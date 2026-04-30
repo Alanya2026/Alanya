@@ -1,16 +1,18 @@
-# talky_flutter
+# Talky Chat Application
 
-A new Flutter project.
+A modern, beautifully designed chat application built with Flutter.
+
+## Features
+- **Authentication**: Seamless Login and Sign Up.
+- **Home Navigation**: Bottom Navigation connecting Chats, Calls, Meets, and Profile.
+- **Chats**: View recent conversations and send messages with a clean UI.
+- **Calls**: View call history.
+- **Meets**: Secure video meetings.
+- **Profile**: Manage your account and settings.
 
 ## Getting Started
+To run this project locally, ensure you have Flutter installed.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. Clone this repository
+2. Run `flutter pub get`
+3. Run `flutter run`
