@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'incoming_call_screen.dart';
+import 'keypad_screen.dart';
+import '../shared/schedule_screen.dart';
 
 class CallsScreen extends StatelessWidget {
   const CallsScreen({super.key});
@@ -21,6 +23,12 @@ class CallsScreen extends StatelessWidget {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month, color: Colors.black),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const ScheduleScreen()));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add_call, color: Colors.black),
             onPressed: () {},
@@ -76,6 +84,13 @@ class CallsScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const KeypadScreen()));
+        },
+        backgroundColor: Colors.indigo,
+        child: const Icon(Icons.dialpad, color: Colors.white),
       ),
     );
   }

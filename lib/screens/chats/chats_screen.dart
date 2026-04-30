@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'chat_detail_screen.dart';
-import '../contacts/contacts_screen.dart';
+import 'new_chat_screen.dart';
+import '../calls/ongoing_call_screen.dart';
 
 class ChatsScreen extends StatelessWidget {
   const ChatsScreen({super.key});
@@ -81,31 +82,21 @@ class ChatsScreen extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  '12:30 PM',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                IconButton(
+                  icon: const Icon(Icons.call, color: Colors.indigo, size: 20),
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => OngoingCallScreen(callerName: 'User ${index + 1}', isVideoCall: false)));
+                  },
                 ),
-                const SizedBox(height: 4),
-                if (index % 2 == 0) // Simulate unread messages
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: Colors.indigo,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Text(
-                      '2',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.videocam, color: Colors.indigo, size: 20),
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => OngoingCallScreen(callerName: 'User ${index + 1}', isVideoCall: true)));
+                  },
+                ),
               ],
             ),
             onTap: () {
@@ -123,11 +114,11 @@ class ChatsScreen extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ContactsScreen()),
+            MaterialPageRoute(builder: (context) => const NewChatScreen()),
           );
         },
         backgroundColor: Colors.indigo,
-        child: const Icon(Icons.message, color: Colors.white),
+        child: const Icon(Icons.chat, color: Colors.white),
       ),
     );
   }

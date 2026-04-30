@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../calls/ongoing_call_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String userName;
@@ -80,11 +81,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.videocam, color: Colors.indigo),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => OngoingCallScreen(callerName: widget.userName, isVideoCall: true)),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.call, color: Colors.indigo),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => OngoingCallScreen(callerName: widget.userName, isVideoCall: false)),
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],

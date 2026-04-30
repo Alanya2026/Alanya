@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'join_meet_screen.dart';
 import 'ongoing_meet_screen.dart';
+import '../shared/schedule_screen.dart';
 
 class MeetsScreen extends StatelessWidget {
   const MeetsScreen({super.key});
@@ -23,8 +24,10 @@ class MeetsScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.history, color: Colors.black),
-            onPressed: () {},
+            icon: const Icon(Icons.calendar_month, color: Colors.black),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const ScheduleScreen()));
+            },
           ),
           const SizedBox(width: 8),
           CircleAvatar(
