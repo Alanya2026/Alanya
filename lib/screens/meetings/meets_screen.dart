@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'join_meet_screen.dart';
+import 'ongoing_meet_screen.dart';
 
 class MeetsScreen extends StatelessWidget {
   const MeetsScreen({super.key});
@@ -47,7 +48,14 @@ class MeetsScreen extends StatelessWidget {
                       title: 'New Meeting',
                       icon: CupertinoIcons.video_camera_solid,
                       color: Colors.indigo,
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OngoingMeetScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),

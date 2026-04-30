@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'incoming_call_screen.dart';
 
 class CallsScreen extends StatelessWidget {
   const CallsScreen({super.key});
@@ -61,7 +62,17 @@ class CallsScreen extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.call, color: Colors.indigo),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => IncomingCallScreen(
+                      callerName: 'User ${index + 1}',
+                      isVideoCall: index % 2 != 0, // Just to show both video and audio
+                    ),
+                  ),
+                );
+              },
             ),
           );
         },

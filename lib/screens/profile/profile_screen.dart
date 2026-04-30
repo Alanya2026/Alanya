@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../authentification/login_screen.dart';
+import 'settings_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -89,13 +91,17 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildProfileItem(CupertinoIcons.person, 'Account', () {}),
+                  _buildProfileItem(CupertinoIcons.person, 'Account', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const EditProfileScreen()));
+                  }),
                   const Divider(height: 1),
                   _buildProfileItem(CupertinoIcons.chat_bubble, 'Chats', () {}),
                   const Divider(height: 1),
                   _buildProfileItem(CupertinoIcons.bell, 'Notifications', () {}),
                   const Divider(height: 1),
-                  _buildProfileItem(CupertinoIcons.lock, 'Privacy', () {}),
+                  _buildProfileItem(CupertinoIcons.settings, 'Settings', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                  }),
                   const Divider(height: 1),
                   _buildProfileItem(Icons.logout, 'Log Out', () {
                     Navigator.pushAndRemoveUntil(

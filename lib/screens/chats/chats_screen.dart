@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_detail_screen.dart';
+import '../contacts/contacts_screen.dart';
 
 class ChatsScreen extends StatelessWidget {
   const ChatsScreen({super.key});
@@ -119,7 +120,12 @@ class ChatsScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ContactsScreen()),
+          );
+        },
         backgroundColor: Colors.indigo,
         child: const Icon(Icons.message, color: Colors.white),
       ),
