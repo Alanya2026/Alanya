@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../chats/chats_screen.dart';
 import '../calls/calls_screen.dart';
+import '../meetings/meets_screen.dart';
 import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const ChatsScreen(),
     const CallsScreen(),
+    const MeetsScreen(),
     const ProfileScreen(),
   ];
 
@@ -62,6 +64,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(CupertinoIcons.phone),
               activeIcon: Icon(CupertinoIcons.phone_fill),
               label: 'Calls',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.video_camera),
+              activeIcon: Icon(CupertinoIcons.video_camera_solid),
+              label: 'Meets',
             ),
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.person),
