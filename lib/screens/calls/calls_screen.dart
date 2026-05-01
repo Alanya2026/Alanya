@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'incoming_call_screen.dart';
+import 'package:provider/provider.dart';
+import '../../core/services/call_service.dart';
+import 'ongoing_call_screen.dart';
 import 'keypad_screen.dart';
 import '../shared/schedule_screen.dart';
 
@@ -39,6 +41,7 @@ class CallsScreen extends StatelessWidget {
         itemCount: 5,
         itemBuilder: (context, index) {
           final bool isMissed = index == 1 || index == 3;
+          final bool isVideo = index % 2 != 0;
           return ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             leading: CircleAvatar(
@@ -70,16 +73,20 @@ class CallsScreen extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.call, color: Colors.indigo),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => IncomingCallScreen(
-                      callerName: 'User ${index + 1}',
-                      isVideoCall: index % 2 != 0, // Just to show both video and audio
-                    ),
-                  ),
+              onPressed: () async {
+                final callService = Provider.of<CallService>(context, listen: false);
+                await callService.initiateCall(
+                  receiverId: index + 1,
+                  isVideo: isVideo,
                 );
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const OngoingCallScreen(),
+                    ),
+                  );
+                }
               },
             ),
           );

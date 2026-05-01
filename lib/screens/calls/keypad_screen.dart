@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/services/call_service.dart';
 import 'ongoing_call_screen.dart';
 
 class KeypadScreen extends StatefulWidget {
@@ -28,17 +30,21 @@ class _KeypadScreenState extends State<KeypadScreen> {
     });
   }
 
-  void _onCall() {
+  void _onCall() async {
     if (_phoneNumber.isEmpty) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OngoingCallScreen(
-          callerName: _phoneNumber,
-          isVideoCall: false,
-        ),
-      ),
+    final callService = Provider.of<CallService>(context, listen: false);
+    await callService.initiateCall(
+      receiverId: int.tryParse(_phoneNumber) ?? 0,
+      isVideo: false,
     );
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OngoingCallScreen(),
+        ),
+      );
+    }
   }
 
   @override

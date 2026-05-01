@@ -1,43 +1,40 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/services/call_service.dart';
 import 'ongoing_call_screen.dart';
 
 class IncomingCallScreen extends StatelessWidget {
-  final String callerName;
-  final bool isVideoCall;
-
-  const IncomingCallScreen({
-    super.key,
-    required this.callerName,
-    this.isVideoCall = false,
-  });
+  const IncomingCallScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.indigo.shade900,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 60),
-            // Caller Info
-            Column(
+    return Consumer<CallService>(
+      builder: (context, callService, _) {
+        final caller = callService.currentCall?.caller;
+        final isVideoCall = callService.currentCall?.type == 'video';
+
+        return Scaffold(
+          backgroundColor: Colors.black87,
+          body: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.white24,
+                  radius: 70,
+                  backgroundColor: Colors.indigo.shade100,
                   child: Text(
-                    callerName[0],
+                    caller?.nom[0] ?? 'U',
                     style: const TextStyle(
-                      fontSize: 48,
-                      color: Colors.white,
+                      fontSize: 56,
+                      color: Colors.indigo,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  callerName,
+                  caller?.nom ?? 'Unknown',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -46,87 +43,68 @@ class IncomingCallScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isVideoCall ? 'Incoming Video Call...' : 'Incoming Audio Call...',
+                  isVideoCall ? 'Incoming Video Call...' : 'Incoming Voice Call...',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 18,
                   ),
                 ),
+                const SizedBox(height: 60),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Reject Button
+                    GestureDetector(
+                      onTap: () async {
+                        await callService.rejectCall();
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.phone_down_fill,
+                          color: Colors.white,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                    // Accept Button
+                    GestureDetector(
+                      onTap: () async {
+                        await callService.answerCall();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OngoingCallScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isVideoCall
+                              ? CupertinoIcons.video_camera_solid
+                              : CupertinoIcons.phone_fill,
+                          color: Colors.white,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-            const Spacer(),
-            // Call Actions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Decline Button
-                  Column(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.phone_down_fill,
-                            color: Colors.white,
-                            size: 36,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Decline',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                  // Accept Button
-                  Column(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OngoingCallScreen(
-                                callerName: callerName,
-                                isVideoCall: isVideoCall,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: const BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isVideoCall ? CupertinoIcons.video_camera_solid : CupertinoIcons.phone_fill,
-                            color: Colors.white,
-                            size: 36,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Accept',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

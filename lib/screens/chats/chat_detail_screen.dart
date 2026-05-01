@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/services/call_service.dart';
 import '../calls/ongoing_call_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
@@ -81,20 +83,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.videocam, color: Colors.indigo),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => OngoingCallScreen(callerName: widget.userName, isVideoCall: true)),
+            onPressed: () async {
+              final callService = Provider.of<CallService>(context, listen: false);
+              await callService.initiateCall(
+                receiverId: 1, // TODO: Replace with actual user ID
+                isVideo: true,
               );
+              if (context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OngoingCallScreen()),
+                );
+              }
             },
           ),
           IconButton(
             icon: const Icon(Icons.call, color: Colors.indigo),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => OngoingCallScreen(callerName: widget.userName, isVideoCall: false)),
+            onPressed: () async {
+              final callService = Provider.of<CallService>(context, listen: false);
+              await callService.initiateCall(
+                receiverId: 1, // TODO: Replace with actual user ID
+                isVideo: false,
               );
+              if (context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OngoingCallScreen()),
+                );
+              }
             },
           ),
           const SizedBox(width: 8),
