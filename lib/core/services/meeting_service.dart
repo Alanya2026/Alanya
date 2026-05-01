@@ -232,6 +232,12 @@ class MeetingService extends ChangeNotifier {
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
         {'urls': 'stun:stun1.l.google.com:19302'},
+        // TODO: Remplacer par ton serveur TURN
+        // {
+        //   'urls': 'turn:ton-serveur-turn.com:3478',
+        //   'username': 'ton-username',
+        //   'credential': 'ton-password',
+        // },
       ]
     };
 
