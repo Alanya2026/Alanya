@@ -15,6 +15,7 @@ class SelectContactScreen extends StatefulWidget {
 class _SelectContactScreenState extends State<SelectContactScreen> {
   List<User> _contacts = [];
   bool _isLoading = false;
+  String _currentQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -24,8 +25,14 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   }
 
   void _onSearchChanged() {
-    if (_searchController.text.length >= 2) {
-      _searchUsers(_searchController.text);
+    final query = _searchController.text;
+    if (query.length >= 2) {
+      _currentQuery = query;
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (_currentQuery == _searchController.text && mounted) {
+          _searchUsers(query);
+        }
+      });
     } else {
       setState(() {
         _contacts = [];
@@ -39,7 +46,10 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.searchUsers(query);
-      final users = data.map((item) => item is User ? item : User.fromJson(item as Map<String, dynamic>)).toList();
+      final users = data.map((item) {
+        if (item is User) return item;
+        return User.fromJson(item as Map<String, dynamic>);
+      }).toList();
       setState(() {
         _contacts = users;
         _isLoading = false;

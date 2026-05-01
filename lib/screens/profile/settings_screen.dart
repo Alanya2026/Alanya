@@ -25,7 +25,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
       setState(() {
-        _user = User.fromJson(data);
+        // Backend returns an object directly (rows[0])
+        final Map<String, dynamic> userData = data is Map ? data : data[0];
+        _user = User.fromJson(userData);
         _isLoading = false;
       });
     } catch (e) {

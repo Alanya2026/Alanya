@@ -203,7 +203,9 @@ class TalkyApiClient {
       Uri.parse('$baseUrl/users/search?q=$query'),
       headers: _headers,
     ));
-    return data is List ? data : data['users'] ?? [];
+    // Backend returns array directly
+    if (data is List) return data;
+    return [];
   }
 
   // ── CONTACTS ─────────────────────────────────────────────────────────
@@ -348,10 +350,14 @@ class TalkyApiClient {
   }
 
   Future<Map<String, dynamic>> getUserByPhone(String alanyaPhone) async {
-    return _handleRequest(() => _client.get(
+    final data = await _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/users/phone/$alanyaPhone'),
       headers: _headers,
     ));
+    // Backend returns array, take first element
+    if (data is List && data.isNotEmpty) return data[0];
+    if (data is Map) return data;
+    throw TalkyException('User not found', 404);
   }
 
   // ── MEETINGS ─────────────────────────────────────────────────────────
