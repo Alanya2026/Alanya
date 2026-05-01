@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../authentification/login_screen.dart';
+import '../../providers/auth_provider.dart';
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
 
@@ -103,12 +105,16 @@ class ProfileScreen extends StatelessWidget {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
                   }),
                   const Divider(height: 1),
-                  _buildProfileItem(Icons.logout, 'Log Out', () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      (route) => false,
-                    );
+                  _buildProfileItem(Icons.logout, 'Log Out', () async {
+                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                    await authProvider.logout();
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
                   }, isDestructive: true),
                 ],
               ),

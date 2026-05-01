@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../talky_models.dart';
 
 class StorageService {
@@ -7,29 +7,30 @@ class StorageService {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userKey = 'user_data';
 
-  late SharedPreferences _prefs;
+  final FlutterSecureStorage _secureStorage;
 
-  Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
-  }
+  StorageService({FlutterSecureStorage? secureStorage})
+      : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+
+  Future<void> init() async {}
 
   Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
   }) async {
-    await _prefs.setString(_accessTokenKey, accessToken);
-    await _prefs.setString(_refreshTokenKey, refreshToken);
+    await _secureStorage.write(key: _accessTokenKey, value: accessToken);
+    await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
   }
 
-  String? getAccessToken() => _prefs.getString(_accessTokenKey);
-  String? getRefreshToken() => _prefs.getString(_refreshTokenKey);
+  Future<String?> getAccessToken() => _secureStorage.read(key: _accessTokenKey);
+  Future<String?> getRefreshToken() => _secureStorage.read(key: _refreshTokenKey);
 
   Future<void> saveUser(User user) async {
-    await _prefs.setString(_userKey, jsonEncode(user.toJson()));
+    await _secureStorage.write(key: _userKey, value: jsonEncode(user.toJson()));
   }
 
-  User? getUser() {
-    final userStr = _prefs.getString(_userKey);
+  Future<User?> getUser() async {
+    final userStr = await _secureStorage.read(key: _userKey);
     if (userStr == null) return null;
     try {
       return User.fromJson(jsonDecode(userStr) as Map<String, dynamic>);
@@ -39,10 +40,10 @@ class StorageService {
   }
 
   Future<void> clearAll() async {
-    await _prefs.remove(_accessTokenKey);
-    await _prefs.remove(_refreshTokenKey);
-    await _prefs.remove(_userKey);
+    await _secureStorage.delete(key: _accessTokenKey);
+    await _secureStorage.delete(key: _refreshTokenKey);
+    await _secureStorage.delete(key: _userKey);
   }
 
-  bool isLoggedIn() => getAccessToken() != null;
+  Future<bool> isLoggedIn() async => (await getAccessToken()) != null;
 }

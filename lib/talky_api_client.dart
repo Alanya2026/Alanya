@@ -24,6 +24,25 @@ class TalkyApiClient {
     if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
   };
 
+  Future<Map<String, dynamic>> _handleRequest(Future<http.Response> Function() request) async {
+    try {
+      final response = await request();
+      if (response.statusCode == 401 && _refreshToken != null) {
+        try {
+          await refreshToken();
+          final retried = await request();
+          return _parseResponse(retried);
+        } catch (_) {
+          throw TalkyException('Session expired', 401);
+        }
+      }
+      return _parseResponse(response);
+    } catch (e) {
+      if (e is TalkyException) rethrow;
+      throw TalkyException('Network error: $e', 0);
+    }
+  }
+
   // ── AUTH ─────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> register({
@@ -35,35 +54,30 @@ class TalkyApiClient {
     String? fcmToken,
     String? deviceId,
   }) async {
-    try {
-      final response = await _client.post(
-        Uri.parse('$baseUrl/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-          if (nom != null) 'nom': nom,
-          if (pseudo != null) 'pseudo': pseudo,
-          if (idPays != null) 'idPays': idPays,
-          if (fcmToken != null) 'fcm_token': fcmToken,
-          if (deviceId != null) 'device_ID': deviceId,
-        }),
-      );
+    final response = await _client.post(
+      Uri.parse('$baseUrl/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        if (nom != null) 'nom': nom,
+        if (pseudo != null) 'pseudo': pseudo,
+        if (idPays != null) 'idPays': idPays,
+        if (fcmToken != null) 'fcm_token': fcmToken,
+        if (deviceId != null) 'device_ID': deviceId,
+      }),
+    );
 
-      final data = _parseResponse(response);
-      if (response.statusCode == 201) {
-        _accessToken = data['accessToken'];
-        _refreshToken = data['refreshToken'];
-        return data;
-      }
-      throw TalkyException(
-        data['error'] ?? 'Registration failed',
-        response.statusCode,
-      );
-    } catch (e) {
-      if (e is TalkyException) rethrow;
-      throw TalkyException('Network error: $e', 0);
+    final data = _parseResponse(response);
+    if (response.statusCode == 201) {
+      _accessToken = data['accessToken'];
+      _refreshToken = data['refreshToken'];
+      return data;
     }
+    throw TalkyException(
+      data['error'] ?? 'Registration failed',
+      response.statusCode,
+    );
   }
 
   Future<Map<String, dynamic>> login({
@@ -72,29 +86,24 @@ class TalkyApiClient {
     String? fcmToken,
     String? deviceId,
   }) async {
-    try {
-      final response = await _client.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-          if (fcmToken != null) 'fcm_token': fcmToken,
-          if (deviceId != null) 'device_ID': deviceId,
-        }),
-      );
+    final response = await _client.post(
+      Uri.parse('$baseUrl/auth/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        if (fcmToken != null) 'fcm_token': fcmToken,
+        if (deviceId != null) 'device_ID': deviceId,
+      }),
+    );
 
-      final data = _parseResponse(response);
-      if (response.statusCode == 200) {
-        _accessToken = data['accessToken'];
-        _refreshToken = data['refreshToken'];
-        return data;
-      }
-      throw TalkyException(data['error'] ?? 'Login failed', response.statusCode);
-    } catch (e) {
-      if (e is TalkyException) rethrow;
-      throw TalkyException('Network error: $e', 0);
+    final data = _parseResponse(response);
+    if (response.statusCode == 200) {
+      _accessToken = data['accessToken'];
+      _refreshToken = data['refreshToken'];
+      return data;
     }
+    throw TalkyException(data['error'] ?? 'Login failed', response.statusCode);
   }
 
   Future<String> refreshToken() async {
@@ -138,22 +147,10 @@ class TalkyApiClient {
   }
 
   Future<Map<String, dynamic>> getMe() async {
-    try {
-      final response = await _client.get(
-        Uri.parse('$baseUrl/auth/me'),
-        headers: _headers,
-      );
-
-      final data = _parseResponse(response);
-      if (response.statusCode == 200) return data;
-      throw TalkyException(
-        data['error'] ?? 'Failed to get user',
-        response.statusCode,
-      );
-    } catch (e) {
-      if (e is TalkyException) rethrow;
-      throw TalkyException('Network error: $e', 0);
-    }
+    return _handleRequest(() => _client.get(
+      Uri.parse('$baseUrl/auth/me'),
+      headers: _headers,
+    ));
   }
 
   Future<Map<String, dynamic>> updateMe({
@@ -164,7 +161,7 @@ class TalkyApiClient {
     String? deviceId,
     bool? isOnline,
   }) async {
-    final response = await _client.put(
+    return _handleRequest(() => _client.put(
       Uri.parse('$baseUrl/auth/me'),
       headers: _headers,
       body: jsonEncode({
@@ -175,11 +172,7 @@ class TalkyApiClient {
         if (deviceId != null) 'device_ID': deviceId,
         if (isOnline != null) 'is_online': isOnline,
       }),
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(data['error'] ?? 'Update failed', response.statusCode);
+    ));
   }
 
   void logout() {
@@ -191,115 +184,67 @@ class TalkyApiClient {
   // ── USERS ────────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getUsers() async {
-    final response = await _client.get(
+    final data = await _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/users'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to get users',
-      response.statusCode,
-    );
+    ));
+    return data is List ? data : data['users'] ?? [];
   }
 
   Future<Map<String, dynamic>> getUser(int alanyaID) async {
-    final response = await _client.get(
+    return _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/users/$alanyaID'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(
-      data['error'] ?? 'User not found',
-      response.statusCode,
-    );
+    ));
   }
 
   Future<Map<String, dynamic>> searchUsers(String query) async {
-    final response = await _client.get(
+    return _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/users/search?q=$query'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(data['error'] ?? 'Search failed', response.statusCode);
+    ));
   }
 
   // ── CONTACTS ─────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getContacts() async {
-    final response = await _client.get(
+    final data = await _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/contacts'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to get contacts',
-      response.statusCode,
-    );
+    ));
+    return data is List ? data : data['contacts'] ?? [];
   }
 
   Future<void> addContact(int userId) async {
-    final response = await _client.post(
+    await _handleRequest(() => _client.post(
       Uri.parse('$baseUrl/contacts/$userId'),
       headers: _headers,
-    );
-
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      final data = jsonDecode(response.body);
-      throw TalkyException(
-        data['error'] ?? 'Failed to add contact',
-        response.statusCode,
-      );
-    }
+    ));
   }
 
   Future<void> removeContact(int userId) async {
-    final response = await _client.delete(
+    await _handleRequest(() => _client.delete(
       Uri.parse('$baseUrl/contacts/$userId'),
       headers: _headers,
-    );
-
-    if (response.statusCode != 200) {
-      final data = jsonDecode(response.body);
-      throw TalkyException(
-        data['error'] ?? 'Failed to remove contact',
-        response.statusCode,
-      );
-    }
+    ));
   }
 
   Future<bool> checkIsContact(int userId) async {
-    final response = await _client.get(
+    final data = await _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/contacts/check/$userId'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data['isContact'] ?? false;
-    throw TalkyException(data['error'] ?? 'Check failed', response.statusCode);
+    ));
+    return data['isContact'] ?? false;
   }
 
   // ── CONVERSATIONS ────────────────────────────────────────────────────
 
   Future<List<dynamic>> getConversations() async {
-    final response = await _client.get(
+    final data = await _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/conversations'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to get conversations',
-      response.statusCode,
-    );
+    ));
+    return data is List ? data : data['conversations'] ?? [];
   }
 
   Future<Map<String, dynamic>> createConversation({
@@ -309,7 +254,7 @@ class TalkyApiClient {
     String? description,
     String? avatarUrl,
   }) async {
-    final response = await _client.post(
+    return _handleRequest(() => _client.post(
       Uri.parse('$baseUrl/conversations'),
       headers: _headers,
       body: jsonEncode({
@@ -319,44 +264,24 @@ class TalkyApiClient {
         if (description != null) 'description': description,
         if (avatarUrl != null) 'avatar_url': avatarUrl,
       }),
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 201) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to create conversation',
-      response.statusCode,
-    );
+    ));
   }
 
   Future<Map<String, dynamic>> getConversation(int convId) async {
-    final response = await _client.get(
+    return _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/conversations/$convId'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(
-      data['error'] ?? 'Conversation not found',
-      response.statusCode,
-    );
+    ));
   }
 
   // ── MESSAGES ────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getMessages(int conversationId, {int page = 1}) async {
-    final response = await _client.get(
+    final data = await _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/conversations/$conversationId/messages?page=$page'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to get messages',
-      response.statusCode,
-    );
+    ));
+    return data is List ? data : data['messages'] ?? [];
   }
 
   Future<Map<String, dynamic>> sendMessage({
@@ -366,7 +291,7 @@ class TalkyApiClient {
     String? mediaUrl,
     int? dureeVocal,
   }) async {
-    final response = await _client.post(
+    return _handleRequest(() => _client.post(
       Uri.parse('$baseUrl/conversations/$conversationId/messages'),
       headers: _headers,
       body: jsonEncode({
@@ -375,29 +300,14 @@ class TalkyApiClient {
         if (mediaUrl != null) 'media_url': mediaUrl,
         if (dureeVocal != null) 'duree_vocal': dureeVocal,
       }),
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 201) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to send message',
-      response.statusCode,
-    );
+    ));
   }
 
   Future<void> deleteMessage(int messageId) async {
-    final response = await _client.delete(
+    await _handleRequest(() => _client.delete(
       Uri.parse('$baseUrl/messages/$messageId'),
       headers: _headers,
-    );
-
-    if (response.statusCode != 200) {
-      final data = jsonDecode(response.body);
-      throw TalkyException(
-        data['error'] ?? 'Failed to delete message',
-        response.statusCode,
-      );
-    }
+    ));
   }
 
   // ── CALLS ────────────────────────────────────────────────────────────
@@ -406,33 +316,18 @@ class TalkyApiClient {
     required int receiverId,
     String type = 'audio',
   }) async {
-    final response = await _client.post(
+    return _handleRequest(() => _client.post(
       Uri.parse('$baseUrl/calls/initiate'),
       headers: _headers,
       body: jsonEncode({'receiver_id': receiverId, 'type': type}),
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200 || response.statusCode == 201) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to initiate call',
-      response.statusCode,
-    );
+    ));
   }
 
   Future<void> endCall(int callId) async {
-    final response = await _client.post(
+    await _handleRequest(() => _client.post(
       Uri.parse('$baseUrl/calls/$callId/end'),
       headers: _headers,
-    );
-
-    if (response.statusCode != 200) {
-      final data = jsonDecode(response.body);
-      throw TalkyException(
-        data['error'] ?? 'Failed to end call',
-        response.statusCode,
-      );
-    }
+    ));
   }
 
   // ── MEETINGS ─────────────────────────────────────────────────────────
@@ -444,7 +339,7 @@ class TalkyApiClient {
     required String dateFin,
     List<int>? participants,
   }) async {
-    final response = await _client.post(
+    return _handleRequest(() => _client.post(
       Uri.parse('$baseUrl/meetings'),
       headers: _headers,
       body: jsonEncode({
@@ -454,28 +349,15 @@ class TalkyApiClient {
         'date_fin': dateFin,
         if (participants != null) 'participants': participants,
       }),
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 201) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to create meeting',
-      response.statusCode,
-    );
+    ));
   }
 
   Future<List<dynamic>> getMeetings() async {
-    final response = await _client.get(
+    final data = await _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/meetings'),
       headers: _headers,
-    );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) return data;
-    throw TalkyException(
-      data['error'] ?? 'Failed to get meetings',
-      response.statusCode,
-    );
+    ));
+    return data is List ? data : data['meetings'] ?? [];
   }
 
   // ── UPLOAD ───────────────────────────────────────────────────────────
@@ -492,9 +374,13 @@ class TalkyApiClient {
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200 || response.statusCode == 201) return data;
-    throw TalkyException(data['error'] ?? 'Upload failed', response.statusCode);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw TalkyException(
+      jsonDecode(response.body)['error'] ?? 'Upload failed',
+      response.statusCode,
+    );
   }
 
   // ── SOCKET.IO ───────────────────────────────────────────────────────
@@ -541,9 +427,9 @@ class TalkyApiClient {
     }
   }
 
-  Map<String, dynamic> _parseResponse(http.Response response) {
+  dynamic _parseResponse(http.Response response) {
     try {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      return jsonDecode(response.body);
     } catch (e) {
       print('[TalkyApiClient] Response parsing failed:');
       print('  Status: ${response.statusCode}');

@@ -31,7 +31,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _checkAuthStatus() async {
     try {
-      final token = _storage.getAccessToken();
+      final token = await _storage.getAccessToken();
       if (token == null) return;
 
       _apiClient.setToken(token);
@@ -40,6 +40,7 @@ class AuthProvider extends ChangeNotifier {
       _apiClient.connectSocket();
     } catch (_) {
       await _storage.clearAll();
+      _apiClient.logout();
     }
   }
 
