@@ -1,11 +1,68 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/services/meeting_service.dart';
+import '../../talky_models.dart';
 import 'join_meet_screen.dart';
 import 'ongoing_meet_screen.dart';
 import '../shared/schedule_screen.dart';
 
-class MeetsScreen extends StatelessWidget {
+class MeetsScreen extends StatefulWidget {
   const MeetsScreen({super.key});
+
+  @override
+  State<MeetsScreen> createState() => _MeetsScreenState();
+}
+
+class _MeetsScreenState extends State<MeetsScreen> {
+  List<Meeting> _meetings = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMeetings();
+  }
+
+  Future<void> _loadMeetings() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final meetingService = Provider.of<MeetingService>(context, listen: false);
+      final data = await meetingService.getMeetings();
+      setState(() {
+        _meetings = data.cast<Meeting>();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _createNewMeeting() async {
+    final meetingService = Provider.of<MeetingService>(context, listen: false);
+
+    try {
+      await meetingService.createAndJoinMeeting(
+        titre: 'New Meeting ${DateTime.now().toString().substring(0, 16)}',
+        dateDebut: DateTime.now(),
+        dateFin: DateTime.now().add(const Duration(hours: 1)),
+      );
+
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const OngoingMeetScreen()),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create meeting: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +83,10 @@ class MeetsScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.calendar_month, color: Colors.black),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const ScheduleScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ScheduleScreen()),
+              );
             },
           ),
           const SizedBox(width: 8),
@@ -38,76 +98,70 @@ class MeetsScreen extends StatelessWidget {
           const SizedBox(width: 16),
         ],
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildActionCard(
-                      context,
-                      title: 'New Meeting',
-                      icon: CupertinoIcons.video_camera_solid,
-                      color: Colors.indigo,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const OngoingMeetScreen(),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionCard(
+                            context,
+                            title: 'New Meeting',
+                            icon: CupertinoIcons.video_camera_solid,
+                            color: Colors.indigo,
+                            onTap: _createNewMeeting,
                           ),
-                        );
-                      },
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildActionCard(
+                            context,
+                            title: 'Join with Code',
+                            icon: CupertinoIcons.keyboard,
+                            color: Colors.black87,
+                            isOutline: true,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const JoinMeetScreen()),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildActionCard(
-                      context,
-                      title: 'Join with Code',
-                      icon: CupertinoIcons.keyboard,
-                      color: Colors.black87,
-                      isOutline: true,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const JoinMeetScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-              child: Text(
-                'Upcoming Meetings',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
                 ),
-              ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                    child: Text(
+                      'Upcoming Meetings',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ),
+                ),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index >= _meetings.length) return null;
+                      return _buildMeetingItem(_meetings[index]);
+                    },
+                    childCount: _meetings.length,
+                  ),
+                ),
+              ],
             ),
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                return _buildMeetingItem(index);
-              },
-              childCount: 4,
-            ),
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: _createNewMeeting,
         backgroundColor: Colors.indigo,
         elevation: 4,
         child: const Icon(Icons.add, color: Colors.white),
@@ -172,15 +226,12 @@ class MeetsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMeetingItem(int index) {
-    final List<Map<String, dynamic>> meetings = [
-      {'title': 'Weekly Team Sync', 'time': '10:00 AM - 11:00 AM', 'date': 'Today', 'color': Colors.orange},
-      {'title': 'Design Review', 'time': '2:30 PM - 3:15 PM', 'date': 'Today', 'color': Colors.purple},
-      {'title': 'Client Presentation', 'time': '11:00 AM - 12:00 PM', 'date': 'Tomorrow', 'color': Colors.blue},
-      {'title': 'Project Planning', 'time': '4:00 PM - 5:00 PM', 'date': 'Tomorrow', 'color': Colors.green},
-    ];
+  Widget _buildMeetingItem(Meeting meeting) {
+    final DateTime dateDebut = DateTime.parse(meeting.dateDebut);
+    final DateTime dateFin = DateTime.parse(meeting.dateFin);
+    final bool isToday = dateDebut.day == DateTime.now().day;
 
-    final meeting = meetings[index];
+    final color = Colors.primaries[meeting.idMeeting % Colors.primaries.length];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16, left: 20, right: 20),
@@ -203,7 +254,7 @@ class MeetsScreen extends StatelessWidget {
             width: 4,
             height: 50,
             decoration: BoxDecoration(
-              color: meeting['color'],
+              color: color,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -213,7 +264,7 @@ class MeetsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  meeting['title'],
+                  meeting.titre,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -225,7 +276,7 @@ class MeetsScreen extends StatelessWidget {
                     Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
                     Text(
-                      '${meeting['date']} • ${meeting['time']}',
+                      '${isToday ? "Today" : "Upcoming"} • ${dateDebut.hour}:${dateDebut.minute.toString().padLeft(2, '0')} - ${dateFin.hour}:${dateFin.minute.toString().padLeft(2, '0')}',
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 13,
@@ -237,7 +288,24 @@ class MeetsScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () async {
+              final meetingService = Provider.of<MeetingService>(context, listen: false);
+              try {
+                await meetingService.joinMeeting(meeting.idMeeting);
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const OngoingMeetScreen()),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to join: $e')),
+                  );
+                }
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.indigo.shade50,
               foregroundColor: Colors.indigo,
