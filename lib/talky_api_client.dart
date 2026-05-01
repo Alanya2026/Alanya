@@ -199,13 +199,19 @@ class TalkyApiClient {
   }
 
   Future<List<dynamic>> searchUsers(String query) async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/users/search?q=$query'),
-      headers: _headers,
-    ));
-    // Backend returns array directly
-    if (data is List) return data;
-    return [];
+    try {
+      final response = await _client.get(
+        Uri.parse('$baseUrl/users/search?q=$query'),
+        headers: _headers,
+      );
+      final data = jsonDecode(response.body);
+      if (data is List) return data;
+      if (data is Map && data['users'] != null) return data['users'];
+      return [];
+    } catch (e) {
+      if (e is TalkyException) rethrow;
+      throw TalkyException('Search failed: $e', 0);
+    }
   }
 
   // ── CONTACTS ─────────────────────────────────────────────────────────
