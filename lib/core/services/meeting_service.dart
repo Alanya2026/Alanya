@@ -232,12 +232,16 @@ class MeetingService extends ChangeNotifier {
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
         {'urls': 'stun:stun1.l.google.com:19302'},
-        // TODO: Remplacer par ton serveur TURN
-        // {
-        //   'urls': 'turn:ton-serveur-turn.com:3478',
-        //   'username': 'ton-username',
-        //   'credential': 'ton-password',
-        // },
+        {
+          'urls': [
+            'turn:global.relay.metered.ca:80',
+            'turn:global.relay.metered.ca:80?transport=tcp',
+            'turn:global.relay.metered.ca:443',
+            'turns:global.relay.metered.ca:443?transport=tcp',
+          ],
+          'username': '4ccd30e6211751522c93c044',
+          'credential': 'iB+/hPI3lLayZAKn',
+        },
       ]
     };
 
