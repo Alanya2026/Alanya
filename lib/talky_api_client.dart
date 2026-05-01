@@ -330,6 +330,29 @@ class TalkyApiClient {
     ));
   }
 
+  Future<List<dynamic>> getCallHistory() async {
+    final data = await _handleRequest(() => _client.get(
+      Uri.parse('$baseUrl/calls'),
+      headers: _headers,
+    ));
+    return data is List ? data : data['calls'] ?? [];
+  }
+
+  Future<List<dynamic>> getPreferredContacts() async {
+    final data = await _handleRequest(() => _client.get(
+      Uri.parse('$baseUrl/contacts/preferred'),
+      headers: _headers,
+    ));
+    return data is List ? data : data['contacts'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> getUserByPhone(String alanyaPhone) async {
+    return _handleRequest(() => _client.get(
+      Uri.parse('$baseUrl/users/phone/$alanyaPhone'),
+      headers: _headers,
+    ));
+  }
+
   // ── MEETINGS ─────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> createMeeting({

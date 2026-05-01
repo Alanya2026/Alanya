@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../talky_api_client.dart';
+import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
 import 'ongoing_call_screen.dart';
 
@@ -13,11 +15,14 @@ class KeypadScreen extends StatefulWidget {
 
 class _KeypadScreenState extends State<KeypadScreen> {
   String _phoneNumber = '';
+  User? _foundUser;
+  bool _isSearching = false;
 
   void _onKeyPress(String value) {
     setState(() {
       if (_phoneNumber.length < 15) {
         _phoneNumber += value;
+        _foundUser = null; // Reset user when typing
       }
     });
   }
@@ -26,16 +31,45 @@ class _KeypadScreenState extends State<KeypadScreen> {
     setState(() {
       if (_phoneNumber.isNotEmpty) {
         _phoneNumber = _phoneNumber.substring(0, _phoneNumber.length - 1);
+        _foundUser = null;
       }
     });
   }
 
-  void _onCall() async {
+  Future<void> _searchUser() async {
     if (_phoneNumber.isEmpty) return;
+
+    setState(() => _isSearching = true);
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final userData = await apiClient.getUserByPhone(_phoneNumber);
+      setState(() {
+        _foundUser = User.fromJson(userData);
+        _isSearching = false;
+      });
+    } catch (e) {
+      setState(() {
+        _foundUser = null;
+        _isSearching = false;
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not found')),
+        );
+      }
+    }
+  }
+
+  Future<void> _onCall({bool isVideo = false}) async {
+    if (_foundUser == null) {
+      await _searchUser();
+      if (_foundUser == null) return;
+    }
+
     final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
-      receiverId: int.tryParse(_phoneNumber) ?? 0,
-      isVideo: false,
+      receiverId: _foundUser!.alanyaID,
+      isVideo: isVideo,
     );
     if (context.mounted) {
       Navigator.push(
@@ -62,21 +96,43 @@ class _KeypadScreenState extends State<KeypadScreen> {
       body: Column(
         children: [
           const Spacer(),
-          // Number display
+          // Number display or User found
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             height: 80,
             alignment: Alignment.center,
-            child: Text(
-              _phoneNumber,
-              style: const TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w400,
-                letterSpacing: 2,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: _isSearching
+                ? const CircularProgressIndicator()
+                : _foundUser != null
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _foundUser!.nom,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '@${_foundUser!.pseudo}',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        _phoneNumber,
+                        style: const TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
           ),
           const SizedBox(height: 20),
           // Keypad
@@ -101,9 +157,29 @@ class _KeypadScreenState extends State<KeypadScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                const SizedBox(width: 64), // Balance the row
+                // Video call button
+                if (_foundUser != null)
+                  GestureDetector(
+                    onTap: () => _onCall(isVideo: true),
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.shade50,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.indigo),
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.videocam_fill,
+                        color: Colors.indigo,
+                        size: 28,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(width: 64),
                 GestureDetector(
-                  onTap: _onCall,
+                  onTap: () => _onCall(),
                   child: Container(
                     width: 72,
                     height: 72,
@@ -122,7 +198,11 @@ class _KeypadScreenState extends State<KeypadScreen> {
                   width: 64,
                   child: IconButton(
                     onPressed: _onDelete,
-                    icon: const Icon(CupertinoIcons.delete_left, size: 28, color: Colors.grey),
+                    icon: Icon(
+                      _foundUser != null ? Icons.clear : CupertinoIcons.delete_left,
+                      size: 28,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
               ],
