@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/services/meeting_service.dart';
+import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/services/meeting_service.dart';
 import 'join_meet_screen.dart';
 import 'ongoing_meet_screen.dart';
 import '../shared/schedule_screen.dart';
@@ -17,11 +18,29 @@ class MeetsScreen extends StatefulWidget {
 class _MeetsScreenState extends State<MeetsScreen> {
   List<Meeting> _meetings = [];
   bool _isLoading = true;
+  String _userInitial = 'U';
 
   @override
   void initState() {
     super.initState();
     _loadMeetings();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final data = await apiClient.getMe();
+      final userData = data is Map ? data : (data is List && data.isNotEmpty ? data[0] : null);
+      if (userData != null) {
+        final user = User.fromJson(userData as Map<String, dynamic>);
+        setState(() {
+          _userInitial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : 'U';
+        });
+      }
+    } catch (e) {
+      // Ignore error
+    }
   }
 
   Future<void> _loadMeetings() async {
@@ -93,7 +112,10 @@ class _MeetsScreenState extends State<MeetsScreen> {
           CircleAvatar(
             radius: 16,
             backgroundColor: Colors.indigo.shade100,
-            child: const Text('SM', style: TextStyle(color: Colors.indigo, fontSize: 12, fontWeight: FontWeight.bold)),
+            child: Text(
+              _userInitial,
+              style: const TextStyle(color: Colors.indigo, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(width: 16),
         ],

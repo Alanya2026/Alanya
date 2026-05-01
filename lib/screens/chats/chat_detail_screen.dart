@@ -5,7 +5,8 @@ import '../calls/ongoing_call_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String userName;
-  const ChatDetailScreen({super.key, required this.userName});
+  final int? conversationId;
+  const ChatDetailScreen({super.key, required this.userName, this.conversationId});
 
   @override
   State<ChatDetailScreen> createState() => _ChatDetailScreenState();
