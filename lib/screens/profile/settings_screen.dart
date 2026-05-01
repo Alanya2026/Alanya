@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
+import '../../talky_models.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,7 +11,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  Map<String, dynamic>? _userData;
+  User? _user;
   bool _isLoading = true;
 
   @override
@@ -24,7 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
       setState(() {
-        _userData = data;
+        _user = User.fromJson(data);
         _isLoading = false;
       });
     } catch (e) {
@@ -66,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             radius: 30,
                             backgroundColor: Colors.indigo.shade100,
                             child: Text(
-                              _userData?['nom']?.substring(0, 1).toUpperCase() ?? 'U',
+                              _user?.nom.substring(0, 1).toUpperCase() ?? 'U',
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -80,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _userData?['nom'] ?? 'User',
+                                  _user?.nom ?? 'User',
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -88,7 +89,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '@${_userData?['pseudo'] ?? 'pseudo'}',
+                                  '@${_user?.pseudo ?? 'pseudo'}',
                                   style: TextStyle(
                                     color: Colors.grey.shade600,
                                     fontSize: 14,
@@ -121,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  _userData?['alanyaPhone'] ?? 'Not set',
+                                  _user?.alanyaPhone ?? 'Not set',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,

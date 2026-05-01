@@ -198,11 +198,12 @@ class TalkyApiClient {
     ));
   }
 
-  Future<Map<String, dynamic>> searchUsers(String query) async {
-    return _handleRequest(() => _client.get(
+  Future<List<dynamic>> searchUsers(String query) async {
+    final data = await _handleRequest(() => _client.get(
       Uri.parse('$baseUrl/users/search?q=$query'),
       headers: _headers,
     ));
+    return data is List ? data : data['users'] ?? [];
   }
 
   // ── CONTACTS ─────────────────────────────────────────────────────────

@@ -13,44 +13,40 @@ class SelectContactScreen extends StatefulWidget {
 }
 
 class _SelectContactScreenState extends State<SelectContactScreen> {
-  List<dynamic> _contacts = [];
-  List<dynamic> _filteredContacts = [];
-  bool _isLoading = true;
+  List<User> _contacts = [];
+  bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadContacts();
-    _searchController.addListener(_filterContacts);
+    _searchController.addListener(_onSearchChanged);
   }
 
-  Future<void> _loadContacts() async {
+  void _onSearchChanged() {
+    if (_searchController.text.length >= 2) {
+      _searchUsers(_searchController.text);
+    } else {
+      setState(() {
+        _contacts = [];
+      });
+    }
+  }
+
+  Future<void> _searchUsers(String query) async {
     setState(() => _isLoading = true);
 
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final contacts = await apiClient.getPreferredContacts();
+      final data = await apiClient.searchUsers(query);
+      final users = data.map((item) => item is User ? item : User.fromJson(item as Map<String, dynamic>)).toList();
       setState(() {
-        _contacts = contacts;
-        _filteredContacts = contacts;
+        _contacts = users;
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
     }
-  }
-
-  void _filterContacts() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      _filteredContacts = _contacts.where((contact) {
-        final user = contact is User ? contact : User.fromJson(contact as Map<String, dynamic>);
-        return user.nom.toLowerCase().contains(query) ||
-            user.pseudo.toLowerCase().contains(query) ||
-            user.alanyaPhone.toLowerCase().contains(query);
-      }).toList();
-    });
   }
 
   Future<void> _initiateCall(User user, bool isVideo) async {
@@ -104,46 +100,52 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _filteredContacts.length,
-                    itemBuilder: (context, index) {
-                      final contact = _filteredContacts[index];
-                      final user = contact is User ? contact : User.fromJson(contact as Map<String, dynamic>);
-
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        leading: CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.indigo.shade50,
-                          child: Text(
-                            user.nom[0].toUpperCase(),
-                            style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        title: Text(
-                          user.nom,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        subtitle: Text(
-                          '@${user.pseudo} • ${user.alanyaPhone}',
+                : _contacts.isEmpty && _searchController.text.length < 2
+                    ? Center(
+                        child: Text(
+                          'Type at least 2 characters to search...',
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.videocam, color: Colors.indigo),
-                              onPressed: () => _initiateCall(user, true),
+                      )
+                    : ListView.builder(
+                        itemCount: _contacts.length,
+                        itemBuilder: (context, index) {
+                          final user = _contacts[index];
+
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            leading: CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.indigo.shade50,
+                              child: Text(
+                                user.nom[0].toUpperCase(),
+                                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                              ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.call, color: Colors.green),
-                              onPressed: () => _initiateCall(user, false),
+                            title: Text(
+                              user.nom,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                            subtitle: Text(
+                              '@${user.pseudo} • ${user.alanyaPhone}',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.videocam, color: Colors.indigo),
+                                  onPressed: () => _initiateCall(user, true),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.call, color: Colors.green),
+                                  onPressed: () => _initiateCall(user, false),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
