@@ -100,9 +100,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   icon: const Icon(Icons.keyboard_arrow_down, color: Colors.indigo),
                   items: eventTypes.map((String value) {
                     IconData icon;
-                    if (value == 'Video Meeting') icon = CupertinoIcons.videocam_circle;
-                    else if (value == 'Video Call') icon = CupertinoIcons.video_camera;
-                    else icon = CupertinoIcons.phone;
+                    if (value == 'Video Meeting') {
+                      icon = CupertinoIcons.videocam_circle;
+                    } else if (value == 'Video Call') {
+                      icon = CupertinoIcons.video_camera;
+                    } else {
+                      icon = CupertinoIcons.phone;
+                    }
 
                     return DropdownMenuItem<String>(
                       value: value,

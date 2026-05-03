@@ -10,12 +10,11 @@ class AppException implements Exception {
 }
 
 class AuthException extends AppException {
-  AuthException(String message, {String? code, int? statusCode})
-      : super(message, code: code, statusCode: statusCode);
+  AuthException(super.message, {super.code, super.statusCode});
 }
 
 class NetworkException extends AppException {
-  NetworkException(String message) : super(message, code: 'NETWORK_ERROR');
+  NetworkException(super.message) : super(code: 'NETWORK_ERROR');
 }
 
 class TokenExpiredException extends AuthException {

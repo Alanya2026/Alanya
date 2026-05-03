@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../talky_api_client.dart';
 import '../../core/services/meeting_service.dart';
 import 'ongoing_meet_screen.dart';
 
@@ -35,8 +36,17 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
     setState(() => _isJoining = true);
 
     try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final userData = await apiClient.getMe();
+      final myId = userData['alanyaID'] ?? 0;
+      final myName = userData['nom'] ?? userData['pseudo'] ?? '';
+
       final meetingService = Provider.of<MeetingService>(context, listen: false);
-      await meetingService.joinMeetingByCode(_codeController.text.trim());
+      await meetingService.joinByRoom(
+        roomCode: _codeController.text.trim(),
+        myId: myId,
+        myName: myName,
+      );
 
       if (context.mounted) {
         Navigator.pushReplacement(

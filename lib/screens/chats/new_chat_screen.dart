@@ -131,20 +131,20 @@ class _NewChatScreenState extends State<NewChatScreen> {
                             ),
                           ),
                           onTap: () async {
-                            // Créer ou récupérer la conversation
                             final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
                             try {
                               final conv = await apiClient.createConversation(
-                                participants: [user.alanyaID],
+                                participantID: user.alanyaID,
                               );
                               if (context.mounted) {
-                                Navigator.pop(context); // Ferme NewChatScreen
+                                Navigator.pop(context);
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => ChatDetailScreen(
                                       userName: user.nom,
-                                      conversationId: conv is Map ? (conv['idConversation'] ?? conv['idConversation']) : null,
+                                      conversationId: conv['conversID'],
+                                      userId: user.alanyaID,
                                     ),
                                   ),
                                 );

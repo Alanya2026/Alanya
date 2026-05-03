@@ -1,3 +1,42 @@
+// call_service.dart — aligné sur le backend Node.js
+//
+// Événements corrects (backend/src/socket/handlers/calls.js) :
+//
+// Flutter → Backend
+//   call_user        { targetUserId, callerId, callerName, callerPhoto, isVideo, offer:{sdp,type} }
+//   answer_call      { callerId, answer:{sdp,type} }
+//   reject_call      { callerId }
+//   end_call         { targetUserId }
+//   ice_candidate    { targetUserId, candidate:{candidate,sdpMid,sdpMLineIndex} }
+//
+// Backend → Flutter
+//   incoming_call    { callerId, callerName, callerPhoto, isVideo, offer:{sdp,type} }
+//   call_answered    { answer:{sdp,type} }
+//   call_rejected    {}
+//   call_ended       {}
+//   call_failed      { reason }
+//   ice_candidate    { candidate:{candidate,sdpMid,sdpMLineIndex} }
+//
+// Appels groupe :
+//   Flutter → Backend
+//     create_group_call  { roomId, callerId, callerName, callerPhoto, isVideo, targetUserIds:[] }
+//     join_group_call    { roomId, userId, userName, userPhoto }
+//     leave_group_call   { roomId }
+//     end_group_call     { roomId }
+//     group_offer        { roomId, fromUserId, toUserId, offer }
+//     group_answer       { roomId, fromUserId, toUserId, answer }
+//     group_ice_candidate{ roomId, fromUserId, toUserId, candidate }
+//
+//   Backend → Flutter
+//     group_call_invite  { callerId, callerName, callerPhoto, isVideo, roomId }
+//     group_user_joined  { roomId, userId, userName, userPhoto }
+//     group_participants { roomId, participants:[] }
+//     group_call_ended   {}
+//     group_user_left    { roomId, userId }
+//     group_offer        { fromUserId, offer, roomId }
+//     group_answer       { fromUserId, answer, roomId }
+//     group_ice_candidate{ fromUserId, candidate, roomId }
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -5,23 +44,42 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'webrtc_service.dart';
 
-enum CallStatus { idle, outgoing, incoming, connecting, connected, ended }
+enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
 
 class CallService extends ChangeNotifier {
   final TalkyApiClient _apiClient;
   final WebRTCService _webrtc = WebRTCService();
 
   CallStatus _status = CallStatus.idle;
-  Call? _currentCall;
+
+  // Données de l'appel en cours (1-à-1)
+  int? _remoteUserId;       // targetUserId ou callerId selon le sens
+  String? _remoteUserName;
+  String? _remoteUserPhoto;
+  bool _isVideo = false;
+  Map<String, dynamic>? _pendingOffer; // offer reçu avant réponse
+
+  // Contrôles médias
   bool _isMuted = false;
   bool _isSpeakerOn = false;
   bool _isVideoOn = true;
+
+  // Durée
   Timer? _durationTimer;
   int _callDuration = 0;
-  Map<String, dynamic>? _pendingOffer;
 
+  // ── Appels de groupe ───────────────────────────────────────────────
+  String? _groupRoomId;
+  final Map<String, RTCPeerConnection> _groupPeerConnections = {};
+  final Map<String, MediaStream> _groupRemoteStreams = {};
+  List<String> _groupParticipants = [];
+
+  // ── Getters ────────────────────────────────────────────────────────
   CallStatus get status => _status;
-  Call? get currentCall => _currentCall;
+  int? get remoteUserId => _remoteUserId;
+  String? get remoteUserName => _remoteUserName;
+  String? get remoteUserPhoto => _remoteUserPhoto;
+  bool get isVideo => _isVideo;
   bool get isMuted => _isMuted;
   bool get isSpeakerOn => _isSpeakerOn;
   bool get isVideoOn => _isVideoOn;
@@ -29,149 +87,543 @@ class CallService extends ChangeNotifier {
   MediaStream? get localStream => _webrtc.localStream;
   MediaStream? get remoteStream => _webrtc.remoteStream;
 
-  CallService({TalkyApiClient? apiClient})
-      : _apiClient = apiClient ?? TalkyApiClient() {
+  String? get groupRoomId => _groupRoomId;
+  Map<String, MediaStream> get groupRemoteStreams => _groupRemoteStreams;
+  List<String> get groupParticipants => _groupParticipants;
+
+  Call? get currentCall {
+    if (_remoteUserId == null && _remoteUserName == null) return null;
+    return Call(
+      idCall: 0,
+      idCaller: _remoteUserId ?? 0,
+      idReceiver: 0,
+      type: _isVideo ? 1 : 0,
+      status: _status == CallStatus.incoming ? 0 : 1,
+      createdAt: '',
+      caller: _remoteUserId != null
+          ? User(
+              alanyaID: _remoteUserId!,
+              nom: _remoteUserName ?? '',
+              pseudo: '',
+              alanyaPhone: '',
+              email: '',
+              idPays: 1,
+              avatarUrl: _remoteUserPhoto ?? '',
+              typeCompte: 0,
+              isOnline: false,
+              lastSeen: '',
+            )
+          : null,
+    );
+  }
+
+  CallService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
     _setupSocketListeners();
   }
 
+  // ── SETUP LISTENERS ────────────────────────────────────────────────
+
   void _setupSocketListeners() {
-    _apiClient.onSocketEvent('call:incoming', (data) {
-      _currentCall = Call.fromJson(data);
-      _pendingOffer = data['offer'];
+    // ── Appels 1-à-1 ──────────────────────────────────────────────
+
+    // Appel entrant
+    _apiClient.onSocketEvent(SocketEvents.incomingCall, (data) {
+      if (data is! Map) return;
+      _remoteUserId = int.tryParse(data['callerId'].toString());
+      _remoteUserName = data['callerName'] as String?;
+      _remoteUserPhoto = data['callerPhoto'] as String?;
+      _isVideo = data['isVideo'] == true;
+      _pendingOffer = data['offer'] as Map<String, dynamic>?;
       _status = CallStatus.incoming;
       notifyListeners();
     });
 
-    _apiClient.onSocketEvent('call:answer', (data) async {
-      if (data['accepted'] == true && data['sdp'] != null) {
+    // Appel accepté par l'autre
+    _apiClient.onSocketEvent(SocketEvents.callAnswered, (data) async {
+      if (data is! Map || data['answer'] == null) return;
+      try {
+        final answer = data['answer'] as Map;
         await _webrtc.handleAnswer(
-          RTCSessionDescription(data['sdp'], 'answer'),
+          RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
         _status = CallStatus.connected;
         _startDurationTimer();
-      } else {
+      } catch (e) {
+        debugPrint('[CallService] Erreur handleAnswer: $e');
         _status = CallStatus.ended;
       }
       notifyListeners();
     });
 
-    _apiClient.onSocketEvent('ice:candidate', (data) {
-      if (data['candidate'] != null) {
-        _webrtc.addIceCandidate(
-          RTCIceCandidate(
-            data['candidate']['candidate'],
-            data['candidate']['sdpMid'],
-            data['candidate']['sdpMLineIndex'],
-          ),
+    // Appel rejeté
+    _apiClient.onSocketEvent(SocketEvents.callRejected, (_) {
+      _resetCallState();
+      _status = CallStatus.ended;
+      notifyListeners();
+    });
+
+    // Appel terminé par l'autre
+    _apiClient.onSocketEvent(SocketEvents.callEnded, (_) {
+      _terminateCall();
+    });
+
+    // Appel échoué (destinataire non disponible)
+    _apiClient.onSocketEvent(SocketEvents.callFailed, (data) {
+      debugPrint('[CallService] Appel échoué: ${data?['reason']}');
+      _resetCallState();
+      _status = CallStatus.ended;
+      notifyListeners();
+    });
+
+    // ICE candidate 1-à-1
+    _apiClient.onSocketEvent(SocketEvents.iceCandidate, (data) {
+      if (data is! Map || data['candidate'] == null) return;
+      final c = data['candidate'] as Map;
+      _webrtc.addIceCandidate(RTCIceCandidate(
+        c['candidate'] as String,
+        c['sdpMid'] as String?,
+        c['sdpMLineIndex'] as int?,
+      ));
+    });
+
+    // ── Appels de groupe ──────────────────────────────────────────
+
+    // Invitation à un appel de groupe
+    _apiClient.onSocketEvent(SocketEvents.groupCallInvite, (data) {
+      if (data is! Map) return;
+      _remoteUserId = int.tryParse(data['callerId'].toString());
+      _remoteUserName = data['callerName'] as String?;
+      _remoteUserPhoto = data['callerPhoto'] as String?;
+      _isVideo = data['isVideo'] == true;
+      _groupRoomId = data['roomId'] as String?;
+      _status = CallStatus.incoming;
+      notifyListeners();
+    });
+
+    // Nouveau participant dans le groupe
+    _apiClient.onSocketEvent(SocketEvents.groupUserJoined, (data) async {
+      if (data is! Map) return;
+      final userId = data['userId'].toString();
+      if (_groupPeerConnections.containsKey(userId)) return;
+      await _createGroupPeerAndOffer(userId);
+    });
+
+    // Liste des participants existants (reçu après join)
+    _apiClient.onSocketEvent(SocketEvents.groupParticipants, (data) {
+      if (data is! Map) return;
+      final participants = (data['participants'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      _groupParticipants = participants;
+      notifyListeners();
+    });
+
+    // Participant quitte le groupe
+    _apiClient.onSocketEvent(SocketEvents.groupUserLeft, (data) {
+      if (data is! Map) return;
+      final userId = data['userId'].toString();
+      _removeGroupPeer(userId);
+    });
+
+    // Appel de groupe terminé
+    _apiClient.onSocketEvent(SocketEvents.groupCallEnded, (_) {
+      _terminateGroupCall();
+    });
+
+    // WebRTC groupe : offer reçue
+    _apiClient.onSocketEvent(SocketEvents.groupOffer, (data) async {
+      if (data is! Map) return;
+      final fromUserId = data['fromUserId'].toString();
+      final offer = data['offer'] as Map?;
+      if (offer == null) return;
+      await _handleGroupOffer(fromUserId, offer);
+    });
+
+    // WebRTC groupe : answer reçue
+    _apiClient.onSocketEvent(SocketEvents.groupAnswer, (data) async {
+      if (data is! Map) return;
+      final fromUserId = data['fromUserId'].toString();
+      final answer = data['answer'] as Map?;
+      if (answer == null) return;
+      final pc = _groupPeerConnections[fromUserId];
+      if (pc != null) {
+        await pc.setRemoteDescription(
+          RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
       }
     });
 
-    _apiClient.onSocketEvent('call:end', (_) {
-      endCall();
+    // WebRTC groupe : ICE candidate reçu
+    _apiClient.onSocketEvent(SocketEvents.groupIceCandidate, (data) {
+      if (data is! Map) return;
+      final fromUserId = data['fromUserId'].toString();
+      final c = data['candidate'] as Map?;
+      if (c == null) return;
+      _groupPeerConnections[fromUserId]?.addCandidate(RTCIceCandidate(
+        c['candidate'] as String,
+        c['sdpMid'] as String?,
+        c['sdpMLineIndex'] as int?,
+      ));
     });
   }
 
+  // ── APPELS 1-À-1 ──────────────────────────────────────────────────
+
+  /// Lance un appel vers [targetUserId].
+  /// [myId] et [myName] sont nécessaires pour le payload backend.
   Future<void> initiateCall({
-    required int receiverId,
+    required int targetUserId,
+    required int myId,
+    required String myName,
+    String? myPhoto,
     required bool isVideo,
   }) async {
+    if (_status != CallStatus.idle) return;
     _status = CallStatus.outgoing;
+    _remoteUserId = targetUserId;
+    _isVideo = isVideo;
     notifyListeners();
 
     try {
-      final callType = isVideo ? 'video' : 'audio';
-      final data = await _apiClient.initiateCall(
-        receiverId: receiverId,
-        type: callType,
-      );
-
-      _currentCall = Call.fromJson(data);
       await _webrtc.init(isVideo ? CallType.video : CallType.audio);
 
+      // ICE candidates → envoyés au destinataire
       _webrtc.onIceCandidate = (candidate) {
-        _apiClient.sendSocketEvent('ice:candidate', {
-          'callId': _currentCall!.idAppel,
-          'candidate': candidate.toMap(),
+        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
+          'targetUserId': targetUserId.toString(),
+          'candidate': {
+            'candidate': candidate.candidate,
+            'sdpMid': candidate.sdpMid,
+            'sdpMLineIndex': candidate.sdpMLineIndex,
+          },
         });
       };
 
       final offer = await _webrtc.createOffer();
-      _pendingOffer = offer.toMap();
 
-      _apiClient.sendSocketEvent('call:user', {
-        'receiverId': receiverId,
-        'type': callType,
-        'offer': _pendingOffer,
+      // ✅ Payload exact attendu par le backend
+      _apiClient.sendSocketEvent(SocketEvents.callUser, {
+        'targetUserId': targetUserId.toString(),
+        'callerId': myId.toString(),
+        'callerName': myName,
+        'callerPhoto': myPhoto,
+        'isVideo': isVideo,
+        'offer': {
+          'sdp': offer.sdp,
+          'type': offer.type,
+        },
       });
 
       _status = CallStatus.connecting;
       notifyListeners();
     } catch (e) {
+      debugPrint('[CallService] Erreur initiateCall: $e');
+      await _webrtc.dispose();
+      _resetCallState();
       _status = CallStatus.ended;
       notifyListeners();
     }
   }
 
+  /// Accepte l'appel entrant.
   Future<void> answerCall() async {
-    if (_currentCall == null) return;
+    if (_status != CallStatus.incoming || _remoteUserId == null) return;
 
     try {
-      await _webrtc.init(
-        _currentCall!.type == 'video' ? CallType.video : CallType.audio,
-      );
+      await _webrtc.init(_isVideo ? CallType.video : CallType.audio);
 
+      // ICE candidates → envoyés à l'appelant
       _webrtc.onIceCandidate = (candidate) {
-        _apiClient.sendSocketEvent('ice:candidate', {
-          'callId': _currentCall!.idAppel,
-          'candidate': candidate.toMap(),
+        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
+          'targetUserId': _remoteUserId.toString(),
+          'candidate': {
+            'candidate': candidate.candidate,
+            'sdpMid': candidate.sdpMid,
+            'sdpMLineIndex': candidate.sdpMLineIndex,
+          },
         });
       };
 
       if (_pendingOffer != null) {
         await _webrtc.handleOffer(
-          RTCSessionDescription(_pendingOffer!['sdp'], 'offer'),
+          RTCSessionDescription(_pendingOffer!['sdp'] as String, 'offer'),
         );
       }
 
       final answer = await _webrtc.createAnswer();
-      _apiClient.sendSocketEvent('call:answer', {
-        'callId': _currentCall!.idAppel,
-        'accepted': true,
-        'sdp': answer.toMap()['sdp'],
+
+      // ✅ Payload exact attendu par le backend
+      _apiClient.sendSocketEvent(SocketEvents.answerCall, {
+        'callerId': _remoteUserId.toString(),
+        'answer': {
+          'sdp': answer.sdp,
+          'type': answer.type,
+        },
       });
 
       _status = CallStatus.connected;
       _startDurationTimer();
       notifyListeners();
     } catch (e) {
+      debugPrint('[CallService] Erreur answerCall: $e');
+      await rejectCall();
+    }
+  }
+
+  /// Rejette l'appel entrant.
+  Future<void> rejectCall() async {
+    if (_remoteUserId == null) return;
+
+    // ✅ Payload exact attendu par le backend
+    _apiClient.sendSocketEvent(SocketEvents.rejectCall, {
+      'callerId': _remoteUserId.toString(),
+    });
+
+    _resetCallState();
+    _status = CallStatus.ended;
+    notifyListeners();
+  }
+
+  /// Termine l'appel en cours.
+  Future<void> endCall() async {
+    if (_remoteUserId != null) {
+      // ✅ Payload exact attendu par le backend
+      _apiClient.sendSocketEvent(SocketEvents.endCall, {
+        'targetUserId': _remoteUserId.toString(),
+      });
+    }
+    await _terminateCall();
+  }
+
+  Future<void> _terminateCall() async {
+    await _webrtc.dispose();
+    _durationTimer?.cancel();
+    _resetCallState();
+    _status = CallStatus.ended;
+    notifyListeners();
+  }
+
+  void _resetCallState() {
+    _remoteUserId = null;
+    _remoteUserName = null;
+    _remoteUserPhoto = null;
+    _pendingOffer = null;
+    _callDuration = 0;
+    _isMuted = false;
+    _isVideoOn = true;
+    _isSpeakerOn = false;
+    _durationTimer?.cancel();
+  }
+
+  // ── APPELS DE GROUPE ───────────────────────────────────────────────
+
+  /// Crée un appel de groupe et invite [targetUserIds].
+  Future<void> createGroupCall({
+    required String roomId,
+    required int myId,
+    required String myName,
+    String? myPhoto,
+    required List<int> targetUserIds,
+    required bool isVideo,
+  }) async {
+    if (_status != CallStatus.idle) return;
+    _groupRoomId = roomId;
+    _status = CallStatus.outgoing;
+    notifyListeners();
+
+    try {
+      await _initLocalStream(isVideo);
+
+      // ✅ Payload exact attendu par le backend
+      _apiClient.sendSocketEvent(SocketEvents.createGroupCall, {
+        'roomId': roomId,
+        'callerId': myId.toString(),
+        'callerName': myName,
+        'callerPhoto': myPhoto,
+        'isVideo': isVideo,
+        'targetUserIds': targetUserIds.map((id) => id.toString()).toList(),
+      });
+
+      _status = CallStatus.connected;
+      _startDurationTimer();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[CallService] Erreur createGroupCall: $e');
       _status = CallStatus.ended;
       notifyListeners();
     }
   }
 
-  Future<void> rejectCall() async {
-    if (_currentCall == null) return;
-    _apiClient.sendSocketEvent('call:reject', {'callId': _currentCall!.idAppel});
+  /// Rejoint un appel de groupe existant (après invitation).
+  Future<void> joinGroupCall({
+    required String roomId,
+    required int myId,
+    required String myName,
+    String? myPhoto,
+    required bool isVideo,
+  }) async {
+    _groupRoomId = roomId;
+    _status = CallStatus.joining;
+    notifyListeners();
+
+    try {
+      await _initLocalStream(isVideo);
+
+      // ✅ Payload exact attendu par le backend
+      _apiClient.sendSocketEvent(SocketEvents.joinGroupCall, {
+        'roomId': roomId,
+        'userId': myId.toString(),
+        'userName': myName,
+        'userPhoto': myPhoto,
+      });
+
+      _status = CallStatus.connected;
+      _startDurationTimer();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[CallService] Erreur joinGroupCall: $e');
+      _status = CallStatus.ended;
+      notifyListeners();
+    }
+  }
+
+  Future<void> leaveGroupCall() async {
+    if (_groupRoomId == null) return;
+
+    _apiClient.sendSocketEvent(SocketEvents.leaveGroupCall, {
+      'roomId': _groupRoomId,
+    });
+
+    await _terminateGroupCall();
+  }
+
+  Future<void> endGroupCall() async {
+    if (_groupRoomId == null) return;
+
+    _apiClient.sendSocketEvent(SocketEvents.endGroupCall, {
+      'roomId': _groupRoomId,
+    });
+
+    await _terminateGroupCall();
+  }
+
+  Future<void> _terminateGroupCall() async {
+    for (final pc in _groupPeerConnections.values) {
+      await pc.close();
+    }
+    _groupPeerConnections.clear();
+    _groupRemoteStreams.clear();
+    _groupParticipants.clear();
+    await _webrtc.dispose();
+    _durationTimer?.cancel();
+    _groupRoomId = null;
+    _callDuration = 0;
     _status = CallStatus.ended;
-    _currentCall = null;
-    _pendingOffer = null;
     notifyListeners();
   }
 
-  Future<void> endCall() async {
-    if (_currentCall != null) {
-      await _apiClient.endCall(_currentCall!.idAppel);
-      _apiClient.sendSocketEvent('call:end', {'callId': _currentCall!.idAppel});
+  Future<void> _initLocalStream(bool isVideo) async {
+    await _webrtc.init(isVideo ? CallType.video : CallType.audio);
+  }
+
+  Future<void> _createGroupPeerAndOffer(String userId) async {
+    final pc = await _createGroupPeerConnection(userId);
+
+    _webrtc.localStream?.getTracks().forEach((track) {
+      pc.addTrack(track, _webrtc.localStream!);
+    });
+
+    final offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // ✅ Payload exact attendu par le backend
+    _apiClient.sendSocketEvent(SocketEvents.groupOffer, {
+      'roomId': _groupRoomId,
+      'fromUserId': '', // rempli par socket.alanyaID côté serveur
+      'toUserId': userId,
+      'offer': {'sdp': offer.sdp, 'type': offer.type},
+    });
+  }
+
+  Future<void> _handleGroupOffer(String fromUserId, Map offer) async {
+    final pc = await _createGroupPeerConnection(fromUserId);
+
+    await pc.setRemoteDescription(
+      RTCSessionDescription(offer['sdp'] as String, 'offer'),
+    );
+
+    _webrtc.localStream?.getTracks().forEach((track) {
+      pc.addTrack(track, _webrtc.localStream!);
+    });
+
+    final answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    // ✅ Payload exact attendu par le backend
+    _apiClient.sendSocketEvent(SocketEvents.groupAnswer, {
+      'roomId': _groupRoomId,
+      'fromUserId': '',
+      'toUserId': fromUserId,
+      'answer': {'sdp': answer.sdp, 'type': answer.type},
+    });
+  }
+
+  Future<RTCPeerConnection> _createGroupPeerConnection(String userId) async {
+    if (_groupPeerConnections.containsKey(userId)) {
+      return _groupPeerConnections[userId]!;
     }
-    await _webrtc.dispose();
-    _durationTimer?.cancel();
-    _status = CallStatus.ended;
-    _currentCall = null;
-    _pendingOffer = null;
-    _callDuration = 0;
+
+    const iceConfig = {
+      'iceServers': [
+        {'urls': 'stun:stun.l.google.com:19302'},
+        {'urls': 'stun:stun1.l.google.com:19302'},
+        {
+          'urls': [
+            'turn:global.relay.metered.ca:80',
+            'turn:global.relay.metered.ca:80?transport=tcp',
+            'turn:global.relay.metered.ca:443',
+            'turns:global.relay.metered.ca:443?transport=tcp',
+          ],
+          'username': '4ccd30e6211751522c93c044',
+          'credential': 'iB+/hPI3lLayZAKn',
+        },
+      ],
+    };
+
+    final pc = await createPeerConnection(iceConfig);
+
+    pc.onTrack = (event) {
+      if (event.streams.isNotEmpty) {
+        _groupRemoteStreams[userId] = event.streams[0];
+        notifyListeners();
+      }
+    };
+
+    pc.onIceCandidate = (candidate) {
+      // ✅ Payload exact attendu par le backend
+      _apiClient.sendSocketEvent(SocketEvents.groupIceCandidate, {
+        'roomId': _groupRoomId,
+        'fromUserId': '',
+        'toUserId': userId,
+        'candidate': {
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        },
+      });
+    };
+
+    _groupPeerConnections[userId] = pc;
+    return pc;
+  }
+
+  void _removeGroupPeer(String userId) {
+    _groupPeerConnections[userId]?.close();
+    _groupPeerConnections.remove(userId);
+    _groupRemoteStreams.remove(userId);
+    _groupParticipants.remove(userId);
     notifyListeners();
   }
+
+  // ── CONTRÔLES MÉDIAS ──────────────────────────────────────────────
 
   Future<void> toggleMute() async {
     await _webrtc.toggleMic();
@@ -189,24 +641,36 @@ class CallService extends ChangeNotifier {
     await _webrtc.switchCamera();
   }
 
+  void toggleSpeaker() {
+    _isSpeakerOn = !_isSpeakerOn;
+    // Note: flutter_webrtc gère le speaker via Helper.setSpeakerphoneOn
+    notifyListeners();
+  }
+
+  // ── TIMER ─────────────────────────────────────────────────────────
+
   void _startDurationTimer() {
     _callDuration = 0;
-    _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _durationTimer?.cancel();
+    _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _callDuration++;
       notifyListeners();
     });
   }
 
   String get formattedDuration {
-    final minutes = _callDuration ~/ 60;
-    final seconds = _callDuration % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final m = _callDuration ~/ 60;
+    final s = _callDuration % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   @override
   void dispose() {
     _durationTimer?.cancel();
     _webrtc.dispose();
+    for (final pc in _groupPeerConnections.values) {
+      pc.close();
+    }
     super.dispose();
   }
 }

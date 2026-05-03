@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final data = await apiClient.getMe();
       setState(() {
         // Backend returns an object directly (rows[0])
-        final Map<String, dynamic> userData = data is Map ? data : data[0];
+        final Map<String, dynamic> userData = data;
         _user = User.fromJson(userData);
         _isLoading = false;
       });

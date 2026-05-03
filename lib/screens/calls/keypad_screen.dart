@@ -44,7 +44,9 @@ class _KeypadScreenState extends State<KeypadScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final userData = await apiClient.getUserByPhone(_phoneNumber);
       setState(() {
-        _foundUser = User.fromJson(userData);
+        _foundUser = userData.isNotEmpty
+            ? User.fromJson(userData[0] as Map<String, dynamic>)
+            : null;
         _isSearching = false;
       });
     } catch (e) {
@@ -66,9 +68,15 @@ class _KeypadScreenState extends State<KeypadScreen> {
       if (_foundUser == null) return;
     }
 
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final userData = await apiClient.getMe();
+    final myId = userData['alanyaID'] ?? 0;
+
     final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
-      receiverId: _foundUser!.alanyaID,
+      targetUserId: _foundUser!.alanyaID,
+      myId: myId,
+      myName: userData['nom'] ?? userData['pseudo'] ?? '',
       isVideo: isVideo,
     );
     if (context.mounted) {

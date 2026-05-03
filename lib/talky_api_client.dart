@@ -1,49 +1,83 @@
+// talky_api_client.dart — aligné avec le backend Alanya
+// Routes, champs et socket events corrects
+
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'talky_models.dart';
 
 class TalkyApiClient {
-  static const String baseUrl = 'http://158.220.107.211/api';
-  static const String socketUrl = 'http://158.220.107.211';
+  // ⚠️ Remplace par ton IP/domaine de production
+  static const String baseUrl   = 'http://158.220.107.211/api';
+  static const String socketUrl = 'http://158.220.107.211/';
 
   String? _accessToken;
   String? _refreshToken;
-  IO.Socket? _socket;
+  io.Socket? _socket;
   final http.Client _client;
 
-  String? get accessToken => _accessToken;
+  // Callbacks Socket globaux (pour CallService, MeetingService)
+  final Map<String, List<Function(dynamic)>> _socketListeners = {};
+
+  String? get accessToken        => _accessToken;
   String? get currentRefreshToken => _refreshToken;
+  bool   get isSocketConnected   => _socket?.connected ?? false;
 
   TalkyApiClient({http.Client? client}) : _client = client ?? http.Client();
 
   void setToken(String token) => _accessToken = token;
 
   Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
-  };
+        'Content-Type': 'application/json',
+        if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+      };
 
-  Future<Map<String, dynamic>> _handleRequest(Future<http.Response> Function() request) async {
+  // ── HTTP HELPER ───────────────────────────────────────────────────
+
+  Future<dynamic> _handleRequest(Future<http.Response> Function() request) async {
     try {
-      final response = await request();
-      if (response.statusCode == 401 && _refreshToken != null) {
-        try {
-          await refreshToken();
-          final retried = await request();
-          return _parseResponse(retried);
-        } catch (_) {
-          throw TalkyException('Session expired', 401);
+      final response = await request().timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 401) {
+        if (_refreshToken != null) {
+          try {
+            await _refreshAccessToken();
+            final retried = await request().timeout(const Duration(seconds: 15));
+            return _parseResponse(retried);
+          } catch (_) {
+            throw TalkyException('Session expirée', 401);
+          }
         }
+        throw TalkyException('Non authentifié', 401);
       }
       return _parseResponse(response);
+    } on TalkyException {
+      rethrow;
+    } on TimeoutException {
+      throw TalkyException('Timeout réseau', 0);
     } catch (e) {
-      if (e is TalkyException) rethrow;
-      throw TalkyException('Network error: $e', 0);
+      throw TalkyException('Erreur réseau: $e', 0);
     }
   }
 
-  // ── AUTH ─────────────────────────────────────────────────────────────
+  dynamic _parseResponse(http.Response response) {
+    try {
+      final body = jsonDecode(response.body);
+      if (response.statusCode >= 400) {
+        final msg = body is Map ? (body['error'] ?? 'Erreur serveur') : 'Erreur serveur';
+        throw TalkyException(msg.toString(), response.statusCode);
+      }
+      return body;
+    } catch (e) {
+      if (e is TalkyException) rethrow;
+      throw TalkyException('Réponse invalide (${response.statusCode})', response.statusCode);
+    }
+  }
+
+  // ── AUTH ──────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> register({
     required String email,
@@ -67,17 +101,10 @@ class TalkyApiClient {
         if (deviceId != null) 'device_ID': deviceId,
       }),
     );
-
     final data = _parseResponse(response);
-    if (response.statusCode == 201) {
-      _accessToken = data['accessToken'];
-      _refreshToken = data['refreshToken'];
-      return data;
-    }
-    throw TalkyException(
-      data['error'] ?? 'Registration failed',
-      response.statusCode,
-    );
+    _accessToken  = data['accessToken'];
+    _refreshToken = data['refreshToken'];
+    return data as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> login({
@@ -96,61 +123,33 @@ class TalkyApiClient {
         if (deviceId != null) 'device_ID': deviceId,
       }),
     );
-
     final data = _parseResponse(response);
-    if (response.statusCode == 200) {
-      _accessToken = data['accessToken'];
-      _refreshToken = data['refreshToken'];
-      return data;
-    }
-    throw TalkyException(data['error'] ?? 'Login failed', response.statusCode);
+    _accessToken  = data['accessToken'];
+    _refreshToken = data['refreshToken'];
+    return data as Map<String, dynamic>;
   }
 
-  Future<String> refreshToken() async {
-    if (_refreshToken == null) throw TalkyException('No refresh token', 401);
-
+  Future<void> _refreshAccessToken() async {
+    if (_refreshToken == null) throw TalkyException('Pas de refresh token', 401);
     final response = await _client.post(
       Uri.parse('$baseUrl/auth/refresh'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'refreshToken': _refreshToken}),
     );
-
     final data = jsonDecode(response.body);
     if (response.statusCode == 200) {
-      _accessToken = data['accessToken'];
+      _accessToken  = data['accessToken'];
       _refreshToken = data['refreshToken'];
-      return _accessToken!;
-    }
-    throw TalkyException(
-      data['error'] ?? 'Token refresh failed',
-      response.statusCode,
-    );
-  }
-
-  Future<void> resetPassword({
-    required String email,
-    required String newPassword,
-  }) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/auth/reset-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'newPassword': newPassword}),
-    );
-
-    if (response.statusCode != 200) {
-      final data = jsonDecode(response.body);
-      throw TalkyException(
-        data['error'] ?? 'Reset failed',
-        response.statusCode,
-      );
+    } else {
+      throw TalkyException(data['error'] ?? 'Refresh échoué', response.statusCode);
     }
   }
 
   Future<Map<String, dynamic>> getMe() async {
-    return _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/auth/me'),
-      headers: _headers,
-    ));
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/auth/me'), headers: _headers),
+    );
+    return data as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> updateMe({
@@ -161,319 +160,466 @@ class TalkyApiClient {
     String? deviceId,
     bool? isOnline,
   }) async {
-    return _handleRequest(() => _client.put(
-      Uri.parse('$baseUrl/auth/me'),
-      headers: _headers,
-      body: jsonEncode({
-        if (nom != null) 'nom': nom,
-        if (pseudo != null) 'pseudo': pseudo,
-        if (avatarUrl != null) 'avatar_url': avatarUrl,
-        if (fcmToken != null) 'fcm_token': fcmToken,
-        if (deviceId != null) 'device_ID': deviceId,
-        if (isOnline != null) 'is_online': isOnline,
-      }),
-    ));
+    final data = await _handleRequest(
+      () => _client.put(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: _headers,
+        body: jsonEncode({
+          if (nom != null) 'nom': nom,
+          if (pseudo != null) 'pseudo': pseudo,
+          if (avatarUrl != null) 'avatar_url': avatarUrl,
+          if (fcmToken != null) 'fcm_token': fcmToken,
+          if (deviceId != null) 'device_ID': deviceId,
+          if (isOnline != null) 'is_online': isOnline ? 1 : 0,
+        }),
+      ),
+    );
+    return data as Map<String, dynamic>;
   }
 
   void logout() {
-    _accessToken = null;
+    _accessToken  = null;
     _refreshToken = null;
     disconnectSocket();
   }
 
-  // ── USERS ────────────────────────────────────────────────────────────
+  // ── USERS ─────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getUsers() async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/users'),
-      headers: _headers,
-    ));
-    return data is List ? data : data['users'] ?? [];
+  Future<Map<String, dynamic>> getUserById(int alanyaID) async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/users/$alanyaID'), headers: _headers),
+    );
+    return data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getUser(int alanyaID) async {
-    return _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/users/$alanyaID'),
-      headers: _headers,
-    ));
+  Future<List<dynamic>> getUserByPhone(String phone) async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/users/phone/$phone'), headers: _headers),
+    );
+    return data is List ? data : [data];
   }
 
   Future<List<dynamic>> searchUsers(String query) async {
-    try {
-      final response = await _client.get(
-        Uri.parse('$baseUrl/users/search?q=$query'),
-        headers: _headers,
-      );
-      final data = jsonDecode(response.body);
-      if (data is List) return data;
-      if (data is Map && data['users'] != null) return data['users'];
-      return [];
-    } catch (e) {
-      if (e is TalkyException) rethrow;
-      throw TalkyException('Search failed: $e', 0);
-    }
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/users/search?q=$query'), headers: _headers),
+    );
+    return data is List ? data : [];
   }
 
-  // ── CONTACTS ─────────────────────────────────────────────────────────
-
-  Future<List<dynamic>> getContacts() async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/contacts'),
-      headers: _headers,
-    ));
-    return data is List ? data : data['contacts'] ?? [];
-  }
-
-  Future<void> addContact(int userId) async {
-    await _handleRequest(() => _client.post(
-      Uri.parse('$baseUrl/contacts/$userId'),
-      headers: _headers,
-    ));
-  }
-
-  Future<void> removeContact(int userId) async {
-    await _handleRequest(() => _client.delete(
-      Uri.parse('$baseUrl/contacts/$userId'),
-      headers: _headers,
-    ));
-  }
-
-  Future<bool> checkIsContact(int userId) async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/contacts/check/$userId'),
-      headers: _headers,
-    ));
-    return data['isContact'] ?? false;
-  }
-
-  // ── CONVERSATIONS ────────────────────────────────────────────────────
-
-  Future<List<dynamic>> getConversations() async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/conversations'),
-      headers: _headers,
-    ));
-    return data is List ? data : data['conversations'] ?? [];
-  }
-
-  Future<Map<String, dynamic>> createConversation({
-    required List<int> participants,
-    String? type,
-    String? nomGroupe,
-    String? description,
-    String? avatarUrl,
-  }) async {
-    return _handleRequest(() => _client.post(
-      Uri.parse('$baseUrl/conversations'),
-      headers: _headers,
-      body: jsonEncode({
-        'participants': participants,
-        if (type != null) 'type': type,
-        if (nomGroupe != null) 'nomGroupe': nomGroupe,
-        if (description != null) 'description': description,
-        if (avatarUrl != null) 'avatar_url': avatarUrl,
-      }),
-    ));
-  }
-
-  Future<Map<String, dynamic>> getConversation(int convId) async {
-    return _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/conversations/$convId'),
-      headers: _headers,
-    ));
-  }
-
-  // ── MESSAGES ────────────────────────────────────────────────────────
-
-  Future<List<dynamic>> getMessages(int conversationId, {int page = 1}) async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/conversations/$conversationId/messages?page=$page'),
-      headers: _headers,
-    ));
-    return data is List ? data : data['messages'] ?? [];
-  }
-
-  Future<Map<String, dynamic>> sendMessage({
-    required int conversationId,
-    required String contenu,
-    String type = 'text',
-    String? mediaUrl,
-    int? dureeVocal,
-  }) async {
-    return _handleRequest(() => _client.post(
-      Uri.parse('$baseUrl/conversations/$conversationId/messages'),
-      headers: _headers,
-      body: jsonEncode({
-        'contenu': contenu,
-        'type': type,
-        if (mediaUrl != null) 'media_url': mediaUrl,
-        if (dureeVocal != null) 'duree_vocal': dureeVocal,
-      }),
-    ));
-  }
-
-  Future<void> deleteMessage(int messageId) async {
-    await _handleRequest(() => _client.delete(
-      Uri.parse('$baseUrl/messages/$messageId'),
-      headers: _headers,
-    ));
-  }
-
-  // ── CALLS ────────────────────────────────────────────────────────────
-
-  Future<Map<String, dynamic>> initiateCall({
-    required int receiverId,
-    String type = 'audio',
-  }) async {
-    return _handleRequest(() => _client.post(
-      Uri.parse('$baseUrl/calls/initiate'),
-      headers: _headers,
-      body: jsonEncode({'receiver_id': receiverId, 'type': type}),
-    ));
-  }
-
-  Future<void> endCall(int callId) async {
-    await _handleRequest(() => _client.post(
-      Uri.parse('$baseUrl/calls/$callId/end'),
-      headers: _headers,
-    ));
-  }
-
-  Future<List<dynamic>> getCallHistory() async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/calls'),
-      headers: _headers,
-    ));
-    return data is List ? data : data['calls'] ?? [];
-  }
-
-  Future<List<dynamic>> getPreferredContacts() async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/contacts/preferred'),
-      headers: _headers,
-    ));
-    return data is List ? data : data['contacts'] ?? [];
-  }
-
-  Future<Map<String, dynamic>> getUserByPhone(String alanyaPhone) async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/users/phone/$alanyaPhone'),
-      headers: _headers,
-    ));
-    // Backend returns array, take first element
-    if (data is List && data.isNotEmpty) return data[0];
-    if (data is Map) return data;
-    throw TalkyException('User not found', 404);
-  }
-
-  // ── MEETINGS ─────────────────────────────────────────────────────────
-
-  Future<Map<String, dynamic>> createMeeting({
-    required String titre,
-    String? description,
-    required String dateDebut,
-    required String dateFin,
-    List<int>? participants,
-  }) async {
-    return _handleRequest(() => _client.post(
-      Uri.parse('$baseUrl/meetings'),
-      headers: _headers,
-      body: jsonEncode({
-        'titre': titre,
-        if (description != null) 'description': description,
-        'date_debut': dateDebut,
-        'date_fin': dateFin,
-        if (participants != null) 'participants': participants,
-      }),
-    ));
-  }
-
-  Future<List<dynamic>> getMeetings() async {
-    final data = await _handleRequest(() => _client.get(
-      Uri.parse('$baseUrl/meetings'),
-      headers: _headers,
-    ));
-    return data is List ? data : data['meetings'] ?? [];
-  }
-
-  // ── UPLOAD ───────────────────────────────────────────────────────────
-
-  Future<Map<String, dynamic>> uploadFile({
-    required File file,
-    String type = 'image',
-  }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload'));
-    request.headers['Authorization'] = 'Bearer $_accessToken';
-    request.files.add(await http.MultipartFile.fromPath('file', file.path));
-    request.fields['type'] = type;
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
-    }
-    throw TalkyException(
-      jsonDecode(response.body)['error'] ?? 'Upload failed',
-      response.statusCode,
+  Future<void> blockUser(int userId) async {
+    await _handleRequest(
+      () => _client.post(Uri.parse('$baseUrl/users/$userId/block'), headers: _headers),
     );
   }
 
-  // ── SOCKET.IO ───────────────────────────────────────────────────────
+  Future<void> unblockUser(int userId) async {
+    await _handleRequest(
+      () => _client.delete(Uri.parse('$baseUrl/users/$userId/block'), headers: _headers),
+    );
+  }
+
+  // ── CONTACTS PRÉFÉRÉS ─────────────────────────────────────────────
+
+  Future<List<dynamic>> getContacts() async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/contacts'), headers: _headers),
+    );
+    return data is List ? data : [];
+  }
+
+  Future<Map<String, dynamic>> addContact(int userId) async {
+    final data = await _handleRequest(
+      () => _client.post(Uri.parse('$baseUrl/contacts/$userId'), headers: _headers),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<void> removeContact(int userId) async {
+    await _handleRequest(
+      () => _client.delete(Uri.parse('$baseUrl/contacts/$userId'), headers: _headers),
+    );
+  }
+
+  Future<bool> checkIsContact(int userId) async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/contacts/check/$userId'), headers: _headers),
+    );
+    return (data as Map<String, dynamic>)['isContact'] == true;
+  }
+
+  // ── CONVERSATIONS ─────────────────────────────────────────────────
+
+  Future<List<dynamic>> getConversations() async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/conversations'), headers: _headers),
+    );
+    return data is List ? data : [];
+  }
+
+  /// Crée une conversation 1-1 — le backend attend { participantID }
+  Future<Map<String, dynamic>> createConversation({required int participantID}) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('$baseUrl/conversations'),
+        headers: _headers,
+        body: jsonEncode({'participantID': participantID}),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  /// Crée un groupe — le backend attend { participantIDs[], GroupName, groupPhoto }
+  Future<Map<String, dynamic>> createGroup({
+    required List<int> participantIDs,
+    required String groupName,
+    String? groupPhoto,
+  }) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('$baseUrl/conversations/group'),
+        headers: _headers,
+        body: jsonEncode({
+          'participantIDs': participantIDs,
+          'GroupName': groupName,
+          if (groupPhoto != null) 'groupPhoto': groupPhoto,
+        }),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getConversation(int conversID) async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/conversations/$conversID'), headers: _headers),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<void> markConversationAsRead(int conversID) async {
+    await _handleRequest(
+      () => _client.post(Uri.parse('$baseUrl/conversations/$conversID/read'), headers: _headers),
+    );
+  }
+
+  Future<void> leaveGroup(int conversID) async {
+    await _handleRequest(
+      () => _client.post(Uri.parse('$baseUrl/conversations/$conversID/leave'), headers: _headers),
+    );
+  }
+
+  // ── MESSAGES ──────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getMessages(int conversID, {int limit = 50, int? before}) async {
+    String url = '$baseUrl/conversations/$conversID/messages?limit=$limit';
+    if (before != null) url += '&before=$before';
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse(url), headers: _headers),
+    );
+    return data is List ? data : [];
+  }
+
+  Future<Map<String, dynamic>> sendMessage({
+    required int conversID,
+    String? content,
+    int type = 0,
+    String? mediaUrl,
+    String? mediaName,
+    int? mediaDuration,
+    int? replyToID,
+    String? replyToContent,
+  }) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('$baseUrl/conversations/$conversID/messages'),
+        headers: _headers,
+        body: jsonEncode({
+          if (content != null) 'content': content,
+          'type': type,
+          if (mediaUrl != null) 'mediaUrl': mediaUrl,
+          if (mediaName != null) 'mediaName': mediaName,
+          if (mediaDuration != null) 'mediaDuration': mediaDuration,
+          if (replyToID != null) 'replyToID': replyToID,
+          if (replyToContent != null) 'replyToContent': replyToContent,
+        }),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> editMessage(int msgID, String content) async {
+    final data = await _handleRequest(
+      () => _client.put(
+        Uri.parse('$baseUrl/messages/$msgID'),
+        headers: _headers,
+        body: jsonEncode({'content': content}),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<void> deleteMessage(int msgID, {bool forAll = false}) async {
+    await _handleRequest(
+      () => _client.delete(
+        Uri.parse('$baseUrl/messages/$msgID${forAll ? '?all=true' : ''}'),
+        headers: _headers,
+      ),
+    );
+  }
+
+  // ── CALLS ─────────────────────────────────────────────────────────
+  // Historique uniquement — les appels se font par Socket (call_user etc.)
+
+  Future<List<dynamic>> getCallHistory() async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/calls'), headers: _headers),
+    );
+    return data is List ? data : [];
+  }
+
+  /// Crée l'entrée en DB (utilisé si besoin — sinon le socket le fait)
+  Future<Map<String, dynamic>> createCallRecord({
+    required int idReceiver,
+    int type = 0, // 0=audio, 1=vidéo
+  }) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('$baseUrl/calls'),
+        headers: _headers,
+        body: jsonEncode({'idReceiver': idReceiver, 'type': type}),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<void> endCallRecord(int idCall, {int status = 1}) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('$baseUrl/calls/$idCall/end'),
+        headers: _headers,
+        body: jsonEncode({'status': status}),
+      ),
+    );
+  }
+
+  // ── MEETINGS ──────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getMeetings() async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/meetings'), headers: _headers),
+    );
+    return data is List ? data : [];
+  }
+
+  /// Crée une réunion — backend attend: objet, start_time, room, duree, type_media
+  Future<Map<String, dynamic>> createMeeting({
+    required String objet,
+    required String startTime, // ISO8601 ex: "2026-05-03T14:00:00"
+    required String room,
+    int duree = 60,
+    int typeMedia = 0,
+  }) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('$baseUrl/meetings'),
+        headers: _headers,
+        body: jsonEncode({
+          'objet': objet,
+          'start_time': startTime,
+          'room': room,
+          'duree': duree,
+          'type_media': typeMedia,
+        }),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getMeeting(int idMeeting) async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/meetings/$idMeeting'), headers: _headers),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<void> joinMeetingHttp(int idMeeting) async {
+    await _handleRequest(
+      () => _client.post(Uri.parse('$baseUrl/meetings/$idMeeting/join'), headers: _headers),
+    );
+  }
+
+  Future<void> leaveMeetingHttp(int idMeeting) async {
+    await _handleRequest(
+      () => _client.post(Uri.parse('$baseUrl/meetings/$idMeeting/leave'), headers: _headers),
+    );
+  }
+
+  Future<void> inviteParticipants(int idMeeting, List<int> participantIds) async {
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('$baseUrl/meetings/$idMeeting/invite'),
+        headers: _headers,
+        body: jsonEncode({'participant_ids': participantIds}),
+      ),
+    );
+  }
+
+  // ── STATUTS ───────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getStatuts() async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/status'), headers: _headers),
+    );
+    return data is List ? data : [];
+  }
+
+  Future<Map<String, dynamic>> createStatut({
+    String? text,
+    String? mediaUrl,
+    String? backgroundColor,
+    int type = 0,
+  }) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('$baseUrl/status'),
+        headers: _headers,
+        body: jsonEncode({
+          if (text != null) 'text': text,
+          if (mediaUrl != null) 'mediaUrl': mediaUrl,
+          if (backgroundColor != null) 'backgroundColor': backgroundColor,
+          'type': type,
+        }),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<void> viewStatut(int id) async {
+    await _handleRequest(
+      () => _client.post(Uri.parse('$baseUrl/status/$id/view'), headers: _headers),
+    );
+  }
+
+  // ── UPLOAD ────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> uploadAvatar(File file) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload/avatar'));
+    request.headers['Authorization'] = 'Bearer $_accessToken';
+    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw TalkyException(jsonDecode(response.body)['error'] ?? 'Upload échoué', response.statusCode);
+  }
+
+  Future<Map<String, dynamic>> uploadMedia(File file) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload/media'));
+    request.headers['Authorization'] = 'Bearer $_accessToken';
+    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw TalkyException(jsonDecode(response.body)['error'] ?? 'Upload échoué', response.statusCode);
+  }
+
+  // ── SOCKET.IO ─────────────────────────────────────────────────────
 
   void connectSocket() {
     if (_accessToken == null) return;
+    if (_socket?.connected == true) return;
 
-    _socket = IO.io(socketUrl, <String, dynamic>{
+    _socket = io.io(socketUrl, <String, dynamic>{
       'transports': ['websocket'],
-      'autoConnect': true,
-      'auth': {'token': _accessToken},
+      'autoConnect': false,
+      'reconnection': true,
+      'reconnectionDelay': 2000,
+      'reconnectionAttempts': 10,
     });
 
-    _socket!.onConnect((_) => print('[Socket] Connected'));
-    _socket!.onDisconnect((_) => print('[Socket] Disconnected'));
-    _socket!.onError((err) => print('[Socket] Error: $err'));
+    _socket!.onConnect((_) {
+      debugPrint('[Socket] Connecté — envoi auth:login');
+      // ✅ AUTH SOCKET obligatoire — sinon tous les handlers ignorent les events
+      _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
+    });
+
+    _socket!.on(SocketEvents.authVerified, (data) {
+      debugPrint('[Socket] Authentifié: ${data['alanyaID']}');
+      // Signaler présence en ligne
+      _socket!.emit(SocketEvents.presenceOnline, {'userID': data['alanyaID']});
+      // Rejouer les listeners en attente
+      _replayPendingListeners();
+    });
+
+    _socket!.on(SocketEvents.authError, (data) {
+      debugPrint('[Socket] Erreur auth: ${data['message']}');
+    });
+
+    _socket!.on(SocketEvents.authConflict, (data) {
+      debugPrint('[Socket] Conflit connexion: ${data['message']}');
+    });
+
+    _socket!.onDisconnect((_) => debugPrint('[Socket] Déconnecté'));
+    _socket!.onError((err) => debugPrint('[Socket] Erreur: $err'));
+    _socket!.onReconnect((_) {
+      debugPrint('[Socket] Reconnecté — ré-auth');
+      _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
+    });
+
+    _socket!.connect();
+  }
+
+  void _replayPendingListeners() {
+    _socketListeners.forEach((event, callbacks) {
+      for (final cb in callbacks) {
+        _socket?.on(event, cb);
+      }
+    });
   }
 
   void disconnectSocket() {
     _socket?.disconnect();
+    _socket?.dispose();
     _socket = null;
+    _socketListeners.clear();
   }
 
   void sendSocketEvent(String event, dynamic data) {
-    _socket?.emit(event, data);
+    if (_socket?.connected != true) {
+      debugPrint('[Socket] ⚠️ Tentative d\'emit "$event" sans connexion');
+      return;
+    }
+    _socket!.emit(event, data);
   }
 
   void onSocketEvent(String event, Function(dynamic) callback) {
+    // Stocker pour replay après reconnexion
+    _socketListeners.putIfAbsent(event, () => []).add(callback);
     _socket?.on(event, callback);
   }
 
   void offSocketEvent(String event) {
+    _socketListeners.remove(event);
     _socket?.off(event);
   }
 
-  // ── HEALTH CHECK ────────────────────────────────────────────────────
+  // ── PAYS ──────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getPays() async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('$baseUrl/pays'), headers: _headers),
+    );
+    return data is List ? data : [];
+  }
+
+  // ── HEALTH ────────────────────────────────────────────────────────
 
   Future<bool> checkHealth() async {
     try {
-      final response = await _client.get(Uri.parse('$baseUrl/../health'));
+      final response = await _client
+          .get(Uri.parse('http://158.220.107.211/health'))
+          .timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
     } catch (_) {
       return false;
-    }
-  }
-
-  dynamic _parseResponse(http.Response response) {
-    try {
-      return jsonDecode(response.body);
-    } catch (e) {
-      print('[TalkyApiClient] Response parsing failed:');
-      print('  Status: ${response.statusCode}');
-      print('  Body (first 500 chars): ${response.body.substring(0, (response.body.length > 500 ? 500 : response.body.length))}');
-      throw TalkyException(
-        'Server error: Invalid response format (${response.statusCode})',
-        response.statusCode,
-      );
     }
   }
 

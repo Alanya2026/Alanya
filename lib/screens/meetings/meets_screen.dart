@@ -31,13 +31,11 @@ class _MeetsScreenState extends State<MeetsScreen> {
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
-      final userData = data is Map ? data : (data is List && data.isNotEmpty ? data[0] : null);
-      if (userData != null) {
-        final user = User.fromJson(userData as Map<String, dynamic>);
-        setState(() {
-          _userInitial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : 'U';
-        });
-      }
+      final userData = data;
+      final user = User.fromJson(userData);
+      setState(() {
+        _userInitial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : 'U';
+      });
     } catch (e) {
       // Ignore error
     }
@@ -59,13 +57,22 @@ class _MeetsScreenState extends State<MeetsScreen> {
   }
 
   Future<void> _createNewMeeting() async {
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final userData = await apiClient.getMe();
+    final myId = userData['alanyaID'] ?? 0;
+
     final meetingService = Provider.of<MeetingService>(context, listen: false);
 
+    final now = DateTime.now();
+    final startTime = now.toIso8601String();
+    final roomCode = 'mtg-${now.millisecondsSinceEpoch}';
+
     try {
-      await meetingService.createAndJoinMeeting(
-        titre: 'New Meeting ${DateTime.now().toString().substring(0, 16)}',
-        dateDebut: DateTime.now(),
-        dateFin: DateTime.now().add(const Duration(hours: 1)),
+      await meetingService.createAndJoin(
+        objet: 'New Meeting ${now.toString().substring(0, 16)}',
+        startTime: startTime,
+        room: roomCode,
+        myId: myId,
       );
 
       if (context.mounted) {
@@ -212,7 +219,7 @@ class _MeetsScreenState extends State<MeetsScreen> {
               ? []
               : [
                   BoxShadow(
-                    color: color.withOpacity(0.3),
+                    color: color.withAlpha(77),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -225,7 +232,7 @@ class _MeetsScreenState extends State<MeetsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isOutline ? Colors.grey.shade100 : Colors.white.withOpacity(0.2),
+                color: isOutline ? Colors.grey.shade100 : Colors.white.withAlpha(51),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -249,9 +256,9 @@ class _MeetsScreenState extends State<MeetsScreen> {
   }
 
   Widget _buildMeetingItem(Meeting meeting) {
-    final DateTime dateDebut = DateTime.parse(meeting.dateDebut);
-    final DateTime dateFin = DateTime.parse(meeting.dateFin);
-    final bool isToday = dateDebut.day == DateTime.now().day;
+    final DateTime dateDebut = meeting.startDateTime;
+    final DateTime dateFin = meeting.endDateTime;
+    final bool isToday = meeting.isToday;
 
     final color = Colors.primaries[meeting.idMeeting % Colors.primaries.length];
 
@@ -264,7 +271,7 @@ class _MeetsScreenState extends State<MeetsScreen> {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withAlpha(5),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -286,7 +293,7 @@ class _MeetsScreenState extends State<MeetsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  meeting.titre,
+                  meeting.objet,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -311,9 +318,18 @@ class _MeetsScreenState extends State<MeetsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+              final userData = await apiClient.getMe();
+              final myId = userData['alanyaID'] ?? 0;
+              final myName = userData['nom'] ?? userData['pseudo'] ?? '';
+
               final meetingService = Provider.of<MeetingService>(context, listen: false);
               try {
-                await meetingService.joinMeeting(meeting.idMeeting);
+                await meetingService.joinMeeting(
+                  idMeeting: meeting.idMeeting,
+                  myId: myId,
+                  myName: myName,
+                );
                 if (context.mounted) {
                   Navigator.push(
                     context,

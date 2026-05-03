@@ -15,11 +15,25 @@ class ChatsScreen extends StatefulWidget {
 class _ChatsScreenState extends State<ChatsScreen> {
   List<Conversation> _conversations = [];
   bool _isLoading = true;
+  int _myId = 0;
 
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();
     _loadConversations();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final data = await apiClient.getMe();
+      setState(() {
+        _myId = data['alanyaID'] ?? 0;
+      });
+    } catch (e) {
+      // Ignore
+    }
   }
 
   Future<void> _loadConversations() async {
@@ -96,11 +110,16 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         itemCount: _conversations.length,
                         itemBuilder: (context, index) {
                           final conv = _conversations[index];
-                          final otherUser = conv.participants.isNotEmpty
-                              ? conv.participants.firstWhere(
-                                  (u) => u.alanyaID != conv.idCreateur,
-                                  orElse: () => conv.participants.first,
-                                )
+                          final otherUser = conv.participants.where((u) => u.alanyaID != _myId).firstOrNull;
+                          final displayName = conv.isGroup
+                              ? (conv.groupName ?? 'Groupe')
+                              : (otherUser?.nom ?? 'Unknown');
+                          final displayAvatar = conv.isGroup
+                              ? conv.groupPhoto
+                              : otherUser?.avatarUrl;
+                          final isOnline = otherUser?.isOnline == true;
+                          final initial = (displayAvatar == null || displayAvatar.isEmpty)
+                              ? (displayName.isNotEmpty ? displayName[0].toUpperCase() : '?')
                               : null;
 
                           return ListTile(
@@ -110,17 +129,20 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                 CircleAvatar(
                                   radius: 28,
                                   backgroundColor: Colors.indigo.shade100,
-                                  child: Text(
-                                    otherUser != null
-                                        ? otherUser.nom[0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(
-                                      color: Colors.indigo,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  backgroundImage: displayAvatar != null && displayAvatar.isNotEmpty
+                                      ? NetworkImage(displayAvatar)
+                                      : null,
+                                  child: initial != null
+                                      ? Text(
+                                          initial,
+                                          style: const TextStyle(
+                                            color: Colors.indigo,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        )
+                                      : null,
                                 ),
-                                if (otherUser?.isOnline == true)
+                                if (isOnline)
                                   Positioned(
                                     right: 0,
                                     bottom: 0,
@@ -137,14 +159,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
                               ],
                             ),
                             title: Text(
-                              conv.nomGroupe ?? otherUser?.nom ?? 'Unknown',
+                              displayName,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
                             ),
                             subtitle: Text(
-                              conv.lastMessage?.contenu ?? 'No messages yet',
+                              conv.lastMessage ?? 'No messages yet',
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontWeight: FontWeight.w400,
@@ -157,7 +179,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  _formatTime(conv.lastMessage?.dateEnvoi),
+                                  _formatTime(conv.lastMessageAt),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade600,
@@ -170,8 +192,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => ChatDetailScreen(
-                                    userName: conv.nomGroupe ?? otherUser?.nom ?? 'Chat',
-                                    conversationId: conv.idConversation,
+                                    userName: displayName,
+                                    conversationId: conv.conversID,
+                                    userId: otherUser?.alanyaID,
                                   ),
                                 ),
                               );

@@ -43,7 +43,8 @@ class _CallsScreenState extends State<CallsScreen> {
 
   Future<void> _initiateCallFromHistory(dynamic callData, bool isVideo) async {
     final call = callData is Call ? callData : Call.fromJson(callData as Map<String, dynamic>);
-    final otherUser = call.caller?.alanyaID != await _getCurrentUserId()
+    final currentUserId = await _getCurrentUserId();
+    final otherUser = call.idCaller != currentUserId
         ? call.caller
         : call.receiver;
 
@@ -51,7 +52,9 @@ class _CallsScreenState extends State<CallsScreen> {
 
     final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
-      receiverId: otherUser.alanyaID,
+      targetUserId: otherUser.alanyaID,
+      myId: currentUserId,
+      myName: currentUserId.toString(),
       isVideo: isVideo,
     );
     if (context.mounted) {
@@ -118,8 +121,8 @@ class _CallsScreenState extends State<CallsScreen> {
                         ? callData
                         : Call.fromJson(callData as Map<String, dynamic>);
 
-                    final isMissed = call.etat == 'missed';
-                    final isVideo = call.type == 'video';
+                    final isMissed = call.isMissed;
+                    final isVideo = call.isVideo;
 
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -156,7 +159,7 @@ class _CallsScreenState extends State<CallsScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${_formatDate(call.dateDebut)} • ${isVideo ? "Video" : "Audio"}',
+                            '${_formatDate(call.createdAt)} • ${isVideo ? "Video" : "Audio"}',
                             style: TextStyle(color: Colors.grey.shade600),
                           ),
                         ],

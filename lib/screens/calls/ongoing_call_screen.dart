@@ -56,7 +56,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
   Widget build(BuildContext context) {
     return Consumer<CallService>(
       builder: (context, callService, _) {
-        final isVideoCall = callService.currentCall?.type == 'video';
+        final isVideoCall = callService.isVideo;
 
         return Scaffold(
           backgroundColor: Colors.black87,
@@ -96,7 +96,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                             radius: 60,
                             backgroundColor: Colors.indigo.shade100,
                             child: Text(
-                              callService.currentCall?.receiver?.nom[0] ?? 'U',
+                              callService.remoteUserName?.isNotEmpty == true
+                                  ? callService.remoteUserName![0]
+                                  : 'U',
                               style: const TextStyle(
                                 fontSize: 48,
                                 color: Colors.indigo,

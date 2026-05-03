@@ -12,7 +12,7 @@ class IncomingCallScreen extends StatelessWidget {
     return Consumer<CallService>(
       builder: (context, callService, _) {
         final caller = callService.currentCall?.caller;
-        final isVideoCall = callService.currentCall?.type == 'video';
+        final isVideoCall = callService.isVideo;
 
         return Scaffold(
           backgroundColor: Colors.black87,
@@ -76,12 +76,14 @@ class IncomingCallScreen extends StatelessWidget {
                     GestureDetector(
                       onTap: () async {
                         await callService.answerCall();
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const OngoingCallScreen(),
-                          ),
-                        );
+                        if (context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const OngoingCallScreen(),
+                            ),
+                          );
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.all(24),

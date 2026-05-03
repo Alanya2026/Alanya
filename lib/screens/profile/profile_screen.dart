@@ -30,7 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
       setState(() {
-        _user = User.fromJson(data is Map ? data : data[0]);
+        _user = User.fromJson(data);
         _isLoading = false;
       });
     } catch (e) {
@@ -120,7 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha(13),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),

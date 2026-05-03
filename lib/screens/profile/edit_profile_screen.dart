@@ -28,7 +28,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
       setState(() {
-        _user = User.fromJson(data is Map ? data : data[0]);
+        _user = User.fromJson(data);
         _nameController.text = _user?.nom ?? '';
         _aboutController.text = ''; // À remplir si tu as un champ 'about' dans le modèle
         _isLoading = false;

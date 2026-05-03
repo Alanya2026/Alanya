@@ -67,10 +67,10 @@ class AuthProvider extends ChangeNotifier {
       _apiClient.connectSocket();
     } on TalkyException catch (e) {
       _error = e.message;
-      print('[AuthProvider] Login TalkyException: ${e.message} (Status: ${e.statusCode})');
+      debugPrint('[AuthProvider] Login TalkyException: ${e.message} (Status: ${e.statusCode})');
     } catch (e) {
       _error = 'Une erreur est survenue: $e';
-      print('[AuthProvider] Login Exception: $e');
+      debugPrint('[AuthProvider] Login Exception: $e');
     } finally {
       _setLoading(false);
     }
@@ -103,10 +103,10 @@ class AuthProvider extends ChangeNotifier {
       _apiClient.connectSocket();
     } on TalkyException catch (e) {
       _error = e.message;
-      print('[AuthProvider] Register TalkyException: ${e.message} (Status: ${e.statusCode})');
+      debugPrint('[AuthProvider] Register TalkyException: ${e.message} (Status: ${e.statusCode})');
     } catch (e) {
       _error = 'Une erreur est survenue: $e';
-      print('[AuthProvider] Register Exception: $e');
+      debugPrint('[AuthProvider] Register Exception: $e');
     } finally {
       _setLoading(false);
     }

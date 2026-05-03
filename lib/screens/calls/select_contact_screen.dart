@@ -60,9 +60,15 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   }
 
   Future<void> _initiateCall(User user, bool isVideo) async {
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final userData = await apiClient.getMe();
+    final myId = userData['alanyaID'] ?? 0;
+
     final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
-      receiverId: user.alanyaID,
+      targetUserId: user.alanyaID,
+      myId: myId,
+      myName: userData['nom'] ?? userData['pseudo'] ?? '',
       isVideo: isVideo,
     );
     if (context.mounted) {

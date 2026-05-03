@@ -57,13 +57,13 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                           IconButton(
                             icon: const Icon(Icons.arrow_back, color: Colors.white),
                             onPressed: () async {
-                              await meetingService.endMeeting();
+                              await meetingService.leaveMeeting();
                               if (context.mounted) Navigator.pop(context);
                             },
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            meeting?.titre ?? 'Meeting',
+                            meeting?.objet ?? 'Meeting',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -129,7 +129,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                         color: Colors.red,
                         iconColor: Colors.white,
                         onTap: () async {
-                          await meetingService.endMeeting();
+                          await meetingService.leaveMeeting();
                           if (context.mounted) Navigator.pop(context);
                         },
                         isLarge: true,
@@ -147,10 +147,10 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                         onTap: () => meetingService.toggleMute(),
                       ),
                       _buildControlBtn(
-                        icon: meetingService.isHandRaised ? Icons.back_hand : Icons.back_hand_outlined,
-                        color: meetingService.isHandRaised ? Colors.amber.shade100 : Colors.white24,
-                        iconColor: meetingService.isHandRaised ? Colors.amber.shade800 : Colors.white,
-                        onTap: () => meetingService.toggleHandRaised(),
+                        icon: Icons.screen_share,
+                        color: Colors.white24,
+                        iconColor: Colors.white,
+                        onTap: () {},
                       ),
                       _buildControlBtn(
                         icon: Icons.more_vert,

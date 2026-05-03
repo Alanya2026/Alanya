@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/call_service.dart';
 import '../calls/ongoing_call_screen.dart';
+import '../../talky_api_client.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String userName;
   final int? conversationId;
-  const ChatDetailScreen({super.key, required this.userName, this.conversationId});
+  final int? userId;
+  const ChatDetailScreen({super.key, required this.userName, this.conversationId, this.userId});
 
   @override
   State<ChatDetailScreen> createState() => _ChatDetailScreenState();
@@ -85,9 +87,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           IconButton(
             icon: const Icon(Icons.videocam, color: Colors.indigo),
             onPressed: () async {
+              if (widget.userId == null) return;
+              final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+              final userData = await apiClient.getMe();
+              final myId = userData['alanyaID'] ?? 0;
               final callService = Provider.of<CallService>(context, listen: false);
               await callService.initiateCall(
-                receiverId: 1, // TODO: Replace with actual user ID
+                targetUserId: widget.userId!,
+                myId: myId,
+                myName: userData['nom'] ?? userData['pseudo'] ?? '',
                 isVideo: true,
               );
               if (context.mounted) {
@@ -101,9 +109,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           IconButton(
             icon: const Icon(Icons.call, color: Colors.indigo),
             onPressed: () async {
+              if (widget.userId == null) return;
+              final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+              final userData = await apiClient.getMe();
+              final myId = userData['alanyaID'] ?? 0;
               final callService = Provider.of<CallService>(context, listen: false);
               await callService.initiateCall(
-                receiverId: 1, // TODO: Replace with actual user ID
+                targetUserId: widget.userId!,
+                myId: myId,
+                myName: userData['nom'] ?? userData['pseudo'] ?? '',
                 isVideo: false,
               );
               if (context.mounted) {
@@ -141,7 +155,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withAlpha(13),
                           blurRadius: 5,
                           offset: const Offset(0, 2),
                         ),
@@ -180,8 +194,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
+color: Colors.black.withAlpha(13),
+                          blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
               ],

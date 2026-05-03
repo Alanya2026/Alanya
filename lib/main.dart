@@ -4,6 +4,7 @@ import 'providers/auth_provider.dart';
 import 'core/services/call_service.dart';
 import 'screens/authentification/login_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'talky_api_client.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,10 +16,12 @@ class TalkyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final apiClient = TalkyApiClient();
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => CallService()),
+        Provider<TalkyApiClient>.value(value: apiClient),
+        ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: apiClient)),
+        ChangeNotifierProvider(create: (_) => CallService(apiClient: apiClient)),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
