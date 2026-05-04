@@ -12,8 +12,8 @@ class OngoingCallScreen extends StatefulWidget {
 }
 
 class _OngoingCallScreenState extends State<OngoingCallScreen> {
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
 
   @override
   void initState() {
@@ -34,22 +34,11 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
       _remoteRenderer.srcObject = callService.remoteStream;
     }
 
-    // ✅ Stocker le listener pour pouvoir le supprimer dans dispose
-    callService.addListener(_onCallServiceChanged);
+    callService.addListener(_updateRenderers);
   }
 
-  void _onCallServiceChanged() {
-    if (!mounted) return;
+  void _updateRenderers() {
     final callService = Provider.of<CallService>(context, listen: false);
-
-    // ✅ Navigation automatique quand l'appel se termine côté distant
-    if (callService.status == CallStatus.ended) {
-      callService.removeListener(_onCallServiceChanged);
-      Navigator.of(context).pop();
-      return;
-    }
-
-    // Mettre à jour les renderers quand les streams changent
     setState(() {
       _localRenderer.srcObject = callService.localStream;
       _remoteRenderer.srcObject = callService.remoteStream;
@@ -58,9 +47,6 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
 
   @override
   void dispose() {
-    // ✅ Supprimer le listener pour éviter le memory leak
-    final callService = Provider.of<CallService>(context, listen: false);
-    callService.removeListener(_onCallServiceChanged);
     _localRenderer.dispose();
     _remoteRenderer.dispose();
     super.dispose();
@@ -88,26 +74,15 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                             color: Colors.white, size: 32),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      Column(
-                        children: [
-                          Text(
-                            callService.remoteUserName ?? 'Appel en cours',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Text(
-                            'Chiffré de bout en bout',
-                            style: TextStyle(color: Colors.white54, fontSize: 11),
-                          ),
-                        ],
+                      const Text(
+                        'End-to-end Encrypted',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
                       ),
-                      const SizedBox(width: 48),
+                      const SizedBox(width: 32),
                     ],
                   ),
                 ),
+                const SizedBox(height: 20),
                 // Video/Audio Display
                 Expanded(
                   child: Stack(
@@ -117,33 +92,19 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
                       else
                         Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircleAvatar(
-                                radius: 60,
-                                backgroundColor: Colors.indigo.shade100,
-                                child: Text(
-                                  callService.remoteUserName?.isNotEmpty == true
-                                      ? callService.remoteUserName![0].toUpperCase()
-                                      : 'U',
-                                  style: const TextStyle(
-                                    fontSize: 48,
-                                    color: Colors.indigo,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.indigo.shade100,
+                            child: Text(
+                              callService.remoteUserName?.isNotEmpty == true
+                                  ? callService.remoteUserName![0]
+                                  : 'U',
+                              style: const TextStyle(
+                                fontSize: 48,
+                                color: Colors.indigo,
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                callService.remoteUserName ?? '',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       if (isVideoCall)
@@ -171,13 +132,13 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                     ],
                   ),
                 ),
-                // Durée de l'appel
+                // Call Info
                 Text(
                   callService.formattedDuration,
                   style: const TextStyle(color: Colors.white70, fontSize: 18),
                 ),
                 const SizedBox(height: 20),
-                // Contrôles
+                // Controls
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
                   decoration: const BoxDecoration(
@@ -190,7 +151,6 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Micro
                       _buildControlButton(
                         icon: callService.isMuted
                             ? CupertinoIcons.mic_off
@@ -198,7 +158,6 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                         isActive: callService.isMuted,
                         onTap: () => callService.toggleMute(),
                       ),
-                      // Caméra (vidéo) ou Speaker (audio)
                       if (isVideoCall)
                         _buildControlButton(
                           icon: callService.isVideoOn
@@ -208,15 +167,18 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                           onTap: () => callService.toggleCamera(),
                         )
                       else
-                        // ✅ Appelle toggleSpeaker (pas toggleMute)
                         _buildControlButton(
                           icon: callService.isSpeakerOn
                               ? CupertinoIcons.speaker_3_fill
                               : CupertinoIcons.speaker_2,
                           isActive: callService.isSpeakerOn,
-                          onTap: () => callService.toggleSpeaker(),
+                          onTap: () {
+                            setState(() {
+                              callService.toggleMute();
+                            });
+                          },
                         ),
-                      // Bouton raccrocher
+                      // End Call Button
                       GestureDetector(
                         onTap: () async {
                           await callService.endCall();
@@ -235,13 +197,6 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                           ),
                         ),
                       ),
-                      // Changer de caméra (video uniquement)
-                      if (isVideoCall)
-                        _buildControlButton(
-                          icon: CupertinoIcons.switch_camera,
-                          isActive: false,
-                          onTap: () => callService.switchCamera(),
-                        ),
                     ],
                   ),
                 ),

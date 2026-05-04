@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'core/services/call_service.dart';
-import 'core/services/meeting_service.dart';
 import 'screens/authentification/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'talky_api_client.dart';
@@ -22,10 +21,7 @@ class TalkyApp extends StatelessWidget {
       providers: [
         Provider<TalkyApiClient>.value(value: apiClient),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: apiClient)),
-        //  CallService enregistré
         ChangeNotifierProvider(create: (_) => CallService(apiClient: apiClient)),
-        //  MeetingService enregistré (manquait)
-        ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
