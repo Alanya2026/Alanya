@@ -568,7 +568,11 @@ class TalkyApiClient {
   }
 
   void _replayPendingListeners() {
+    debugPrint('[Socket] 🔄 Replay ${_socketListeners.length} listener group(s)');
     _socketListeners.forEach((event, callbacks) {
+      // ✅ IMPORTANT : Nettoyer les anciens listeners d'abord
+      _socket?.off(event);
+      debugPrint('[Socket] 🔄 Replay event "$event" (${callbacks.length} callback(s))');
       for (final cb in callbacks) {
         _socket?.on(event, cb);
       }
@@ -591,9 +595,20 @@ class TalkyApiClient {
   }
 
   void onSocketEvent(String event, Function(dynamic) callback) {
-    // Stocker pour replay après reconnexion
-    _socketListeners.putIfAbsent(event, () => []).add(callback);
-    _socket?.on(event, callback);
+    // ✅ Stocker une seule fois pour replay après reconnexion
+    final listeners = _socketListeners.putIfAbsent(event, () => []);
+    
+    // ✅ Éviter les doublons (même si peu probable)
+    if (!listeners.contains(callback)) {
+      listeners.add(callback);
+      debugPrint('[Socket] 📌 Listener enregistré pour "$event"');
+    }
+    
+    // ✅ Enregistrer le listener socket.io s'il n'est pas déjà là
+    if (_socket?.connected == true) {
+      _socket?.on(event, callback);
+      debugPrint('[Socket] ✅ Listener activé pour "$event" sur socket actif');
+    }
   }
 
   void offSocketEvent(String event) {

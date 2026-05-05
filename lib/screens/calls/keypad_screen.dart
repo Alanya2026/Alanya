@@ -80,6 +80,17 @@ class _KeypadScreenState extends State<KeypadScreen> {
       isVideo: isVideo,
     );
     if (context.mounted) {
+      // Vérifier s'il y a eu une erreur (ex: permissions refusées)
+      if (callService.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(callService.errorMessage!),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
       Navigator.push(
         context,
         MaterialPageRoute(

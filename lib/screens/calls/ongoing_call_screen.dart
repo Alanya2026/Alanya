@@ -42,14 +42,19 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     if (!mounted) return;
     final callService = Provider.of<CallService>(context, listen: false);
 
+    debugPrint('[OngoingCallScreen] 📊 CallService changed: ${callService.status}');
+
     // ✅ Navigation automatique quand l'appel se termine côté distant
-    if (callService.status == CallStatus.ended) {
+    // Ne pas pop si on a volontairement terminé l'appel (le bouton RED l'a déjà fait)
+    if (callService.status == CallStatus.ended && !callService.callEndedByUs) {
+      debugPrint('[OngoingCallScreen] ❌ Appel terminé par l\'autre - dépilage...');
       callService.removeListener(_onCallServiceChanged);
       Navigator.of(context).pop();
       return;
     }
 
     // Mettre à jour les renderers quand les streams changent
+    debugPrint('[OngoingCallScreen] 🎥 Mise à jour renderers - Local: ${callService.localStream != null}, Remote: ${callService.remoteStream != null}');
     setState(() {
       _localRenderer.srcObject = callService.localStream;
       _remoteRenderer.srcObject = callService.remoteStream;

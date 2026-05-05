@@ -59,6 +59,9 @@ class CallService extends ChangeNotifier {
   bool _isVideo = false;
   Map<String, dynamic>? _pendingOffer; // offer reçu avant réponse
 
+  // ✅ Flag pour savoir si on a volontairement terminé l'appel
+  bool _callEndedByUs = false;
+
   // Contrôles médias
   bool _isMuted = false;
   bool _isSpeakerOn = false;
@@ -88,6 +91,7 @@ class CallService extends ChangeNotifier {
   bool get isVideoOn => _isVideoOn;
   int get callDuration => _callDuration;
   String? get errorMessage => _errorMessage;
+  bool get callEndedByUs => _callEndedByUs;
   MediaStream? get localStream => _webrtc.localStream;
   MediaStream? get remoteStream => _webrtc.remoteStream;
 
@@ -132,28 +136,47 @@ class CallService extends ChangeNotifier {
 
     // Appel entrant
     _apiClient.onSocketEvent(SocketEvents.incomingCall, (data) {
-      if (data is! Map) return;
+      debugPrint('[CallService] 📞 Appel entrant reçu: $data');
+      if (data is! Map) {
+        debugPrint('[CallService] ❌ Données invalides pour incoming_call');
+        return;
+      }
       _remoteUserId = int.tryParse(data['callerId'].toString());
       _remoteUserName = data['callerName'] as String?;
       _remoteUserPhoto = data['callerPhoto'] as String?;
       _isVideo = data['isVideo'] == true;
       _pendingOffer = data['offer'] as Map<String, dynamic>?;
       _status = CallStatus.incoming;
+      debugPrint('[CallService] ✅ Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
       notifyListeners();
     });
 
     // Appel accepté par l'autre
     _apiClient.onSocketEvent(SocketEvents.callAnswered, (data) async {
-      if (data is! Map || data['answer'] == null) return;
+      debugPrint('[CallService] 📞 call_answered reçu: $data');
+      
+      // ✅ GARDE : Ne traiter que si on est en status "connecting" (en attente de réponse)
+      if (_status != CallStatus.connecting) {
+        debugPrint('[CallService] ⚠️ call_answered ignoré : statut=${_status}, attendu=connecting');
+        return;
+      }
+      
+      if (data is! Map || data['answer'] == null) {
+        debugPrint('[CallService] ❌ Données call_answered invalides');
+        return;
+      }
+      
       try {
         final answer = data['answer'] as Map;
+        debugPrint('[CallService] 🔄 handleAnswer: ${answer['type']}');
         await _webrtc.handleAnswer(
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
+        debugPrint('[CallService] ✅ Answer acceptée, statut → CONNECTED');
         _status = CallStatus.connected;
         _startDurationTimer();
       } catch (e) {
-        debugPrint('[CallService] Erreur handleAnswer: $e');
+        debugPrint('[CallService] ❌ Erreur handleAnswer: $e');
         _status = CallStatus.ended;
       }
       notifyListeners();
@@ -168,6 +191,8 @@ class CallService extends ChangeNotifier {
 
     // Appel terminé par l'autre
     _apiClient.onSocketEvent(SocketEvents.callEnded, (_) {
+      debugPrint('[CallService] 📞 Appel terminé par l\'autre côté');
+      // ✅ Ne PAS activer _callEndedByUs ici — c'est l'autre qui a terminé
       _terminateCall();
     });
 
@@ -353,11 +378,17 @@ class CallService extends ChangeNotifier {
 
   /// Accepte l'appel entrant.
   Future<void> answerCall() async {
-    if (_status != CallStatus.incoming || _remoteUserId == null) return;
+    if (_status != CallStatus.incoming || _remoteUserId == null) {
+      debugPrint('[CallService] ⚠️ answerCall ignoré: status=${_status}, remoteUserId=${_remoteUserId}');
+      return;
+    }
     _errorMessage = null; // Réinitialiser les erreurs
+    debugPrint('[CallService] 📞 answerCall START - Caller: $_remoteUserId');
 
     try {
+      debugPrint('[CallService] 🔧 _webrtc.init($_isVideo ? CallType.video : CallType.audio)');
       await _webrtc.init(_isVideo ? CallType.video : CallType.audio);
+      debugPrint('[CallService] ✅ WebRTC initialisé');
 
       // ICE candidates → envoyés à l'appelant
       _webrtc.onIceCandidate = (candidate) {
@@ -432,6 +463,8 @@ class CallService extends ChangeNotifier {
 
   /// Termine l'appel en cours.
   Future<void> endCall() async {
+    _callEndedByUs = true; // ✅ Marquer qu'on a terminé volontairement
+    debugPrint('[CallService] 📞 endCall() - Appel terminé par nous');
     if (_remoteUserId != null) {
       // ✅ Payload exact attendu par le backend
       _apiClient.sendSocketEvent(SocketEvents.endCall, {
@@ -459,6 +492,7 @@ class CallService extends ChangeNotifier {
     _isVideoOn = true;
     _isSpeakerOn = false;
     _durationTimer?.cancel();
+    _callEndedByUs = false; // ✅ Réinitialiser le flag
   }
 
   // ── APPELS DE GROUPE ───────────────────────────────────────────────

@@ -161,11 +161,25 @@ class WebRTCService {
   }
 
   Future<void> handleOffer(RTCSessionDescription offer) async {
-    await _peerConnection!.setRemoteDescription(offer);
+    debugPrint('[WebRTC] handleOffer: type=${offer.type}, sdp length=${offer.sdp?.length}');
+    try {
+      await _peerConnection!.setRemoteDescription(offer);
+      debugPrint('[WebRTC] ✅ handleOffer success');
+    } catch (e) {
+      debugPrint('[WebRTC] ❌ handleOffer failed: $e');
+      rethrow;
+    }
   }
 
   Future<void> handleAnswer(RTCSessionDescription answer) async {
-    await _peerConnection!.setRemoteDescription(answer);
+    debugPrint('[WebRTC] handleAnswer: type=${answer.type}, sdp length=${answer.sdp?.length}, pc=${_peerConnection != null}');
+    try {
+      await _peerConnection!.setRemoteDescription(answer);
+      debugPrint('[WebRTC] ✅ handleAnswer success');
+    } catch (e) {
+      debugPrint('[WebRTC] ❌ handleAnswer failed: $e');
+      rethrow;
+    }
   }
 
   Future<void> addIceCandidate(RTCIceCandidate candidate) async {
