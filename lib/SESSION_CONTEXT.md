@@ -57,9 +57,4 @@ L'utilisateur veut implémenter:
 - Appels 1-1: `call:user`, `call:incoming`, `call:answer`, `call:reject`, `call:end`, `ice:candidate`, `offer`, `answer`
 - Appels groupe: `group_call:create`, `group_call:join`, `group_call:leave`, `group_call:end`, `group:offer`, `group:answer`, `group:ice_candidate`
 - Meetings: `meeting:create`, `meeting:join_room`, `meeting:join_request`, `meeting:join_accept`, `meeting:join_decline`, `meeting:start`, `meeting:end`, `meeting:chat`, `meeting:leave`, `meeting:offer`, `meeting:answer`, `meeting:ice_candidate`
-
-## Notes importantes
-- Le frontend n'a pas été trouvé au chemin `/home/chris-manuel/alanya/frontend/`
-- À vérifier: le dossier frontend existe-t-il? Nom différent?
-- Les fichiers Dart créés sont dans `/home/chris-manuel/alanya/backend/`
-- À déplacer dans `lib/` du projet Flutter
+ 

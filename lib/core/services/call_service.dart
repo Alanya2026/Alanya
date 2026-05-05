@@ -64,6 +64,9 @@ class CallService extends ChangeNotifier {
   bool _isSpeakerOn = false;
   bool _isVideoOn = true;
 
+  // Erreurs
+  String? _errorMessage;
+
   // Durée
   Timer? _durationTimer;
   int _callDuration = 0;
@@ -84,6 +87,7 @@ class CallService extends ChangeNotifier {
   bool get isSpeakerOn => _isSpeakerOn;
   bool get isVideoOn => _isVideoOn;
   int get callDuration => _callDuration;
+  String? get errorMessage => _errorMessage;
   MediaStream? get localStream => _webrtc.localStream;
   MediaStream? get remoteStream => _webrtc.remoteStream;
 
@@ -277,6 +281,7 @@ class CallService extends ChangeNotifier {
     required bool isVideo,
   }) async {
     if (_status != CallStatus.idle) return;
+    _errorMessage = null; // Réinitialiser les erreurs
     _status = CallStatus.outgoing;
     _remoteUserId = targetUserId;
     _isVideo = isVideo;
@@ -316,6 +321,29 @@ class CallService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('[CallService] Erreur initiateCall: $e');
+      debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
+      
+      // Déterminer le type d'erreur pour afficher un message clair
+      String errorMsg = 'Erreur lors du démarrage de l\'appel';
+      final errorStr = e.toString().toLowerCase();
+      
+      if (errorStr.contains('permission')) {
+        errorMsg = 'Permission refusée. Veuillez autoriser le microphone/caméra.';
+      } else if (errorStr.contains('microphone') || errorStr.contains('audio')) {
+        errorMsg = 'Erreur microphone. Veuillez vérifier vos permissions et votre matériel audio.';
+      } else if (errorStr.contains('camera') || errorStr.contains('video')) {
+        errorMsg = 'Erreur caméra. Veuillez vérifier vos permissions et votre caméra.';
+      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
+        errorMsg = 'Erreur d\'accès aux médias. Vérifiez que HTTPS est activé ou que vous êtes sur localhost.';
+      } else if (errorStr.contains('notfounderror')) {
+        errorMsg = 'Aucun appareil microphone/caméra trouvé sur votre système.';
+      } else if (errorStr.contains('notreadableerror')) {
+        errorMsg = 'Impossible d\'accéder au microphone/caméra. Vérifiez que l\'application a les permissions.';
+      } else {
+        errorMsg = 'Erreur: ${e.toString()}';
+      }
+      
+      _errorMessage = errorMsg;
       await _webrtc.dispose();
       _resetCallState();
       _status = CallStatus.ended;
@@ -326,6 +354,7 @@ class CallService extends ChangeNotifier {
   /// Accepte l'appel entrant.
   Future<void> answerCall() async {
     if (_status != CallStatus.incoming || _remoteUserId == null) return;
+    _errorMessage = null; // Réinitialiser les erreurs
 
     try {
       await _webrtc.init(_isVideo ? CallType.video : CallType.audio);
@@ -364,6 +393,25 @@ class CallService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('[CallService] Erreur answerCall: $e');
+      debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
+      
+      // Déterminer le type d'erreur pour afficher un message clair
+      String errorMsg = 'Erreur lors de l\'acceptation de l\'appel';
+      final errorStr = e.toString().toLowerCase();
+      
+      if (errorStr.contains('permission')) {
+        errorMsg = 'Permission refusée. Veuillez autoriser le microphone/caméra.';
+      } else if (errorStr.contains('microphone') || errorStr.contains('audio')) {
+        errorMsg = 'Erreur microphone. Veuillez vérifier vos permissions et votre matériel audio.';
+      } else if (errorStr.contains('camera') || errorStr.contains('video')) {
+        errorMsg = 'Erreur caméra. Veuillez vérifier vos permissions et votre caméra.';
+      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
+        errorMsg = 'Erreur d\'accès aux médias. Vérifiez que HTTPS est activé ou que vous êtes sur localhost.';
+      } else {
+        errorMsg = 'Erreur: ${e.toString()}';
+      }
+      
+      _errorMessage = errorMsg;
       await rejectCall();
     }
   }

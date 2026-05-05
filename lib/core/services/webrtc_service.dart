@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum CallType { audio, video }
 
@@ -17,54 +20,132 @@ class WebRTCService {
   MediaStream? get localStream => _localStream;
   MediaStream? get remoteStream => _remoteStream;
 
+  /// Vérifier et demander les permissions microphone pour Android/iOS
+  Future<bool> _requestMicrophonePermission() async {
+    // Sur web, les permissions sont gérées par le navigateur via getUserMedia
+    if (kIsWeb) return true;
+
+    final status = await Permission.microphone.request();
+    debugPrint('[WebRTC] Permission microphone: ${status.toString()}');
+
+    return status.isGranted;
+  }
+
+  /// Vérifier et demander les permissions caméra pour Android/iOS
+  Future<bool> _requestCameraPermission() async {
+    // Sur web, les permissions sont gérées par le navigateur via getUserMedia
+    if (kIsWeb) return true;
+
+    final status = await Permission.camera.request();
+    debugPrint('[WebRTC] Permission caméra: ${status.toString()}');
+
+    return status.isGranted;
+  }
+
   Future<void> init(CallType type) async {
-    final configuration = {
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-        {'urls': 'stun:stun1.l.google.com:19302'},
-        {
-          'urls': [
-            'turn:global.relay.metered.ca:80',
-            'turn:global.relay.metered.ca:80?transport=tcp',
-            'turn:global.relay.metered.ca:443',
-            'turns:global.relay.metered.ca:443?transport=tcp',
-          ],
-          'username': '4ccd30e6211751522c93c044',
-          'credential': 'iB+/hPI3lLayZAKn',
-        },
-      ]
-    };
+    try {
+      debugPrint('[WebRTC] ========== Initialisation WebRTC ==========');
+      debugPrint('[WebRTC] isWeb: $kIsWeb, Platform: ${kIsWeb ? "WEB" : (Platform.isAndroid ? "ANDROID" : "iOS")}');
+      debugPrint('[WebRTC] Call Type: $type');
 
-    _peerConnection = await createPeerConnection(configuration);
+      // ✅ Sur mobile, demander les permissions
+      if (!kIsWeb) {
+        final micGranted = await _requestMicrophonePermission();
+        if (!micGranted) {
+          throw Exception('Permission microphone refusée');
+        }
 
-    _peerConnection!.onIceCandidate = (candidate) {
-      onIceCandidate?.call(candidate);
-    };
-
-    _peerConnection!.onTrack = (event) {
-      if (event.streams.isNotEmpty) {
-        _remoteStream = event.streams[0];
-        onRemoteStream?.call(_remoteStream!);
+        if (type == CallType.video) {
+          final cameraGranted = await _requestCameraPermission();
+          if (!cameraGranted) {
+            debugPrint('[WebRTC] ⚠️ Permission caméra refusée — continuant avec audio uniquement');
+          }
+        }
+      } else {
+        debugPrint('[WebRTC] Plateforme WEB - Les permissions seront demandées par le navigateur via getUserMedia');
       }
-    };
 
-    _localStream = await _getUserMedia(type);
-    onLocalStream?.call(_localStream!);
+      final configuration = {
+        'iceServers': [
+          {'urls': 'stun:stun.l.google.com:19302'},
+          {'urls': 'stun:stun1.l.google.com:19302'},
+          {
+            'urls': [
+              'turn:global.relay.metered.ca:80',
+              'turn:global.relay.metered.ca:80?transport=tcp',
+              'turn:global.relay.metered.ca:443',
+              'turns:global.relay.metered.ca:443?transport=tcp',
+            ],
+            'username': '4ccd30e6211751522c93c044',
+            'credential': 'iB+/hPI3lLayZAKn',
+          },
+        ]
+      };
 
-    _localStream!.getTracks().forEach((track) {
-      _peerConnection!.addTrack(track, _localStream!);
-    });
+      debugPrint('[WebRTC] Création du PeerConnection...');
+      _peerConnection = await createPeerConnection(configuration);
+      debugPrint('[WebRTC] PeerConnection créé avec succès');
+
+      _peerConnection!.onIceCandidate = (candidate) {
+        debugPrint('[WebRTC] Nouveau ICE candidate');
+        onIceCandidate?.call(candidate);
+      };
+
+      _peerConnection!.onTrack = (event) {
+        debugPrint('[WebRTC] Track reçu: ${event.streams.length} streams');
+        if (event.streams.isNotEmpty) {
+          _remoteStream = event.streams[0];
+          debugPrint('[WebRTC] Remote stream assigné');
+          onRemoteStream?.call(_remoteStream!);
+        }
+      };
+
+      debugPrint('[WebRTC] Appel à _getUserMedia...');
+      _localStream = await _getUserMedia(type);
+      debugPrint('[WebRTC] Local stream obtenu: ${_localStream?.getTracks().length} tracks');
+      onLocalStream?.call(_localStream!);
+
+      debugPrint('[WebRTC] Ajout des tracks au PeerConnection...');
+      _localStream!.getTracks().forEach((track) {
+        debugPrint('[WebRTC] Ajout track: ${track.kind}');
+        _peerConnection!.addTrack(track, _localStream!);
+      });
+      debugPrint('[WebRTC] ========== Initialisation WebRTC réussie ==========');
+    } catch (e) {
+      debugPrint('[WebRTC] ❌ Erreur lors de l\'initialisation: $e');
+      debugPrint('[WebRTC] Type d\'erreur: ${e.runtimeType}');
+      await dispose();
+      rethrow;
+    }
   }
 
   Future<MediaStream> _getUserMedia(CallType type) async {
-    final constraints = <String, dynamic>{
-      'audio': true,
-      'video': type == CallType.video
-          ? {'width': 1280, 'height': 720}
-          : false,
-    };
+    try {
+      debugPrint('[WebRTC] _getUserMedia - Type: $type, isWeb: $kIsWeb');
 
-    return await navigator.mediaDevices.getUserMedia(constraints);
+      final constraints = <String, dynamic>{
+        'audio': {
+          'echoCancellation': true,
+          'noiseSuppression': true,
+          'autoGainControl': true,
+        },
+        'video': type == CallType.video
+            ? {
+                'width': {'ideal': 1280},
+                'height': {'ideal': 720},
+                'frameRate': {'ideal': 30},
+              }
+            : false,
+      };
+
+      debugPrint('[WebRTC] Contraintes: $constraints');
+
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (e) {
+      debugPrint('[WebRTC] Erreur getUserMedia: $e');
+      debugPrint('[WebRTC] Stack: ${StackTrace.current}');
+      rethrow;
+    }
   }
 
   Future<RTCSessionDescription> createOffer() async {

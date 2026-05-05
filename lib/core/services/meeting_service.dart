@@ -34,8 +34,10 @@
 //   Payload join_room : meetingID (pas meetingId), toUserID (pas targetUserId)
 
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, ChangeNotifier;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 
@@ -406,11 +408,61 @@ class MeetingService extends ChangeNotifier {
   // ── WEBRTC ────────────────────────────────────────────────────────
 
   Future<void> _initLocalStream() async {
-    _localStream = await navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': {'width': 1280, 'height': 720},
-    });
-    notifyListeners();
+    try {
+      debugPrint('[MeetingService] Initialisation du stream local...');
+      debugPrint('[MeetingService] isWeb: $kIsWeb');
+
+      // Demander les permissions si mobile
+      if (!kIsWeb) {
+        final micStatus = await Permission.microphone.request();
+        if (!micStatus.isGranted) {
+          throw Exception('Permission microphone refusée');
+        }
+
+        final cameraStatus = await Permission.camera.request();
+        if (!cameraStatus.isGranted) {
+          debugPrint('[MeetingService] ⚠️ Permission caméra refusée');
+        }
+      }
+
+      // Obtenir le media stream avec constraints
+      final constraints = {
+        'audio': {
+          'echoCancellation': true,
+          'noiseSuppression': true,
+          'autoGainControl': true,
+        },
+        'video': {
+          'width': {'ideal': 1280},
+          'height': {'ideal': 720},
+          'frameRate': {'ideal': 30},
+        }
+      };
+
+      debugPrint('[MeetingService] Appel getUserMedia avec contraintes: $constraints');
+      _localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      debugPrint('[MeetingService] ✅ Stream local obtenu: ${_localStream?.getTracks().length} tracks');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[MeetingService] ❌ Erreur _initLocalStream: $e');
+      debugPrint('[MeetingService] Type: ${e.runtimeType}');
+
+      String errorMsg = 'Erreur d\'accès aux médias';
+      final errorStr = e.toString().toLowerCase();
+
+      if (errorStr.contains('permission')) {
+        errorMsg = 'Permission refusée pour le microphone/caméra';
+      } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
+        errorMsg = 'Erreur d\'accès aux médias. Vérifiez HTTPS ou localhost.';
+      } else if (errorStr.contains('notfounderror')) {
+        errorMsg = 'Aucun appareil audio/vidéo trouvé';
+      } else if (errorStr.contains('notreadableerror')) {
+        errorMsg = 'Impossible d\'accéder aux appareils. Vérifiez les permissions.';
+      }
+
+      debugPrint('[MeetingService] Message d\'erreur: $errorMsg');
+      rethrow;
+    }
   }
 
   Future<void> _createPeerAndOffer(String userId) async {
