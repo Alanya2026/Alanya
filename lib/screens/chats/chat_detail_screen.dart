@@ -96,6 +96,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 targetUserId: widget.userId!,
                 myId: myId,
                 myName: userData['nom'] ?? userData['pseudo'] ?? '',
+                targetUserName: widget.userName,
                 isVideo: true,
               );
               if (context.mounted) {
@@ -129,6 +130,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 targetUserId: widget.userId!,
                 myId: myId,
                 myName: userData['nom'] ?? userData['pseudo'] ?? '',
+                targetUserName: widget.userName,
                 isVideo: false,
               );
               if (context.mounted) {

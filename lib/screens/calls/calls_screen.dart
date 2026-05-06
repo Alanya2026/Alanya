@@ -70,6 +70,8 @@ class _CallsScreenState extends State<CallsScreen> {
       myId: _myId,
       myName: myName,
       myPhoto: myPhoto,
+      targetUserName: otherUser.nom,
+      targetUserPhoto: otherUser.avatarUrl,
       isVideo: isVideo,
     );
 

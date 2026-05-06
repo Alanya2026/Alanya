@@ -9,6 +9,7 @@ import 'talky_api_client.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint('[Main] 🚀 Application démarrée');
   runApp(const TalkyApp());
 }
 
@@ -63,8 +64,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
+    debugPrint('[AuthWrapper] initState - Lancement de init()');
     Future.microtask(
-      () => Provider.of<AuthProvider>(context, listen: false).init(),
+      () async {
+        try {
+          await Provider.of<AuthProvider>(context, listen: false).init();
+          debugPrint('[AuthWrapper] ✅ init() complété');
+        } catch (e) {
+          debugPrint('[AuthWrapper] ❌ Erreur init: $e');
+          debugPrint('[AuthWrapper] Stack: ${StackTrace.current}');
+        }
+      },
     );
   }
 
@@ -72,6 +82,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
+        debugPrint('[AuthWrapper] build - isInitialized=${auth.isInitialized}, isLoggedIn=${auth.isLoggedIn}');
         if (!auth.isInitialized) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),

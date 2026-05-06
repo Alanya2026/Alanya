@@ -38,6 +38,7 @@
 //     group_ice_candidate{ fromUserId, candidate, roomId }
 
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../talky_api_client.dart';
@@ -304,16 +305,27 @@ class CallService extends ChangeNotifier {
     required String myName,
     String? myPhoto,
     required bool isVideo,
+    String? targetUserName,
+    String? targetUserPhoto,
   }) async {
     if (_status != CallStatus.idle) return;
     _errorMessage = null; // Réinitialiser les erreurs
     _status = CallStatus.outgoing;
     _remoteUserId = targetUserId;
+    _remoteUserName = targetUserName;
+    _remoteUserPhoto = targetUserPhoto;
     _isVideo = isVideo;
     notifyListeners();
 
     try {
       await _webrtc.init(isVideo ? CallType.video : CallType.audio);
+
+      // ✅ Initialiser le routage audio (mobile uniquement)
+      if (!kIsWeb) {
+        _isSpeakerOn = true;
+        await Helper.setSpeakerphoneOn(true);
+        debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
+      }
 
       // ICE candidates → envoyés au destinataire
       _webrtc.onIceCandidate = (candidate) {
@@ -389,6 +401,13 @@ class CallService extends ChangeNotifier {
       debugPrint('[CallService] 🔧 _webrtc.init($_isVideo ? CallType.video : CallType.audio)');
       await _webrtc.init(_isVideo ? CallType.video : CallType.audio);
       debugPrint('[CallService] ✅ WebRTC initialisé');
+
+      // ✅ Initialiser le routage audio (mobile uniquement)
+      if (!kIsWeb) {
+        _isSpeakerOn = true;
+        await Helper.setSpeakerphoneOn(true);
+        debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
+      }
 
       // ICE candidates → envoyés à l'appelant
       _webrtc.onIceCandidate = (candidate) {
@@ -604,6 +623,13 @@ class CallService extends ChangeNotifier {
 
   Future<void> _initLocalStream(bool isVideo) async {
     await _webrtc.init(isVideo ? CallType.video : CallType.audio);
+
+    // ✅ Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement)
+    if (!kIsWeb) {
+      _isSpeakerOn = true;
+      await Helper.setSpeakerphoneOn(true);
+      debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
+    }
   }
 
   Future<void> _createGroupPeerAndOffer(String userId) async {
@@ -723,9 +749,10 @@ class CallService extends ChangeNotifier {
     await _webrtc.switchCamera();
   }
 
-  void toggleSpeaker() {
+  Future<void> toggleSpeaker() async {
     _isSpeakerOn = !_isSpeakerOn;
-    // Note: flutter_webrtc gère le speaker via Helper.setSpeakerphoneOn
+    await Helper.setSpeakerphoneOn(_isSpeakerOn);
+    debugPrint('[CallService] Haut-parleur: ${_isSpeakerOn ? "ON" : "OFF"}');
     notifyListeners();
   }
 

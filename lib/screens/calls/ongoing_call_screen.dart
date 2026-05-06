@@ -12,8 +12,10 @@ class OngoingCallScreen extends StatefulWidget {
 }
 
 class _OngoingCallScreenState extends State<OngoingCallScreen> {
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  late RTCVideoRenderer _localRenderer;
+  late RTCVideoRenderer _remoteRenderer;
+  bool _initialized = false;
+  bool _isScreenClosing = false;
 
   @override
   void initState() {
@@ -22,52 +24,111 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
   }
 
   Future<void> _initRenderers() async {
-    await _localRenderer.initialize();
-    await _remoteRenderer.initialize();
+    try {
+      _localRenderer = RTCVideoRenderer();
+      _remoteRenderer = RTCVideoRenderer();
+      
+      await _localRenderer.initialize();
+      await _remoteRenderer.initialize();
+      
+      debugPrint('[OngoingCallScreen] ✅ Renderers initialisés');
 
-    final callService = Provider.of<CallService>(context, listen: false);
+      final callService = Provider.of<CallService>(context, listen: false);
 
-    if (callService.localStream != null) {
-      _localRenderer.srcObject = callService.localStream;
+      if (callService.localStream != null) {
+        _localRenderer.srcObject = callService.localStream;
+      }
+      if (callService.remoteStream != null) {
+        _remoteRenderer.srcObject = callService.remoteStream;
+      }
+
+      // ✅ Stocker le listener pour pouvoir le supprimer dans dispose
+      callService.addListener(_onCallServiceChanged);
+      
+      setState(() => _initialized = true);
+    } catch (e) {
+      debugPrint('[OngoingCallScreen] ❌ Erreur init renderers: $e');
     }
-    if (callService.remoteStream != null) {
-      _remoteRenderer.srcObject = callService.remoteStream;
-    }
-
-    // ✅ Stocker le listener pour pouvoir le supprimer dans dispose
-    callService.addListener(_onCallServiceChanged);
   }
 
   void _onCallServiceChanged() {
-    if (!mounted) return;
+    // ✅ Ignorer si l'écran est en cours de fermeture
+    if (_isScreenClosing) {
+      debugPrint('[OngoingCallScreen] ⚠️ _onCallServiceChanged: screen is closing, ignoring');
+      return;
+    }
+    
+    if (!mounted) {
+      debugPrint('[OngoingCallScreen] ⚠️ _onCallServiceChanged: widget not mounted, ignoring');
+      return;
+    }
+    
     final callService = Provider.of<CallService>(context, listen: false);
-
     debugPrint('[OngoingCallScreen] 📊 CallService changed: ${callService.status}');
 
     // ✅ Navigation automatique quand l'appel se termine côté distant
     // Ne pas pop si on a volontairement terminé l'appel (le bouton RED l'a déjà fait)
     if (callService.status == CallStatus.ended && !callService.callEndedByUs) {
       debugPrint('[OngoingCallScreen] ❌ Appel terminé par l\'autre - dépilage...');
+      _isScreenClosing = true;
       callService.removeListener(_onCallServiceChanged);
-      Navigator.of(context).pop();
+      
+      // ✅ Vider les renderers avant de pop
+      if (_initialized) {
+        _localRenderer.srcObject = null;
+        _remoteRenderer.srcObject = null;
+      }
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
       return;
     }
 
-    // Mettre à jour les renderers quand les streams changent
+    // ✅ Mettre à jour les renderers quand les streams changent
+    if (!_initialized) return;
+    
     debugPrint('[OngoingCallScreen] 🎥 Mise à jour renderers - Local: ${callService.localStream != null}, Remote: ${callService.remoteStream != null}');
-    setState(() {
-      _localRenderer.srcObject = callService.localStream;
-      _remoteRenderer.srcObject = callService.remoteStream;
-    });
+    try {
+      if (mounted) {
+        setState(() {
+          _localRenderer.srcObject = callService.localStream;
+          _remoteRenderer.srcObject = callService.remoteStream;
+        });
+      }
+    } catch (e) {
+      debugPrint('[OngoingCallScreen] ⚠️ Erreur setState renderers: $e');
+    }
   }
 
   @override
   void dispose() {
-    // ✅ Supprimer le listener pour éviter le memory leak
-    final callService = Provider.of<CallService>(context, listen: false);
-    callService.removeListener(_onCallServiceChanged);
-    _localRenderer.dispose();
-    _remoteRenderer.dispose();
+    debugPrint('[OngoingCallScreen] 🧹 Nettoyage OngoingCallScreen...');
+    
+    try {
+      // ✅ Supprimer le listener
+      try {
+        final callService = Provider.of<CallService>(context, listen: false);
+        callService.removeListener(_onCallServiceChanged);
+      } catch (e) {
+        debugPrint('[OngoingCallScreen] ⚠️ Erreur suppression listener: $e');
+      }
+      
+      if (_initialized) {
+        // ✅ Vider les sources avant dispose
+        _localRenderer.srcObject = null;
+        _remoteRenderer.srcObject = null;
+        
+        // ✅ Disposer les renderers
+        _localRenderer.dispose();
+        _remoteRenderer.dispose();
+        
+        debugPrint('[OngoingCallScreen] ✅ Renderers disposés');
+      }
+    } catch (e) {
+      debugPrint('[OngoingCallScreen] ❌ Erreur dispose: $e');
+    }
+    
     super.dispose();
   }
 
@@ -219,13 +280,35 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                               ? CupertinoIcons.speaker_3_fill
                               : CupertinoIcons.speaker_2,
                           isActive: callService.isSpeakerOn,
-                          onTap: () => callService.toggleSpeaker(),
+                          onTap: () async {
+                            await callService.toggleSpeaker();
+                          },
                         ),
                       // Bouton raccrocher
                       GestureDetector(
                         onTap: () async {
+                          debugPrint('[OngoingCallScreen] 🔴 Bouton rouge appuyé');
+                          _isScreenClosing = true;
+                          
+                          // ✅ Supprimer le listener AVANT d'endcall
+                          final callService = Provider.of<CallService>(context, listen: false);
+                          callService.removeListener(_onCallServiceChanged);
+                          
+                          // ✅ Arrêter les renderers AVANT de quitter
+                          if (_initialized) {
+                            _localRenderer.srcObject = null;
+                            _remoteRenderer.srcObject = null;
+                            debugPrint('[OngoingCallScreen] 🛑 Renderers arrêtés');
+                          }
+                          
+                          // ✅ Terminer l'appel et attendre la fin complète
                           await callService.endCall();
-                          if (mounted) Navigator.pop(context);
+                          debugPrint('[OngoingCallScreen] ✅ endCall() complété');
+                          
+                          // ✅ Pop seulement après que tout soit fini
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.all(20),

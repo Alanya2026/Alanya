@@ -69,6 +69,8 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       targetUserId: user.alanyaID,
       myId: myId,
       myName: userData['nom'] ?? userData['pseudo'] ?? '',
+      targetUserName: user.nom,
+      targetUserPhoto: user.avatarUrl,
       isVideo: isVideo,
     );
     if (context.mounted) {

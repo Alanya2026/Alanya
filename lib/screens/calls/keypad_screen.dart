@@ -77,6 +77,8 @@ class _KeypadScreenState extends State<KeypadScreen> {
       targetUserId: _foundUser!.alanyaID,
       myId: myId,
       myName: userData['nom'] ?? userData['pseudo'] ?? '',
+      targetUserName: _foundUser!.nom,
+      targetUserPhoto: _foundUser!.avatarUrl,
       isVideo: isVideo,
     );
     if (context.mounted) {

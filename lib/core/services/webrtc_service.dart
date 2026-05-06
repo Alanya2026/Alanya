@@ -96,6 +96,13 @@ class WebRTCService {
         if (event.streams.isNotEmpty) {
           _remoteStream = event.streams[0];
           debugPrint('[WebRTC] Remote stream assigné');
+          debugPrint('[WebRTC] 📊 Remote stream tracks: Audio=${_remoteStream?.getAudioTracks().length}, Video=${_remoteStream?.getVideoTracks().length}');
+          
+          // Log détails des pistes audio
+          _remoteStream?.getAudioTracks().forEach((track) {
+            debugPrint('[WebRTC] 🎵 Audio track - kind=${track.kind}, enabled=${track.enabled}, label=${track.label}');
+          });
+          
           onRemoteStream?.call(_remoteStream!);
         }
       };
@@ -107,9 +114,10 @@ class WebRTCService {
 
       debugPrint('[WebRTC] Ajout des tracks au PeerConnection...');
       _localStream!.getTracks().forEach((track) {
-        debugPrint('[WebRTC] Ajout track: ${track.kind}');
+        debugPrint('[WebRTC] Ajout track: ${track.kind} (enabled=${track.enabled}, label=${track.label})');
         _peerConnection!.addTrack(track, _localStream!);
       });
+      debugPrint('[WebRTC] 📊 Local stream setup: Audio=${_localStream?.getAudioTracks().length}, Video=${_localStream?.getVideoTracks().length}');
       debugPrint('[WebRTC] ========== Initialisation WebRTC réussie ==========');
     } catch (e) {
       debugPrint('[WebRTC] ❌ Erreur lors de l\'initialisation: $e');
@@ -208,10 +216,33 @@ class WebRTCService {
   }
 
   Future<void> dispose() async {
-    await _localStream?.dispose();
-    await _peerConnection?.close();
-    _peerConnection = null;
-    _localStream = null;
-    _remoteStream = null;
+    try {
+      debugPrint('[WebRTC] 🧹 Nettoyage WebRTC...');
+      
+      // ✅ Éteindre tous les tracks avant de disposer le stream
+      _localStream?.getTracks().forEach((track) async {
+        await track.stop();
+      });
+      
+      _remoteStream?.getTracks().forEach((track) async {
+        await track.stop();
+      });
+      
+      // ✅ Fermer le PeerConnection
+      await _peerConnection?.close();
+      
+      // ✅ Disposer les streams
+      await _localStream?.dispose();
+      await _remoteStream?.dispose();
+      
+      // ✅ Réinitialiser les références
+      _peerConnection = null;
+      _localStream = null;
+      _remoteStream = null;
+      
+      debugPrint('[WebRTC] ✅ Nettoyage complété');
+    } catch (e) {
+      debugPrint('[WebRTC] ❌ Erreur dispose: $e');
+    }
   }
 }
