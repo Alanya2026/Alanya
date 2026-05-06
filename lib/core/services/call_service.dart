@@ -162,10 +162,12 @@ class CallService extends ChangeNotifier {
       _status = CallStatus.incoming;
       debugPrint('[CallService] ✅ Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
       
-      // 🔔 Démarrer la sonnerie d'appel entrant
-      await _ringtone.playIncomingCallRingtone();
-      
       notifyListeners();
+      
+      // 🔔 Démarrer la sonnerie en arrière-plan (ne pas bloquer l'affichage)
+      _ringtone.playIncomingCallRingtone().catchError((e) {
+        debugPrint('[CallService] ⚠️ Erreur sonnerie (non-bloquante): $e');
+      });
     });
 
     // Appel accepté par l'autre

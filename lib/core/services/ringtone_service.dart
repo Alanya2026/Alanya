@@ -38,19 +38,18 @@ class RingtoneService {
       debugPrint('[RingtoneService] 📞 Démarrage ringback tone (appelant)');
       _isPlaying = true;
 
-      // ✅ Charger le son depuis les assets (le MP3 de l'utilisateur)
-      await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3');
-      
-      // ✅ Looper le son
-      await _audioPlayer.setLoopMode(LoopMode.one);
-      
-      // ✅ Volume max
-      await _audioPlayer.setVolume(1.0);
-      
-      // ✅ Démarrer la lecture
-      await _audioPlayer.play();
-      
-      debugPrint('[RingtoneService] ✅ Ringback tone lancée');
+      // ✅ Charger le son depuis les assets avec timeout
+      try {
+        await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3').timeout(const Duration(seconds: 2));
+        await _audioPlayer.setLoopMode(LoopMode.one);
+        await _audioPlayer.setVolume(1.0);
+        await _audioPlayer.play();
+        debugPrint('[RingtoneService] ✅ Ringback tone lancée');
+      } catch (e) {
+        debugPrint('[RingtoneService] ⚠️ Asset ringback non disponible: $e');
+        _isPlaying = false;
+        // Continuer sans son plutôt que de bloquer
+      }
     } catch (e) {
       debugPrint('[RingtoneService] ❌ Erreur ringback: $e');
       _isPlaying = false;
@@ -74,38 +73,56 @@ class RingtoneService {
       debugPrint('[RingtoneService] 🔔 Démarrage sonnerie système (appelé)');
       _isPlaying = true;
 
-      // ✅ Essayer de charger la sonnerie système Android
+      // ✅ Essayer de charger la sonnerie système Android avec timeout
       if (Platform.isAndroid) {
+        bool soundLoaded = false;
+        
+        // Essai 1 : sonnerie système
         try {
-          // URI de la sonnerie système Android par défaut
           const ringtoneUri = 'android.resource://com.android.systemui/raw/ringtone';
-          
-          await _audioPlayer.setUrl(ringtoneUri);
+          await _audioPlayer.setUrl(ringtoneUri).timeout(const Duration(seconds: 2));
           await _audioPlayer.setLoopMode(LoopMode.one);
           await _audioPlayer.setVolume(1.0);
           await _audioPlayer.play();
-          
           debugPrint('[RingtoneService] ✅ Sonnerie système lancée');
+          soundLoaded = true;
         } catch (e) {
-          debugPrint('[RingtoneService] ⚠️ Sonnerie système non trouvée: $e');
-          debugPrint('[RingtoneService] 📞 Fallback: Utilisation du ringback tone');
-          // Fallback sur le MP3 des assets
-          await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3');
-          await _audioPlayer.setLoopMode(LoopMode.one);
-          await _audioPlayer.setVolume(1.0);
-          await _audioPlayer.play();
+          debugPrint('[RingtoneService] ⚠️ Sonnerie système non disponible: $e');
+          
+          // Essai 2 : fichier asset en fallback
+          if (!soundLoaded) {
+            try {
+              await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3').timeout(const Duration(seconds: 2));
+              await _audioPlayer.setLoopMode(LoopMode.one);
+              await _audioPlayer.setVolume(1.0);
+              await _audioPlayer.play();
+              debugPrint('[RingtoneService] ✅ Fallback asset lancé');
+              soundLoaded = true;
+            } catch (e2) {
+              debugPrint('[RingtoneService] ⚠️ Fallback asset échoué: $e2');
+              // Continuer sans son - au moins la vibration fonctionnera
+            }
+          }
         }
       } else {
-        // Fallback pour autres plateformes : utiliser le MP3
-        await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3');
-        await _audioPlayer.setLoopMode(LoopMode.one);
-        await _audioPlayer.setVolume(1.0);
-        await _audioPlayer.play();
+        // Non-Android : utiliser le fichier asset
+        try {
+          await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3').timeout(const Duration(seconds: 2));
+          await _audioPlayer.setLoopMode(LoopMode.one);
+          await _audioPlayer.setVolume(1.0);
+          await _audioPlayer.play();
+          debugPrint('[RingtoneService] ✅ Asset ringtone lancé');
+        } catch (e) {
+          debugPrint('[RingtoneService] ⚠️ Asset non disponible: $e');
+          // Continuer sans son
+        }
       }
 
-      // ✅ Vibration sur Android uniquement
+      // ✅ Vibration sur Android uniquement (en arrière-plan, ne pas attendre)
       if (Platform.isAndroid) {
-        _startVibration();
+        _startVibration().catchError((e) {
+          debugPrint('[RingtoneService] ⚠️ Erreur vibration: $e');
+        });
       }
     } catch (e) {
       debugPrint('[RingtoneService] ❌ Erreur system ringtone: $e');
@@ -117,7 +134,7 @@ class RingtoneService {
   Future<void> playIncomingCallRingtone() => playSystemRingtone();
 
   /// Lance une vibration continue (motif pour appel entrant)
-  void _startVibration() async {
+  Future<void> _startVibration() async {
     try {
       final hasVibrator = await Vibration.hasVibrator() ?? false;
       if (!hasVibrator) {

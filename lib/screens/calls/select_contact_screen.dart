@@ -63,12 +63,14 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final userData = await apiClient.getMe();
     final myId = userData['alanyaID'] ?? 0;
+    final myPhoto = userData['avatar_url'];
 
     final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
       targetUserId: user.alanyaID,
       myId: myId,
       myName: userData['nom'] ?? userData['pseudo'] ?? '',
+      myPhoto: myPhoto,
       targetUserName: user.nom,
       targetUserPhoto: user.avatarUrl,
       isVideo: isVideo,

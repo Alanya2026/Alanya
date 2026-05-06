@@ -96,6 +96,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 targetUserId: widget.userId!,
                 myId: myId,
                 myName: userData['nom'] ?? userData['pseudo'] ?? '',
+                myPhoto: userData['avatar_url'],
                 targetUserName: widget.userName,
                 isVideo: true,
               );
@@ -130,6 +131,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 targetUserId: widget.userId!,
                 myId: myId,
                 myName: userData['nom'] ?? userData['pseudo'] ?? '',
+                myPhoto: userData['avatar_url'],
                 targetUserName: widget.userName,
                 isVideo: false,
               );
