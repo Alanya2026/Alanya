@@ -31,10 +31,14 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _checkAuthStatus() async {
     try {
-      final token = await _storage.getAccessToken();
-      if (token == null) return;
+      final accessToken = await _storage.getAccessToken();
+      final refreshToken = await _storage.getRefreshToken();
+      if (accessToken == null) return;
 
-      _apiClient.setToken(token);
+      _apiClient.setToken(accessToken);
+      if (refreshToken != null) {
+        _apiClient.setRefreshToken(refreshToken);
+      }
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
       _apiClient.connectSocket();
@@ -45,7 +49,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> login({
-    required String email,
+    required String alanyaPhone,
     required String password,
   }) async {
     _setLoading(true);
@@ -53,7 +57,7 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await _apiClient.login(
-        email: email,
+        alanyaPhone: alanyaPhone,
         password: password,
       );
 

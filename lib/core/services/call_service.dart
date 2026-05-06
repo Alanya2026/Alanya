@@ -44,12 +44,14 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'webrtc_service.dart';
+import 'ringtone_service.dart';
 
 enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
 
 class CallService extends ChangeNotifier {
   final TalkyApiClient _apiClient;
   final WebRTCService _webrtc = WebRTCService();
+  final RingtoneService _ringtone = RingtoneService();
 
   CallStatus _status = CallStatus.idle;
 
@@ -127,7 +129,17 @@ class CallService extends ChangeNotifier {
   }
 
   CallService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
+    _initRingtone();
     _setupSocketListeners();
+  }
+
+  Future<void> _initRingtone() async {
+    try {
+      await _ringtone.init();
+      debugPrint('[CallService] ✅ RingtoneService initialisé');
+    } catch (e) {
+      debugPrint('[CallService] ⚠️ Erreur init ringtone: $e');
+    }
   }
 
   // ── SETUP LISTENERS ────────────────────────────────────────────────
@@ -136,7 +148,7 @@ class CallService extends ChangeNotifier {
     // ── Appels 1-à-1 ──────────────────────────────────────────────
 
     // Appel entrant
-    _apiClient.onSocketEvent(SocketEvents.incomingCall, (data) {
+    _apiClient.onSocketEvent(SocketEvents.incomingCall, (data) async {
       debugPrint('[CallService] 📞 Appel entrant reçu: $data');
       if (data is! Map) {
         debugPrint('[CallService] ❌ Données invalides pour incoming_call');
@@ -149,6 +161,10 @@ class CallService extends ChangeNotifier {
       _pendingOffer = data['offer'] as Map<String, dynamic>?;
       _status = CallStatus.incoming;
       debugPrint('[CallService] ✅ Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
+      
+      // 🔔 Démarrer la sonnerie d'appel entrant
+      await _ringtone.playIncomingCallRingtone();
+      
       notifyListeners();
     });
 
@@ -355,6 +371,10 @@ class CallService extends ChangeNotifier {
       });
 
       _status = CallStatus.connecting;
+      
+      // 📞 Démarrer la sonnerie ringback (tonalité d'appel pour l'appelant)
+      _ringtone.playRingbackTone();
+      
       notifyListeners();
     } catch (e) {
       debugPrint('[CallService] Erreur initiateCall: $e');
@@ -394,6 +414,10 @@ class CallService extends ChangeNotifier {
       debugPrint('[CallService] ⚠️ answerCall ignoré: status=${_status}, remoteUserId=${_remoteUserId}');
       return;
     }
+
+    // 🛑 Arrêter la sonnerie
+    await _ringtone.stopRingtone();
+    
     _errorMessage = null; // Réinitialiser les erreurs
     debugPrint('[CallService] 📞 answerCall START - Caller: $_remoteUserId');
 
@@ -470,6 +494,9 @@ class CallService extends ChangeNotifier {
   Future<void> rejectCall() async {
     if (_remoteUserId == null) return;
 
+    // 🛑 Arrêter la sonnerie
+    await _ringtone.stopRingtone();
+
     // ✅ Payload exact attendu par le backend
     _apiClient.sendSocketEvent(SocketEvents.rejectCall, {
       'callerId': _remoteUserId.toString(),
@@ -494,6 +521,9 @@ class CallService extends ChangeNotifier {
   }
 
   Future<void> _terminateCall() async {
+    // 🛑 Arrêter la sonnerie
+    await _ringtone.stopRingtone();
+    
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _resetCallState();
@@ -774,9 +804,11 @@ class CallService extends ChangeNotifier {
   }
 
   @override
+  @override
   void dispose() {
     _durationTimer?.cancel();
     _webrtc.dispose();
+    _ringtone.dispose();
     for (final pc in _groupPeerConnections.values) {
       pc.close();
     }

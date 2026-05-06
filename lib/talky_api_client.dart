@@ -29,6 +29,7 @@ class TalkyApiClient {
   TalkyApiClient({http.Client? client}) : _client = client ?? http.Client();
 
   void setToken(String token) => _accessToken = token;
+  void setRefreshToken(String token) => _refreshToken = token;
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
@@ -108,7 +109,7 @@ class TalkyApiClient {
   }
 
   Future<Map<String, dynamic>> login({
-    required String email,
+    required String alanyaPhone,
     required String password,
     String? fcmToken,
     String? deviceId,
@@ -117,7 +118,7 @@ class TalkyApiClient {
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'email': email,
+        'alanyaPhone': alanyaPhone,
         'password': password,
         if (fcmToken != null) 'fcm_token': fcmToken,
         if (deviceId != null) 'device_ID': deviceId,
@@ -143,6 +144,44 @@ class TalkyApiClient {
     } else {
       throw TalkyException(data['error'] ?? 'Refresh échoué', response.statusCode);
     }
+  }
+
+  // ── PASSWORD RESET WITH OTP ───────────────────────────────────────
+
+  /// Étape 1: Demander un OTP par email
+  Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/auth/forgot-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    return _parseResponse(response);
+  }
+
+  /// Étape 2: Valider l'OTP et récupérer un reset token
+  Future<Map<String, dynamic>> validateOTP(String email, String otp) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/auth/validate-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'otp': otp}),
+    );
+    return _parseResponse(response);
+  }
+
+  /// Étape 3: Compléter le reset password avec le reset token
+  Future<Map<String, dynamic>> completePasswordReset(
+    String resetToken,
+    String newPassword,
+  ) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/auth/reset-password-confirm'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'resetToken': resetToken,
+        'newPassword': newPassword,
+      }),
+    );
+    return _parseResponse(response);
   }
 
   Future<Map<String, dynamic>> getMe() async {

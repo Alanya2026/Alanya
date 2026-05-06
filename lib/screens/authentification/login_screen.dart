@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'signup_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,14 +13,14 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
+  final _alanyaPhoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   void _login() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.login(
-      email: _emailController.text.trim(),
+      alanyaPhone: _alanyaPhoneController.text.trim(),
       password: _passwordController.text,
     );
 
@@ -30,6 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
         (route) => false,
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _alanyaPhoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -78,11 +86,11 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 48),
               TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
+                controller: _alanyaPhoneController,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  hintText: 'Email address',
-                  prefixIcon: const Icon(Icons.email_outlined),
+                  hintText: 'Alanya Phone Ex : 340364',
+                  prefixIcon: const Icon(Icons.phone_outlined),
                   filled: true,
                   fillColor: Colors.grey.shade100,
                   border: OutlineInputBorder(
@@ -120,7 +128,12 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                    );
+                  },
                   child: const Text(
                     'Forgot Password?',
                     style: TextStyle(color: Colors.indigo),
