@@ -178,7 +178,7 @@ class CallService extends ChangeNotifier {
         _startDurationTimer();
       } catch (e) {
         debugPrint('[CallService] ❌ Erreur handleAnswer: $e');
-        _status = CallStatus.ended;
+        _status = CallStatus.idle;
       }
       notifyListeners();
     });
@@ -186,7 +186,7 @@ class CallService extends ChangeNotifier {
     // Appel rejeté
     _apiClient.onSocketEvent(SocketEvents.callRejected, (_) {
       _resetCallState();
-      _status = CallStatus.ended;
+      _status = CallStatus.idle;
       notifyListeners();
     });
 
@@ -201,7 +201,7 @@ class CallService extends ChangeNotifier {
     _apiClient.onSocketEvent(SocketEvents.callFailed, (data) {
       debugPrint('[CallService] Appel échoué: ${data?['reason']}');
       _resetCallState();
-      _status = CallStatus.ended;
+      _status = CallStatus.idle;
       notifyListeners();
     });
 
@@ -383,7 +383,7 @@ class CallService extends ChangeNotifier {
       _errorMessage = errorMsg;
       await _webrtc.dispose();
       _resetCallState();
-      _status = CallStatus.ended;
+      _status = CallStatus.idle;
       notifyListeners();
     }
   }
@@ -476,7 +476,7 @@ class CallService extends ChangeNotifier {
     });
 
     _resetCallState();
-    _status = CallStatus.ended;
+    _status = CallStatus.idle;
     notifyListeners();
   }
 
@@ -497,7 +497,7 @@ class CallService extends ChangeNotifier {
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _resetCallState();
-    _status = CallStatus.ended;
+    _status = CallStatus.idle;
     notifyListeners();
   }
 
@@ -548,7 +548,7 @@ class CallService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('[CallService] Erreur createGroupCall: $e');
-      _status = CallStatus.ended;
+      _status = CallStatus.idle;
       notifyListeners();
     }
   }
@@ -581,7 +581,7 @@ class CallService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('[CallService] Erreur joinGroupCall: $e');
-      _status = CallStatus.ended;
+      _status = CallStatus.idle;
       notifyListeners();
     }
   }
@@ -617,7 +617,7 @@ class CallService extends ChangeNotifier {
     _durationTimer?.cancel();
     _groupRoomId = null;
     _callDuration = 0;
-    _status = CallStatus.ended;
+    _status = CallStatus.idle;
     notifyListeners();
   }
 
