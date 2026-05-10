@@ -23,10 +23,15 @@ class AuthProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   Future<void> init() async {
-    await _storage.init();
-    await _checkAuthStatus();
-    _isInitialized = true;
-    notifyListeners();
+    try {
+      await _storage.init();
+      await _checkAuthStatus();
+    } catch (e) {
+      debugPrint('[AuthProvider] ⚠️ init() error: $e');
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
+    }
   }
 
   Future<void> _checkAuthStatus() async {
@@ -42,8 +47,9 @@ class AuthProvider extends ChangeNotifier {
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
       _apiClient.connectSocket();
-    } catch (_) {
-      await _storage.clearAll();
+    } catch (e) {
+      debugPrint('[AuthProvider] ⚠️ _checkAuthStatus error: $e');
+      try { await _storage.clearAll(); } catch (_) {}
       _apiClient.logout();
     }
   }

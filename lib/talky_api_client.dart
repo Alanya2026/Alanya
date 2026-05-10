@@ -216,9 +216,72 @@ class TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
+  Future<void> updateFcmToken(String fcmToken) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('$baseUrl/auth/fcm-token'),
+        headers: _headers,
+        body: jsonEncode({'fcmToken': fcmToken}),
+      ),
+    );
+  }
+
+  // ── WEBRTC / TURN ─────────────────────────────────────────────────
+
+  List<Map<String, dynamic>>? _cachedIceServers;
+  DateTime? _iceServersExpiresAt;
+
+  /// Récupère la config iceServers depuis le backend. Cache 50 min par défaut
+  /// (les credentials TURN éphémères ont 60 min — on les renouvelle avant).
+  Future<List<Map<String, dynamic>>> fetchIceServers({bool force = false}) async {
+    final now = DateTime.now();
+    if (!force &&
+        _cachedIceServers != null &&
+        _iceServersExpiresAt != null &&
+        now.isBefore(_iceServersExpiresAt!)) {
+      debugPrint('[TalkyApiClient] 🧊 fetchIceServers (cache, ${_cachedIceServers!.length} serveur(s))');
+      return _cachedIceServers!;
+    }
+
+    try {
+      final data = await _handleRequest(
+        () => _client.get(Uri.parse('$baseUrl/turn/credentials'), headers: _headers),
+      ) as Map<String, dynamic>;
+
+      final List<dynamic> raw = data['iceServers'] as List<dynamic>? ?? [];
+      final servers = raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+      final ttlSec = (data['ttlSec'] as num?)?.toInt() ?? 0;
+      _cachedIceServers = servers;
+      _iceServersExpiresAt = ttlSec > 60
+          ? now.add(Duration(seconds: ttlSec - 600))
+          : now.add(const Duration(minutes: 50));
+      debugPrint('[TalkyApiClient] 🧊 fetchIceServers: ${servers.length} serveur(s)');
+      for (final s in servers) {
+        final urls = s['urls'];
+        final hasCreds = s.containsKey('username') && s.containsKey('credential');
+        debugPrint('  • urls=$urls, auth=${hasCreds ? "TURN avec creds" : "STUN"}');
+      }
+      return servers;
+    } catch (e) {
+      // Fallback STUN public si le backend est injoignable — l'app reste utilisable
+      // sur les réseaux non-symétriques.
+      debugPrint('[TalkyApiClient] fetchIceServers fallback: $e');
+      return const [
+        {'urls': 'stun:stun.l.google.com:19302'},
+        {'urls': 'stun:stun1.l.google.com:19302'},
+      ];
+    }
+  }
+
   void logout() {
     _accessToken  = null;
     _refreshToken = null;
+    _cachedIceServers = null;
+    _iceServersExpiresAt = null;
     disconnectSocket();
   }
 

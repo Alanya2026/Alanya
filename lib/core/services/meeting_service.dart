@@ -34,7 +34,6 @@
 //   Payload join_room : meetingID (pas meetingId), toUserID (pas targetUserId)
 
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, ChangeNotifier;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -82,23 +81,11 @@ class MeetingService extends ChangeNotifier {
   // Messages in-meeting
   final List<ChatMessage> _chatMessages = [];
 
-  // Config ICE (STUN + TURN)
-  static const _iceConfig = {
-    'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'},
-      {'urls': 'stun:stun1.l.google.com:19302'},
-      {
-        'urls': [
-          'turn:global.relay.metered.ca:80',
-          'turn:global.relay.metered.ca:80?transport=tcp',
-          'turn:global.relay.metered.ca:443',
-          'turns:global.relay.metered.ca:443?transport=tcp',
-        ],
-        'username': '4ccd30e6211751522c93c044',
-        'credential': 'iB+/hPI3lLayZAKn',
-      },
-    ],
-  };
+  // Demandes d'accès en attente (organisateur)
+  final List<Map<String, String>> _pendingJoinRequests = [];
+
+  // Config ICE chargée depuis le backend via TalkyApiClient.fetchIceServers().
+  // Évite d'embarquer les credentials TURN dans le code client.
 
   // ── Getters ────────────────────────────────────────────────────────
   MeetingStatus get status => _status;
@@ -109,6 +96,7 @@ class MeetingService extends ChangeNotifier {
   bool get isVideoOff => _isVideoOff;
   int get meetingDuration => _meetingDuration;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+  List<Map<String, String>> get pendingJoinRequests => List.unmodifiable(_pendingJoinRequests);
 
   MeetingService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
     _setupSocketListeners();
@@ -170,6 +158,16 @@ class MeetingService extends ChangeNotifier {
         message: data['message']?.toString() ?? '',
         sendAt: DateTime.tryParse(data['sendAt']?.toString() ?? '') ?? DateTime.now(),
       ));
+      notifyListeners();
+    });
+
+    // Demande d'un invité à rejoindre (reçu par l'organisateur)
+    _apiClient.onSocketEvent(SocketEvents.meetingJoinRequested, (data) {
+      if (data is! Map) return;
+      final userID   = data['userID']?.toString() ?? '';
+      final userName = data['userName']?.toString() ?? '';
+      if (userID.isEmpty) return;
+      _pendingJoinRequests.add({'userID': userID, 'userName': userName});
       notifyListeners();
     });
 
@@ -510,7 +508,8 @@ class MeetingService extends ChangeNotifier {
       return _peerConnections[userId]!;
     }
 
-    final pc = await createPeerConnection(_iceConfig);
+    final iceServers = await _apiClient.fetchIceServers();
+    final pc = await createPeerConnection({'iceServers': iceServers});
 
     pc.onTrack = (event) {
       if (event.streams.isNotEmpty) {
@@ -596,6 +595,7 @@ class MeetingService extends ChangeNotifier {
     _peerConnections.clear();
     _remoteStreams.clear();
     _chatMessages.clear();
+    _pendingJoinRequests.clear();
     await _localStream?.dispose();
     _localStream = null;
     _durationTimer?.cancel();

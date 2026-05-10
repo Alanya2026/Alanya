@@ -1,183 +1,138 @@
+import 'dart:async';
 import 'dart:io' show Platform;
+
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:vibration/vibration.dart';
 
-/// Service de gestion des sonneries et vibrations pour les appels
+/// Centralise les sons d'appel.
+///
+/// - **Appelé** : sonnerie système du téléphone (paramétrée par l'utilisateur),
+///   gérée par `flutter_ringtone_player`. Looping natif, vibration séparée.
+/// - **Appelant** : ringback custom (assets/sounds/ringback.wav) joué en boucle.
+///   Configure une session audio "voiceCall" pour rester audible quand WebRTC
+///   met le système en `MODE_IN_COMMUNICATION`.
+///
+/// Singleton — un seul lecteur audio pour tout le cycle de vie de l'app.
 class RingtoneService {
-  static final RingtoneService _instance = RingtoneService._internal();
-  
-  factory RingtoneService() {
-    return _instance;
-  }
-  
-  RingtoneService._internal();
+  RingtoneService._();
+  static final RingtoneService instance = RingtoneService._();
 
-  late AudioPlayer _audioPlayer;
-  bool _isPlaying = false;
+  static const _ringbackAsset = 'assets/sounds/ringback.wav';
+
+  final FlutterRingtonePlayer _systemRingtone = FlutterRingtonePlayer();
+  AudioPlayer? _ringbackPlayer;
+  AudioSession? _audioSession;
+
+  _ActiveSound _active = _ActiveSound.none;
+  Timer? _vibrationTimer;
 
   Future<void> init() async {
     if (kIsWeb) return;
-    _audioPlayer = AudioPlayer();
+    _ringbackPlayer ??= AudioPlayer();
+    _audioSession ??= await AudioSession.instance;
   }
 
-  /// Joue la sonnerie de RINGBACK (tonalité pour l'appelant en attente)
-  /// Utilise le fichier MP3 des assets
-  Future<void> playRingbackTone() async {
-    if (kIsWeb) {
-      debugPrint('[RingtoneService] Web - skip ringback');
-      return;
-    }
+  // ─── Appelé : sonnerie système du téléphone ────────────────────────────
 
-    if (_isPlaying) {
-      debugPrint('[RingtoneService] ⚠️ Ringback déjà en cours');
-      return;
-    }
+  Future<void> startIncomingRingtone() async {
+    if (kIsWeb || _active != _ActiveSound.none) return;
+    _active = _ActiveSound.incoming;
+    debugPrint('[RingtoneService] 🔔 Sonnerie système (appelé)');
 
     try {
-      debugPrint('[RingtoneService] 📞 Démarrage ringback tone (appelant)');
-      _isPlaying = true;
+      await _systemRingtone.playRingtone(looping: true, volume: 1.0, asAlarm: false);
+      _startVibrationLoop();
+    } catch (e) {
+      debugPrint('[RingtoneService] ⚠️ Sonnerie système échouée: $e');
+      _active = _ActiveSound.none;
+    }
+  }
 
-      // ✅ Charger le son depuis les assets avec timeout
-      try {
-        await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3').timeout(const Duration(seconds: 2));
-        await _audioPlayer.setLoopMode(LoopMode.one);
-        await _audioPlayer.setVolume(1.0);
-        await _audioPlayer.play();
-        debugPrint('[RingtoneService] ✅ Ringback tone lancée');
-      } catch (e) {
-        debugPrint('[RingtoneService] ⚠️ Asset ringback non disponible: $e');
-        _isPlaying = false;
-        // Continuer sans son plutôt que de bloquer
+  // ─── Appelant : ringback custom ────────────────────────────────────────
+
+  Future<void> startOutgoingRingback() async {
+    if (kIsWeb || _active != _ActiveSound.none) return;
+    _active = _ActiveSound.outgoing;
+    debugPrint('[RingtoneService] 📞 Ringback (appelant)');
+
+    try {
+      await _configureCallAudioSession();
+      final player = _ringbackPlayer!;
+      await player.setAsset(_ringbackAsset);
+      await player.setLoopMode(LoopMode.one);
+      await player.setVolume(0.7);
+      await player.play();
+    } catch (e) {
+      debugPrint('[RingtoneService] ⚠️ Ringback échoué: $e');
+      _active = _ActiveSound.none;
+    }
+  }
+
+  // ─── Stop générique ────────────────────────────────────────────────────
+
+  Future<void> stop() async {
+    if (kIsWeb) return;
+    final wasActive = _active;
+    _active = _ActiveSound.none;
+
+    _vibrationTimer?.cancel();
+    _vibrationTimer = null;
+
+    try {
+      if (wasActive == _ActiveSound.incoming) {
+        await _systemRingtone.stop();
+        try { await Vibration.cancel(); } catch (_) {}
+      } else if (wasActive == _ActiveSound.outgoing) {
+        await _ringbackPlayer?.stop();
       }
     } catch (e) {
-      debugPrint('[RingtoneService] ❌ Erreur ringback: $e');
-      _isPlaying = false;
+      debugPrint('[RingtoneService] ⚠️ Stop: $e');
     }
   }
 
-  /// Joue la sonnerie SYSTÈME du téléphone (pour appel entrant)
-  /// Utilise la sonnerie configurée dans les paramètres Android
-  Future<void> playSystemRingtone() async {
-    if (kIsWeb) {
-      debugPrint('[RingtoneService] Web - skip system ringtone');
-      return;
-    }
-
-    if (_isPlaying) {
-      debugPrint('[RingtoneService] ⚠️ Ringtone déjà en cours');
-      return;
-    }
-
-    try {
-      debugPrint('[RingtoneService] 🔔 Démarrage sonnerie système (appelé)');
-      _isPlaying = true;
-
-      // ✅ Essayer de charger la sonnerie système Android avec timeout
-      if (Platform.isAndroid) {
-        bool soundLoaded = false;
-        
-        // Essai 1 : sonnerie système
-        try {
-          const ringtoneUri = 'android.resource://com.android.systemui/raw/ringtone';
-          await _audioPlayer.setUrl(ringtoneUri).timeout(const Duration(seconds: 2));
-          await _audioPlayer.setLoopMode(LoopMode.one);
-          await _audioPlayer.setVolume(1.0);
-          await _audioPlayer.play();
-          debugPrint('[RingtoneService] ✅ Sonnerie système lancée');
-          soundLoaded = true;
-        } catch (e) {
-          debugPrint('[RingtoneService] ⚠️ Sonnerie système non disponible: $e');
-          
-          // Essai 2 : fichier asset en fallback
-          if (!soundLoaded) {
-            try {
-              await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3').timeout(const Duration(seconds: 2));
-              await _audioPlayer.setLoopMode(LoopMode.one);
-              await _audioPlayer.setVolume(1.0);
-              await _audioPlayer.play();
-              debugPrint('[RingtoneService] ✅ Fallback asset lancé');
-              soundLoaded = true;
-            } catch (e2) {
-              debugPrint('[RingtoneService] ⚠️ Fallback asset échoué: $e2');
-              // Continuer sans son - au moins la vibration fonctionnera
-            }
-          }
-        }
-      } else {
-        // Non-Android : utiliser le fichier asset
-        try {
-          await _audioPlayer.setAsset('assets/sounds/incoming_call.mp3').timeout(const Duration(seconds: 2));
-          await _audioPlayer.setLoopMode(LoopMode.one);
-          await _audioPlayer.setVolume(1.0);
-          await _audioPlayer.play();
-          debugPrint('[RingtoneService] ✅ Asset ringtone lancé');
-        } catch (e) {
-          debugPrint('[RingtoneService] ⚠️ Asset non disponible: $e');
-          // Continuer sans son
-        }
-      }
-
-      // ✅ Vibration sur Android uniquement (en arrière-plan, ne pas attendre)
-      if (Platform.isAndroid) {
-        _startVibration().catchError((e) {
-          debugPrint('[RingtoneService] ⚠️ Erreur vibration: $e');
-        });
-      }
-    } catch (e) {
-      debugPrint('[RingtoneService] ❌ Erreur system ringtone: $e');
-      _isPlaying = false;
-    }
+  Future<void> dispose() async {
+    await stop();
+    await _ringbackPlayer?.dispose();
+    _ringbackPlayer = null;
   }
 
-  /// Alias pour compatibilité - joue la sonnerie d'appel entrant
-  Future<void> playIncomingCallRingtone() => playSystemRingtone();
+  // ─── Internes ──────────────────────────────────────────────────────────
 
-  /// Lance une vibration continue (motif pour appel entrant)
-  Future<void> _startVibration() async {
-    try {
-      final hasVibrator = await Vibration.hasVibrator() ?? false;
-      if (!hasVibrator) {
-        debugPrint('[RingtoneService] ⚠️ Appareil sans vibreur');
+  /// Configure la session audio pour que le ringback s'entende en mode call.
+  /// WebRTC met le système en MODE_IN_COMMUNICATION via `getUserMedia`, ce qui
+  /// rend STREAM_MUSIC quasi inaudible. On utilise USAGE_VOICE_COMMUNICATION_SIGNALLING
+  /// (Android) ou playAndRecord (iOS) pour rester audible.
+  Future<void> _configureCallAudioSession() async {
+    final session = _audioSession;
+    if (session == null) return;
+    await session.configure(const AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth,
+      avAudioSessionMode: AVAudioSessionMode.voiceChat,
+      androidAudioAttributes: AndroidAudioAttributes(
+        contentType: AndroidAudioContentType.sonification,
+        usage: AndroidAudioUsage.voiceCommunicationSignalling,
+      ),
+      androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransient,
+      androidWillPauseWhenDucked: false,
+    ));
+    await session.setActive(true);
+  }
+
+  void _startVibrationLoop() {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    try { Vibration.vibrate(duration: 700); } catch (_) {}
+    _vibrationTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      if (_active != _ActiveSound.incoming) {
+        _vibrationTimer?.cancel();
         return;
       }
-
-      // Motif de vibration : 500ms vibration, 500ms pause, répété
-      // [duration ms, pause ms, duration ms, pause ms, ...]
-      while (_isPlaying) {
-        await Vibration.vibrate(duration: 500);
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-    } catch (e) {
-      debugPrint('[RingtoneService] ❌ Erreur vibration: $e');
-    }
-  }
-
-  /// Arrête la sonnerie et vibration
-  Future<void> stopRingtone() async {
-    if (kIsWeb) return;
-
-    try {
-      if (_isPlaying) {
-        await _audioPlayer.stop();
-        _isPlaying = false;
-        debugPrint('[RingtoneService] ⏹️ Sonnerie arrêtée');
-      }
-    } catch (e) {
-      debugPrint('[RingtoneService] ❌ Erreur stop: $e');
-    }
-  }
-
-  /// Nettoyer ressources
-  Future<void> dispose() async {
-    if (kIsWeb) return;
-    
-    try {
-      await stopRingtone();
-      await _audioPlayer.dispose();
-      debugPrint('[RingtoneService] 🧹 Ressources disposées');
-    } catch (e) {
-      debugPrint('[RingtoneService] ⚠️ Erreur dispose: $e');
-    }
+      try { Vibration.vibrate(duration: 700); } catch (_) {}
+    });
   }
 }
+
+enum _ActiveSound { none, incoming, outgoing }

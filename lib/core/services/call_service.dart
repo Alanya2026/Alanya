@@ -43,15 +43,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import 'webrtc_service.dart';
+import 'callkit_service.dart';
 import 'ringtone_service.dart';
+import 'webrtc_service.dart';
 
 enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
 
 class CallService extends ChangeNotifier {
   final TalkyApiClient _apiClient;
   final WebRTCService _webrtc = WebRTCService();
-  final RingtoneService _ringtone = RingtoneService();
+  final RingtoneService _ringtone = RingtoneService.instance;
+  final CallKitService _callKit = CallKitService.instance;
 
   CallStatus _status = CallStatus.idle;
 
@@ -61,6 +63,7 @@ class CallService extends ChangeNotifier {
   String? _remoteUserPhoto;
   bool _isVideo = false;
   Map<String, dynamic>? _pendingOffer; // offer reçu avant réponse
+  String? _currentCallId;   // callId backend, utilisé pour synchroniser CallKit
 
   // ✅ Flag pour savoir si on a volontairement terminé l'appel
   bool _callEndedByUs = false;
@@ -128,9 +131,66 @@ class CallService extends ChangeNotifier {
     );
   }
 
+  // Flag : l'utilisateur a accepté l'appel via CallKit avant que l'event
+  // socket `incoming_call` (avec l'offer SDP) n'arrive. Quand l'offer arrive,
+  // on déclenche automatiquement answerCall().
+  bool _autoAnswerOnNextIncoming = false;
+  String? _autoAnswerCallerId;
+
   CallService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
     _initRingtone();
     _setupSocketListeners();
+  }
+
+  /// Appelée depuis main.dart quand l'utilisateur accepte un appel via l'écran
+  /// CallKit (push FCM). Deux cas :
+  /// - L'event `incoming_call` est déjà arrivé et `_pendingOffer` est rempli
+  ///   → on appelle directement `answerCall()`.
+  /// - L'offer n'est pas encore là → on arme un flag pour répondre dès qu'elle
+  ///   arrive (le socket peut prendre quelques secondes à se reconnecter).
+  Future<void> acceptIncomingCallFromPush({
+    required String callId,
+    required String callerId,
+    required String callerName,
+    String? callerPhoto,
+    required bool isVideo,
+    String? roomId,
+  }) async {
+    debugPrint('[CallService] 📲 acceptIncomingCallFromPush callId=$callId caller=$callerId');
+
+    if (_pendingOffer != null && _status == CallStatus.incoming) {
+      await answerCall();
+      return;
+    }
+
+    _remoteUserId = int.tryParse(callerId);
+    _remoteUserName = callerName;
+    _remoteUserPhoto = callerPhoto;
+    _isVideo = isVideo;
+    _currentCallId = callId.isNotEmpty ? callId : null;
+    _autoAnswerOnNextIncoming = true;
+    _autoAnswerCallerId = callerId;
+    _status = CallStatus.incoming;
+    notifyListeners();
+  }
+
+  /// Appelée depuis main.dart quand l'utilisateur refuse un appel via CallKit.
+  Future<void> rejectIncomingCallFromPush({required String callerId}) async {
+    debugPrint('[CallService] 📲 rejectIncomingCallFromPush caller=$callerId');
+    final cid = int.tryParse(callerId);
+    if (cid != null) {
+      try {
+        _apiClient.sendSocketEvent(SocketEvents.rejectCall, {'callerId': cid});
+      } catch (e) {
+        debugPrint('[CallService] rejectCall socket error: $e');
+      }
+    }
+    _autoAnswerOnNextIncoming = false;
+    _autoAnswerCallerId = null;
+    if (_status == CallStatus.incoming) {
+      _status = CallStatus.idle;
+      notifyListeners();
+    }
   }
 
   Future<void> _initRingtone() async {
@@ -154,18 +214,35 @@ class CallService extends ChangeNotifier {
         debugPrint('[CallService] ❌ Données invalides pour incoming_call');
         return;
       }
-      _remoteUserId = int.tryParse(data['callerId'].toString());
+      final incomingCallerId = data['callerId'].toString();
+      _remoteUserId = int.tryParse(incomingCallerId);
       _remoteUserName = data['callerName'] as String?;
       _remoteUserPhoto = data['callerPhoto'] as String?;
       _isVideo = data['isVideo'] == true;
       _pendingOffer = data['offer'] as Map<String, dynamic>?;
       _status = CallStatus.incoming;
       debugPrint('[CallService] ✅ Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
-      
+
       notifyListeners();
-      
-      // 🔔 Démarrer la sonnerie en arrière-plan (ne pas bloquer l'affichage)
-      _ringtone.playIncomingCallRingtone().catchError((e) {
+
+      // Si l'utilisateur a déjà accepté via CallKit pour ce caller, on répond
+      // automatiquement maintenant que l'offer est arrivée.
+      if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
+        debugPrint('[CallService] ⚡ Auto-answer (CallKit pré-accepté)');
+        _autoAnswerOnNextIncoming = false;
+        _autoAnswerCallerId = null;
+        try {
+          await answerCall();
+        } catch (e) {
+          debugPrint('[CallService] ⚠️ Auto-answer failed: $e');
+        }
+        return;
+      }
+
+      _currentCallId = data['callId']?.toString();
+
+      // Sonnerie système (téléphone par défaut de l'utilisateur).
+      _ringtone.startIncomingRingtone().catchError((e) {
         debugPrint('[CallService] ⚠️ Erreur sonnerie (non-bloquante): $e');
       });
     });
@@ -173,25 +250,26 @@ class CallService extends ChangeNotifier {
     // Appel accepté par l'autre
     _apiClient.onSocketEvent(SocketEvents.callAnswered, (data) async {
       debugPrint('[CallService] 📞 call_answered reçu: $data');
-      
-      // ✅ GARDE : Ne traiter que si on est en status "connecting" (en attente de réponse)
+
       if (_status != CallStatus.connecting) {
-        debugPrint('[CallService] ⚠️ call_answered ignoré : statut=${_status}, attendu=connecting');
+        debugPrint('[CallService] ⚠️ call_answered ignoré : statut=$_status');
         return;
       }
-      
+
+      // 🛑 Arrêter le ringback dès que le destinataire décroche
+      await _ringtone.stop();
+
       if (data is! Map || data['answer'] == null) {
         debugPrint('[CallService] ❌ Données call_answered invalides');
         return;
       }
-      
+
       try {
         final answer = data['answer'] as Map;
-        debugPrint('[CallService] 🔄 handleAnswer: ${answer['type']}');
         await _webrtc.handleAnswer(
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
-        debugPrint('[CallService] ✅ Answer acceptée, statut → CONNECTED');
+        debugPrint('[CallService] ✅ Answer acceptée → CONNECTED');
         _status = CallStatus.connected;
         _startDurationTimer();
       } catch (e) {
@@ -201,26 +279,22 @@ class CallService extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Appel rejeté
-    _apiClient.onSocketEvent(SocketEvents.callRejected, (_) {
-      _resetCallState();
-      _status = CallStatus.idle;
-      notifyListeners();
+    // Appel rejeté par le destinataire
+    _apiClient.onSocketEvent(SocketEvents.callRejected, (_) async {
+      debugPrint('[CallService] 📞 Appel rejeté');
+      await _terminateCall();
     });
 
-    // Appel terminé par l'autre
-    _apiClient.onSocketEvent(SocketEvents.callEnded, (_) {
+    // Appel terminé par l'autre côté
+    _apiClient.onSocketEvent(SocketEvents.callEnded, (_) async {
       debugPrint('[CallService] 📞 Appel terminé par l\'autre côté');
-      // ✅ Ne PAS activer _callEndedByUs ici — c'est l'autre qui a terminé
-      _terminateCall();
+      await _terminateCall();
     });
 
-    // Appel échoué (destinataire non disponible)
-    _apiClient.onSocketEvent(SocketEvents.callFailed, (data) {
+    // Appel échoué (destinataire hors-ligne)
+    _apiClient.onSocketEvent(SocketEvents.callFailed, (data) async {
       debugPrint('[CallService] Appel échoué: ${data?['reason']}');
-      _resetCallState();
-      _status = CallStatus.idle;
-      notifyListeners();
+      await _terminateCall();
     });
 
     // ICE candidate 1-à-1
@@ -336,7 +410,8 @@ class CallService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _webrtc.init(isVideo ? CallType.video : CallType.audio);
+      final iceServers = await _apiClient.fetchIceServers(force: true);
+      await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
 
       // ✅ Initialiser le routage audio (mobile uniquement)
       if (!kIsWeb) {
@@ -373,10 +448,10 @@ class CallService extends ChangeNotifier {
       });
 
       _status = CallStatus.connecting;
-      
-      // 📞 Démarrer la sonnerie ringback (tonalité d'appel pour l'appelant)
-      _ringtone.playRingbackTone();
-      
+
+      // Ringback côté appelant (tonalité jusqu'à décrochage du destinataire).
+      _ringtone.startOutgoingRingback();
+
       notifyListeners();
     } catch (e) {
       debugPrint('[CallService] Erreur initiateCall: $e');
@@ -411,31 +486,44 @@ class CallService extends ChangeNotifier {
   }
 
   /// Accepte l'appel entrant.
+  ///
+  /// Gardes :
+  /// - Status doit être `incoming` (sinon return). Le passage immédiat à
+  ///   `connecting` empêche les appels concurrents (Accept depuis l'UI ET
+  ///   auto-answer depuis CallKit en parallèle).
+  /// - L'offer doit être présente. Sinon on arme `_autoAnswerOnNextIncoming`
+  ///   pour répondre dès que l'event socket `incoming_call` arrive.
   Future<void> answerCall() async {
     if (_status != CallStatus.incoming || _remoteUserId == null) {
-      debugPrint('[CallService] ⚠️ answerCall ignoré: status=${_status}, remoteUserId=${_remoteUserId}');
+      debugPrint('[CallService] ⚠️ answerCall ignoré: status=$_status');
+      return;
+    }
+    if (_pendingOffer == null) {
+      debugPrint('[CallService] ⏳ answerCall: offer pas encore reçue, auto-answer armé');
+      _autoAnswerOnNextIncoming = true;
+      _autoAnswerCallerId = _remoteUserId.toString();
       return;
     }
 
-    // 🛑 Arrêter la sonnerie
-    await _ringtone.stopRingtone();
-    
-    _errorMessage = null; // Réinitialiser les erreurs
-    debugPrint('[CallService] 📞 answerCall START - Caller: $_remoteUserId');
+    // Verrouille immédiatement pour bloquer un éventuel double-appel.
+    _status = CallStatus.connecting;
+    notifyListeners();
+
+    await _ringtone.stop();
+    _errorMessage = null;
+
+    final offer = _pendingOffer!;
+    _pendingOffer = null;
 
     try {
-      debugPrint('[CallService] 🔧 _webrtc.init($_isVideo ? CallType.video : CallType.audio)');
-      await _webrtc.init(_isVideo ? CallType.video : CallType.audio);
-      debugPrint('[CallService] ✅ WebRTC initialisé');
+      final iceServers = await _apiClient.fetchIceServers(force: true);
+      await _webrtc.init(_isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
 
-      // ✅ Initialiser le routage audio (mobile uniquement)
       if (!kIsWeb) {
         _isSpeakerOn = true;
         await Helper.setSpeakerphoneOn(true);
-        debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
       }
 
-      // ICE candidates → envoyés à l'appelant
       _webrtc.onIceCandidate = (candidate) {
         _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
           'targetUserId': _remoteUserId.toString(),
@@ -447,11 +535,9 @@ class CallService extends ChangeNotifier {
         });
       };
 
-      if (_pendingOffer != null) {
-        await _webrtc.handleOffer(
-          RTCSessionDescription(_pendingOffer!['sdp'] as String, 'offer'),
-        );
-      }
+      await _webrtc.handleOffer(
+        RTCSessionDescription(offer['sdp'] as String, 'offer'),
+      );
 
       final answer = await _webrtc.createAnswer();
 
@@ -466,6 +552,10 @@ class CallService extends ChangeNotifier {
 
       _status = CallStatus.connected;
       _startDurationTimer();
+      // Synchronise la notif CallKit (passe en mode "appel en cours").
+      if (_currentCallId != null && _currentCallId!.isNotEmpty) {
+        await _callKit.setConnected(_currentCallId!);
+      }
       notifyListeners();
     } catch (e) {
       debugPrint('[CallService] Erreur answerCall: $e');
@@ -496,10 +586,9 @@ class CallService extends ChangeNotifier {
   Future<void> rejectCall() async {
     if (_remoteUserId == null) return;
 
-    // 🛑 Arrêter la sonnerie
-    await _ringtone.stopRingtone();
+    await _ringtone.stop();
+    await _callKit.endAll();
 
-    // ✅ Payload exact attendu par le backend
     _apiClient.sendSocketEvent(SocketEvents.rejectCall, {
       'callerId': _remoteUserId.toString(),
     });
@@ -523,14 +612,16 @@ class CallService extends ChangeNotifier {
   }
 
   Future<void> _terminateCall() async {
-    // 🛑 Arrêter la sonnerie
-    await _ringtone.stopRingtone();
-    
+    await _ringtone.stop();
+    await _callKit.endAll();
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _resetCallState();
-    _status = CallStatus.idle;
+    // Passe d'abord par 'ended' pour que OngoingCallScreen/IncomingCallScreen
+    // détectent la fin et pop, puis revient à 'idle' immédiatement.
+    _status = CallStatus.ended;
     notifyListeners();
+    _status = CallStatus.idle;
   }
 
   void _resetCallState() {
@@ -538,12 +629,13 @@ class CallService extends ChangeNotifier {
     _remoteUserName = null;
     _remoteUserPhoto = null;
     _pendingOffer = null;
+    _currentCallId = null;
     _callDuration = 0;
     _isMuted = false;
     _isVideoOn = true;
     _isSpeakerOn = false;
     _durationTimer?.cancel();
-    _callEndedByUs = false; // ✅ Réinitialiser le flag
+    _callEndedByUs = false;
   }
 
   // ── APPELS DE GROUPE ───────────────────────────────────────────────
@@ -654,7 +746,8 @@ class CallService extends ChangeNotifier {
   }
 
   Future<void> _initLocalStream(bool isVideo) async {
-    await _webrtc.init(isVideo ? CallType.video : CallType.audio);
+    final iceServers = await _apiClient.fetchIceServers();
+    await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
 
     // ✅ Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement)
     if (!kIsWeb) {
@@ -711,22 +804,8 @@ class CallService extends ChangeNotifier {
       return _groupPeerConnections[userId]!;
     }
 
-    const iceConfig = {
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-        {'urls': 'stun:stun1.l.google.com:19302'},
-        {
-          'urls': [
-            'turn:global.relay.metered.ca:80',
-            'turn:global.relay.metered.ca:80?transport=tcp',
-            'turn:global.relay.metered.ca:443',
-            'turns:global.relay.metered.ca:443?transport=tcp',
-          ],
-          'username': '4ccd30e6211751522c93c044',
-          'credential': 'iB+/hPI3lLayZAKn',
-        },
-      ],
-    };
+    final iceServers = await _apiClient.fetchIceServers();
+    final iceConfig = {'iceServers': iceServers};
 
     final pc = await createPeerConnection(iceConfig);
 
@@ -806,11 +885,12 @@ class CallService extends ChangeNotifier {
   }
 
   @override
-  @override
   void dispose() {
     _durationTimer?.cancel();
     _webrtc.dispose();
-    _ringtone.dispose();
+    // RingtoneService est singleton — on ne le dispose pas globalement, juste
+    // s'assurer qu'aucun son ne traîne.
+    _ringtone.stop();
     for (final pc in _groupPeerConnections.values) {
       pc.close();
     }

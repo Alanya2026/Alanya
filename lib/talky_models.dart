@@ -552,8 +552,9 @@ class SocketEvents {
   // Meetings (Flutter → Backend)
   static const meetingCreate      = 'meeting:create';
   static const meetingJoinRoom    = 'meeting:join_room';
-  static const meetingJoinRequest = 'meeting:join_request';
-  static const meetingJoinAccept  = 'meeting:join_accept';
+  static const meetingJoinRequest   = 'meeting:join_request';
+  static const meetingJoinRequested = 'meeting:join_requested';
+  static const meetingJoinAccept    = 'meeting:join_accept';
   static const meetingJoinDecline = 'meeting:join_decline';
   static const meetingStart       = 'meeting:start';
   static const meetingEnd         = 'meeting:end';

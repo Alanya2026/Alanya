@@ -32,6 +32,13 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final callService = Provider.of<CallService>(context, listen: false);
       callService.addListener(_onCallStatusChanged);
+      // Si l'app vient d'être lancée depuis CallKit (push d'appel reçu app
+      // tuée → user accepte), le status est déjà `incoming` au moment où
+      // ce listener s'enregistre. On déclenche manuellement la navigation.
+      if (callService.status == CallStatus.incoming) {
+        debugPrint('[HomeScreen] 🚀 Appel entrant déjà actif au mount → navigation');
+        _onCallStatusChanged();
+      }
     });
   }
 

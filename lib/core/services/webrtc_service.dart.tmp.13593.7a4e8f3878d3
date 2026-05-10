@@ -292,7 +292,7 @@ class WebRTCService {
       _remoteStream = null;
       _remoteDescriptionSet = false;
       _pendingIceCandidates.clear();
-
+      
       debugPrint('[WebRTC] ✅ Nettoyage complété');
     } catch (e) {
       debugPrint('[WebRTC] ❌ Erreur dispose: $e');
