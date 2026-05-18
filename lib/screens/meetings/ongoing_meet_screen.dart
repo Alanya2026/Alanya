@@ -50,7 +50,9 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     }
 
     // Synchroniser les renderers distants avec les streams reçus
-    _syncRemoteRenderers(meetingService.remoteStreams);
+    _syncRemoteRenderers(meetingService.remoteStreams).then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _syncRemoteRenderers(Map<String, dynamic> remoteStreams) async {

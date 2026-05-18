@@ -49,6 +49,11 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     if (_closing || !mounted) return;
     final cs = Provider.of<CallService>(context, listen: false);
 
+    setState(() {
+      _localRenderer.srcObject = cs.localStream;
+      _remoteRenderer.srcObject = cs.remoteStream;
+    });
+
     if (cs.status == CallStatus.ended && !cs.callEndedByUs) {
       _closeAndPop();
       return;
@@ -57,11 +62,6 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
       _closeAndPop();
       return;
     }
-
-    setState(() {
-      _localRenderer.srcObject = cs.localStream;
-      _remoteRenderer.srcObject = cs.remoteStream;
-    });
   }
 
   void _closeAndPop() {

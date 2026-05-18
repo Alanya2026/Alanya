@@ -220,6 +220,7 @@ class CallService extends ChangeNotifier {
       _remoteUserPhoto = data['callerPhoto'] as String?;
       _isVideo = data['isVideo'] == true;
       _pendingOffer = data['offer'] as Map<String, dynamic>?;
+      _currentCallId = data['callId']?.toString();
       _status = CallStatus.incoming;
       debugPrint('[CallService] ✅ Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
@@ -238,8 +239,6 @@ class CallService extends ChangeNotifier {
         }
         return;
       }
-
-      _currentCallId = data['callId']?.toString();
 
       // Sonnerie système (téléphone par défaut de l'utilisateur).
       _ringtone.startIncomingRingtone().catchError((e) {
@@ -412,6 +411,8 @@ class CallService extends ChangeNotifier {
     try {
       final iceServers = await _apiClient.fetchIceServers(force: true);
       await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+      _webrtc.onLocalStream  = (_) { notifyListeners(); };
+      _webrtc.onRemoteStream = (_) { notifyListeners(); };
 
       // ✅ Initialiser le routage audio (mobile uniquement)
       if (!kIsWeb) {
@@ -518,6 +519,8 @@ class CallService extends ChangeNotifier {
     try {
       final iceServers = await _apiClient.fetchIceServers(force: true);
       await _webrtc.init(_isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+      _webrtc.onLocalStream  = (_) { notifyListeners(); };
+      _webrtc.onRemoteStream = (_) { notifyListeners(); };
 
       if (!kIsWeb) {
         _isSpeakerOn = true;
@@ -622,6 +625,8 @@ class CallService extends ChangeNotifier {
     _status = CallStatus.ended;
     notifyListeners();
     _status = CallStatus.idle;
+    await Future.microtask(() {});
+    notifyListeners();
   }
 
   void _resetCallState() {

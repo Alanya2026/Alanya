@@ -246,16 +246,16 @@ class WebRTCService {
   }
 
   Future<void> toggleMic() async {
-    if (_localStream != null) {
-      final audioTrack = _localStream!.getAudioTracks().first;
-      audioTrack.enabled = !audioTrack.enabled;
+    final tracks = _localStream?.getAudioTracks();
+    if (tracks != null && tracks.isNotEmpty) {
+      tracks.first.enabled = !tracks.first.enabled;
     }
   }
 
   Future<void> toggleCamera() async {
-    if (_localStream != null) {
-      final videoTrack = _localStream!.getVideoTracks().first;
-      videoTrack.enabled = !videoTrack.enabled;
+    final tracks = _localStream?.getVideoTracks();
+    if (tracks != null && tracks.isNotEmpty) {
+      tracks.first.enabled = !tracks.first.enabled;
     }
   }
 
