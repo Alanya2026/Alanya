@@ -22,6 +22,7 @@ class WebRTCService {
   Function(RTCIceCandidate)? onIceCandidate;
   Function(RTCSessionDescription)? onOffer;
   Function(RTCSessionDescription)? onAnswer;
+  Function()? onConnectionFailure; // Callback for connection failures
 
   MediaStream? get localStream => _localStream;
   MediaStream? get remoteStream => _remoteStream;
@@ -96,7 +97,7 @@ class WebRTCService {
                 : c.contains(' typ host ')
                     ? 'host/LAN'
                     : 'unknown';
-        debugPrint('[WebRTC] 🧊 ICE candidate généré (type=$type) cb=${onIceCandidate != null}');
+        debugPrint('[WebRTC] 🧊 ICE candidate généré (type=$type, candidate=${c.split(' ').first}) cb=${onIceCandidate != null}');
         onIceCandidate?.call(candidate);
       };
 
@@ -106,6 +107,14 @@ class WebRTCService {
 
       _peerConnection!.onConnectionState = (state) {
         debugPrint('[WebRTC] 🔌 Peer connection state: $state');
+        
+        // Detect connection failures and notify
+        if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+            state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+            state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+          debugPrint('[WebRTC] ❌ Peer connection failed/disconnected: $state');
+          onConnectionFailure?.call();
+        }
       };
 
       _peerConnection!.onIceGatheringState = (state) {
@@ -113,36 +122,77 @@ class WebRTCService {
       };
 
       _peerConnection!.onTrack = (event) {
-        debugPrint('[WebRTC] Track reçu: ${event.streams.length} streams');
+        debugPrint('[WebRTC] 🎥 Track reçu: ${event.streams.length} stream(s), kind=${event.track.kind}');
         if (event.streams.isNotEmpty) {
           _remoteStream = event.streams[0];
-          debugPrint('[WebRTC] Remote stream assigné');
+          debugPrint('[WebRTC] ✅ Remote stream assigné (ID=${_remoteStream?.id})');
           debugPrint('[WebRTC] 📊 Remote stream tracks: Audio=${_remoteStream?.getAudioTracks().length}, Video=${_remoteStream?.getVideoTracks().length}');
           
-          // Log détails des pistes audio
+          // Log détails des pistes
           _remoteStream?.getAudioTracks().forEach((track) {
-            debugPrint('[WebRTC] 🎵 Audio track - kind=${track.kind}, enabled=${track.enabled}, label=${track.label}');
+            debugPrint('[WebRTC] 🎵 Audio track: kind=${track.kind}, enabled=${track.enabled}, label="${track.label}", id=${track.id}');
+          });
+          _remoteStream?.getVideoTracks().forEach((track) {
+            debugPrint('[WebRTC] 🎬 Video track: kind=${track.kind}, enabled=${track.enabled}, label="${track.label}", id=${track.id}');
           });
           
           onRemoteStream?.call(_remoteStream!);
+        } else {
+          debugPrint('[WebRTC] ⚠️ Track reçu sans streams!');
         }
       };
 
       debugPrint('[WebRTC] Appel à _getUserMedia...');
       _localStream = await _getUserMedia(type);
-      debugPrint('[WebRTC] Local stream obtenu: ${_localStream?.getTracks().length} tracks');
+      debugPrint('[WebRTC] ✅ Local stream obtenu: ${_localStream?.getTracks().length} track(s), ID=${_localStream?.id}');
       onLocalStream?.call(_localStream!);
 
       debugPrint('[WebRTC] Ajout des tracks au PeerConnection...');
       _localStream!.getTracks().forEach((track) {
-        debugPrint('[WebRTC] Ajout track: ${track.kind} (enabled=${track.enabled}, label=${track.label})');
+        debugPrint('[WebRTC] ➕ Ajout track: kind=${track.kind}, enabled=${track.enabled}, label="${track.label}", id=${track.id}');
         _peerConnection!.addTrack(track, _localStream!);
       });
       debugPrint('[WebRTC] 📊 Local stream setup: Audio=${_localStream?.getAudioTracks().length}, Video=${_localStream?.getVideoTracks().length}');
+      
+      // ✅ Sur Android, configurer explicitement les transceivers pour assurer
+      // que les m-lines existent dans l'offre SDP et que le receiver peut
+      // créer les tracks à la réception
+      if (Platform.isAndroid) {
+        debugPrint('[WebRTC] 🔧 Configuration des transceivers pour Android...');
+        try {
+          // S'assurer que les transceivers audio et vidéo existent
+          // Cela garantit que les m-lines "audio" et "video" sont dans le SDP
+          final audioTransceivers = await _peerConnection!.getTransceivers();
+          debugPrint('[WebRTC] ✅ Transceivers existants avant configuration: ${audioTransceivers.length}');
+          
+          // Sur Android, il faut vérifier que les transceivers sont correctement configurés
+          for (final t in audioTransceivers) {
+            debugPrint('[WebRTC]   - mid=${t.mid}');
+          }
+        } catch (e) {
+          debugPrint('[WebRTC] ⚠️ Erreur vérification transceivers: $e');
+        }
+      }
+      
+      // ✅ Log des transceivers (diagnostic Android)
+      if (Platform.isAndroid) {
+        try {
+          final transceivers = await _peerConnection!.getTransceivers();
+          debugPrint('[WebRTC] 📡 Transceivers finaux: ${transceivers.length}');
+          for (int i = 0; i < transceivers.length; i++) {
+            final t = transceivers[i];
+            debugPrint('[WebRTC]   [$i] mid=${t.mid}');
+          }
+        } catch (e) {
+          debugPrint('[WebRTC] ⚠️ Erreur lecture des transceivers: $e');
+        }
+      }
+      
       debugPrint('[WebRTC] ========== Initialisation WebRTC réussie ==========');
     } catch (e) {
       debugPrint('[WebRTC] ❌ Erreur lors de l\'initialisation: $e');
       debugPrint('[WebRTC] Type d\'erreur: ${e.runtimeType}');
+      debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
       await dispose();
       rethrow;
     }
@@ -150,14 +200,35 @@ class WebRTCService {
 
   Future<MediaStream> _getUserMedia(CallType type) async {
     try {
-      debugPrint('[WebRTC] _getUserMedia - Type: $type, isWeb: $kIsWeb');
+      debugPrint('[WebRTC] _getUserMedia - Type: $type, isWeb: $kIsWeb, Platform: ${Platform.isAndroid ? "ANDROID" : "iOS"}');
 
-      final constraints = <String, dynamic>{
-        'audio': {
+      // ✅ Sur Android, utiliser des contraintes plus simples et compatibles
+      // flutter_webrtc sur Android peut ne pas supporter tous les paramètres audio
+      final dynamic audioConstraints;
+      
+      if (Platform.isAndroid) {
+        // Format compatible avec Android et flutter_webrtc
+        audioConstraints = {
+          'mandatory': {
+            'echoCancellation': true,
+            'noiseSuppression': true,
+            'autoGainControl': true,
+          },
+        };
+      } else if (kIsWeb) {
+        // Format WebRTC standard pour le web
+        audioConstraints = {
           'echoCancellation': true,
           'noiseSuppression': true,
           'autoGainControl': true,
-        },
+        };
+      } else {
+        // iOS et autres - accepter n'importe quel audio
+        audioConstraints = true;
+      }
+
+      final constraints = <String, dynamic>{
+        'audio': audioConstraints,
         'video': type == CallType.video
             ? {
                 'width': {'ideal': 1280},
@@ -169,79 +240,191 @@ class WebRTCService {
 
       debugPrint('[WebRTC] Contraintes: $constraints');
 
-      return await navigator.mediaDevices.getUserMedia(constraints);
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e1) {
+        debugPrint('[WebRTC] ⚠️ getUserMedia avec contraintes échouée: $e1');
+        
+        // Fallback avec contraintes minimales sur Android
+        if (Platform.isAndroid) {
+          debugPrint('[WebRTC] 📍 Tentative fallback Android avec contraintes minimales...');
+          final fallbackConstraints = <String, dynamic>{
+            'audio': true,
+            'video': type == CallType.video
+                ? {
+                    'width': {'ideal': 720},
+                    'height': {'ideal': 480},
+                  }
+                : false,
+          };
+          debugPrint('[WebRTC] Contraintes fallback: $fallbackConstraints');
+          return await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+        }
+        rethrow;
+      }
     } catch (e) {
-      debugPrint('[WebRTC] Erreur getUserMedia: $e');
+      debugPrint('[WebRTC] ❌ Erreur getUserMedia: $e');
+      debugPrint('[WebRTC] Type d\'erreur: ${e.runtimeType}');
       debugPrint('[WebRTC] Stack: ${StackTrace.current}');
       rethrow;
     }
   }
 
   Future<RTCSessionDescription> createOffer() async {
-    final offer = await _peerConnection!.createOffer();
-    await _peerConnection!.setLocalDescription(offer);
-    return offer;
+    debugPrint('[WebRTC] 📝 Création offre SDP...');
+    try {
+      final offer = await _peerConnection!.createOffer();
+      debugPrint('[WebRTC] ✅ Offre créée: type=${offer.type}, sdp_length=${offer.sdp?.length}');
+      
+      // Log les codecs dans l'offre (diagnostic)
+      if (offer.sdp != null && Platform.isAndroid) {
+        final audioCodecMatch = RegExp(r'a=rtpmap:\d+ (\w+)').allMatches(offer.sdp!);
+        debugPrint('[WebRTC] 📋 Codecs dans l\'offre:');
+        for (final match in audioCodecMatch) {
+          debugPrint('[WebRTC]   - ${match.group(1)}');
+        }
+      }
+      
+      await _peerConnection!.setLocalDescription(offer);
+      debugPrint('[WebRTC] ✅ LocalDescription définie');
+      return offer;
+    } catch (e) {
+      debugPrint('[WebRTC] ❌ Erreur createOffer: $e');
+      debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
   }
 
   Future<RTCSessionDescription> createAnswer() async {
-    final answer = await _peerConnection!.createAnswer();
-    await _peerConnection!.setLocalDescription(answer);
-    return answer;
+    debugPrint('[WebRTC] 📝 Création réponse SDP...');
+    try {
+      final answer = await _peerConnection!.createAnswer();
+      debugPrint('[WebRTC] ✅ Réponse créée: type=${answer.type}, sdp_length=${answer.sdp?.length}');
+      
+      // Log les codecs dans la réponse (diagnostic)
+      if (answer.sdp != null && Platform.isAndroid) {
+        final audioCodecMatch = RegExp(r'a=rtpmap:\d+ (\w+)').allMatches(answer.sdp!);
+        debugPrint('[WebRTC] 📋 Codecs dans la réponse:');
+        for (final match in audioCodecMatch) {
+          debugPrint('[WebRTC]   - ${match.group(1)}');
+        }
+      }
+      
+      await _peerConnection!.setLocalDescription(answer);
+      debugPrint('[WebRTC] ✅ LocalDescription définie');
+      return answer;
+    } catch (e) {
+      debugPrint('[WebRTC] ❌ Erreur createAnswer: $e');
+      debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
   }
 
   Future<void> handleOffer(RTCSessionDescription offer) async {
-    debugPrint('[WebRTC] handleOffer: type=${offer.type}, sdp length=${offer.sdp?.length}');
+    debugPrint('[WebRTC] 📥 Traitement offre reçue: type=${offer.type}, sdp_length=${offer.sdp?.length}');
     try {
+      // Log les codecs dans l'offre reçue (diagnostic)
+      if (offer.sdp != null && Platform.isAndroid) {
+        final audioCodecMatch = RegExp(r'a=rtpmap:\d+ (\w+)').allMatches(offer.sdp!);
+        debugPrint('[WebRTC] 📋 Codecs dans l\'offre reçue:');
+        for (final match in audioCodecMatch) {
+          debugPrint('[WebRTC]   - ${match.group(1)}');
+        }
+      }
+      
       await _peerConnection!.setRemoteDescription(offer);
+      debugPrint('[WebRTC] ✅ RemoteDescription (offre) définie');
+      
       _remoteDescriptionSet = true;
       await _flushPendingIceCandidates();
-      debugPrint('[WebRTC] ✅ handleOffer success');
+      debugPrint('[WebRTC] ✅ handleOffer succès');
     } catch (e) {
-      debugPrint('[WebRTC] ❌ handleOffer failed: $e');
+      debugPrint('[WebRTC] ❌ handleOffer échoué: $e');
+      debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
       rethrow;
     }
   }
 
   Future<void> handleAnswer(RTCSessionDescription answer) async {
-    debugPrint('[WebRTC] handleAnswer: type=${answer.type}, sdp length=${answer.sdp?.length}');
+    debugPrint('[WebRTC] 📥 Traitement réponse reçue: type=${answer.type}, sdp_length=${answer.sdp?.length}');
     try {
+      // Log les codecs dans la réponse reçue (diagnostic)
+      if (answer.sdp != null && Platform.isAndroid) {
+        final audioCodecMatch = RegExp(r'a=rtpmap:\d+ (\w+)').allMatches(answer.sdp!);
+        debugPrint('[WebRTC] 📋 Codecs dans la réponse reçue:');
+        for (final match in audioCodecMatch) {
+          debugPrint('[WebRTC]   - ${match.group(1)}');
+        }
+      }
+      
       await _peerConnection!.setRemoteDescription(answer);
+      debugPrint('[WebRTC] ✅ RemoteDescription (réponse) définie');
+      
       _remoteDescriptionSet = true;
       await _flushPendingIceCandidates();
-      debugPrint('[WebRTC] ✅ handleAnswer success');
+      debugPrint('[WebRTC] ✅ handleAnswer succès');
     } catch (e) {
-      debugPrint('[WebRTC] ❌ handleAnswer failed: $e');
+      debugPrint('[WebRTC] ❌ handleAnswer échoué: $e');
+      debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
       rethrow;
     }
   }
 
   Future<void> addIceCandidate(RTCIceCandidate candidate) async {
-    if (_peerConnection == null) return;
-    if (!_remoteDescriptionSet) {
-      // Trickle ICE : l'autre côté nous envoie ses candidates dès qu'il les
-      // génère, parfois avant qu'on ait reçu/appliqué son answer/offer.
-      // On les bufferise et on les applique dans handleOffer/handleAnswer.
+    if (_peerConnection == null) {
+      // Bufferiser les candidats reçus AVANT l'initialisation du PeerConnection.
+      // Ce cas arrive quand l'appelant envoie ses candidats ICE immédiatement
+      // après l'offre, mais que l'appelé n'a pas encore appelé init() (pas
+      // encore décroché). Sans ce buffer, ces candidats sont définitivement
+      // perdus → ICE ne trouve pas de paire → timeout ~15s → appel coupé.
       _pendingIceCandidates.add(candidate);
-      debugPrint('[WebRTC] 🧊 ICE candidate bufferisé (en attente de remote description)');
+      debugPrint('[WebRTC] 🧊 ICE candidate bufferisé (PC null, ${_pendingIceCandidates.length} en attente): ${candidate.candidate?.split(' ').first ?? "?"} | sdpMid=${candidate.sdpMid}');
       return;
     }
+    
+    if (!_remoteDescriptionSet) {
+      _pendingIceCandidates.add(candidate);
+      debugPrint('[WebRTC] 🧊 ICE candidate bufferisé (pas de remote desc, ${_pendingIceCandidates.length} en attente): ${candidate.candidate?.split(' ').first ?? "?"} | sdpMid=${candidate.sdpMid}');
+      return;
+    }
+    
     try {
+      debugPrint('[WebRTC] ➕ Application ICE candidate: ${candidate.candidate?.split(' ').first ?? "?"} | sdpMid=${candidate.sdpMid} | sdpMLineIndex=${candidate.sdpMLineIndex}');
       await _peerConnection!.addCandidate(candidate);
+      debugPrint('[WebRTC] ✅ ICE candidate ajouté avec succès');
     } catch (e) {
       debugPrint('[WebRTC] ⚠️ addCandidate échoué: $e');
     }
   }
 
   Future<void> _flushPendingIceCandidates() async {
-    if (_pendingIceCandidates.isEmpty) return;
-    debugPrint('[WebRTC] 🧊 Flush ${_pendingIceCandidates.length} ICE candidate(s) bufferisé(s)');
-    for (final c in _pendingIceCandidates) {
+    if (_pendingIceCandidates.isEmpty) {
+      debugPrint('[WebRTC] 🧊 Pas de candidates en attente');
+      return;
+    }
+    
+    if (_peerConnection == null) {
+      debugPrint('[WebRTC] 🧊 PeerConnection null, ${_pendingIceCandidates.length} candidats non flushés');
+      return;
+    }
+    
+    debugPrint('[WebRTC] 🧊 Application de ${_pendingIceCandidates.length} ICE candidate(s) bufferisé(s)...');
+    int successCount = 0;
+    int failureCount = 0;
+    
+    for (int i = 0; i < _pendingIceCandidates.length; i++) {
+      final c = _pendingIceCandidates[i];
       try {
+        debugPrint('[WebRTC]   [$i] ${c.candidate?.split(' ').first ?? "?"} | sdpMid=${c.sdpMid}');
         await _peerConnection!.addCandidate(c);
+        successCount++;
       } catch (e) {
-        debugPrint('[WebRTC] ⚠️ Flush addCandidate échoué: $e');
+        debugPrint('[WebRTC]   [$i] ❌ Erreur: $e');
+        failureCount++;
       }
     }
+    
+    debugPrint('[WebRTC] 🧊 Flush terminé: $successCount réussis, $failureCount échoués');
     _pendingIceCandidates.clear();
   }
 
@@ -270,21 +453,46 @@ class WebRTCService {
     try {
       debugPrint('[WebRTC] 🧹 Nettoyage WebRTC...');
       
-      // ✅ Éteindre tous les tracks avant de disposer le stream
-      _localStream?.getTracks().forEach((track) async {
-        await track.stop();
-      });
+      // ✅ FIX CRITIQUE: Fermer les tracks de façon synchrone (sans async dans forEach)
+      // Les forEach avec async ne bloquent pas, ce qui crée une race condition
+      debugPrint('[WebRTC] 🛑 Arrêt des tracks locaux...');
+      if (_localStream != null) {
+        for (final track in _localStream!.getTracks()) {
+          try {
+            debugPrint('[WebRTC]   - Track local: ${track.kind} (id=${track.id})');
+            await track.stop();
+          } catch (e) {
+            debugPrint('[WebRTC]   ⚠️ Erreur arrêt track local: $e');
+          }
+        }
+      }
       
-      _remoteStream?.getTracks().forEach((track) async {
-        await track.stop();
-      });
+      debugPrint('[WebRTC] 🛑 Arrêt des tracks distants...');
+      if (_remoteStream != null) {
+        for (final track in _remoteStream!.getTracks()) {
+          try {
+            debugPrint('[WebRTC]   - Track distant: ${track.kind} (id=${track.id})');
+            await track.stop();
+          } catch (e) {
+            debugPrint('[WebRTC]   ⚠️ Erreur arrêt track distant: $e');
+          }
+        }
+      }
       
-      // ✅ Fermer le PeerConnection
-      await _peerConnection?.close();
+      debugPrint('[WebRTC] 🔌 Fermeture PeerConnection...');
+      try {
+        await _peerConnection?.close();
+      } catch (e) {
+        debugPrint('[WebRTC] ⚠️ Erreur fermeture PeerConnection: $e');
+      }
       
-      // ✅ Disposer les streams
-      await _localStream?.dispose();
-      await _remoteStream?.dispose();
+      debugPrint('[WebRTC] 🗑️ Disposition des streams...');
+      try {
+        await _localStream?.dispose();
+        await _remoteStream?.dispose();
+      } catch (e) {
+        debugPrint('[WebRTC] ⚠️ Erreur disposition streams: $e');
+      }
       
       // ✅ Réinitialiser les références
       _peerConnection = null;
@@ -293,9 +501,10 @@ class WebRTCService {
       _remoteDescriptionSet = false;
       _pendingIceCandidates.clear();
 
-      debugPrint('[WebRTC] ✅ Nettoyage complété');
+      debugPrint('[WebRTC] ✅ Nettoyage complété avec succès');
     } catch (e) {
-      debugPrint('[WebRTC] ❌ Erreur dispose: $e');
+      debugPrint('[WebRTC] ❌ Erreur dispose globale: $e');
+      debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
     }
   }
 }

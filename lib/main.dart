@@ -12,6 +12,9 @@ import 'screens/authentification/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'talky_api_client.dart';
 
+/// Clé globale exposée à PushService pour naviguer depuis les notifications.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[Main] 🚀 Application démarrée');
@@ -44,6 +47,7 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Talky',
         theme: ThemeData(
@@ -80,17 +84,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void initState() {
     super.initState();
     debugPrint('[AuthWrapper] initState - Lancement de init()');
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     Future.microtask(
       () async {
         try {
-          final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-          await Provider.of<AuthProvider>(context, listen: false).init();
+          await authProvider.init();
           debugPrint('[AuthWrapper] ✅ init() complété');
 
           // Démarre PushService une fois l'auth initialisée pour pouvoir
           // pousser le FCM token au backend si l'utilisateur est connecté.
           try {
-            await PushService.init(apiClient);
+            await PushService.init(apiClient, navKey: navigatorKey);
           } catch (e) {
             debugPrint('[AuthWrapper] PushService init failed: $e');
           }

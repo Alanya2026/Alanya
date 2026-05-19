@@ -43,6 +43,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import 'audio_helper.dart' as audio;
 import 'callkit_service.dart';
 import 'ringtone_service.dart';
 import 'webrtc_service.dart';
@@ -427,7 +428,7 @@ class CallService extends ChangeNotifier {
       // ✅ Initialiser le routage audio (mobile uniquement)
       if (!kIsWeb) {
         _isSpeakerOn = true;
-        await Helper.setSpeakerphoneOn(true);
+        await audio.AudioHelper.setSpeakerphoneOn(true);
         debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
       }
 
@@ -441,6 +442,12 @@ class CallService extends ChangeNotifier {
             'sdpMLineIndex': candidate.sdpMLineIndex,
           },
         });
+      };
+
+      // Connection failure handler
+      _webrtc.onConnectionFailure = () {
+        debugPrint('[CallService] ⚠️ Peer connection failed, ending call');
+        _terminateCall();
       };
 
       final offer = await _webrtc.createOffer();
@@ -550,7 +557,7 @@ class CallService extends ChangeNotifier {
 
       if (!kIsWeb) {
         _isSpeakerOn = true;
-        await Helper.setSpeakerphoneOn(true);
+        await audio.AudioHelper.setSpeakerphoneOn(true);
       }
 
       _webrtc.onIceCandidate = (candidate) {
@@ -562,6 +569,12 @@ class CallService extends ChangeNotifier {
             'sdpMLineIndex': candidate.sdpMLineIndex,
           },
         });
+      };
+
+      // Connection failure handler
+      _webrtc.onConnectionFailure = () {
+        debugPrint('[CallService] ⚠️ Peer connection failed, ending call');
+        _terminateCall();
       };
 
       await _webrtc.handleOffer(
@@ -783,7 +796,7 @@ class CallService extends ChangeNotifier {
     // ✅ Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement)
     if (!kIsWeb) {
       _isSpeakerOn = true;
-      await Helper.setSpeakerphoneOn(true);
+      await audio.AudioHelper.setSpeakerphoneOn(true);
       debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
     }
   }
@@ -861,6 +874,15 @@ class CallService extends ChangeNotifier {
       });
     };
 
+    pc.onConnectionState = (state) {
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+        debugPrint('[CallService] ⚠️ Group peer $userId connection failed: $state');
+        _removeGroupPeer(userId);
+      }
+    };
+
     _groupPeerConnections[userId] = pc;
     return pc;
   }
@@ -893,7 +915,7 @@ class CallService extends ChangeNotifier {
 
   Future<void> toggleSpeaker() async {
     _isSpeakerOn = !_isSpeakerOn;
-    await Helper.setSpeakerphoneOn(_isSpeakerOn);
+    await audio.AudioHelper.setSpeakerphoneOn(_isSpeakerOn);
     debugPrint('[CallService] Haut-parleur: ${_isSpeakerOn ? "ON" : "OFF"}');
     notifyListeners();
   }

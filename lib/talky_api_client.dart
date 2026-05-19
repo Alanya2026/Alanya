@@ -555,6 +555,32 @@ class TalkyApiClient {
     );
   }
 
+  Future<void> deleteMeeting(int idMeeting) async {
+    await _handleRequest(
+      () => _client.delete(Uri.parse('$baseUrl/meetings/$idMeeting'), headers: _headers),
+    );
+  }
+
+  Future<void> updateMeeting(int idMeeting, {
+    String? objet,
+    String? startTime,
+    int? duree,
+    int? typeMedia,
+  }) async {
+    final body = <String, dynamic>{};
+    if (objet != null) body['objet'] = objet;
+    if (startTime != null) body['start_time'] = startTime;
+    if (duree != null) body['duree'] = duree;
+    if (typeMedia != null) body['type_media'] = typeMedia;
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('$baseUrl/meetings/$idMeeting'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
   Future<void> inviteParticipants(int idMeeting, List<int> participantIds) async {
     await _handleRequest(
       () => _client.post(

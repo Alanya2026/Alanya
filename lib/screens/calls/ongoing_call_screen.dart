@@ -38,8 +38,16 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     if (!mounted) return;
 
     final cs = Provider.of<CallService>(context, listen: false);
+    
+    // ✅ FIX: Assigner les streams immédiatement s'ils existent
+    debugPrint('[OngoingCall] 📹 Init renderers');
+    debugPrint('[OngoingCall] Local stream: ${cs.localStream != null ? "✅" : "❌"}');
+    debugPrint('[OngoingCall] Remote stream: ${cs.remoteStream != null ? "✅" : "❌"}');
+    
     _localRenderer.srcObject = cs.localStream;
     _remoteRenderer.srcObject = cs.remoteStream;
+    
+    // ✅ S'abonner aux changements de CallService
     cs.addListener(_onCallChanged);
 
     setState(() => _renderersReady = true);
@@ -49,16 +57,34 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     if (_closing || !mounted) return;
     final cs = Provider.of<CallService>(context, listen: false);
 
+    debugPrint('[OngoingCall] 📹 State changed: status=${cs.status}, local=${cs.localStream != null ? "✅" : "❌"}, remote=${cs.remoteStream != null ? "✅" : "❌"}');
+
+    // ✅ FIX CRITIQUE: TOUJOURS mettre à jour les renderers
+    // Ne pas vérifier si ça a "changé" - juste le faire
+    // Parfois le stream arrive après le premier call, ou est réassigné
     setState(() {
-      _localRenderer.srcObject = cs.localStream;
-      _remoteRenderer.srcObject = cs.remoteStream;
+      if (_renderersReady) {
+        final localChanged = _localRenderer.srcObject != cs.localStream;
+        final remoteChanged = _remoteRenderer.srcObject != cs.remoteStream;
+        
+        if (localChanged) {
+          debugPrint('[OngoingCall] 📹 Update local renderer: ${cs.localStream != null ? "stream" : "null"}');
+          _localRenderer.srcObject = cs.localStream;
+        }
+        if (remoteChanged) {
+          debugPrint('[OngoingCall] 📹 Update remote renderer: ${cs.remoteStream != null ? "stream" : "null"}');
+          _remoteRenderer.srcObject = cs.remoteStream;
+        }
+      }
     });
 
     if (cs.status == CallStatus.ended && !cs.callEndedByUs) {
+      debugPrint('[OngoingCall] 📞 Appel terminé par l\'autre côté');
       _closeAndPop();
       return;
     }
     if (cs.status == CallStatus.idle) {
+      debugPrint('[OngoingCall] 📞 Statut idle, fermeture');
       _closeAndPop();
       return;
     }

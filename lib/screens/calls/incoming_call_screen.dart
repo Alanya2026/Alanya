@@ -76,22 +76,27 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   Future<void> _accept() async {
     if (_navigated) return;
+    _navigated = true;
+    
     final cs = Provider.of<CallService>(context, listen: false);
     await cs.answerCall();
+    
+    // Widget may be deactivated during await, check mounted before using context
     if (!mounted) return;
 
     if (cs.errorMessage != null) {
-      _navigated = true;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(cs.errorMessage!),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 4),
       ));
-      Navigator.of(context).maybePop();
+      if (mounted) Navigator.of(context).maybePop();
       return;
     }
 
-    _navigated = true;
+    // Verify widget is still mounted before navigation
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
     );
