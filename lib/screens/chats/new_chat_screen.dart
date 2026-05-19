@@ -158,7 +158,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                             }
                           },
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
           ),

@@ -128,8 +128,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
           // bufferisée par CallKitService.
           final pending = CallKitService.instance.consumePendingAction();
           if (pending != null) {
-            debugPrint('[AuthWrapper] 🎯 Pending CallKit action: ${pending.action}');
+            debugPrint('[AuthWrapper] 🎯 Pending CallKit action trouvée: ${pending.action}');
+            debugPrint('[AuthWrapper] Dispatcher l\'action...');
             dispatch(pending);
+            debugPrint('[AuthWrapper] ✅ Action dispatchée');
+          } else {
+            debugPrint('[AuthWrapper] ℹ️ Aucune action pending au démarrage');
           }
         } catch (e) {
           debugPrint('[AuthWrapper] ❌ Erreur init: $e');

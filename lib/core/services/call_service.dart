@@ -158,11 +158,6 @@ class CallService extends ChangeNotifier {
   }) async {
     debugPrint('[CallService] 📲 acceptIncomingCallFromPush callId=$callId caller=$callerId');
 
-    if (_pendingOffer != null && _status == CallStatus.incoming) {
-      await answerCall();
-      return;
-    }
-
     _remoteUserId = int.tryParse(callerId);
     _remoteUserName = callerName;
     _remoteUserPhoto = callerPhoto;
@@ -170,8 +165,19 @@ class CallService extends ChangeNotifier {
     _currentCallId = callId.isNotEmpty ? callId : null;
     _autoAnswerOnNextIncoming = true;
     _autoAnswerCallerId = callerId;
+    
+    // ✅ Fixer le statut à incoming IMMÉDIATEMENT pour que HomeScreen navigue
+    // vers IncomingCallScreen, même avant que l'offer socket ne soit reçue.
     _status = CallStatus.incoming;
     notifyListeners();
+    
+    debugPrint('[CallService] ✅ Status = incoming, auto-answer armé');
+
+    // Si l'offer est déjà arrivée, répondre immédiatement (rare mais possible)
+    if (_pendingOffer != null) {
+      debugPrint('[CallService] ⚡ Offer déjà présente → réponse immédiate');
+      await answerCall();
+    }
   }
 
   /// Appelée depuis main.dart quand l'utilisateur refuse un appel via CallKit.
@@ -229,9 +235,13 @@ class CallService extends ChangeNotifier {
       // Si l'utilisateur a déjà accepté via CallKit pour ce caller, on répond
       // automatiquement maintenant que l'offer est arrivée.
       if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
-        debugPrint('[CallService] ⚡ Auto-answer (CallKit pré-accepté)');
+        debugPrint('[CallService] ⚡ Auto-answer en 500ms (CallKit pré-accepté)');
         _autoAnswerOnNextIncoming = false;
         _autoAnswerCallerId = null;
+        
+        // ✅ Attendre 500ms pour que l'app soit bien initialisée avant d'auto-répondre
+        await Future.delayed(const Duration(milliseconds: 500));
+        
         try {
           await answerCall();
         } catch (e) {
@@ -512,6 +522,22 @@ class CallService extends ChangeNotifier {
 
     await _ringtone.stop();
     _errorMessage = null;
+
+    // ✅ Attendre que le socket soit connecté/authentifié avant d'envoyer l'answer
+    // (important après app redémarrage depuis push CallKit)
+    int retries = 0;
+    while (!_apiClient.isSocketConnected && retries < 20) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      retries++;
+    }
+    if (!_apiClient.isSocketConnected) {
+      debugPrint('[CallService] ❌ Socket not connected après 2s');
+      _errorMessage = 'Socket non connecté';
+      _status = CallStatus.idle;
+      notifyListeners();
+      return;
+    }
+    debugPrint('[CallService] ✅ Socket connecté, envoi answer');
 
     final offer = _pendingOffer!;
     _pendingOffer = null;

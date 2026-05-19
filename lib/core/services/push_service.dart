@@ -26,6 +26,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../talky_api_client.dart';
 import 'callkit_service.dart';
+import 'ringtone_service.dart';
 
 /// VAPID key publique du projet Firebase (Web Push) — projet talky-2026.
 /// Source : Firebase Console → Project Settings → Cloud Messaging → Web push
@@ -57,7 +58,16 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         callerPhoto: data['photo']?.toString(),
         isVideo:     data['isVideo'] == 'true',
         roomId:      data['roomId']?.toString(),
+        // ✅ silent=true : CallKit affiche la notif sans sonner, RingtoneService
+        // de l'app gère seul la sonnerie (pas de doublon).
+        silent: true,
       );
+    }
+  } else if (type == 'call_ended') {
+    // ✅ Arrêter la sonnerie quand l'appelant raccroche (app en background)
+    if (!kIsWeb) {
+      await CallKitService.instance.endAll();
+      await RingtoneService.stopAll();
     }
   }
   // Les autres types sont affichés par le système (notification automatique
@@ -166,6 +176,11 @@ class PushService {
       // App au premier plan : pas de CallKit. L'event socket `incoming_call`
       // déclenche déjà IncomingCallScreen (plein écran) + RingtoneService.
       // CallKit en parallèle apporterait une sonnerie de notif additionnelle.
+      return;
+    }
+
+    if (type == 'call_ended') {
+      // ✅ Ignorer, l'event socket `call_ended` gère ce cas en foreground.
       return;
     }
 

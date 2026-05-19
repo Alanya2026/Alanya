@@ -17,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  bool _incomingCallShown = false;
 
   final List<Widget> _screens = [
     const ChatsScreen(),
@@ -28,16 +29,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Écouter les rappels entrants
+    // ✅ Écouter les appels entrants
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final callService = Provider.of<CallService>(context, listen: false);
       callService.addListener(_onCallStatusChanged);
-      // Si l'app vient d'être lancée depuis CallKit (push d'appel reçu app
-      // tuée → user accepte), le status est déjà `incoming` au moment où
-      // ce listener s'enregistre. On déclenche manuellement la navigation.
-      if (callService.status == CallStatus.incoming) {
-        debugPrint('[HomeScreen] 🚀 Appel entrant déjà actif au mount → navigation');
-        _onCallStatusChanged();
+      
+      // ✅ Si l'app redémarre depuis un push CallKit (app tuée → user accepte),
+      // le status est DÉJÀ `incoming`. On déclenche la navigation manuellement.
+      if (callService.status == CallStatus.incoming && !_incomingCallShown) {
+        debugPrint('[HomeScreen] ✅ Appel entrant trouvé au démarrage → navigation');
+        _showIncomingCall();
       }
     });
   }
@@ -53,18 +55,28 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     final callService = Provider.of<CallService>(context, listen: false);
     
-    debugPrint('[HomeScreen] 🎯 CallService status changed: ${callService.status}');
+    debugPrint('[HomeScreen] 📞 CallService status: ${callService.status}');
     
-    // ✅ NE naviguer que si UNIQUEMENT appel entrant (pas pendant un appel en cours)
-    // Si status == connecting/outgoing/connected, l'appareil est déjà en appel
-    if (callService.status == CallStatus.incoming) {
-      debugPrint('[HomeScreen] 📱 Navigation vers IncomingCallScreen...');
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const IncomingCallScreen(),
-        ),
-      );
+    // ✅ Afficher IncomingCallScreen quand appel entrant
+    if (callService.status == CallStatus.incoming && !_incomingCallShown) {
+      _showIncomingCall();
     }
+  }
+
+  void _showIncomingCall() {
+    _incomingCallShown = true;
+    if (!mounted) return;
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => const IncomingCallScreen(),
+      ),
+    ).then((_) {
+      if (mounted) {
+        _incomingCallShown = false;
+      }
+    });
   }
 
   void _onItemTapped(int index) {

@@ -20,6 +20,10 @@ class RingtoneService {
   RingtoneService._();
   static final RingtoneService instance = RingtoneService._();
 
+  static Future<void> stopAll() async {
+    await instance.stop();
+  }
+
   static const _ringbackAsset = 'assets/sounds/ringback.wav';
 
   final FlutterRingtonePlayer _systemRingtone = FlutterRingtonePlayer();
