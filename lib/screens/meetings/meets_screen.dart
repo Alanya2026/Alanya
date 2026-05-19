@@ -367,8 +367,10 @@ class _MeetingCard extends StatelessWidget {
   String _formatDateTime(Meeting m) {
     final now = DateTime.now();
     final d = m.startDateTime;
-    final timeStr =
-        '${d.hour}:${d.minute.toString().padLeft(2, '0')} — ${m.endDateTime.hour}:${m.endDateTime.minute.toString().padLeft(2, '0')}';
+    final e = m.endDateTime;
+    String hm(DateTime dt) =>
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final timeStr = '${hm(d)} — ${hm(e)}';
     if (m.isToday) return "Aujourd'hui · $timeStr";
     final tomorrow = now.add(const Duration(days: 1));
     if (d.year == tomorrow.year && d.month == tomorrow.month && d.day == tomorrow.day) {

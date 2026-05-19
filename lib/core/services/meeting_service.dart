@@ -70,6 +70,12 @@ class MeetingService extends ChangeNotifier {
   // Streams distants : userId → MediaStream
   final Map<String, MediaStream> _remoteStreams = {};
 
+  // ICE candidates reçus avant setRemoteDescription, bufferisés par peer.
+  // Sans ce buffer, addCandidate() lance InvalidStateError et le candidat est
+  // perdu → ICE ne trouve pas de paire → connection timeout.
+  final Map<String, List<RTCIceCandidate>> _pendingIceByPeer = {};
+  final Set<String> _remoteDescSetForPeer = <String>{};
+
   // Contrôles
   bool _isMuted = false;
   bool _isVideoOff = false;
@@ -193,22 +199,48 @@ class MeetingService extends ChangeNotifier {
         await pc.setRemoteDescription(
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
+        _remoteDescSetForPeer.add(fromUserId);
+        await _flushPendingIce(fromUserId);
       }
     });
 
     // WebRTC : ICE candidate reçu
-    _apiClient.onSocketEvent(SocketEvents.meetingIceCandidate, (data) {
+    _apiClient.onSocketEvent(SocketEvents.meetingIceCandidate, (data) async {
       if (data is! Map) return;
       // ✅ Champ correct du backend : fromUserID
       final fromUserId = data['fromUserID']?.toString();
       final c = data['candidate'] as Map?;
       if (fromUserId == null || c == null) return;
-      _peerConnections[fromUserId]?.addCandidate(RTCIceCandidate(
+      final candidate = RTCIceCandidate(
         c['candidate'] as String,
         c['sdpMid'] as String?,
         c['sdpMLineIndex'] as int?,
-      ));
+      );
+      final pc = _peerConnections[fromUserId];
+      if (pc == null || !_remoteDescSetForPeer.contains(fromUserId)) {
+        // Bufferiser tant que le peer ou la remote description ne sont pas prêts.
+        _pendingIceByPeer.putIfAbsent(fromUserId, () => []).add(candidate);
+        return;
+      }
+      try {
+        await pc.addCandidate(candidate);
+      } catch (e) {
+        debugPrint('[MeetingService] addCandidate échoué pour $fromUserId: $e');
+      }
     });
+  }
+
+  Future<void> _flushPendingIce(String userId) async {
+    final pc = _peerConnections[userId];
+    final pending = _pendingIceByPeer.remove(userId);
+    if (pc == null || pending == null || pending.isEmpty) return;
+    for (final c in pending) {
+      try {
+        await pc.addCandidate(c);
+      } catch (e) {
+        debugPrint('[MeetingService] addCandidate (flush) échoué pour $userId: $e');
+      }
+    }
   }
 
   // ── API REST ───────────────────────────────────────────────────────
@@ -261,10 +293,13 @@ class MeetingService extends ChangeNotifier {
 
   /// Rejoint une réunion existante par son [idMeeting].
   /// [myId] est le alanyaID de l'utilisateur connecté.
+  /// [initialStream] : si fourni, le service réutilise ce stream au lieu de
+  /// rappeler getUserMedia (évite l'écran noir dû à la libération de la caméra).
   Future<void> joinMeeting({
     required int idMeeting,
     required int myId,
     required String myName,
+    MediaStream? initialStream,
   }) async {
     _status = MeetingStatus.joining;
     notifyListeners();
@@ -278,7 +313,7 @@ class MeetingService extends ChangeNotifier {
       await _apiClient.joinMeetingHttp(idMeeting);
 
       // 3. Rejoindre la room socket
-      await _joinRoom(myId: myId);
+      await _joinRoom(myId: myId, initialStream: initialStream);
     } catch (e) {
       debugPrint('[MeetingService] Erreur joinMeeting: $e');
       _status = MeetingStatus.ended;
@@ -315,9 +350,25 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
-  Future<void> _joinRoom({required int myId}) async {
-    // Initialiser le stream local
-    await _initLocalStream();
+  Future<void> _joinRoom({required int myId, MediaStream? initialStream}) async {
+    if (initialStream != null) {
+      // Réutiliser le stream déjà obtenu (par exemple par le lobby) :
+      // évite un second getUserMedia qui ferait flasher / noircir la vidéo.
+      _localStream = initialStream;
+      final isVideoMeeting = _currentMeeting?.typeMedia == 0;
+      if (!isVideoMeeting) {
+        _isVideoOff = true;
+      } else {
+        final videoTracks = initialStream.getVideoTracks();
+        _isVideoOff = videoTracks.isEmpty || !videoTracks.first.enabled;
+      }
+      final audioTracks = initialStream.getAudioTracks();
+      if (audioTracks.isNotEmpty) {
+        _isMuted = !audioTracks.first.enabled;
+      }
+    } else {
+      await _initLocalStream();
+    }
 
     // ✅ Champs corrects : meetingID et userID (pas meetingId/userId)
     _apiClient.sendSocketEvent(SocketEvents.meetingJoinRoom, {
@@ -351,6 +402,8 @@ class MeetingService extends ChangeNotifier {
       'meetingID': _currentMeeting!.idMeeting,
       'userID': userId.toString(),
     });
+    _pendingJoinRequests.removeWhere((r) => r['userID'] == userId.toString());
+    notifyListeners();
   }
 
   /// Refuse la demande de join.
@@ -360,6 +413,8 @@ class MeetingService extends ChangeNotifier {
       'meetingID': _currentMeeting!.idMeeting,
       'userID': userId.toString(),
     });
+    _pendingJoinRequests.removeWhere((r) => r['userID'] == userId.toString());
+    notifyListeners();
   }
 
   /// Démarre la réunion (organisateur seulement).
@@ -410,6 +465,8 @@ class MeetingService extends ChangeNotifier {
       debugPrint('[MeetingService] Initialisation du stream local...');
       debugPrint('[MeetingService] isWeb: $kIsWeb');
 
+      final isVideoMeeting = _currentMeeting?.typeMedia == 0;
+
       // Demander les permissions si mobile
       if (!kIsWeb) {
         final micStatus = await Permission.microphone.request();
@@ -417,28 +474,34 @@ class MeetingService extends ChangeNotifier {
           throw Exception('Permission microphone refusée');
         }
 
-        final cameraStatus = await Permission.camera.request();
-        if (!cameraStatus.isGranted) {
-          debugPrint('[MeetingService] ⚠️ Permission caméra refusée');
+        if (isVideoMeeting) {
+          final cameraStatus = await Permission.camera.request();
+          if (!cameraStatus.isGranted) {
+            debugPrint('[MeetingService] ⚠️ Permission caméra refusée');
+          }
         }
       }
 
       // Obtenir le media stream avec constraints
-      final constraints = {
+      final constraints = <String, dynamic>{
         'audio': {
           'echoCancellation': true,
           'noiseSuppression': true,
           'autoGainControl': true,
         },
-        'video': {
+      };
+
+      if (isVideoMeeting) {
+        constraints['video'] = {
           'width': {'ideal': 1280},
           'height': {'ideal': 720},
           'frameRate': {'ideal': 30},
-        }
-      };
+        };
+      }
 
       debugPrint('[MeetingService] Appel getUserMedia avec contraintes: $constraints');
       _localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (!isVideoMeeting) _isVideoOff = true;
       debugPrint('[MeetingService] ✅ Stream local obtenu: ${_localStream?.getTracks().length} tracks');
       notifyListeners();
     } catch (e) {
@@ -487,6 +550,8 @@ class MeetingService extends ChangeNotifier {
     await pc.setRemoteDescription(
       RTCSessionDescription(offer['sdp'] as String, 'offer'),
     );
+    _remoteDescSetForPeer.add(fromUserId);
+    await _flushPendingIce(fromUserId);
 
     _localStream?.getTracks().forEach((track) {
       pc.addTrack(track, _localStream!);
@@ -531,6 +596,14 @@ class MeetingService extends ChangeNotifier {
       });
     };
 
+    pc.onConnectionState = (state) {
+      debugPrint('[MeetingService] Peer $userId connection state: $state');
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+        _removePeer(userId);
+      }
+    };
+
     _peerConnections[userId] = pc;
     return pc;
   }
@@ -539,6 +612,8 @@ class MeetingService extends ChangeNotifier {
     _peerConnections[userId]?.close();
     _peerConnections.remove(userId);
     _remoteStreams.remove(userId);
+    _pendingIceByPeer.remove(userId);
+    _remoteDescSetForPeer.remove(userId);
     notifyListeners();
   }
 
@@ -594,6 +669,8 @@ class MeetingService extends ChangeNotifier {
     }
     _peerConnections.clear();
     _remoteStreams.clear();
+    _pendingIceByPeer.clear();
+    _remoteDescSetForPeer.clear();
     _chatMessages.clear();
     _pendingJoinRequests.clear();
     await _localStream?.dispose();

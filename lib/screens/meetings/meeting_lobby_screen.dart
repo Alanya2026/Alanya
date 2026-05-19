@@ -13,6 +13,7 @@ class MeetingLobbyScreen extends StatefulWidget {
   final int myId;
   final String myName;
   final bool isOrganiser;
+  final int typeMedia; // 0 = vidéo+audio, 1 = audio seul
 
   const MeetingLobbyScreen({
     super.key,
@@ -20,6 +21,7 @@ class MeetingLobbyScreen extends StatefulWidget {
     required this.myId,
     required this.myName,
     required this.isOrganiser,
+    this.typeMedia = 0,
   });
 
   @override
@@ -39,15 +41,11 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   bool _isCamOn = true;
   bool _joining = false;
 
-  // Demandes en attente (organisateur)
-  final List<Map<String, String>> _pendingRequests = [];
-
   @override
   void initState() {
     super.initState();
     _initPreview();
     _loadMeeting();
-    _listenToJoinRequests();
   }
 
   @override
@@ -59,6 +57,9 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   }
 
   Future<void> _initPreview() async {
+    // Les réunions audio n'ont pas besoin de la caméra
+    if (widget.typeMedia != 0) return;
+
     await _previewRenderer.initialize();
     try {
       if (!kIsWeb) {
@@ -101,22 +102,6 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
     }
   }
 
-  void _listenToJoinRequests() {
-    if (!widget.isOrganiser) return;
-    final api = Provider.of<TalkyApiClient>(context, listen: false);
-    api.onSocketEvent(SocketEvents.meetingJoinRequested, (data) {
-      if (!mounted || data is! Map) return;
-      final userId   = data['userID']?.toString() ?? '';
-      final userName = data['userName']?.toString() ?? 'Inconnu';
-      if (userId.isEmpty) return;
-      setState(() {
-        if (!_pendingRequests.any((r) => r['userID'] == userId)) {
-          _pendingRequests.add({'userID': userId, 'userName': userName});
-        }
-      });
-    });
-  }
-
   void _toggleMic() {
     _previewStream?.getAudioTracks().forEach((t) => t.enabled = !_isMicOn);
     setState(() => _isMicOn = !_isMicOn);
@@ -128,19 +113,24 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   }
 
   Future<void> _join() async {
-    setState(() => _joining = true);
     final meetingService = Provider.of<MeetingService>(context, listen: false);
 
-    // Arrêter le stream de prévisualisation — MeetingService en créera un neuf
-    _previewStream?.getTracks().forEach((t) => t.stop());
-    await _previewStream?.dispose();
-    _previewStream = null;
+    // Transférer la propriété du stream à MeetingService :
+    // on ne le stoppe PAS pour éviter que la caméra ne renvoie des frames
+    // noires lors d'un nouveau getUserMedia immédiat.
+    final adoptedStream = _previewStream;
+    setState(() {
+      _joining = true;
+      _previewStream = null; // empêche dispose() de toucher au stream adopté
+    });
+    _previewRenderer.srcObject = null;
 
     try {
       await meetingService.joinMeeting(
         idMeeting: widget.meetingId,
         myId: widget.myId,
         myName: widget.myName,
+        initialStream: adoptedStream,
       );
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -154,18 +144,6 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
         SnackBar(content: Text('Impossible de rejoindre : $e')),
       );
     }
-  }
-
-  void _acceptRequest(String userId, String userName) {
-    final meetingService = Provider.of<MeetingService>(context, listen: false);
-    meetingService.acceptJoinRequest(int.tryParse(userId) ?? 0);
-    setState(() => _pendingRequests.removeWhere((r) => r['userID'] == userId));
-  }
-
-  void _declineRequest(String userId) {
-    final meetingService = Provider.of<MeetingService>(context, listen: false);
-    meetingService.declineJoinRequest(int.tryParse(userId) ?? 0);
-    setState(() => _pendingRequests.removeWhere((r) => r['userID'] == userId));
   }
 
   @override
@@ -254,15 +232,8 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
             ),
           ),
 
-          // ── Panel En attente ou demandes organisateur ───────────────
-          if (isPending)
-            _PendingBanner()
-          else if (widget.isOrganiser && _pendingRequests.isNotEmpty)
-            _PendingRequestsPanel(
-              requests: _pendingRequests,
-              onAccept: _acceptRequest,
-              onDecline: _declineRequest,
-            ),
+          // ── Bannière "En attente d'approbation" ─────────────────────
+          if (isPending) _PendingBanner(),
 
           // ── Contrôles + bouton rejoindre ───────────────────────────
           SafeArea(
@@ -280,13 +251,15 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                         active: _isMicOn,
                         onTap: _toggleMic,
                       ),
-                      const SizedBox(width: 24),
-                      _LobbyToggle(
-                        icon: _isCamOn ? Icons.videocam : Icons.videocam_off,
-                        label: _isCamOn ? 'Caméra active' : 'Caméra coupée',
-                        active: _isCamOn,
-                        onTap: _toggleCam,
-                      ),
+                      if (widget.typeMedia == 0) ...[
+                        const SizedBox(width: 24),
+                        _LobbyToggle(
+                          icon: _isCamOn ? Icons.videocam : Icons.videocam_off,
+                          label: _isCamOn ? 'Caméra active' : 'Caméra coupée',
+                          active: _isCamOn,
+                          onTap: _toggleCam,
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -356,84 +329,6 @@ class _PendingBanner extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontSize: 13),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Panel demandes en attente (organisateur) ─────────────────────────────────
-
-class _PendingRequestsPanel extends StatelessWidget {
-  const _PendingRequestsPanel({
-    required this.requests,
-    required this.onAccept,
-    required this.onDecline,
-  });
-
-  final List<Map<String, String>> requests;
-  final void Function(String userId, String userName) onAccept;
-  final void Function(String userId) onDecline;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(15),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${requests.length} demande(s) en attente',
-            style: const TextStyle(
-                color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          ...requests.map((req) {
-            final userId   = req['userID'] ?? '';
-            final userName = req['userName'] ?? 'Inconnu';
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.indigo.shade700,
-                    child: Text(
-                      userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(userName,
-                        style: const TextStyle(color: Colors.white, fontSize: 13)),
-                  ),
-                  TextButton(
-                    onPressed: () => onAccept(userId, userName),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Text('Accepter', style: TextStyle(fontSize: 12)),
-                  ),
-                  TextButton(
-                    onPressed: () => onDecline(userId),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Text('Refuser', style: TextStyle(fontSize: 12)),
-                  ),
-                ],
-              ),
-            );
-          }),
         ],
       ),
     );

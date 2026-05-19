@@ -15,22 +15,28 @@ class OngoingMeetScreen extends StatefulWidget {
 class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final Map<String, RTCVideoRenderer> _remoteRenderers = {};
+  bool _localRendererReady = false;
 
   @override
   void initState() {
     super.initState();
-    _initLocalRenderer();
-    final meetingService = Provider.of<MeetingService>(context, listen: false);
-    meetingService.addListener(_onMeetingServiceChanged);
+    _setupRenderer();
   }
 
-  Future<void> _initLocalRenderer() async {
+  Future<void> _setupRenderer() async {
     final meetingService = Provider.of<MeetingService>(context, listen: false);
     await _localRenderer.initialize();
     if (!mounted) return;
-    if (meetingService.localStream != null) {
-      setState(() => _localRenderer.srcObject = meetingService.localStream);
-    }
+
+    setState(() {
+      _localRendererReady = true;
+      _localRenderer.srcObject = meetingService.localStream;
+    });
+
+    await _syncRemoteRenderers(meetingService.remoteStreams);
+    if (!mounted) return;
+
+    meetingService.addListener(_onMeetingServiceChanged);
   }
 
   void _onMeetingServiceChanged() {
@@ -43,7 +49,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       return;
     }
 
-    if (_localRenderer.srcObject != meetingService.localStream) {
+    if (_localRendererReady &&
+        _localRenderer.srcObject != meetingService.localStream) {
       setState(() => _localRenderer.srcObject = meetingService.localStream);
     }
 
@@ -102,7 +109,14 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
         final isOrganiser = meeting?.idOrganiser == myId;
         final pendingCount = meetingService.pendingJoinRequests.length;
 
-        return Scaffold(
+        return PopScope(
+          canPop: meetingService.status != MeetingStatus.connected,
+          onPopInvokedWithResult: (didPop, _) async {
+            if (didPop) return;
+            await meetingService.leaveMeeting();
+            if (context.mounted) Navigator.of(context).pop();
+          },
+          child: Scaffold(
           backgroundColor: const Color(0xFF202124),
           body: SafeArea(
             child: Column(
@@ -201,7 +215,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                         ? _buildVideoTile(
                             label: 'Vous',
                             renderer: _localRenderer,
-                            isVideoOff: meetingService.isVideoOff,
+                            isVideoOff: meetingService.isVideoOff || !_localRendererReady,
                             isMuted: meetingService.isMuted,
                             mirror: true,
                           )
@@ -214,7 +228,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               _buildVideoTile(
                                 label: 'Vous',
                                 renderer: _localRenderer,
-                                isVideoOff: meetingService.isVideoOff,
+                                isVideoOff: meetingService.isVideoOff || !_localRendererReady,
                                 isMuted: meetingService.isMuted,
                                 mirror: true,
                               ),
@@ -295,6 +309,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                 ),
               ],
             ),
+          ),
           ),
         );
       },

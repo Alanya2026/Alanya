@@ -154,9 +154,10 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           myId: _myId,
           myName: _myName,
           isOrganiser: _isOrganiser,
+          typeMedia: _meeting?.typeMedia ?? 0,
         ),
       ),
-    );
+    ).then((_) => _load());
   }
 
   @override
@@ -186,7 +187,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             ),
         ],
       ),
-      floatingActionButton: _meeting != null && !_meeting!.isEnd
+      floatingActionButton: _meeting != null &&
+              !_meeting!.isEnd &&
+              _meeting!.endDateTime.isAfter(DateTime.now())
           ? FloatingActionButton.extended(
               onPressed: _openLobby,
               backgroundColor: Colors.indigo,
@@ -255,14 +258,15 @@ class _MeetingDetailBody extends StatelessWidget {
 
   String _formatDateTime() {
     final d = meeting.startDateTime;
+    final e = meeting.endDateTime;
     const months = [
       '', 'jan', 'fév', 'mar', 'avr', 'mai', 'jun',
       'jul', 'aoû', 'sep', 'oct', 'nov', 'déc',
     ];
     final date = '${d.day} ${months[d.month]} ${d.year}';
-    final time =
-        '${d.hour}:${d.minute.toString().padLeft(2, '0')} — ${meeting.endDateTime.hour}:${meeting.endDateTime.minute.toString().padLeft(2, '0')}';
-    return '$date · $time';
+    String hm(DateTime dt) =>
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    return '$date · ${hm(d)} — ${hm(e)}';
   }
 
   @override

@@ -352,7 +352,10 @@ class Meeting {
             [],
       );
 
-  DateTime get startDateTime => DateTime.tryParse(startTime) ?? DateTime.now();
+  DateTime get startDateTime {
+    final dt = DateTime.tryParse(startTime) ?? DateTime.now();
+    return dt.isUtc ? dt.toLocal() : dt;
+  }
   DateTime get endDateTime => startDateTime.add(Duration(minutes: duree));
   bool get isToday {
     final now = DateTime.now();

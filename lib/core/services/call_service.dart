@@ -87,6 +87,10 @@ class CallService extends ChangeNotifier {
   final Map<String, MediaStream> _groupRemoteStreams = {};
   List<String> _groupParticipants = [];
 
+  // ICE candidates bufferisés tant que la remote description n'est pas définie.
+  final Map<String, List<RTCIceCandidate>> _groupPendingIce = {};
+  final Set<String> _groupRemoteDescSet = <String>{};
+
   // ── Getters ────────────────────────────────────────────────────────
   CallStatus get status => _status;
   int? get remoteUserId => _remoteUserId;
@@ -380,21 +384,46 @@ class CallService extends ChangeNotifier {
         await pc.setRemoteDescription(
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
+        _groupRemoteDescSet.add(fromUserId);
+        await _flushGroupPendingIce(fromUserId);
       }
     });
 
     // WebRTC groupe : ICE candidate reçu
-    _apiClient.onSocketEvent(SocketEvents.groupIceCandidate, (data) {
+    _apiClient.onSocketEvent(SocketEvents.groupIceCandidate, (data) async {
       if (data is! Map) return;
       final fromUserId = data['fromUserId'].toString();
       final c = data['candidate'] as Map?;
       if (c == null) return;
-      _groupPeerConnections[fromUserId]?.addCandidate(RTCIceCandidate(
+      final candidate = RTCIceCandidate(
         c['candidate'] as String,
         c['sdpMid'] as String?,
         c['sdpMLineIndex'] as int?,
-      ));
+      );
+      final pc = _groupPeerConnections[fromUserId];
+      if (pc == null || !_groupRemoteDescSet.contains(fromUserId)) {
+        _groupPendingIce.putIfAbsent(fromUserId, () => []).add(candidate);
+        return;
+      }
+      try {
+        await pc.addCandidate(candidate);
+      } catch (e) {
+        debugPrint('[CallService] group addCandidate échoué $fromUserId: $e');
+      }
     });
+  }
+
+  Future<void> _flushGroupPendingIce(String userId) async {
+    final pc = _groupPeerConnections[userId];
+    final pending = _groupPendingIce.remove(userId);
+    if (pc == null || pending == null || pending.isEmpty) return;
+    for (final c in pending) {
+      try {
+        await pc.addCandidate(c);
+      } catch (e) {
+        debugPrint('[CallService] group addCandidate (flush) échoué $userId: $e');
+      }
+    }
   }
 
   // ── APPELS 1-À-1 ──────────────────────────────────────────────────
@@ -781,6 +810,8 @@ class CallService extends ChangeNotifier {
     _groupPeerConnections.clear();
     _groupRemoteStreams.clear();
     _groupParticipants.clear();
+    _groupPendingIce.clear();
+    _groupRemoteDescSet.clear();
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _groupRoomId = null;
@@ -826,6 +857,8 @@ class CallService extends ChangeNotifier {
     await pc.setRemoteDescription(
       RTCSessionDescription(offer['sdp'] as String, 'offer'),
     );
+    _groupRemoteDescSet.add(fromUserId);
+    await _flushGroupPendingIce(fromUserId);
 
     _webrtc.localStream?.getTracks().forEach((track) {
       pc.addTrack(track, _webrtc.localStream!);
@@ -892,6 +925,8 @@ class CallService extends ChangeNotifier {
     _groupPeerConnections.remove(userId);
     _groupRemoteStreams.remove(userId);
     _groupParticipants.remove(userId);
+    _groupPendingIce.remove(userId);
+    _groupRemoteDescSet.remove(userId);
     notifyListeners();
   }
 
