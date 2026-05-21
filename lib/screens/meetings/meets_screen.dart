@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/services/meeting_service.dart';
+import '../../core/services/push_service.dart';
 import 'join_meet_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'ongoing_meet_screen.dart';
@@ -24,16 +27,23 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
   String _userInitial = 'U';
   int _myId = 0;
 
+  // Recharge la liste en temps réel à la réception d'une notification meeting
+  // (invitation reçue, rappel) — sans avoir à rafraîchir manuellement.
+  StreamSubscription<MeetingNotifData>? _meetingNotifSub;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadCurrentUser();
     _loadMeetings();
+    _meetingNotifSub =
+        PushService.meetingNotifications.listen((_) => _loadMeetings());
   }
 
   @override
   void dispose() {
+    _meetingNotifSub?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -58,11 +68,13 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
     try {
       final meetingService = Provider.of<MeetingService>(context, listen: false);
       final data = await meetingService.getMeetings();
+      if (!mounted) return;
       setState(() {
         _meetings = data;
         _isLoading = false;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -112,7 +124,7 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
     try {
       await meetingService.createAndJoin(
         objet: 'Réunion ${now.toString().substring(0, 16)}',
-        startTime: now.toIso8601String(),
+        startTime: now.toUtc().toIso8601String(),
         room: 'mtg-${now.millisecondsSinceEpoch}',
         myId: _myId,
       );
@@ -125,10 +137,12 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
       }
 
       if (!mounted) return;
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const OngoingMeetScreen()),
       );
+      // Au retour de la réunion, rafraîchir pour voir celle qu'on vient de créer.
+      if (mounted) _loadMeetings();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -270,6 +284,7 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'meets_schedule_fab',
         onPressed: _openSchedule,
         backgroundColor: Colors.indigo,
         elevation: 4,

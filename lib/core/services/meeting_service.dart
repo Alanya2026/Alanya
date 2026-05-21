@@ -87,9 +87,6 @@ class MeetingService extends ChangeNotifier {
   // Messages in-meeting
   final List<ChatMessage> _chatMessages = [];
 
-  // Demandes d'accès en attente (organisateur)
-  final List<Map<String, String>> _pendingJoinRequests = [];
-
   // Config ICE chargée depuis le backend via TalkyApiClient.fetchIceServers().
   // Évite d'embarquer les credentials TURN dans le code client.
 
@@ -102,7 +99,6 @@ class MeetingService extends ChangeNotifier {
   bool get isVideoOff => _isVideoOff;
   int get meetingDuration => _meetingDuration;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
-  List<Map<String, String>> get pendingJoinRequests => List.unmodifiable(_pendingJoinRequests);
 
   MeetingService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
     _setupSocketListeners();
@@ -138,24 +134,6 @@ class MeetingService extends ChangeNotifier {
       _terminateMeeting(emitLeave: false);
     });
 
-    // Notre demande de join a été acceptée
-    _apiClient.onSocketEvent(SocketEvents.meetingAccepted, (data) {
-      debugPrint('[MeetingService] Demande acceptée: $data');
-    });
-
-    // Notre demande de join a été refusée
-    _apiClient.onSocketEvent(SocketEvents.meetingDeclined, (data) {
-      debugPrint('[MeetingService] Demande refusée: $data');
-      _status = MeetingStatus.ended;
-      notifyListeners();
-    });
-
-    // Réunion démarrée
-    _apiClient.onSocketEvent(SocketEvents.meetingStarted, (data) {
-      debugPrint('[MeetingService] Réunion démarrée: $data');
-      notifyListeners();
-    });
-
     // Message chat in-meeting
     _apiClient.onSocketEvent(SocketEvents.meetingMessage, (data) {
       if (data is! Map) return;
@@ -164,16 +142,6 @@ class MeetingService extends ChangeNotifier {
         message: data['message']?.toString() ?? '',
         sendAt: DateTime.tryParse(data['sendAt']?.toString() ?? '') ?? DateTime.now(),
       ));
-      notifyListeners();
-    });
-
-    // Demande d'un invité à rejoindre (reçu par l'organisateur)
-    _apiClient.onSocketEvent(SocketEvents.meetingJoinRequested, (data) {
-      if (data is! Map) return;
-      final userID   = data['userID']?.toString() ?? '';
-      final userName = data['userName']?.toString() ?? '';
-      if (userID.isEmpty) return;
-      _pendingJoinRequests.add({'userID': userID, 'userName': userName});
       notifyListeners();
     });
 
@@ -291,15 +259,71 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
+  /// Prépare le stream local (caméra/micro) AVANT de rejoindre, pour la preview
+  /// du lobby. Le stream reste la propriété du service : il sera réutilisé tel
+  /// quel par [_joinRoom] (un seul getUserMedia sur toute la durée de vie).
+  /// Retourne null si l'accès média échoue.
+  Future<MediaStream?> prepareLocalMedia({required bool video}) async {
+    if (_localStream != null) return _localStream;
+    try {
+      if (!kIsWeb) {
+        final mic = await Permission.microphone.request();
+        if (!mic.isGranted) {
+          throw Exception('Permission microphone refusée');
+        }
+        if (video) {
+          await Permission.camera.request();
+        }
+      }
+
+      final constraints = <String, dynamic>{
+        'audio': {
+          'echoCancellation': true,
+          'noiseSuppression': true,
+          'autoGainControl': true,
+        },
+        if (video)
+          'video': {
+            'width': {'ideal': 1280},
+            'height': {'ideal': 720},
+            'frameRate': {'ideal': 30},
+          },
+      };
+
+      _localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      _isVideoOff = !video;
+      debugPrint('[MeetingService] ✅ prepareLocalMedia: ${_localStream?.getTracks().length} tracks');
+      notifyListeners();
+      return _localStream;
+    } catch (e) {
+      debugPrint('[MeetingService] ❌ prepareLocalMedia: $e');
+      return null;
+    }
+  }
+
+  /// Libère le stream préparé si l'utilisateur quitte le lobby sans rejoindre.
+  Future<void> releaseLocalMediaIfNotJoined() async {
+    if (_status == MeetingStatus.connected || _status == MeetingStatus.joining) {
+      return; // on a (ou est en train de) rejoindre → le stream est utilisé
+    }
+    if (_localStream != null) {
+      for (final t in _localStream!.getTracks()) {
+        await t.stop();
+      }
+      await _localStream!.dispose();
+      _localStream = null;
+    }
+    _isVideoOff = false;
+    notifyListeners();
+  }
+
   /// Rejoint une réunion existante par son [idMeeting].
   /// [myId] est le alanyaID de l'utilisateur connecté.
-  /// [initialStream] : si fourni, le service réutilise ce stream au lieu de
-  /// rappeler getUserMedia (évite l'écran noir dû à la libération de la caméra).
+  /// Si [prepareLocalMedia] a déjà été appelé, le stream existant est réutilisé.
   Future<void> joinMeeting({
     required int idMeeting,
     required int myId,
     required String myName,
-    MediaStream? initialStream,
   }) async {
     _status = MeetingStatus.joining;
     notifyListeners();
@@ -313,7 +337,7 @@ class MeetingService extends ChangeNotifier {
       await _apiClient.joinMeetingHttp(idMeeting);
 
       // 3. Rejoindre la room socket
-      await _joinRoom(myId: myId, initialStream: initialStream);
+      await _joinRoom(myId: myId);
     } catch (e) {
       debugPrint('[MeetingService] Erreur joinMeeting: $e');
       _status = MeetingStatus.ended;
@@ -332,15 +356,12 @@ class MeetingService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final meetings = await getMeetings();
-      // ✅ Champ correct : room (pas roomId)
-      final meeting = meetings.firstWhere(
-        (m) => m.room == roomCode,
-        orElse: () => throw Exception('Réunion introuvable'),
-      );
+      // Résolution par code côté serveur : fonctionne même si on n'est pas
+      // encore participant (contrairement à getMeetings qui filtre).
+      final data = await _apiClient.getMeetingByRoom(roomCode);
+      _currentMeeting = Meeting.fromJson(data);
 
-      _currentMeeting = meeting;
-      await _apiClient.joinMeetingHttp(meeting.idMeeting);
+      await _apiClient.joinMeetingHttp(_currentMeeting!.idMeeting);
       await _joinRoom(myId: myId);
     } catch (e) {
       debugPrint('[MeetingService] Erreur joinByRoom: $e');
@@ -350,23 +371,10 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
-  Future<void> _joinRoom({required int myId, MediaStream? initialStream}) async {
-    if (initialStream != null) {
-      // Réutiliser le stream déjà obtenu (par exemple par le lobby) :
-      // évite un second getUserMedia qui ferait flasher / noircir la vidéo.
-      _localStream = initialStream;
-      final isVideoMeeting = _currentMeeting?.typeMedia == 0;
-      if (!isVideoMeeting) {
-        _isVideoOff = true;
-      } else {
-        final videoTracks = initialStream.getVideoTracks();
-        _isVideoOff = videoTracks.isEmpty || !videoTracks.first.enabled;
-      }
-      final audioTracks = initialStream.getAudioTracks();
-      if (audioTracks.isNotEmpty) {
-        _isMuted = !audioTracks.first.enabled;
-      }
-    } else {
+  Future<void> _joinRoom({required int myId}) async {
+    // Le stream a normalement déjà été préparé par le lobby
+    // (prepareLocalMedia). Sinon (création directe), on l'initialise ici.
+    if (_localStream == null) {
       await _initLocalStream();
     }
 
@@ -392,36 +400,6 @@ class MeetingService extends ChangeNotifier {
       'meetingID': _currentMeeting!.idMeeting,
       'userID': myId.toString(),
       'message': message,
-    });
-  }
-
-  /// Accepte la demande de join d'un participant (organisateur seulement).
-  void acceptJoinRequest(int userId) {
-    if (_currentMeeting == null) return;
-    _apiClient.sendSocketEvent(SocketEvents.meetingJoinAccept, {
-      'meetingID': _currentMeeting!.idMeeting,
-      'userID': userId.toString(),
-    });
-    _pendingJoinRequests.removeWhere((r) => r['userID'] == userId.toString());
-    notifyListeners();
-  }
-
-  /// Refuse la demande de join.
-  void declineJoinRequest(int userId) {
-    if (_currentMeeting == null) return;
-    _apiClient.sendSocketEvent(SocketEvents.meetingJoinDecline, {
-      'meetingID': _currentMeeting!.idMeeting,
-      'userID': userId.toString(),
-    });
-    _pendingJoinRequests.removeWhere((r) => r['userID'] == userId.toString());
-    notifyListeners();
-  }
-
-  /// Démarre la réunion (organisateur seulement).
-  void startMeeting() {
-    if (_currentMeeting == null) return;
-    _apiClient.sendSocketEvent(SocketEvents.meetingStart, {
-      'meetingID': _currentMeeting!.idMeeting,
     });
   }
 
@@ -672,7 +650,6 @@ class MeetingService extends ChangeNotifier {
     _pendingIceByPeer.clear();
     _remoteDescSetForPeer.clear();
     _chatMessages.clear();
-    _pendingJoinRequests.clear();
     await _localStream?.dispose();
     _localStream = null;
     _durationTimer?.cancel();

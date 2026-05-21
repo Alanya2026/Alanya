@@ -127,6 +127,7 @@ class RingtoneService {
   }
 
   void _startVibrationLoop() {
+    if (kIsWeb) return;
     if (!Platform.isAndroid && !Platform.isIOS) return;
     try { Vibration.vibrate(duration: 700); } catch (_) {}
     _vibrationTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {

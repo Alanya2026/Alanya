@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/avatar_utils.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 
@@ -366,13 +367,12 @@ class _UserTile extends StatelessWidget {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: Colors.indigo.shade50,
-                  backgroundImage:
-                      user.avatarUrl.isNotEmpty ? NetworkImage(user.avatarUrl) : null,
-                  child: user.avatarUrl.isEmpty
-                      ? Text(initial,
+                  backgroundImage: avatarImage(user.avatarUrl),
+                  child: hasValidAvatarUrl(user.avatarUrl)
+                      ? null
+                      : Text(initial,
                           style: const TextStyle(
-                              color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 16))
-                      : null,
+                              color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
                 if (user.isOnline)
                   Positioned(

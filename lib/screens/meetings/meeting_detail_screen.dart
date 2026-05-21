@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/avatar_utils.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'meeting_lobby_screen.dart';
@@ -191,6 +192,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               !_meeting!.isEnd &&
               _meeting!.endDateTime.isAfter(DateTime.now())
           ? FloatingActionButton.extended(
+              heroTag: 'meeting_detail_join_fab',
               onPressed: _openLobby,
               backgroundColor: Colors.indigo,
               foregroundColor: Colors.white,
@@ -465,14 +467,12 @@ class _ParticipantTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: Colors.indigo.shade50,
-                backgroundImage: participant.avatarUrl != null && participant.avatarUrl!.isNotEmpty
-                    ? NetworkImage(participant.avatarUrl!)
-                    : null,
-                child: participant.avatarUrl == null || participant.avatarUrl!.isEmpty
-                    ? Text(initial,
+                backgroundImage: avatarImage(participant.avatarUrl),
+                child: hasValidAvatarUrl(participant.avatarUrl)
+                    ? null
+                    : Text(initial,
                         style: const TextStyle(
-                            color: Colors.indigo, fontWeight: FontWeight.bold))
-                    : null,
+                            color: Colors.indigo, fontWeight: FontWeight.bold)),
               ),
               if (participant.connecte)
                 Positioned(

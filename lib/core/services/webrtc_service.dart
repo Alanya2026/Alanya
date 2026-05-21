@@ -7,6 +7,10 @@ import 'package:permission_handler/permission_handler.dart';
 enum CallType { audio, video }
 
 class WebRTCService {
+  // `Platform.isAndroid` lance UnsupportedError sur le web (dart:io indisponible).
+  // Le court-circuit `!kIsWeb &&` garantit que Platform n'est jamais évalué sur web.
+  bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   MediaStream? _remoteStream;
@@ -55,7 +59,7 @@ class WebRTCService {
   Future<void> init(CallType type, {List<Map<String, dynamic>>? iceServers}) async {
     try {
       debugPrint('[WebRTC] ========== Initialisation WebRTC ==========');
-      debugPrint('[WebRTC] isWeb: $kIsWeb, Platform: ${kIsWeb ? "WEB" : (Platform.isAndroid ? "ANDROID" : "iOS")}');
+      debugPrint('[WebRTC] isWeb: $kIsWeb, Platform: ${kIsWeb ? "WEB" : (_isAndroid ? "ANDROID" : "iOS")}');
       debugPrint('[WebRTC] Call Type: $type');
 
       // ✅ Sur mobile, demander les permissions
@@ -157,7 +161,7 @@ class WebRTCService {
       // ✅ Sur Android, configurer explicitement les transceivers pour assurer
       // que les m-lines existent dans l'offre SDP et que le receiver peut
       // créer les tracks à la réception
-      if (Platform.isAndroid) {
+      if (_isAndroid) {
         debugPrint('[WebRTC] 🔧 Configuration des transceivers pour Android...');
         try {
           // S'assurer que les transceivers audio et vidéo existent
@@ -175,7 +179,7 @@ class WebRTCService {
       }
       
       // ✅ Log des transceivers (diagnostic Android)
-      if (Platform.isAndroid) {
+      if (_isAndroid) {
         try {
           final transceivers = await _peerConnection!.getTransceivers();
           debugPrint('[WebRTC] 📡 Transceivers finaux: ${transceivers.length}');
@@ -200,13 +204,13 @@ class WebRTCService {
 
   Future<MediaStream> _getUserMedia(CallType type) async {
     try {
-      debugPrint('[WebRTC] _getUserMedia - Type: $type, isWeb: $kIsWeb, Platform: ${Platform.isAndroid ? "ANDROID" : "iOS"}');
+      debugPrint('[WebRTC] _getUserMedia - Type: $type, isWeb: $kIsWeb, Platform: ${_isAndroid ? "ANDROID" : "iOS/WEB"}');
 
       // ✅ Sur Android, utiliser des contraintes plus simples et compatibles
       // flutter_webrtc sur Android peut ne pas supporter tous les paramètres audio
       final dynamic audioConstraints;
-      
-      if (Platform.isAndroid) {
+
+      if (_isAndroid) {
         // Format compatible avec Android et flutter_webrtc
         audioConstraints = {
           'mandatory': {
@@ -246,7 +250,7 @@ class WebRTCService {
         debugPrint('[WebRTC] ⚠️ getUserMedia avec contraintes échouée: $e1');
         
         // Fallback avec contraintes minimales sur Android
-        if (Platform.isAndroid) {
+        if (_isAndroid) {
           debugPrint('[WebRTC] 📍 Tentative fallback Android avec contraintes minimales...');
           final fallbackConstraints = <String, dynamic>{
             'audio': true,
@@ -277,7 +281,7 @@ class WebRTCService {
       debugPrint('[WebRTC] ✅ Offre créée: type=${offer.type}, sdp_length=${offer.sdp?.length}');
       
       // Log les codecs dans l'offre (diagnostic)
-      if (offer.sdp != null && Platform.isAndroid) {
+      if (offer.sdp != null && _isAndroid) {
         final audioCodecMatch = RegExp(r'a=rtpmap:\d+ (\w+)').allMatches(offer.sdp!);
         debugPrint('[WebRTC] 📋 Codecs dans l\'offre:');
         for (final match in audioCodecMatch) {
@@ -302,7 +306,7 @@ class WebRTCService {
       debugPrint('[WebRTC] ✅ Réponse créée: type=${answer.type}, sdp_length=${answer.sdp?.length}');
       
       // Log les codecs dans la réponse (diagnostic)
-      if (answer.sdp != null && Platform.isAndroid) {
+      if (answer.sdp != null && _isAndroid) {
         final audioCodecMatch = RegExp(r'a=rtpmap:\d+ (\w+)').allMatches(answer.sdp!);
         debugPrint('[WebRTC] 📋 Codecs dans la réponse:');
         for (final match in audioCodecMatch) {
@@ -324,7 +328,7 @@ class WebRTCService {
     debugPrint('[WebRTC] 📥 Traitement offre reçue: type=${offer.type}, sdp_length=${offer.sdp?.length}');
     try {
       // Log les codecs dans l'offre reçue (diagnostic)
-      if (offer.sdp != null && Platform.isAndroid) {
+      if (offer.sdp != null && _isAndroid) {
         final audioCodecMatch = RegExp(r'a=rtpmap:\d+ (\w+)').allMatches(offer.sdp!);
         debugPrint('[WebRTC] 📋 Codecs dans l\'offre reçue:');
         for (final match in audioCodecMatch) {
@@ -349,7 +353,7 @@ class WebRTCService {
     debugPrint('[WebRTC] 📥 Traitement réponse reçue: type=${answer.type}, sdp_length=${answer.sdp?.length}');
     try {
       // Log les codecs dans la réponse reçue (diagnostic)
-      if (answer.sdp != null && Platform.isAndroid) {
+      if (answer.sdp != null && _isAndroid) {
         final audioCodecMatch = RegExp(r'a=rtpmap:\d+ (\w+)').allMatches(answer.sdp!);
         debugPrint('[WebRTC] 📋 Codecs dans la réponse reçue:');
         for (final match in audioCodecMatch) {

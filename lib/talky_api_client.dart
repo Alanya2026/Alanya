@@ -543,6 +543,18 @@ class TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
+  /// Résout une réunion par son code de room (même si on n'en est pas encore
+  /// participant). Lève une exception si introuvable / terminée.
+  Future<Map<String, dynamic>> getMeetingByRoom(String room) async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('$baseUrl/meetings/by-room/${Uri.encodeComponent(room)}'),
+        headers: _headers,
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
   Future<void> joinMeetingHttp(int idMeeting) async {
     await _handleRequest(
       () => _client.post(Uri.parse('$baseUrl/meetings/$idMeeting/join'), headers: _headers),

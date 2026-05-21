@@ -105,7 +105,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
       final data = await apiClient.createMeeting(
         objet: title,
-        startTime: startDateTime.toIso8601String(),
+        // UTC explicite : évite tout décalage selon le fuseau serveur/client.
+        startTime: startDateTime.toUtc().toIso8601String(),
         room: roomCode,
         duree: _selectedDuration,
         typeMedia: _typeMedia,

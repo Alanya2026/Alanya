@@ -1,7 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/meeting_service.dart';
 import '../../talky_api_client.dart';
@@ -30,13 +28,14 @@ class MeetingLobbyScreen extends StatefulWidget {
 
 class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   final RTCVideoRenderer _previewRenderer = RTCVideoRenderer();
+  // Stream possédé par MeetingService (préparé via prepareLocalMedia). On garde
+  // juste une référence locale pour l'affichage de la preview.
   MediaStream? _previewStream;
+  late final MeetingService _meetingService;
 
   Meeting? _meeting;
   bool _loadingMeeting = true;
 
-  // Statut du participant dans ce meeting
-  int _participantStatus = 1; // 0=pending, 1=accepted
   bool _isMicOn = true;
   bool _isCamOn = true;
   bool _joining = false;
@@ -44,40 +43,34 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   @override
   void initState() {
     super.initState();
+    _meetingService = Provider.of<MeetingService>(context, listen: false);
     _initPreview();
     _loadMeeting();
   }
 
   @override
   void dispose() {
+    _previewRenderer.srcObject = null;
     _previewRenderer.dispose();
-    _previewStream?.getTracks().forEach((t) => t.stop());
-    _previewStream?.dispose();
+    // Le stream appartient à MeetingService : ne le libérer que si l'utilisateur
+    // a quitté le lobby SANS rejoindre la réunion.
+    _meetingService.releaseLocalMediaIfNotJoined();
     super.dispose();
   }
 
   Future<void> _initPreview() async {
-    // Les réunions audio n'ont pas besoin de la caméra
-    if (widget.typeMedia != 0) return;
-
     await _previewRenderer.initialize();
-    try {
-      if (!kIsWeb) {
-        await Permission.camera.request();
-        await Permission.microphone.request();
-      }
-      final stream = await navigator.mediaDevices.getUserMedia({
-        'audio': true,
-        'video': {'facingMode': 'user'},
-      });
-      if (!mounted) return;
-      setState(() {
-        _previewStream = stream;
-        _previewRenderer.srcObject = stream;
-      });
-    } catch (_) {
-      // Camera non disponible — on continue sans prévisualisation
-    }
+    // Prépare le stream directement dans MeetingService (un seul getUserMedia
+    // pour toute la durée de vie : preview + réunion).
+    final stream = await _meetingService.prepareLocalMedia(
+      video: widget.typeMedia == 0,
+    );
+    if (!mounted) return;
+    setState(() {
+      _previewStream = stream;
+      // La preview vidéo n'est affichée que pour les réunions vidéo.
+      _previewRenderer.srcObject = widget.typeMedia == 0 ? stream : null;
+    });
   }
 
   Future<void> _loadMeeting() async {
@@ -87,14 +80,8 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
       if (!mounted) return;
       final meeting = Meeting.fromJson(data);
 
-      // Trouver le statut du participant courant
-      final myParticipant = meeting.participants
-          .where((p) => p.participantID == widget.myId)
-          .firstOrNull;
-
       setState(() {
         _meeting = meeting;
-        _participantStatus = widget.isOrganiser ? 1 : (myParticipant?.status ?? 1);
         _loadingMeeting = false;
       });
     } catch (_) {
@@ -113,24 +100,16 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   }
 
   Future<void> _join() async {
-    final meetingService = Provider.of<MeetingService>(context, listen: false);
-
-    // Transférer la propriété du stream à MeetingService :
-    // on ne le stoppe PAS pour éviter que la caméra ne renvoie des frames
-    // noires lors d'un nouveau getUserMedia immédiat.
-    final adoptedStream = _previewStream;
-    setState(() {
-      _joining = true;
-      _previewStream = null; // empêche dispose() de toucher au stream adopté
-    });
+    setState(() => _joining = true);
+    // Détacher la preview du renderer (le stream reste vivant dans
+    // MeetingService et sera réutilisé tel quel par la réunion).
     _previewRenderer.srcObject = null;
 
     try {
-      await meetingService.joinMeeting(
+      await _meetingService.joinMeeting(
         idMeeting: widget.meetingId,
         myId: widget.myId,
         myName: widget.myName,
-        initialStream: adoptedStream,
       );
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -148,8 +127,6 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isPending = _participantStatus == 0 && !widget.isOrganiser;
-
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E),
       appBar: AppBar(
@@ -232,9 +209,6 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
             ),
           ),
 
-          // ── Bannière "En attente d'approbation" ─────────────────────
-          if (isPending) _PendingBanner(),
-
           // ── Contrôles + bouton rejoindre ───────────────────────────
           SafeArea(
             child: Padding(
@@ -265,68 +239,34 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                   const SizedBox(height: 20),
 
                   // Bouton Rejoindre
-                  if (!isPending)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _joining ? null : _join,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(54),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
-                        ),
-                        child: _joining
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Text(
-                                'Rejoindre',
-                                style: TextStyle(
-                                    fontSize: 17, fontWeight: FontWeight.bold),
-                              ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _joining ? null : _join,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(54),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
                       ),
+                      child: _joining
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text(
+                              'Rejoindre',
+                              style: TextStyle(
+                                  fontSize: 17, fontWeight: FontWeight.bold),
+                            ),
                     ),
+                  ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Bannière "En attente d'approbation" ─────────────────────────────────────
-
-class _PendingBanner extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade900.withAlpha(180),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Row(
-        children: [
-          SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-                strokeWidth: 2, color: Colors.orange),
-          ),
-          SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              'En attente d\'approbation de l\'organisateur…',
-              style: TextStyle(color: Colors.white, fontSize: 13),
             ),
           ),
         ],

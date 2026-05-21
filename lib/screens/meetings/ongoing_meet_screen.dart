@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/meeting_service.dart';
+import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
 
 class OngoingMeetScreen extends StatefulWidget {
@@ -15,7 +16,17 @@ class OngoingMeetScreen extends StatefulWidget {
 class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final Map<String, RTCVideoRenderer> _remoteRenderers = {};
+  // Signature (id du stream + nb de pistes) par pair. Sert à détecter qu'une
+  // piste vidéo s'est ajoutée à un stream déjà rendu (les pistes audio/vidéo
+  // arrivent via deux onTrack successifs) afin de réassigner le srcObject —
+  // sinon le renderer reste figé sur l'audio seul et la vidéo est noire.
+  final Map<String, String> _remoteStreamSignatures = {};
   bool _localRendererReady = false;
+
+  String _streamSignature(dynamic stream) {
+    if (stream is! MediaStream) return '';
+    return '${stream.id}:v${stream.getVideoTracks().length}:a${stream.getAudioTracks().length}';
+  }
 
   @override
   void initState() {
@@ -51,12 +62,11 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
 
     if (_localRendererReady &&
         _localRenderer.srcObject != meetingService.localStream) {
-      setState(() => _localRenderer.srcObject = meetingService.localStream);
+      _localRenderer.srcObject = meetingService.localStream;
     }
 
-    _syncRemoteRenderers(meetingService.remoteStreams).then((_) {
-      if (mounted) setState(() {});
-    });
+    // _syncRemoteRenderers déclenche déjà son propre setState une fois terminé.
+    _syncRemoteRenderers(meetingService.remoteStreams);
   }
 
   Future<void> _syncRemoteRenderers(Map<String, dynamic> remoteStreams) async {
@@ -66,6 +76,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     for (final key in currentKeys.difference(newKeys)) {
       await _remoteRenderers[key]?.dispose();
       _remoteRenderers.remove(key);
+      _remoteStreamSignatures.remove(key);
     }
 
     for (final key in newKeys.difference(currentKeys)) {
@@ -73,6 +84,17 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       await renderer.initialize();
       renderer.srcObject = remoteStreams[key];
       _remoteRenderers[key] = renderer;
+      _remoteStreamSignatures[key] = _streamSignature(remoteStreams[key]);
+    }
+
+    // Pairs déjà rendus : si la composition du stream a changé (piste vidéo
+    // ajoutée après l'audio), réassigner le srcObject pour forcer le rendu.
+    for (final key in newKeys.intersection(currentKeys)) {
+      final sig = _streamSignature(remoteStreams[key]);
+      if (_remoteStreamSignatures[key] != sig) {
+        _remoteRenderers[key]?.srcObject = remoteStreams[key];
+        _remoteStreamSignatures[key] = sig;
+      }
     }
 
     if (mounted) setState(() {});
@@ -107,7 +129,6 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
         final meeting = meetingService.currentMeeting;
         final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
         final isOrganiser = meeting?.idOrganiser == myId;
-        final pendingCount = meetingService.pendingJoinRequests.length;
 
         return PopScope(
           canPop: meetingService.status != MeetingStatus.connected,
@@ -127,28 +148,30 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white),
-                            onPressed: () async {
-                              await meetingService.leaveMeeting();
-                              if (context.mounted) Navigator.pop(context);
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              meeting?.objet ?? 'Meeting',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              onPressed: () async {
+                                await meetingService.leaveMeeting();
+                                if (context.mounted) Navigator.pop(context);
+                              },
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                meeting?.objet ?? 'Meeting',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       Row(
                         children: [
@@ -161,51 +184,15 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                             icon: const Icon(CupertinoIcons.switch_camera, color: Colors.white),
                             onPressed: () => meetingService.switchCamera(),
                           ),
-                          // People button with pending badge
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.people_outline, color: Colors.white),
-                                onPressed: () => _showParticipantsPanel(meetingService),
-                              ),
-                              if (isOrganiser && pendingCount > 0)
-                                Positioned(
-                                  right: 6,
-                                  top: 6,
-                                  child: Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '$pendingCount',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
+                          IconButton(
+                            icon: const Icon(Icons.people_outline, color: Colors.white),
+                            onPressed: () => _showParticipantsPanel(meetingService),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-
-                // ── Join requests banner (organisateur only) ──────────
-                if (isOrganiser && pendingCount > 0)
-                  _JoinRequestBanner(
-                    count: pendingCount,
-                    onTap: () => _showParticipantsPanel(meetingService),
-                  ),
 
                 // ── Grille vidéo ─────────────────────────────────────
                 Expanded(
@@ -374,7 +361,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                 radius: 40,
                 backgroundColor: Colors.indigo,
                 child: Text(
-                  label[0].toUpperCase(),
+                  label.isNotEmpty ? label[0].toUpperCase() : '?',
                   style: const TextStyle(fontSize: 32, color: Colors.white),
                 ),
               ),
@@ -438,43 +425,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   }
 }
 
-// ─── Bannière demandes en attente ─────────────────────────────────────────────
-
-class _JoinRequestBanner extends StatelessWidget {
-  const _JoinRequestBanner({required this.count, required this.onTap});
-  final int count;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.orange.shade800,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.person_add, color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '$count personne(s) demande(nt) à rejoindre',
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: Colors.white70, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Panel participants + demandes ────────────────────────────────────────────
+// ─── Panel participants ───────────────────────────────────────────────────────
 
 class _ParticipantsSheet extends StatelessWidget {
   final MeetingService meetingService;
@@ -484,7 +435,6 @@ class _ParticipantsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
     final meeting = meetingService.currentMeeting;
-    final isOrganiser = meeting?.idOrganiser == myId;
     final connectedIds = Set<String>.from(meetingService.remoteStreams.keys);
     final participants = meeting?.participants ?? [];
 
@@ -492,7 +442,6 @@ class _ParticipantsSheet extends StatelessWidget {
       value: meetingService,
       child: Consumer<MeetingService>(
         builder: (_, svc, __) {
-          final pendingReqs = svc.pendingJoinRequests;
           return DraggableScrollableSheet(
             initialChildSize: 0.5,
             minChildSize: 0.35,
@@ -538,35 +487,6 @@ class _ParticipantsSheet extends StatelessWidget {
                   ),
                 ),
 
-                // Demandes en attente (organisateur)
-                if (isOrganiser && pendingReqs.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 12, 20, 6),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Demandes en attente',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  ...pendingReqs.map((req) {
-                    final userId = req['userID'] ?? '';
-                    final userName = req['userName'] ?? 'Inconnu';
-                    return _PendingRequestTile(
-                      userId: userId,
-                      userName: userName,
-                      onAccept: () => svc.acceptJoinRequest(int.tryParse(userId) ?? 0),
-                      onDecline: () => svc.declineJoinRequest(int.tryParse(userId) ?? 0),
-                    );
-                  }),
-                  const Divider(color: Colors.white12, height: 24),
-                ],
-
                 // Liste des participants
                 Expanded(
                   child: participants.isEmpty
@@ -605,60 +525,6 @@ class _ParticipantsSheet extends StatelessWidget {
   }
 }
 
-class _PendingRequestTile extends StatelessWidget {
-  const _PendingRequestTile({
-    required this.userId,
-    required this.userName,
-    required this.onAccept,
-    required this.onDecline,
-  });
-  final String userId;
-  final String userName;
-  final VoidCallback onAccept;
-  final VoidCallback onDecline;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.indigo.shade700,
-            child: Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(userName, style: const TextStyle(color: Colors.white, fontSize: 14)),
-          ),
-          TextButton(
-            onPressed: onAccept,
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.green,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              minimumSize: Size.zero,
-            ),
-            child: const Text('Accepter', style: TextStyle(fontSize: 12)),
-          ),
-          TextButton(
-            onPressed: onDecline,
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              minimumSize: Size.zero,
-            ),
-            child: const Text('Refuser', style: TextStyle(fontSize: 12)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ParticipantRow extends StatelessWidget {
   const _ParticipantRow({
     required this.name,
@@ -683,12 +549,10 @@ class _ParticipantRow extends StatelessWidget {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: Colors.indigo.shade800,
-                backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
-                    ? NetworkImage(avatarUrl!)
-                    : null,
-                child: avatarUrl == null || avatarUrl!.isEmpty
-                    ? Text(initial, style: const TextStyle(color: Colors.white))
-                    : null,
+                backgroundImage: avatarImage(avatarUrl),
+                child: hasValidAvatarUrl(avatarUrl)
+                    ? null
+                    : Text(initial, style: const TextStyle(color: Colors.white)),
               ),
               if (isConnected)
                 Positioned(
