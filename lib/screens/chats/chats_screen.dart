@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../talky_api_client.dart';
-import '../../talky_models.dart';
+import '../../core/db/app_database.dart';
+import '../../core/db/chat_dao.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/chat_provider.dart';
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 
@@ -13,50 +15,21 @@ class ChatsScreen extends StatefulWidget {
 }
 
 class _ChatsScreenState extends State<ChatsScreen> {
-  List<Conversation> _conversations = [];
-  bool _isLoading = true;
   int _myId = 0;
+  String _search = '';
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentUser();
-    _loadConversations();
-  }
-
-  Future<void> _loadCurrentUser() async {
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getMe();
-      setState(() {
-        _myId = data['alanyaID'] ?? 0;
-      });
-    } catch (e) {
-      // Ignore
-    }
-  }
-
-  Future<void> _loadConversations() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getConversations();
-      final conversations = data.map((item) {
-        if (item is Conversation) return item;
-        return Conversation.fromJson(item as Map<String, dynamic>);
-      }).toList();
-      setState(() {
-        _conversations = conversations;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
+    _myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
+    // Rafraîchit depuis le serveur en arrière-plan (l'UI s'affiche déjà du cache).
+    Provider.of<ChatProvider>(context, listen: false).refreshConversations();
   }
 
   @override
   Widget build(BuildContext context) {
+    final chat = Provider.of<ChatProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -64,25 +37,18 @@ class _ChatsScreenState extends State<ChatsScreen> {
         elevation: 0,
         title: const Text(
           'Chats',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.more_vert, color: Colors.black), onPressed: () {}),
         ],
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: TextField(
+              onChanged: (v) => setState(() => _search = v.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search...',
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -97,120 +63,37 @@ class _ChatsScreenState extends State<ChatsScreen> {
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _conversations.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No conversations yet',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _conversations.length,
-                        itemBuilder: (context, index) {
-                          final conv = _conversations[index];
-                          final otherUser = conv.participants.where((u) => u.alanyaID != _myId).firstOrNull;
-                          final displayName = conv.isGroup
-                              ? (conv.groupName ?? 'Groupe')
-                              : (otherUser?.nom ?? 'Unknown');
-                          final displayAvatar = conv.isGroup
-                              ? conv.groupPhoto
-                              : otherUser?.avatarUrl;
-                          final isOnline = otherUser?.isOnline == true;
-                          final initial = (displayAvatar == null || displayAvatar.isEmpty)
-                              ? (displayName.isNotEmpty ? displayName[0].toUpperCase() : '?')
-                              : null;
+            child: StreamBuilder<List<LocalConversation>>(
+              stream: chat.watchConversations(),
+              builder: (context, snapshot) {
+                final all = snapshot.data ?? const [];
+                final convs = _search.isEmpty
+                    ? all
+                    : all.where((c) => _displayName(c).toLowerCase().contains(_search)).toList();
 
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            leading: Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: 28,
-                                  backgroundColor: Colors.indigo.shade100,
-                                  backgroundImage: displayAvatar != null && displayAvatar.isNotEmpty
-                                      ? NetworkImage(displayAvatar)
-                                      : null,
-                                  child: initial != null
-                                      ? Text(
-                                          initial,
-                                          style: const TextStyle(
-                                            color: Colors.indigo,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        )
-                                      : null,
-                                ),
-                                if (isOnline)
-                                  Positioned(
-                                    right: 0,
-                                    bottom: 0,
-                                    child: Container(
-                                      width: 14,
-                                      height: 14,
-                                      decoration: BoxDecoration(
-                                        color: Colors.green,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 2),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            title: Text(
-                              displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            subtitle: Text(
-                              conv.lastMessage ?? 'No messages yet',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w400,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  _formatTime(conv.lastMessageAt),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ChatDetailScreen(
-                                    userName: displayName,
-                                    conversationId: conv.conversID,
-                                    userId: otherUser?.alanyaID,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                if (snapshot.connectionState == ConnectionState.waiting && all.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (convs.isEmpty) {
+                  return Center(
+                    child: Text('No conversations yet', style: TextStyle(color: Colors.grey.shade600)),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () => chat.refreshConversations(),
+                  child: ListView.builder(
+                    itemCount: convs.length,
+                    itemBuilder: (context, index) => _buildTile(context, chat, convs[index]),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const NewChatScreen()),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const NewChatScreen()));
         },
         backgroundColor: Colors.indigo,
         child: const Icon(Icons.chat, color: Colors.white),
@@ -218,17 +101,124 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  String _formatTime(String? dateStr) {
-    if (dateStr == null) return '';
-    try {
-      final date = DateTime.parse(dateStr);
-      final now = DateTime.now();
-      if (date.day == now.day && date.month == now.month) {
-        return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-      }
-      return '${date.day}/${date.month}';
-    } catch (e) {
-      return '';
+  Widget _buildTile(BuildContext context, ChatProvider chat, LocalConversation conv) {
+    final other = _otherParticipant(conv);
+    final displayName = _displayName(conv);
+    final displayAvatar = conv.isGroup ? conv.groupPhoto : other?['avatar_url'] as String?;
+    final otherId = other?['alanyaID'] as int?;
+
+    // Présence : event temps réel prioritaire, sinon valeur du cache.
+    final live = otherId != null ? chat.presenceOf(otherId) : null;
+    final isOnline = live?.online ?? (other?['is_online'] == 1 || other?['is_online'] == true);
+
+    final initial = (displayAvatar == null || displayAvatar.isEmpty)
+        ? (displayName.isNotEmpty ? displayName[0].toUpperCase() : '?')
+        : null;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      leading: Stack(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.indigo.shade100,
+            backgroundImage: displayAvatar != null && displayAvatar.isNotEmpty
+                ? NetworkImage(displayAvatar)
+                : null,
+            child: initial != null
+                ? Text(initial, style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold))
+                : null,
+          ),
+          if (isOnline && !conv.isGroup)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            ),
+        ],
+      ),
+      title: Text(
+        displayName,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      ),
+      subtitle: Text(
+        conv.lastMessage ?? 'No messages yet',
+        style: TextStyle(
+          color: conv.unreadCount > 0 ? Colors.black87 : Colors.grey.shade600,
+          fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            _formatTime(conv.lastMessageAt),
+            style: TextStyle(
+              fontSize: 12,
+              color: conv.unreadCount > 0 ? Colors.indigo : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          if (conv.unreadCount > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
+              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+              child: Text(
+                '${conv.unreadCount}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+        ],
+      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatDetailScreen(
+              userName: displayName,
+              conversationId: conv.conversID,
+              userId: otherId,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Map<String, dynamic>? _otherParticipant(LocalConversation conv) {
+    final parts = decodeParticipants(conv.participantsJson);
+    for (final p in parts) {
+      if (p['alanyaID'] != _myId) return p;
     }
+    return parts.isNotEmpty ? parts.first : null;
+  }
+
+  String _displayName(LocalConversation conv) {
+    if (conv.isGroup) return conv.groupName ?? 'Groupe';
+    final other = _otherParticipant(conv);
+    return (other?['nom'] as String?) ?? 'Inconnu';
+  }
+
+  String _formatTime(DateTime? date) {
+    if (date == null) return '';
+    final local = date.toLocal();
+    final now = DateTime.now();
+    if (local.day == now.day && local.month == now.month && local.year == now.year) {
+      return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    }
+    return '${local.day}/${local.month}';
   }
 }

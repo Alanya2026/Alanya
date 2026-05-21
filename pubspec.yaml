@@ -53,9 +53,34 @@ dependencies:
   flutter_local_notifications: ^17.2.3
   wakelock_plus: ^1.2.8               # Garder l'écran allumé pendant l'appel
 
+  # ── Chat : stockage local offline-first (drift / SQLite) ──────────
+  drift: ^2.20.0                      # ORM SQLite typé, requêtes réactives
+  sqlite3_flutter_libs: ^0.5.24       # Binaire SQLite embarqué (Android/iOS)
+  path_provider: ^2.1.4               # Dossier documents app (DB + cache médias)
+  path: ^1.9.0
+
+  # ── Chat : médias (images, vidéos, fichiers) ──────────────────────
+  image_picker: ^1.1.2                # Galerie / caméra (photos & vidéos)
+  file_picker: ^8.1.2                 # Sélection de documents
+  cached_network_image: ^3.4.1        # Affichage + cache disque des images
+  video_player: ^2.9.2                # Lecture vidéo inline
+  chewie: ^1.8.5                      # Contrôles vidéo prêts à l'emploi
+  record: ^5.1.2                      # Enregistrement messages vocaux
+  emoji_picker_flutter: ^3.1.0        # Sélecteur d'émojis
+
+# record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
+# pas record_platform_interface 1.5.0 → casse la compilation. On force la
+# version Linux maintenue (l'app cible mobile, ceci débloque le build).
+dependency_overrides:
+  record_linux: ^1.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Génération de code drift
+  drift_dev: ^2.20.0
+  build_runner: ^2.4.13
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

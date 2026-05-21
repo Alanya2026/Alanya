@@ -252,7 +252,7 @@ class _ReminderDialogState extends State<_ReminderDialog> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Réunion dans 10 minutes',
+            'Réunion dans moins de 10 minutes',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),

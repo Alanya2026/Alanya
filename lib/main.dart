@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/chat_provider.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/meeting_service.dart';
@@ -45,6 +46,8 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CallService(apiClient: apiClient)),
         //  MeetingService enregistré (manquait)
         ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
+        //  ChatProvider : chats offline-first (drift) + présence temps réel
+        ChangeNotifierProvider(create: (_) => ChatProvider(api: apiClient)),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -86,11 +89,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
     debugPrint('[AuthWrapper] initState - Lancement de init()');
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     Future.microtask(
       () async {
         try {
           await authProvider.init();
           debugPrint('[AuthWrapper] ✅ init() complété');
+
+          // Lier le ChatProvider à l'utilisateur courant (sync + outbox).
+          final myId = authProvider.currentUser?.alanyaID;
+          if (myId != null) {
+            try {
+              await chatProvider.bind(myId);
+            } catch (e) {
+              debugPrint('[AuthWrapper] ChatProvider.bind échoué: $e');
+            }
+          }
 
           // Démarre PushService une fois l'auth initialisée pour pouvoir
           // pousser le FCM token au backend si l'utilisateur est connecté.
