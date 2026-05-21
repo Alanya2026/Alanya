@@ -46,7 +46,14 @@ class ChatRepository {
 
   // ── Cycle de vie ───────────────────────────────────────────────────
   void bind(int myId) {
+    if (myId == 0) return; // jamais lier avec un ID invalide
     _myId = myId;
+
+    // Purge des messages fantômes (senderID=0) + doublons hérités.
+    _dao.purgeGhostMessages();
+    _dao.purgeDuplicateOptimistics();
+    _dao.purgeDuplicateByMsgId();
+
     if (_listenersBound) return;
     _listenersBound = true;
 
@@ -55,6 +62,13 @@ class ChatRepository {
     _api.onSocketEvent(SocketEvents.messageUpdated, _onMessageUpdated);
     _api.onSocketEvent(SocketEvents.messageDeleted, _onMessageDeleted);
     _api.onSocketEvent(SocketEvents.messageStatus, _onMessageStatus);
+    _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
+  }
+
+  void _onConversationCreated(dynamic data) {
+    if (data is! Map) return;
+    final json = Map<String, dynamic>.from(data);
+    _dao.upsertConversation(_convToCompanion(Conversation.fromJson(json), json));
   }
 
   // ── Synchronisation serveur → DB locale ────────────────────────────
@@ -76,11 +90,9 @@ class ChatRepository {
   Future<void> syncMessages(int conversationID, {bool delta = false}) async {
     try {
       final raw = await _api.getMessages(conversationID, limit: 50);
-      final companions = raw
-          .whereType<Map<String, dynamic>>()
-          .map(_msgJsonToCompanion)
-          .toList();
-      if (companions.isNotEmpty) await _dao.upsertMessages(companions);
+      for (final j in raw.whereType<Map<String, dynamic>>()) {
+        await _upsertServerMsg(j); // dédoublonne les optimistes non confirmés
+      }
     } catch (e) {
       debugPrint('[ChatRepo] syncMessages($conversationID) échouée: $e');
     }
@@ -93,9 +105,11 @@ class ChatRepository {
       final oldest = await _dao.minServerMsgId(conversationID);
       if (oldest == 0) return 0;
       final raw = await _api.getMessages(conversationID, limit: limit, before: oldest);
-      final companions = raw.whereType<Map<String, dynamic>>().map(_msgJsonToCompanion).toList();
-      if (companions.isNotEmpty) await _dao.upsertMessages(companions);
-      return companions.length;
+      final list = raw.whereType<Map<String, dynamic>>().toList();
+      for (final j in list) {
+        await _upsertServerMsg(j);
+      }
+      return list.length;
     } catch (e) {
       debugPrint('[ChatRepo] loadOlderMessages échouée: $e');
       return 0;
@@ -109,6 +123,10 @@ class ChatRepository {
     int? replyToID,
     String? replyToContent,
   }) async {
+    if (_myId == 0) {
+      debugPrint('[ChatRepo] sendText ignoré : utilisateur non lié (myId=0)');
+      return;
+    }
     final clientId = _newClientId();
     final now = DateTime.now();
 
@@ -188,6 +206,10 @@ class ChatRepository {
     int? mediaDuration,
     String? content,
   }) async {
+    if (_myId == 0) {
+      debugPrint('[ChatRepo] sendMediaFile ignoré : utilisateur non lié (myId=0)');
+      return;
+    }
     final clientId = _newClientId();
     final now = DateTime.now();
     final name = mediaName ?? file.path.split('/').last;
@@ -217,6 +239,7 @@ class ChatRepository {
           .write(LocalMessagesCompanion(
         mediaUrl: Value(url),
         pendingUploadPath: const Value(null),
+        status: const Value(1), // envoyé (message:sent affinera ensuite)
       ));
 
       _emitSend(
@@ -282,23 +305,81 @@ class ChatRepository {
     _api.markConversationAsRead(conversationID).ignore();
   }
 
+  // ── Insertion robuste d'un message serveur ─────────────────────────
+  // Avant d'insérer, si le message est le MIEN et confirmé (msgID>0), on
+  // supprime la ligne optimiste correspondante (par clientId si fourni par
+  // message:sent, sinon par contenu) → plus de doublon côté émetteur, même
+  // si le backend ne renvoie pas le clientId. Préserve le chemin média local.
+  Future<void> _upsertServerMsg(Map<String, dynamic> json) async {
+    final msgID = _toInt(json['msgID']);
+    final convID = _toInt(json['conversationID']);
+    if (msgID == 0) {
+      // Message serveur sans ID (ne devrait pas arriver) → insertion simple.
+      await _dao.upsertMessage(_msgJsonToCompanion(json));
+      return;
+    }
+
+    final srvKey = 'srv_$msgID';
+    final clientId = json['clientId']?.toString();
+    final content = json['content']?.toString();
+    final mediaName = json['mediaName']?.toString();
+
+    // Toute la fusion se fait dans UNE transaction : drift ne notifie le
+    // stream qu'à la fin → aucun état intermédiaire "double" affiché.
+    await _db.transaction(() async {
+      String? carriedLocalPath;
+
+      // 1. Lignes à supprimer :
+      //    - autre clé portant le même msgID (doublon confirmé hérité)
+      //    - ligne optimiste (msgID=0) correspondante. Une ligne msgID=0
+      //      n'existe QUE pour mes propres envois → pas de garde senderID :
+      //      match par clientId si fourni, sinon par contenu/média.
+      final candidates = await (_db.select(_db.localMessages)
+            ..where((m) {
+              final sameOtherKey = m.msgID.equals(msgID) & m.clientId.equals(srvKey).not();
+              final optimisticBase = m.conversationID.equals(convID) & m.msgID.equals(0);
+              Expression<bool> optimistic;
+              if (clientId != null && clientId.isNotEmpty) {
+                optimistic = optimisticBase & m.clientId.equals(clientId);
+              } else if (content != null && content.isNotEmpty) {
+                optimistic = optimisticBase & m.content.equals(content);
+              } else {
+                optimistic = optimisticBase & m.mediaName.equals(mediaName ?? '');
+              }
+              return sameOtherKey | optimistic;
+            }))
+          .get();
+
+      for (final m in candidates) {
+        carriedLocalPath ??= m.localMediaPath;
+        await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
+      }
+
+      var companion = _msgJsonToCompanion(json);
+      if (carriedLocalPath != null) {
+        companion = companion.copyWith(localMediaPath: Value(carriedLocalPath));
+      }
+      await _dao.upsertMessage(companion);
+    });
+  }
+
   // ── Handlers Socket.IO ─────────────────────────────────────────────
-  void _onMessageReceived(dynamic data) {
+  Future<void> _onMessageReceived(dynamic data) async {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
     final senderID0 = _toInt(json['senderID']);
-    // Mes propres messages reviennent via la room : ignorés ici, la
-    // confirmation passe par message:sent (clientId → msgID).
+
+    await _upsertServerMsg(json);
+
+    // Le reste (résumé, accusé, cache) ne concerne que les messages reçus
+    // des AUTRES ; mes propres messages ont déjà été traités optimistiquement.
     if (senderID0 == _myId) return;
 
-    _dao.upsertMessage(_msgJsonToCompanion(json));
-
-    final senderID = json['senderID'] ?? 0;
     final convID = _toInt(json['conversationID']);
     final content = (json['content'] ?? json['mediaName'] ?? 'Média').toString();
     final type = json['type'] ?? 0;
     final at = _parseDate(json['sendAt']) ?? DateTime.now();
-    _bumpConversationSummary(convID, content, type, at, fromOther: senderID != _myId);
+    _bumpConversationSummary(convID, content, type, at, fromOther: true);
 
     // Accusé de réception → l'émetteur passe en "livré" (✓✓).
     if (convID != 0 && _api.isSocketConnected) {
@@ -329,14 +410,13 @@ class ChatRepository {
     _dao.bumpMyMessagesStatus(convID, _myId, status);
   }
 
-  void _onMessageSent(dynamic data) {
+  Future<void> _onMessageSent(dynamic data) async {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
-    final clientId = json['clientId']?.toString();
-    final realId = _toInt(json['msgID']);
-    if (clientId != null && realId != 0) {
-      _dao.confirmMessage(clientId: clientId, msgID: realId, status: 1);
-    }
+    if (_toInt(json['msgID']) == 0) return;
+    // Même chemin robuste : supprime l'optimiste (par clientId) et insère la
+    // ligne serveur, identique à une resync → aucun doublon.
+    await _upsertServerMsg(json);
   }
 
   void _onMessageUpdated(dynamic data) {

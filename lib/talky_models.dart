@@ -520,6 +520,7 @@ class SocketEvents {
   static const messageDelivered  = 'message:delivered';
   static const messageRead       = 'message:read';
   static const messageStatus     = 'message:status';
+  static const conversationCreated = 'conversation:created';
   static const typingStart       = 'typing:start';
   static const typingStop        = 'typing:stop';
   static const typingStarted     = 'typing:started';

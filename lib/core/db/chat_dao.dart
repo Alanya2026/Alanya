@@ -97,16 +97,19 @@ class ChatDao {
         .get();
   }
 
-  /// Confirme un message optimiste : remplace clientId par les infos serveur.
+  /// Confirme un message optimiste : pose le msgID serveur, le statut, et
+  /// (si fourni) l'horodatage serveur pour faire converger l'heure affichée.
   Future<void> confirmMessage({
     required String clientId,
     required int msgID,
     required int status,
+    DateTime? sendAt,
   }) {
     return (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
         .write(LocalMessagesCompanion(
       msgID: Value(msgID),
       status: Value(status),
+      sendAt: sendAt != null ? Value(sendAt) : const Value.absent(),
       syncPending: const Value(false),
     ));
   }
@@ -164,6 +167,52 @@ class ChatDao {
   Future<void> clearAll() async {
     await db.delete(db.localMessages).go();
     await db.delete(db.localConversations).go();
+  }
+
+  /// Purge les messages "fantômes" créés avec un senderID invalide (0) —
+  /// séquelles d'un envoi alors que l'utilisateur n'était pas encore lié.
+  Future<int> purgeGhostMessages() {
+    return (db.delete(db.localMessages)..where((m) => m.senderID.equals(0))).go();
+  }
+
+  /// Supprime les lignes optimistes (msgID=0) dont le jumeau confirmé
+  /// (msgID>0, même conv/expéditeur/contenu) existe déjà → nettoie les
+  /// doublons hérités d'anciennes versions.
+  Future<void> purgeDuplicateOptimistics() async {
+    final all = await db.select(db.localMessages).get();
+    String sig(LocalMessage m) =>
+        '${m.conversationID}|${m.senderID}|${m.content ?? ''}|${m.type}|${m.mediaName ?? ''}';
+    final confirmed = <String>{};
+    for (final m in all) {
+      if (m.msgID > 0) confirmed.add(sig(m));
+    }
+    for (final m in all) {
+      if (m.msgID == 0 && confirmed.contains(sig(m))) {
+        await (db.delete(db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
+      }
+    }
+  }
+
+  /// Garantit qu'un même msgID (>0) n'a qu'une seule ligne : en cas de
+  /// doublon (clés clientId différentes), conserve la ligne `srv_` préfixée
+  /// (ou la première) et supprime les autres.
+  Future<void> purgeDuplicateByMsgId() async {
+    final all = await db.select(db.localMessages).get();
+    final byMsg = <int, List<LocalMessage>>{};
+    for (final m in all) {
+      if (m.msgID > 0) (byMsg[m.msgID] ??= []).add(m);
+    }
+    for (final entry in byMsg.entries) {
+      if (entry.value.length < 2) continue;
+      entry.value.sort((a, b) {
+        final aSrv = a.clientId.startsWith('srv_') ? 0 : 1;
+        final bSrv = b.clientId.startsWith('srv_') ? 0 : 1;
+        return aSrv.compareTo(bSrv);
+      });
+      for (final m in entry.value.skip(1)) {
+        await (db.delete(db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
+      }
+    }
   }
 }
 

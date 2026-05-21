@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/push_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/chat_provider.dart';
 import '../chats/chats_screen.dart';
 import '../calls/calls_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
@@ -48,6 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Notifications meeting via PushService
       _meetingNotifSub = PushService.meetingNotifications.listen(_onMeetingNotif);
+
+      // Lier le ChatProvider à l'utilisateur courant (couvre login frais ET
+      // session restaurée) → active le temps réel et un senderID correct.
+      final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID;
+      if (myId != null && myId != 0) {
+        Provider.of<ChatProvider>(context, listen: false).bind(myId);
+      }
     });
   }
 

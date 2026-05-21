@@ -91,10 +91,54 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       await CallKitService.instance.endAll();
       await RingtoneService.stopAll();
     }
+  } else {
+    // Les push de message/réunion/statut sont DATA-ONLY : en background le
+    // système n'affiche rien tout seul. On construit donc la notification
+    // locale ici (isolate séparé → plugin réinitialisé).
+    await _showBackgroundNotification(message);
   }
-  // meeting_invite / meeting_reminder en background : le système affiche la
-  // notification FCM automatiquement. La navigation sera gérée au tap via
-  // _handleOpenedApp / getInitialMessage.
+}
+
+/// Affiche une notification locale depuis l'isolate de background pour les
+/// push data-only (message, réunion, statut…).
+Future<void> _showBackgroundNotification(RemoteMessage message) async {
+  if (kIsWeb) return;
+  final data = message.data;
+  final type = data['type']?.toString();
+  final title = (data['title'] ?? message.notification?.title ?? '').toString();
+  final body = (data['body'] ?? message.notification?.body ?? '').toString();
+  if (title.isEmpty && body.isEmpty) return;
+
+  final isMeeting = type == 'meeting_invite' || type == 'meeting_reminder';
+  final channelId = isMeeting ? 'talky_meetings' : 'talky_messages';
+  final channelName = isMeeting ? 'Réunions' : 'Messages';
+
+  final plugin = FlutterLocalNotificationsPlugin();
+  const initSettings = InitializationSettings(
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+  );
+  await plugin.initialize(initSettings);
+
+  final androidPlugin = plugin.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>();
+  await androidPlugin?.createNotificationChannel(
+    AndroidNotificationChannel(channelId, channelName, importance: Importance.high),
+  );
+
+  await plugin.show(
+    DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title,
+    body,
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        channelId,
+        channelName,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      ),
+    ),
+  );
 }
 
 class PushService {

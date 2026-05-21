@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' show MediaType;
+import 'package:mime/mime.dart' show lookupMimeType;
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'talky_models.dart';
 
@@ -641,10 +643,21 @@ class TalkyApiClient {
 
   // ── UPLOAD ────────────────────────────────────────────────────────
 
+  // http.MultipartFile.fromPath n'infère PAS le type MIME (octet-stream par
+  // défaut), que le filtre multer du backend rejette. On le détecte ici.
+  Future<http.MultipartFile> _multipartFile(String field, File file) async {
+    final mimeStr = lookupMimeType(file.path) ?? 'application/octet-stream';
+    final slash = mimeStr.indexOf('/');
+    final mediaType = slash > 0
+        ? MediaType(mimeStr.substring(0, slash), mimeStr.substring(slash + 1))
+        : MediaType('application', 'octet-stream');
+    return http.MultipartFile.fromPath(field, file.path, contentType: mediaType);
+  }
+
   Future<Map<String, dynamic>> uploadAvatar(File file) async {
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload/avatar'));
     request.headers['Authorization'] = 'Bearer $_accessToken';
-    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+    request.files.add(await _multipartFile('file', file));
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode == 200) return jsonDecode(response.body);
@@ -654,7 +667,7 @@ class TalkyApiClient {
   Future<Map<String, dynamic>> uploadMedia(File file) async {
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload/media'));
     request.headers['Authorization'] = 'Bearer $_accessToken';
-    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+    request.files.add(await _multipartFile('file', file));
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode == 200) return jsonDecode(response.body);

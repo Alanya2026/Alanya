@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:image_picker/image_picker.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
@@ -282,8 +283,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (path != null) _sendMediaFile(File(path), type: 4, name: res!.files.single.name);
   }
 
+  // Limite alignée sur multer (50 Mo) côté backend.
+  static const int _maxMediaBytes = 50 * 1024 * 1024;
+
   void _sendMediaFile(File file, {required int type, String? name, int? duration}) {
     if (widget.conversationId == null || _myId == null) return;
+
+    final size = file.existsSync() ? file.lengthSync() : 0;
+    if (size > _maxMediaBytes) {
+      final mb = (size / (1024 * 1024)).toStringAsFixed(1);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Fichier trop volumineux ($mb Mo). Limite : 50 Mo.'),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+
     _chat.repository.sendMediaFile(
       conversationID: widget.conversationId!,
       type: type,
@@ -719,18 +734,77 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _hasLocal(LocalMessage msg) =>
       msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
 
-  void _openViewer(LocalMessage msg, {required bool isVideo}) {
+  Future<void> _openViewer(LocalMessage msg, {required bool isVideo}) async {
+    String? localPath =
+        (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
+            ? msg.localMediaPath
+            : null;
+
+    // Vidéo : télécharger en local d'abord (lecture fichier = plus fiable que
+    // le streaming, et fonctionne ensuite hors-ligne).
+    if (isVideo && localPath == null && msg.mediaUrl != null) {
+      _showLoading();
+      localPath = await _chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
+      if (localPath != null && msg.msgID != 0) {
+        await _chat.repository.dao.setLocalMediaPath(msg.msgID, localPath);
+      }
+      if (mounted) Navigator.of(context, rootNavigator: true).pop(); // ferme le loader
+    }
+    if (!mounted) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MediaViewerScreen(
           isVideo: isVideo,
-          localPath: msg.localMediaPath,
+          localPath: localPath,
           networkUrl: msg.mediaUrl,
           title: msg.mediaName,
         ),
       ),
     );
+  }
+
+  void _showLoading() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+    );
+  }
+
+  // Télécharge si besoin puis ouvre le fichier avec l'app système (PDF, doc…).
+  Future<void> _openFile(LocalMessage msg) async {
+    String? path =
+        (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
+            ? msg.localMediaPath
+            : null;
+
+    if (path == null) {
+      if (msg.mediaUrl == null) return;
+      _showLoading();
+      path = await _chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
+      if (path != null && msg.msgID != 0) {
+        await _chat.repository.dao.setLocalMediaPath(msg.msgID, path);
+      }
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (path == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de télécharger le fichier'), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
+
+    final res = await OpenFilex.open(path);
+    if (res.type != ResultType.done && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Aucune app pour ouvrir ce fichier (${res.message})'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   Widget _buildImageMedia(LocalMessage msg) {
@@ -785,23 +859,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Widget _buildFileMedia(LocalMessage msg, bool isMe) {
     final color = isMe ? Colors.white : Colors.indigo;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(msg.status == 0 ? Icons.upload_file : Icons.insert_drive_file, color: color),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            msg.mediaName ?? 'Fichier',
-            style: TextStyle(
-              color: isMe ? Colors.white : Colors.black87,
-              decoration: TextDecoration.underline,
+    return GestureDetector(
+      onTap: msg.status == 0 ? null : () => _openFile(msg),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(msg.status == 0 ? Icons.upload_file : Icons.insert_drive_file, color: color),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              msg.mediaName ?? 'Fichier',
+              style: TextStyle(
+                color: isMe ? Colors.white : Colors.black87,
+                decoration: TextDecoration.underline,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -905,24 +982,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        // Champ vide → micro (appui-maintenu) ; sinon → envoyer.
-        _hasText
-            ? Container(
-                decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
-                child: IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                  onPressed: _sendMessage,
-                ),
-              )
-            : GestureDetector(
-                onLongPressStart: (_) => _startRecording(),
-                onLongPressEnd: (_) => _stopRecording(send: true),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
-                  child: const Icon(Icons.mic, color: Colors.white, size: 22),
-                ),
-              ),
+        // Champ vide → micro (tap pour démarrer) ; sinon → envoyer.
+        Container(
+          decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
+          child: IconButton(
+            icon: Icon(_hasText ? Icons.send : Icons.mic, color: Colors.white, size: 22),
+            onPressed: _hasText ? _sendMessage : _startRecording,
+          ),
+        ),
       ],
     );
   }
@@ -930,19 +997,77 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget _buildRecordingBar() {
     return Row(
       children: [
-        const Icon(Icons.fiber_manual_record, color: Colors.red, size: 16),
-        const SizedBox(width: 8),
-        Text(_fmtRec(_recordSeconds), style: const TextStyle(color: Colors.black87, fontSize: 16)),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text('Relâchez pour envoyer · glissez pour annuler',
-              style: TextStyle(color: Colors.black45, fontSize: 12)),
-        ),
+        // Annuler
         IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
+          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 26),
           onPressed: () => _stopRecording(send: false),
         ),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Row(
+              children: [
+                _RecordingDot(),
+                const SizedBox(width: 10),
+                Text(
+                  _fmtRec(_recordSeconds),
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text('Enregistrement…', style: TextStyle(color: Colors.red.shade400, fontSize: 13)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Envoyer
+        Container(
+          decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
+          child: IconButton(
+            icon: const Icon(Icons.send, color: Colors.white, size: 22),
+            onPressed: () => _stopRecording(send: true),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+/// Pastille rouge qui pulse pendant l'enregistrement.
+class _RecordingDot extends StatefulWidget {
+  @override
+  State<_RecordingDot> createState() => _RecordingDotState();
+}
+
+class _RecordingDotState extends State<_RecordingDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 700))
+        ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween(begin: 0.3, end: 1.0).animate(_c),
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+      ),
     );
   }
 }
