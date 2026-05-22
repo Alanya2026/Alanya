@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/add_contact_sheet.dart';
 import 'chat_detail_screen.dart';
 
 class NewChatScreen extends StatefulWidget {
@@ -12,16 +13,17 @@ class NewChatScreen extends StatefulWidget {
 }
 
 class _NewChatScreenState extends State<NewChatScreen> {
-  List<User> _users = [];
+  List<User> _preferredContacts = [];
   List<User> _filteredUsers = [];
   bool _isLoading = true;
+  bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadContacts();
-    _searchController.addListener(_filterUsers);
+    _searchController.addListener(_onSearchChanged);
   }
 
   Future<void> _loadContacts() async {
@@ -35,24 +37,51 @@ class _NewChatScreenState extends State<NewChatScreen> {
         return User.fromJson(item as Map<String, dynamic>);
       }).toList();
       setState(() {
-        _users = users;
+        _preferredContacts = users;
         _filteredUsers = users;
         _isLoading = false;
+        _isSearching = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
     }
   }
 
-  void _filterUsers() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      _filteredUsers = _users.where((user) {
-        return user.nom.toLowerCase().contains(query) ||
-            user.pseudo.toLowerCase().contains(query) ||
-            user.alanyaPhone.toLowerCase().contains(query);
+  void _onSearchChanged() {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      setState(() {
+        _filteredUsers = _preferredContacts;
+        _isSearching = false;
+      });
+    } else {
+      _searchAllUsers(query);
+    }
+  }
+
+  Future<void> _searchAllUsers(String query) async {
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final data = await apiClient.searchUsers(query);
+      final users = data.map((item) {
+        if (item is User) return item;
+        return User.fromJson(item as Map<String, dynamic>);
       }).toList();
-    });
+      
+      if (mounted) {
+        setState(() {
+          _filteredUsers = users;
+          _isSearching = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _filteredUsers = [];
+          _isSearching = true;
+        });
+      }
+    }
   }
 
   @override
@@ -96,69 +125,95 @@ class _NewChatScreenState extends State<NewChatScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(
                     children: [
-                      _buildActionTile(Icons.group_add, 'New Group'),
-                      _buildActionTile(Icons.campaign, 'New Broadcast'),
-                      _buildActionTile(Icons.person_add, 'New Contact'),
-                      const Padding(
-                        padding: EdgeInsets.only(left: 20, top: 16, bottom: 8),
-                        child: Text(
-                          'Contacts on Talky',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
+                      if (!_isSearching) ...[
+                        _buildActionTile(Icons.group_add, 'Nouveau groupe ', () {}), 
+                        _buildActionTile(Icons.person_add, 'Nouveau contact préféré', _showAddContactDialog),
+                      ],
+                      if (_filteredUsers.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 40),
+                            child: Text(
+                              _isSearching ? 'Aucun utilisateur trouvé' : 'Pas de contacts préférés',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        )
+                      else ...[
+                        Padding(
+                          padding: const EdgeInsets.only(left: 20, top: 16, bottom: 8),
+                          child: Text(
+                            _isSearching ? 'Resultats de la recherche' : 'Contacts préférés',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
                           ),
                         ),
-                      ),
-                      ..._filteredUsers.map((user) {
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          leading: CircleAvatar(
-                            radius: 24,
-                            backgroundColor: Colors.indigo.shade50,
-                            child: Text(
-                              user.nom[0].toUpperCase(),
-                              style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                        ..._filteredUsers.map((user) {
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            leading: CircleAvatar(
+                              radius: 24,
+                              backgroundColor: Colors.indigo.shade50,
+                              child: Text(
+                                user.nom[0].toUpperCase(),
+                                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                              ),
                             ),
-                          ),
-                          title: Text(
-                            user.nom,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          subtitle: Text(
-                            user.isOnline ? 'Online' : 'Offline',
-                            style: TextStyle(
-                              color: user.isOnline ? Colors.green : Colors.grey,
+                            title: Text(
+                              user.nom,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
-                          ),
-                          onTap: () async {
-                            final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-                            try {
-                              final conv = await apiClient.createConversation(
-                                participantID: user.alanyaID,
-                              );
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ChatDetailScreen(
-                                      userName: user.nom,
-                                      conversationId: conv['conversID'],
-                                      userId: user.alanyaID,
-                                    ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user.alanyaPhone,
+                                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                                ),
+                                Text(
+                                  user.isOnline ? 'En ligne' : 'Hors ligne',
+                                  style: TextStyle(
+                                    color: user.isOnline ? Colors.green : Colors.grey,
+                                    fontSize: 12,
                                   ),
+                                ),
+                              ],
+                            ),
+                            onTap: () async {
+                              final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+                              try {
+                                final conv = await apiClient.createConversation(
+                                  participantID: user.alanyaID,
                                 );
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatDetailScreen(
+                                        userName: user.nom,
+                                        conversationId: conv['conversID'],
+                                        userId: user.alanyaID,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: $e')),
+                                  );
+                                }
                               }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
-                                );
-                              }
-                            }
-                          },
-                        );
-                      }),
+                            },
+                          );
+                        }),
+                      ],
                     ],
                   ),
           ),
@@ -167,7 +222,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     );
   }
 
-  Widget _buildActionTile(IconData icon, String text) {
+  Widget _buildActionTile(IconData icon, String text, VoidCallback onTap) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       leading: CircleAvatar(
@@ -179,7 +234,21 @@ class _NewChatScreenState extends State<NewChatScreen> {
         text,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
-      onTap: () {},
+      onTap: onTap,
+    );
+  }
+
+  void _showAddContactDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddContactSheet(
+        existingIds: _preferredContacts.map((u) => u.alanyaID).toSet(),
+        onAdded: (user) {
+          setState(() => _preferredContacts.add(user));
+        },
+      ),
     );
   }
 

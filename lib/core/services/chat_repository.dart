@@ -18,6 +18,20 @@ class ChatRepository {
   int _myId = 0;
   bool _listenersBound = false;
 
+  /// Conversation actuellement ouverte à l'écran (0 = aucune). Un message reçu
+  /// pour cette conversation est marqué lu immédiatement et n'incrémente pas
+  /// l'unread (l'utilisateur le voit en direct).
+  int _activeConversationID = 0;
+
+  /// Lectures à confirmer au serveur dès la reconnexion (lecture hors-ligne).
+  final Set<int> _pendingReads = {};
+
+  void setActiveConversation(int conversationID) =>
+      _activeConversationID = conversationID;
+  void clearActiveConversation(int conversationID) {
+    if (_activeConversationID == conversationID) _activeConversationID = 0;
+  }
+
   ChatRepository._(this._api, this._db) : _dao = ChatDao(_db);
 
   MediaCacheService get mediaCache => _mediaCache; 
@@ -125,9 +139,10 @@ class ChatRepository {
       replyToContent: Value(replyToContent),
       syncPending: const Value(true),
     ));
-    _bumpConversationSummary(conversationID, content, 0, now);
+    _bumpConversationSummary(conversationID, content, 0, now,
+        senderID: _myId, status: 0);
 
-     
+
     _emitSend(
       clientId: clientId,
       conversationID: conversationID,
@@ -165,7 +180,8 @@ class ChatRepository {
       localMediaPath: Value(localMediaPath),
       syncPending: const Value(true),
     ));
-    _bumpConversationSummary(conversationID, content ?? mediaName ?? 'Média', type, now);
+    _bumpConversationSummary(conversationID, content ?? mediaName ?? 'Média', type, now,
+        senderID: _myId, status: 0);
 
     _emitSend(
       clientId: clientId,
@@ -177,7 +193,7 @@ class ChatRepository {
       mediaDuration: mediaDuration,
     );
   }
- 
+
   Future<void> sendMediaFile({
     required int conversationID,
     required int type, // 1=image 2=vidéo 3=audio 4=fichier
@@ -208,7 +224,8 @@ class ChatRepository {
       pendingUploadPath: Value(file.path),
       syncPending: const Value(true),
     ));
-    _bumpConversationSummary(conversationID, content ?? name, type, now);
+    _bumpConversationSummary(conversationID, content ?? name, type, now,
+        senderID: _myId, status: 0);
 
     try {
       final res = await _api.uploadMedia(file);
@@ -253,6 +270,13 @@ class ChatRepository {
         replyToContent: m.replyToContent,
       );
     }
+    // Rejoue les accusés de lecture émis hors-ligne.
+    if (_api.isSocketConnected && _pendingReads.isNotEmpty) {
+      for (final convID in _pendingReads.toList()) {
+        _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': convID});
+      }
+      _pendingReads.clear();
+    }
   }
 
   /// Modifie un message texte (le mien). Applique localement puis serveur.
@@ -277,9 +301,13 @@ class ChatRepository {
 
   Future<void> markAsRead(int conversationID) async {
     await _dao.markConversationRead(conversationID, _myId);
-    await _dao.setUnread(conversationID, 0); 
+    await _dao.setUnread(conversationID, 0);
     if (_api.isSocketConnected) {
       _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': conversationID});
+    } else {
+      // Hors-ligne : on rejouera la lecture à la reconnexion (sinon le serveur
+      // garde unread>0 et un futur sync ramènerait le message comme non-lu).
+      _pendingReads.add(conversationID);
     }
     _api.markConversationAsRead(conversationID).ignore();
   }
@@ -320,7 +348,11 @@ class ChatRepository {
         await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
       }
 
-      var companion = _msgJsonToCompanion(json);
+      // PK toujours normalisée à `srv_<msgID>` : le clientId du JSON (présent sur
+      // `message:sent`) ne sert qu'au matching de l'optimiste ci-dessus, jamais de
+      // clé stockée. Sinon `message:received` (→ srv_X) et `message:sent` (→ c_X)
+      // créeraient DEUX lignes pour le même msgID = doublon chez l'émetteur.
+      var companion = _msgJsonToCompanion(json).copyWith(clientId: Value(srvKey));
       if (carriedLocalPath != null) {
         companion = companion.copyWith(localMediaPath: Value(carriedLocalPath));
       }
@@ -340,9 +372,22 @@ class ChatRepository {
     final content = (json['content'] ?? json['mediaName'] ?? 'Média').toString();
     final type = json['type'] ?? 0;
     final at = _parseDate(json['sendAt']) ?? DateTime.now();
-    _bumpConversationSummary(convID, content, type, at, fromOther: true);
+    final isActive = convID != 0 && convID == _activeConversationID;
+
+    // Conversation ouverte → message lu immédiatement (pas de badge non-lu).
+    _bumpConversationSummary(convID, content, type, at,
+        fromOther: !isActive, senderID: senderID0);
+    if (isActive) {
+      await _dao.markConversationRead(convID, _myId);
+      await _dao.setUnread(convID, 0);
+    }
+
     if (convID != 0 && _api.isSocketConnected) {
-      _api.sendSocketEvent(SocketEvents.messageDelivered, {'conversationID': convID});
+      // Conversation ouverte → "lu" (✓✓ bleu) ; sinon "livré".
+      _api.sendSocketEvent(
+        isActive ? SocketEvents.messageRead : SocketEvents.messageDelivered,
+        {'conversationID': convID},
+      );
     }
     final mtype = _toInt(json['type']);
     final mediaUrl = json['mediaUrl']?.toString();
@@ -364,13 +409,20 @@ class ChatRepository {
     final byUserID = _toInt(data['byUserID']);
     if (convID == 0 || status == 0 || byUserID == _myId) return;
     _dao.bumpMyMessagesStatus(convID, _myId, status);
+    // Reflète l'accusé (✓✓ / ✓✓ bleu) sur l'aperçu si le dernier message est le mien.
+    _dao.bumpConvLastStatusIfMine(convID, _myId, status);
   }
 
   Future<void> _onMessageSent(dynamic data) async {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
-    if (_toInt(json['msgID']) == 0) return; 
+    final msgID = _toInt(json['msgID']);
+    if (msgID == 0) return;
     await _upsertServerMsg(json);
+    // Mon message est confirmé "envoyé" → ✓ sur l'aperçu.
+    final convID = _toInt(json['conversationID']);
+    final status = _toInt(json['status'], fallback: 1);
+    if (convID != 0) _dao.bumpConvLastStatusIfMine(convID, _myId, status);
   }
 
   void _onMessageUpdated(dynamic data) {
@@ -417,12 +469,17 @@ class ChatRepository {
     int type,
     DateTime at, {
     bool fromOther = false,
+    int? senderID,
+    int? status,
   }) async {
     final companion = LocalConversationsCompanion(
       conversID: Value(conversID),
       lastMessage: Value(preview.length > 200 ? preview.substring(0, 200) : preview),
       lastMessageAt: Value(at),
       lastMessageType: Value(type),
+      lastMessageSenderID:
+          senderID != null ? Value(senderID) : const Value.absent(),
+      lastMessageStatus: status != null ? Value(status) : const Value.absent(),
     );
     await _db.into(_db.localConversations).insertOnConflictUpdate(companion);
     if (fromOther) {

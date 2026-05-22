@@ -85,8 +85,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     // 1. Synchronise l'historique depuis le serveur (l'UI affiche déjà le cache).
     _chat.repository.syncMessages(convId);
 
-    // 2. Rejoint la room temps réel + marque comme lu.
+    // 2. Rejoint la room temps réel + marque comme lu. On signale aussi la
+    //    conversation active : tout message reçu pendant qu'elle est ouverte
+    //    sera marqué lu en direct (pas de badge non-lu fantôme).
     _apiClient.sendSocketEvent(SocketEvents.joinConversation, {'conversationID': convId});
+    _chat.repository.setActiveConversation(convId);
     _chat.repository.markAsRead(convId);
 
     // 3. Écoute les indicateurs "en train d'écrire".
@@ -413,6 +416,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _typingTimer?.cancel();
     _recordTimer?.cancel();
     _recorder.dispose();
+    final convId = widget.conversationId;
+    if (convId != null) _chat.repository.clearActiveConversation(convId);
     _stopTyping();
     _apiClient.offSocketEvent(SocketEvents.typingStarted);
     _apiClient.offSocketEvent(SocketEvents.typingStopped);

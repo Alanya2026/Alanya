@@ -149,14 +149,25 @@ class _ChatsScreenState extends State<ChatsScreen> {
         displayName,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
-      subtitle: Text(
-        conv.lastMessage ?? 'No messages yet',
-        style: TextStyle(
-          color: conv.unreadCount > 0 ? Colors.black87 : Colors.grey.shade600,
-          fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      subtitle: Row(
+        children: [
+          // Accusé (✓ / ✓✓ / ✓✓ bleu) si le dernier message est le mien.
+          if (conv.lastMessageSenderID == _myId && conv.lastMessage != null) ...[
+            _previewStatusIcon(conv.lastMessageStatus),
+            const SizedBox(width: 4),
+          ],
+          Expanded(
+            child: Text(
+              conv.lastMessage ?? 'No messages yet',
+              style: TextStyle(
+                color: conv.unreadCount > 0 ? Colors.black87 : Colors.grey.shade600,
+                fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -210,6 +221,23 @@ class _ChatsScreenState extends State<ChatsScreen> {
     if (conv.isGroup) return conv.groupName ?? 'Groupe';
     final other = _otherParticipant(conv);
     return (other?['nom'] as String?) ?? 'Inconnu';
+  }
+
+  // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec.
+  Widget _previewStatusIcon(int? status) {
+    switch (status) {
+      case 0:
+        return Icon(Icons.schedule, size: 13, color: Colors.grey.shade500);
+      case 2:
+        return Icon(Icons.done_all, size: 14, color: Colors.grey.shade500);
+      case 3:
+        return const Icon(Icons.done_all, size: 14, color: Color(0xFF4FC3F7));
+      case 4:
+        return const Icon(Icons.error_outline, size: 14, color: Colors.redAccent);
+      case 1:
+      default:
+        return Icon(Icons.check, size: 14, color: Colors.grey.shade500);
+    }
   }
 
   String _formatTime(DateTime? date) {

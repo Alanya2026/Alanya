@@ -136,6 +136,17 @@ class ChatDao {
         .write(LocalMessagesCompanion(status: Value(status)));
   }
 
+  /// Monte le statut affiché sur l'aperçu de conversation, uniquement si le
+  /// dernier message est le mien (accusé ✓ / ✓✓ / ✓✓ bleu). Jamais en arrière.
+  Future<void> bumpConvLastStatusIfMine(int conversID, int myId, int status) {
+    return (db.update(db.localConversations)
+          ..where((c) =>
+              c.conversID.equals(conversID) &
+              c.lastMessageSenderID.equals(myId) &
+              c.lastMessageStatus.isSmallerThanValue(status)))
+        .write(LocalConversationsCompanion(lastMessageStatus: Value(status)));
+  }
+
   Future<void> markFailed(String clientId) {
     return (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
         .write(const LocalMessagesCompanion(status: Value(4), syncPending: Value(true)));
