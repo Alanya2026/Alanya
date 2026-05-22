@@ -18,7 +18,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  debugPrint('[Main] 🚀 Application démarrée');
+  debugPrint('[Main] ======== Application démarrée ========');
 
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -26,7 +26,7 @@ void main() async {
     await CallKitService.instance.init();
     debugPrint('[Main] Firebase + CallKit initialisés');
   } catch (e) {
-    debugPrint('[Main] ⚠️ Init Firebase échouée — push désactivé: $e');
+    debugPrint('[Main] ** Init Firebase échouée — push désactivé: $e');
   }
 
   runApp(const TalkyApp());
@@ -94,9 +94,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
       () async {
         try {
           await authProvider.init();
-          debugPrint('[AuthWrapper] ✅ init() complété');
+          debugPrint('[AuthWrapper] !! init() complété');
 
-          // Lier le ChatProvider à l'utilisateur courant (sync + outbox).
           final myId = authProvider.currentUser?.alanyaID;
           if (myId != null) {
             try {
@@ -105,17 +104,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
               debugPrint('[AuthWrapper] ChatProvider.bind échoué: $e');
             }
           }
-
-          // Démarre PushService une fois l'auth initialisée pour pouvoir
-          // pousser le FCM token au backend si l'utilisateur est connecté.
+          
           try {
             await PushService.init(apiClient, navKey: navigatorKey);
           } catch (e) {
             debugPrint('[AuthWrapper] PushService init failed: $e');
           }
 
-          // Relaie les actions CallKit (Accept/Decline depuis l'écran système)
-          // vers CallService.
           void dispatch(IncomingCallAction action) {
             if (!mounted) return;
             final callService = Provider.of<CallService>(context, listen: false);
@@ -141,21 +136,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
           }
 
           CallKitService.instance.actions.listen(dispatch);
-
-          // Cas app tuée → user tape "Accepter" → l'event est arrivé AVANT
-          // que ce listener ne soit prêt. On consomme la dernière action
-          // bufferisée par CallKitService.
+          
           final pending = CallKitService.instance.consumePendingAction();
           if (pending != null) {
-            debugPrint('[AuthWrapper] 🎯 Pending CallKit action trouvée: ${pending.action}');
+            debugPrint('[AuthWrapper]  Pending CallKit action trouvée: ${pending.action}');
             debugPrint('[AuthWrapper] Dispatcher l\'action...');
             dispatch(pending);
-            debugPrint('[AuthWrapper] ✅ Action dispatchée');
+            debugPrint('[AuthWrapper] !! Action dispatchée');
           } else {
-            debugPrint('[AuthWrapper] ℹ️ Aucune action pending au démarrage');
+            debugPrint('[AuthWrapper] ℹ Aucune action pending au démarrage');
           }
         } catch (e) {
-          debugPrint('[AuthWrapper] ❌ Erreur init: $e');
+          debugPrint('[AuthWrapper] ** Erreur init: $e');
           debugPrint('[AuthWrapper] Stack: ${StackTrace.current}');
         }
       },

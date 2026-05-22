@@ -1,42 +1,3 @@
-// call_service.dart — aligné sur le backend Node.js
-//
-// Événements corrects (backend/src/socket/handlers/calls.js) :
-//
-// Flutter → Backend
-//   call_user        { targetUserId, callerId, callerName, callerPhoto, isVideo, offer:{sdp,type} }
-//   answer_call      { callerId, answer:{sdp,type} }
-//   reject_call      { callerId }
-//   end_call         { targetUserId }
-//   ice_candidate    { targetUserId, candidate:{candidate,sdpMid,sdpMLineIndex} }
-//
-// Backend → Flutter
-//   incoming_call    { callerId, callerName, callerPhoto, isVideo, offer:{sdp,type} }
-//   call_answered    { answer:{sdp,type} }
-//   call_rejected    {}
-//   call_ended       {}
-//   call_failed      { reason }
-//   ice_candidate    { candidate:{candidate,sdpMid,sdpMLineIndex} }
-//
-// Appels groupe :
-//   Flutter → Backend
-//     create_group_call  { roomId, callerId, callerName, callerPhoto, isVideo, targetUserIds:[] }
-//     join_group_call    { roomId, userId, userName, userPhoto }
-//     leave_group_call   { roomId }
-//     end_group_call     { roomId }
-//     group_offer        { roomId, fromUserId, toUserId, offer }
-//     group_answer       { roomId, fromUserId, toUserId, answer }
-//     group_ice_candidate{ roomId, fromUserId, toUserId, candidate }
-//
-//   Backend → Flutter
-//     group_call_invite  { callerId, callerName, callerPhoto, isVideo, roomId }
-//     group_user_joined  { roomId, userId, userName, userPhoto }
-//     group_participants { roomId, participants:[] }
-//     group_call_ended   {}
-//     group_user_left    { roomId, userId }
-//     group_offer        { fromUserId, offer, roomId }
-//     group_answer       { fromUserId, answer, roomId }
-//     group_ice_candidate{ fromUserId, candidate, roomId }
-
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -56,17 +17,14 @@ class CallService extends ChangeNotifier {
   final RingtoneService _ringtone = RingtoneService.instance;
   final CallKitService _callKit = CallKitService.instance;
 
-  CallStatus _status = CallStatus.idle;
-
-  // Données de l'appel en cours (1-à-1)
-  int? _remoteUserId;       // targetUserId ou callerId selon le sens
+  CallStatus _status = CallStatus.idle; 
+  int? _remoteUserId;       
   String? _remoteUserName;
   String? _remoteUserPhoto;
   bool _isVideo = false;
   Map<String, dynamic>? _pendingOffer; // offer reçu avant réponse
   String? _currentCallId;   // callId backend, utilisé pour synchroniser CallKit
-
-  // ✅ Flag pour savoir si on a volontairement terminé l'appel
+ 
   bool _callEndedByUs = false;
 
   // Contrôles médias
@@ -81,7 +39,7 @@ class CallService extends ChangeNotifier {
   Timer? _durationTimer;
   int _callDuration = 0;
 
-  // ── Appels de groupe ───────────────────────────────────────────────
+  //  Appels de groupe 
   String? _groupRoomId;
   final Map<String, RTCPeerConnection> _groupPeerConnections = {};
   final Map<String, MediaStream> _groupRemoteStreams = {};
@@ -91,7 +49,7 @@ class CallService extends ChangeNotifier {
   final Map<String, List<RTCIceCandidate>> _groupPendingIce = {};
   final Set<String> _groupRemoteDescSet = <String>{};
 
-  // ── Getters ────────────────────────────────────────────────────────
+  //  Getters 
   CallStatus get status => _status;
   int? get remoteUserId => _remoteUserId;
   String? get remoteUserName => _remoteUserName;
@@ -136,9 +94,7 @@ class CallService extends ChangeNotifier {
     );
   }
 
-  // Flag : l'utilisateur a accepté l'appel via CallKit avant que l'event
-  // socket `incoming_call` (avec l'offer SDP) n'arrive. Quand l'offer arrive,
-  // on déclenche automatiquement answerCall().
+   
   bool _autoAnswerOnNextIncoming = false;
   String? _autoAnswerCallerId;
 
@@ -147,12 +103,7 @@ class CallService extends ChangeNotifier {
     _setupSocketListeners();
   }
 
-  /// Appelée depuis main.dart quand l'utilisateur accepte un appel via l'écran
-  /// CallKit (push FCM). Deux cas :
-  /// - L'event `incoming_call` est déjà arrivé et `_pendingOffer` est rempli
-  ///   → on appelle directement `answerCall()`.
-  /// - L'offer n'est pas encore là → on arme un flag pour répondre dès qu'elle
-  ///   arrive (le socket peut prendre quelques secondes à se reconnecter).
+   
   Future<void> acceptIncomingCallFromPush({
     required String callId,
     required String callerId,
@@ -170,15 +121,12 @@ class CallService extends ChangeNotifier {
     _currentCallId = callId.isNotEmpty ? callId : null;
     _autoAnswerOnNextIncoming = true;
     _autoAnswerCallerId = callerId;
-    
-    // ✅ Fixer le statut à incoming IMMÉDIATEMENT pour que HomeScreen navigue
-    // vers IncomingCallScreen, même avant que l'offer socket ne soit reçue.
     _status = CallStatus.incoming;
     notifyListeners();
     
-    debugPrint('[CallService] ✅ Status = incoming, auto-answer armé');
+    debugPrint('[CallService] !! Status = incoming, auto-answer armé');
 
-    // Si l'offer est déjà arrivée, répondre immédiatement (rare mais possible)
+    // Si l'offer est déjà arrivée, répondre immédiatement 
     if (_pendingOffer != null) {
       debugPrint('[CallService] ⚡ Offer déjà présente → réponse immédiate');
       await answerCall();
@@ -207,22 +155,22 @@ class CallService extends ChangeNotifier {
   Future<void> _initRingtone() async {
     try {
       await _ringtone.init();
-      debugPrint('[CallService] ✅ RingtoneService initialisé');
+      debugPrint('[CallService] !! RingtoneService initialisé');
     } catch (e) {
-      debugPrint('[CallService] ⚠️ Erreur init ringtone: $e');
+      debugPrint('[CallService] ** Erreur init ringtone: $e');
     }
   }
 
-  // ── SETUP LISTENERS ────────────────────────────────────────────────
+  // SETUP LISTENERS 
 
   void _setupSocketListeners() {
-    // ── Appels 1-à-1 ──────────────────────────────────────────────
+    // Appels 1-à-1 
 
     // Appel entrant
     _apiClient.onSocketEvent(SocketEvents.incomingCall, (data) async {
       debugPrint('[CallService] 📞 Appel entrant reçu: $data');
       if (data is! Map) {
-        debugPrint('[CallService] ❌ Données invalides pour incoming_call');
+        debugPrint('[CallService] ** Données invalides pour incoming_call');
         return;
       }
       final incomingCallerId = data['callerId'].toString();
@@ -233,31 +181,29 @@ class CallService extends ChangeNotifier {
       _pendingOffer = data['offer'] as Map<String, dynamic>?;
       _currentCallId = data['callId']?.toString();
       _status = CallStatus.incoming;
-      debugPrint('[CallService] ✅ Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
+      debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
       notifyListeners();
 
-      // Si l'utilisateur a déjà accepté via CallKit pour ce caller, on répond
-      // automatiquement maintenant que l'offer est arrivée.
       if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
         debugPrint('[CallService] ⚡ Auto-answer en 500ms (CallKit pré-accepté)');
         _autoAnswerOnNextIncoming = false;
         _autoAnswerCallerId = null;
         
-        // ✅ Attendre 500ms pour que l'app soit bien initialisée avant d'auto-répondre
+        // !! Attendre 500ms pour que l'app soit bien initialisée avant d'auto-répondre
         await Future.delayed(const Duration(milliseconds: 500));
         
         try {
           await answerCall();
         } catch (e) {
-          debugPrint('[CallService] ⚠️ Auto-answer failed: $e');
+          debugPrint('[CallService] ** Auto-answer failed: $e');
         }
         return;
       }
 
       // Sonnerie système (téléphone par défaut de l'utilisateur).
       _ringtone.startIncomingRingtone().catchError((e) {
-        debugPrint('[CallService] ⚠️ Erreur sonnerie (non-bloquante): $e');
+        debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
       });
     });
 
@@ -266,7 +212,7 @@ class CallService extends ChangeNotifier {
       debugPrint('[CallService] 📞 call_answered reçu: $data');
 
       if (_status != CallStatus.connecting) {
-        debugPrint('[CallService] ⚠️ call_answered ignoré : statut=$_status');
+        debugPrint('[CallService] ** call_answered ignoré : statut=$_status');
         return;
       }
 
@@ -274,7 +220,7 @@ class CallService extends ChangeNotifier {
       await _ringtone.stop();
 
       if (data is! Map || data['answer'] == null) {
-        debugPrint('[CallService] ❌ Données call_answered invalides');
+        debugPrint('[CallService] ** Données call_answered invalides');
         return;
       }
 
@@ -283,11 +229,11 @@ class CallService extends ChangeNotifier {
         await _webrtc.handleAnswer(
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
-        debugPrint('[CallService] ✅ Answer acceptée → CONNECTED');
+        debugPrint('[CallService] !! Answer acceptée → CONNECTED');
         _status = CallStatus.connected;
         _startDurationTimer();
       } catch (e) {
-        debugPrint('[CallService] ❌ Erreur handleAnswer: $e');
+        debugPrint('[CallService] ** Erreur handleAnswer: $e');
         _status = CallStatus.idle;
       }
       notifyListeners();
@@ -322,8 +268,7 @@ class CallService extends ChangeNotifier {
       ));
     });
 
-    // ── Appels de groupe ──────────────────────────────────────────
-
+    // Appels de groupe 
     // Invitation à un appel de groupe
     _apiClient.onSocketEvent(SocketEvents.groupCallInvite, (data) {
       if (data is! Map) return;
@@ -344,7 +289,7 @@ class CallService extends ChangeNotifier {
       await _createGroupPeerAndOffer(userId);
     });
 
-    // Liste des participants existants (reçu après join)
+    // Liste des participants existants 
     _apiClient.onSocketEvent(SocketEvents.groupParticipants, (data) {
       if (data is! Map) return;
       final participants = (data['participants'] as List?)?.map((e) => e.toString()).toList() ?? [];
@@ -426,10 +371,9 @@ class CallService extends ChangeNotifier {
     }
   }
 
-  // ── APPELS 1-À-1 ──────────────────────────────────────────────────
+  //  APPELS 1-À-1 
 
-  /// Lance un appel vers [targetUserId].
-  /// [myId] et [myName] sont nécessaires pour le payload backend.
+  /// Lance un appel vers [targetUserId]
   Future<void> initiateCall({
     required int targetUserId,
     required int myId,
@@ -440,7 +384,7 @@ class CallService extends ChangeNotifier {
     String? targetUserPhoto,
   }) async {
     if (_status != CallStatus.idle) return;
-    _errorMessage = null; // Réinitialiser les erreurs
+    _errorMessage = null;  
     _status = CallStatus.outgoing;
     _remoteUserId = targetUserId;
     _remoteUserName = targetUserName;
@@ -454,14 +398,14 @@ class CallService extends ChangeNotifier {
       _webrtc.onLocalStream  = (_) { notifyListeners(); };
       _webrtc.onRemoteStream = (_) { notifyListeners(); };
 
-      // ✅ Initialiser le routage audio (mobile uniquement)
+      // Initialiser le routage audio  
       if (!kIsWeb) {
         _isSpeakerOn = true;
         await audio.AudioHelper.setSpeakerphoneOn(true);
         debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
       }
 
-      // ICE candidates → envoyés au destinataire
+      // ICE candidates envoyés au destinataire
       _webrtc.onIceCandidate = (candidate) {
         _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
           'targetUserId': targetUserId.toString(),
@@ -475,13 +419,12 @@ class CallService extends ChangeNotifier {
 
       // Connection failure handler
       _webrtc.onConnectionFailure = () {
-        debugPrint('[CallService] ⚠️ Peer connection failed, ending call');
+        debugPrint('[CallService] ** Peer connection failed, ending call');
         _terminateCall();
       };
 
       final offer = await _webrtc.createOffer();
 
-      // ✅ Payload exact attendu par le backend
       _apiClient.sendSocketEvent(SocketEvents.callUser, {
         'targetUserId': targetUserId.toString(),
         'callerId': myId.toString(),
@@ -496,7 +439,7 @@ class CallService extends ChangeNotifier {
 
       _status = CallStatus.connecting;
 
-      // Ringback côté appelant (tonalité jusqu'à décrochage du destinataire).
+      // Ringback côté appelant
       _ringtone.startOutgoingRingback();
 
       notifyListeners();
@@ -532,17 +475,9 @@ class CallService extends ChangeNotifier {
     }
   }
 
-  /// Accepte l'appel entrant.
-  ///
-  /// Gardes :
-  /// - Status doit être `incoming` (sinon return). Le passage immédiat à
-  ///   `connecting` empêche les appels concurrents (Accept depuis l'UI ET
-  ///   auto-answer depuis CallKit en parallèle).
-  /// - L'offer doit être présente. Sinon on arme `_autoAnswerOnNextIncoming`
-  ///   pour répondre dès que l'event socket `incoming_call` arrive.
   Future<void> answerCall() async {
     if (_status != CallStatus.incoming || _remoteUserId == null) {
-      debugPrint('[CallService] ⚠️ answerCall ignoré: status=$_status');
+      debugPrint('[CallService] ** answerCall ignoré: status=$_status');
       return;
     }
     if (_pendingOffer == null) {
@@ -557,23 +492,20 @@ class CallService extends ChangeNotifier {
     notifyListeners();
 
     await _ringtone.stop();
-    _errorMessage = null;
-
-    // ✅ Attendre que le socket soit connecté/authentifié avant d'envoyer l'answer
-    // (important après app redémarrage depuis push CallKit)
+    _errorMessage = null; 
     int retries = 0;
     while (!_apiClient.isSocketConnected && retries < 20) {
       await Future.delayed(const Duration(milliseconds: 100));
       retries++;
     }
     if (!_apiClient.isSocketConnected) {
-      debugPrint('[CallService] ❌ Socket not connected après 2s');
+      debugPrint('[CallService] ** Socket not connected après 2s');
       _errorMessage = 'Socket non connecté';
       _status = CallStatus.idle;
       notifyListeners();
       return;
     }
-    debugPrint('[CallService] ✅ Socket connecté, envoi answer');
+    debugPrint('[CallService] !! Socket connecté, envoi answer');
 
     final offer = _pendingOffer!;
     _pendingOffer = null;
@@ -602,7 +534,7 @@ class CallService extends ChangeNotifier {
 
       // Connection failure handler
       _webrtc.onConnectionFailure = () {
-        debugPrint('[CallService] ⚠️ Peer connection failed, ending call');
+        debugPrint('[CallService] ** Peer connection failed, ending call');
         _terminateCall();
       };
 
@@ -611,8 +543,7 @@ class CallService extends ChangeNotifier {
       );
 
       final answer = await _webrtc.createAnswer();
-
-      // ✅ Payload exact attendu par le backend
+      
       _apiClient.sendSocketEvent(SocketEvents.answerCall, {
         'callerId': _remoteUserId.toString(),
         'answer': {
@@ -671,10 +602,9 @@ class CallService extends ChangeNotifier {
 
   /// Termine l'appel en cours.
   Future<void> endCall() async {
-    _callEndedByUs = true; // ✅ Marquer qu'on a terminé volontairement
+    _callEndedByUs = true; 
     debugPrint('[CallService] 📞 endCall() - Appel terminé par nous');
-    if (_remoteUserId != null) {
-      // ✅ Payload exact attendu par le backend
+    if (_remoteUserId != null) { 
       _apiClient.sendSocketEvent(SocketEvents.endCall, {
         'targetUserId': _remoteUserId.toString(),
       });
@@ -687,9 +617,7 @@ class CallService extends ChangeNotifier {
     await _callKit.endAll();
     await _webrtc.dispose();
     _durationTimer?.cancel();
-    _resetCallState();
-    // Passe d'abord par 'ended' pour que OngoingCallScreen/IncomingCallScreen
-    // détectent la fin et pop, puis revient à 'idle' immédiatement.
+    _resetCallState(); 
     _status = CallStatus.ended;
     notifyListeners();
     _status = CallStatus.idle;
@@ -711,8 +639,7 @@ class CallService extends ChangeNotifier {
     _callEndedByUs = false;
   }
 
-  // ── APPELS DE GROUPE ───────────────────────────────────────────────
-
+  //  APPELS DE GROUPE 
   /// Crée un appel de groupe et invite [targetUserIds].
   Future<void> createGroupCall({
     required String roomId,
@@ -729,8 +656,7 @@ class CallService extends ChangeNotifier {
 
     try {
       await _initLocalStream(isVideo);
-
-      // ✅ Payload exact attendu par le backend
+ 
       _apiClient.sendSocketEvent(SocketEvents.createGroupCall, {
         'roomId': roomId,
         'callerId': myId.toString(),
@@ -765,7 +691,7 @@ class CallService extends ChangeNotifier {
     try {
       await _initLocalStream(isVideo);
 
-      // ✅ Payload exact attendu par le backend
+
       _apiClient.sendSocketEvent(SocketEvents.joinGroupCall, {
         'roomId': roomId,
         'userId': myId.toString(),
@@ -824,7 +750,7 @@ class CallService extends ChangeNotifier {
     final iceServers = await _apiClient.fetchIceServers();
     await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
 
-    // ✅ Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement)
+    // Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement)
     if (!kIsWeb) {
       _isSpeakerOn = true;
       await audio.AudioHelper.setSpeakerphoneOn(true);
@@ -842,7 +768,7 @@ class CallService extends ChangeNotifier {
     final offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    // ✅ Payload exact attendu par le backend
+    // Payload exact attendu par le backend
     _apiClient.sendSocketEvent(SocketEvents.groupOffer, {
       'roomId': _groupRoomId,
       'fromUserId': '', // rempli par socket.alanyaID côté serveur
@@ -867,7 +793,7 @@ class CallService extends ChangeNotifier {
     final answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
-    // ✅ Payload exact attendu par le backend
+    // Payload exact attendu par le backend
     _apiClient.sendSocketEvent(SocketEvents.groupAnswer, {
       'roomId': _groupRoomId,
       'fromUserId': '',
@@ -894,7 +820,7 @@ class CallService extends ChangeNotifier {
     };
 
     pc.onIceCandidate = (candidate) {
-      // ✅ Payload exact attendu par le backend
+      // Payload exact attendu par le backend
       _apiClient.sendSocketEvent(SocketEvents.groupIceCandidate, {
         'roomId': _groupRoomId,
         'fromUserId': '',
@@ -911,7 +837,7 @@ class CallService extends ChangeNotifier {
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        debugPrint('[CallService] ⚠️ Group peer $userId connection failed: $state');
+        debugPrint('[CallService] ** Group peer $userId connection failed: $state');
         _removeGroupPeer(userId);
       }
     };
@@ -930,7 +856,7 @@ class CallService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── CONTRÔLES MÉDIAS ──────────────────────────────────────────────
+  // CONTRÔLES MÉDIAS
 
   Future<void> toggleMute() async {
     await _webrtc.toggleMic();
@@ -955,8 +881,7 @@ class CallService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── TIMER ─────────────────────────────────────────────────────────
-
+  // TIMER 
   void _startDurationTimer() {
     _callDuration = 0;
     _durationTimer?.cancel();
@@ -975,9 +900,7 @@ class CallService extends ChangeNotifier {
   @override
   void dispose() {
     _durationTimer?.cancel();
-    _webrtc.dispose();
-    // RingtoneService est singleton — on ne le dispose pas globalement, juste
-    // s'assurer qu'aucun son ne traîne.
+    _webrtc.dispose(); 
     _ringtone.stop();
     for (final pc in _groupPeerConnections.values) {
       pc.close();

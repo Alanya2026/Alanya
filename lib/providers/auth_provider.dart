@@ -27,7 +27,7 @@ class AuthProvider extends ChangeNotifier {
       await _storage.init();
       await _checkAuthStatus();
     } catch (e) {
-      debugPrint('[AuthProvider] ⚠️ init() error: $e');
+      debugPrint('[AuthProvider] ** init() error: $e');
     } finally {
       _isInitialized = true;
       notifyListeners();
@@ -48,7 +48,7 @@ class AuthProvider extends ChangeNotifier {
       _currentUser = User.fromJson(userData);
       _apiClient.connectSocket();
     } catch (e) {
-      debugPrint('[AuthProvider] ⚠️ _checkAuthStatus error: $e');
+      debugPrint('[AuthProvider] ** _checkAuthStatus error: $e');
       try { await _storage.clearAll(); } catch (_) {}
       _apiClient.logout();
     }

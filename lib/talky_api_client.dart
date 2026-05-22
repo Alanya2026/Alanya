@@ -12,7 +12,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'talky_models.dart';
 
 class TalkyApiClient {
-  // ⚠️ Remplace par ton IP/domaine de production
+  // ** Remplace par ton IP/domaine de production
   static const String baseUrl   = 'http://158.220.107.211/api';
   static const String socketUrl = 'http://158.220.107.211/';
 
@@ -690,7 +690,7 @@ class TalkyApiClient {
 
     _socket!.onConnect((_) {
       debugPrint('[Socket] Connecté — envoi auth:login');
-      // ✅ AUTH SOCKET obligatoire — sinon tous les handlers ignorent les events
+      // !! AUTH SOCKET obligatoire — sinon tous les handlers ignorent les events
       _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
     });
 
@@ -723,7 +723,7 @@ class TalkyApiClient {
   void _replayPendingListeners() {
     debugPrint('[Socket] 🔄 Replay ${_socketListeners.length} listener group(s)');
     _socketListeners.forEach((event, callbacks) {
-      // ✅ IMPORTANT : Nettoyer les anciens listeners d'abord
+      // !! IMPORTANT : Nettoyer les anciens listeners d'abord
       _socket?.off(event);
       debugPrint('[Socket] 🔄 Replay event "$event" (${callbacks.length} callback(s))');
       for (final cb in callbacks) {
@@ -741,26 +741,26 @@ class TalkyApiClient {
 
   void sendSocketEvent(String event, dynamic data) {
     if (_socket?.connected != true) {
-      debugPrint('[Socket] ⚠️ Tentative d\'emit "$event" sans connexion');
+      debugPrint('[Socket] ** Tentative d\'emit "$event" sans connexion');
       return;
     }
     _socket!.emit(event, data);
   }
 
   void onSocketEvent(String event, Function(dynamic) callback) {
-    // ✅ Stocker une seule fois pour replay après reconnexion
+    // !! Stocker une seule fois pour replay après reconnexion
     final listeners = _socketListeners.putIfAbsent(event, () => []);
     
-    // ✅ Éviter les doublons (même si peu probable)
+    // !! Éviter les doublons (même si peu probable)
     if (!listeners.contains(callback)) {
       listeners.add(callback);
       debugPrint('[Socket] 📌 Listener enregistré pour "$event"');
     }
     
-    // ✅ Enregistrer le listener socket.io s'il n'est pas déjà là
+    // !! Enregistrer le listener socket.io s'il n'est pas déjà là
     if (_socket?.connected == true) {
       _socket?.on(event, callback);
-      debugPrint('[Socket] ✅ Listener activé pour "$event" sur socket actif');
+      debugPrint('[Socket] !! Listener activé pour "$event" sur socket actif');
     }
   }
 

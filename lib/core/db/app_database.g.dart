@@ -1,8 +1,6 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'app_database.dart';
 
-// ignore_for_file: type=lint
+ 
 class $LocalConversationsTable extends LocalConversations
     with TableInfo<$LocalConversationsTable, LocalConversation> {
   @override
@@ -377,9 +375,7 @@ class LocalConversation extends DataClass
   final int unreadCount;
   final bool isPinned;
   final bool isArchived;
-
-  /// Participants sérialisés en JSON (alanyaID, nom, pseudo, avatar_url,
-  /// is_online, last_seen). Évite une table relationnelle lourde.
+ 
   final String participantsJson;
   const LocalConversation({
     required this.conversID,

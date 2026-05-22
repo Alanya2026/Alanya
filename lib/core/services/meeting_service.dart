@@ -1,38 +1,3 @@
-// meeting_service.dart — aligné sur le backend Node.js
-//
-// Événements corrects (backend/src/socket/handlers/meetings.js) :
-//
-// Flutter → Backend
-//   meeting:join_room    { meetingID, userID }
-//   meeting:join_request { meetingID, userID, userName }
-//   meeting:join_accept  { meetingID, userID }
-//   meeting:join_decline { meetingID, userID }
-//   meeting:start        { meetingID }
-//   meeting:end          { meetingID }
-//   meeting:leave        { meetingID }
-//   meeting:chat         { meetingID, userID, message }
-//   meeting:offer        { meetingID, toUserID, offer:{sdp,type} }
-//   meeting:answer       { meetingID, toUserID, answer:{sdp,type} }
-//   meeting:ice_candidate{ meetingID, toUserID, candidate:{...} }
-//
-// Backend → Flutter
-//   meeting:room_joined  { meetingID, userID }
-//   meeting:user_joined  { meetingID, userID }
-//   meeting:user_left    { meetingID, userID }
-//   meeting:accepted     { meetingID }
-//   meeting:declined     { meetingID }
-//   meeting:started      { meetingID }
-//   meeting:ended        { meetingID }
-//   meeting:message      { meetingID, userID, message, sendAt }
-//   meeting:offer        { fromUserID, offer, meetingID }
-//   meeting:answer       { fromUserID, answer, meetingID }
-//   meeting:ice_candidate{ fromUserID, candidate, meetingID }
-//
-// Champs DB corrects :
-//   Meeting : idMeeting, idOrganiser, start_time, duree, objet, room, isEnd, type_media
-//   Participant : IDparticipant, status, connecte
-//   Payload join_room : meetingID (pas meetingId), toUserID (pas targetUserId)
-
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, ChangeNotifier;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -61,18 +26,12 @@ class MeetingService extends ChangeNotifier {
   MeetingStatus _status = MeetingStatus.idle;
   Meeting? _currentMeeting;
 
-  // Médias locaux
-  MediaStream? _localStream;
-
-  // WebRTC peers : userId → PeerConnection
+  // Médias locaux & WebRTC peers 
+  MediaStream? _localStream; 
   final Map<String, RTCPeerConnection> _peerConnections = {};
 
-  // Streams distants : userId → MediaStream
+  // Streams distants 
   final Map<String, MediaStream> _remoteStreams = {};
-
-  // ICE candidates reçus avant setRemoteDescription, bufferisés par peer.
-  // Sans ce buffer, addCandidate() lance InvalidStateError et le candidat est
-  // perdu → ICE ne trouve pas de paire → connection timeout.
   final Map<String, List<RTCIceCandidate>> _pendingIceByPeer = {};
   final Set<String> _remoteDescSetForPeer = <String>{};
 
@@ -87,10 +46,7 @@ class MeetingService extends ChangeNotifier {
   // Messages in-meeting
   final List<ChatMessage> _chatMessages = [];
 
-  // Config ICE chargée depuis le backend via TalkyApiClient.fetchIceServers().
-  // Évite d'embarquer les credentials TURN dans le code client.
-
-  // ── Getters ────────────────────────────────────────────────────────
+  // Getters 
   MeetingStatus get status => _status;
   Meeting? get currentMeeting => _currentMeeting;
   MediaStream? get localStream => _localStream;
@@ -104,7 +60,6 @@ class MeetingService extends ChangeNotifier {
     _setupSocketListeners();
   }
 
-  // ── SOCKET LISTENERS ───────────────────────────────────────────────
 
   void _setupSocketListeners() {
     // Confirmation que la room a été rejointe
@@ -114,11 +69,9 @@ class MeetingService extends ChangeNotifier {
 
     // Un nouveau participant vient de rejoindre → initier l'échange WebRTC
     _apiClient.onSocketEvent(SocketEvents.meetingUserJoined, (data) async {
-      if (data is! Map) return;
-      // ✅ Champ correct du backend : userID (string)
+      if (data is! Map) return; 
       final userId = data['userID']?.toString();
-      if (userId == null || _peerConnections.containsKey(userId)) return;
-      // C'est nous qui créons l'offer (on est arrivé en premier)
+      if (userId == null || _peerConnections.containsKey(userId)) return; 
       await _createPeerAndOffer(userId);
     });
 
@@ -148,7 +101,7 @@ class MeetingService extends ChangeNotifier {
     // WebRTC : offer reçue d'un pair
     _apiClient.onSocketEvent(SocketEvents.meetingOffer, (data) async {
       if (data is! Map) return;
-      // ✅ Champ correct du backend : fromUserID
+      // !! Champ correct du backend : fromUserID
       final fromUserId = data['fromUserID']?.toString();
       final offer = data['offer'] as Map?;
       if (fromUserId == null || offer == null) return;
@@ -158,7 +111,6 @@ class MeetingService extends ChangeNotifier {
     // WebRTC : answer reçue d'un pair
     _apiClient.onSocketEvent(SocketEvents.meetingAnswer, (data) async {
       if (data is! Map) return;
-      // ✅ Champ correct du backend : fromUserID
       final fromUserId = data['fromUserID']?.toString();
       final answer = data['answer'] as Map?;
       if (fromUserId == null || answer == null) return;
@@ -175,7 +127,6 @@ class MeetingService extends ChangeNotifier {
     // WebRTC : ICE candidate reçu
     _apiClient.onSocketEvent(SocketEvents.meetingIceCandidate, (data) async {
       if (data is! Map) return;
-      // ✅ Champ correct du backend : fromUserID
       final fromUserId = data['fromUserID']?.toString();
       final c = data['candidate'] as Map?;
       if (fromUserId == null || c == null) return;
@@ -185,8 +136,7 @@ class MeetingService extends ChangeNotifier {
         c['sdpMLineIndex'] as int?,
       );
       final pc = _peerConnections[fromUserId];
-      if (pc == null || !_remoteDescSetForPeer.contains(fromUserId)) {
-        // Bufferiser tant que le peer ou la remote description ne sont pas prêts.
+      if (pc == null || !_remoteDescSetForPeer.contains(fromUserId)) { 
         _pendingIceByPeer.putIfAbsent(fromUserId, () => []).add(candidate);
         return;
       }
@@ -211,9 +161,6 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
-  // ── API REST ───────────────────────────────────────────────────────
-
-  /// Récupère la liste des réunions depuis le serveur.
   Future<List<Meeting>> getMeetings() async {
     final data = await _apiClient.getMeetings();
     return data
@@ -222,11 +169,9 @@ class MeetingService extends ChangeNotifier {
         .toList();
   }
 
-  /// Crée une réunion ET rejoint la room socket.
-  /// [myId] est le alanyaID de l'utilisateur connecté.
   Future<void> createAndJoin({
     required String objet,
-    required String startTime, // ISO8601
+    required String startTime, 
     required String room,
     required int myId,
     int duree = 60,
@@ -236,7 +181,6 @@ class MeetingService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Créer la réunion en DB via REST
       final data = await _apiClient.createMeeting(
         objet: objet,
         startTime: startTime,
@@ -245,11 +189,7 @@ class MeetingService extends ChangeNotifier {
         typeMedia: typeMedia,
       );
       _currentMeeting = Meeting.fromJson(data);
-
-      // 2. Rejoindre en DB (marque connecte=1)
       await _apiClient.joinMeetingHttp(_currentMeeting!.idMeeting);
-
-      // 3. Rejoindre la room socket
       await _joinRoom(myId: myId);
     } catch (e) {
       debugPrint('[MeetingService] Erreur createAndJoin: $e');
@@ -259,10 +199,7 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
-  /// Prépare le stream local (caméra/micro) AVANT de rejoindre, pour la preview
-  /// du lobby. Le stream reste la propriété du service : il sera réutilisé tel
-  /// quel par [_joinRoom] (un seul getUserMedia sur toute la durée de vie).
-  /// Retourne null si l'accès média échoue.
+  /// Prépare le stream local (caméra/micro) avant de rejoindre
   Future<MediaStream?> prepareLocalMedia({required bool video}) async {
     if (_localStream != null) return _localStream;
     try {
@@ -292,11 +229,11 @@ class MeetingService extends ChangeNotifier {
 
       _localStream = await navigator.mediaDevices.getUserMedia(constraints);
       _isVideoOff = !video;
-      debugPrint('[MeetingService] ✅ prepareLocalMedia: ${_localStream?.getTracks().length} tracks');
+      debugPrint('[MeetingService] !! prepareLocalMedia: ${_localStream?.getTracks().length} tracks');
       notifyListeners();
       return _localStream;
     } catch (e) {
-      debugPrint('[MeetingService] ❌ prepareLocalMedia: $e');
+      debugPrint('[MeetingService] ** prepareLocalMedia: $e');
       return null;
     }
   }
@@ -304,7 +241,7 @@ class MeetingService extends ChangeNotifier {
   /// Libère le stream préparé si l'utilisateur quitte le lobby sans rejoindre.
   Future<void> releaseLocalMediaIfNotJoined() async {
     if (_status == MeetingStatus.connected || _status == MeetingStatus.joining) {
-      return; // on a (ou est en train de) rejoindre → le stream est utilisé
+      return; 
     }
     if (_localStream != null) {
       for (final t in _localStream!.getTracks()) {
@@ -329,14 +266,14 @@ class MeetingService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Récupérer les détails de la réunion
+      // Récupérer les détails de la réunion
       final data = await _apiClient.getMeeting(idMeeting);
       _currentMeeting = Meeting.fromJson(data);
 
-      // 2. Rejoindre en DB
+      // Rejoindre en DB
       await _apiClient.joinMeetingHttp(idMeeting);
 
-      // 3. Rejoindre la room socket
+      // Rejoindre la room socket
       await _joinRoom(myId: myId);
     } catch (e) {
       debugPrint('[MeetingService] Erreur joinMeeting: $e');
@@ -372,13 +309,11 @@ class MeetingService extends ChangeNotifier {
   }
 
   Future<void> _joinRoom({required int myId}) async {
-    // Le stream a normalement déjà été préparé par le lobby
-    // (prepareLocalMedia). Sinon (création directe), on l'initialise ici.
     if (_localStream == null) {
       await _initLocalStream();
     }
 
-    // ✅ Champs corrects : meetingID et userID (pas meetingId/userId)
+    // !! Champs corrects : meetingID et userID (pas meetingId/userId)
     _apiClient.sendSocketEvent(SocketEvents.meetingJoinRoom, {
       'meetingID': _currentMeeting!.idMeeting,
       'userID': myId,
@@ -388,14 +323,13 @@ class MeetingService extends ChangeNotifier {
     _startDurationTimer();
     notifyListeners();
   }
-
-  // ── CONTRÔLES DE RÉUNION ──────────────────────────────────────────
+ 
 
   /// Envoie un message chat dans la réunion.
   void sendChatMessage(String message, int myId) {
     if (_currentMeeting == null) return;
 
-    // ✅ Champs corrects : meetingID, userID
+    // !! Champs corrects : meetingID, userID
     _apiClient.sendSocketEvent(SocketEvents.meetingChat, {
       'meetingID': _currentMeeting!.idMeeting,
       'userID': myId.toString(),
@@ -419,7 +353,7 @@ class MeetingService extends ChangeNotifier {
 
   Future<void> _terminateMeeting({required bool emitLeave}) async {
     if (emitLeave && _currentMeeting != null) {
-      // ✅ Payload exact : meetingID
+      // !! Payload exact : meetingID
       _apiClient.sendSocketEvent(SocketEvents.meetingLeave, {
         'meetingID': _currentMeeting!.idMeeting,
       });
@@ -436,8 +370,8 @@ class MeetingService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── WEBRTC ────────────────────────────────────────────────────────
-
+  // WEBRTC
+  
   Future<void> _initLocalStream() async {
     try {
       debugPrint('[MeetingService] Initialisation du stream local...');
@@ -455,7 +389,7 @@ class MeetingService extends ChangeNotifier {
         if (isVideoMeeting) {
           final cameraStatus = await Permission.camera.request();
           if (!cameraStatus.isGranted) {
-            debugPrint('[MeetingService] ⚠️ Permission caméra refusée');
+            debugPrint('[MeetingService] ** Permission caméra refusée');
           }
         }
       }
@@ -480,10 +414,10 @@ class MeetingService extends ChangeNotifier {
       debugPrint('[MeetingService] Appel getUserMedia avec contraintes: $constraints');
       _localStream = await navigator.mediaDevices.getUserMedia(constraints);
       if (!isVideoMeeting) _isVideoOff = true;
-      debugPrint('[MeetingService] ✅ Stream local obtenu: ${_localStream?.getTracks().length} tracks');
+      debugPrint('[MeetingService] !! Stream local obtenu: ${_localStream?.getTracks().length} tracks');
       notifyListeners();
     } catch (e) {
-      debugPrint('[MeetingService] ❌ Erreur _initLocalStream: $e');
+      debugPrint('[MeetingService] ** Erreur _initLocalStream: $e');
       debugPrint('[MeetingService] Type: ${e.runtimeType}');
 
       String errorMsg = 'Erreur d\'accès aux médias';
@@ -514,7 +448,7 @@ class MeetingService extends ChangeNotifier {
     final offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    // ✅ Champs corrects : meetingID, toUserID
+    // !! Champs corrects : meetingID, toUserID
     _apiClient.sendSocketEvent(SocketEvents.meetingOffer, {
       'meetingID': _currentMeeting!.idMeeting,
       'toUserID': userId,
@@ -538,7 +472,7 @@ class MeetingService extends ChangeNotifier {
     final answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
-    // ✅ Champs corrects : meetingID, toUserID
+    // !! Champs corrects : meetingID, toUserID
     _apiClient.sendSocketEvent(SocketEvents.meetingAnswer, {
       'meetingID': _currentMeeting!.idMeeting,
       'toUserID': fromUserId,
@@ -562,7 +496,7 @@ class MeetingService extends ChangeNotifier {
     };
 
     pc.onIceCandidate = (candidate) {
-      // ✅ Champs corrects : meetingID, toUserID
+      // !! Champs corrects : meetingID, toUserID
       _apiClient.sendSocketEvent(SocketEvents.meetingIceCandidate, {
         'meetingID': _currentMeeting!.idMeeting,
         'toUserID': userId,
@@ -595,7 +529,7 @@ class MeetingService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── MÉDIAS ────────────────────────────────────────────────────────
+  // MÉDIAS 
 
   Future<void> toggleMute() async {
     if (_localStream != null && _localStream!.getAudioTracks().isNotEmpty) {
@@ -622,8 +556,7 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
-  // ── TIMER ─────────────────────────────────────────────────────────
-
+  // TIMER 
   void _startDurationTimer() {
     _meetingDuration = 0;
     _durationTimer?.cancel();
@@ -639,8 +572,7 @@ class MeetingService extends ChangeNotifier {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  // ── CLEANUP ───────────────────────────────────────────────────────
-
+  // CLEANUP
   Future<void> _cleanup() async {
     for (final pc in _peerConnections.values) {
       await pc.close();

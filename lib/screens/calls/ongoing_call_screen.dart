@@ -39,15 +39,15 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
 
     final cs = Provider.of<CallService>(context, listen: false);
     
-    // ✅ FIX: Assigner les streams immédiatement s'ils existent
+    // !! FIX: Assigner les streams immédiatement s'ils existent
     debugPrint('[OngoingCall] 📹 Init renderers');
-    debugPrint('[OngoingCall] Local stream: ${cs.localStream != null ? "✅" : "❌"}');
-    debugPrint('[OngoingCall] Remote stream: ${cs.remoteStream != null ? "✅" : "❌"}');
+    debugPrint('[OngoingCall] Local stream: ${cs.localStream != null ? "!!" : "**"}');
+    debugPrint('[OngoingCall] Remote stream: ${cs.remoteStream != null ? "!!" : "**"}');
     
     _localRenderer.srcObject = cs.localStream;
     _remoteRenderer.srcObject = cs.remoteStream;
     
-    // ✅ S'abonner aux changements de CallService
+    // !! S'abonner aux changements de CallService
     cs.addListener(_onCallChanged);
 
     setState(() => _renderersReady = true);
@@ -57,9 +57,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     if (_closing || !mounted) return;
     final cs = Provider.of<CallService>(context, listen: false);
 
-    debugPrint('[OngoingCall] 📹 State changed: status=${cs.status}, local=${cs.localStream != null ? "✅" : "❌"}, remote=${cs.remoteStream != null ? "✅" : "❌"}');
+    debugPrint('[OngoingCall] 📹 State changed: status=${cs.status}, local=${cs.localStream != null ? "!!" : "**"}, remote=${cs.remoteStream != null ? "!!" : "**"}');
 
-    // ✅ FIX CRITIQUE: TOUJOURS mettre à jour les renderers
+    // !! FIX CRITIQUE: TOUJOURS mettre à jour les renderers
     // Ne pas vérifier si ça a "changé" - juste le faire
     // Parfois le stream arrive après le premier call, ou est réassigné
     setState(() {

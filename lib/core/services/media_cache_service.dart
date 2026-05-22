@@ -5,10 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-// ─────────────────────────────────────────────────────────────────────
+
 //  Télécharge et conserve les médias reçus dans le dossier de l'app pour
-//  une consultation hors-ligne. Cache adressé par nom de fichier distant.
-// ─────────────────────────────────────────────────────────────────────
+//  une consultation hors-ligne.
 class MediaCacheService {
   Directory? _dir;
 

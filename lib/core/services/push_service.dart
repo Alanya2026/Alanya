@@ -1,35 +1,11 @@
-// push_service.dart
-//
-// Facade unifiée FCM (Android + Web). Gère :
-// - Initialisation Firebase Messaging
-// - Permissions de notification
-// - Récupération du token (et rotation via onTokenRefresh)
-// - Réception des push :
-//     * `type=call` ou `type=group_call` → délègue à CallKitService (mobile)
-//       ou laisse le service worker afficher la notif (web)
-//     * `type=meeting_invite` / `type=meeting_reminder` → notif locale dédiée
-//       + diffusion sur [meetingNotifications] pour navigation dans-app
-//     * autres types (message, status_view…) → notif locale standard
-//
-// IMPORTANT : pour fonctionner, ce service requiert :
-// - main.dart : Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
-// - main.dart : @pragma('vm:entry-point') top-level firebaseMessagingBackgroundHandler
-//   enregistré via FirebaseMessaging.onBackgroundMessage(...)
-// - web/firebase-messaging-sw.js + manifest pour le PWA
-// - AndroidManifest : POST_NOTIFICATIONS, FOREGROUND_SERVICE_PHONE_CALL, etc.
-
 import 'dart:async';
-
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
 import '../../talky_api_client.dart';
 import 'callkit_service.dart';
 import 'ringtone_service.dart';
-
-/// VAPID key publique du projet Firebase (Web Push) — projet talky-2026.
 const String _kDefaultFirebaseVapidKey =
     'BBde_uFKtUbLFwAQZ0Kd5ENuaPD1LuRf2ZvvHMPZ3wigioZpjIf7a9rh3pFcI2TRYRrC1YmoiRnAJ4n8io5QBTk';
 const String _kFirebaseVapidKey = String.fromEnvironment(
@@ -52,12 +28,11 @@ const _kChannelMeetings = AndroidNotificationChannel(
 
 /// Données d'une notification meeting diffusées sur [PushService.meetingNotifications].
 class MeetingNotifData {
-  final String type;       // 'meeting_invite' | 'meeting_reminder'
+  final String type;        
   final int meetingId;
   final String meetingTitle;
   final String organiserName;
-  final String meetingTime; // ISO8601 (invite only)
-
+  final String meetingTime;  
   const MeetingNotifData({
     required this.type,
     required this.meetingId,
@@ -67,8 +42,6 @@ class MeetingNotifData {
   });
 }
 
-/// Handler invoqué par Firebase quand un message arrive alors que l'app est
-/// tuée ou en background. Doit être un top-level / static.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final data = message.data;
@@ -91,16 +64,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       await CallKitService.instance.endAll();
       await RingtoneService.stopAll();
     }
-  } else {
-    // Les push de message/réunion/statut sont DATA-ONLY : en background le
-    // système n'affiche rien tout seul. On construit donc la notification
-    // locale ici (isolate séparé → plugin réinitialisé).
+  } else { 
     await _showBackgroundNotification(message);
   }
 }
 
-/// Affiche une notification locale depuis l'isolate de background pour les
-/// push data-only (message, réunion, statut…).
+/// Affiche une notification locale  
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
   if (kIsWeb) return;
   final data = message.data;
@@ -161,7 +130,6 @@ class PushService {
   String? _token;
   String? get currentToken => _token;
 
-  // Stream interne diffusé à HomeScreen pour navigation + dialog
   static final StreamController<MeetingNotifData> _meetingCtrl =
       StreamController.broadcast();
   static Stream<MeetingNotifData> get meetingNotifications =>
@@ -177,7 +145,7 @@ class PushService {
   }
 
   Future<void> _setup() async {
-    // 1. Permission utilisateur
+    // Permission utilisateur
     final settings = await _fm.requestPermission(
       alert: true,
       badge: true,
@@ -186,11 +154,11 @@ class PushService {
     debugPrint('[Push] Permission status: ${settings.authorizationStatus}');
 
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      debugPrint('[Push] ⚠️ Notifications refusées par l\'utilisateur');
+      debugPrint('[Push] ** Notifications refusées par l\'utilisateur');
       return;
     }
 
-    // 2. Initialiser flutter_local_notifications (mobile uniquement)
+    // Initialiser flutter_local_notifications (mobile uniquement)
     if (!kIsWeb) {
       const initSettings = InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -207,7 +175,7 @@ class PushService {
       await plugin?.createNotificationChannel(_kChannelMeetings);
     }
 
-    // 3. Token FCM
+    // Token FCM
     try {
       _token = kIsWeb && _kFirebaseVapidKey.isNotEmpty
           ? await _fm.getToken(vapidKey: _kFirebaseVapidKey)
@@ -218,20 +186,20 @@ class PushService {
       debugPrint('[Push] getToken error: $e');
     }
 
-    // 4. Rotation du token
+    // Rotation du token
     _onTokenRefreshSub = _fm.onTokenRefresh.listen((t) {
       _token = t;
       _safeUpdateToken(t);
     });
 
-    // 5. Messages foreground
+    // Messages foreground
     _onMessageSub = FirebaseMessaging.onMessage.listen(_handleForeground);
 
-    // 6. App ouverte depuis notif background → tap
+    // App ouverte depuis notif background → tap
     _onMessageOpenedSub =
         FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedApp);
 
-    // 7. App tuée → tap sur notif → redémarrage
+    // App tuée → tap sur notif → redémarrage
     final initial = await _fm.getInitialMessage();
     if (initial != null) _handleOpenedApp(initial);
   }
@@ -245,21 +213,13 @@ class PushService {
     }
   }
 
-  // ── Foreground ──────────────────────────────────────────────────────
+  // Foreground
 
   void _handleForeground(RemoteMessage message) async {
     final data = message.data;
     final type = data['type']?.toString();
 
-    debugPrint('[Push] foreground: type=$type');
-
-    // ✅ FIX CRITIQUE: Ne pas ignorer les appels en foreground!
-    // Même si le socket devrait les traiter, il peut ne pas être connecté.
-    // On laisse l'app traiter la push pour ne pas perdre l'appel.
-    
-    // Les types d'appel doivent être traités pour les cas où:
-    // 1. Socket pas encore connecté
-    // 2. App background/tuée lors de la première tentative de connexion
+    debugPrint('[Push] foreground: type=$type'); 
     if (type == 'call_ended') return;
 
     if (type == 'meeting_invite' || type == 'meeting_reminder') {
@@ -267,13 +227,9 @@ class PushService {
       _dispatchMeetingData(data);
       return;
     }
-
-    // ✅ Les appels (call et group_call) sont traités via CallKit sur Android/iOS
-    // qui déclenche acceptIncomingCallFromPush/rejectIncomingCallFromPush.
-    // La push CallKit n'affiche pas de notification locale - juste l'écran d'appel.
+ 
     if (type == 'call' || type == 'group_call') {
-      debugPrint('[Push] ℹ️ Appel géré via CallKit (pas de notif locale)');
-      // La logique de CallKit est gérée dans callkit_service.dart
+      debugPrint('[Push] ℹ️ Appel géré via CallKit (pas de notif locale)'); 
       return;
     }
 
@@ -301,7 +257,7 @@ class PushService {
     }
   }
 
-  // ── Tap sur notif (background → foreground ou terminated → start) ───
+  // Tap sur notif  
 
   void _handleOpenedApp(RemoteMessage message) {
     final data = message.data;
@@ -313,13 +269,11 @@ class PushService {
     }
   }
 
-  // ── Tap sur notif locale (foreground) ───────────────────────────────
+  // Tap sur notif locale (foreground) ───────────────────────────────
 
   void _onLocalNotifTap(NotificationResponse response) {
     final payload = response.payload;
-    if (payload == null) return;
-
-    // Payload format : "type|meetingId|meetingTitle|organiserName|meetingTime"
+    if (payload == null) return; 
     final parts = payload.split('|');
     if (parts.length < 4) return;
     final data = {
@@ -331,9 +285,7 @@ class PushService {
     };
     _dispatchMeetingData(data);
   }
-
-  // ── Helpers ─────────────────────────────────────────────────────────
-
+ 
   Future<void> _showMeetingLocalNotif(Map<String, dynamic> data) async {
     if (kIsWeb) return;
 
@@ -379,8 +331,6 @@ class PushService {
     );
 
     _meetingCtrl.add(notif);
-
-    // Navigation : sortir de tout écran secondaire et revenir à la racine
     _navKey?.currentState?.popUntil((route) => route.isFirst);
   }
 

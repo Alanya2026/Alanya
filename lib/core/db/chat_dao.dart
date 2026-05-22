@@ -3,17 +3,10 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import 'app_database.dart';
-
-// ─────────────────────────────────────────────────────────────────────
-//  Couche d'accès aux données locales (drift). Toutes les lectures de
-//  l'UI passent par des streams réactifs : dès qu'une ligne change en
-//  base, l'écran se met à jour automatiquement.
-// ─────────────────────────────────────────────────────────────────────
+ 
 class ChatDao {
   final AppDatabase db;
   ChatDao(this.db);
-
-  // ── CONVERSATIONS ──────────────────────────────────────────────────
 
   /// Liste réactive des conversations, épinglées d'abord puis par date.
   Stream<List<LocalConversation>> watchConversations() {
@@ -47,7 +40,7 @@ class ChatDao {
         .write(LocalConversationsCompanion(unreadCount: Value(count)));
   }
 
-  // ── MESSAGES ───────────────────────────────────────────────────────
+  // MESSAGES 
 
   /// Messages d'une conversation (anciens → récents), masque les supprimés.
   Stream<List<LocalMessage>> watchMessages(int conversationID) {
@@ -97,8 +90,7 @@ class ChatDao {
         .get();
   }
 
-  /// Confirme un message optimiste : pose le msgID serveur, le statut, et
-  /// (si fourni) l'horodatage serveur pour faire converger l'heure affichée.
+ 
   Future<void> confirmMessage({
     required String clientId,
     required int msgID,
@@ -134,7 +126,7 @@ class ChatDao {
   }
 
   /// Fait monter le statut de MES messages envoyés dans une conversation
-  /// jusqu'à `status` (ex. tous → livré/lu). N'abaisse jamais un statut.
+  
   Future<void> bumpMyMessagesStatus(int conversationID, int myId, int status) {
     return (db.update(db.localMessages)
           ..where((m) =>
@@ -169,15 +161,12 @@ class ChatDao {
     await db.delete(db.localConversations).go();
   }
 
-  /// Purge les messages "fantômes" créés avec un senderID invalide (0) —
-  /// séquelles d'un envoi alors que l'utilisateur n'était pas encore lié.
+ 
   Future<int> purgeGhostMessages() {
     return (db.delete(db.localMessages)..where((m) => m.senderID.equals(0))).go();
   }
 
-  /// Supprime les lignes optimistes (msgID=0) dont le jumeau confirmé
-  /// (msgID>0, même conv/expéditeur/contenu) existe déjà → nettoie les
-  /// doublons hérités d'anciennes versions.
+ 
   Future<void> purgeDuplicateOptimistics() async {
     final all = await db.select(db.localMessages).get();
     String sig(LocalMessage m) =>
@@ -193,9 +182,7 @@ class ChatDao {
     }
   }
 
-  /// Garantit qu'un même msgID (>0) n'a qu'une seule ligne : en cas de
-  /// doublon (clés clientId différentes), conserve la ligne `srv_` préfixée
-  /// (ou la première) et supprime les autres.
+  /// Garantit qu'un même msgID (>0) n'a qu'une seule ligne  
   Future<void> purgeDuplicateByMsgId() async {
     final all = await db.select(db.localMessages).get();
     final byMsg = <int, List<LocalMessage>>{};

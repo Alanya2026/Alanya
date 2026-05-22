@@ -1,18 +1,7 @@
-// callkit_service.dart
-//
-// Wrapper autour de flutter_callkit_incoming pour afficher un écran d'appel
-// système (Android ConnectionService) quand un FCM data-only `type=call`
-// arrive — y compris quand l'app est tuée ou en background.
-//
-// Web : non supporté par flutter_callkit_incoming. PushService gère les
-// notifications Web via le service worker (web/firebase-messaging-sw.js).
-
 import 'dart:async';
-
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
-
 class IncomingCallAction {
   final String callId;
   final String callerId;
@@ -45,10 +34,6 @@ class CallKitService {
   Stream<IncomingCallAction> get actions => _actions.stream;
 
   StreamSubscription? _eventSub;
-
-  // Quand l'app est tuée et que l'user clique "Accepter" sur CallKit, l'event
-  // arrive AVANT que les listeners Dart de AuthWrapper soient prêts. On stocke
-  // le dernier event "actionnable" pour qu'il soit consommé après init.
   IncomingCallAction? _pendingAction;
 
   Future<void> init() async {
@@ -59,13 +44,6 @@ class CallKitService {
     });
   }
 
-  /// Affiche l'écran d'appel système. À appeler depuis le handler FCM
-  /// (foreground et background) sur réception d'un push `type=call|group_call`.
-  ///
-  /// [silent] : true en foreground pour afficher la notif visuelle sans
-  /// jouer la sonnerie CallKit (le RingtoneService de l'app gère la sonnerie
-  /// ; ça évite le doublon). False en background → CallKit joue la sonnerie
-  /// système puisque l'app n'a pas la main pour le faire.
   Future<void> showIncoming({
     required String callId,
     required String callerId,
@@ -80,7 +58,7 @@ class CallKitService {
     final params = CallKitParams(
       id: callId,
       nameCaller: callerName,
-      appName: 'Talky',
+      appName: 'Alanya',
       avatar: callerPhoto,
       handle: callerId,
       type: isVideo ? 1 : 0,
@@ -104,8 +82,6 @@ class CallKitService {
       android: AndroidParams(
         isCustomNotification: true,
         isShowLogo: false,
-        // En mode silent, on passe une chaîne vide → CallKit n'attaque pas
-        // la sonnerie système. Le RingtoneService de l'app reste seul à jouer.
         ringtonePath: silent ? '' : 'system_ringtone_default',
         backgroundColor: '#0955fa',
         actionColor: '#4CAF50',
@@ -117,8 +93,7 @@ class CallKitService {
     await FlutterCallkitIncoming.showCallkitIncoming(params);
   }
 
-  /// Transitionne la notif CallKit en mode "appel en cours" (durée qui défile,
-  /// plus de boutons Accept/Decline). À appeler dès que CallStatus == connected.
+  
   Future<void> setConnected(String callId) async {
     if (kIsWeb) return;
     try {
@@ -180,10 +155,6 @@ class CallKitService {
     _actions.add(action);
   }
 
-  /// À appeler depuis main/AuthWrapper après init pour récupérer un éventuel
-  /// event arrivé avant que le listener Dart soit prêt (cas typique : l'app
-  /// est lancée par un tap "Accepter" sur la notif CallKit alors qu'elle était
-  /// tuée).
   IncomingCallAction? consumePendingAction() {
     final p = _pendingAction;
     _pendingAction = null;

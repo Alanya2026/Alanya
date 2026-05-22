@@ -8,15 +8,7 @@ import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import 'media_cache_service.dart';
 import '../../talky_api_client.dart';
-import '../../talky_models.dart';
-
-// ─────────────────────────────────────────────────────────────────────
-//  ChatRepository — source de vérité unique pour les chats.
-//
-//  Principe offline-first : l'UI lit/écrit TOUJOURS la base locale via
-//  les streams du DAO. Le repository synchronise avec le serveur (REST +
-//  Socket.IO) en arrière-plan et applique les events temps réel.
-// ─────────────────────────────────────────────────────────────────────
+import '../../talky_models.dart';  
 class ChatRepository {
   final AppDatabase _db;
   final ChatDao _dao;
@@ -28,9 +20,7 @@ class ChatRepository {
 
   ChatRepository._(this._api, this._db) : _dao = ChatDao(_db);
 
-  MediaCacheService get mediaCache => _mediaCache;
-
-  /// Construit le repository avec une unique instance de DB partagée.
+  MediaCacheService get mediaCache => _mediaCache; 
   factory ChatRepository({required TalkyApiClient api, AppDatabase? database}) {
     return ChatRepository._(api, database ?? AppDatabase());
   }
@@ -38,18 +28,14 @@ class ChatRepository {
   AppDatabase get db => _db;
   ChatDao get dao => _dao;
   int get myId => _myId;
-
-  // ── Streams réactifs consommés par l'UI ────────────────────────────
   Stream<List<LocalConversation>> watchConversations() => _dao.watchConversations();
   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
       _dao.watchMessages(conversationID);
-
-  // ── Cycle de vie ───────────────────────────────────────────────────
+ 
   void bind(int myId) {
-    if (myId == 0) return; // jamais lier avec un ID invalide
+    if (myId == 0) return; 
     _myId = myId;
 
-    // Purge des messages fantômes (senderID=0) + doublons hérités.
     _dao.purgeGhostMessages();
     _dao.purgeDuplicateOptimistics();
     _dao.purgeDuplicateByMsgId();
@@ -70,8 +56,7 @@ class ChatRepository {
     final json = Map<String, dynamic>.from(data);
     _dao.upsertConversation(_convToCompanion(Conversation.fromJson(json), json));
   }
-
-  // ── Synchronisation serveur → DB locale ────────────────────────────
+ 
   Future<void> syncConversations() async {
     try {
       final raw = await _api.getConversations();
@@ -85,8 +70,7 @@ class ChatRepository {
     }
   }
 
-  /// Charge l'historique d'une conversation. `delta=true` ne récupère que
-  /// les messages plus récents que le dernier connu localement.
+  /// Charge l'historique d'une conversation 
   Future<void> syncMessages(int conversationID, {bool delta = false}) async {
     try {
       final raw = await _api.getMessages(conversationID, limit: 50);
@@ -98,8 +82,7 @@ class ChatRepository {
     }
   }
 
-  /// Charge une page d'anciens messages (avant le plus ancien connu).
-  /// Renvoie le nombre de messages récupérés (0 = plus rien à charger).
+  /// Charge une page d'anciens messages 
   Future<int> loadOlderMessages(int conversationID, {int limit = 30}) async {
     try {
       final oldest = await _dao.minServerMsgId(conversationID);
@@ -116,7 +99,6 @@ class ChatRepository {
     }
   }
 
-  // ── Envoi optimiste (offline-first) ────────────────────────────────
   Future<void> sendText({
     required int conversationID,
     required String content,
@@ -130,7 +112,7 @@ class ChatRepository {
     final clientId = _newClientId();
     final now = DateTime.now();
 
-    // 1. Écriture locale immédiate (status=sending, syncPending).
+     
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
       conversationID: conversationID,
@@ -145,7 +127,7 @@ class ChatRepository {
     ));
     _bumpConversationSummary(conversationID, content, 0, now);
 
-    // 2. Tentative d'envoi temps réel.
+     
     _emitSend(
       clientId: clientId,
       conversationID: conversationID,
@@ -156,7 +138,7 @@ class ChatRepository {
     );
   }
 
-  /// Envoi d'un média déjà uploadé (url connue).
+
   Future<void> sendMedia({
     required int conversationID,
     required int type, // 1=image 2=vidéo 3=audio 4=fichier
@@ -195,9 +177,7 @@ class ChatRepository {
       mediaDuration: mediaDuration,
     );
   }
-
-  /// Envoi d'un média depuis un fichier local : affichage optimiste immédiat
-  /// (chemin local), upload en arrière-plan, puis diffusion temps réel.
+ 
   Future<void> sendMediaFile({
     required int conversationID,
     required int type, // 1=image 2=vidéo 3=audio 4=fichier
@@ -297,24 +277,18 @@ class ChatRepository {
 
   Future<void> markAsRead(int conversationID) async {
     await _dao.markConversationRead(conversationID, _myId);
-    await _dao.setUnread(conversationID, 0);
-    // Notifie l'émetteur en temps réel (✓✓ bleu) + persiste côté serveur.
+    await _dao.setUnread(conversationID, 0); 
     if (_api.isSocketConnected) {
       _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': conversationID});
     }
     _api.markConversationAsRead(conversationID).ignore();
   }
 
-  // ── Insertion robuste d'un message serveur ─────────────────────────
-  // Avant d'insérer, si le message est le MIEN et confirmé (msgID>0), on
-  // supprime la ligne optimiste correspondante (par clientId si fourni par
-  // message:sent, sinon par contenu) → plus de doublon côté émetteur, même
-  // si le backend ne renvoie pas le clientId. Préserve le chemin média local.
+
   Future<void> _upsertServerMsg(Map<String, dynamic> json) async {
     final msgID = _toInt(json['msgID']);
     final convID = _toInt(json['conversationID']);
-    if (msgID == 0) {
-      // Message serveur sans ID (ne devrait pas arriver) → insertion simple.
+    if (msgID == 0) { 
       await _dao.upsertMessage(_msgJsonToCompanion(json));
       return;
     }
@@ -322,18 +296,9 @@ class ChatRepository {
     final srvKey = 'srv_$msgID';
     final clientId = json['clientId']?.toString();
     final content = json['content']?.toString();
-    final mediaName = json['mediaName']?.toString();
-
-    // Toute la fusion se fait dans UNE transaction : drift ne notifie le
-    // stream qu'à la fin → aucun état intermédiaire "double" affiché.
+    final mediaName = json['mediaName']?.toString(); 
     await _db.transaction(() async {
-      String? carriedLocalPath;
-
-      // 1. Lignes à supprimer :
-      //    - autre clé portant le même msgID (doublon confirmé hérité)
-      //    - ligne optimiste (msgID=0) correspondante. Une ligne msgID=0
-      //      n'existe QUE pour mes propres envois → pas de garde senderID :
-      //      match par clientId si fourni, sinon par contenu/média.
+      String? carriedLocalPath; 
       final candidates = await (_db.select(_db.localMessages)
             ..where((m) {
               final sameOtherKey = m.msgID.equals(msgID) & m.clientId.equals(srvKey).not();
@@ -363,16 +328,12 @@ class ChatRepository {
     });
   }
 
-  // ── Handlers Socket.IO ─────────────────────────────────────────────
   Future<void> _onMessageReceived(dynamic data) async {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
     final senderID0 = _toInt(json['senderID']);
 
     await _upsertServerMsg(json);
-
-    // Le reste (résumé, accusé, cache) ne concerne que les messages reçus
-    // des AUTRES ; mes propres messages ont déjà été traités optimistiquement.
     if (senderID0 == _myId) return;
 
     final convID = _toInt(json['conversationID']);
@@ -380,13 +341,9 @@ class ChatRepository {
     final type = json['type'] ?? 0;
     final at = _parseDate(json['sendAt']) ?? DateTime.now();
     _bumpConversationSummary(convID, content, type, at, fromOther: true);
-
-    // Accusé de réception → l'émetteur passe en "livré" (✓✓).
     if (convID != 0 && _api.isSocketConnected) {
       _api.sendSocketEvent(SocketEvents.messageDelivered, {'conversationID': convID});
     }
-
-    // Auto-cache des médias consultables hors-ligne (images & vocaux).
     final mtype = _toInt(json['type']);
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
@@ -398,9 +355,8 @@ class ChatRepository {
   Future<void> _cacheMedia(int msgID, String url) async {
     final path = await _mediaCache.ensureCached(url);
     if (path != null) await _dao.setLocalMediaPath(msgID, path);
-  }
+  } 
 
-  /// `message:status` : l'autre a livré (2) ou lu (3) MES messages.
   void _onMessageStatus(dynamic data) {
     if (data is! Map) return;
     final convID = _toInt(data['conversationID']);
@@ -413,15 +369,12 @@ class ChatRepository {
   Future<void> _onMessageSent(dynamic data) async {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
-    if (_toInt(json['msgID']) == 0) return;
-    // Même chemin robuste : supprime l'optimiste (par clientId) et insère la
-    // ligne serveur, identique à une resync → aucun doublon.
+    if (_toInt(json['msgID']) == 0) return; 
     await _upsertServerMsg(json);
   }
 
   void _onMessageUpdated(dynamic data) {
     if (data is! Map) return;
-    // Mettre à jour PAR msgID (mes messages ont un clientId local, pas srv_).
     final id = _toInt(data['msgID']);
     final content = data['content']?.toString();
     if (id != 0 && content != null) _dao.updateContentByServerId(id, content);
@@ -433,7 +386,6 @@ class ChatRepository {
     if (id != 0) _dao.softDeleteByServerId(id);
   }
 
-  // ── Helpers internes ───────────────────────────────────────────────
   void _emitSend({
     required String clientId,
     required int conversationID,
@@ -445,7 +397,7 @@ class ChatRepository {
     int? replyToID,
     String? replyToContent,
   }) {
-    if (!_api.isSocketConnected) return; // restera dans l'outbox
+    if (!_api.isSocketConnected) return;
     _api.sendSocketEvent(SocketEvents.messageSend, {
       'clientId': clientId,
       'conversationID': conversationID,
@@ -472,8 +424,6 @@ class ChatRepository {
       lastMessageAt: Value(at),
       lastMessageType: Value(type),
     );
-    // insertOnConflictUpdate ne mettrait à jour que ces champs si la conv
-    // existe déjà ; sinon crée une ligne minimale (sera enrichie au sync).
     await _db.into(_db.localConversations).insertOnConflictUpdate(companion);
     if (fromOther) {
       final current = await (_db.select(_db.localConversations)

@@ -19,7 +19,7 @@ class CallsScreen extends StatefulWidget {
 class _CallsScreenState extends State<CallsScreen> {
   List<Call> _recentCalls = [];
   bool _isLoading = true;
-  // ✅ ID mis en cache — pas de FutureBuilder dans chaque ListTile
+  // !! ID mis en cache — pas de FutureBuilder dans chaque ListTile
   int _myId = 0;
 
   @override
@@ -137,7 +137,7 @@ class _CallsScreenState extends State<CallsScreen> {
                     itemCount: _recentCalls.length,
                     itemBuilder: (context, index) {
                       final call = _recentCalls[index];
-                      // ✅ Calcul direct — pas de FutureBuilder
+                      // !! Calcul direct — pas de FutureBuilder
                       final otherUser = call.idCaller != _myId ? call.caller : call.receiver;
                       final isMissed = call.isMissed;
                       final isVideo = call.isVideo;

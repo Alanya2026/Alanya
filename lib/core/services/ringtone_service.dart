@@ -8,14 +8,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:vibration/vibration.dart';
 
 /// Centralise les sons d'appel.
-///
-/// - **Appelé** : sonnerie système du téléphone (paramétrée par l'utilisateur),
-///   gérée par `flutter_ringtone_player`. Looping natif, vibration séparée.
-/// - **Appelant** : ringback custom (assets/sounds/ringback.wav) joué en boucle.
-///   Configure une session audio "voiceCall" pour rester audible quand WebRTC
-///   met le système en `MODE_IN_COMMUNICATION`.
-///
-/// Singleton — un seul lecteur audio pour tout le cycle de vie de l'app.
+
 class RingtoneService {
   RingtoneService._();
   static final RingtoneService instance = RingtoneService._();
@@ -37,9 +30,7 @@ class RingtoneService {
     if (kIsWeb) return;
     _ringbackPlayer ??= AudioPlayer();
     _audioSession ??= await AudioSession.instance;
-  }
-
-  // ─── Appelé : sonnerie système du téléphone ────────────────────────────
+  } 
 
   Future<void> startIncomingRingtone() async {
     if (kIsWeb || _active != _ActiveSound.none) return;
@@ -50,12 +41,12 @@ class RingtoneService {
       await _systemRingtone.playRingtone(looping: true, volume: 1.0, asAlarm: false);
       _startVibrationLoop();
     } catch (e) {
-      debugPrint('[RingtoneService] ⚠️ Sonnerie système échouée: $e');
+      debugPrint('[RingtoneService] ** Sonnerie système échouée: $e');
       _active = _ActiveSound.none;
     }
   }
 
-  // ─── Appelant : ringback custom ────────────────────────────────────────
+  // Appelant : ringback custom 
 
   Future<void> startOutgoingRingback() async {
     if (kIsWeb || _active != _ActiveSound.none) return;
@@ -70,12 +61,10 @@ class RingtoneService {
       await player.setVolume(0.7);
       await player.play();
     } catch (e) {
-      debugPrint('[RingtoneService] ⚠️ Ringback échoué: $e');
+      debugPrint('[RingtoneService] ** Ringback échoué: $e');
       _active = _ActiveSound.none;
     }
-  }
-
-  // ─── Stop générique ────────────────────────────────────────────────────
+  } 
 
   Future<void> stop() async {
     if (kIsWeb) return;
@@ -93,7 +82,7 @@ class RingtoneService {
         await _ringbackPlayer?.stop();
       }
     } catch (e) {
-      debugPrint('[RingtoneService] ⚠️ Stop: $e');
+      debugPrint('[RingtoneService] ** Stop: $e');
     }
   }
 
@@ -103,12 +92,6 @@ class RingtoneService {
     _ringbackPlayer = null;
   }
 
-  // ─── Internes ──────────────────────────────────────────────────────────
-
-  /// Configure la session audio pour que le ringback s'entende en mode call.
-  /// WebRTC met le système en MODE_IN_COMMUNICATION via `getUserMedia`, ce qui
-  /// rend STREAM_MUSIC quasi inaudible. On utilise USAGE_VOICE_COMMUNICATION_SIGNALLING
-  /// (Android) ou playAndRecord (iOS) pour rester audible.
   Future<void> _configureCallAudioSession() async {
     final session = _audioSession;
     if (session == null) return;

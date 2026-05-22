@@ -5,19 +5,13 @@ import '../core/db/chat_dao.dart';
 import '../core/services/chat_repository.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
-
-/// État de présence d'un utilisateur.
+ 
 class PresenceInfo {
   final bool online;
   final DateTime? lastSeen;
   const PresenceInfo({required this.online, this.lastSeen});
 }
-
-// ─────────────────────────────────────────────────────────────────────
-//  ChatProvider — façade ChangeNotifier au-dessus du ChatRepository.
-//  Expose les streams de la DB locale, l'état de présence en temps réel,
-//  et déclenche les synchronisations.
-// ─────────────────────────────────────────────────────────────────────
+ 
 class ChatProvider extends ChangeNotifier {
   final TalkyApiClient _api;
   late final ChatRepository repository;
@@ -30,9 +24,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   PresenceInfo? presenceOf(int userID) => _presence[userID];
-
-  /// Libellé prêt à afficher : "En ligne", "Vu(e) à HH:mm",
-  /// "Vu(e) hier à HH:mm", "Vu(e) le J/M". Vide si présence inconnue.
+ 
   String presenceLabel(int userID) {
     final p = _presence[userID];
     if (p == null) return '';
@@ -48,20 +40,16 @@ class ChatProvider extends ChangeNotifier {
     if (isYesterday) return 'Vu(e) hier à $hm';
     return 'Vu(e) le ${ls.day}/${ls.month}';
   }
-
-  // Streams réactifs pour l'UI.
+ 
   Stream<List<LocalConversation>> watchConversations() => repository.watchConversations();
   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
       repository.watchMessages(conversationID);
-
-  /// À appeler une fois l'utilisateur authentifié.
+ 
   Future<void> bind(int myId) async {
     repository.bind(myId);
     if (!_bound) {
       _bound = true;
-      _api.onSocketEvent(SocketEvents.presenceUpdated, _onPresenceUpdated);
-      // À chaque (re)authentification socket (incl. reconnexion réseau) :
-      // vider l'outbox des messages en attente + resynchroniser.
+      _api.onSocketEvent(SocketEvents.presenceUpdated, _onPresenceUpdated); 
       _api.onSocketEvent(SocketEvents.authVerified, _onSocketReady);
     }
     await refreshConversations();
@@ -72,9 +60,7 @@ class ChatProvider extends ChangeNotifier {
     repository.flushOutbox();
     refreshConversations();
   }
-
-  /// Resynchronise les conversations puis amorce la présence connue depuis
-  /// le cache (is_online / last_seen des participants).
+ 
   Future<void> refreshConversations() async {
     await repository.syncConversations();
     await _seedPresenceFromCache();

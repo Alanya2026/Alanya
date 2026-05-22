@@ -7,12 +7,9 @@ import 'package:path_provider/path_provider.dart';
 
 part 'app_database.g.dart';
 
-// ─────────────────────────────────────────────────────────────────────
+ 
 //  Base SQLite locale (drift) — miroir offline-first des conversations
-//  et messages. L'UI lit/écrit TOUJOURS ici ; le ChatRepository
-//  synchronise avec le serveur en arrière-plan.
-// ─────────────────────────────────────────────────────────────────────
-
+ 
 /// Conversations mises en cache localement.
 class LocalConversations extends Table {
   IntColumn get conversID => integer()();
@@ -26,21 +23,14 @@ class LocalConversations extends Table {
   IntColumn get lastMessageStatus => integer().nullable()();
   IntColumn get unreadCount => integer().withDefault(const Constant(0))();
   BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
-  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
-
-  /// Participants sérialisés en JSON (alanyaID, nom, pseudo, avatar_url,
-  /// is_online, last_seen). Évite une table relationnelle lourde.
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))(); 
   TextColumn get participantsJson => text().withDefault(const Constant('[]'))();
 
   @override
   Set<Column> get primaryKey => {conversID};
 }
 
-/// Messages mis en cache localement.
-///
-/// `clientId` est généré côté client AVANT l'envoi : il permet de retrouver
-/// la ligne optimiste quand le serveur renvoie le vrai `msgID`, et sert de
-/// clé d'idempotence pour l'outbox.
+/// Messages mis en cache localement 
 class LocalMessages extends Table {
   TextColumn get clientId => text()();
 
