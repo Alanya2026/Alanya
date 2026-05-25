@@ -10,7 +10,7 @@ class AdminStats {
   final int callsPeriod;
   final int statusesPeriod;
 
-  const AdminStats({
+  AdminStats({
     this.totalUsers = 0,
     this.onlineUsers = 0,
     this.bannedUsers = 0,
@@ -19,144 +19,133 @@ class AdminStats {
     this.statusesPeriod = 0,
   });
 
-  factory AdminStats.fromCounters(Map<String, dynamic> json) => AdminStats(
-        totalUsers: _i(json['totalUsers']),
-        onlineUsers: _i(json['onlineUsers']),
-        bannedUsers: _i(json['bannedUsers']),
-        messagesPeriod: _i(json['messagesPeriod']),
-        callsPeriod: _i(json['callsPeriod']),
-        statusesPeriod: _i(json['statusesPeriod']),
-      );
-
-  static int _i(dynamic v) => v is int ? v : (v is num ? v.toInt() : 0);
+  factory AdminStats.fromJson(Map<String, dynamic> json) {
+    return AdminStats(
+      totalUsers: json['totalUsers'] as int? ?? 0,
+      onlineUsers: json['onlineUsers'] as int? ?? 0,
+      bannedUsers: json['bannedUsers'] as int? ?? 0,
+      messagesPeriod: json['messages_7d'] as int? ?? 0,
+      callsPeriod: json['calls_7d'] as int? ?? 0,
+      statusesPeriod: json['statuses_7d'] as int? ?? 0,
+    );
+  }
 }
 
 class AdminProvider extends ChangeNotifier {
-  final TalkyApiClient _api;
+  final TalkyApiClient api;
 
-  // Users (page courante)
+  AdminProvider({required this.api});
+
+  AdminStats _stats = AdminStats();
   List<User> _users = [];
-  int _totalUsers = 0;
   int _page = 1;
   int _limit = 20;
+  int _totalUsers = 0;
+  bool _isLoadingStats = false;
   bool _isLoadingUsers = false;
   String _searchQuery = '';
 
-  // Stats
-  AdminStats _stats = const AdminStats();
-  bool _isLoadingStats = false;
-
-  String? _error;
-
-  AdminProvider({required TalkyApiClient api}) : _api = api;
-
-  List<User> get users => _users;
-  int get totalUsers => _totalUsers;
-  int get page => _page;
-  int get limit => _limit;
-  bool get isLoadingUsers => _isLoadingUsers;
-  bool get isLoadingStats => _isLoadingStats;
   AdminStats get stats => _stats;
-  String get searchQuery => _searchQuery;
-  String? get error => _error;
+  List<User> get users => _users;
+  int get currentPage => _page;
+  int get pageCount => (_totalUsers / _limit).ceil();
+  bool get isLoadingStats => _isLoadingStats;
+  bool get isLoadingUsers => _isLoadingUsers;
+  bool get canNextPage => _page < pageCount;
+  bool get canPreviousPage => _page > 1;
+
+  Future<void> loadStats() async {
+    try {
+      _isLoadingStats = true;
+      notifyListeners();
+
+      final data = await api.adminGetStats();
+      _stats = AdminStats.fromJson(data);
+
+      _isLoadingStats = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoadingStats = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> loadUsers({String? search, int? page, int? limit}) async {
+    try {
+      _isLoadingUsers = true;
+      notifyListeners();
+
+      final res = await api.adminGetUsers(
+        search: search,
+        page: page ?? _page,
+        limit: limit ?? _limit,
+      );
+
+      _users = (res['items'] as List)
+          .map((json) => User.fromJson(json as Map<String, dynamic>))
+          .toList();
+      _totalUsers = res['total'] as int? ?? 0;
+
+      _isLoadingUsers = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoadingUsers = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
 
   void setSearchQuery(String query) {
     _searchQuery = query;
-    notifyListeners();
   }
 
-  Future<void> loadUsers({
-    String? search,
-    int page = 1,
-    int limit = 20,
-  }) async {
-    _isLoadingUsers = true;
-    _error = null;
-    _page = page;
-    _limit = limit;
-    notifyListeners();
-
+  Future<void> toggleBan(int userId, {required bool ban}) async {
     try {
-      final res = await _api.adminGetUsers(
-        search: search ?? _searchQuery,
-        page: page,
-        limit: limit,
-      );
-      final items = (res['items'] as List? ?? []);
-      _users = items
-          .map((e) => User.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
-      _totalUsers = (res['total'] as num?)?.toInt() ?? _users.length;
-    } catch (e) {
-      _error = 'Erreur chargement utilisateurs: $e';
-      debugPrint('[AdminProvider] loadUsers error: $e');
-    } finally {
-      _isLoadingUsers = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadStats() async {
-    _isLoadingStats = true;
-    notifyListeners();
-
-    try {
-      final raw = await _api.adminGetStats();
-      final counters = Map<String, dynamic>.from(raw['counters'] ?? {});
-      _stats = AdminStats.fromCounters(counters);
-    } catch (e) {
-      debugPrint('[AdminProvider] loadStats error: $e');
-    } finally {
-      _isLoadingStats = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> toggleBan(User user, {String? reason}) async {
-    try {
-      if (user.exclus) {
-        await _api.adminUnbanUser(user.alanyaID);
+      if (ban) {
+        await api.adminBanUser(userId);
       } else {
-        await _api.adminBanUser(user.alanyaID, reason: reason);
+        await api.adminUnbanUser(userId);
       }
-      // Mettre à jour localement
-      await loadUsers(page: _page);
+      await loadUsers();
     } catch (e) {
-      _error = 'Erreur bannissement: $e';
-      debugPrint('[AdminProvider] toggleBan error: $e');
-      notifyListeners();
+      rethrow;
     }
   }
 
-  Future<void> nextPage() async {
-    await loadUsers(
-      page: _page + 1,
-      limit: _limit,
-      search: _searchQuery,
-    );
-  }
-
-  Future<void> previousPage() async {
-    if (_page > 1) {
-      await loadUsers(
-        page: _page - 1,
-        limit: _limit,
-        search: _searchQuery,
-      );
+  Future<void> makeAdmin(int userId) async {
+    try {
+      await api.adminSetAccountType(userId, typeCompte: 1);
+      await loadUsers();
+    } catch (e) {
+      rethrow;
     }
   }
 
-  Future<void> goToPage(int pageNum) async {
-    if (pageNum > 0) {
-      await loadUsers(
-        page: pageNum,
-        limit: _limit,
-        search: _searchQuery,
-      );
+  Future<void> deleteUser(int userId) async {
+    try {
+      await api.adminDeleteUser(userId);
+      await loadUsers();
+    } catch (e) {
+      rethrow;
     }
   }
 
-  int get pageCount => (_totalUsers / _limit).ceil();
-  bool get canNextPage => _page < pageCount;
-  bool get canPreviousPage => _page > 1;
+  void nextPage() {
+    if (canNextPage) {
+      _page++;
+    }
+  }
+
+  void previousPage() {
+    if (canPreviousPage) {
+      _page--;
+    }
+  }
+
+  void goToPage(int page) {
+    if (page > 0 && page <= pageCount) {
+      _page = page;
+    }
+  }
 }

@@ -15,7 +15,7 @@ class StatusProvider extends ChangeNotifier {
   int _myId = 0;
   bool _bound = false;
 
-  // alanyaID auteur → liste de ses statuts (croissant chronologique)
+  // LinkedHashMap: alanyaID auteur → liste de ses statuts (chronologique)
   final LinkedHashMap<int, List<Statut>> _byAuthor = LinkedHashMap();
   List<Statut> _mine = [];
 
@@ -38,9 +38,6 @@ class StatusProvider extends ChangeNotifier {
   int unseenCount(int authorId) =>
       _byAuthor[authorId]?.where((s) => !_seenIds.contains(s.id)).length ?? 0;
 
-  int totalCount(int authorId) => _byAuthor[authorId]?.length ?? 0;
-
-  /// Initialise les listeners socket et restaure la liste des "vus" persistés
   Future<void> bind(int myId) async {
     _myId = myId;
     if (!_bound) {
@@ -50,323 +47,228 @@ class StatusProvider extends ChangeNotifier {
       _api.onSocketEvent(SocketEvents.statusLiked, _onStatusLiked);
       _api.onSocketEvent(SocketEvents.statusUnliked, _onStatusUnliked);
       _api.onSocketEvent(SocketEvents.statusDeleted, _onStatusDeleted);
+
       await _loadSeenIds();
+      await refresh();
+
+      // Purge expired every 5 minutes
       _purgeTimer = Timer.periodic(
-        const Duration(minutes: 5),
+        Duration(minutes: 5),
         (_) => _purgeExpired(),
       );
     }
-    await refresh();
   }
 
-  void unbind() {
-    if (!_bound) return;
-    _bound = false;
-    _api.offSocketEvent(SocketEvents.statusCreated);
-    _api.offSocketEvent(SocketEvents.statusViewed);
-    _api.offSocketEvent(SocketEvents.statusLiked);
-    _api.offSocketEvent(SocketEvents.statusUnliked);
-    _api.offSocketEvent(SocketEvents.statusDeleted);
+  Future<void> unbind() async {
     _purgeTimer?.cancel();
-    _purgeTimer = null;
+    _bound = false;
   }
 
-  @override
-  void dispose() {
-    unbind();
-    super.dispose();
+  Future<void> _loadSeenIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString('status_seen_ids_$_myId') ?? '[]';
+      final ids = (jsonDecode(json) as List).cast<int>();
+      _seenIds.addAll(ids);
+    } catch (_) {}
   }
 
-  // ── Loading ────────────────────────────────────────────────────
+  Future<void> _saveSeenIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'status_seen_ids_$_myId',
+        jsonEncode(_seenIds.toList()),
+      );
+    } catch (_) {}
+  }
 
   Future<void> refresh() async {
-    if (_loading) return;
-    _loading = true;
-    notifyListeners();
     try {
-      final results = await Future.wait([
-        _api.getStatuts(),
-        _api.getMyStatuts(),
-      ]);
-      final others = results[0]
-          .map((e) => Statut.fromJson(Map<String, dynamic>.from(e)))
-          .where((s) => !s.isExpired)
-          .toList();
-      _mine = results[1]
-          .map((e) => Statut.fromJson(Map<String, dynamic>.from(e)))
-          .where((s) => !s.isExpired)
+      _loading = true;
+      notifyListeners();
+
+      // Get all statuses + filter mine
+      final data = await _api.getStatuts();
+      final all = (data as List)
+          .map((json) => Statut.fromJson(json as Map<String, dynamic>))
           .toList();
 
       _byAuthor.clear();
-      for (final s in others) {
-        _byAuthor.putIfAbsent(s.alanyaID, () => []).add(s);
-        if (s.seenByMe) _seenIds.add(s.id);
+      _mine = [];
+
+      for (final s in all) {
+        if (s.alanyaID == _myId) {
+          _mine.add(s);
+        } else {
+          _byAuthor.putIfAbsent(s.alanyaID, () => []).add(s);
+        }
       }
 
-      // Trier les listes par date (ASC) pour le viewer auto-advance
-      for (final list in _byAuthor.values) {
-        list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-      }
-      _mine.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    } catch (e) {
-      debugPrint('[StatusProvider] refresh error: $e');
-    } finally {
+      _purgeExpired();
       _loading = false;
       notifyListeners();
-    }
-  }
-
-  // ── Mutations ──────────────────────────────────────────────────
-
-  Future<Statut?> createText({
-    required String text,
-    String? backgroundColor,
-  }) async {
-    try {
-      final res =
-          await _api.createStatut(text: text, backgroundColor: backgroundColor);
-      final s = Statut.fromJson(Map<String, dynamic>.from(res));
-      _mine.add(s);
-      notifyListeners();
-      return s;
     } catch (e) {
-      debugPrint('[StatusProvider] createText error: $e');
+      _loading = false;
+      notifyListeners();
       rethrow;
     }
   }
 
-  Future<Statut?> createImage({required File imageFile}) async {
-    try {
-      final url = await _api.uploadAvatar(imageFile);
-      final mediaUrl = url['url'] as String?;
-      final res = await _api.createStatut(mediaUrl: mediaUrl, type: 1);
-      final s = Statut.fromJson(Map<String, dynamic>.from(res));
-      _mine.add(s);
-      notifyListeners();
-      return s;
-    } catch (e) {
-      debugPrint('[StatusProvider] createImage error: $e');
-      rethrow;
-    }
+  Future<void> createText(String text, {String? backgroundColor}) async {
+    final res = await _api.createStatut(
+      text: text,
+      backgroundColor: backgroundColor,
+      type: 0,
+    );
+    final s = Statut.fromJson(res);
+    _mine.add(s);
+    notifyListeners();
   }
 
-  Future<Statut?> createVideo({required File videoFile}) async {
-    try {
-      final url = await _api.uploadAvatar(videoFile);
-      final mediaUrl = url['url'] as String?;
-      final res = await _api.createStatut(mediaUrl: mediaUrl, type: 2);
-      final s = Statut.fromJson(Map<String, dynamic>.from(res));
-      _mine.add(s);
-      notifyListeners();
-      return s;
-    } catch (e) {
-      debugPrint('[StatusProvider] createVideo error: $e');
-      rethrow;
-    }
+  Future<void> createImage(File file) async {
+    // Upload first
+    final uploadRes = await _api.uploadMedia(file);
+    final mediaUrl = uploadRes['url'] as String;
+
+    final res = await _api.createStatut(mediaUrl: mediaUrl, type: 1);
+    final s = Statut.fromJson(res);
+    _mine.add(s);
+    notifyListeners();
+  }
+
+  Future<void> createVideo(File file) async {
+    // Upload first
+    final uploadRes = await _api.uploadMedia(file);
+    final mediaUrl = uploadRes['url'] as String;
+
+    final res = await _api.createStatut(mediaUrl: mediaUrl, type: 2);
+    final s = Statut.fromJson(res);
+    _mine.add(s);
+    notifyListeners();
   }
 
   Future<void> deleteStatut(int id) async {
-    try {
-      await _api.deleteStatut(id);
-      _mine.removeWhere((s) => s.id == id);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[StatusProvider] deleteStatut error: $e');
-      rethrow;
-    }
+    await _api.deleteStatut(id);
+    _mine.removeWhere((s) => s.id == id);
+    notifyListeners();
   }
 
   Future<void> viewStatut(int id) async {
-    try {
-      await _api.viewStatut(id);
+    if (!_seenIds.contains(id)) {
       _seenIds.add(id);
-      // Mettre à jour l'état local
-      for (final list in _byAuthor.values) {
-        for (int i = 0; i < list.length; i++) {
-          if (list[i].id == id) {
-            list[i] = list[i].copyWith(seenByMe: true, viewedBy: list[i].viewedBy + 1);
-            break;
-          }
-        }
-      }
+      await _saveSeenIds();
+      await _api.viewStatut(id);
       notifyListeners();
-    } catch (e) {
-      debugPrint('[StatusProvider] viewStatut error: $e');
-      rethrow;
     }
   }
 
   Future<void> toggleLike(int id) async {
     try {
-      final current =
-          _byAuthor.values.expand((l) => l).firstWhere((s) => s.id == id);
-      if (current.likedByMe) {
-        await _api.unlikeStatut(id);
-      } else {
+      final s = _findStatut(id);
+      if (s == null) return;
+
+      if (s.likedByMe == 0) {
         await _api.likeStatut(id);
-      }
-      // Mettre à jour l'état local
-      for (final list in _byAuthor.values) {
-        for (int i = 0; i < list.length; i++) {
-          if (list[i].id == id) {
-            final newLiked = !current.likedByMe;
-            list[i] = list[i].copyWith(
-              likedByMe: newLiked,
-              likedBy: list[i].likedBy + (newLiked ? 1 : -1),
-            );
-            break;
-          }
-        }
+        s.likedByMe = 1;
+        s.likedBy.add(_myId);
+      } else {
+        await _api.unlikeStatut(id);
+        s.likedByMe = 0;
+        s.likedBy.remove(_myId);
       }
       notifyListeners();
-    } catch (e) {
-      debugPrint('[StatusProvider] toggleLike error: $e');
-      rethrow;
-    }
+    } catch (_) {}
   }
 
   Future<List<StatutView>> getViews(int id) async {
     if (_viewsCache.containsKey(id)) {
       return _viewsCache[id]!;
     }
-    try {
-      final raw = await _api.getStatutViews(id);
-      final views = raw
-          .map((e) => StatutView.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
-      _viewsCache[id] = views;
-      return views;
-    } catch (e) {
-      debugPrint('[StatusProvider] getViews error: $e');
-      return [];
-    }
+
+    final data = await _api.getStatutViews(id);
+    final views = (data as List)
+        .map((json) => StatutView.fromJson(json as Map<String, dynamic>))
+        .toList();
+
+    _viewsCache[id] = views;
+    return views;
   }
 
-  // ── Socket listeners ────────────────────────────────────────────
-
-  void _onStatusCreated(dynamic event) {
-    try {
-      if (event is! Map) return;
-      final s = Statut.fromJson(Map<String, dynamic>.from(event));
-      if (s.alanyaID == _myId) {
-        _mine.add(s);
-      } else {
-        _byAuthor.putIfAbsent(s.alanyaID, () => []).add(s);
-      }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[StatusProvider] _onStatusCreated error: $e');
+  Statut? _findStatut(int id) {
+    for (final list in _byAuthor.values) {
+      final s = list.firstWhere(
+        (x) => x.id == id,
+        orElse: () => null as Statut,
+      );
+      if (s != null) return s;
     }
+    return _mine.firstWhere((x) => x.id == id, orElse: () => null as Statut);
   }
-
-  void _onStatusViewed(dynamic event) {
-    try {
-      if (event is! Map) return;
-      final id = event['statutID'] as int?;
-      if (id == null) return;
-      for (final list in _byAuthor.values) {
-        for (int i = 0; i < list.length; i++) {
-          if (list[i].id == id) {
-            list[i] = list[i].copyWith(viewedBy: list[i].viewedBy + 1);
-            break;
-          }
-        }
-      }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[StatusProvider] _onStatusViewed error: $e');
-    }
-  }
-
-  void _onStatusLiked(dynamic event) {
-    try {
-      if (event is! Map) return;
-      final id = event['statutID'] as int?;
-      if (id == null) return;
-      for (final list in _byAuthor.values) {
-        for (int i = 0; i < list.length; i++) {
-          if (list[i].id == id) {
-            list[i] = list[i].copyWith(likedBy: list[i].likedBy + 1);
-            break;
-          }
-        }
-      }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[StatusProvider] _onStatusLiked error: $e');
-    }
-  }
-
-  void _onStatusUnliked(dynamic event) {
-    try {
-      if (event is! Map) return;
-      final id = event['statutID'] as int?;
-      if (id == null) return;
-      for (final list in _byAuthor.values) {
-        for (int i = 0; i < list.length; i++) {
-          if (list[i].id == id) {
-            list[i] = list[i].copyWith(likedBy: list[i].likedBy - 1);
-            break;
-          }
-        }
-      }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[StatusProvider] _onStatusUnliked error: $e');
-    }
-  }
-
-  void _onStatusDeleted(dynamic event) {
-    try {
-      if (event is! Map) return;
-      final id = event['ID'] as int?;
-      if (id == null) return;
-      for (final list in _byAuthor.values) {
-        list.removeWhere((s) => s.id == id);
-      }
-      _mine.removeWhere((s) => s.id == id);
-      _viewsCache.remove(id);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[StatusProvider] _onStatusDeleted error: $e');
-    }
-  }
-
-  // ── Helpers ────────────────────────────────────────────────────
 
   void _purgeExpired() {
-    bool changed = false;
-    for (final list in _byAuthor.values) {
-      final before = list.length;
-      list.removeWhere((s) => s.isExpired);
-      if (list.length != before) changed = true;
-    }
-    final before = _mine.length;
-    _mine.removeWhere((s) => s.isExpired);
-    if (_mine.length != before) changed = true;
-
-    if (changed) notifyListeners();
+    final now = DateTime.now();
+    _byAuthor.removeWhere((_, list) {
+      list.removeWhere((s) => DateTime.parse(s.expiredAt).isBefore(now));
+      return list.isEmpty;
+    });
+    _mine.removeWhere((s) => DateTime.parse(s.expiredAt).isBefore(now));
   }
 
-  Future<void> _loadSeenIds() async {
+  // Socket listeners
+  void _onStatusCreated(dynamic data) {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('status_seen_ids_$_myId');
-      if (raw != null) {
-        final list = jsonDecode(raw) as List;
-        _seenIds.addAll(list.cast<int>());
+      final s = Statut.fromJson(data as Map<String, dynamic>);
+      _byAuthor.putIfAbsent(s.alanyaID, () => []).add(s);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void _onStatusViewed(dynamic data) {
+    try {
+      final id = data['statusId'] as int;
+      final s = _findStatut(id);
+      if (s != null) {
+        s.viewedBy.add(data['alanyaID'] as int);
+        notifyListeners();
       }
-    } catch (e) {
-      debugPrint('[StatusProvider] _loadSeenIds error: $e');
-    }
+    } catch (_) {}
   }
 
-  Future<void> _persistSeenIds() async {
+  void _onStatusLiked(dynamic data) {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('status_seen_ids_$_myId', jsonEncode(_seenIds.toList()));
-    } catch (e) {
-      debugPrint('[StatusProvider] _persistSeenIds error: $e');
-    }
+      final id = data['statusId'] as int;
+      final s = _findStatut(id);
+      if (s != null) {
+        s.likedBy.add(data['alanyaID'] as int);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  void _onStatusUnliked(dynamic data) {
+    try {
+      final id = data['statusId'] as int;
+      final s = _findStatut(id);
+      if (s != null) {
+        s.likedBy.remove(data['alanyaID'] as int);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  void _onStatusDeleted(dynamic data) {
+    try {
+      final id = data['statusId'] as int;
+      _byAuthor.forEach((_, list) => list.removeWhere((s) => s.id == id));
+      _mine.removeWhere((s) => s.id == id);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    unbind();
+    super.dispose();
   }
 }
