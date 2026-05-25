@@ -162,6 +162,10 @@ class _MyStatusTile extends StatelessWidget {
               totalCount: statuses.length,
               unseenCount: 0,
               size: 56,
+              previewUrl: statuses.isNotEmpty && statuses.last.type == 1
+                  ? statuses.last.mediaUrl
+                  : null,
+              statusType: statuses.isNotEmpty ? statuses.last.type : null,
               overlay: Container(
                 width: 22,
                 height: 22,
@@ -240,6 +244,8 @@ class _ContactStatusTile extends StatelessWidget {
               fallbackText: last.nom ?? '?',
               totalCount: totalCount,
               unseenCount: unseenCount,
+              previewUrl: last.type == 1 ? last.mediaUrl : null,
+              statusType: last.type,
             ),
             const SizedBox(width: 14),
             Expanded(

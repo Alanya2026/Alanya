@@ -1,9 +1,9 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import '../../providers/auth_provider.dart';
+import '../../core/utils/avatar_utils.dart';
+import '../../widgets/add_contact_sheet.dart';
 import 'select_members_screen.dart';
 
 class NewChatScreen extends StatefulWidget {
@@ -18,7 +18,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
   List<User> _contacts = [];
   List<User> _filteredUsers = [];
   bool _isLoading = false;
-  bool _isSearching = false;
 
   @override
   void initState() {
@@ -53,17 +52,13 @@ class _NewChatScreenState extends State<NewChatScreen> {
   void _onSearchChanged() {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
-      setState(() {
-        _filteredUsers = _contacts;
-        _isSearching = false;
-      });
+      setState(() => _filteredUsers = _contacts);
     } else {
       _searchAllUsers(query);
     }
   }
 
   Future<void> _searchAllUsers(String query) async {
-    setState(() => _isSearching = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.searchUsers(query);
@@ -72,98 +67,106 @@ class _NewChatScreenState extends State<NewChatScreen> {
           _filteredUsers = (data as List)
               .map((json) => User.fromJson(json as Map<String, dynamic>))
               .toList();
-          _isSearching = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isSearching = false);
+      if (mounted) setState(() {});
     }
   }
 
-  void _showAddContactDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Add Contact'),
-        content: const Text('Feature coming soon'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _filteredUsers = _contacts);
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasQuery = _searchController.text.trim().isNotEmpty;
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('New Chat'),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
+        title: const Text(
+          'Nouveau message',
+          style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search contacts...',
-                prefixIcon: const Icon(CupertinoIcons.search),
+                hintText: 'Rechercher par nom, pseudo ou téléphone…',
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                suffixIcon: hasQuery
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Row(
               children: [
                 _buildActionTile(
-                  CupertinoIcons.plus_circle,
-                  'New Group',
-                  () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SelectMembersScreen(),
-                      ),
-                    );
-                  },
+                  Icons.group_outlined,
+                  'Nouveau groupe',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SelectMembersScreen()),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 _buildActionTile(
-                  CupertinoIcons.person_add,
-                  'Add Contact',
-                  _showAddContactDialog,
+                  Icons.person_add_alt_1,
+                  'Ajouter',
+                  _showAddContactSheet,
                 ),
               ],
             ),
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
                 : _filteredUsers.isEmpty
                     ? Center(
-                        child: Text(
-                          _isSearching ? 'No users found' : 'No contacts',
-                          style: TextStyle(color: Colors.grey.shade600),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              hasQuery ? Icons.person_search : Icons.people_outline,
+                              size: 48,
+                              color: Colors.grey.shade300,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              hasQuery ? 'Aucun résultat' : 'Aucun contact',
+                              style: TextStyle(color: Colors.grey.shade500),
+                            ),
+                          ],
                         ),
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                             child: Text(
-                              _searchController.text.trim().isEmpty
-                                  ? 'Contacts préférés'
-                                  : 'Résultats',
+                              hasQuery ? 'Résultats' : 'Contacts préférés',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -173,34 +176,75 @@ class _NewChatScreenState extends State<NewChatScreen> {
                             ),
                           ),
                           Expanded(
-                            child: ListView.separated(
+                            child: ListView.builder(
                               itemCount: _filteredUsers.length,
-                              separatorBuilder: (_, __) => const Divider(),
                               itemBuilder: (_, idx) {
                                 final user = _filteredUsers[idx];
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: Colors.indigo.shade50,
-                                    backgroundImage: user.avatarUrl.isNotEmpty
-                                        ? NetworkImage(user.avatarUrl)
-                                        : null,
-                                    child: user.avatarUrl.isEmpty
-                                        ? Text(
-                                            user.nom.isNotEmpty
-                                                ? user.nom[0].toUpperCase()
-                                                : '?',
-                                            style: const TextStyle(
-                                              color: Colors.indigo,
-                                              fontWeight: FontWeight.bold,
+                                final initial = user.nom.isNotEmpty
+                                    ? user.nom[0].toUpperCase()
+                                    : '?';
+                                return InkWell(
+                                  onTap: () => Navigator.pop(context, user),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Stack(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 24,
+                                              backgroundColor: Colors.indigo.shade50,
+                                              backgroundImage: avatarImage(user.avatarUrl),
+                                              child: hasValidAvatarUrl(user.avatarUrl)
+                                                  ? null
+                                                  : Text(initial,
+                                                      style: const TextStyle(
+                                                          color: Colors.indigo,
+                                                          fontWeight: FontWeight.bold,
+                                                          fontSize: 16)),
                                             ),
-                                          )
-                                        : null,
+                                            if (user.isOnline)
+                                              Positioned(
+                                                right: 0,
+                                                bottom: 0,
+                                                child: Container(
+                                                  width: 10,
+                                                  height: 10,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green,
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                        color: Colors.white, width: 1.5),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 14),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                user.nom.isNotEmpty ? user.nom : user.pseudo,
+                                                style: const TextStyle(
+                                                    fontWeight: FontWeight.w600, fontSize: 15),
+                                              ),
+                                              if (user.pseudo.isNotEmpty)
+                                                Text(
+                                                  '@${user.pseudo}',
+                                                  style: TextStyle(
+                                                      color: Colors.grey.shade500, fontSize: 13),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  title: Text(user.nom),
-                                  subtitle: Text(user.alanyaPhone),
-                                  onTap: () {
-                                    Navigator.pop(context, user);
-                                  },
                                 );
                               },
                             ),
@@ -213,34 +257,43 @@ class _NewChatScreenState extends State<NewChatScreen> {
     );
   }
 
-  Widget _buildActionTile(
-    IconData icon,
-    String text,
-    VoidCallback onTap,
-  ) {
+  void _showAddContactSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddContactSheet(
+        existingIds: _contacts.map((u) => u.alanyaID).toSet(),
+        onAdded: (_) => _loadContacts(),
+      ),
+    );
+  }
+
+  Widget _buildActionTile(IconData icon, String text, VoidCallback onTap) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.indigo.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.indigo.shade200),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.indigo),
-              const SizedBox(width: 8),
-              Text(
-                text,
-                style: const TextStyle(
-                  color: Colors.indigo,
-                  fontWeight: FontWeight.w500,
+      child: Material(
+        color: Colors.indigo.withAlpha(20),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: Colors.indigo, size: 26),
+                const SizedBox(height: 6),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.indigo,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -5,7 +5,7 @@ import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
-import '../chats/contact_detail_screen.dart';
+import 'call_detail_screen.dart';
 import 'ongoing_call_screen.dart';
 import 'keypad_screen.dart';
 import 'select_contact_screen.dart';
@@ -207,10 +207,9 @@ class _CallsScreenState extends State<CallsScreen> {
                             : () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => ContactDetailScreen(
-                                      userId: otherUser.alanyaID,
-                                      initialName: otherUser.nom,
-                                      initialAvatar: otherUser.avatarUrl,
+                                    builder: (_) => CallDetailScreen(
+                                      user: otherUser,
+                                      call: call,
                                     ),
                                   ),
                                 ),

@@ -1,8 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/utils/avatar_utils.dart';
 import 'create_group_screen.dart';
 
 class SelectMembersScreen extends StatefulWidget {
@@ -18,7 +18,6 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
   List<User> _filteredUsers = [];
   Set<int> _selected = {};
   bool _isLoading = false;
-  bool _isSearching = false;
 
   @override
   void initState() {
@@ -53,17 +52,13 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
   void _onSearchChanged() {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
-      setState(() {
-        _filteredUsers = _contacts;
-        _isSearching = false;
-      });
+      setState(() => _filteredUsers = _contacts);
     } else {
       _searchAllUsers(query);
     }
   }
 
   Future<void> _searchAllUsers(String query) async {
-    setState(() => _isSearching = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.searchUsers(query);
@@ -72,11 +67,10 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
           _filteredUsers = (data as List)
               .map((json) => User.fromJson(json as Map<String, dynamic>))
               .toList();
-          _isSearching = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isSearching = false);
+      if (mounted) setState(() {});
     }
   }
 
@@ -101,33 +95,34 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
     );
   }
 
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _filteredUsers = _contacts);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasQuery = _searchController.text.trim().isNotEmpty;
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Select Members'),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
+        title: Text(
+          _selected.isEmpty ? 'Nouveau groupe' : '${_selected.length} sélectionné',
+          style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
         actions: [
           if (_selected.isNotEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.indigo,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${_selected.length} selected',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+            TextButton(
+              onPressed: _goToCreate,
+              child: const Text(
+                'Suivant',
+                style: TextStyle(
+                  color: Colors.indigo,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
             ),
@@ -136,55 +131,134 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search members...',
-                prefixIcon: const Icon(CupertinoIcons.search),
+                hintText: 'Rechercher par nom, pseudo ou téléphone…',
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                suffixIcon: hasQuery
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
                 : _filteredUsers.isEmpty
                     ? Center(
-                        child: Text(
-                          _isSearching ? 'No users found' : 'No contacts',
-                          style: TextStyle(color: Colors.grey.shade600),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              hasQuery ? Icons.person_search : Icons.people_outline,
+                              size: 48,
+                              color: Colors.grey.shade300,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              hasQuery ? 'Aucun résultat' : 'Aucun contact',
+                              style: TextStyle(color: Colors.grey.shade500),
+                            ),
+                          ],
                         ),
                       )
-                    : ListView.separated(
+                    : ListView.builder(
                         itemCount: _filteredUsers.length,
-                        separatorBuilder: (_, __) => const Divider(),
                         itemBuilder: (_, idx) {
                           final user = _filteredUsers[idx];
-                          final isSelected = _selected.contains(user.alanyaID);
-                          return CheckboxListTile(
-                            value: isSelected,
-                            onChanged: (_) => _toggle(user),
-                            title: Text(user.nom),
-                            subtitle: Text(user.alanyaPhone ?? ''),
-                            secondary: CircleAvatar(
-                              backgroundColor: Colors.indigo.shade50,
-                              backgroundImage: user.avatarUrl.isNotEmpty
-                                  ? NetworkImage(user.avatarUrl)
-                                  : null,
-                              child: user.avatarUrl.isEmpty
-                                  ? Text(
-                                      user.nom.isNotEmpty
-                                          ? user.nom[0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                        color: Colors.indigo,
-                                        fontWeight: FontWeight.bold,
+                          final selected = _selected.contains(user.alanyaID);
+                          final initial = user.nom.isNotEmpty
+                              ? user.nom[0].toUpperCase()
+                              : '?';
+                          return InkWell(
+                            onTap: () => _toggle(user),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Stack(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 24,
+                                        backgroundColor: Colors.indigo.shade50,
+                                        backgroundImage: avatarImage(user.avatarUrl),
+                                        child: hasValidAvatarUrl(user.avatarUrl)
+                                            ? null
+                                            : Text(initial,
+                                                style: const TextStyle(
+                                                    color: Colors.indigo,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16)),
                                       ),
-                                    )
-                                  : null,
+                                      if (user.isOnline)
+                                        Positioned(
+                                          right: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: 10,
+                                            height: 10,
+                                            decoration: BoxDecoration(
+                                              color: Colors.green,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color: Colors.white, width: 1.5),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          user.nom.isNotEmpty ? user.nom : user.pseudo,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w600, fontSize: 15),
+                                        ),
+                                        if (user.pseudo.isNotEmpty)
+                                          Text(
+                                            '@${user.pseudo}',
+                                            style: TextStyle(
+                                                color: Colors.grey.shade500, fontSize: 13),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    width: 26,
+                                    height: 26,
+                                    decoration: BoxDecoration(
+                                      color: selected ? Colors.indigo : Colors.transparent,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: selected ? Colors.indigo : Colors.grey.shade400,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: selected
+                                        ? const Icon(Icons.check, color: Colors.white, size: 16)
+                                        : null,
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -192,13 +266,6 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
           ),
         ],
       ),
-      floatingActionButton: _selected.isNotEmpty
-          ? FloatingActionButton(
-              onPressed: _goToCreate,
-              backgroundColor: Colors.indigo,
-              child: const Icon(CupertinoIcons.arrow_right),
-            )
-          : null,
     );
   }
 }

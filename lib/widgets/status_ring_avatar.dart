@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../core/utils/avatar_utils.dart';
 
 /// Avatar circulaire encadré d'un anneau segmenté (un arc par statut).
 /// Arcs verts pour les statuts non-vus, gris pour les vus — style WhatsApp.
+/// Si [previewUrl] est fourni (statut de type image), il est affiché
+/// en aperçu au centre. Un badge de type (▶ 🎵) apparaît pour vidéo/audio.
 class StatusRingAvatar extends StatelessWidget {
   final String? avatarUrl;
   final String fallbackText;
@@ -12,6 +15,8 @@ class StatusRingAvatar extends StatelessWidget {
   final double strokeWidth;
   final double gapDeg;
   final Widget? overlay;
+  final String? previewUrl;
+  final int? statusType;
 
   const StatusRingAvatar({
     super.key,
@@ -23,31 +28,44 @@ class StatusRingAvatar extends StatelessWidget {
     this.strokeWidth = 3,
     this.gapDeg = 6,
     this.overlay,
+    this.previewUrl,
+    this.statusType,
   });
 
   @override
   Widget build(BuildContext context) {
     final inner = size - strokeWidth * 2 - 4;
-    final avatar = CircleAvatar(
-      radius: inner / 2,
-      backgroundColor: Colors.grey.shade300,
-      backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
-          ? NetworkImage(avatarUrl!)
-          : null,
-      child: (avatarUrl == null || avatarUrl!.isEmpty)
-          ? Text(
-              fallbackText.isNotEmpty ? fallbackText[0].toUpperCase() : '?',
-              style: TextStyle(
-                fontSize: inner * 0.4,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
-              ),
-            )
-          : null,
-    );
+    final showPreview =
+        previewUrl != null && hasValidAvatarUrl(previewUrl);
+    final showAvatar = hasValidAvatarUrl(avatarUrl);
+
+    final center = showPreview
+        ? CircleAvatar(
+            radius: inner / 2,
+            backgroundImage: NetworkImage(previewUrl!),
+            onBackgroundImageError: (_, __) {},
+          )
+        : CircleAvatar(
+            radius: inner / 2,
+            backgroundColor: Colors.grey.shade300,
+            backgroundImage: showAvatar ? NetworkImage(avatarUrl!) : null,
+            onBackgroundImageError: showAvatar ? (_, __) {} : null,
+            child: !showAvatar
+                ? Text(
+                    fallbackText.isNotEmpty
+                        ? fallbackText[0].toUpperCase()
+                        : '?',
+                    style: TextStyle(
+                      fontSize: inner * 0.4,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade700,
+                    ),
+                  )
+                : null,
+          );
 
     if (totalCount == 0) {
-      return SizedBox(width: size, height: size, child: Center(child: avatar));
+      return SizedBox(width: size, height: size, child: Center(child: center));
     }
 
     return SizedBox(
@@ -65,11 +83,42 @@ class StatusRingAvatar extends StatelessWidget {
               gapDeg: gapDeg,
             ),
           ),
-          avatar,
+          center,
+          if (statusType == 2)
+            Positioned(
+              right: 2,
+              bottom: 2,
+              child: _TypeBadge(icon: Icons.play_arrow, size: inner * 0.3),
+            ),
+          if (statusType == 3)
+            Positioned(
+              right: 2,
+              bottom: 2,
+              child: _TypeBadge(icon: Icons.music_note, size: inner * 0.3),
+            ),
           if (overlay != null)
             Positioned(right: 0, bottom: 0, child: overlay!),
         ],
       ),
+    );
+  }
+}
+
+class _TypeBadge extends StatelessWidget {
+  final IconData icon;
+  final double size;
+  const _TypeBadge({required this.icon, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size + 6,
+      height: size + 6,
+      decoration: const BoxDecoration(
+        color: Colors.black54,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: Colors.white, size: size),
     );
   }
 }
