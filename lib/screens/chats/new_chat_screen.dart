@@ -4,31 +4,24 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/add_contact_sheet.dart';
 import 'chat_detail_screen.dart';
-
+import 'select_members_screen.dart';
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
-
   @override
   State<NewChatScreen> createState() => _NewChatScreenState();
-}
-
 class _NewChatScreenState extends State<NewChatScreen> {
   List<User> _preferredContacts = [];
   List<User> _filteredUsers = [];
   bool _isLoading = true;
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
     _loadContacts();
     _searchController.addListener(_onSearchChanged);
-  }
-
   Future<void> _loadContacts() async {
     setState(() => _isLoading = true);
-
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getContacts();
@@ -45,8 +38,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
     }
-  }
-
   void _onSearchChanged() {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
@@ -57,8 +48,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
     } else {
       _searchAllUsers(query);
     }
-  }
-
   Future<void> _searchAllUsers(String query) async {
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
@@ -82,8 +71,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
         });
       }
     }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -126,15 +113,22 @@ class _NewChatScreenState extends State<NewChatScreen> {
                 : ListView(
                     children: [
                       if (!_isSearching) ...[
-                        _buildActionTile(Icons.group_add, 'Nouveau groupe ', () {}), 
-                        _buildActionTile(Icons.person_add, 'Nouveau contact préféré', _showAddContactDialog),
+                        _buildActionTile(Icons.group_add, 'Nouveau groupe ', () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SelectMembersScreen()),
+                          );
+                        }),
+                        _buildActionTile(Icons.person_add, 'Nouveau contact pr
+', _showAddContactDialog),
                       ],
                       if (_filteredUsers.isEmpty)
                         Center(
                           child: Padding(
                             padding: const EdgeInsets.only(top: 40),
                             child: Text(
-                              _isSearching ? 'Aucun utilisateur trouvé' : 'Pas de contacts préférés',
+                              _isSearching ? 'Aucun utilisateur trouv
+' : 'Pas de contacts pr
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 16,
@@ -146,7 +140,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                         Padding(
                           padding: const EdgeInsets.only(left: 20, top: 16, bottom: 8),
                           child: Text(
-                            _isSearching ? 'Resultats de la recherche' : 'Contacts préférés',
+                            _isSearching ? 'Resultats de la recherche' : 'Contacts pr
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.grey,
@@ -220,8 +214,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
         ],
       ),
     );
-  }
-
   Widget _buildActionTile(IconData icon, String text, VoidCallback onTap) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -236,8 +228,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
       ),
       onTap: onTap,
     );
-  }
-
   void _showAddContactDialog() {
     showModalBottomSheet(
       context: context,
@@ -250,11 +240,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
         },
       ),
     );
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-}

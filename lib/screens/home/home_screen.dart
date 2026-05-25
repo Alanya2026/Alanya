@@ -12,6 +12,7 @@ import '../calls/calls_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
 import '../meetings/meets_screen.dart';
 import '../profile/profile_screen.dart';
+import '../status/statuses_screen.dart';
 import '../calls/incoming_call_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const ChatsScreen(),
     const CallsScreen(),
+    const StatusesScreen(),
     const MeetsScreen(),
     const ProfileScreen(),
   ];
@@ -190,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedItemColor: Colors.indigo,
           unselectedItemColor: Colors.grey.shade400,
           showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
+          type: BottomNavigationBarType.scrollable,
           elevation: 0,
           items: const [
             BottomNavigationBarItem(
@@ -202,6 +204,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(CupertinoIcons.phone),
               activeIcon: Icon(CupertinoIcons.phone_fill),
               label: 'Calls',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.flame),
+              activeIcon: Icon(CupertinoIcons.flame_fill),
+              label: 'Status',
             ),
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.video_camera),

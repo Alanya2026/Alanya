@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/add_contact_sheet.dart';
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
+import '../admin/admin_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -235,6 +236,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     );
                   }),
+                  if (!_isLoading && _user != null && _user!.typeCompte >= 1) ...[
+                    const Divider(height: 1),
+                    _buildMenuItem(Icons.admin_panel_settings, 'Dashboard Admin', () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                      );
+                    }),
+                  ],
                   const Divider(height: 1),
                   _buildMenuItem(Icons.logout, 'Déconnexion', _logout, isDestructive: true),
                 ],

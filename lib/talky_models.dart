@@ -14,6 +14,12 @@ class User {
   final int typeCompte;
   final bool isOnline;
   final String lastSeen;
+  // Champs admin (optionnels — peuplés uniquement par les endpoints admin)
+  final bool exclus;
+  final String? excludeAt;
+  final String? excludeReason;
+  final String? createdAt;
+  final String? paysLibelle;
 
   User({
     required this.alanyaID,
@@ -26,6 +32,11 @@ class User {
     required this.typeCompte,
     required this.isOnline,
     required this.lastSeen,
+    this.exclus = false,
+    this.excludeAt,
+    this.excludeReason,
+    this.createdAt,
+    this.paysLibelle,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -34,11 +45,16 @@ class User {
         pseudo: json['pseudo'] ?? '',
         alanyaPhone: json['alanyaPhone'] ?? '',
         email: json['email'] ?? '',
-        idPays: json['idPays'] ?? 1,
+        idPays: json['idPays'] ?? 10,
         avatarUrl: json['avatar_url'] ?? '',
         typeCompte: json['type_compte'] ?? 0,
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
         lastSeen: json['last_seen'] ?? '',
+        exclus: json['exclus'] == 1 || json['exclus'] == true,
+        excludeAt: json['exclude_at'],
+        excludeReason: json['exclude_reason'],
+        createdAt: json['created_at'],
+        paysLibelle: json['pays_libelle'],
       );
 
   Map<String, dynamic> toJson() => {
@@ -407,13 +423,17 @@ class MeetingParticipant {
 class Statut {
   final int id;
   final int alanyaID;
-  final int type; // 0=texte, 1=image, 2=vidéo
+  final int type; // 0=texte, 1=image, 2=vidéo, 3=audio
   final String? text;
   final String? mediaUrl;
+  final int? mediaDurationMs;
   final String? backgroundColor;
   final String createdAt;
   final String expiredAt;
   final int viewedBy;
+  final int likedBy;
+  final bool likedByMe;
+  final bool seenByMe;
   // Jointure users
   final String? nom;
   final String? pseudo;
@@ -426,10 +446,14 @@ class Statut {
     required this.type,
     this.text,
     this.mediaUrl,
+    this.mediaDurationMs,
     this.backgroundColor,
     required this.createdAt,
     required this.expiredAt,
     required this.viewedBy,
+    this.likedBy = 0,
+    this.likedByMe = false,
+    this.seenByMe = false,
     this.nom,
     this.pseudo,
     this.avatarUrl,
@@ -442,17 +466,94 @@ class Statut {
         type: json['type'] ?? 0,
         text: json['text'],
         mediaUrl: json['mediaUrl'],
+        mediaDurationMs: json['mediaDurationMs'],
         backgroundColor: json['backgroundColor'],
         createdAt: json['createdAt'] ?? '',
         expiredAt: json['expiredAt'] ?? '',
         viewedBy: json['viewedBy'] ?? 0,
+        likedBy: json['likedBy'] ?? 0,
+        likedByMe: json['likedByMe'] == 1 || json['likedByMe'] == true,
+        seenByMe: json['seenByMe'] == 1 || json['seenByMe'] == true,
         nom: json['nom'],
         pseudo: json['pseudo'],
         avatarUrl: json['avatar_url'],
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
       );
 
-  bool get isExpired => DateTime.now().isAfter(DateTime.tryParse(expiredAt) ?? DateTime.now());
+  bool get isExpired =>
+      DateTime.now().isAfter(DateTime.tryParse(expiredAt) ?? DateTime.now());
+
+  Statut copyWith({
+    int? viewedBy,
+    int? likedBy,
+    bool? likedByMe,
+    bool? seenByMe,
+  }) =>
+      Statut(
+        id: id,
+        alanyaID: alanyaID,
+        type: type,
+        text: text,
+        mediaUrl: mediaUrl,
+        mediaDurationMs: mediaDurationMs,
+        backgroundColor: backgroundColor,
+        createdAt: createdAt,
+        expiredAt: expiredAt,
+        viewedBy: viewedBy ?? this.viewedBy,
+        likedBy: likedBy ?? this.likedBy,
+        likedByMe: likedByMe ?? this.likedByMe,
+        seenByMe: seenByMe ?? this.seenByMe,
+        nom: nom,
+        pseudo: pseudo,
+        avatarUrl: avatarUrl,
+        isOnline: isOnline,
+      );
+}
+
+// ── STATUT_VIEW (qui a vu/liké un statut) ─────────────────────────
+
+class StatutView {
+  final int statutID;
+  final int alanyaID;
+  final String nom;
+  final String pseudo;
+  final String? avatarUrl;
+  final String seenAt;
+  final bool liked;
+  final String? likedAt;
+
+  StatutView({
+    required this.statutID,
+    required this.alanyaID,
+    required this.nom,
+    required this.pseudo,
+    this.avatarUrl,
+    required this.seenAt,
+    required this.liked,
+    this.likedAt,
+  });
+
+  factory StatutView.fromJson(Map<String, dynamic> json) => StatutView(
+        statutID: json['statutID'] ?? 0,
+        alanyaID: json['alanyaID'] ?? 0,
+        nom: json['nom'] ?? '',
+        pseudo: json['pseudo'] ?? '',
+        avatarUrl: json['avatar_url'],
+        seenAt: json['seenAt'] ?? '',
+        liked: json['liked'] == 1 || json['liked'] == true,
+        likedAt: json['likedAt'],
+      );
+
+  StatutView copyWith({bool? liked, String? likedAt}) => StatutView(
+        statutID: statutID,
+        alanyaID: alanyaID,
+        nom: nom,
+        pseudo: pseudo,
+        avatarUrl: avatarUrl,
+        seenAt: seenAt,
+        liked: liked ?? this.liked,
+        likedAt: likedAt ?? this.likedAt,
+      );
 }
 
 // ── PREFERRED CONTACT ────────────────────────────────────────────────
@@ -581,4 +682,11 @@ class SocketEvents {
   static const meetingStarted     = 'meeting:started';
   static const meetingEnded       = 'meeting:ended';
   static const meetingMessage     = 'meeting:message';
+
+  // Statuts (Backend → Flutter)
+  static const statusCreated  = 'status:created';
+  static const statusViewed   = 'status:viewed';
+  static const statusLiked    = 'status:liked';
+  static const statusUnliked  = 'status:unliked';
+  static const statusDeleted  = 'status:deleted';
 }

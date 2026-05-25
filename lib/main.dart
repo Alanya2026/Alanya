@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/status_provider.dart';
+import 'providers/admin_provider.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/meeting_service.dart';
@@ -48,6 +50,10 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
         //  ChatProvider : chats offline-first (drift) + présence temps réel
         ChangeNotifierProvider(create: (_) => ChatProvider(api: apiClient)),
+        //  StatusProvider : statuts/stories avec persistence offline
+        ChangeNotifierProvider(create: (_) => StatusProvider(api: apiClient)),
+        //  AdminProvider : dashboard admin avec pagination
+        ChangeNotifierProvider(create: (_) => AdminProvider(api: apiClient)),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -90,6 +96,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final statusProvider = Provider.of<StatusProvider>(context, listen: false);
+    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
     Future.microtask(
       () async {
         try {
@@ -102,6 +110,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
               await chatProvider.bind(myId);
             } catch (e) {
               debugPrint('[AuthWrapper] ChatProvider.bind échoué: $e');
+            }
+            
+            try {
+              await statusProvider.bind(myId);
+            } catch (e) {
+              debugPrint('[AuthWrapper] StatusProvider.bind échoué: $e');
+            }
+            
+            try {
+              await adminProvider.loadStats();
+            } catch (e) {
+              debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e');
             }
           }
           
