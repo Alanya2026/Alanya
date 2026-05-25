@@ -155,19 +155,40 @@ class _NewChatScreenState extends State<NewChatScreen> {
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                       )
-                    : ListView.separated(
-                        itemCount: _filteredUsers.length,
-                        separatorBuilder: (_, __) => const Divider(),
-                        itemBuilder: (_, idx) {
-                          final user = _filteredUsers[idx];
-                          return ListTile(
-                            title: Text(user.nom),
-                            subtitle: Text(user.alanyaPhone ?? ''),
-                            onTap: () {
-                              Navigator.pop(context, user);
-                            },
-                          );
-                        },
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                            child: Text(
+                              _searchController.text.trim().isEmpty
+                                  ? 'Contacts préférés'
+                                  : 'Résultats',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade600,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView.separated(
+                              itemCount: _filteredUsers.length,
+                              separatorBuilder: (_, __) => const Divider(),
+                              itemBuilder: (_, idx) {
+                                final user = _filteredUsers[idx];
+                                return ListTile(
+                                  title: Text(user.nom),
+                                  subtitle: Text(user.alanyaPhone),
+                                  onTap: () {
+                                    Navigator.pop(context, user);
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
           ),
         ],

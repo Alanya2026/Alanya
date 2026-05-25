@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -154,8 +155,22 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   }
 
   Future<void> _toggleLike() async {
-    await context.read<StatusProvider>().toggleLike(_current.id);
-    if (mounted) setState(() {});
+    HapticFeedback.lightImpact();
+    final provider = context.read<StatusProvider>();
+    final id = _current.id;
+    _setPaused(true);
+    // toggleLike applique l'optimistic update avant le await réseau,
+    // donc lancer le rebuild immédiatement reflète le nouvel état.
+    final future = provider.toggleLike(id);
+    setState(() {});
+    try {
+      await future;
+    } finally {
+      if (mounted) {
+        setState(() {});
+        _setPaused(false);
+      }
+    }
   }
 
   Future<void> _confirmDelete() async {
@@ -468,16 +483,22 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.transparent, Colors.black.withAlpha(180)],
+    return GestureDetector(
+      // Absorbe les taps dans la zone du footer pour éviter qu'ils
+      // déclenchent prev/next du viewer en dessous.
+      behavior: HitTestBehavior.opaque,
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.transparent, Colors.black.withAlpha(180)],
+          ),
         ),
+        child: isMine ? _mineFooter(context) : _otherFooter(context),
       ),
-      child: isMine ? _mineFooter(context) : _otherFooter(context),
     );
   }
 
