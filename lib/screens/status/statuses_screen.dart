@@ -139,7 +139,7 @@ class _StatusesScreenState extends State<StatusesScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'View (${s.viewedBy.length})',
+                              'View (${s.viewedBy})',
                               style: const TextStyle(fontSize: 10),
                             ),
                           ],

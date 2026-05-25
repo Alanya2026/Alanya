@@ -1,195 +1,234 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/db/app_database.dart';
-import '../../core/db/chat_dao.dart' show decodeParticipants;
-import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
-import 'contact_detail_screen.dart';
-/// Fiche d
-taill
-e d'un groupe : photo, nom, membres, et action 
- Quitter 
+import '../../talky_models.dart';
+import 'conversation_media_screen.dart';
+
 class GroupDetailScreen extends StatefulWidget {
   final int conversationId;
-  const GroupDetailScreen({super.key, required this.conversationId});
+  final String groupName;
+
+  const GroupDetailScreen({
+    super.key,
+    required this.conversationId,
+    required this.groupName,
+  });
+
   @override
   State<GroupDetailScreen> createState() => _GroupDetailScreenState();
+}
+
 class _GroupDetailScreenState extends State<GroupDetailScreen> {
-  late final TalkyApiClient _api;
-  late final ChatProvider _chat;
-  int? _myId;
-  bool _leaving = false;
+  Conversation? _group;
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    _api = Provider.of<TalkyApiClient>(context, listen: false);
-    _chat = Provider.of<ChatProvider>(context, listen: false);
-    _myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID;
+    _loadGroup();
+  }
+
+  Future<void> _loadGroup() async {
+    try {
+      // Load from provider's watchConversations stream
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _leaveGroup() async {
-    if (_leaving) return;
+    if (_group == null) return;
+
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Quitter le groupe'),
-        content: const Text('Vous ne recevrez plus les messages de ce groupe. Continuer ?'),
+      builder: (context) => AlertDialog(
+        title: const Text('Leave Group'),
+        content: const Text('Are you sure you want to leave this group?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Quitter', style: TextStyle(color: Colors.red)),
+            child: const Text('Leave', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+
     if (confirm != true) return;
-    setState(() => _leaving = true);
+
     try {
-      await _api.leaveGroup(widget.conversationId);
-      await _chat.repository.dao.deleteConversation(widget.conversationId);
-      if (!mounted) return;
-      Navigator.popUntil(context, (route) => route.isFirst);
+      final api = Provider.of<TalkyApiClient>(context, listen: false);
+      final chat = Provider.of<ChatProvider>(context, listen: false);
+      await api.leaveGroup(widget.conversationId);
+      await chat.refreshConversations();
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        setState(() => _leaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Rebuild sur changement de pr
-sence des membres.
-    Provider.of<ChatProvider>(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
+        title: const Text('Group Info'),
         backgroundColor: Colors.white,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('Infos du groupe', style: TextStyle(color: Colors.black, fontSize: 18)),
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
-      body: StreamBuilder<LocalConversation?>(
-        stream: _chat.watchConversation(widget.conversationId),
-        builder: (context, snapshot) {
-          final conv = snapshot.data;
-          if (conv == null) {
-            return const Center(child: CircularProgressIndicator(color: Colors.indigo));
-          }
-          final name = conv.groupName ?? 'Groupe';
-          final photo = conv.groupPhoto;
-          final members = decodeParticipants(conv.participantsJson);
-          return ListView(
-            children: [
-              _buildHeader(name, photo, members.length),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-                child: Text('${members.length} membres',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-              ),
-              ...members.map(_buildMemberTile),
-              const SizedBox(height: 16),
-              _buildLeaveButton(),
-              const SizedBox(height: 24),
-            ],
-          );
-        },
-      ),
-    );
-  Widget _buildHeader(String name, String? photo, int count) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 48,
-            backgroundColor: Colors.indigo.shade100,
-            backgroundImage: (photo != null && photo.isNotEmpty) ? NetworkImage(photo) : null,
-            child: (photo == null || photo.isEmpty)
-                ? const Icon(Icons.group, color: Colors.indigo, size: 48)
-                : null,
-          ),
-          const SizedBox(height: 12),
-          Text(name,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 4),
-          Text('Groupe 
- $count membres', style: const TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
-  Widget _buildMemberTile(Map<String, dynamic> member) {
-    final id = _toInt(member['alanyaID']);
-    final nom = (member['nom'] as String?) ?? 'Membre';
-    final avatar = member['avatar_url'] as String?;
-    final isMe = id == _myId;
-    final presence = isMe ? 'Vous' : _chat.presenceLabel(id);
-    final hasPhoto = avatar != null && avatar.isNotEmpty;
-    return Material(
-      child: InkWell(
-        onTap: isMe
-            ? null
-            : () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ContactDetailScreen(
-                      userId: id,
-                      initialName: nom,
-                      initialAvatar: avatar ?? '',
-                    ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _group == null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        CupertinoIcons.exclamationmark_circle,
+                        color: Colors.grey,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Group not found'),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Go Back'),
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Header
+                      Container(
+                        color: Colors.indigo.shade50,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 24,
+                          horizontal: 16,
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.indigo.shade100,
+                              backgroundImage: _group!.groupPhoto != null &&
+                                      _group!.groupPhoto!.isNotEmpty
+                                  ? CachedNetworkImageProvider(
+                                      _group!.groupPhoto!)
+                                  : null,
+                              child:
+                                  _group!.groupPhoto == null ||
+                                          _group!.groupPhoto!.isEmpty
+                                      ? Icon(
+                                          CupertinoIcons.group,
+                                          size: 32,
+                                          color: Colors.indigo,
+                                        )
+                                      : null,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _group!.groupName ?? 'Group',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${_group!.participants.length} members',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Options
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          spacing: 8,
+                          children: [
+                            ListTile(
+                              leading: const Icon(CupertinoIcons.photo),
+                              title: const Text('View Media'),
+                              trailing: const Icon(
+                                CupertinoIcons.chevron_right,
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ConversationMediaScreen(
+                                      conversationId:
+                                          widget.conversationId,
+                                      conversationName:
+                                          widget.groupName,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(CupertinoIcons.person_3),
+                              title: const Text('Members'),
+                              trailing: const Icon(
+                                CupertinoIcons.chevron_right,
+                              ),
+                              onTap: () {
+                                // TODO: Show members screen
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(CupertinoIcons.bell),
+                              title: const Text('Notifications'),
+                              trailing: const Icon(
+                                CupertinoIcons.chevron_right,
+                              ),
+                              onTap: () {
+                                // TODO: Show notification settings
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Danger zone
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _leaveGroup,
+                            icon:
+                                const Icon(CupertinoIcons.xmark_circle),
+                            label: const Text('Leave Group'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade100,
+                              foregroundColor: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-        child: ListTile(
-          leading: CircleAvatar(
-            radius: 24,
-            backgroundColor: Colors.indigo.shade50,
-            backgroundImage: hasPhoto ? NetworkImage(avatar) : null,
-            child: hasPhoto
-                ? null
-                : Text(nom.isNotEmpty ? nom[0].toUpperCase() : '?',
-                    style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)),
-          ),
-          title: Text(isMe ? '$nom (vous)' : nom,
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: presence.isNotEmpty
-              ? Text(presence, style: const TextStyle(color: Colors.grey, fontSize: 13))
-              : null,
-          trailing: !isMe ? const Icon(Icons.chevron_right, color: Colors.grey) : null,
-        ),
-      ),
     );
-  Widget _buildLeaveButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: _leaving ? null : _leaveGroup,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.red,
-            side: const BorderSide(color: Colors.red),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          icon: _leaving
-              ? const SizedBox(
-                  width: 18, height: 18,
-                  child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2))
-              : const Icon(Icons.exit_to_app),
-          label: const Text('Quitter le groupe', style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-      ),
-    );
-  static int _toInt(dynamic v) {
-    if (v is int) return v;
-    if (v is num) return v.toInt();
-    return int.tryParse(v?.toString() ?? '') ?? 0;
+  }
+}

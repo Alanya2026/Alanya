@@ -66,7 +66,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     setState(() => _isSearching = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.searchUsers(query: query);
+      final data = await apiClient.searchUsers(query);
       if (mounted) {
         setState(() {
           _filteredUsers = (data as List)
@@ -125,7 +125,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
             child: Row(
               children: [
                 _buildActionTile(
-                  CupertinoIcons.group_add,
+                  CupertinoIcons.plus_circle,
                   'New Group',
                   () {
                     Navigator.push(

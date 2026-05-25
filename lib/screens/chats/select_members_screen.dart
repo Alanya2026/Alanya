@@ -66,7 +66,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
     setState(() => _isSearching = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.searchUsers(query: query);
+      final data = await apiClient.searchUsers(query);
       if (mounted) {
         setState(() {
           _filteredUsers = (data as List)
