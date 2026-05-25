@@ -169,6 +169,23 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                             onChanged: (_) => _toggle(user),
                             title: Text(user.nom),
                             subtitle: Text(user.alanyaPhone ?? ''),
+                            secondary: CircleAvatar(
+                              backgroundColor: Colors.indigo.shade50,
+                              backgroundImage: user.avatarUrl.isNotEmpty
+                                  ? NetworkImage(user.avatarUrl)
+                                  : null,
+                              child: user.avatarUrl.isEmpty
+                                  ? Text(
+                                      user.nom.isNotEmpty
+                                          ? user.nom[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        color: Colors.indigo,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
+                            ),
                           );
                         },
                       ),

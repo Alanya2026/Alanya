@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../talky_models.dart';
+import '../../core/utils/avatar_utils.dart';
 import 'admin_user_detail_screen.dart';
 
 enum _UserFilter { all, online, banned }
@@ -537,10 +538,10 @@ class _UserTile extends StatelessWidget {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: const Color(0xFFEDEDED),
-                  backgroundImage: user.avatarUrl.isNotEmpty
+                  backgroundImage: hasValidAvatarUrl(user.avatarUrl)
                       ? NetworkImage(user.avatarUrl)
                       : null,
-                  child: user.avatarUrl.isEmpty
+                  child: !hasValidAvatarUrl(user.avatarUrl)
                       ? Text(
                           user.nom.isNotEmpty
                               ? user.nom[0].toUpperCase()

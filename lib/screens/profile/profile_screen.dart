@@ -163,16 +163,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   CircleAvatar(
                     radius: 60,
                     backgroundColor: Colors.indigo.shade100,
-                    child: _isLoading
-                        ? const CircularProgressIndicator()
-                        : Text(
-                            _user?.nom.substring(0, 1).toUpperCase() ?? 'U',
-                            style: const TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.indigo,
-                            ),
-                          ),
+                    backgroundImage: (_user?.avatarUrl != null &&
+                            _user!.avatarUrl.isNotEmpty)
+                        ? NetworkImage(_user!.avatarUrl)
+                        : null,
+                    child: (_user?.avatarUrl == null ||
+                            _user!.avatarUrl.isEmpty)
+                        ? _isLoading
+                            ? const CircularProgressIndicator()
+                            : Text(
+                                _user?.nom.substring(0, 1).toUpperCase() ??
+                                    'U',
+                                style: const TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.indigo,
+                                ),
+                              )
+                        : null,
                   ),
                   Positioned(
                     bottom: 0,

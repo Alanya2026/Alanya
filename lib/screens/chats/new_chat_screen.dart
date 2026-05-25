@@ -179,6 +179,23 @@ class _NewChatScreenState extends State<NewChatScreen> {
                               itemBuilder: (_, idx) {
                                 final user = _filteredUsers[idx];
                                 return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: Colors.indigo.shade50,
+                                    backgroundImage: user.avatarUrl.isNotEmpty
+                                        ? NetworkImage(user.avatarUrl)
+                                        : null,
+                                    child: user.avatarUrl.isEmpty
+                                        ? Text(
+                                            user.nom.isNotEmpty
+                                                ? user.nom[0].toUpperCase()
+                                                : '?',
+                                            style: const TextStyle(
+                                              color: Colors.indigo,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
                                   title: Text(user.nom),
                                   subtitle: Text(user.alanyaPhone),
                                   onTap: () {

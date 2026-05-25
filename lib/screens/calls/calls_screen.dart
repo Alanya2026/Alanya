@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
+import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
+import '../chats/contact_detail_screen.dart';
 import 'ongoing_call_screen.dart';
 import 'keypad_screen.dart';
 import 'select_contact_screen.dart';
@@ -147,14 +149,13 @@ class _CallsScreenState extends State<CallsScreen> {
                         leading: CircleAvatar(
                           radius: 28,
                           backgroundColor: Colors.indigo.shade50,
-                          backgroundImage: (otherUser?.avatarUrl != null &&
-                                  otherUser!.avatarUrl.isNotEmpty)
-                              ? NetworkImage(otherUser.avatarUrl)
+                          backgroundImage: otherUser != null
+                              ? avatarImage(otherUser.avatarUrl)
                               : null,
-                          child: (otherUser?.avatarUrl == null ||
-                                  otherUser!.avatarUrl.isEmpty)
+                          child: otherUser == null ||
+                                  !hasValidAvatarUrl(otherUser.avatarUrl)
                               ? Text(
-                                  (otherUser?.nom.isNotEmpty == true)
+                                  otherUser?.nom.isNotEmpty == true
                                       ? otherUser!.nom[0].toUpperCase()
                                       : '?',
                                   style: const TextStyle(
@@ -201,6 +202,18 @@ class _CallsScreenState extends State<CallsScreen> {
                           ),
                           onPressed: () => _callFromHistory(call, isVideo),
                         ),
+                        onTap: otherUser == null
+                            ? null
+                            : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ContactDetailScreen(
+                                      userId: otherUser.alanyaID,
+                                      initialName: otherUser.nom,
+                                      initialAvatar: otherUser.avatarUrl,
+                                    ),
+                                  ),
+                                ),
                       );
                     },
                   ),

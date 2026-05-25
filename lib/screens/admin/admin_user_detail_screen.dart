@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/utils/avatar_utils.dart';
 
 class AdminUserDetailScreen extends StatefulWidget {
   final int userId;
@@ -139,10 +140,10 @@ class _ProfileCard extends StatelessWidget {
           CircleAvatar(
             radius: 56,
             backgroundColor: const Color(0xFFCBD0E8),
-            backgroundImage: user.avatarUrl.isNotEmpty
+            backgroundImage: hasValidAvatarUrl(user.avatarUrl)
                 ? NetworkImage(user.avatarUrl)
                 : null,
-            child: user.avatarUrl.isEmpty
+            child: !hasValidAvatarUrl(user.avatarUrl)
                 ? Text(
                     user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?',
                     style: const TextStyle(

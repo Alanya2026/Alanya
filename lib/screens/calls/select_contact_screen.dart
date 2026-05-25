@@ -149,10 +149,18 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                             leading: CircleAvatar(
                               radius: 28,
                               backgroundColor: Colors.indigo.shade50,
-                              child: Text(
-                                user.nom[0].toUpperCase(),
-                                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
-                              ),
+                              backgroundImage: user.avatarUrl.isNotEmpty
+                                  ? NetworkImage(user.avatarUrl)
+                                  : null,
+                              child: user.avatarUrl.isEmpty
+                                  ? Text(
+                                      user.nom[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.indigo,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             title: Text(
                               user.nom,

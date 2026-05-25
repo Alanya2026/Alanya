@@ -76,14 +76,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         CircleAvatar(
                           radius: 60,
                           backgroundColor: Colors.indigo.shade100,
-                          child: Text(
-                            _user?.nom.substring(0, 1).toUpperCase() ?? 'U',
-                            style: const TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.indigo,
-                            ),
-                          ),
+                          backgroundImage: (_user?.avatarUrl != null &&
+                                  _user!.avatarUrl.isNotEmpty)
+                              ? NetworkImage(_user!.avatarUrl)
+                              : null,
+                          child: (_user?.avatarUrl == null ||
+                                  _user!.avatarUrl.isEmpty)
+                              ? Text(
+                                  _user?.nom.substring(0, 1).toUpperCase() ??
+                                      'U',
+                                  style: const TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.indigo,
+                                  ),
+                                )
+                              : null,
                         ),
                         Positioned(
                           bottom: 0,

@@ -77,7 +77,14 @@ class _StatusViewsScreenState extends State<StatusViewsScreen>
                         final v = viewed[idx];
                         return ListTile(
                           leading: CircleAvatar(
-                            child: Text(v.nom.substring(0, 1).toUpperCase()),
+                            backgroundImage: (v.avatarUrl != null &&
+                                    v.avatarUrl!.isNotEmpty)
+                                ? NetworkImage(v.avatarUrl!)
+                                : null,
+                            child: (v.avatarUrl == null ||
+                                    v.avatarUrl!.isEmpty)
+                                ? Text(v.nom.substring(0, 1).toUpperCase())
+                                : null,
                           ),
                           title: Text(v.nom),
                           subtitle: Text(v.pseudo),
@@ -99,7 +106,14 @@ class _StatusViewsScreenState extends State<StatusViewsScreen>
                         final v = liked[idx];
                         return ListTile(
                           leading: CircleAvatar(
-                            child: Text(v.nom.substring(0, 1).toUpperCase()),
+                            backgroundImage: (v.avatarUrl != null &&
+                                    v.avatarUrl!.isNotEmpty)
+                                ? NetworkImage(v.avatarUrl!)
+                                : null,
+                            child: (v.avatarUrl == null ||
+                                    v.avatarUrl!.isEmpty)
+                                ? Text(v.nom.substring(0, 1).toUpperCase())
+                                : null,
                           ),
                           title: Text(v.nom),
                           subtitle: Text(v.pseudo),
