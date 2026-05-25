@@ -69,7 +69,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   // Stats section
                   Text(
-                    'Statistics',
+                    'Statistiques',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -83,25 +83,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     crossAxisSpacing: 12,
                     children: [
                       _StatCard(
-                        label: 'Total Users',
+                        label: 'Total utilisateurs',
                         value: '${provider.stats.totalUsers}',
                         icon: CupertinoIcons.person_2_fill,
                         color: Colors.blue,
                       ),
                       _StatCard(
-                        label: 'Online',
+                        label: 'En ligne',
                         value: '${provider.stats.onlineUsers}',
                         icon: CupertinoIcons.circle_fill,
                         color: Colors.green,
                       ),
                       _StatCard(
-                        label: 'Banned',
+                        label: 'Bannis',
                         value: '${provider.stats.bannedUsers}',
                         icon: CupertinoIcons.nosign,
                         color: Colors.red,
                       ),
                       _StatCard(
-                        label: 'Messages (7d)',
+                        label: 'Messages (7j)',
                         value: '${provider.stats.messagesPeriod}',
                         icon: CupertinoIcons.chat_bubble_fill,
                         color: Colors.cyan,
@@ -112,7 +112,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                   // Search section
                   Text(
-                    'Users',
+                    'Utilisateurs',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -121,7 +121,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   TextField(
                     controller: _searchCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Search users...',
+                      hintText: 'Rechercher un utilisateur...',
                       prefixIcon: const Icon(CupertinoIcons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -147,12 +147,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: 16),
 
                   // Users list
+                  if (provider.error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        provider.error!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                      ),
+                    ),
                   if (provider.users.isEmpty && !provider.isLoadingUsers)
-                    const Center(child: Text('No users found'))
+                    const Center(child: Text('Aucun utilisateur trouvé'))
                   else if (provider.isLoadingUsers)
                     const Padding(
                       padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
+                      child: Center(child: CircularProgressIndicator()),
                     )
                   else
                     ListView.separated(
@@ -163,8 +171,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       itemBuilder: (ctx, idx) {
                         final user = provider.users[idx];
                         return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.indigo.shade100,
+                            backgroundImage: user.avatarUrl.isNotEmpty
+                                ? NetworkImage(user.avatarUrl)
+                                : null,
+                            child: user.avatarUrl.isEmpty
+                                ? Text(
+                                    user.nom.isNotEmpty
+                                        ? user.nom[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(color: Colors.indigo),
+                                  )
+                                : null,
+                          ),
                           title: Text(user.nom),
-                          subtitle: Text(user.alanyaPhone ?? ''),
+                          subtitle: Text(user.alanyaPhone),
                           trailing: _UserActions(
                             user: user,
                             provider: provider,
@@ -184,37 +206,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   const SizedBox(height: 16),
 
-                  // Pagination
-                  if (provider.pageCount > 1)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: provider.canPreviousPage
-                              ? () {
-                                  provider.previousPage();
-                                  _refresh();
-                                }
-                              : null,
-                          icon: const Icon(CupertinoIcons.chevron_left),
-                          label: const Text('Previous'),
+                  // Load more
+                  if (provider.users.length < provider.totalUsers &&
+                      !provider.isLoadingUsers)
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () => provider.loadUsers(
+                          search: _searchCtrl.text,
+                          page: provider.page + 1,
+                          limit: provider.limit,
                         ),
-                        const SizedBox(width: 16),
-                        Text(
-                          'Page ${provider.currentPage} of ${provider.pageCount}',
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton.icon(
-                          onPressed: provider.canNextPage
-                              ? () {
-                                  provider.nextPage();
-                                  _refresh();
-                                }
-                              : null,
-                          icon: const Icon(CupertinoIcons.chevron_right),
-                          label: const Text('Next'),
-                        ),
-                      ],
+                        icon: const Icon(CupertinoIcons.arrow_down_circle),
+                        label: const Text('Charger plus'),
+                      ),
                     ),
                 ],
               ),
@@ -263,6 +267,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ],
@@ -281,42 +286,51 @@ class _UserActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton(
       itemBuilder: (context) => [
-        if (user.exclus == 0)
+        if (!user.exclus)
           PopupMenuItem(
-            child: const Text('Ban User'),
+            child: const Text('Bannir'),
             onTap: () async {
-              await provider.toggleBan(user.alanyaID, ban: true);
+              await provider.toggleBan(user);
             },
           )
         else
           PopupMenuItem(
-            child: const Text('Unban User'),
+            child: const Text('Débannir'),
             onTap: () async {
-              await provider.toggleBan(user.alanyaID, ban: false);
+              await provider.toggleBan(user);
+            },
+          ),
+        if (user.typeCompte < 1)
+          PopupMenuItem(
+            child: const Text('Rendre admin'),
+            onTap: () async {
+              await provider.setAccountType(user.alanyaID, 1);
+            },
+          )
+        else
+          PopupMenuItem(
+            child: const Text('Rétrograder'),
+            onTap: () async {
+              await provider.setAccountType(user.alanyaID, 0);
             },
           ),
         PopupMenuItem(
-          child: const Text('Make Admin'),
-          onTap: () async {
-            await provider.makeAdmin(user.alanyaID);
-          },
-        ),
-        PopupMenuItem(
-          child: const Text('Delete User'),
+          child: const Text('Supprimer'),
           onTap: () async {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Text('Delete User?'),
-                content: const Text('This action cannot be undone.'),
+                title: const Text('Supprimer l\'utilisateur ?'),
+                content: const Text('Cette action est irréversible.'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Cancel'),
+                    child: const Text('Annuler'),
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Delete'),
+                    child: const Text('Supprimer',
+                        style: TextStyle(color: Colors.red)),
                   ),
                 ],
               ),

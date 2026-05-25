@@ -56,17 +56,17 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       if (tab == 0 && _textCtrl.text.isNotEmpty) {
         // Text status
         await provider.createText(
-          _textCtrl.text,
-          backgroundColor: _bgColor.value.toRadixString(16),
+          text: _textCtrl.text,
+          backgroundColor: _bgColor.value.toRadixString(16).padLeft(8, '0'),
         );
         if (mounted) Navigator.pop(context);
       } else if (tab == 1 && _selectedImage != null) {
         // Image status
-        await provider.createImage(_selectedImage!);
+        await provider.createMedia(file: _selectedImage!, type: 1);
         if (mounted) Navigator.pop(context);
       } else if (tab == 2 && _selectedVideo != null) {
         // Video status
-        await provider.createVideo(_selectedVideo!);
+        await provider.createMedia(file: _selectedVideo!, type: 2);
         if (mounted) Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(

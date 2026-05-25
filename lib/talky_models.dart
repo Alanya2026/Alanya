@@ -71,6 +71,28 @@ class User {
       };
 }
 
+// ── PAYS ─────────────────────────────────────────────────────────────
+// Table: pays
+// PK: idPays | libelle | prefix
+
+class Pays {
+  final int idPays;
+  final String libelle;
+  final String prefix;
+
+  const Pays({
+    required this.idPays,
+    required this.libelle,
+    required this.prefix,
+  });
+
+  factory Pays.fromJson(Map<String, dynamic> json) => Pays(
+        idPays: json['idPays'] ?? 0,
+        libelle: json['libelle'] ?? '',
+        prefix: json['prefix'] ?? '',
+      );
+}
+
 // ── MESSAGE ──────────────────────────────────────────────────────────
 // Table: message
 // PK: msgID | senderID | conversationID | content | type | status

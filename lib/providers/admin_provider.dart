@@ -10,7 +10,7 @@ class AdminStats {
   final int callsPeriod;
   final int statusesPeriod;
 
-  AdminStats({
+  const AdminStats({
     this.totalUsers = 0,
     this.onlineUsers = 0,
     this.bannedUsers = 0,
@@ -19,133 +19,159 @@ class AdminStats {
     this.statusesPeriod = 0,
   });
 
-  factory AdminStats.fromJson(Map<String, dynamic> json) {
-    return AdminStats(
-      totalUsers: json['totalUsers'] as int? ?? 0,
-      onlineUsers: json['onlineUsers'] as int? ?? 0,
-      bannedUsers: json['bannedUsers'] as int? ?? 0,
-      messagesPeriod: json['messages_7d'] as int? ?? 0,
-      callsPeriod: json['calls_7d'] as int? ?? 0,
-      statusesPeriod: json['statuses_7d'] as int? ?? 0,
-    );
-  }
+  factory AdminStats.fromCounters(Map<String, dynamic> json) => AdminStats(
+        totalUsers: _i(json['totalUsers']),
+        onlineUsers: _i(json['onlineUsers']),
+        bannedUsers: _i(json['bannedUsers']),
+        messagesPeriod: _i(json['messagesPeriod']),
+        callsPeriod: _i(json['callsPeriod']),
+        statusesPeriod: _i(json['statusesPeriod']),
+      );
+
+  static int _i(dynamic v) => v is int ? v : (v is num ? v.toInt() : 0);
 }
 
 class AdminProvider extends ChangeNotifier {
-  final TalkyApiClient api;
+  final TalkyApiClient _api;
 
-  AdminProvider({required this.api});
-
-  AdminStats _stats = AdminStats();
   List<User> _users = [];
+  int _totalUsers = 0;
   int _page = 1;
   int _limit = 20;
-  int _totalUsers = 0;
-  bool _isLoadingStats = false;
   bool _isLoadingUsers = false;
   String _searchQuery = '';
 
-  AdminStats get stats => _stats;
+  AdminStats _stats = const AdminStats();
+  bool _isLoadingStats = false;
+  String? _error;
+
+  AdminProvider({required TalkyApiClient api}) : _api = api;
+
   List<User> get users => _users;
-  int get currentPage => _page;
-  int get pageCount => (_totalUsers / _limit).ceil();
-  bool get isLoadingStats => _isLoadingStats;
+  int get totalUsers => _totalUsers;
+  int get page => _page;
+  int get limit => _limit;
   bool get isLoadingUsers => _isLoadingUsers;
-  bool get canNextPage => _page < pageCount;
-  bool get canPreviousPage => _page > 1;
-
-  Future<void> loadStats() async {
-    try {
-      _isLoadingStats = true;
-      notifyListeners();
-
-      final data = await api.adminGetStats();
-      _stats = AdminStats.fromJson(data);
-
-      _isLoadingStats = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoadingStats = false;
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  Future<void> loadUsers({String? search, int? page, int? limit}) async {
-    try {
-      _isLoadingUsers = true;
-      notifyListeners();
-
-      final res = await api.adminGetUsers(
-        search: search,
-        page: page ?? _page,
-        limit: limit ?? _limit,
-      );
-
-      _users = (res['items'] as List)
-          .map((json) => User.fromJson(json as Map<String, dynamic>))
-          .toList();
-      _totalUsers = res['total'] as int? ?? 0;
-
-      _isLoadingUsers = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoadingUsers = false;
-      notifyListeners();
-      rethrow;
-    }
-  }
+  bool get isLoadingStats => _isLoadingStats;
+  AdminStats get stats => _stats;
+  String get searchQuery => _searchQuery;
+  String? get error => _error;
 
   void setSearchQuery(String query) {
     _searchQuery = query;
+    notifyListeners();
   }
 
-  Future<void> toggleBan(int userId, {required bool ban}) async {
+  Future<void> loadUsers({
+    String? search,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    _isLoadingUsers = true;
+    _error = null;
+    _page = page;
+    _limit = limit;
+    notifyListeners();
     try {
-      if (ban) {
-        await api.adminBanUser(userId);
-      } else {
-        await api.adminUnbanUser(userId);
-      }
-      await loadUsers();
+      final res = await _api.adminGetUsers(
+        search: search ?? _searchQuery,
+        page: page,
+        limit: limit,
+      );
+      final items = (res['items'] as List? ?? []);
+      _users = items
+          .map((e) => User.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      _totalUsers = (res['total'] as num?)?.toInt() ?? _users.length;
     } catch (e) {
-      rethrow;
+      _error = 'Erreur chargement utilisateurs: $e';
+      debugPrint('[AdminProvider] loadUsers error: $e');
+    } finally {
+      _isLoadingUsers = false;
+      notifyListeners();
     }
   }
 
-  Future<void> makeAdmin(int userId) async {
+  Future<void> loadStats() async {
+    _isLoadingStats = true;
+    notifyListeners();
     try {
-      await api.adminSetAccountType(userId, typeCompte: 1);
-      await loadUsers();
+      final raw = await _api.adminGetStats();
+      final counters = Map<String, dynamic>.from(raw['counters'] ?? {});
+      _stats = AdminStats.fromCounters(counters);
     } catch (e) {
-      rethrow;
+      debugPrint('[AdminProvider] loadStats error: $e');
+    } finally {
+      _isLoadingStats = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleBan(User user, {String? reason}) async {
+    try {
+      if (user.exclus) {
+        await _api.adminUnbanUser(user.alanyaID);
+      } else {
+        await _api.adminBanUser(user.alanyaID, reason: reason);
+      }
+      await loadUsers(search: _searchQuery, page: _page, limit: _limit);
+    } catch (e) {
+      _error = 'Erreur ban/unban: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> setAccountType(int userId, int typeCompte) async {
+    try {
+      await _api.adminSetAccountType(userId, typeCompte: typeCompte);
+      await loadUsers(search: _searchQuery, page: _page, limit: _limit);
+    } catch (e) {
+      _error = 'Erreur changement de rôle: $e';
+      notifyListeners();
     }
   }
 
   Future<void> deleteUser(int userId) async {
     try {
-      await api.adminDeleteUser(userId);
-      await loadUsers();
+      await _api.adminDeleteUser(userId);
+      _users.removeWhere((u) => u.alanyaID == userId);
+      _totalUsers = (_totalUsers - 1).clamp(0, 1 << 30);
+      notifyListeners();
     } catch (e) {
-      rethrow;
+      _error = 'Erreur suppression: $e';
+      notifyListeners();
     }
   }
 
-  void nextPage() {
-    if (canNextPage) {
-      _page++;
-    }
+  void updatePresence(int userId, bool online) {
+    final idx = _users.indexWhere((u) => u.alanyaID == userId);
+    if (idx == -1) return;
+    final u = _users[idx];
+    _users[idx] = User(
+      alanyaID: u.alanyaID,
+      nom: u.nom,
+      pseudo: u.pseudo,
+      alanyaPhone: u.alanyaPhone,
+      email: u.email,
+      idPays: u.idPays,
+      avatarUrl: u.avatarUrl,
+      typeCompte: u.typeCompte,
+      isOnline: online,
+      lastSeen: u.lastSeen,
+      exclus: u.exclus,
+      excludeAt: u.excludeAt,
+      excludeReason: u.excludeReason,
+      createdAt: u.createdAt,
+      paysLibelle: u.paysLibelle,
+    );
+    notifyListeners();
   }
 
-  void previousPage() {
-    if (canPreviousPage) {
-      _page--;
-    }
+  Future<User> getUserById(int userId) async {
+    final data = await _api.adminGetUserById(userId);
+    return User.fromJson(Map<String, dynamic>.from(data));
   }
 
-  void goToPage(int page) {
-    if (page > 0 && page <= pageCount) {
-      _page = page;
-    }
-  }
+  static bool isAdmin(User? user) => (user?.typeCompte ?? 0) >= 1;
+  static bool isSuperAdmin(User? user) => (user?.typeCompte ?? 0) >= 2;
 }

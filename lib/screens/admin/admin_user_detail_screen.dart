@@ -24,8 +24,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
   }
 
   Future<User> _loadUser(AdminProvider provider) async {
-    final data = await provider.api.adminGetUserById(widget.userId);
-    return User.fromJson(data);
+    return provider.getUserById(widget.userId);
   }
 
   @override
@@ -85,7 +84,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  user.alanyaPhone ?? 'N/A',
+                                  user.alanyaPhone,
                                   style: TextStyle(color: Colors.grey.shade600),
                                 ),
                               ],
@@ -95,10 +94,10 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                       _InfoRow(label: 'ID', value: '${user.alanyaID}'),
-                      _InfoRow(label: 'Email', value: user.email ?? 'N/A'),
+                      _InfoRow(label: 'Email', value: user.email),
                       _InfoRow(
-                        label: 'Status',
-                        value: user.exclus == 0 ? 'Active' : 'Banned',
+                        label: 'Statut',
+                        value: user.exclus ? 'Banni' : 'Actif',
                       ),
                       _InfoRow(
                         label: 'Type',
@@ -122,16 +121,16 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              if (user.exclus == 0)
+              if (!user.exclus)
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await provider.toggleBan(user.alanyaID, ban: true);
+                      await provider.toggleBan(user);
                       if (mounted) Navigator.pop(context);
                     },
                     icon: const Icon(CupertinoIcons.nosign),
-                    label: const Text('Ban User'),
+                    label: const Text('Bannir'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
@@ -143,11 +142,11 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await provider.toggleBan(user.alanyaID, ban: false);
+                      await provider.toggleBan(user);
                       if (mounted) Navigator.pop(context);
                     },
                     icon: const Icon(CupertinoIcons.checkmark_circle),
-                    label: const Text('Unban User'),
+                    label: const Text('Débannir'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -160,13 +159,29 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await provider.makeAdmin(user.alanyaID);
+                      await provider.setAccountType(user.alanyaID, 1);
                       if (mounted) Navigator.pop(context);
                     },
                     icon: const Icon(CupertinoIcons.shield_fill),
-                    label: const Text('Make Admin'),
+                    label: const Text('Rendre admin'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await provider.setAccountType(user.alanyaID, 0);
+                      if (mounted) Navigator.pop(context);
+                    },
+                    icon: const Icon(CupertinoIcons.shield_slash_fill),
+                    label: const Text('Rétrograder'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
                     ),
                   ),

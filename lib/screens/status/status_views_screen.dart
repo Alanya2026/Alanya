@@ -61,8 +61,8 @@ class _StatusViewsScreenState extends State<StatusViewsScreen>
           }
 
           final views = snapshot.data!;
-          final viewed = views.where((v) => v.liked == 0).toList();
-          final liked = views.where((v) => v.liked != 0).toList();
+          final viewed = views.where((v) => !v.liked).toList();
+          final liked = views.where((v) => v.liked).toList();
 
           return TabBarView(
             controller: _tabCtrl,
