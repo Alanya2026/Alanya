@@ -1,246 +1,211 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import '../../widgets/add_contact_sheet.dart';
-import 'chat_detail_screen.dart';
+import '../../providers/auth_provider.dart';
 import 'select_members_screen.dart';
+
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
+
   @override
   State<NewChatScreen> createState() => _NewChatScreenState();
+}
+
 class _NewChatScreenState extends State<NewChatScreen> {
-  List<User> _preferredContacts = [];
+  final _searchController = TextEditingController();
+  List<User> _contacts = [];
   List<User> _filteredUsers = [];
-  bool _isLoading = true;
+  bool _isLoading = false;
   bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _loadContacts();
     _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadContacts() async {
     setState(() => _isLoading = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getContacts();
-      final users = data.map((item) {
-        if (item is User) return item;
-        return User.fromJson(item as Map<String, dynamic>);
-      }).toList();
       setState(() {
-        _preferredContacts = users;
-        _filteredUsers = users;
+        _contacts = (data as List)
+            .map((json) => User.fromJson(json as Map<String, dynamic>))
+            .toList();
+        _filteredUsers = _contacts;
         _isLoading = false;
-        _isSearching = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
   void _onSearchChanged() {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
       setState(() {
-        _filteredUsers = _preferredContacts;
+        _filteredUsers = _contacts;
         _isSearching = false;
       });
     } else {
       _searchAllUsers(query);
     }
+  }
+
   Future<void> _searchAllUsers(String query) async {
+    setState(() => _isSearching = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.searchUsers(query);
-      final users = data.map((item) {
-        if (item is User) return item;
-        return User.fromJson(item as Map<String, dynamic>);
-      }).toList();
-      
+      final data = await apiClient.searchUsers(query: query);
       if (mounted) {
         setState(() {
-          _filteredUsers = users;
-          _isSearching = true;
+          _filteredUsers = (data as List)
+              .map((json) => User.fromJson(json as Map<String, dynamic>))
+              .toList();
+          _isSearching = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _filteredUsers = [];
-          _isSearching = true;
-        });
-      }
+      if (mounted) setState(() => _isSearching = false);
     }
+  }
+
+  void _showAddContactDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Add Contact'),
+        content: const Text('Feature coming soon'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.indigo,
+        title: const Text('New Chat'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'New Chat',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
       ),
       body: Column(
         children: [
-          Container(
+          Padding(
             padding: const EdgeInsets.all(16),
-            color: Colors.indigo,
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search names or numbers...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                hintText: 'Search contacts...',
+                prefixIcon: const Icon(CupertinoIcons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                _buildActionTile(
+                  CupertinoIcons.group_add,
+                  'New Group',
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SelectMembersScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
+                _buildActionTile(
+                  CupertinoIcons.person_add,
+                  'Add Contact',
+                  _showAddContactDialog,
+                ),
+              ],
             ),
           ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView(
-                    children: [
-                      if (!_isSearching) ...[
-                        _buildActionTile(Icons.group_add, 'Nouveau groupe ', () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const SelectMembersScreen()),
-                          );
-                        }),
-                        _buildActionTile(Icons.person_add, 'Nouveau contact pr
-', _showAddContactDialog),
-                      ],
-                      if (_filteredUsers.isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 40),
-                            child: Text(
-                              _isSearching ? 'Aucun utilisateur trouv
-' : 'Pas de contacts pr
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        )
-                      else ...[
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20, top: 16, bottom: 8),
-                          child: Text(
-                            _isSearching ? 'Resultats de la recherche' : 'Contacts pr
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
-                            ),
-                          ),
+                : _filteredUsers.isEmpty
+                    ? Center(
+                        child: Text(
+                          _isSearching ? 'No users found' : 'No contacts',
+                          style: TextStyle(color: Colors.grey.shade600),
                         ),
-                        ..._filteredUsers.map((user) {
+                      )
+                    : ListView.separated(
+                        itemCount: _filteredUsers.length,
+                        separatorBuilder: (_, __) => const Divider(),
+                        itemBuilder: (_, idx) {
+                          final user = _filteredUsers[idx];
                           return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            leading: CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Colors.indigo.shade50,
-                              child: Text(
-                                user.nom[0].toUpperCase(),
-                                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            title: Text(
-                              user.nom,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user.alanyaPhone,
-                                  style: const TextStyle(color: Colors.grey, fontSize: 14),
-                                ),
-                                Text(
-                                  user.isOnline ? 'En ligne' : 'Hors ligne',
-                                  style: TextStyle(
-                                    color: user.isOnline ? Colors.green : Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            onTap: () async {
-                              final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-                              try {
-                                final conv = await apiClient.createConversation(
-                                  participantID: user.alanyaID,
-                                );
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ChatDetailScreen(
-                                        userName: user.nom,
-                                        conversationId: conv['conversID'],
-                                        userId: user.alanyaID,
-                                      ),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error: $e')),
-                                  );
-                                }
-                              }
+                            title: Text(user.nom),
+                            subtitle: Text(user.alanyaPhone ?? ''),
+                            onTap: () {
+                              Navigator.pop(context, user);
                             },
                           );
-                        }),
-                      ],
-                    ],
-                  ),
+                        },
+                      ),
           ),
         ],
       ),
     );
-  Widget _buildActionTile(IconData icon, String text, VoidCallback onTap) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundColor: Colors.grey.shade100,
-        child: Icon(icon, color: Colors.black87),
+  }
+
+  Widget _buildActionTile(
+    IconData icon,
+    String text,
+    VoidCallback onTap,
+  ) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.indigo.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.indigo.shade200),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.indigo),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.indigo,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      title: Text(
-        text,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
-      onTap: onTap,
     );
-  void _showAddContactDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => AddContactSheet(
-        existingIds: _preferredContacts.map((u) => u.alanyaID).toSet(),
-        onAdded: (user) {
-          setState(() => _preferredContacts.add(user));
-        },
-      ),
-    );
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  }
+}

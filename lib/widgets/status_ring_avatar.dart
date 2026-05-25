@@ -1,113 +1,133 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-/// Avatar circulaire encadr
- d'un anneau segment
- (un arc par statut).
-/// Arcs verts pour les statuts non-vus, gris pour les vus 
- style WhatsApp.
+import 'dart:math' as math;
+
 class StatusRingAvatar extends StatelessWidget {
-  final String? avatarUrl;
-  final String fallbackText;
-  final int totalCount;
+  final int authorId;
+  final bool hasUnseen;
   final int unseenCount;
-  final double size;
-  final double strokeWidth;
-  final double gapDeg;
-  final Widget? overlay;
+
   const StatusRingAvatar({
     super.key,
-    required this.avatarUrl,
-    required this.fallbackText,
-    required this.totalCount,
+    required this.authorId,
+    required this.hasUnseen,
     required this.unseenCount,
-    this.size = 56,
-    this.strokeWidth = 3,
-    this.gapDeg = 6,
-    this.overlay,
   });
+
   @override
   Widget build(BuildContext context) {
-    final inner = size - strokeWidth * 2 - 4;
-    final avatar = CircleAvatar(
-      radius: inner / 2,
-      backgroundColor: Colors.grey.shade300,
-      backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
-          ? NetworkImage(avatarUrl!)
-          : null,
-      child: (avatarUrl == null || avatarUrl!.isEmpty)
-          ? Text(
-              fallbackText.isNotEmpty ? fallbackText[0].toUpperCase() : '?',
-              style: TextStyle(
-                fontSize: inner * 0.4,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
-              ),
-            )
-          : null,
-    );
-    if (totalCount == 0) {
-      return SizedBox(width: size, height: size, child: Center(child: avatar));
-    }
-    return SizedBox(
-      width: size,
-      height: size,
+    return Container(
+      width: 75,
+      height: 75,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: hasUnseen
+            ? [
+                BoxShadow(
+                  color: Colors.green.withAlpha(100),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                ),
+              ]
+            : null,
+      ),
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // Ring painter for status indicators
           CustomPaint(
-            size: Size(size, size),
             painter: _RingPainter(
-              total: totalCount,
-              unseen: unseenCount.clamp(0, totalCount),
-              strokeWidth: strokeWidth,
-              gapDeg: gapDeg,
+              total: 3, // Example: 3 total statuses
+              unseen: unseenCount,
+              strokeWidth: 3,
+              gapDeg: 8,
+            ),
+            size: const Size(75, 75),
+          ),
+          // Avatar circle
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.indigo.shade100,
+            child: Text(
+              'U${authorId % 1000}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
             ),
           ),
-          avatar,
-          if (overlay != null)
-            Positioned(right: 0, bottom: 0, child: overlay!),
+          // Unseen badge
+          if (hasUnseen)
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Text(
+                  '●',
+                  style: TextStyle(color: Colors.white, fontSize: 10),
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+}
+
 class _RingPainter extends CustomPainter {
   final int total;
   final int unseen;
   final double strokeWidth;
   final double gapDeg;
-  _RingPainter({
+
+  const _RingPainter({
     required this.total,
     required this.unseen,
     required this.strokeWidth,
     required this.gapDeg,
   });
-  static const _unseenColor = Color(0xFF25D366); // vert WhatsApp
+
+  static const _unseenColor = Color(0xFF25D366);
   static const _seenColor = Color(0xFFBDBDBD);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromCircle(
-      center: Offset(size.width / 2, size.height / 2),
-      radius: (size.width - strokeWidth) / 2,
-    );
+    final radius = (size.width - strokeWidth) / 2;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
     final n = math.max(1, total);
     final gap = n == 1 ? 0.0 : gapDeg;
-    final arcDeg = (360 - gap * n) / n;
-    final arcRad = arcDeg * math.pi / 180;
-    final gapRad = gap * math.pi / 180;
-    // Start at -90
- (top) for natural feel
-    double start = -math.pi / 2 + gapRad / 2;
-    for (var i = 0; i < n; i++) {
-      final paint = Paint()
+    final arcAngle = (360 - (n * gap)) / n;
+
+    for (int i = 0; i < n; i++) {
+      final startAngle = (i * (arcAngle + gap)) - 90;
+      paint
         ..color = i < unseen ? _unseenColor : _seenColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
-      canvas.drawArc(rect, start, arcRad, false, paint);
-      start += arcRad + gapRad;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: radius),
+        _degToRad(startAngle),
+        _degToRad(arcAngle),
+        false,
+        paint,
+      );
     }
+  }
+
+  double _degToRad(double deg) => deg * (3.141592653589793 / 180);
+
   @override
-  bool shouldRepaint(covariant _RingPainter old) =>
+  bool shouldRepaint(_RingPainter old) =>
       old.total != total ||
       old.unseen != unseen ||
       old.strokeWidth != strokeWidth ||
       old.gapDeg != gapDeg;
+}

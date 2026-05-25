@@ -192,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedItemColor: Colors.indigo,
           unselectedItemColor: Colors.grey.shade400,
           showUnselectedLabels: true,
-          type: BottomNavigationBarType.scrollable,
+          type: BottomNavigationBarType.fixed,
           elevation: 0,
           items: const [
             BottomNavigationBarItem(

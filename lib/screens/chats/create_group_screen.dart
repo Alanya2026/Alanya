@@ -1,166 +1,224 @@
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import 'chat_detail_screen.dart';
-/// Derni
-tape de cr
-ation d'un groupe : nom, photo optionnelle, membres.
+import '../../providers/chat_provider.dart';
+
 class CreateGroupScreen extends StatefulWidget {
   final List<User> members;
+
   const CreateGroupScreen({super.key, required this.members});
+
   @override
   State<CreateGroupScreen> createState() => _CreateGroupScreenState();
+}
+
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
-  final TextEditingController _nameController = TextEditingController();
+  final _nameController = TextEditingController();
   late List<User> _members;
   File? _photoFile;
   bool _creating = false;
+
   @override
   void initState() {
     super.initState();
     _members = List.of(widget.members);
     _nameController.addListener(() => setState(() {}));
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
   Future<void> _pickPhoto() async {
     final picker = ImagePicker();
-    final x = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final x = await picker.pickImage(source: ImageSource.gallery);
     if (x != null) setState(() => _photoFile = File(x.path));
+  }
+
   void _removeMember(User u) {
     setState(() => _members.removeWhere((m) => m.alanyaID == u.alanyaID));
+  }
+
   Future<void> _create() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty || _members.isEmpty || _creating) return;
+    if (_nameController.text.isEmpty || _members.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fill all fields')),
+      );
+      return;
+    }
+
     setState(() => _creating = true);
-    final api = Provider.of<TalkyApiClient>(context, listen: false);
-    final chat = Provider.of<ChatProvider>(context, listen: false);
     try {
-      String? photoUrl;
-      if (_photoFile != null) {
-        final res = await api.uploadAvatar(_photoFile!);
-        photoUrl = res['url'] as String?;
-      }
-      final conv = await api.createGroup(
-        participantIDs: _members.map((m) => m.alanyaID).toList(),
-        groupName: name,
-        groupPhoto: photoUrl,
+      final api = Provider.of<TalkyApiClient>(context, listen: false);
+      final chat = Provider.of<ChatProvider>(context, listen: false);
+
+      final res = await api.createGroup(
+        name: _nameController.text,
+        members: _members.map((m) => m.alanyaID).toList(),
+        photo: _photoFile,
       );
-      await chat.refreshConversations();
+
       if (!mounted) return;
-      // Revient 
- la liste des chats puis ouvre le groupe cr
+
+      chat.addConversation(Conversation.fromJson(res));
       Navigator.popUntil(context, (route) => route.isFirst);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChatDetailScreen(
-            userName: name,
-            conversationId: conv['conversID'] as int?,
-          ),
-        ),
-      );
     } catch (e) {
       if (mounted) {
         setState(() => _creating = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final canCreate = _nameController.text.trim().isNotEmpty && !_creating;
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.indigo,
+        title: const Text('Create Group'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('Nouveau groupe',
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
       ),
-      body: ListView(
-        children: [
-          Container(
-            color: Colors.indigo,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: _pickPhoto,
-                  child: CircleAvatar(
-                    radius: 32,
-                    backgroundColor: Colors.white,
-                    backgroundImage: _photoFile != null ? FileImage(_photoFile!) : null,
-                    child: _photoFile == null
-                        ? const Icon(Icons.add_a_photo, color: Colors.indigo)
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Photo
+            Center(
+              child: GestureDetector(
+                onTap: _pickPhoto,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(60),
+                    image: _photoFile != null
+                        ? DecorationImage(
+                            image: FileImage(_photoFile!),
+                            fit: BoxFit.cover,
+                          )
                         : null,
                   ),
+                  child: _photoFile == null
+                      ? Icon(
+                          CupertinoIcons.camera,
+                          color: Colors.grey,
+                          size: 40,
+                        )
+                      : null,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    controller: _nameController,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                    cursorColor: Colors.white,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      hintText: 'Nom du groupe',
-                      hintStyle: TextStyle(color: Colors.white70),
-                      border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Text('Membres : ${_members.length}',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-          ),
-          ..._members.map((u) {
-            final hasPhoto = u.avatarUrl.isNotEmpty;
-            return ListTile(
-              leading: CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.indigo.shade50,
-                backgroundImage: hasPhoto ? NetworkImage(u.avatarUrl) : null,
-                child: hasPhoto
-                    ? null
-                    : Text(u.nom.isNotEmpty ? u.nom[0].toUpperCase() : '?',
-                        style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+
+            // Name field
+            Text(
+              'Group Name',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                hintText: 'Enter group name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              title: Text(u.nom, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(u.alanyaPhone, style: const TextStyle(color: Colors.grey)),
-              trailing: IconButton(
-                icon: const Icon(Icons.close, color: Colors.grey),
-                onPressed: () => _removeMember(u),
+            ),
+            const SizedBox(height: 24),
+
+            // Members
+            Text(
+              'Members (${_members.length})',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _members.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, idx) {
+                final member = _members[idx];
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        child:
+                            Text(member.nom.substring(0, 1).toUpperCase()),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              member.nom,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              member.alanyaPhone ?? '',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(CupertinoIcons.xmark),
+                        onPressed: () => _removeMember(member),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 32),
+
+            // Create button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _creating ? null : _create,
+                icon: _creating
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(CupertinoIcons.check_mark),
+                label: Text(_creating ? 'Creating...' : 'Create Group'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
-            );
-          }),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: canCreate ? Colors.indigo : Colors.grey,
-        onPressed: canCreate ? _create : null,
-        icon: _creating
-            ? const SizedBox(
-                width: 20, height: 20,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : const Icon(Icons.check, color: Colors.white),
-        label: const Text('Cr
-er', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
+  }
+}

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../talky_api_client.dart';
@@ -168,14 +169,48 @@ class StatusProvider extends ChangeNotifier {
       final s = _findStatut(id);
       if (s == null) return;
 
-      if (s.likedByMe == 0) {
+      if (!s.likedByMe) {
         await _api.likeStatut(id);
-        s.likedByMe = 1;
-        s.likedBy.add(_myId);
+        // Create new Statut with updated likedByMe and likedBy count
+        final idx = _mine.indexWhere((x) => x.id == id);
+        if (idx >= 0) {
+          _mine[idx] = _mine[idx].copyWith(
+            likedByMe: true,
+            likedBy: s.likedBy + 1,
+          );
+        } else {
+          // Update in byAuthor
+          for (final list in _byAuthor.values) {
+            final idx2 = list.indexWhere((x) => x.id == id);
+            if (idx2 >= 0) {
+              list[idx2] = list[idx2].copyWith(
+                likedByMe: true,
+                likedBy: s.likedBy + 1,
+              );
+              break;
+            }
+          }
+        }
       } else {
         await _api.unlikeStatut(id);
-        s.likedByMe = 0;
-        s.likedBy.remove(_myId);
+        final idx = _mine.indexWhere((x) => x.id == id);
+        if (idx >= 0) {
+          _mine[idx] = _mine[idx].copyWith(
+            likedByMe: false,
+            likedBy: math.max(0, s.likedBy - 1),
+          );
+        } else {
+          for (final list in _byAuthor.values) {
+            final idx2 = list.indexWhere((x) => x.id == id);
+            if (idx2 >= 0) {
+              list[idx2] = list[idx2].copyWith(
+                likedByMe: false,
+                likedBy: math.max(0, s.likedBy - 1),
+              );
+              break;
+            }
+          }
+        }
       }
       notifyListeners();
     } catch (_) {}
@@ -229,7 +264,18 @@ class StatusProvider extends ChangeNotifier {
       final id = data['statusId'] as int;
       final s = _findStatut(id);
       if (s != null) {
-        s.viewedBy.add(data['alanyaID'] as int);
+        final idx = _mine.indexWhere((x) => x.id == id);
+        if (idx >= 0) {
+          _mine[idx] = _mine[idx].copyWith(viewedBy: s.viewedBy + 1);
+        } else {
+          for (final list in _byAuthor.values) {
+            final idx2 = list.indexWhere((x) => x.id == id);
+            if (idx2 >= 0) {
+              list[idx2] = list[idx2].copyWith(viewedBy: s.viewedBy + 1);
+              break;
+            }
+          }
+        }
         notifyListeners();
       }
     } catch (_) {}
@@ -240,7 +286,18 @@ class StatusProvider extends ChangeNotifier {
       final id = data['statusId'] as int;
       final s = _findStatut(id);
       if (s != null) {
-        s.likedBy.add(data['alanyaID'] as int);
+        final idx = _mine.indexWhere((x) => x.id == id);
+        if (idx >= 0) {
+          _mine[idx] = _mine[idx].copyWith(likedBy: s.likedBy + 1);
+        } else {
+          for (final list in _byAuthor.values) {
+            final idx2 = list.indexWhere((x) => x.id == id);
+            if (idx2 >= 0) {
+              list[idx2] = list[idx2].copyWith(likedBy: s.likedBy + 1);
+              break;
+            }
+          }
+        }
         notifyListeners();
       }
     } catch (_) {}
@@ -251,7 +308,18 @@ class StatusProvider extends ChangeNotifier {
       final id = data['statusId'] as int;
       final s = _findStatut(id);
       if (s != null) {
-        s.likedBy.remove(data['alanyaID'] as int);
+        final idx = _mine.indexWhere((x) => x.id == id);
+        if (idx >= 0) {
+          _mine[idx] = _mine[idx].copyWith(likedBy: math.max(0, s.likedBy - 1));
+        } else {
+          for (final list in _byAuthor.values) {
+            final idx2 = list.indexWhere((x) => x.id == id);
+            if (idx2 >= 0) {
+              list[idx2] = list[idx2].copyWith(likedBy: math.max(0, s.likedBy - 1));
+              break;
+            }
+          }
+        }
         notifyListeners();
       }
     } catch (_) {}
