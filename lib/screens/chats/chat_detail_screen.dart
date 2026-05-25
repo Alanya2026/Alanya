@@ -24,11 +24,15 @@ class ChatDetailScreen extends StatefulWidget {
   final String userName;
   final int? conversationId;
   final int? userId;
+  final bool isGroup;
+  final String? avatarUrl;
   const ChatDetailScreen({
     super.key,
     required this.userName,
     this.conversationId,
     this.userId,
+    this.isGroup = false,
+    this.avatarUrl,
   });
 
   @override
@@ -446,10 +450,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             CircleAvatar(
               radius: 18,
               backgroundColor: Colors.indigo.shade100,
-              child: Text(
-                widget.userName.isNotEmpty ? widget.userName[0] : '?',
-                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
-              ),
+              backgroundImage:
+                  (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty)
+                      ? CachedNetworkImageProvider(widget.avatarUrl!)
+                      : null,
+              child: (widget.avatarUrl == null || widget.avatarUrl!.isEmpty)
+                  ? (widget.isGroup
+                      ? const Icon(Icons.group, color: Colors.indigo, size: 20)
+                      : Text(
+                          widget.userName.isNotEmpty
+                              ? widget.userName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            color: Colors.indigo,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ))
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(

@@ -180,13 +180,17 @@ class _CallsScreenState extends State<CallsScreen> {
                               color: isMissed ? Colors.red : Colors.green,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              '${_formatDate(call.createdAt)} • ${isVideo ? "Vidéo" : "Audio"}',
-                              style: TextStyle(color: Colors.grey.shade600),
+                            Flexible(
+                              child: Text(
+                                '${_formatDate(call.createdAt)} • ${isVideo ? "Vidéo" : "Audio"}',
+                                style: TextStyle(color: Colors.grey.shade600),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                             if (call.duree != null && call.duree! > 0) ...[
                               Text(' • ${call.formattedDuration}',
-                                  style: TextStyle(color: Colors.grey.shade600)),
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                  overflow: TextOverflow.ellipsis),
                             ],
                           ],
                         ),

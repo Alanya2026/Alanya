@@ -132,7 +132,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                               child:
                                   _group!.groupPhoto == null ||
                                           _group!.groupPhoto!.isEmpty
-                                      ? Icon(
+                                      ? const Icon(
                                           CupertinoIcons.group,
                                           size: 32,
                                           color: Colors.indigo,

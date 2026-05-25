@@ -317,20 +317,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   const SizedBox(height: 16),
 
-                  // Load more
-                  if (provider.users.length < provider.totalUsers &&
-                      !provider.isLoadingUsers &&
-                      _filter == _UserFilter.all &&
-                      _searchCtrl.text.isEmpty)
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () => provider.loadUsers(
-                          search: _searchCtrl.text,
-                          page: provider.page + 1,
-                          limit: provider.limit,
-                        ),
-                        icon: const Icon(CupertinoIcons.arrow_down_circle),
-                        label: const Text('Charger plus'),
+                  // Pagination
+                  if (_filter == _UserFilter.all &&
+                      _searchCtrl.text.isEmpty &&
+                      provider.totalUsers > provider.limit)
+                    _Pagination(
+                      page: provider.page,
+                      limit: provider.limit,
+                      total: provider.totalUsers,
+                      isLoading: provider.isLoadingUsers,
+                      onChangePage: (p) => provider.loadUsers(
+                        search: _searchCtrl.text,
+                        page: p,
+                        limit: provider.limit,
                       ),
                     ),
                 ],
@@ -727,6 +726,108 @@ class _UserActions extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _Pagination extends StatelessWidget {
+  final int page;
+  final int limit;
+  final int total;
+  final bool isLoading;
+  final ValueChanged<int> onChangePage;
+
+  const _Pagination({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.isLoading,
+    required this.onChangePage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pageCount = (total / limit).ceil().clamp(1, 1 << 30);
+    final canPrev = page > 1 && !isLoading;
+    final canNext = page < pageCount && !isLoading;
+    final from = (page - 1) * limit + 1;
+    final to = (page * limit).clamp(0, total);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          _PageBtn(
+            icon: CupertinoIcons.chevron_left,
+            enabled: canPrev,
+            onTap: () => onChangePage(page - 1),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  'Page $page / $pageCount',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$from–$to sur $total',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _PageBtn(
+            icon: CupertinoIcons.chevron_right,
+            enabled: canNext,
+            onTap: () => onChangePage(page + 1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PageBtn extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+  const _PageBtn({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = enabled ? const Color(0xFF1E66D8) : Colors.grey.shade400;
+    final bg = enabled ? const Color(0xFFE3EEFE) : const Color(0xFFF3F4F6);
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: color, size: 18),
+      ),
     );
   }
 }

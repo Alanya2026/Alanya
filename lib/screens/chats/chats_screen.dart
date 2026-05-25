@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
@@ -111,8 +112,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
     final live = otherId != null ? chat.presenceOf(otherId) : null;
     final isOnline = live?.online ?? (other?['is_online'] == 1 || other?['is_online'] == true);
 
-    final initial = (displayAvatar == null || displayAvatar.isEmpty)
-        ? (displayName.isNotEmpty ? displayName[0].toUpperCase() : '?')
+    final hasAvatar = displayAvatar != null && displayAvatar.isNotEmpty;
+    final Widget? avatarFallback = !hasAvatar
+        ? (conv.isGroup
+            ? const Icon(CupertinoIcons.group, color: Colors.indigo)
+            : Text(
+                displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                style: const TextStyle(
+                  color: Colors.indigo,
+                  fontWeight: FontWeight.bold,
+                ),
+              ))
         : null;
 
     return ListTile(
@@ -122,12 +132,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
           CircleAvatar(
             radius: 28,
             backgroundColor: Colors.indigo.shade100,
-            backgroundImage: displayAvatar != null && displayAvatar.isNotEmpty
-                ? NetworkImage(displayAvatar)
-                : null,
-            child: initial != null
-                ? Text(initial, style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold))
-                : null,
+            backgroundImage: hasAvatar ? NetworkImage(displayAvatar) : null,
+            child: avatarFallback,
           ),
           if (isOnline && !conv.isGroup)
             Positioned(
@@ -202,6 +208,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
               userName: displayName,
               conversationId: conv.conversID,
               userId: otherId,
+              isGroup: conv.isGroup,
+              avatarUrl: displayAvatar,
             ),
           ),
         );
