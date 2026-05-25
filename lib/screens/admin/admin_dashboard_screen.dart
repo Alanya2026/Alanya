@@ -5,6 +5,8 @@ import '../../providers/admin_provider.dart';
 import '../../talky_models.dart';
 import 'admin_user_detail_screen.dart';
 
+enum _UserFilter { all, online, banned }
+
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -14,6 +16,7 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _searchCtrl = TextEditingController();
+  _UserFilter _filter = _UserFilter.all;
 
   @override
   void initState() {
@@ -36,23 +39,61 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     await Future.wait([p.loadStats(), p.loadUsers(search: _searchCtrl.text)]);
   }
 
+  List<User> _filteredUsers(List<User> users) {
+    final q = _searchCtrl.text.trim().toLowerCase();
+    Iterable<User> base = users;
+    switch (_filter) {
+      case _UserFilter.online:
+        base = base.where((u) => u.isOnline && !u.exclus);
+        break;
+      case _UserFilter.banned:
+        base = base.where((u) => u.exclus);
+        break;
+      case _UserFilter.all:
+        break;
+    }
+    if (q.isNotEmpty) {
+      base = base.where((u) {
+        return u.nom.toLowerCase().contains(q) ||
+            u.pseudo.toLowerCase().contains(q) ||
+            u.alanyaPhone.toLowerCase().contains(q) ||
+            u.alanyaID.toString().contains(q);
+      });
+    }
+    return base.toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
+    final stats = provider.stats;
+    final users = _filteredUsers(provider.users);
+
+    final onlinePct = stats.totalUsers > 0
+        ? (stats.onlineUsers * 100 / stats.totalUsers)
+        : 0.0;
+    final bannedPct = stats.totalUsers > 0
+        ? (stats.bannedUsers * 100 / stats.totalUsers)
+        : 0.0;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF7F7FA),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
+        centerTitle: true,
         title: const Text(
-          'Admin Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          'Tableau de bord',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.maybePop(context),
         ),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: 'Actualiser',
             onPressed: provider.isLoadingUsers || provider.isLoadingStats
                 ? null
                 : _refresh,
@@ -65,13 +106,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: provider.isLoadingStats && provider.users.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 children: [
-                  // Stats section
+                  const Text(
+                    'Bienvenue',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   Text(
-                    'Statistiques',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    'Gérez les utilisateurs et surveillance',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    "Vue d'ensemble",
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -79,70 +138,135 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: 1.05,
                     children: [
-                      _StatCard(
-                        label: 'Total utilisateurs',
-                        value: '${provider.stats.totalUsers}',
+                      _GradientStatCard(
+                        label: 'Utilisateurs',
+                        value: '${stats.totalUsers}',
+                        sub: 'Total',
                         icon: CupertinoIcons.person_2_fill,
-                        color: Colors.blue,
+                        colors: const [Color(0xFF5B8DEF), Color(0xFF4A6FD0)],
                       ),
-                      _StatCard(
+                      _GradientStatCard(
                         label: 'En ligne',
-                        value: '${provider.stats.onlineUsers}',
+                        value: '${stats.onlineUsers}',
+                        sub: '${onlinePct.toStringAsFixed(1)}%',
                         icon: CupertinoIcons.circle_fill,
-                        color: Colors.green,
+                        colors: const [Color(0xFF5DBE7A), Color(0xFF3FA45F)],
                       ),
-                      _StatCard(
-                        label: 'Bannis',
-                        value: '${provider.stats.bannedUsers}',
-                        icon: CupertinoIcons.nosign,
-                        color: Colors.red,
-                      ),
-                      _StatCard(
+                      _GradientStatCard(
                         label: 'Messages (7j)',
-                        value: '${provider.stats.messagesPeriod}',
-                        icon: CupertinoIcons.chat_bubble_fill,
-                        color: Colors.cyan,
+                        value: '${stats.messagesPeriod}',
+                        sub: 'Dernière semaine',
+                        icon: CupertinoIcons.chat_bubble_2_fill,
+                        colors: const [Color(0xFF4FC3D8), Color(0xFF2BA5BD)],
+                      ),
+                      _GradientStatCard(
+                        label: 'Appels (7j)',
+                        value: '${stats.callsPeriod}',
+                        sub: 'Dernière semaine',
+                        icon: CupertinoIcons.phone_fill,
+                        colors: const [Color(0xFFFFA552), Color(0xFFE9803D)],
+                      ),
+                      _GradientStatCard(
+                        label: 'Statuts (7j)',
+                        value: '${stats.statusesPeriod}',
+                        sub: 'Dernière semaine',
+                        icon: CupertinoIcons.sparkles,
+                        colors: const [Color(0xFFE94BA0), Color(0xFFB23DBF)],
+                      ),
+                      _GradientStatCard(
+                        label: 'Bannis',
+                        value: '${stats.bannedUsers}',
+                        sub: '${bannedPct.toStringAsFixed(1)}%',
+                        icon: CupertinoIcons.nosign,
+                        colors: const [Color(0xFFEC5C5C), Color(0xFFD8453E)],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  // Search section
-                  Text(
-                    'Utilisateurs',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _searchCtrl,
-                    decoration: InputDecoration(
-                      hintText: 'Rechercher un utilisateur...',
-                      prefixIcon: const Icon(CupertinoIcons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // Filter chips
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _FilterChip(
+                          label: 'Tous',
+                          icon: CupertinoIcons.person_2,
+                          selected: _filter == _UserFilter.all,
+                          onTap: () => setState(() => _filter = _UserFilter.all),
+                          showCheck: true,
+                        ),
                       ),
-                      suffixIcon: _searchCtrl.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                CupertinoIcons.xmark_circle_fill,
-                              ),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                provider.loadUsers();
-                              },
-                            )
-                          : null,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _FilterChip(
+                          label: 'En ligne',
+                          icon: CupertinoIcons.circle_fill,
+                          selected: _filter == _UserFilter.online,
+                          onTap: () =>
+                              setState(() => _filter = _UserFilter.online),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _FilterChip(
+                          label: 'Bannis',
+                          icon: CupertinoIcons.nosign,
+                          selected: _filter == _UserFilter.banned,
+                          onTap: () =>
+                              setState(() => _filter = _UserFilter.banned),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Search bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
                     ),
-                    onChanged: (val) {
-                      setState(() {});
-                      provider.setSearchQuery(val);
-                      provider.loadUsers(search: val);
-                    },
+                    child: TextField(
+                      controller: _searchCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher par nom, pseudo ou ...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 14,
+                        ),
+                        prefixIcon: Icon(
+                          CupertinoIcons.search,
+                          color: Colors.grey.shade500,
+                          size: 20,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        suffixIcon: _searchCtrl.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  CupertinoIcons.xmark_circle_fill,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  provider.setSearchQuery('');
+                                  provider.loadUsers();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: (val) {
+                        setState(() {});
+                        provider.setSearchQuery(val);
+                        provider.loadUsers(search: val);
+                      },
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -155,60 +279,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         style: const TextStyle(color: Colors.red, fontSize: 13),
                       ),
                     ),
-                  if (provider.users.isEmpty && !provider.isLoadingUsers)
-                    const Center(child: Text('Aucun utilisateur trouvé'))
-                  else if (provider.isLoadingUsers)
+                  if (users.isEmpty && !provider.isLoadingUsers)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: Text('Aucun utilisateur trouvé')),
+                    )
+                  else if (provider.isLoadingUsers && users.isEmpty)
                     const Padding(
                       padding: EdgeInsets.all(16),
                       child: Center(child: CircularProgressIndicator()),
                     )
                   else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: provider.users.length,
-                      separatorBuilder: (_, __) => const Divider(),
-                      itemBuilder: (ctx, idx) {
-                        final user = provider.users[idx];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.indigo.shade100,
-                            backgroundImage: user.avatarUrl.isNotEmpty
-                                ? NetworkImage(user.avatarUrl)
-                                : null,
-                            child: user.avatarUrl.isEmpty
-                                ? Text(
-                                    user.nom.isNotEmpty
-                                        ? user.nom[0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(color: Colors.indigo),
-                                  )
-                                : null,
-                          ),
-                          title: Text(user.nom),
-                          subtitle: Text(user.alanyaPhone),
-                          trailing: _UserActions(
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: users.length,
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: Colors.grey.shade200,
+                          indent: 16,
+                          endIndent: 16,
+                        ),
+                        itemBuilder: (ctx, idx) {
+                          final user = users[idx];
+                          return _UserTile(
                             user: user,
                             provider: provider,
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AdminUserDetailScreen(
-                                  userId: user.alanyaID,
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   const SizedBox(height: 16),
 
                   // Load more
                   if (provider.users.length < provider.totalUsers &&
-                      !provider.isLoadingUsers)
+                      !provider.isLoadingUsers &&
+                      _filter == _UserFilter.all &&
+                      _searchCtrl.text.isEmpty)
                     Center(
                       child: TextButton.icon(
                         onPressed: () => provider.loadUsers(
@@ -227,50 +340,320 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _GradientStatCard extends StatelessWidget {
   final String label;
   final String value;
+  final String sub;
   final IconData icon;
-  final Color color;
+  final List<Color> colors;
 
-  const _StatCard({
+  const _GradientStatCard({
     required this.label,
     required this.value,
+    required this.sub,
     required this.icon,
-    required this.color,
+    required this.colors,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: colors.last.withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          // Decorative bubble
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          Positioned(
+            right: 8,
+            bottom: -10,
+            child: Icon(
+              icon,
+              size: 80,
+              color: Colors.white.withValues(alpha: 0.10),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.20),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  sub,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool showCheck;
+
+  const _FilterChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    this.showCheck = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = selected ? const Color(0xFFE3EEFE) : Colors.white;
+    final border = selected ? const Color(0xFFBFD6FB) : const Color(0xFFE5E7EB);
+    final fg = selected ? const Color(0xFF1E66D8) : Colors.black87;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (showCheck && selected) ...[
+              Icon(Icons.check, size: 16, color: fg),
+              const SizedBox(width: 4),
+            ],
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: fg,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UserTile extends StatelessWidget {
+  final User user;
+  final AdminProvider provider;
+
+  const _UserTile({required this.user, required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminUserDetailScreen(userId: user.alanyaID),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFFEDEDED),
+                  backgroundImage: user.avatarUrl.isNotEmpty
+                      ? NetworkImage(user.avatarUrl)
+                      : null,
+                  child: user.avatarUrl.isEmpty
+                      ? Text(
+                          user.nom.isNotEmpty
+                              ? user.nom[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      : null,
+                ),
+                if (user.isOnline)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3FA45F),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          user.nom.isNotEmpty ? user.nom : '—',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (user.exclus) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDECEC),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Banni',
+                            style: TextStyle(
+                              color: Color(0xFFD8453E),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (user.typeCompte >= 1) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE3EEFE),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Admin',
+                            style: TextStyle(
+                              color: Color(0xFF1E66D8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    user.pseudo.isNotEmpty ? '@${user.pseudo}' : user.alanyaPhone,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${user.alanyaID}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _UserActions(user: user, provider: provider),
+          ],
+        ),
       ),
     );
   }
@@ -285,6 +668,7 @@ class _UserActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton(
+      icon: Icon(Icons.more_vert, color: Colors.grey.shade500),
       itemBuilder: (context) => [
         if (!user.exclus)
           PopupMenuItem(
@@ -329,8 +713,10 @@ class _UserActions extends StatelessWidget {
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Supprimer',
-                        style: TextStyle(color: Colors.red)),
+                    child: const Text(
+                      'Supprimer',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 ],
               ),
