@@ -191,17 +191,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'Contacts préférés',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
-                  TextButton.icon(
-                    onPressed: _openAddContact,
-                    icon: const Icon(Icons.add, size: 18, color: Colors.indigo),
-                    label: const Text(
-                      'Ajouter',
-                      style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
+                  if (_contacts.length > 4)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PreferredContactsScreen(
+                              contacts: _contacts,
+                              onLongPress: _showContactOptions,
+                              onAddContact: _openAddContact,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '+${_contacts.length - 4}',
+                            style: const TextStyle(
+                              color: Colors.indigo,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, size: 18, color: Colors.indigo),
+                        ],
+                      ),
                     ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -213,7 +231,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: CircularProgressIndicator(color: Colors.indigo),
                   )
                 : _contacts.isEmpty
-                    ? _EmptyContacts(onAdd: _openAddContact)
+                    ? _EmptyContacts(onAdd: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PreferredContactsScreen(
+                              contacts: _contacts,
+                              onLongPress: _showContactOptions,
+                              onAddContact: _openAddContact,
+                            ),
+                          ),
+                        );
+                      })
                     : _ContactGrid(
                         contacts: _contacts,
                         onLongPress: _showContactOptions,
@@ -475,7 +504,7 @@ class _ContactGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayed = contacts.take(3).toList();
+    final displayed = contacts.take(4).toList();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
@@ -492,57 +521,7 @@ class _ContactGrid extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          ...displayed.map((user) => _ContactChip(user: user, onLongPress: onLongPress)),
-          if (contacts.length > 3)
-            _VoirToutTile(
-              remaining: contacts.length - 3,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PreferredContactsScreen(
-                      contacts: contacts,
-                      onLongPress: onLongPress,
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VoirToutTile extends StatelessWidget {
-  const _VoirToutTile({required this.remaining, required this.onTap});
-
-  final int remaining;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 64,
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '+$remaining',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
-                ),
-              ),
-              const Icon(Icons.chevron_right, size: 18, color: Colors.indigo),
-            ],
-          ),
-        ),
+        children: displayed.map((user) => _ContactChip(user: user, onLongPress: onLongPress)).toList(),
       ),
     );
   }

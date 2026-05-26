@@ -25,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   bool _incomingCallShown = false;
+  late final PageController _pageController;
 
   StreamSubscription<MeetingNotifData>? _meetingNotifSub;
 
@@ -39,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: 0);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -64,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     Provider.of<CallService>(context, listen: false)
         .removeListener(_onCallStatusChanged);
     _meetingNotifSub?.cancel();
@@ -166,14 +169,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Navigation ───────────────────────────────────────────────────────
 
-  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
+  void _onItemTapped(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onPageChanged(int index) {
+    setState(() => _selectedIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: _onPageChanged,
+        children: _screens.map((s) => KeepAliveWrapper(child: s)).toList(),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -326,5 +340,27 @@ class _ReminderDialogState extends State<_ReminderDialog> {
         ),
       ],
     );
+  }
+}
+
+// ─── Garde les pages hors-écran en vie ────────────────────────────────
+
+class KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+  const KeepAliveWrapper({super.key, required this.child});
+
+  @override
+  State<KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

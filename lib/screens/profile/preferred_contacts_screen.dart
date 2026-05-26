@@ -9,10 +9,12 @@ class PreferredContactsScreen extends StatelessWidget {
     super.key,
     required this.contacts,
     required this.onLongPress,
+    required this.onAddContact,
   });
 
   final List<User> contacts;
   final void Function(User) onLongPress;
+  final VoidCallback onAddContact;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +31,16 @@ class PreferredContactsScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          TextButton.icon(
+            onPressed: onAddContact,
+            icon: const Icon(Icons.add, size: 18, color: Colors.indigo),
+            label: const Text(
+              'Ajouter',
+              style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
       body: contacts.isEmpty
           ? Center(
