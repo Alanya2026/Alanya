@@ -1019,6 +1019,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Widget _buildComposeBar() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         IconButton(
           icon: Icon(_showEmoji ? Icons.keyboard : Icons.emoji_emotions_outlined, color: Colors.grey),
@@ -1029,25 +1030,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: _showAttachSheet,
         ),
         Expanded(
-          child: TextField(
-            controller: _messageController,
-            focusNode: _inputFocus,
-            onChanged: _onTextChanged,
-            onTap: () {
-              if (_showEmoji) setState(() => _showEmoji = false);
-            },
-            textInputAction: TextInputAction.send,
-            onSubmitted: (_) => _sendMessage(),
-            decoration: InputDecoration(
-              hintText: 'Type a message...',
-              hintStyle: TextStyle(color: Colors.grey.shade400),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide.none,
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 150),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: TextField(
+              controller: _messageController,
+              focusNode: _inputFocus,
+              onChanged: _onTextChanged,
+              onTap: () {
+                if (_showEmoji) setState(() => _showEmoji = false);
+              },
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _sendMessage(),
+              maxLines: null,
+              minLines: 1,
+              scrollPhysics: const ClampingScrollPhysics(),
+              decoration: InputDecoration(
+                hintText: 'Type a message...',
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
-              filled: true,
-              fillColor: Colors.grey.shade100,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
           ),
         ),

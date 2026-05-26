@@ -5,6 +5,8 @@ import '../../core/db/app_database.dart';
 import '../../core/db/chat_dao.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../talky_api_client.dart';
+import '../../talky_models.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
@@ -95,8 +97,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const NewChatScreen()));
+        onPressed: () async {
+          final result = await Navigator.push<User>(
+            context,
+            MaterialPageRoute(builder: (_) => const NewChatScreen()),
+          );
+          
+          if (result != null && mounted) {
+            _openChatWithUser(result);
+          }
         },
         backgroundColor: Colors.indigo,
         child: const Icon(Icons.chat, color: Colors.white),
@@ -247,6 +256,35 @@ class _ChatsScreenState extends State<ChatsScreen> {
       case 1:
       default:
         return Icon(Icons.check, size: 14, color: Colors.grey.shade500);
+    }
+  }
+
+  Future<void> _openChatWithUser(User user) async {
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final result = await apiClient.createConversation(participantID: user.alanyaID);
+      final conversationId = result['conversID'] as int?;
+      
+      if (conversationId != null && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatDetailScreen(
+              userName: user.nom.isNotEmpty ? user.nom : user.pseudo,
+              conversationId: conversationId,
+              userId: user.alanyaID,
+              isGroup: false,
+              avatarUrl: user.avatarUrl,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur lors de l\'ouverture de la discussion')),
+        );
+      }
     }
   }
 

@@ -82,6 +82,26 @@ class TalkyApiClient {
 
   // ── AUTH ──────────────────────────────────────────────────────────
 
+  /// OS courant à envoyer dans `os_system` pour la table userAccess.
+  /// Capitalise pour cohérence avec le parser server-side (Android / iOS / …).
+  static String _currentOs() {
+    if (kIsWeb) return 'Web';
+    switch (Platform.operatingSystem) {
+      case 'android':
+        return 'Android';
+      case 'ios':
+        return 'iOS';
+      case 'macos':
+        return 'macOS';
+      case 'windows':
+        return 'Windows';
+      case 'linux':
+        return 'Linux';
+      default:
+        return Platform.operatingSystem;
+    }
+  }
+
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -102,6 +122,7 @@ class TalkyApiClient {
         if (idPays != null) 'idPays': idPays,
         if (fcmToken != null) 'fcm_token': fcmToken,
         if (deviceId != null) 'device_ID': deviceId,
+        'os_system': _currentOs(),
       }),
     );
     final data = _parseResponse(response);
@@ -124,6 +145,7 @@ class TalkyApiClient {
         'password': password,
         if (fcmToken != null) 'fcm_token': fcmToken,
         if (deviceId != null) 'device_ID': deviceId,
+        'os_system': _currentOs(),
       }),
     );
     final data = _parseResponse(response);
