@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/call_service.dart';
@@ -14,6 +13,7 @@ import '../meetings/meets_screen.dart';
 import '../profile/profile_screen.dart';
 import '../status/statuses_screen.dart';
 import '../calls/incoming_call_screen.dart';
+import 'glass_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -184,58 +184,27 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        children: _screens.map((s) => KeepAliveWrapper(child: s)).toList(),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(13),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 80),
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: _onPageChanged,
+              children: _screens.map((s) => KeepAliveWrapper(child: s)).toList(),
             ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.indigo,
-          unselectedItemColor: Colors.grey.shade400,
-          showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.chat_bubble_2),
-              activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
-              label: 'Chats',
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: GlassNavBar(
+              selectedIndex: _selectedIndex,
+              onItemTapped: _onItemTapped,
             ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.phone),
-              activeIcon: Icon(CupertinoIcons.phone_fill),
-              label: 'Calls',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.flame),
-              activeIcon: Icon(CupertinoIcons.flame_fill),
-              label: 'Status',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.video_camera),
-              activeIcon: Icon(CupertinoIcons.video_camera_solid),
-              label: 'Meets',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.person),
-              activeIcon: Icon(CupertinoIcons.person_fill),
-              label: 'Profile',
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
