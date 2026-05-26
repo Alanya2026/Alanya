@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/utils/avatar_utils.dart';
+import '../../core/utils/country_utils.dart';
 import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/add_contact_sheet.dart';
+import '../chats/contact_detail_screen.dart';
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
+import 'preferred_contacts_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -35,8 +39,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
       if (!mounted) return;
+      final user = User.fromJson(data);
+      final full = await apiClient.getUserById(user.alanyaID).catchError((_) => <String, dynamic>{});
+      if (!mounted) return;
+      final paysLibelle = full['pays_libelle'] as String? ?? user.paysLibelle;
       setState(() {
-        _user = User.fromJson(data);
+        _user = User(
+          alanyaID: user.alanyaID,
+          nom: user.nom,
+          pseudo: user.pseudo,
+          alanyaPhone: full['alanyaPhone'] as String? ?? user.alanyaPhone,
+          email: user.email,
+          idPays: user.idPays,
+          avatarUrl: user.avatarUrl,
+          typeCompte: user.typeCompte,
+          isOnline: user.isOnline,
+          lastSeen: user.lastSeen,
+          paysLibelle: paysLibelle,
+        );
         _isLoading = false;
       });
     } catch (_) {
@@ -156,62 +176,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 20),
 
-            // Avatar + nom
-            Center(
-              child: Stack(
+            // ── En-tête profil ───────────────────────────────────────────
+            _ProfileHeader(user: _user, isLoading: _isLoading),
+
+            const SizedBox(height: 20),
+
+            // ── Section contacts préférés ─────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.indigo.shade100,
-                    backgroundImage: (_user?.avatarUrl != null &&
-                            _user!.avatarUrl.isNotEmpty)
-                        ? NetworkImage(_user!.avatarUrl)
-                        : null,
-                    child: (_user?.avatarUrl == null ||
-                            _user!.avatarUrl.isEmpty)
-                        ? _isLoading
-                            ? const CircularProgressIndicator()
-                            : Text(
-                                _user?.nom.substring(0, 1).toUpperCase() ??
-                                    'U',
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.indigo,
-                                ),
-                              )
-                        : null,
+                  const Text(
+                    'Contacts préférés',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
-                      child: IconButton(
-                        icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                        onPressed: () {},
-                      ),
+                  TextButton.icon(
+                    onPressed: _openAddContact,
+                    icon: const Icon(Icons.add, size: 18, color: Colors.indigo),
+                    label: const Text(
+                      'Ajouter',
+                      style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            _isLoading
-                ? const CircularProgressIndicator()
-                : Text(
-                    _user?.nom ?? 'User',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-            const SizedBox(height: 4),
-            if (!_isLoading)
-              Text(
-                _user?.alanyaPhone ?? '',
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
 
-            // Menu principal
+            _loadingContacts
+                ? const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(color: Colors.indigo),
+                  )
+                : _contacts.isEmpty
+                    ? _EmptyContacts(onAdd: _openAddContact)
+                    : _ContactGrid(
+                        contacts: _contacts,
+                        onLongPress: _showContactOptions,
+                      ),
+
+            const SizedBox(height: 20),
+
+            // ── Menu paramètres ─────────────────────────────────────────
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
@@ -253,50 +263,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     }),
                   ],
-                  const Divider(height: 1),
-                  _buildMenuItem(Icons.logout, 'Déconnexion', _logout, isDestructive: true),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
 
-            // ── Section contacts préférés ─────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Contacts préférés',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-                  TextButton.icon(
-                    onPressed: _openAddContact,
-                    icon: const Icon(Icons.add, size: 18, color: Colors.indigo),
-                    label: const Text(
-                      'Ajouter',
-                      style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    ),
+            const SizedBox(height: 20),
+
+            // ── Déconnexion ─────────────────────────────────────────────
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(13),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.logout,
+                    color: Colors.red,
+                    size: 20,
+                  ),
+                ),
+                title: const Text(
+                  'Déconnexion',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.red,
+                  ),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: _logout,
+              ),
             ),
-            const SizedBox(height: 12),
-
-            _loadingContacts
-                ? const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(color: Colors.indigo),
-                  )
-                : _contacts.isEmpty
-                    ? _EmptyContacts(onAdd: _openAddContact)
-                    : _ContactGrid(
-                        contacts: _contacts,
-                        onLongPress: _showContactOptions,
-                      ),
 
             const SizedBox(height: 40),
           ],
@@ -308,27 +318,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildMenuItem(
     IconData icon,
     String title,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
+    VoidCallback onTap,
+  ) {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isDestructive ? Colors.red.shade50 : Colors.indigo.shade50,
+          color: Colors.indigo.shade50,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
-          color: isDestructive ? Colors.red : Colors.indigo,
+          color: Colors.indigo,
           size: 20,
         ),
       ),
       title: Text(
         title,
-        style: TextStyle(
+        style: const TextStyle(
           fontWeight: FontWeight.w500,
-          color: isDestructive ? Colors.red : Colors.black87,
+          color: Colors.black87,
         ),
       ),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
@@ -337,7 +346,126 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// ─── Grille de contacts ───────────────────────────────────────────────────────
+// ─── En-tête profil ─────────────────────────────────────────────────────
+
+class _ProfileHeader extends StatelessWidget {
+  final User? user;
+  final bool isLoading;
+
+  const _ProfileHeader({required this.user, required this.isLoading});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = user != null && hasValidAvatarUrl(user!.avatarUrl);
+    final initial = user?.nom.isNotEmpty == true ? user!.nom[0].toUpperCase() : 'U';
+    final pseudo = user?.pseudo ?? '';
+    final phone = user?.alanyaPhone ?? '';
+    final pays = user?.paysLibelle ?? '';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(13),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: const Color(0xFFCBD0E8),
+                backgroundImage: hasPhoto
+                    ? avatarImage(user!.avatarUrl)
+                    : null,
+                child: hasPhoto
+                    ? null
+                    : Text(
+                        initial,
+                        style: const TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Colors.indigo,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (isLoading)
+            const CircularProgressIndicator()
+          else ...[
+            Text(
+              user?.nom ?? 'User',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            if (pseudo.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                '@$pseudo',
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+              ),
+            ],
+            if (phone.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.phone_iphone, size: 16, color: Colors.indigo.shade400),
+                  const SizedBox(width: 4),
+                  Text(
+                    'AlanyaPhone $phone',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF1E66D8),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (pays.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              CountryRow(country: pays),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Grille de contacts ─────────────────────────────────────────────────
 
 class _ContactGrid extends StatelessWidget {
   const _ContactGrid({required this.contacts, required this.onLongPress});
@@ -347,9 +475,10 @@ class _ContactGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayed = contacts.take(3).toList();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -361,10 +490,59 @@ class _ContactGrid extends StatelessWidget {
           ),
         ],
       ),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 20,
-        children: contacts.map((user) => _ContactChip(user: user, onLongPress: onLongPress)).toList(),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ...displayed.map((user) => _ContactChip(user: user, onLongPress: onLongPress)),
+          if (contacts.length > 3)
+            _VoirToutTile(
+              remaining: contacts.length - 3,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PreferredContactsScreen(
+                      contacts: contacts,
+                      onLongPress: onLongPress,
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VoirToutTile extends StatelessWidget {
+  const _VoirToutTile({required this.remaining, required this.onTap});
+
+  final int remaining;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 64,
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '+$remaining',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 18, color: Colors.indigo),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -378,11 +556,24 @@ class _ContactChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasPhoto = hasValidAvatarUrl(user.avatarUrl);
     final initial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
     final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
     final shortName = displayName.length > 8 ? '${displayName.substring(0, 7)}…' : displayName;
 
     return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ContactDetailScreen(
+              userId: user.alanyaID,
+              initialName: user.nom,
+              initialAvatar: user.avatarUrl,
+            ),
+          ),
+        );
+      },
       onLongPress: () => onLongPress(user),
       child: SizedBox(
         width: 64,
@@ -392,18 +583,18 @@ class _ContactChip extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: Colors.indigo.shade50,
-                  backgroundImage: user.avatarUrl.isNotEmpty ? NetworkImage(user.avatarUrl) : null,
-                  child: user.avatarUrl.isEmpty
-                      ? Text(
+                  backgroundColor: const Color(0xFFCBD0E8),
+                  backgroundImage: hasPhoto ? avatarImage(user.avatarUrl) : null,
+                  child: hasPhoto
+                      ? null
+                      : Text(
                           initial,
                           style: const TextStyle(
-                            color: Colors.indigo,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                           ),
-                        )
-                      : null,
+                        ),
                 ),
                 if (user.isOnline)
                   Positioned(
@@ -444,7 +635,7 @@ class _ContactChip extends StatelessWidget {
   }
 }
 
-// ─── État vide ────────────────────────────────────────────────────────────────
+// ─── État vide ──────────────────────────────────────────────────────────
 
 class _EmptyContacts extends StatelessWidget {
   const _EmptyContacts({required this.onAdd});
