@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../../providers/status_provider.dart';
 import '../../talky_models.dart';
+import '../../core/utils/avatar_utils.dart';
 import 'status_views_screen.dart';
 
 class StatusViewerScreen extends StatefulWidget {
@@ -399,6 +400,13 @@ class _ProgressBars extends StatelessWidget {
   }
 }
 
+ImageProvider? _previewImage(Statut s) {
+  if (s.type == 1 && hasValidAvatarUrl(s.mediaUrl)) {
+    return NetworkImage(s.mediaUrl!);
+  }
+  return hasValidAvatarUrl(s.avatarUrl) ? NetworkImage(s.avatarUrl!) : null;
+}
+
 class _Header extends StatelessWidget {
   final Statut statut;
   final VoidCallback onClose;
@@ -424,11 +432,8 @@ class _Header extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: Colors.grey.shade700,
-            backgroundImage:
-                statut.avatarUrl != null && statut.avatarUrl!.isNotEmpty
-                    ? NetworkImage(statut.avatarUrl!)
-                    : null,
-            child: statut.avatarUrl == null || statut.avatarUrl!.isEmpty
+            backgroundImage: _previewImage(statut),
+            child: _previewImage(statut) == null
                 ? Text(
                     (statut.nom != null && statut.nom!.isNotEmpty)
                         ? statut.nom![0].toUpperCase()
@@ -586,11 +591,8 @@ class _AudioContent extends StatelessWidget {
           CircleAvatar(
             radius: 60,
             backgroundColor: Colors.white24,
-            backgroundImage:
-                statut.avatarUrl != null && statut.avatarUrl!.isNotEmpty
-                    ? NetworkImage(statut.avatarUrl!)
-                    : null,
-            child: statut.avatarUrl == null || statut.avatarUrl!.isEmpty
+            backgroundImage: _previewImage(statut),
+            child: _previewImage(statut) == null
                 ? const Icon(Icons.person, size: 60, color: Colors.white)
                 : null,
           ),

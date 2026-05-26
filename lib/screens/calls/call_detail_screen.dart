@@ -121,6 +121,49 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     );
   }
 
+  static String _flagEmoji(String country) {
+    const iso = {
+      'france': 'FR',
+      'united states': 'US',
+      'united kingdom': 'GB',
+      'germany': 'DE',
+      'spain': 'ES',
+      'italy': 'IT',
+      'belgium': 'BE',
+      'switzerland': 'CH',
+      'canada': 'CA',
+      'cameroun': 'CM',
+      'congo': 'CD',
+      'gabon': 'GA',
+      'côte d\'ivoire': 'CI',
+      'senegal': 'SN',
+      'mali': 'ML',
+      'burkina faso': 'BF',
+      'niger': 'NE',
+      'chad': 'TD',
+      'central african republic': 'CF',
+      'equatorial guinea': 'GQ',
+      'china': 'CN',
+      'japan': 'JP',
+      'india': 'IN',
+      'brazil': 'BR',
+      'argentina': 'AR',
+      'mexico': 'MX',
+      'australia': 'AU',
+      'russia': 'RU',
+      'south africa': 'ZA',
+      'nigeria': 'NG',
+    };
+    final code = iso[country.toLowerCase().trim()];
+    if (code == null || code.length != 2) return '🌍';
+    const base = 0x1F1E6;
+    final a = 'A'.codeUnitAt(0);
+    return String.fromCharCodes([
+      base + code.codeUnitAt(0) - a,
+      base + code.codeUnitAt(1) - a,
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final initial = _displayName.isNotEmpty ? _displayName[0].toUpperCase() : '?';
@@ -165,6 +208,23 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                     const SizedBox(width: 4),
                     Text('AlanyaPhone $_phone',
                         style: const TextStyle(fontSize: 14, color: Colors.indigo)),
+                  ],
+                ),
+              ],
+              if ((widget.user.paysLibelle ?? '').isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _flagEmoji(widget.user.paysLibelle!),
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.user.paysLibelle!,
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                    ),
                   ],
                 ),
               ],

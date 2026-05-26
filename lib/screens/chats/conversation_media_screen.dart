@@ -1,7 +1,18 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../talky_models.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:provider/provider.dart';
+import '../../core/db/app_database.dart';
+import '../../providers/chat_provider.dart';
+import 'media_viewer_screen.dart';
+
+class _DateGroup {
+  final String label;
+  final List<LocalMessage> items;
+  const _DateGroup({required this.label, required this.items});
+}
 
 class ConversationMediaScreen extends StatefulWidget {
   final int conversationId;
@@ -21,15 +32,17 @@ class ConversationMediaScreen extends StatefulWidget {
 class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<Message> _mediaMessages = [];
-  List<Message> _linkMessages = [];
-  bool _isLoading = false;
+  List<LocalMessage> _images = [];
+  List<LocalMessage> _videos = [];
+  List<LocalMessage> _documents = [];
+  List<LocalMessage> _links = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _loadMedia();
+    _tabController = TabController(length: 4, vsync: this);
+    _init();
   }
 
   @override
@@ -38,28 +51,89 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     super.dispose();
   }
 
-  Future<void> _loadMedia() async {
-    // TODO: Load media and links from API
-    setState(() => _isLoading = false);
+  Future<void> _init() async {
+    final chat = context.read<ChatProvider>();
+    await chat.repository.syncMessages(widget.conversationId);
+    chat.watchMessages(widget.conversationId).listen(_onMessages);
+  }
+
+  void _onMessages(List<LocalMessage> messages) {
+    final images = <LocalMessage>[];
+    final videos = <LocalMessage>[];
+    final documents = <LocalMessage>[];
+    final links = <LocalMessage>[];
+    for (final m in messages) {
+      if (m.type == 1) {
+        if (m.mediaUrl != null && m.mediaUrl!.isNotEmpty) {
+          images.add(m);
+        }
+      } else if (m.type == 2) {
+        if (m.mediaUrl != null && m.mediaUrl!.isNotEmpty) {
+          videos.add(m);
+        }
+      } else if (m.type == 4) {
+        if (m.mediaUrl != null && m.mediaUrl!.isNotEmpty) {
+          documents.add(m);
+        }
+      }
+      final c = m.content;
+      if (c != null && c.isNotEmpty) {
+        if (_hasUrl(c)) {
+          links.add(m);
+        }
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _images = images.reversed.toList();
+      _videos = videos.reversed.toList();
+      _documents = documents.reversed.toList();
+      _links = links.reversed.toList();
+      _isLoading = false;
+    });
+  }
+
+  bool _hasUrl(String text) {
+    return text.contains('http://') || text.contains('https://');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F5F8),
       appBar: AppBar(
-        title: Text('${widget.conversationName} - Media'),
+        title: Text(
+          '${widget.conversationName} — Médias',
+          style: const TextStyle(fontSize: 16),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.indigo,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.indigo,
-          tabs: const [
-            Tab(text: 'Photos & Videos'),
-            Tab(text: 'Links'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.indigo,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.indigo,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(fontSize: 12),
+              tabs: const [
+                Tab(icon: Icon(Icons.image, size: 22), text: 'Images'),
+                Tab(icon: Icon(Icons.videocam, size: 22), text: 'Vidéos'),
+                Tab(
+                    icon: Icon(Icons.description, size: 22),
+                    text: 'Documents'),
+                Tab(icon: Icon(Icons.link, size: 22), text: 'Liens'),
+              ],
+            ),
+          ),
         ),
       ),
       body: _isLoading
@@ -67,102 +141,390 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildMediaGrid(),
+                _buildImageGrid(),
+                _buildVideoGrid(),
+                _buildDocumentList(),
                 _buildLinksList(),
               ],
             ),
     );
   }
 
-  Widget _buildMediaGrid() {
-    if (_mediaMessages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              CupertinoIcons.photo,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No media shared',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      );
-    }
+  // ── Images ──────────────────────────────────────────────────────────
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: _mediaMessages.length,
+  Widget _buildImageGrid() {
+    if (_images.isEmpty) {
+      return _emptyState(CupertinoIcons.photo, 'Aucune image');
+    }
+    return _buildDateSections(_images, isGrid: true, isVideo: false);
+  }
+
+  // ── Vidéos ──────────────────────────────────────────────────────────
+
+  Widget _buildVideoGrid() {
+    if (_videos.isEmpty) {
+      return _emptyState(CupertinoIcons.videocam, 'Aucune vidéo');
+    }
+    return _buildDateSections(_videos, isGrid: true, isVideo: true);
+  }
+
+  // ── Documents ───────────────────────────────────────────────────────
+
+  Widget _buildDocumentList() {
+    if (_documents.isEmpty) {
+      return _emptyState(Icons.insert_drive_file, 'Aucun document');
+    }
+    return _buildDateSections(_documents, isGrid: false);
+  }
+
+  // ── Liens ───────────────────────────────────────────────────────────
+
+  Widget _buildLinksList() {
+    if (_links.isEmpty) {
+      return _emptyState(CupertinoIcons.link, 'Aucun lien');
+    }
+    return _buildDateSections(_links, isGrid: false);
+  }
+
+  // ── Date grouping ───────────────────────────────────────────────────
+
+  List<_DateGroup> _groupByDate(List<LocalMessage> messages) {
+    if (messages.isEmpty) return [];
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    final groups = <_DateGroup>[];
+    List<LocalMessage>? current;
+    String? currentLabel;
+
+    for (final m in messages) {
+      final date = DateTime(m.sendAt.year, m.sendAt.month, m.sendAt.day);
+      String label;
+      if (date == today) {
+        label = "Aujourd'hui";
+      } else if (date == yesterday) {
+        label = 'Hier';
+      } else {
+        label =
+            '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      }
+
+      if (current == null || currentLabel != label) {
+        if (current != null) {
+          groups.add(_DateGroup(label: currentLabel!, items: current));
+        }
+        current = [];
+        currentLabel = label;
+      }
+      current.add(m);
+    }
+    if (current != null) {
+      groups.add(_DateGroup(label: currentLabel!, items: current));
+    }
+    return groups;
+  }
+
+  Widget _buildDateSections(List<LocalMessage> messages,
+      {required bool isGrid, bool isVideo = false}) {
+    final groups = _groupByDate(messages);
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: groups.length,
       itemBuilder: (context, index) {
-        final msg = _mediaMessages[index];
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.grey.shade200,
-          ),
-          child: msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: msg.mediaUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) =>
-                      const Center(child: CircularProgressIndicator()),
-                  errorWidget: (context, url, error) =>
-                      const Icon(CupertinoIcons.photo),
-                )
-              : const Icon(CupertinoIcons.photo),
+        final group = groups[index];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                group.label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            if (isGrid)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 4,
+                    mainAxisSpacing: 4,
+                  ),
+                  itemCount: group.items.length,
+                  itemBuilder: (context, i) =>
+                      _gridItem(group.items[i], isVideo: isVideo),
+                ),
+              )
+            else
+              ...group.items.map((msg) => Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: msg.type == 4
+                        ? _buildDocTile(msg)
+                        : _buildLinkTile(msg),
+                  )),
+            const SizedBox(height: 8),
+          ],
         );
       },
     );
   }
 
-  Widget _buildLinksList() {
-    if (_linkMessages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              CupertinoIcons.link,
-              size: 64,
-              color: Colors.grey.shade400,
+  Widget _buildDocTile(LocalMessage msg) {
+    final name = msg.mediaName ?? 'Document';
+    final ext = name.contains('.')
+        ? name.split('.').last.toUpperCase()
+        : 'FILE';
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: _docColor(ext),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: Text(
+              ext,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No links shared',
-              style: TextStyle(color: Colors.grey.shade600),
+          ),
+        ),
+        title: Text(
+          name,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          '${msg.sendAt.day}/${msg.sendAt.month}/${msg.sendAt.year}',
+          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: () => _openDoc(msg),
+      ),
+    );
+  }
+
+  Widget _buildLinkTile(LocalMessage msg) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            CupertinoIcons.link,
+            color: Colors.blue,
+            size: 22,
+          ),
+        ),
+        title: Text(
+          msg.content ?? 'Lien',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          '${msg.sendAt.day}/${msg.sendAt.month}/${msg.sendAt.year}',
+          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      ),
+    );
+  }
+
+  // ── Shared widgets ──────────────────────────────────────────────────
+
+  Widget _emptyState(IconData icon, String text) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 56, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _gridItem(LocalMessage msg, {required bool isVideo}) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MediaViewerScreen(
+            isVideo: isVideo,
+            localPath: msg.localMediaPath,
+            networkUrl: msg.mediaUrl,
+            title: msg.mediaName,
+          ),
+        ),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: Colors.grey.shade200,
             ),
-          ],
+            clipBehavior: Clip.antiAlias,
+            child: _buildThumbnail(msg, msg.localMediaPath ?? msg.mediaUrl),
+          ),
+          if (isVideo)
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                color: Colors.black26,
+              ),
+              child: const Icon(
+                CupertinoIcons.play_circle_fill,
+                color: Colors.white,
+                size: 36,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThumbnail(LocalMessage msg, String? url) {
+    if (msg.type == 2) {
+      return Container(color: Colors.grey.shade300);
+    }
+    final hasLocal = msg.localMediaPath != null &&
+        File(msg.localMediaPath!).existsSync();
+    if (hasLocal) {
+      return Image.file(
+        File(msg.localMediaPath!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            Container(color: Colors.grey.shade300),
+      );
+    }
+    if (url != null && url.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        placeholder: (context, url) =>
+            const Center(child: CircularProgressIndicator()),
+        errorWidget: (context, url, error) =>
+            Container(color: Colors.grey.shade300),
+      );
+    }
+    return Container(color: Colors.grey.shade300);
+  }
+
+  Color _docColor(String ext) {
+    switch (ext) {
+      case 'PDF':
+        return Colors.red.shade400;
+      case 'DOC':
+      case 'DOCX':
+        return Colors.blue.shade400;
+      case 'XLS':
+      case 'XLSX':
+        return Colors.green.shade400;
+      case 'PPT':
+      case 'PPTX':
+        return Colors.orange.shade400;
+      case 'ZIP':
+      case 'RAR':
+        return Colors.purple.shade400;
+      default:
+        return Colors.grey.shade500;
+    }
+  }
+
+  Future<void> _openDoc(LocalMessage msg) async {
+    String? path = (msg.localMediaPath != null &&
+            File(msg.localMediaPath!).existsSync())
+        ? msg.localMediaPath
+        : null;
+
+    if (path == null) {
+      if (msg.mediaUrl == null) return;
+      _showLoading();
+      final chat = context.read<ChatProvider>();
+      path = await chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
+      if (path != null && msg.msgID != 0) {
+        await chat.repository.dao.setLocalMediaPath(msg.msgID, path);
+      }
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (path == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible de télécharger le fichier'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final res = await OpenFilex.open(path);
+    if (res.type != ResultType.done && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Aucune app pour ouvrir ce fichier (${res.message})'),
+          backgroundColor: Colors.red,
         ),
       );
     }
+  }
 
-    return ListView.builder(
-      itemCount: _linkMessages.length,
-      itemBuilder: (context, index) {
-        final msg = _linkMessages[index];
-        return ListTile(
-          leading: const Icon(
-            CupertinoIcons.link,
-            color: Colors.blue,
-          ),
-          title: Text(msg.content ?? 'Link'),
-          subtitle: Text(msg.sendAt),
-          trailing: Icon(
-            CupertinoIcons.chevron_right,
-            color: Colors.grey.shade400,
-          ),
-        );
-      },
+  void _showLoading() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: Colors.white)),
     );
   }
 }

@@ -411,6 +411,12 @@ class TalkyApiClient {
     );
   }
 
+  Future<void> deleteConversation(int conversID) async {
+    await _handleRequest(
+      () => _client.delete(Uri.parse('$baseUrl/conversations/$conversID'), headers: _headers),
+    );
+  }
+
   // ── MESSAGES ──────────────────────────────────────────────────────
 
   Future<List<dynamic>> getMessages(int conversID, {int limit = 50, int? before}) async {

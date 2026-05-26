@@ -17,6 +17,8 @@ import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../calls/ongoing_call_screen.dart';
+import 'contact_detail_screen.dart';
+import 'group_detail_screen.dart';
 import 'media_viewer_screen.dart';
 import 'voice_message_bubble.dart';
 
@@ -445,7 +447,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Row(
+        title: InkWell(
+          onTap: widget.isGroup
+              ? (widget.conversationId != null
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GroupDetailScreen(
+                            conversationId: widget.conversationId!,
+                            groupName: widget.userName,
+                            groupAvatar: widget.avatarUrl,
+                          ),
+                        ),
+                      )
+                  : null)
+              : (widget.userId != null
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ContactDetailScreen(
+                            userId: widget.userId!,
+                            conversationId: widget.conversationId,
+                            initialName: widget.userName,
+                            initialAvatar: widget.avatarUrl ?? '',
+                          ),
+                        ),
+                      )
+                  : null),
+          child: Row(
           children: [
             CircleAvatar(
               radius: 18,
@@ -496,6 +525,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
           ],
+          ),
         ),
         actions: [
           IconButton(icon: const Icon(Icons.videocam, color: Colors.indigo), onPressed: () => _initiateCall(isVideo: true)),
