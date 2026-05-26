@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/services/push_service.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
@@ -65,7 +67,22 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
   }
 
   Future<void> _loadMeetings() async {
-    setState(() => _isLoading = true);
+    // 1) Hydrate depuis le cache local (instantané, offline-safe).
+    try {
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      final local = await cache.watchMeetings().first;
+      if (!mounted) return;
+      if (local.isNotEmpty) {
+        setState(() {
+          _meetings = local.map(_localToMeeting).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = true);
+      }
+    } catch (_) {}
+
+    // 2) Rafraîchit depuis l'API (best-effort).
     try {
       final meetingService = Provider.of<MeetingService>(context, listen: false);
       final data = await meetingService.getMeetings();
@@ -74,10 +91,30 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
         _meetings = data;
         _isLoading = false;
       });
+      if (mounted) {
+        final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+        cache.syncMeetings();
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _isLoading = false);
     }
+  }
+
+  Meeting _localToMeeting(LocalMeeting m) {
+    return Meeting(
+      idMeeting: m.idMeeting,
+      idOrganiser: m.organiserID,
+      startTime: m.startTime.toIso8601String(),
+      duree: m.duree,
+      objet: m.objet,
+      room: m.room,
+      isEnd: m.statut == 2,
+      typeMedia: m.typeMedia,
+      reminderSent: false,
+      organiserNom: m.organiserNom,
+      participants: const [],
+    );
   }
 
   List<Meeting> get _todayMeetings {

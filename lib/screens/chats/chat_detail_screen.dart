@@ -641,58 +641,76 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Widget _buildMessageBubble(LocalMessage msg, bool isMe) {
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
-        onLongPress: () => _showMessageMenu(msg, isMe),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-          decoration: BoxDecoration(
-            color: isMe ? Colors.indigo : Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(20),
-              topRight: const Radius.circular(20),
-              bottomLeft: isMe ? const Radius.circular(20) : Radius.zero,
-              bottomRight: isMe ? Radius.zero : const Radius.circular(20),
+    return Column(
+      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        // Show sender name in group chats for other people's messages
+        if (widget.isGroup && !isMe)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 4),
+            child: Text(
+              msg.senderNom ?? msg.senderPseudo ?? 'Unknown',
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 5, offset: const Offset(0, 2)),
-            ],
           ),
-          child: Column(
-            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            children: [
-              if (msg.replyToContent != null && msg.replyToContent!.isNotEmpty)
-                _buildReplyQuote(msg.replyToContent!, isMe),
-              if (msg.type != 0) _buildMedia(msg, isMe),
-              if (msg.content != null && msg.content!.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
-                  child: Text(
-                    msg.content!,
-                    style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15),
-                  ),
+        Align(
+          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+          child: GestureDetector(
+            onLongPress: () => _showMessageMenu(msg, isMe),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              decoration: BoxDecoration(
+                color: isMe ? Colors.indigo : Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: isMe ? const Radius.circular(20) : Radius.zero,
+                  bottomRight: isMe ? Radius.zero : const Radius.circular(20),
                 ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _formatTime(msg.sendAt),
-                    style: TextStyle(color: isMe ? Colors.white70 : Colors.black45, fontSize: 10),
-                  ),
-                  if (isMe) ...[
-                    const SizedBox(width: 4),
-                    _statusIcon(msg.status),
-                  ],
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 5, offset: const Offset(0, 2)),
                 ],
               ),
-            ],
+              child: Column(
+                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (msg.replyToContent != null && msg.replyToContent!.isNotEmpty)
+                    _buildReplyQuote(msg.replyToContent!, isMe),
+                  if (msg.type != 0) _buildMedia(msg, isMe),
+                  if (msg.content != null && msg.content!.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
+                      child: Text(
+                        msg.content!,
+                        style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15),
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatTime(msg.sendAt),
+                        style: TextStyle(color: isMe ? Colors.white70 : Colors.black45, fontSize: 10),
+                      ),
+                      if (isMe) ...[
+                        const SizedBox(width: 4),
+                        _statusIcon(msg.status),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 

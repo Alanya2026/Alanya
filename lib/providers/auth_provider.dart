@@ -27,6 +27,15 @@ class AuthProvider extends ChangeNotifier {
   Future<void> init() async {
     try {
       await _storage.init();
+      // Hydrate immédiatement depuis le cache pour afficher quelque chose
+      // même hors ligne / avant la réponse réseau.
+      try {
+        final cached = await _storage.getUser();
+        if (cached != null) {
+          _currentUser = cached;
+          notifyListeners();
+        }
+      } catch (_) {}
       await _checkAuthStatus();
     } catch (e) {
       debugPrint('[AuthProvider] ** init() error: $e');
@@ -46,13 +55,22 @@ class AuthProvider extends ChangeNotifier {
       if (refreshToken != null) {
         _apiClient.setRefreshToken(refreshToken);
       }
-      final userData = await _apiClient.getMe();
-      _currentUser = User.fromJson(userData);
+      try {
+        final userData = await _apiClient.getMe();
+        _currentUser = User.fromJson(userData);
+        await _storage.saveUser(_currentUser!);
+      } on TalkyException catch (e) {
+        // Offline ou erreur transitoire : on garde le user caché. Sinon
+        // 401/403 = token invalide → clear et déconnexion.
+        if (e.statusCode == 401 || e.statusCode == 403) rethrow;
+        debugPrint('[AuthProvider] getMe offline, on garde le cache: ${e.message}');
+      }
       _apiClient.connectSocket();
     } catch (e) {
       debugPrint('[AuthProvider] ** _checkAuthStatus error: $e');
       try { await _storage.clearAll(); } catch (_) {}
       _apiClient.logout();
+      _currentUser = null;
     }
   }
 
@@ -76,6 +94,7 @@ class AuthProvider extends ChangeNotifier {
 
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
+      await _storage.saveUser(_currentUser!);
       _apiClient.connectSocket();
     } on TalkyException catch (e) {
       _error = e.message;
@@ -112,6 +131,7 @@ class AuthProvider extends ChangeNotifier {
 
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
+      await _storage.saveUser(_currentUser!);
       _apiClient.connectSocket();
     } on TalkyException catch (e) {
       _error = e.message;
@@ -146,6 +166,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final data = await _apiClient.getMe();
       _currentUser = User.fromJson(data);
+      await _storage.saveUser(_currentUser!);
       notifyListeners();
     } catch (e) {
       debugPrint('[AuthProvider] _refreshCurrentUser error: $e');

@@ -8,6 +8,7 @@ import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/utils/country_utils.dart';
 import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
@@ -51,6 +52,50 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   }
 
   Future<void> _load() async {
+    final cache = context.read<LocalCacheRepository>();
+
+    // 1) Affichage immédiat depuis l'initial passé OU le cache local.
+    if (widget.initialName.isNotEmpty || widget.initialAvatar.isNotEmpty) {
+      setState(() {
+        _contact = User(
+          alanyaID: widget.userId,
+          nom: widget.initialName,
+          pseudo: '',
+          alanyaPhone: '',
+          email: '',
+          idPays: 0,
+          avatarUrl: widget.initialAvatar,
+          typeCompte: 0,
+          isOnline: false,
+          lastSeen: '',
+        );
+        _isLoading = false;
+      });
+    }
+    try {
+      final u = await cache.getKnownUser(widget.userId);
+      if (u != null && mounted) {
+        setState(() {
+          _contact = User(
+            alanyaID: u.alanyaID,
+            nom: u.nom,
+            pseudo: u.pseudo,
+            alanyaPhone: u.alanyaPhone,
+            email: u.email,
+            idPays: u.idPays,
+            avatarUrl: u.avatarUrl,
+            typeCompte: u.typeCompte,
+            isOnline: u.isOnline,
+            lastSeen: u.lastSeen?.toIso8601String() ?? '',
+            paysLibelle: u.paysLibelle,
+          );
+          _isFavorite = u.isPreferredContact;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {}
+
+    // 2) Rafraîchit depuis l'API + upsert dans le cache pour la prochaine fois.
     try {
       final data = await _api.getUserById(widget.userId);
       bool fav = false;
@@ -58,13 +103,15 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         fav = await _api.checkIsContact(widget.userId);
       } catch (_) {}
       if (!mounted) return;
+      final user = User.fromJson(data);
       setState(() {
-        _contact = User.fromJson(data);
+        _contact = user;
         _isFavorite = fav;
         _isLoading = false;
       });
+      cache.upsertKnownUser(user, preferred: fav);
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && _contact == null) setState(() => _isLoading = false);
     }
   }
 

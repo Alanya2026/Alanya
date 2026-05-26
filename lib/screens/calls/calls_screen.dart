@@ -5,6 +5,8 @@ import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
 import 'ongoing_call_screen.dart';
@@ -39,7 +41,22 @@ class _CallsScreenState extends State<CallsScreen> {
   }
 
   Future<void> _loadRecentCalls() async {
-    setState(() => _isLoading = true);
+    // 1) Hydrate immédiatement depuis le cache local (instantané, offline-safe).
+    try {
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      final localCalls = await cache.watchCalls().first;
+      if (!mounted) return;
+      if (localCalls.isNotEmpty) {
+        setState(() {
+          _recentCalls = localCalls.map(_localToCall).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = true);
+      }
+    } catch (_) {}
+
+    // 2) Rafraîchit depuis l'API (best-effort, écrase le cache si succès).
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final raw = await apiClient.getCallHistory();
@@ -48,13 +65,59 @@ class _CallsScreenState extends State<CallsScreen> {
               ? item
               : Call.fromJson(item as Map<String, dynamic>))
           .toList();
+      if (!mounted) return;
       setState(() {
         _recentCalls = calls;
         _isLoading = false;
       });
+      // Sync background → met aussi à jour le cache local pour la prochaine fois.
+      if (mounted) {
+        final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+        cache.syncCalls();
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Call _localToCall(LocalCall c) {
+    return Call(
+      idCall: c.idCall,
+      idCaller: c.idCaller,
+      idReceiver: c.idReceiver,
+      type: c.type,
+      status: c.status,
+      createdAt: c.createdAt.toIso8601String(),
+      duree: c.duration,
+      caller: c.idCaller != _myId
+          ? User(
+              alanyaID: c.idCaller,
+              nom: c.otherNom ?? '',
+              pseudo: '',
+              alanyaPhone: '',
+              email: '',
+              idPays: 0,
+              avatarUrl: c.otherAvatar ?? '',
+              typeCompte: 0,
+              isOnline: false,
+              lastSeen: '',
+            )
+          : null,
+      receiver: c.idReceiver != _myId
+          ? User(
+              alanyaID: c.idReceiver,
+              nom: c.otherNom ?? '',
+              pseudo: '',
+              alanyaPhone: '',
+              email: '',
+              idPays: 0,
+              avatarUrl: c.otherAvatar ?? '',
+              typeCompte: 0,
+              isOnline: false,
+              lastSeen: '',
+            )
+          : null,
+    );
   }
 
   Future<void> _callFromHistory(Call call, bool isVideo) async {

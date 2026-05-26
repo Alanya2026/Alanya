@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
+import 'core/db/app_database.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
+import 'core/services/local_cache_repository.dart';
 import 'core/services/meeting_service.dart';
 import 'core/services/push_service.dart';
 import 'firebase_options.dart';
@@ -40,20 +43,28 @@ class TalkyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = TalkyApiClient();
+    final database = AppDatabase();
+    final chatProvider = ChatProvider(api: apiClient, database: database);
+    final localCache = LocalCacheRepository(db: database, api: apiClient);
     return MultiProvider(
       providers: [
         Provider<TalkyApiClient>.value(value: apiClient),
+        Provider<AppDatabase>.value(value: database),
+        Provider<LocalCacheRepository>.value(value: localCache),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: apiClient)),
         //  CallService enregistré
         ChangeNotifierProvider(create: (_) => CallService(apiClient: apiClient)),
         //  MeetingService enregistré (manquait)
         ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
         //  ChatProvider : chats offline-first (drift) + présence temps réel
-        ChangeNotifierProvider(create: (_) => ChatProvider(api: apiClient)),
+        ChangeNotifierProvider.value(value: chatProvider),
         //  StatusProvider : statuts/stories avec persistence offline
-        ChangeNotifierProvider(create: (_) => StatusProvider(api: apiClient)),
+        ChangeNotifierProvider(
+            create: (_) => StatusProvider(api: apiClient, cache: localCache)),
         //  AdminProvider : dashboard admin avec pagination
         ChangeNotifierProvider(create: (_) => AdminProvider(api: apiClient)),
+        //  ConnectivityProvider : état réseau OS pour l'UI offline + triggers
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider(api: apiClient)),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -108,6 +119,30 @@ class _AuthWrapperState extends State<AuthWrapper> {
           if (myId != null) {
             try {
               await chatProvider.bind(myId);
+              // Sync background du cache lecture (contacts, calls, meetings).
+              if (mounted) {
+                final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+                cache.syncPreferredContacts();
+                cache.syncCalls();
+                cache.syncMeetings();
+                cache.purgeExpiredStatuses();
+              }
+              // Resync à chaque retour online (réseau OS), au-delà du seul
+              // auth:verified — ça couvre les coupures Wi-Fi/4G transitoires.
+              if (mounted) {
+                final connectivity =
+                    Provider.of<ConnectivityProvider>(context, listen: false);
+                final cache =
+                    Provider.of<LocalCacheRepository>(context, listen: false);
+                connectivity.addBackOnlineListener(() {
+                  debugPrint('[AuthWrapper] Réseau revenu → flush + refresh');
+                  chatProvider.repository.flushOutbox();
+                  chatProvider.refreshConversations();
+                  cache.syncPreferredContacts();
+                  cache.syncCalls();
+                  cache.syncMeetings();
+                });
+              }
             } catch (e) {
               debugPrint('[AuthWrapper] ChatProvider.bind échoué: $e');
             }

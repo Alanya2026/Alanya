@@ -8,6 +8,8 @@ import '../../core/utils/country_utils.dart';
 import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/add_contact_sheet.dart';
+import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../chats/contact_detail_screen.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'settings_screen.dart';
@@ -36,6 +38,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUser() async {
+    // 1) Hydrate immédiatement depuis le cache AuthProvider (offline-safe).
+    final cached = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (cached != null && mounted) {
+      setState(() {
+        _user = cached;
+        _isLoading = false;
+      });
+    }
+
+    // 2) Rafraîchit depuis l'API ; en cas d'échec on garde le cache.
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
@@ -61,12 +73,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      // Réseau indisponible : on garde l'affichage du cache (déjà posé en étape 1).
+      if (mounted && _user == null) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loadContacts() async {
-    setState(() => _loadingContacts = true);
+    // 1) Hydrate depuis le cache local.
+    try {
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      final local = await cache.watchPreferredContacts().first;
+      if (!mounted) return;
+      if (local.isNotEmpty) {
+        setState(() {
+          _contacts = local.map(_localToUser).toList();
+          _loadingContacts = false;
+        });
+      } else {
+        setState(() => _loadingContacts = true);
+      }
+    } catch (_) {}
+
+    // 2) Rafraîchit depuis l'API.
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getContacts();
@@ -77,10 +105,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .toList();
         _loadingContacts = false;
       });
+      if (mounted) {
+        final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+        cache.syncPreferredContacts();
+      }
     } catch (_) {
       if (mounted) setState(() => _loadingContacts = false);
     }
   }
+
+  User _localToUser(LocalUser u) => User(
+        alanyaID: u.alanyaID,
+        nom: u.nom,
+        pseudo: u.pseudo,
+        alanyaPhone: u.alanyaPhone,
+        email: u.email,
+        idPays: u.idPays,
+        avatarUrl: u.avatarUrl,
+        typeCompte: u.typeCompte,
+        isOnline: u.isOnline,
+        lastSeen: u.lastSeen?.toIso8601String() ?? '',
+        paysLibelle: u.paysLibelle,
+      );
 
   Future<void> _logout() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/status_provider.dart';
@@ -50,7 +51,7 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
                 leading: CircleAvatar(
                   backgroundColor: Colors.indigo.shade50,
                   backgroundImage: hasValidAvatarUrl(v.avatarUrl)
-                      ? NetworkImage(v.avatarUrl!)
+                      ? CachedNetworkImageProvider(v.avatarUrl!)
                       : null,
                   child: !hasValidAvatarUrl(v.avatarUrl)
                       ? Text(initial,

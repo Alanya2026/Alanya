@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/utils/avatar_utils.dart';
+import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'meeting_lobby_screen.dart';
@@ -29,9 +31,43 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
+    // 1) Hydrate depuis le cache local pour un affichage instantané (offline-safe).
+    final me = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+    final api = Provider.of<TalkyApiClient>(context, listen: false);
+    final myId = me?.alanyaID ?? 0;
+    final myName = (me?.nom.isNotEmpty == true) ? me!.nom : (me?.pseudo ?? '');
     try {
-      final api = Provider.of<TalkyApiClient>(context, listen: false);
+      final local = await cache.watchMeetings().first;
+      final found = local.where((m) => m.idMeeting == widget.meetingId).firstOrNull;
+      if (found != null && mounted) {
+        final cachedMeeting = Meeting(
+          idMeeting: found.idMeeting,
+          idOrganiser: found.organiserID,
+          startTime: found.startTime.toIso8601String(),
+          duree: found.duree,
+          objet: found.objet,
+          room: found.room,
+          isEnd: found.statut == 2,
+          typeMedia: found.typeMedia,
+          reminderSent: false,
+          organiserNom: found.organiserNom,
+          participants: const [],
+        );
+        setState(() {
+          _meeting = cachedMeeting;
+          _myId = myId;
+          _myName = myName;
+          _isOrganiser = cachedMeeting.idOrganiser == myId;
+          _isLoading = false;
+        });
+      } else if (mounted) {
+        setState(() => _isLoading = true);
+      }
+    } catch (_) {}
+
+    // 2) Rafraîchit depuis l'API.
+    try {
       final results = await Future.wait([
         api.getMeeting(widget.meetingId),
         api.getMe(),
@@ -39,23 +75,26 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
 
       if (!mounted) return;
       final meeting = Meeting.fromJson(results[0]);
-      final me = results[1];
-      final myId = (me['alanyaID'] as num?)?.toInt() ?? 0;
-      final myName = me['nom'] as String? ?? me['pseudo'] as String? ?? '';
+      final freshMe = results[1];
+      final freshId = (freshMe['alanyaID'] as num?)?.toInt() ?? myId;
+      final freshName = freshMe['nom'] as String? ?? freshMe['pseudo'] as String? ?? myName;
 
       setState(() {
         _meeting = meeting;
-        _myId = myId;
-        _myName = myName;
-        _isOrganiser = meeting.idOrganiser == myId;
+        _myId = freshId;
+        _myName = freshName;
+        _isOrganiser = meeting.idOrganiser == freshId;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de charger la réunion : $e')),
-      );
+      if (_meeting == null) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Impossible de charger la réunion : $e')),
+        );
+      }
+      // Sinon on garde silencieusement le cache.
     }
   }
 

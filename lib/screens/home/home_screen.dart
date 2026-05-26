@@ -13,6 +13,7 @@ import '../meetings/meets_screen.dart';
 import '../profile/profile_screen.dart';
 import '../status/statuses_screen.dart';
 import '../calls/incoming_call_screen.dart';
+import '../../widgets/offline_banner.dart';
 import 'glass_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -209,6 +210,12 @@ class _HomeScreenState extends State<HomeScreen> {
               onPageChanged: _onPageChanged,
               children: _screens.map((s) => KeepAliveWrapper(child: s)).toList(),
             ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: mq.padding.top,
+            child: const OfflineBanner(),
           ),
           Positioned(
             left: 0,

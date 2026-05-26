@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../core/utils/avatar_utils.dart';
 
@@ -42,13 +43,14 @@ class StatusRingAvatar extends StatelessWidget {
     final center = showPreview
         ? CircleAvatar(
             radius: inner / 2,
-            backgroundImage: NetworkImage(previewUrl!),
+            backgroundImage: CachedNetworkImageProvider(previewUrl!),
             onBackgroundImageError: (_, __) {},
           )
         : CircleAvatar(
             radius: inner / 2,
             backgroundColor: Colors.grey.shade300,
-            backgroundImage: showAvatar ? NetworkImage(avatarUrl!) : null,
+            backgroundImage:
+                showAvatar ? CachedNetworkImageProvider(avatarUrl!) : null,
             onBackgroundImageError: showAvatar ? (_, __) {} : null,
             child: !showAvatar
                 ? Text(

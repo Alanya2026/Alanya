@@ -4,12 +4,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/db/app_database.dart';
+import '../core/services/local_cache_repository.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
 
 class StatusProvider extends ChangeNotifier {
   final TalkyApiClient _api;
-  StatusProvider({required TalkyApiClient api}) : _api = api;
+  final LocalCacheRepository? _cache;
+  StatusProvider({required TalkyApiClient api, LocalCacheRepository? cache})
+      : _api = api,
+        _cache = cache;
 
   int _myId = 0;
   bool _bound = false;
@@ -52,8 +57,55 @@ class StatusProvider extends ChangeNotifier {
         (_) => _purgeExpired(),
       );
     }
+    // Hydrate depuis le cache local pour un affichage instantané (offline-safe)
+    await _hydrateFromCache();
     await refresh();
   }
+
+  /// Charge les statuts non expirés depuis Drift et alimente _byAuthor / _mine.
+  Future<void> _hydrateFromCache() async {
+    if (_cache == null) return;
+    try {
+      final rows = await _cache.watchStatuses().first;
+      if (rows.isEmpty) return;
+      _byAuthor.clear();
+      _mine.clear();
+      for (final r in rows) {
+        final s = _localToStatut(r);
+        if (s.isExpired) continue;
+        if (r.isMine) {
+          _mine.add(s);
+        } else {
+          _byAuthor.putIfAbsent(s.alanyaID, () => []).add(s);
+        }
+      }
+      for (final list in _byAuthor.values) {
+        list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      }
+      _mine.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[StatusProvider] _hydrateFromCache error: $e');
+    }
+  }
+
+  Statut _localToStatut(LocalStatuse r) => Statut(
+        id: r.idStatut,
+        alanyaID: r.authorID,
+        type: r.type,
+        text: r.textContent,
+        mediaUrl: r.mediaUrl,
+        mediaDurationMs: r.mediaDurationMs,
+        backgroundColor: r.backgroundColor,
+        createdAt: r.createdAt.toIso8601String(),
+        expiredAt: r.expiresAt.toIso8601String(),
+        viewedBy: 0,
+        likedBy: 0,
+        likedByMe: false,
+        seenByMe: _seenIds.contains(r.idStatut),
+        nom: r.authorNom,
+        avatarUrl: r.authorAvatar,
+      );
 
   void unbind() {
     if (!_bound) return;
@@ -102,6 +154,15 @@ class StatusProvider extends ChangeNotifier {
         list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       }
       _mine.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      // Persiste dans Drift pour lecture offline au prochain démarrage.
+      if (_cache != null) {
+        for (final s in others) {
+          await _cache.upsertStatus(s, isMine: false);
+        }
+        for (final s in _mine) {
+          await _cache.upsertStatus(s, isMine: true);
+        }
+      }
     } catch (e) {
       debugPrint('[StatusProvider] refresh error: $e');
     } finally {
@@ -124,6 +185,7 @@ class StatusProvider extends ChangeNotifier {
       );
       final s = Statut.fromJson(json);
       _mine.add(s);
+      await _cache?.upsertStatus(s, isMine: true);
       notifyListeners();
       return s;
     } catch (e) {
@@ -150,6 +212,7 @@ class StatusProvider extends ChangeNotifier {
       );
       final s = Statut.fromJson(json);
       _mine.add(s);
+      await _cache?.upsertStatus(s, isMine: true);
       notifyListeners();
       return s;
     } catch (e) {
@@ -163,6 +226,7 @@ class StatusProvider extends ChangeNotifier {
       await _api.deleteStatut(id);
       _mine.removeWhere((s) => s.id == id);
       _viewsCache.remove(id);
+      await _cache?.deleteStatusById(id);
       notifyListeners();
     } catch (e) {
       debugPrint('[StatusProvider] delete error: $e');
@@ -206,18 +270,65 @@ class StatusProvider extends ChangeNotifier {
   }
 
   Future<List<StatutView>> getViews(int id, {bool force = false}) async {
+    // 1) Cache mémoire si présent et pas forcé.
     if (!force && _viewsCache.containsKey(id)) return _viewsCache[id]!;
+    // 2) Cache persistant (SharedPreferences) en l'absence du cache mémoire.
+    if (!_viewsCache.containsKey(id)) {
+      final loaded = await _loadViewsForStatus(id);
+      if (loaded != null) _viewsCache[id] = loaded;
+    }
+    // 3) Fetch API + persiste pour la prochaine fois.
     try {
       final list = await _api.getStatutViews(id);
       final views = list
           .map((e) => StatutView.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       _viewsCache[id] = views;
+      _saveViewsForStatus(id, views);
       return views;
     } catch (e) {
       debugPrint('[StatusProvider] getViews error: $e');
       return _viewsCache[id] ?? [];
     }
+  }
+
+  // ── Persistance vues (SharedPreferences) ────────────────────────────
+
+  static String _viewsKey(int statutId) => 'status_views_$statutId';
+
+  Future<List<StatutView>?> _loadViewsForStatus(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_viewsKey(id));
+      if (raw == null) return null;
+      final list = jsonDecode(raw);
+      if (list is! List) return null;
+      return list
+          .whereType<Map>()
+          .map((e) => StatutView.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveViewsForStatus(int id, List<StatutView> views) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = views
+          .map((v) => {
+                'statutID': v.statutID,
+                'alanyaID': v.alanyaID,
+                'nom': v.nom,
+                'pseudo': v.pseudo,
+                'avatar_url': v.avatarUrl,
+                'seenAt': v.seenAt,
+                'liked': v.liked ? 1 : 0,
+                'likedAt': v.likedAt,
+              })
+          .toList();
+      await prefs.setString(_viewsKey(id), jsonEncode(json));
+    } catch (_) {}
   }
 
   // ── Socket handlers ──────────────────────────────────────────────────
@@ -230,6 +341,7 @@ class StatusProvider extends ChangeNotifier {
     if (!list.any((e) => e.id == s.id)) {
       list.add(s);
       list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      _cache?.upsertStatus(s, isMine: false);
       notifyListeners();
     }
   }
@@ -325,6 +437,7 @@ class StatusProvider extends ChangeNotifier {
     }
     _mine.removeWhere((s) => s.id == id);
     _viewsCache.remove(id);
+    _cache?.deleteStatusById(id);
     notifyListeners();
   }
 

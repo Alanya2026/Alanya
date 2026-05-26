@@ -1,6 +1,8 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
 part of 'app_database.dart';
 
- 
+// ignore_for_file: type=lint
 class $LocalConversationsTable extends LocalConversations
     with TableInfo<$LocalConversationsTable, LocalConversation> {
   @override
@@ -375,7 +377,6 @@ class LocalConversation extends DataClass
   final int unreadCount;
   final bool isPinned;
   final bool isArchived;
- 
   final String participantsJson;
   const LocalConversation({
     required this.conversID,
@@ -2105,12 +2106,2736 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   }
 }
 
+class $LocalUsersTable extends LocalUsers
+    with TableInfo<$LocalUsersTable, LocalUser> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalUsersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _alanyaIDMeta = const VerificationMeta(
+    'alanyaID',
+  );
+  @override
+  late final GeneratedColumn<int> alanyaID = GeneratedColumn<int>(
+    'alanya_i_d',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nomMeta = const VerificationMeta('nom');
+  @override
+  late final GeneratedColumn<String> nom = GeneratedColumn<String>(
+    'nom',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _pseudoMeta = const VerificationMeta('pseudo');
+  @override
+  late final GeneratedColumn<String> pseudo = GeneratedColumn<String>(
+    'pseudo',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _alanyaPhoneMeta = const VerificationMeta(
+    'alanyaPhone',
+  );
+  @override
+  late final GeneratedColumn<String> alanyaPhone = GeneratedColumn<String>(
+    'alanya_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _emailMeta = const VerificationMeta('email');
+  @override
+  late final GeneratedColumn<String> email = GeneratedColumn<String>(
+    'email',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _avatarUrlMeta = const VerificationMeta(
+    'avatarUrl',
+  );
+  @override
+  late final GeneratedColumn<String> avatarUrl = GeneratedColumn<String>(
+    'avatar_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _idPaysMeta = const VerificationMeta('idPays');
+  @override
+  late final GeneratedColumn<int> idPays = GeneratedColumn<int>(
+    'id_pays',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _paysLibelleMeta = const VerificationMeta(
+    'paysLibelle',
+  );
+  @override
+  late final GeneratedColumn<String> paysLibelle = GeneratedColumn<String>(
+    'pays_libelle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isOnlineMeta = const VerificationMeta(
+    'isOnline',
+  );
+  @override
+  late final GeneratedColumn<bool> isOnline = GeneratedColumn<bool>(
+    'is_online',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_online" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _lastSeenMeta = const VerificationMeta(
+    'lastSeen',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSeen = GeneratedColumn<DateTime>(
+    'last_seen',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isPreferredContactMeta =
+      const VerificationMeta('isPreferredContact');
+  @override
+  late final GeneratedColumn<bool> isPreferredContact = GeneratedColumn<bool>(
+    'is_preferred_contact',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_preferred_contact" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _typeCompteMeta = const VerificationMeta(
+    'typeCompte',
+  );
+  @override
+  late final GeneratedColumn<int> typeCompte = GeneratedColumn<int>(
+    'type_compte',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    alanyaID,
+    nom,
+    pseudo,
+    alanyaPhone,
+    email,
+    avatarUrl,
+    idPays,
+    paysLibelle,
+    isOnline,
+    lastSeen,
+    isPreferredContact,
+    typeCompte,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_users';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalUser> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('alanya_i_d')) {
+      context.handle(
+        _alanyaIDMeta,
+        alanyaID.isAcceptableOrUnknown(data['alanya_i_d']!, _alanyaIDMeta),
+      );
+    }
+    if (data.containsKey('nom')) {
+      context.handle(
+        _nomMeta,
+        nom.isAcceptableOrUnknown(data['nom']!, _nomMeta),
+      );
+    }
+    if (data.containsKey('pseudo')) {
+      context.handle(
+        _pseudoMeta,
+        pseudo.isAcceptableOrUnknown(data['pseudo']!, _pseudoMeta),
+      );
+    }
+    if (data.containsKey('alanya_phone')) {
+      context.handle(
+        _alanyaPhoneMeta,
+        alanyaPhone.isAcceptableOrUnknown(
+          data['alanya_phone']!,
+          _alanyaPhoneMeta,
+        ),
+      );
+    }
+    if (data.containsKey('email')) {
+      context.handle(
+        _emailMeta,
+        email.isAcceptableOrUnknown(data['email']!, _emailMeta),
+      );
+    }
+    if (data.containsKey('avatar_url')) {
+      context.handle(
+        _avatarUrlMeta,
+        avatarUrl.isAcceptableOrUnknown(data['avatar_url']!, _avatarUrlMeta),
+      );
+    }
+    if (data.containsKey('id_pays')) {
+      context.handle(
+        _idPaysMeta,
+        idPays.isAcceptableOrUnknown(data['id_pays']!, _idPaysMeta),
+      );
+    }
+    if (data.containsKey('pays_libelle')) {
+      context.handle(
+        _paysLibelleMeta,
+        paysLibelle.isAcceptableOrUnknown(
+          data['pays_libelle']!,
+          _paysLibelleMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_online')) {
+      context.handle(
+        _isOnlineMeta,
+        isOnline.isAcceptableOrUnknown(data['is_online']!, _isOnlineMeta),
+      );
+    }
+    if (data.containsKey('last_seen')) {
+      context.handle(
+        _lastSeenMeta,
+        lastSeen.isAcceptableOrUnknown(data['last_seen']!, _lastSeenMeta),
+      );
+    }
+    if (data.containsKey('is_preferred_contact')) {
+      context.handle(
+        _isPreferredContactMeta,
+        isPreferredContact.isAcceptableOrUnknown(
+          data['is_preferred_contact']!,
+          _isPreferredContactMeta,
+        ),
+      );
+    }
+    if (data.containsKey('type_compte')) {
+      context.handle(
+        _typeCompteMeta,
+        typeCompte.isAcceptableOrUnknown(data['type_compte']!, _typeCompteMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {alanyaID};
+  @override
+  LocalUser map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalUser(
+      alanyaID: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}alanya_i_d'],
+      )!,
+      nom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nom'],
+      )!,
+      pseudo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pseudo'],
+      )!,
+      alanyaPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}alanya_phone'],
+      )!,
+      email: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}email'],
+      )!,
+      avatarUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}avatar_url'],
+      )!,
+      idPays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_pays'],
+      )!,
+      paysLibelle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pays_libelle'],
+      ),
+      isOnline: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_online'],
+      )!,
+      lastSeen: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_seen'],
+      ),
+      isPreferredContact: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_preferred_contact'],
+      )!,
+      typeCompte: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_compte'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalUsersTable createAlias(String alias) {
+    return $LocalUsersTable(attachedDatabase, alias);
+  }
+}
+
+class LocalUser extends DataClass implements Insertable<LocalUser> {
+  final int alanyaID;
+  final String nom;
+  final String pseudo;
+  final String alanyaPhone;
+  final String email;
+  final String avatarUrl;
+  final int idPays;
+  final String? paysLibelle;
+  final bool isOnline;
+  final DateTime? lastSeen;
+  final bool isPreferredContact;
+  final int typeCompte;
+  final DateTime cachedAt;
+  const LocalUser({
+    required this.alanyaID,
+    required this.nom,
+    required this.pseudo,
+    required this.alanyaPhone,
+    required this.email,
+    required this.avatarUrl,
+    required this.idPays,
+    this.paysLibelle,
+    required this.isOnline,
+    this.lastSeen,
+    required this.isPreferredContact,
+    required this.typeCompte,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['alanya_i_d'] = Variable<int>(alanyaID);
+    map['nom'] = Variable<String>(nom);
+    map['pseudo'] = Variable<String>(pseudo);
+    map['alanya_phone'] = Variable<String>(alanyaPhone);
+    map['email'] = Variable<String>(email);
+    map['avatar_url'] = Variable<String>(avatarUrl);
+    map['id_pays'] = Variable<int>(idPays);
+    if (!nullToAbsent || paysLibelle != null) {
+      map['pays_libelle'] = Variable<String>(paysLibelle);
+    }
+    map['is_online'] = Variable<bool>(isOnline);
+    if (!nullToAbsent || lastSeen != null) {
+      map['last_seen'] = Variable<DateTime>(lastSeen);
+    }
+    map['is_preferred_contact'] = Variable<bool>(isPreferredContact);
+    map['type_compte'] = Variable<int>(typeCompte);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  LocalUsersCompanion toCompanion(bool nullToAbsent) {
+    return LocalUsersCompanion(
+      alanyaID: Value(alanyaID),
+      nom: Value(nom),
+      pseudo: Value(pseudo),
+      alanyaPhone: Value(alanyaPhone),
+      email: Value(email),
+      avatarUrl: Value(avatarUrl),
+      idPays: Value(idPays),
+      paysLibelle: paysLibelle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paysLibelle),
+      isOnline: Value(isOnline),
+      lastSeen: lastSeen == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSeen),
+      isPreferredContact: Value(isPreferredContact),
+      typeCompte: Value(typeCompte),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory LocalUser.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalUser(
+      alanyaID: serializer.fromJson<int>(json['alanyaID']),
+      nom: serializer.fromJson<String>(json['nom']),
+      pseudo: serializer.fromJson<String>(json['pseudo']),
+      alanyaPhone: serializer.fromJson<String>(json['alanyaPhone']),
+      email: serializer.fromJson<String>(json['email']),
+      avatarUrl: serializer.fromJson<String>(json['avatarUrl']),
+      idPays: serializer.fromJson<int>(json['idPays']),
+      paysLibelle: serializer.fromJson<String?>(json['paysLibelle']),
+      isOnline: serializer.fromJson<bool>(json['isOnline']),
+      lastSeen: serializer.fromJson<DateTime?>(json['lastSeen']),
+      isPreferredContact: serializer.fromJson<bool>(json['isPreferredContact']),
+      typeCompte: serializer.fromJson<int>(json['typeCompte']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'alanyaID': serializer.toJson<int>(alanyaID),
+      'nom': serializer.toJson<String>(nom),
+      'pseudo': serializer.toJson<String>(pseudo),
+      'alanyaPhone': serializer.toJson<String>(alanyaPhone),
+      'email': serializer.toJson<String>(email),
+      'avatarUrl': serializer.toJson<String>(avatarUrl),
+      'idPays': serializer.toJson<int>(idPays),
+      'paysLibelle': serializer.toJson<String?>(paysLibelle),
+      'isOnline': serializer.toJson<bool>(isOnline),
+      'lastSeen': serializer.toJson<DateTime?>(lastSeen),
+      'isPreferredContact': serializer.toJson<bool>(isPreferredContact),
+      'typeCompte': serializer.toJson<int>(typeCompte),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  LocalUser copyWith({
+    int? alanyaID,
+    String? nom,
+    String? pseudo,
+    String? alanyaPhone,
+    String? email,
+    String? avatarUrl,
+    int? idPays,
+    Value<String?> paysLibelle = const Value.absent(),
+    bool? isOnline,
+    Value<DateTime?> lastSeen = const Value.absent(),
+    bool? isPreferredContact,
+    int? typeCompte,
+    DateTime? cachedAt,
+  }) => LocalUser(
+    alanyaID: alanyaID ?? this.alanyaID,
+    nom: nom ?? this.nom,
+    pseudo: pseudo ?? this.pseudo,
+    alanyaPhone: alanyaPhone ?? this.alanyaPhone,
+    email: email ?? this.email,
+    avatarUrl: avatarUrl ?? this.avatarUrl,
+    idPays: idPays ?? this.idPays,
+    paysLibelle: paysLibelle.present ? paysLibelle.value : this.paysLibelle,
+    isOnline: isOnline ?? this.isOnline,
+    lastSeen: lastSeen.present ? lastSeen.value : this.lastSeen,
+    isPreferredContact: isPreferredContact ?? this.isPreferredContact,
+    typeCompte: typeCompte ?? this.typeCompte,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  LocalUser copyWithCompanion(LocalUsersCompanion data) {
+    return LocalUser(
+      alanyaID: data.alanyaID.present ? data.alanyaID.value : this.alanyaID,
+      nom: data.nom.present ? data.nom.value : this.nom,
+      pseudo: data.pseudo.present ? data.pseudo.value : this.pseudo,
+      alanyaPhone: data.alanyaPhone.present
+          ? data.alanyaPhone.value
+          : this.alanyaPhone,
+      email: data.email.present ? data.email.value : this.email,
+      avatarUrl: data.avatarUrl.present ? data.avatarUrl.value : this.avatarUrl,
+      idPays: data.idPays.present ? data.idPays.value : this.idPays,
+      paysLibelle: data.paysLibelle.present
+          ? data.paysLibelle.value
+          : this.paysLibelle,
+      isOnline: data.isOnline.present ? data.isOnline.value : this.isOnline,
+      lastSeen: data.lastSeen.present ? data.lastSeen.value : this.lastSeen,
+      isPreferredContact: data.isPreferredContact.present
+          ? data.isPreferredContact.value
+          : this.isPreferredContact,
+      typeCompte: data.typeCompte.present
+          ? data.typeCompte.value
+          : this.typeCompte,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalUser(')
+          ..write('alanyaID: $alanyaID, ')
+          ..write('nom: $nom, ')
+          ..write('pseudo: $pseudo, ')
+          ..write('alanyaPhone: $alanyaPhone, ')
+          ..write('email: $email, ')
+          ..write('avatarUrl: $avatarUrl, ')
+          ..write('idPays: $idPays, ')
+          ..write('paysLibelle: $paysLibelle, ')
+          ..write('isOnline: $isOnline, ')
+          ..write('lastSeen: $lastSeen, ')
+          ..write('isPreferredContact: $isPreferredContact, ')
+          ..write('typeCompte: $typeCompte, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    alanyaID,
+    nom,
+    pseudo,
+    alanyaPhone,
+    email,
+    avatarUrl,
+    idPays,
+    paysLibelle,
+    isOnline,
+    lastSeen,
+    isPreferredContact,
+    typeCompte,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalUser &&
+          other.alanyaID == this.alanyaID &&
+          other.nom == this.nom &&
+          other.pseudo == this.pseudo &&
+          other.alanyaPhone == this.alanyaPhone &&
+          other.email == this.email &&
+          other.avatarUrl == this.avatarUrl &&
+          other.idPays == this.idPays &&
+          other.paysLibelle == this.paysLibelle &&
+          other.isOnline == this.isOnline &&
+          other.lastSeen == this.lastSeen &&
+          other.isPreferredContact == this.isPreferredContact &&
+          other.typeCompte == this.typeCompte &&
+          other.cachedAt == this.cachedAt);
+}
+
+class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
+  final Value<int> alanyaID;
+  final Value<String> nom;
+  final Value<String> pseudo;
+  final Value<String> alanyaPhone;
+  final Value<String> email;
+  final Value<String> avatarUrl;
+  final Value<int> idPays;
+  final Value<String?> paysLibelle;
+  final Value<bool> isOnline;
+  final Value<DateTime?> lastSeen;
+  final Value<bool> isPreferredContact;
+  final Value<int> typeCompte;
+  final Value<DateTime> cachedAt;
+  const LocalUsersCompanion({
+    this.alanyaID = const Value.absent(),
+    this.nom = const Value.absent(),
+    this.pseudo = const Value.absent(),
+    this.alanyaPhone = const Value.absent(),
+    this.email = const Value.absent(),
+    this.avatarUrl = const Value.absent(),
+    this.idPays = const Value.absent(),
+    this.paysLibelle = const Value.absent(),
+    this.isOnline = const Value.absent(),
+    this.lastSeen = const Value.absent(),
+    this.isPreferredContact = const Value.absent(),
+    this.typeCompte = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+  });
+  LocalUsersCompanion.insert({
+    this.alanyaID = const Value.absent(),
+    this.nom = const Value.absent(),
+    this.pseudo = const Value.absent(),
+    this.alanyaPhone = const Value.absent(),
+    this.email = const Value.absent(),
+    this.avatarUrl = const Value.absent(),
+    this.idPays = const Value.absent(),
+    this.paysLibelle = const Value.absent(),
+    this.isOnline = const Value.absent(),
+    this.lastSeen = const Value.absent(),
+    this.isPreferredContact = const Value.absent(),
+    this.typeCompte = const Value.absent(),
+    required DateTime cachedAt,
+  }) : cachedAt = Value(cachedAt);
+  static Insertable<LocalUser> custom({
+    Expression<int>? alanyaID,
+    Expression<String>? nom,
+    Expression<String>? pseudo,
+    Expression<String>? alanyaPhone,
+    Expression<String>? email,
+    Expression<String>? avatarUrl,
+    Expression<int>? idPays,
+    Expression<String>? paysLibelle,
+    Expression<bool>? isOnline,
+    Expression<DateTime>? lastSeen,
+    Expression<bool>? isPreferredContact,
+    Expression<int>? typeCompte,
+    Expression<DateTime>? cachedAt,
+  }) {
+    return RawValuesInsertable({
+      if (alanyaID != null) 'alanya_i_d': alanyaID,
+      if (nom != null) 'nom': nom,
+      if (pseudo != null) 'pseudo': pseudo,
+      if (alanyaPhone != null) 'alanya_phone': alanyaPhone,
+      if (email != null) 'email': email,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+      if (idPays != null) 'id_pays': idPays,
+      if (paysLibelle != null) 'pays_libelle': paysLibelle,
+      if (isOnline != null) 'is_online': isOnline,
+      if (lastSeen != null) 'last_seen': lastSeen,
+      if (isPreferredContact != null)
+        'is_preferred_contact': isPreferredContact,
+      if (typeCompte != null) 'type_compte': typeCompte,
+      if (cachedAt != null) 'cached_at': cachedAt,
+    });
+  }
+
+  LocalUsersCompanion copyWith({
+    Value<int>? alanyaID,
+    Value<String>? nom,
+    Value<String>? pseudo,
+    Value<String>? alanyaPhone,
+    Value<String>? email,
+    Value<String>? avatarUrl,
+    Value<int>? idPays,
+    Value<String?>? paysLibelle,
+    Value<bool>? isOnline,
+    Value<DateTime?>? lastSeen,
+    Value<bool>? isPreferredContact,
+    Value<int>? typeCompte,
+    Value<DateTime>? cachedAt,
+  }) {
+    return LocalUsersCompanion(
+      alanyaID: alanyaID ?? this.alanyaID,
+      nom: nom ?? this.nom,
+      pseudo: pseudo ?? this.pseudo,
+      alanyaPhone: alanyaPhone ?? this.alanyaPhone,
+      email: email ?? this.email,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      idPays: idPays ?? this.idPays,
+      paysLibelle: paysLibelle ?? this.paysLibelle,
+      isOnline: isOnline ?? this.isOnline,
+      lastSeen: lastSeen ?? this.lastSeen,
+      isPreferredContact: isPreferredContact ?? this.isPreferredContact,
+      typeCompte: typeCompte ?? this.typeCompte,
+      cachedAt: cachedAt ?? this.cachedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (alanyaID.present) {
+      map['alanya_i_d'] = Variable<int>(alanyaID.value);
+    }
+    if (nom.present) {
+      map['nom'] = Variable<String>(nom.value);
+    }
+    if (pseudo.present) {
+      map['pseudo'] = Variable<String>(pseudo.value);
+    }
+    if (alanyaPhone.present) {
+      map['alanya_phone'] = Variable<String>(alanyaPhone.value);
+    }
+    if (email.present) {
+      map['email'] = Variable<String>(email.value);
+    }
+    if (avatarUrl.present) {
+      map['avatar_url'] = Variable<String>(avatarUrl.value);
+    }
+    if (idPays.present) {
+      map['id_pays'] = Variable<int>(idPays.value);
+    }
+    if (paysLibelle.present) {
+      map['pays_libelle'] = Variable<String>(paysLibelle.value);
+    }
+    if (isOnline.present) {
+      map['is_online'] = Variable<bool>(isOnline.value);
+    }
+    if (lastSeen.present) {
+      map['last_seen'] = Variable<DateTime>(lastSeen.value);
+    }
+    if (isPreferredContact.present) {
+      map['is_preferred_contact'] = Variable<bool>(isPreferredContact.value);
+    }
+    if (typeCompte.present) {
+      map['type_compte'] = Variable<int>(typeCompte.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalUsersCompanion(')
+          ..write('alanyaID: $alanyaID, ')
+          ..write('nom: $nom, ')
+          ..write('pseudo: $pseudo, ')
+          ..write('alanyaPhone: $alanyaPhone, ')
+          ..write('email: $email, ')
+          ..write('avatarUrl: $avatarUrl, ')
+          ..write('idPays: $idPays, ')
+          ..write('paysLibelle: $paysLibelle, ')
+          ..write('isOnline: $isOnline, ')
+          ..write('lastSeen: $lastSeen, ')
+          ..write('isPreferredContact: $isPreferredContact, ')
+          ..write('typeCompte: $typeCompte, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalCallsTable extends LocalCalls
+    with TableInfo<$LocalCallsTable, LocalCall> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalCallsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idCallMeta = const VerificationMeta('idCall');
+  @override
+  late final GeneratedColumn<int> idCall = GeneratedColumn<int>(
+    'id_call',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _idCallerMeta = const VerificationMeta(
+    'idCaller',
+  );
+  @override
+  late final GeneratedColumn<int> idCaller = GeneratedColumn<int>(
+    'id_caller',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idReceiverMeta = const VerificationMeta(
+    'idReceiver',
+  );
+  @override
+  late final GeneratedColumn<int> idReceiver = GeneratedColumn<int>(
+    'id_receiver',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<int> type = GeneratedColumn<int>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<int> status = GeneratedColumn<int>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _durationMeta = const VerificationMeta(
+    'duration',
+  );
+  @override
+  late final GeneratedColumn<int> duration = GeneratedColumn<int>(
+    'duration',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _otherNomMeta = const VerificationMeta(
+    'otherNom',
+  );
+  @override
+  late final GeneratedColumn<String> otherNom = GeneratedColumn<String>(
+    'other_nom',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _otherAvatarMeta = const VerificationMeta(
+    'otherAvatar',
+  );
+  @override
+  late final GeneratedColumn<String> otherAvatar = GeneratedColumn<String>(
+    'other_avatar',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    idCall,
+    idCaller,
+    idReceiver,
+    type,
+    status,
+    duration,
+    createdAt,
+    otherNom,
+    otherAvatar,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_calls';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalCall> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id_call')) {
+      context.handle(
+        _idCallMeta,
+        idCall.isAcceptableOrUnknown(data['id_call']!, _idCallMeta),
+      );
+    }
+    if (data.containsKey('id_caller')) {
+      context.handle(
+        _idCallerMeta,
+        idCaller.isAcceptableOrUnknown(data['id_caller']!, _idCallerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_idCallerMeta);
+    }
+    if (data.containsKey('id_receiver')) {
+      context.handle(
+        _idReceiverMeta,
+        idReceiver.isAcceptableOrUnknown(data['id_receiver']!, _idReceiverMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_idReceiverMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('duration')) {
+      context.handle(
+        _durationMeta,
+        duration.isAcceptableOrUnknown(data['duration']!, _durationMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('other_nom')) {
+      context.handle(
+        _otherNomMeta,
+        otherNom.isAcceptableOrUnknown(data['other_nom']!, _otherNomMeta),
+      );
+    }
+    if (data.containsKey('other_avatar')) {
+      context.handle(
+        _otherAvatarMeta,
+        otherAvatar.isAcceptableOrUnknown(
+          data['other_avatar']!,
+          _otherAvatarMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {idCall};
+  @override
+  LocalCall map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalCall(
+      idCall: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_call'],
+      )!,
+      idCaller: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_caller'],
+      )!,
+      idReceiver: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_receiver'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status'],
+      )!,
+      duration: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      otherNom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}other_nom'],
+      ),
+      otherAvatar: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}other_avatar'],
+      ),
+    );
+  }
+
+  @override
+  $LocalCallsTable createAlias(String alias) {
+    return $LocalCallsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalCall extends DataClass implements Insertable<LocalCall> {
+  final int idCall;
+  final int idCaller;
+  final int idReceiver;
+
+  /// 0=audio, 1=vidéo
+  final int type;
+
+  /// 0=missed, 1=answered, 2=rejected, 3=outgoing answered…
+  final int status;
+  final int? duration;
+  final DateTime createdAt;
+
+  /// Snapshot dénormalisé pour affichage offline (avatar/nom du correspondant).
+  final String? otherNom;
+  final String? otherAvatar;
+  const LocalCall({
+    required this.idCall,
+    required this.idCaller,
+    required this.idReceiver,
+    required this.type,
+    required this.status,
+    this.duration,
+    required this.createdAt,
+    this.otherNom,
+    this.otherAvatar,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id_call'] = Variable<int>(idCall);
+    map['id_caller'] = Variable<int>(idCaller);
+    map['id_receiver'] = Variable<int>(idReceiver);
+    map['type'] = Variable<int>(type);
+    map['status'] = Variable<int>(status);
+    if (!nullToAbsent || duration != null) {
+      map['duration'] = Variable<int>(duration);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || otherNom != null) {
+      map['other_nom'] = Variable<String>(otherNom);
+    }
+    if (!nullToAbsent || otherAvatar != null) {
+      map['other_avatar'] = Variable<String>(otherAvatar);
+    }
+    return map;
+  }
+
+  LocalCallsCompanion toCompanion(bool nullToAbsent) {
+    return LocalCallsCompanion(
+      idCall: Value(idCall),
+      idCaller: Value(idCaller),
+      idReceiver: Value(idReceiver),
+      type: Value(type),
+      status: Value(status),
+      duration: duration == null && nullToAbsent
+          ? const Value.absent()
+          : Value(duration),
+      createdAt: Value(createdAt),
+      otherNom: otherNom == null && nullToAbsent
+          ? const Value.absent()
+          : Value(otherNom),
+      otherAvatar: otherAvatar == null && nullToAbsent
+          ? const Value.absent()
+          : Value(otherAvatar),
+    );
+  }
+
+  factory LocalCall.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalCall(
+      idCall: serializer.fromJson<int>(json['idCall']),
+      idCaller: serializer.fromJson<int>(json['idCaller']),
+      idReceiver: serializer.fromJson<int>(json['idReceiver']),
+      type: serializer.fromJson<int>(json['type']),
+      status: serializer.fromJson<int>(json['status']),
+      duration: serializer.fromJson<int?>(json['duration']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      otherNom: serializer.fromJson<String?>(json['otherNom']),
+      otherAvatar: serializer.fromJson<String?>(json['otherAvatar']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'idCall': serializer.toJson<int>(idCall),
+      'idCaller': serializer.toJson<int>(idCaller),
+      'idReceiver': serializer.toJson<int>(idReceiver),
+      'type': serializer.toJson<int>(type),
+      'status': serializer.toJson<int>(status),
+      'duration': serializer.toJson<int?>(duration),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'otherNom': serializer.toJson<String?>(otherNom),
+      'otherAvatar': serializer.toJson<String?>(otherAvatar),
+    };
+  }
+
+  LocalCall copyWith({
+    int? idCall,
+    int? idCaller,
+    int? idReceiver,
+    int? type,
+    int? status,
+    Value<int?> duration = const Value.absent(),
+    DateTime? createdAt,
+    Value<String?> otherNom = const Value.absent(),
+    Value<String?> otherAvatar = const Value.absent(),
+  }) => LocalCall(
+    idCall: idCall ?? this.idCall,
+    idCaller: idCaller ?? this.idCaller,
+    idReceiver: idReceiver ?? this.idReceiver,
+    type: type ?? this.type,
+    status: status ?? this.status,
+    duration: duration.present ? duration.value : this.duration,
+    createdAt: createdAt ?? this.createdAt,
+    otherNom: otherNom.present ? otherNom.value : this.otherNom,
+    otherAvatar: otherAvatar.present ? otherAvatar.value : this.otherAvatar,
+  );
+  LocalCall copyWithCompanion(LocalCallsCompanion data) {
+    return LocalCall(
+      idCall: data.idCall.present ? data.idCall.value : this.idCall,
+      idCaller: data.idCaller.present ? data.idCaller.value : this.idCaller,
+      idReceiver: data.idReceiver.present
+          ? data.idReceiver.value
+          : this.idReceiver,
+      type: data.type.present ? data.type.value : this.type,
+      status: data.status.present ? data.status.value : this.status,
+      duration: data.duration.present ? data.duration.value : this.duration,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      otherNom: data.otherNom.present ? data.otherNom.value : this.otherNom,
+      otherAvatar: data.otherAvatar.present
+          ? data.otherAvatar.value
+          : this.otherAvatar,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalCall(')
+          ..write('idCall: $idCall, ')
+          ..write('idCaller: $idCaller, ')
+          ..write('idReceiver: $idReceiver, ')
+          ..write('type: $type, ')
+          ..write('status: $status, ')
+          ..write('duration: $duration, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('otherNom: $otherNom, ')
+          ..write('otherAvatar: $otherAvatar')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    idCall,
+    idCaller,
+    idReceiver,
+    type,
+    status,
+    duration,
+    createdAt,
+    otherNom,
+    otherAvatar,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalCall &&
+          other.idCall == this.idCall &&
+          other.idCaller == this.idCaller &&
+          other.idReceiver == this.idReceiver &&
+          other.type == this.type &&
+          other.status == this.status &&
+          other.duration == this.duration &&
+          other.createdAt == this.createdAt &&
+          other.otherNom == this.otherNom &&
+          other.otherAvatar == this.otherAvatar);
+}
+
+class LocalCallsCompanion extends UpdateCompanion<LocalCall> {
+  final Value<int> idCall;
+  final Value<int> idCaller;
+  final Value<int> idReceiver;
+  final Value<int> type;
+  final Value<int> status;
+  final Value<int?> duration;
+  final Value<DateTime> createdAt;
+  final Value<String?> otherNom;
+  final Value<String?> otherAvatar;
+  const LocalCallsCompanion({
+    this.idCall = const Value.absent(),
+    this.idCaller = const Value.absent(),
+    this.idReceiver = const Value.absent(),
+    this.type = const Value.absent(),
+    this.status = const Value.absent(),
+    this.duration = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.otherNom = const Value.absent(),
+    this.otherAvatar = const Value.absent(),
+  });
+  LocalCallsCompanion.insert({
+    this.idCall = const Value.absent(),
+    required int idCaller,
+    required int idReceiver,
+    this.type = const Value.absent(),
+    this.status = const Value.absent(),
+    this.duration = const Value.absent(),
+    required DateTime createdAt,
+    this.otherNom = const Value.absent(),
+    this.otherAvatar = const Value.absent(),
+  }) : idCaller = Value(idCaller),
+       idReceiver = Value(idReceiver),
+       createdAt = Value(createdAt);
+  static Insertable<LocalCall> custom({
+    Expression<int>? idCall,
+    Expression<int>? idCaller,
+    Expression<int>? idReceiver,
+    Expression<int>? type,
+    Expression<int>? status,
+    Expression<int>? duration,
+    Expression<DateTime>? createdAt,
+    Expression<String>? otherNom,
+    Expression<String>? otherAvatar,
+  }) {
+    return RawValuesInsertable({
+      if (idCall != null) 'id_call': idCall,
+      if (idCaller != null) 'id_caller': idCaller,
+      if (idReceiver != null) 'id_receiver': idReceiver,
+      if (type != null) 'type': type,
+      if (status != null) 'status': status,
+      if (duration != null) 'duration': duration,
+      if (createdAt != null) 'created_at': createdAt,
+      if (otherNom != null) 'other_nom': otherNom,
+      if (otherAvatar != null) 'other_avatar': otherAvatar,
+    });
+  }
+
+  LocalCallsCompanion copyWith({
+    Value<int>? idCall,
+    Value<int>? idCaller,
+    Value<int>? idReceiver,
+    Value<int>? type,
+    Value<int>? status,
+    Value<int?>? duration,
+    Value<DateTime>? createdAt,
+    Value<String?>? otherNom,
+    Value<String?>? otherAvatar,
+  }) {
+    return LocalCallsCompanion(
+      idCall: idCall ?? this.idCall,
+      idCaller: idCaller ?? this.idCaller,
+      idReceiver: idReceiver ?? this.idReceiver,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      duration: duration ?? this.duration,
+      createdAt: createdAt ?? this.createdAt,
+      otherNom: otherNom ?? this.otherNom,
+      otherAvatar: otherAvatar ?? this.otherAvatar,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (idCall.present) {
+      map['id_call'] = Variable<int>(idCall.value);
+    }
+    if (idCaller.present) {
+      map['id_caller'] = Variable<int>(idCaller.value);
+    }
+    if (idReceiver.present) {
+      map['id_receiver'] = Variable<int>(idReceiver.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<int>(type.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<int>(status.value);
+    }
+    if (duration.present) {
+      map['duration'] = Variable<int>(duration.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (otherNom.present) {
+      map['other_nom'] = Variable<String>(otherNom.value);
+    }
+    if (otherAvatar.present) {
+      map['other_avatar'] = Variable<String>(otherAvatar.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalCallsCompanion(')
+          ..write('idCall: $idCall, ')
+          ..write('idCaller: $idCaller, ')
+          ..write('idReceiver: $idReceiver, ')
+          ..write('type: $type, ')
+          ..write('status: $status, ')
+          ..write('duration: $duration, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('otherNom: $otherNom, ')
+          ..write('otherAvatar: $otherAvatar')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalMeetingsTable extends LocalMeetings
+    with TableInfo<$LocalMeetingsTable, LocalMeeting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalMeetingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeetingMeta = const VerificationMeta(
+    'idMeeting',
+  );
+  @override
+  late final GeneratedColumn<int> idMeeting = GeneratedColumn<int>(
+    'id_meeting',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _objetMeta = const VerificationMeta('objet');
+  @override
+  late final GeneratedColumn<String> objet = GeneratedColumn<String>(
+    'objet',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _roomMeta = const VerificationMeta('room');
+  @override
+  late final GeneratedColumn<String> room = GeneratedColumn<String>(
+    'room',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _startTimeMeta = const VerificationMeta(
+    'startTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startTime = GeneratedColumn<DateTime>(
+    'start_time',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dureeMeta = const VerificationMeta('duree');
+  @override
+  late final GeneratedColumn<int> duree = GeneratedColumn<int>(
+    'duree',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(60),
+  );
+  static const VerificationMeta _typeMediaMeta = const VerificationMeta(
+    'typeMedia',
+  );
+  @override
+  late final GeneratedColumn<int> typeMedia = GeneratedColumn<int>(
+    'type_media',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _organiserIDMeta = const VerificationMeta(
+    'organiserID',
+  );
+  @override
+  late final GeneratedColumn<int> organiserID = GeneratedColumn<int>(
+    'organiser_i_d',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _organiserNomMeta = const VerificationMeta(
+    'organiserNom',
+  );
+  @override
+  late final GeneratedColumn<String> organiserNom = GeneratedColumn<String>(
+    'organiser_nom',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _participantsJsonMeta = const VerificationMeta(
+    'participantsJson',
+  );
+  @override
+  late final GeneratedColumn<String> participantsJson = GeneratedColumn<String>(
+    'participants_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _statutMeta = const VerificationMeta('statut');
+  @override
+  late final GeneratedColumn<int> statut = GeneratedColumn<int>(
+    'statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    idMeeting,
+    objet,
+    room,
+    startTime,
+    duree,
+    typeMedia,
+    organiserID,
+    organiserNom,
+    participantsJson,
+    statut,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_meetings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalMeeting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id_meeting')) {
+      context.handle(
+        _idMeetingMeta,
+        idMeeting.isAcceptableOrUnknown(data['id_meeting']!, _idMeetingMeta),
+      );
+    }
+    if (data.containsKey('objet')) {
+      context.handle(
+        _objetMeta,
+        objet.isAcceptableOrUnknown(data['objet']!, _objetMeta),
+      );
+    }
+    if (data.containsKey('room')) {
+      context.handle(
+        _roomMeta,
+        room.isAcceptableOrUnknown(data['room']!, _roomMeta),
+      );
+    }
+    if (data.containsKey('start_time')) {
+      context.handle(
+        _startTimeMeta,
+        startTime.isAcceptableOrUnknown(data['start_time']!, _startTimeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startTimeMeta);
+    }
+    if (data.containsKey('duree')) {
+      context.handle(
+        _dureeMeta,
+        duree.isAcceptableOrUnknown(data['duree']!, _dureeMeta),
+      );
+    }
+    if (data.containsKey('type_media')) {
+      context.handle(
+        _typeMediaMeta,
+        typeMedia.isAcceptableOrUnknown(data['type_media']!, _typeMediaMeta),
+      );
+    }
+    if (data.containsKey('organiser_i_d')) {
+      context.handle(
+        _organiserIDMeta,
+        organiserID.isAcceptableOrUnknown(
+          data['organiser_i_d']!,
+          _organiserIDMeta,
+        ),
+      );
+    }
+    if (data.containsKey('organiser_nom')) {
+      context.handle(
+        _organiserNomMeta,
+        organiserNom.isAcceptableOrUnknown(
+          data['organiser_nom']!,
+          _organiserNomMeta,
+        ),
+      );
+    }
+    if (data.containsKey('participants_json')) {
+      context.handle(
+        _participantsJsonMeta,
+        participantsJson.isAcceptableOrUnknown(
+          data['participants_json']!,
+          _participantsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('statut')) {
+      context.handle(
+        _statutMeta,
+        statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {idMeeting};
+  @override
+  LocalMeeting map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalMeeting(
+      idMeeting: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_meeting'],
+      )!,
+      objet: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}objet'],
+      )!,
+      room: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}room'],
+      )!,
+      startTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_time'],
+      )!,
+      duree: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duree'],
+      )!,
+      typeMedia: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type_media'],
+      )!,
+      organiserID: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}organiser_i_d'],
+      )!,
+      organiserNom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}organiser_nom'],
+      ),
+      participantsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}participants_json'],
+      )!,
+      statut: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}statut'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalMeetingsTable createAlias(String alias) {
+    return $LocalMeetingsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalMeeting extends DataClass implements Insertable<LocalMeeting> {
+  final int idMeeting;
+  final String objet;
+  final String room;
+  final DateTime startTime;
+  final int duree;
+  final int typeMedia;
+  final int organiserID;
+  final String? organiserNom;
+  final String participantsJson;
+
+  /// 0=upcoming, 1=ongoing, 2=ended, 3=cancelled
+  final int statut;
+  final DateTime cachedAt;
+  const LocalMeeting({
+    required this.idMeeting,
+    required this.objet,
+    required this.room,
+    required this.startTime,
+    required this.duree,
+    required this.typeMedia,
+    required this.organiserID,
+    this.organiserNom,
+    required this.participantsJson,
+    required this.statut,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id_meeting'] = Variable<int>(idMeeting);
+    map['objet'] = Variable<String>(objet);
+    map['room'] = Variable<String>(room);
+    map['start_time'] = Variable<DateTime>(startTime);
+    map['duree'] = Variable<int>(duree);
+    map['type_media'] = Variable<int>(typeMedia);
+    map['organiser_i_d'] = Variable<int>(organiserID);
+    if (!nullToAbsent || organiserNom != null) {
+      map['organiser_nom'] = Variable<String>(organiserNom);
+    }
+    map['participants_json'] = Variable<String>(participantsJson);
+    map['statut'] = Variable<int>(statut);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  LocalMeetingsCompanion toCompanion(bool nullToAbsent) {
+    return LocalMeetingsCompanion(
+      idMeeting: Value(idMeeting),
+      objet: Value(objet),
+      room: Value(room),
+      startTime: Value(startTime),
+      duree: Value(duree),
+      typeMedia: Value(typeMedia),
+      organiserID: Value(organiserID),
+      organiserNom: organiserNom == null && nullToAbsent
+          ? const Value.absent()
+          : Value(organiserNom),
+      participantsJson: Value(participantsJson),
+      statut: Value(statut),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory LocalMeeting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalMeeting(
+      idMeeting: serializer.fromJson<int>(json['idMeeting']),
+      objet: serializer.fromJson<String>(json['objet']),
+      room: serializer.fromJson<String>(json['room']),
+      startTime: serializer.fromJson<DateTime>(json['startTime']),
+      duree: serializer.fromJson<int>(json['duree']),
+      typeMedia: serializer.fromJson<int>(json['typeMedia']),
+      organiserID: serializer.fromJson<int>(json['organiserID']),
+      organiserNom: serializer.fromJson<String?>(json['organiserNom']),
+      participantsJson: serializer.fromJson<String>(json['participantsJson']),
+      statut: serializer.fromJson<int>(json['statut']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'idMeeting': serializer.toJson<int>(idMeeting),
+      'objet': serializer.toJson<String>(objet),
+      'room': serializer.toJson<String>(room),
+      'startTime': serializer.toJson<DateTime>(startTime),
+      'duree': serializer.toJson<int>(duree),
+      'typeMedia': serializer.toJson<int>(typeMedia),
+      'organiserID': serializer.toJson<int>(organiserID),
+      'organiserNom': serializer.toJson<String?>(organiserNom),
+      'participantsJson': serializer.toJson<String>(participantsJson),
+      'statut': serializer.toJson<int>(statut),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  LocalMeeting copyWith({
+    int? idMeeting,
+    String? objet,
+    String? room,
+    DateTime? startTime,
+    int? duree,
+    int? typeMedia,
+    int? organiserID,
+    Value<String?> organiserNom = const Value.absent(),
+    String? participantsJson,
+    int? statut,
+    DateTime? cachedAt,
+  }) => LocalMeeting(
+    idMeeting: idMeeting ?? this.idMeeting,
+    objet: objet ?? this.objet,
+    room: room ?? this.room,
+    startTime: startTime ?? this.startTime,
+    duree: duree ?? this.duree,
+    typeMedia: typeMedia ?? this.typeMedia,
+    organiserID: organiserID ?? this.organiserID,
+    organiserNom: organiserNom.present ? organiserNom.value : this.organiserNom,
+    participantsJson: participantsJson ?? this.participantsJson,
+    statut: statut ?? this.statut,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  LocalMeeting copyWithCompanion(LocalMeetingsCompanion data) {
+    return LocalMeeting(
+      idMeeting: data.idMeeting.present ? data.idMeeting.value : this.idMeeting,
+      objet: data.objet.present ? data.objet.value : this.objet,
+      room: data.room.present ? data.room.value : this.room,
+      startTime: data.startTime.present ? data.startTime.value : this.startTime,
+      duree: data.duree.present ? data.duree.value : this.duree,
+      typeMedia: data.typeMedia.present ? data.typeMedia.value : this.typeMedia,
+      organiserID: data.organiserID.present
+          ? data.organiserID.value
+          : this.organiserID,
+      organiserNom: data.organiserNom.present
+          ? data.organiserNom.value
+          : this.organiserNom,
+      participantsJson: data.participantsJson.present
+          ? data.participantsJson.value
+          : this.participantsJson,
+      statut: data.statut.present ? data.statut.value : this.statut,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalMeeting(')
+          ..write('idMeeting: $idMeeting, ')
+          ..write('objet: $objet, ')
+          ..write('room: $room, ')
+          ..write('startTime: $startTime, ')
+          ..write('duree: $duree, ')
+          ..write('typeMedia: $typeMedia, ')
+          ..write('organiserID: $organiserID, ')
+          ..write('organiserNom: $organiserNom, ')
+          ..write('participantsJson: $participantsJson, ')
+          ..write('statut: $statut, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    idMeeting,
+    objet,
+    room,
+    startTime,
+    duree,
+    typeMedia,
+    organiserID,
+    organiserNom,
+    participantsJson,
+    statut,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalMeeting &&
+          other.idMeeting == this.idMeeting &&
+          other.objet == this.objet &&
+          other.room == this.room &&
+          other.startTime == this.startTime &&
+          other.duree == this.duree &&
+          other.typeMedia == this.typeMedia &&
+          other.organiserID == this.organiserID &&
+          other.organiserNom == this.organiserNom &&
+          other.participantsJson == this.participantsJson &&
+          other.statut == this.statut &&
+          other.cachedAt == this.cachedAt);
+}
+
+class LocalMeetingsCompanion extends UpdateCompanion<LocalMeeting> {
+  final Value<int> idMeeting;
+  final Value<String> objet;
+  final Value<String> room;
+  final Value<DateTime> startTime;
+  final Value<int> duree;
+  final Value<int> typeMedia;
+  final Value<int> organiserID;
+  final Value<String?> organiserNom;
+  final Value<String> participantsJson;
+  final Value<int> statut;
+  final Value<DateTime> cachedAt;
+  const LocalMeetingsCompanion({
+    this.idMeeting = const Value.absent(),
+    this.objet = const Value.absent(),
+    this.room = const Value.absent(),
+    this.startTime = const Value.absent(),
+    this.duree = const Value.absent(),
+    this.typeMedia = const Value.absent(),
+    this.organiserID = const Value.absent(),
+    this.organiserNom = const Value.absent(),
+    this.participantsJson = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+  });
+  LocalMeetingsCompanion.insert({
+    this.idMeeting = const Value.absent(),
+    this.objet = const Value.absent(),
+    this.room = const Value.absent(),
+    required DateTime startTime,
+    this.duree = const Value.absent(),
+    this.typeMedia = const Value.absent(),
+    this.organiserID = const Value.absent(),
+    this.organiserNom = const Value.absent(),
+    this.participantsJson = const Value.absent(),
+    this.statut = const Value.absent(),
+    required DateTime cachedAt,
+  }) : startTime = Value(startTime),
+       cachedAt = Value(cachedAt);
+  static Insertable<LocalMeeting> custom({
+    Expression<int>? idMeeting,
+    Expression<String>? objet,
+    Expression<String>? room,
+    Expression<DateTime>? startTime,
+    Expression<int>? duree,
+    Expression<int>? typeMedia,
+    Expression<int>? organiserID,
+    Expression<String>? organiserNom,
+    Expression<String>? participantsJson,
+    Expression<int>? statut,
+    Expression<DateTime>? cachedAt,
+  }) {
+    return RawValuesInsertable({
+      if (idMeeting != null) 'id_meeting': idMeeting,
+      if (objet != null) 'objet': objet,
+      if (room != null) 'room': room,
+      if (startTime != null) 'start_time': startTime,
+      if (duree != null) 'duree': duree,
+      if (typeMedia != null) 'type_media': typeMedia,
+      if (organiserID != null) 'organiser_i_d': organiserID,
+      if (organiserNom != null) 'organiser_nom': organiserNom,
+      if (participantsJson != null) 'participants_json': participantsJson,
+      if (statut != null) 'statut': statut,
+      if (cachedAt != null) 'cached_at': cachedAt,
+    });
+  }
+
+  LocalMeetingsCompanion copyWith({
+    Value<int>? idMeeting,
+    Value<String>? objet,
+    Value<String>? room,
+    Value<DateTime>? startTime,
+    Value<int>? duree,
+    Value<int>? typeMedia,
+    Value<int>? organiserID,
+    Value<String?>? organiserNom,
+    Value<String>? participantsJson,
+    Value<int>? statut,
+    Value<DateTime>? cachedAt,
+  }) {
+    return LocalMeetingsCompanion(
+      idMeeting: idMeeting ?? this.idMeeting,
+      objet: objet ?? this.objet,
+      room: room ?? this.room,
+      startTime: startTime ?? this.startTime,
+      duree: duree ?? this.duree,
+      typeMedia: typeMedia ?? this.typeMedia,
+      organiserID: organiserID ?? this.organiserID,
+      organiserNom: organiserNom ?? this.organiserNom,
+      participantsJson: participantsJson ?? this.participantsJson,
+      statut: statut ?? this.statut,
+      cachedAt: cachedAt ?? this.cachedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (idMeeting.present) {
+      map['id_meeting'] = Variable<int>(idMeeting.value);
+    }
+    if (objet.present) {
+      map['objet'] = Variable<String>(objet.value);
+    }
+    if (room.present) {
+      map['room'] = Variable<String>(room.value);
+    }
+    if (startTime.present) {
+      map['start_time'] = Variable<DateTime>(startTime.value);
+    }
+    if (duree.present) {
+      map['duree'] = Variable<int>(duree.value);
+    }
+    if (typeMedia.present) {
+      map['type_media'] = Variable<int>(typeMedia.value);
+    }
+    if (organiserID.present) {
+      map['organiser_i_d'] = Variable<int>(organiserID.value);
+    }
+    if (organiserNom.present) {
+      map['organiser_nom'] = Variable<String>(organiserNom.value);
+    }
+    if (participantsJson.present) {
+      map['participants_json'] = Variable<String>(participantsJson.value);
+    }
+    if (statut.present) {
+      map['statut'] = Variable<int>(statut.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalMeetingsCompanion(')
+          ..write('idMeeting: $idMeeting, ')
+          ..write('objet: $objet, ')
+          ..write('room: $room, ')
+          ..write('startTime: $startTime, ')
+          ..write('duree: $duree, ')
+          ..write('typeMedia: $typeMedia, ')
+          ..write('organiserID: $organiserID, ')
+          ..write('organiserNom: $organiserNom, ')
+          ..write('participantsJson: $participantsJson, ')
+          ..write('statut: $statut, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalStatusesTable extends LocalStatuses
+    with TableInfo<$LocalStatusesTable, LocalStatuse> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalStatusesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idStatutMeta = const VerificationMeta(
+    'idStatut',
+  );
+  @override
+  late final GeneratedColumn<int> idStatut = GeneratedColumn<int>(
+    'id_statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _authorIDMeta = const VerificationMeta(
+    'authorID',
+  );
+  @override
+  late final GeneratedColumn<int> authorID = GeneratedColumn<int>(
+    'author_i_d',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _authorNomMeta = const VerificationMeta(
+    'authorNom',
+  );
+  @override
+  late final GeneratedColumn<String> authorNom = GeneratedColumn<String>(
+    'author_nom',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _authorAvatarMeta = const VerificationMeta(
+    'authorAvatar',
+  );
+  @override
+  late final GeneratedColumn<String> authorAvatar = GeneratedColumn<String>(
+    'author_avatar',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<int> type = GeneratedColumn<int>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _textContentMeta = const VerificationMeta(
+    'textContent',
+  );
+  @override
+  late final GeneratedColumn<String> textContent = GeneratedColumn<String>(
+    'text_content',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _mediaUrlMeta = const VerificationMeta(
+    'mediaUrl',
+  );
+  @override
+  late final GeneratedColumn<String> mediaUrl = GeneratedColumn<String>(
+    'media_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _localMediaPathMeta = const VerificationMeta(
+    'localMediaPath',
+  );
+  @override
+  late final GeneratedColumn<String> localMediaPath = GeneratedColumn<String>(
+    'local_media_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _backgroundColorMeta = const VerificationMeta(
+    'backgroundColor',
+  );
+  @override
+  late final GeneratedColumn<String> backgroundColor = GeneratedColumn<String>(
+    'background_color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _mediaDurationMsMeta = const VerificationMeta(
+    'mediaDurationMs',
+  );
+  @override
+  late final GeneratedColumn<int> mediaDurationMs = GeneratedColumn<int>(
+    'media_duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expiresAtMeta = const VerificationMeta(
+    'expiresAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> expiresAt = GeneratedColumn<DateTime>(
+    'expires_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isMineMeta = const VerificationMeta('isMine');
+  @override
+  late final GeneratedColumn<bool> isMine = GeneratedColumn<bool>(
+    'is_mine',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_mine" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    idStatut,
+    authorID,
+    authorNom,
+    authorAvatar,
+    type,
+    textContent,
+    mediaUrl,
+    localMediaPath,
+    backgroundColor,
+    mediaDurationMs,
+    createdAt,
+    expiresAt,
+    isMine,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_statuses';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalStatuse> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id_statut')) {
+      context.handle(
+        _idStatutMeta,
+        idStatut.isAcceptableOrUnknown(data['id_statut']!, _idStatutMeta),
+      );
+    }
+    if (data.containsKey('author_i_d')) {
+      context.handle(
+        _authorIDMeta,
+        authorID.isAcceptableOrUnknown(data['author_i_d']!, _authorIDMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_authorIDMeta);
+    }
+    if (data.containsKey('author_nom')) {
+      context.handle(
+        _authorNomMeta,
+        authorNom.isAcceptableOrUnknown(data['author_nom']!, _authorNomMeta),
+      );
+    }
+    if (data.containsKey('author_avatar')) {
+      context.handle(
+        _authorAvatarMeta,
+        authorAvatar.isAcceptableOrUnknown(
+          data['author_avatar']!,
+          _authorAvatarMeta,
+        ),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('text_content')) {
+      context.handle(
+        _textContentMeta,
+        textContent.isAcceptableOrUnknown(
+          data['text_content']!,
+          _textContentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('media_url')) {
+      context.handle(
+        _mediaUrlMeta,
+        mediaUrl.isAcceptableOrUnknown(data['media_url']!, _mediaUrlMeta),
+      );
+    }
+    if (data.containsKey('local_media_path')) {
+      context.handle(
+        _localMediaPathMeta,
+        localMediaPath.isAcceptableOrUnknown(
+          data['local_media_path']!,
+          _localMediaPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('background_color')) {
+      context.handle(
+        _backgroundColorMeta,
+        backgroundColor.isAcceptableOrUnknown(
+          data['background_color']!,
+          _backgroundColorMeta,
+        ),
+      );
+    }
+    if (data.containsKey('media_duration_ms')) {
+      context.handle(
+        _mediaDurationMsMeta,
+        mediaDurationMs.isAcceptableOrUnknown(
+          data['media_duration_ms']!,
+          _mediaDurationMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(
+        _expiresAtMeta,
+        expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_expiresAtMeta);
+    }
+    if (data.containsKey('is_mine')) {
+      context.handle(
+        _isMineMeta,
+        isMine.isAcceptableOrUnknown(data['is_mine']!, _isMineMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {idStatut};
+  @override
+  LocalStatuse map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalStatuse(
+      idStatut: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_statut'],
+      )!,
+      authorID: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}author_i_d'],
+      )!,
+      authorNom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author_nom'],
+      ),
+      authorAvatar: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author_avatar'],
+      ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type'],
+      )!,
+      textContent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}text_content'],
+      ),
+      mediaUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}media_url'],
+      ),
+      localMediaPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_media_path'],
+      ),
+      backgroundColor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}background_color'],
+      ),
+      mediaDurationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}media_duration_ms'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      expiresAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}expires_at'],
+      )!,
+      isMine: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_mine'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalStatusesTable createAlias(String alias) {
+    return $LocalStatusesTable(attachedDatabase, alias);
+  }
+}
+
+class LocalStatuse extends DataClass implements Insertable<LocalStatuse> {
+  final int idStatut;
+  final int authorID;
+  final String? authorNom;
+  final String? authorAvatar;
+
+  /// 0=texte, 1=image, 2=vidéo, 3=audio
+  final int type;
+  final String? textContent;
+  final String? mediaUrl;
+  final String? localMediaPath;
+  final String? backgroundColor;
+  final int? mediaDurationMs;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+  final bool isMine;
+  const LocalStatuse({
+    required this.idStatut,
+    required this.authorID,
+    this.authorNom,
+    this.authorAvatar,
+    required this.type,
+    this.textContent,
+    this.mediaUrl,
+    this.localMediaPath,
+    this.backgroundColor,
+    this.mediaDurationMs,
+    required this.createdAt,
+    required this.expiresAt,
+    required this.isMine,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id_statut'] = Variable<int>(idStatut);
+    map['author_i_d'] = Variable<int>(authorID);
+    if (!nullToAbsent || authorNom != null) {
+      map['author_nom'] = Variable<String>(authorNom);
+    }
+    if (!nullToAbsent || authorAvatar != null) {
+      map['author_avatar'] = Variable<String>(authorAvatar);
+    }
+    map['type'] = Variable<int>(type);
+    if (!nullToAbsent || textContent != null) {
+      map['text_content'] = Variable<String>(textContent);
+    }
+    if (!nullToAbsent || mediaUrl != null) {
+      map['media_url'] = Variable<String>(mediaUrl);
+    }
+    if (!nullToAbsent || localMediaPath != null) {
+      map['local_media_path'] = Variable<String>(localMediaPath);
+    }
+    if (!nullToAbsent || backgroundColor != null) {
+      map['background_color'] = Variable<String>(backgroundColor);
+    }
+    if (!nullToAbsent || mediaDurationMs != null) {
+      map['media_duration_ms'] = Variable<int>(mediaDurationMs);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['expires_at'] = Variable<DateTime>(expiresAt);
+    map['is_mine'] = Variable<bool>(isMine);
+    return map;
+  }
+
+  LocalStatusesCompanion toCompanion(bool nullToAbsent) {
+    return LocalStatusesCompanion(
+      idStatut: Value(idStatut),
+      authorID: Value(authorID),
+      authorNom: authorNom == null && nullToAbsent
+          ? const Value.absent()
+          : Value(authorNom),
+      authorAvatar: authorAvatar == null && nullToAbsent
+          ? const Value.absent()
+          : Value(authorAvatar),
+      type: Value(type),
+      textContent: textContent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(textContent),
+      mediaUrl: mediaUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaUrl),
+      localMediaPath: localMediaPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localMediaPath),
+      backgroundColor: backgroundColor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(backgroundColor),
+      mediaDurationMs: mediaDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaDurationMs),
+      createdAt: Value(createdAt),
+      expiresAt: Value(expiresAt),
+      isMine: Value(isMine),
+    );
+  }
+
+  factory LocalStatuse.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalStatuse(
+      idStatut: serializer.fromJson<int>(json['idStatut']),
+      authorID: serializer.fromJson<int>(json['authorID']),
+      authorNom: serializer.fromJson<String?>(json['authorNom']),
+      authorAvatar: serializer.fromJson<String?>(json['authorAvatar']),
+      type: serializer.fromJson<int>(json['type']),
+      textContent: serializer.fromJson<String?>(json['textContent']),
+      mediaUrl: serializer.fromJson<String?>(json['mediaUrl']),
+      localMediaPath: serializer.fromJson<String?>(json['localMediaPath']),
+      backgroundColor: serializer.fromJson<String?>(json['backgroundColor']),
+      mediaDurationMs: serializer.fromJson<int?>(json['mediaDurationMs']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      expiresAt: serializer.fromJson<DateTime>(json['expiresAt']),
+      isMine: serializer.fromJson<bool>(json['isMine']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'idStatut': serializer.toJson<int>(idStatut),
+      'authorID': serializer.toJson<int>(authorID),
+      'authorNom': serializer.toJson<String?>(authorNom),
+      'authorAvatar': serializer.toJson<String?>(authorAvatar),
+      'type': serializer.toJson<int>(type),
+      'textContent': serializer.toJson<String?>(textContent),
+      'mediaUrl': serializer.toJson<String?>(mediaUrl),
+      'localMediaPath': serializer.toJson<String?>(localMediaPath),
+      'backgroundColor': serializer.toJson<String?>(backgroundColor),
+      'mediaDurationMs': serializer.toJson<int?>(mediaDurationMs),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'expiresAt': serializer.toJson<DateTime>(expiresAt),
+      'isMine': serializer.toJson<bool>(isMine),
+    };
+  }
+
+  LocalStatuse copyWith({
+    int? idStatut,
+    int? authorID,
+    Value<String?> authorNom = const Value.absent(),
+    Value<String?> authorAvatar = const Value.absent(),
+    int? type,
+    Value<String?> textContent = const Value.absent(),
+    Value<String?> mediaUrl = const Value.absent(),
+    Value<String?> localMediaPath = const Value.absent(),
+    Value<String?> backgroundColor = const Value.absent(),
+    Value<int?> mediaDurationMs = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? expiresAt,
+    bool? isMine,
+  }) => LocalStatuse(
+    idStatut: idStatut ?? this.idStatut,
+    authorID: authorID ?? this.authorID,
+    authorNom: authorNom.present ? authorNom.value : this.authorNom,
+    authorAvatar: authorAvatar.present ? authorAvatar.value : this.authorAvatar,
+    type: type ?? this.type,
+    textContent: textContent.present ? textContent.value : this.textContent,
+    mediaUrl: mediaUrl.present ? mediaUrl.value : this.mediaUrl,
+    localMediaPath: localMediaPath.present
+        ? localMediaPath.value
+        : this.localMediaPath,
+    backgroundColor: backgroundColor.present
+        ? backgroundColor.value
+        : this.backgroundColor,
+    mediaDurationMs: mediaDurationMs.present
+        ? mediaDurationMs.value
+        : this.mediaDurationMs,
+    createdAt: createdAt ?? this.createdAt,
+    expiresAt: expiresAt ?? this.expiresAt,
+    isMine: isMine ?? this.isMine,
+  );
+  LocalStatuse copyWithCompanion(LocalStatusesCompanion data) {
+    return LocalStatuse(
+      idStatut: data.idStatut.present ? data.idStatut.value : this.idStatut,
+      authorID: data.authorID.present ? data.authorID.value : this.authorID,
+      authorNom: data.authorNom.present ? data.authorNom.value : this.authorNom,
+      authorAvatar: data.authorAvatar.present
+          ? data.authorAvatar.value
+          : this.authorAvatar,
+      type: data.type.present ? data.type.value : this.type,
+      textContent: data.textContent.present
+          ? data.textContent.value
+          : this.textContent,
+      mediaUrl: data.mediaUrl.present ? data.mediaUrl.value : this.mediaUrl,
+      localMediaPath: data.localMediaPath.present
+          ? data.localMediaPath.value
+          : this.localMediaPath,
+      backgroundColor: data.backgroundColor.present
+          ? data.backgroundColor.value
+          : this.backgroundColor,
+      mediaDurationMs: data.mediaDurationMs.present
+          ? data.mediaDurationMs.value
+          : this.mediaDurationMs,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      isMine: data.isMine.present ? data.isMine.value : this.isMine,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStatuse(')
+          ..write('idStatut: $idStatut, ')
+          ..write('authorID: $authorID, ')
+          ..write('authorNom: $authorNom, ')
+          ..write('authorAvatar: $authorAvatar, ')
+          ..write('type: $type, ')
+          ..write('textContent: $textContent, ')
+          ..write('mediaUrl: $mediaUrl, ')
+          ..write('localMediaPath: $localMediaPath, ')
+          ..write('backgroundColor: $backgroundColor, ')
+          ..write('mediaDurationMs: $mediaDurationMs, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('isMine: $isMine')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    idStatut,
+    authorID,
+    authorNom,
+    authorAvatar,
+    type,
+    textContent,
+    mediaUrl,
+    localMediaPath,
+    backgroundColor,
+    mediaDurationMs,
+    createdAt,
+    expiresAt,
+    isMine,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalStatuse &&
+          other.idStatut == this.idStatut &&
+          other.authorID == this.authorID &&
+          other.authorNom == this.authorNom &&
+          other.authorAvatar == this.authorAvatar &&
+          other.type == this.type &&
+          other.textContent == this.textContent &&
+          other.mediaUrl == this.mediaUrl &&
+          other.localMediaPath == this.localMediaPath &&
+          other.backgroundColor == this.backgroundColor &&
+          other.mediaDurationMs == this.mediaDurationMs &&
+          other.createdAt == this.createdAt &&
+          other.expiresAt == this.expiresAt &&
+          other.isMine == this.isMine);
+}
+
+class LocalStatusesCompanion extends UpdateCompanion<LocalStatuse> {
+  final Value<int> idStatut;
+  final Value<int> authorID;
+  final Value<String?> authorNom;
+  final Value<String?> authorAvatar;
+  final Value<int> type;
+  final Value<String?> textContent;
+  final Value<String?> mediaUrl;
+  final Value<String?> localMediaPath;
+  final Value<String?> backgroundColor;
+  final Value<int?> mediaDurationMs;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> expiresAt;
+  final Value<bool> isMine;
+  const LocalStatusesCompanion({
+    this.idStatut = const Value.absent(),
+    this.authorID = const Value.absent(),
+    this.authorNom = const Value.absent(),
+    this.authorAvatar = const Value.absent(),
+    this.type = const Value.absent(),
+    this.textContent = const Value.absent(),
+    this.mediaUrl = const Value.absent(),
+    this.localMediaPath = const Value.absent(),
+    this.backgroundColor = const Value.absent(),
+    this.mediaDurationMs = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.isMine = const Value.absent(),
+  });
+  LocalStatusesCompanion.insert({
+    this.idStatut = const Value.absent(),
+    required int authorID,
+    this.authorNom = const Value.absent(),
+    this.authorAvatar = const Value.absent(),
+    this.type = const Value.absent(),
+    this.textContent = const Value.absent(),
+    this.mediaUrl = const Value.absent(),
+    this.localMediaPath = const Value.absent(),
+    this.backgroundColor = const Value.absent(),
+    this.mediaDurationMs = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime expiresAt,
+    this.isMine = const Value.absent(),
+  }) : authorID = Value(authorID),
+       createdAt = Value(createdAt),
+       expiresAt = Value(expiresAt);
+  static Insertable<LocalStatuse> custom({
+    Expression<int>? idStatut,
+    Expression<int>? authorID,
+    Expression<String>? authorNom,
+    Expression<String>? authorAvatar,
+    Expression<int>? type,
+    Expression<String>? textContent,
+    Expression<String>? mediaUrl,
+    Expression<String>? localMediaPath,
+    Expression<String>? backgroundColor,
+    Expression<int>? mediaDurationMs,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? expiresAt,
+    Expression<bool>? isMine,
+  }) {
+    return RawValuesInsertable({
+      if (idStatut != null) 'id_statut': idStatut,
+      if (authorID != null) 'author_i_d': authorID,
+      if (authorNom != null) 'author_nom': authorNom,
+      if (authorAvatar != null) 'author_avatar': authorAvatar,
+      if (type != null) 'type': type,
+      if (textContent != null) 'text_content': textContent,
+      if (mediaUrl != null) 'media_url': mediaUrl,
+      if (localMediaPath != null) 'local_media_path': localMediaPath,
+      if (backgroundColor != null) 'background_color': backgroundColor,
+      if (mediaDurationMs != null) 'media_duration_ms': mediaDurationMs,
+      if (createdAt != null) 'created_at': createdAt,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      if (isMine != null) 'is_mine': isMine,
+    });
+  }
+
+  LocalStatusesCompanion copyWith({
+    Value<int>? idStatut,
+    Value<int>? authorID,
+    Value<String?>? authorNom,
+    Value<String?>? authorAvatar,
+    Value<int>? type,
+    Value<String?>? textContent,
+    Value<String?>? mediaUrl,
+    Value<String?>? localMediaPath,
+    Value<String?>? backgroundColor,
+    Value<int?>? mediaDurationMs,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? expiresAt,
+    Value<bool>? isMine,
+  }) {
+    return LocalStatusesCompanion(
+      idStatut: idStatut ?? this.idStatut,
+      authorID: authorID ?? this.authorID,
+      authorNom: authorNom ?? this.authorNom,
+      authorAvatar: authorAvatar ?? this.authorAvatar,
+      type: type ?? this.type,
+      textContent: textContent ?? this.textContent,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      localMediaPath: localMediaPath ?? this.localMediaPath,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      mediaDurationMs: mediaDurationMs ?? this.mediaDurationMs,
+      createdAt: createdAt ?? this.createdAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      isMine: isMine ?? this.isMine,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (idStatut.present) {
+      map['id_statut'] = Variable<int>(idStatut.value);
+    }
+    if (authorID.present) {
+      map['author_i_d'] = Variable<int>(authorID.value);
+    }
+    if (authorNom.present) {
+      map['author_nom'] = Variable<String>(authorNom.value);
+    }
+    if (authorAvatar.present) {
+      map['author_avatar'] = Variable<String>(authorAvatar.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<int>(type.value);
+    }
+    if (textContent.present) {
+      map['text_content'] = Variable<String>(textContent.value);
+    }
+    if (mediaUrl.present) {
+      map['media_url'] = Variable<String>(mediaUrl.value);
+    }
+    if (localMediaPath.present) {
+      map['local_media_path'] = Variable<String>(localMediaPath.value);
+    }
+    if (backgroundColor.present) {
+      map['background_color'] = Variable<String>(backgroundColor.value);
+    }
+    if (mediaDurationMs.present) {
+      map['media_duration_ms'] = Variable<int>(mediaDurationMs.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<DateTime>(expiresAt.value);
+    }
+    if (isMine.present) {
+      map['is_mine'] = Variable<bool>(isMine.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStatusesCompanion(')
+          ..write('idStatut: $idStatut, ')
+          ..write('authorID: $authorID, ')
+          ..write('authorNom: $authorNom, ')
+          ..write('authorAvatar: $authorAvatar, ')
+          ..write('type: $type, ')
+          ..write('textContent: $textContent, ')
+          ..write('mediaUrl: $mediaUrl, ')
+          ..write('localMediaPath: $localMediaPath, ')
+          ..write('backgroundColor: $backgroundColor, ')
+          ..write('mediaDurationMs: $mediaDurationMs, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('isMine: $isMine')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $LocalConversationsTable localConversations =
       $LocalConversationsTable(this);
   late final $LocalMessagesTable localMessages = $LocalMessagesTable(this);
+  late final $LocalUsersTable localUsers = $LocalUsersTable(this);
+  late final $LocalCallsTable localCalls = $LocalCallsTable(this);
+  late final $LocalMeetingsTable localMeetings = $LocalMeetingsTable(this);
+  late final $LocalStatusesTable localStatuses = $LocalStatusesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2118,6 +4843,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     localConversations,
     localMessages,
+    localUsers,
+    localCalls,
+    localMeetings,
+    localStatuses,
   ];
 }
 
@@ -3058,6 +5787,1298 @@ typedef $$LocalMessagesTableProcessedTableManager =
       LocalMessage,
       PrefetchHooks Function()
     >;
+typedef $$LocalUsersTableCreateCompanionBuilder =
+    LocalUsersCompanion Function({
+      Value<int> alanyaID,
+      Value<String> nom,
+      Value<String> pseudo,
+      Value<String> alanyaPhone,
+      Value<String> email,
+      Value<String> avatarUrl,
+      Value<int> idPays,
+      Value<String?> paysLibelle,
+      Value<bool> isOnline,
+      Value<DateTime?> lastSeen,
+      Value<bool> isPreferredContact,
+      Value<int> typeCompte,
+      required DateTime cachedAt,
+    });
+typedef $$LocalUsersTableUpdateCompanionBuilder =
+    LocalUsersCompanion Function({
+      Value<int> alanyaID,
+      Value<String> nom,
+      Value<String> pseudo,
+      Value<String> alanyaPhone,
+      Value<String> email,
+      Value<String> avatarUrl,
+      Value<int> idPays,
+      Value<String?> paysLibelle,
+      Value<bool> isOnline,
+      Value<DateTime?> lastSeen,
+      Value<bool> isPreferredContact,
+      Value<int> typeCompte,
+      Value<DateTime> cachedAt,
+    });
+
+class $$LocalUsersTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalUsersTable> {
+  $$LocalUsersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get alanyaID => $composableBuilder(
+    column: $table.alanyaID,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pseudo => $composableBuilder(
+    column: $table.pseudo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get alanyaPhone => $composableBuilder(
+    column: $table.alanyaPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get avatarUrl => $composableBuilder(
+    column: $table.avatarUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idPays => $composableBuilder(
+    column: $table.idPays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paysLibelle => $composableBuilder(
+    column: $table.paysLibelle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isOnline => $composableBuilder(
+    column: $table.isOnline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSeen => $composableBuilder(
+    column: $table.lastSeen,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPreferredContact => $composableBuilder(
+    column: $table.isPreferredContact,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get typeCompte => $composableBuilder(
+    column: $table.typeCompte,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalUsersTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalUsersTable> {
+  $$LocalUsersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get alanyaID => $composableBuilder(
+    column: $table.alanyaID,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nom => $composableBuilder(
+    column: $table.nom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pseudo => $composableBuilder(
+    column: $table.pseudo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get alanyaPhone => $composableBuilder(
+    column: $table.alanyaPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get avatarUrl => $composableBuilder(
+    column: $table.avatarUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idPays => $composableBuilder(
+    column: $table.idPays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paysLibelle => $composableBuilder(
+    column: $table.paysLibelle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isOnline => $composableBuilder(
+    column: $table.isOnline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSeen => $composableBuilder(
+    column: $table.lastSeen,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPreferredContact => $composableBuilder(
+    column: $table.isPreferredContact,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get typeCompte => $composableBuilder(
+    column: $table.typeCompte,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalUsersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalUsersTable> {
+  $$LocalUsersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get alanyaID =>
+      $composableBuilder(column: $table.alanyaID, builder: (column) => column);
+
+  GeneratedColumn<String> get nom =>
+      $composableBuilder(column: $table.nom, builder: (column) => column);
+
+  GeneratedColumn<String> get pseudo =>
+      $composableBuilder(column: $table.pseudo, builder: (column) => column);
+
+  GeneratedColumn<String> get alanyaPhone => $composableBuilder(
+    column: $table.alanyaPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get email =>
+      $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<String> get avatarUrl =>
+      $composableBuilder(column: $table.avatarUrl, builder: (column) => column);
+
+  GeneratedColumn<int> get idPays =>
+      $composableBuilder(column: $table.idPays, builder: (column) => column);
+
+  GeneratedColumn<String> get paysLibelle => $composableBuilder(
+    column: $table.paysLibelle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isOnline =>
+      $composableBuilder(column: $table.isOnline, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSeen =>
+      $composableBuilder(column: $table.lastSeen, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPreferredContact => $composableBuilder(
+    column: $table.isPreferredContact,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get typeCompte => $composableBuilder(
+    column: $table.typeCompte,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$LocalUsersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalUsersTable,
+          LocalUser,
+          $$LocalUsersTableFilterComposer,
+          $$LocalUsersTableOrderingComposer,
+          $$LocalUsersTableAnnotationComposer,
+          $$LocalUsersTableCreateCompanionBuilder,
+          $$LocalUsersTableUpdateCompanionBuilder,
+          (
+            LocalUser,
+            BaseReferences<_$AppDatabase, $LocalUsersTable, LocalUser>,
+          ),
+          LocalUser,
+          PrefetchHooks Function()
+        > {
+  $$LocalUsersTableTableManager(_$AppDatabase db, $LocalUsersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalUsersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalUsersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalUsersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> alanyaID = const Value.absent(),
+                Value<String> nom = const Value.absent(),
+                Value<String> pseudo = const Value.absent(),
+                Value<String> alanyaPhone = const Value.absent(),
+                Value<String> email = const Value.absent(),
+                Value<String> avatarUrl = const Value.absent(),
+                Value<int> idPays = const Value.absent(),
+                Value<String?> paysLibelle = const Value.absent(),
+                Value<bool> isOnline = const Value.absent(),
+                Value<DateTime?> lastSeen = const Value.absent(),
+                Value<bool> isPreferredContact = const Value.absent(),
+                Value<int> typeCompte = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+              }) => LocalUsersCompanion(
+                alanyaID: alanyaID,
+                nom: nom,
+                pseudo: pseudo,
+                alanyaPhone: alanyaPhone,
+                email: email,
+                avatarUrl: avatarUrl,
+                idPays: idPays,
+                paysLibelle: paysLibelle,
+                isOnline: isOnline,
+                lastSeen: lastSeen,
+                isPreferredContact: isPreferredContact,
+                typeCompte: typeCompte,
+                cachedAt: cachedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> alanyaID = const Value.absent(),
+                Value<String> nom = const Value.absent(),
+                Value<String> pseudo = const Value.absent(),
+                Value<String> alanyaPhone = const Value.absent(),
+                Value<String> email = const Value.absent(),
+                Value<String> avatarUrl = const Value.absent(),
+                Value<int> idPays = const Value.absent(),
+                Value<String?> paysLibelle = const Value.absent(),
+                Value<bool> isOnline = const Value.absent(),
+                Value<DateTime?> lastSeen = const Value.absent(),
+                Value<bool> isPreferredContact = const Value.absent(),
+                Value<int> typeCompte = const Value.absent(),
+                required DateTime cachedAt,
+              }) => LocalUsersCompanion.insert(
+                alanyaID: alanyaID,
+                nom: nom,
+                pseudo: pseudo,
+                alanyaPhone: alanyaPhone,
+                email: email,
+                avatarUrl: avatarUrl,
+                idPays: idPays,
+                paysLibelle: paysLibelle,
+                isOnline: isOnline,
+                lastSeen: lastSeen,
+                isPreferredContact: isPreferredContact,
+                typeCompte: typeCompte,
+                cachedAt: cachedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalUsersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalUsersTable,
+      LocalUser,
+      $$LocalUsersTableFilterComposer,
+      $$LocalUsersTableOrderingComposer,
+      $$LocalUsersTableAnnotationComposer,
+      $$LocalUsersTableCreateCompanionBuilder,
+      $$LocalUsersTableUpdateCompanionBuilder,
+      (LocalUser, BaseReferences<_$AppDatabase, $LocalUsersTable, LocalUser>),
+      LocalUser,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalCallsTableCreateCompanionBuilder =
+    LocalCallsCompanion Function({
+      Value<int> idCall,
+      required int idCaller,
+      required int idReceiver,
+      Value<int> type,
+      Value<int> status,
+      Value<int?> duration,
+      required DateTime createdAt,
+      Value<String?> otherNom,
+      Value<String?> otherAvatar,
+    });
+typedef $$LocalCallsTableUpdateCompanionBuilder =
+    LocalCallsCompanion Function({
+      Value<int> idCall,
+      Value<int> idCaller,
+      Value<int> idReceiver,
+      Value<int> type,
+      Value<int> status,
+      Value<int?> duration,
+      Value<DateTime> createdAt,
+      Value<String?> otherNom,
+      Value<String?> otherAvatar,
+    });
+
+class $$LocalCallsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalCallsTable> {
+  $$LocalCallsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get idCall => $composableBuilder(
+    column: $table.idCall,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idCaller => $composableBuilder(
+    column: $table.idCaller,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idReceiver => $composableBuilder(
+    column: $table.idReceiver,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get duration => $composableBuilder(
+    column: $table.duration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get otherNom => $composableBuilder(
+    column: $table.otherNom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get otherAvatar => $composableBuilder(
+    column: $table.otherAvatar,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalCallsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalCallsTable> {
+  $$LocalCallsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get idCall => $composableBuilder(
+    column: $table.idCall,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idCaller => $composableBuilder(
+    column: $table.idCaller,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idReceiver => $composableBuilder(
+    column: $table.idReceiver,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get duration => $composableBuilder(
+    column: $table.duration,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get otherNom => $composableBuilder(
+    column: $table.otherNom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get otherAvatar => $composableBuilder(
+    column: $table.otherAvatar,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalCallsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalCallsTable> {
+  $$LocalCallsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get idCall =>
+      $composableBuilder(column: $table.idCall, builder: (column) => column);
+
+  GeneratedColumn<int> get idCaller =>
+      $composableBuilder(column: $table.idCaller, builder: (column) => column);
+
+  GeneratedColumn<int> get idReceiver => $composableBuilder(
+    column: $table.idReceiver,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get duration =>
+      $composableBuilder(column: $table.duration, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get otherNom =>
+      $composableBuilder(column: $table.otherNom, builder: (column) => column);
+
+  GeneratedColumn<String> get otherAvatar => $composableBuilder(
+    column: $table.otherAvatar,
+    builder: (column) => column,
+  );
+}
+
+class $$LocalCallsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalCallsTable,
+          LocalCall,
+          $$LocalCallsTableFilterComposer,
+          $$LocalCallsTableOrderingComposer,
+          $$LocalCallsTableAnnotationComposer,
+          $$LocalCallsTableCreateCompanionBuilder,
+          $$LocalCallsTableUpdateCompanionBuilder,
+          (
+            LocalCall,
+            BaseReferences<_$AppDatabase, $LocalCallsTable, LocalCall>,
+          ),
+          LocalCall,
+          PrefetchHooks Function()
+        > {
+  $$LocalCallsTableTableManager(_$AppDatabase db, $LocalCallsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalCallsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalCallsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalCallsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> idCall = const Value.absent(),
+                Value<int> idCaller = const Value.absent(),
+                Value<int> idReceiver = const Value.absent(),
+                Value<int> type = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<int?> duration = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> otherNom = const Value.absent(),
+                Value<String?> otherAvatar = const Value.absent(),
+              }) => LocalCallsCompanion(
+                idCall: idCall,
+                idCaller: idCaller,
+                idReceiver: idReceiver,
+                type: type,
+                status: status,
+                duration: duration,
+                createdAt: createdAt,
+                otherNom: otherNom,
+                otherAvatar: otherAvatar,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> idCall = const Value.absent(),
+                required int idCaller,
+                required int idReceiver,
+                Value<int> type = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<int?> duration = const Value.absent(),
+                required DateTime createdAt,
+                Value<String?> otherNom = const Value.absent(),
+                Value<String?> otherAvatar = const Value.absent(),
+              }) => LocalCallsCompanion.insert(
+                idCall: idCall,
+                idCaller: idCaller,
+                idReceiver: idReceiver,
+                type: type,
+                status: status,
+                duration: duration,
+                createdAt: createdAt,
+                otherNom: otherNom,
+                otherAvatar: otherAvatar,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalCallsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalCallsTable,
+      LocalCall,
+      $$LocalCallsTableFilterComposer,
+      $$LocalCallsTableOrderingComposer,
+      $$LocalCallsTableAnnotationComposer,
+      $$LocalCallsTableCreateCompanionBuilder,
+      $$LocalCallsTableUpdateCompanionBuilder,
+      (LocalCall, BaseReferences<_$AppDatabase, $LocalCallsTable, LocalCall>),
+      LocalCall,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalMeetingsTableCreateCompanionBuilder =
+    LocalMeetingsCompanion Function({
+      Value<int> idMeeting,
+      Value<String> objet,
+      Value<String> room,
+      required DateTime startTime,
+      Value<int> duree,
+      Value<int> typeMedia,
+      Value<int> organiserID,
+      Value<String?> organiserNom,
+      Value<String> participantsJson,
+      Value<int> statut,
+      required DateTime cachedAt,
+    });
+typedef $$LocalMeetingsTableUpdateCompanionBuilder =
+    LocalMeetingsCompanion Function({
+      Value<int> idMeeting,
+      Value<String> objet,
+      Value<String> room,
+      Value<DateTime> startTime,
+      Value<int> duree,
+      Value<int> typeMedia,
+      Value<int> organiserID,
+      Value<String?> organiserNom,
+      Value<String> participantsJson,
+      Value<int> statut,
+      Value<DateTime> cachedAt,
+    });
+
+class $$LocalMeetingsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalMeetingsTable> {
+  $$LocalMeetingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get idMeeting => $composableBuilder(
+    column: $table.idMeeting,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get objet => $composableBuilder(
+    column: $table.objet,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get room => $composableBuilder(
+    column: $table.room,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startTime => $composableBuilder(
+    column: $table.startTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get duree => $composableBuilder(
+    column: $table.duree,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get typeMedia => $composableBuilder(
+    column: $table.typeMedia,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get organiserID => $composableBuilder(
+    column: $table.organiserID,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get organiserNom => $composableBuilder(
+    column: $table.organiserNom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get participantsJson => $composableBuilder(
+    column: $table.participantsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalMeetingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalMeetingsTable> {
+  $$LocalMeetingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get idMeeting => $composableBuilder(
+    column: $table.idMeeting,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get objet => $composableBuilder(
+    column: $table.objet,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get room => $composableBuilder(
+    column: $table.room,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startTime => $composableBuilder(
+    column: $table.startTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get duree => $composableBuilder(
+    column: $table.duree,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get typeMedia => $composableBuilder(
+    column: $table.typeMedia,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get organiserID => $composableBuilder(
+    column: $table.organiserID,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get organiserNom => $composableBuilder(
+    column: $table.organiserNom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get participantsJson => $composableBuilder(
+    column: $table.participantsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalMeetingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalMeetingsTable> {
+  $$LocalMeetingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get idMeeting =>
+      $composableBuilder(column: $table.idMeeting, builder: (column) => column);
+
+  GeneratedColumn<String> get objet =>
+      $composableBuilder(column: $table.objet, builder: (column) => column);
+
+  GeneratedColumn<String> get room =>
+      $composableBuilder(column: $table.room, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startTime =>
+      $composableBuilder(column: $table.startTime, builder: (column) => column);
+
+  GeneratedColumn<int> get duree =>
+      $composableBuilder(column: $table.duree, builder: (column) => column);
+
+  GeneratedColumn<int> get typeMedia =>
+      $composableBuilder(column: $table.typeMedia, builder: (column) => column);
+
+  GeneratedColumn<int> get organiserID => $composableBuilder(
+    column: $table.organiserID,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get organiserNom => $composableBuilder(
+    column: $table.organiserNom,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get participantsJson => $composableBuilder(
+    column: $table.participantsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get statut =>
+      $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$LocalMeetingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalMeetingsTable,
+          LocalMeeting,
+          $$LocalMeetingsTableFilterComposer,
+          $$LocalMeetingsTableOrderingComposer,
+          $$LocalMeetingsTableAnnotationComposer,
+          $$LocalMeetingsTableCreateCompanionBuilder,
+          $$LocalMeetingsTableUpdateCompanionBuilder,
+          (
+            LocalMeeting,
+            BaseReferences<_$AppDatabase, $LocalMeetingsTable, LocalMeeting>,
+          ),
+          LocalMeeting,
+          PrefetchHooks Function()
+        > {
+  $$LocalMeetingsTableTableManager(_$AppDatabase db, $LocalMeetingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalMeetingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalMeetingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalMeetingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> idMeeting = const Value.absent(),
+                Value<String> objet = const Value.absent(),
+                Value<String> room = const Value.absent(),
+                Value<DateTime> startTime = const Value.absent(),
+                Value<int> duree = const Value.absent(),
+                Value<int> typeMedia = const Value.absent(),
+                Value<int> organiserID = const Value.absent(),
+                Value<String?> organiserNom = const Value.absent(),
+                Value<String> participantsJson = const Value.absent(),
+                Value<int> statut = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+              }) => LocalMeetingsCompanion(
+                idMeeting: idMeeting,
+                objet: objet,
+                room: room,
+                startTime: startTime,
+                duree: duree,
+                typeMedia: typeMedia,
+                organiserID: organiserID,
+                organiserNom: organiserNom,
+                participantsJson: participantsJson,
+                statut: statut,
+                cachedAt: cachedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> idMeeting = const Value.absent(),
+                Value<String> objet = const Value.absent(),
+                Value<String> room = const Value.absent(),
+                required DateTime startTime,
+                Value<int> duree = const Value.absent(),
+                Value<int> typeMedia = const Value.absent(),
+                Value<int> organiserID = const Value.absent(),
+                Value<String?> organiserNom = const Value.absent(),
+                Value<String> participantsJson = const Value.absent(),
+                Value<int> statut = const Value.absent(),
+                required DateTime cachedAt,
+              }) => LocalMeetingsCompanion.insert(
+                idMeeting: idMeeting,
+                objet: objet,
+                room: room,
+                startTime: startTime,
+                duree: duree,
+                typeMedia: typeMedia,
+                organiserID: organiserID,
+                organiserNom: organiserNom,
+                participantsJson: participantsJson,
+                statut: statut,
+                cachedAt: cachedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalMeetingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalMeetingsTable,
+      LocalMeeting,
+      $$LocalMeetingsTableFilterComposer,
+      $$LocalMeetingsTableOrderingComposer,
+      $$LocalMeetingsTableAnnotationComposer,
+      $$LocalMeetingsTableCreateCompanionBuilder,
+      $$LocalMeetingsTableUpdateCompanionBuilder,
+      (
+        LocalMeeting,
+        BaseReferences<_$AppDatabase, $LocalMeetingsTable, LocalMeeting>,
+      ),
+      LocalMeeting,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalStatusesTableCreateCompanionBuilder =
+    LocalStatusesCompanion Function({
+      Value<int> idStatut,
+      required int authorID,
+      Value<String?> authorNom,
+      Value<String?> authorAvatar,
+      Value<int> type,
+      Value<String?> textContent,
+      Value<String?> mediaUrl,
+      Value<String?> localMediaPath,
+      Value<String?> backgroundColor,
+      Value<int?> mediaDurationMs,
+      required DateTime createdAt,
+      required DateTime expiresAt,
+      Value<bool> isMine,
+    });
+typedef $$LocalStatusesTableUpdateCompanionBuilder =
+    LocalStatusesCompanion Function({
+      Value<int> idStatut,
+      Value<int> authorID,
+      Value<String?> authorNom,
+      Value<String?> authorAvatar,
+      Value<int> type,
+      Value<String?> textContent,
+      Value<String?> mediaUrl,
+      Value<String?> localMediaPath,
+      Value<String?> backgroundColor,
+      Value<int?> mediaDurationMs,
+      Value<DateTime> createdAt,
+      Value<DateTime> expiresAt,
+      Value<bool> isMine,
+    });
+
+class $$LocalStatusesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalStatusesTable> {
+  $$LocalStatusesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get idStatut => $composableBuilder(
+    column: $table.idStatut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get authorID => $composableBuilder(
+    column: $table.authorID,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get authorNom => $composableBuilder(
+    column: $table.authorNom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get authorAvatar => $composableBuilder(
+    column: $table.authorAvatar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get textContent => $composableBuilder(
+    column: $table.textContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mediaUrl => $composableBuilder(
+    column: $table.mediaUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localMediaPath => $composableBuilder(
+    column: $table.localMediaPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get backgroundColor => $composableBuilder(
+    column: $table.backgroundColor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mediaDurationMs => $composableBuilder(
+    column: $table.mediaDurationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isMine => $composableBuilder(
+    column: $table.isMine,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalStatusesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalStatusesTable> {
+  $$LocalStatusesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get idStatut => $composableBuilder(
+    column: $table.idStatut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get authorID => $composableBuilder(
+    column: $table.authorID,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get authorNom => $composableBuilder(
+    column: $table.authorNom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get authorAvatar => $composableBuilder(
+    column: $table.authorAvatar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get textContent => $composableBuilder(
+    column: $table.textContent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mediaUrl => $composableBuilder(
+    column: $table.mediaUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localMediaPath => $composableBuilder(
+    column: $table.localMediaPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get backgroundColor => $composableBuilder(
+    column: $table.backgroundColor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get mediaDurationMs => $composableBuilder(
+    column: $table.mediaDurationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isMine => $composableBuilder(
+    column: $table.isMine,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalStatusesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalStatusesTable> {
+  $$LocalStatusesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get idStatut =>
+      $composableBuilder(column: $table.idStatut, builder: (column) => column);
+
+  GeneratedColumn<int> get authorID =>
+      $composableBuilder(column: $table.authorID, builder: (column) => column);
+
+  GeneratedColumn<String> get authorNom =>
+      $composableBuilder(column: $table.authorNom, builder: (column) => column);
+
+  GeneratedColumn<String> get authorAvatar => $composableBuilder(
+    column: $table.authorAvatar,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get textContent => $composableBuilder(
+    column: $table.textContent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mediaUrl =>
+      $composableBuilder(column: $table.mediaUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get localMediaPath => $composableBuilder(
+    column: $table.localMediaPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get backgroundColor => $composableBuilder(
+    column: $table.backgroundColor,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get mediaDurationMs => $composableBuilder(
+    column: $table.mediaDurationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isMine =>
+      $composableBuilder(column: $table.isMine, builder: (column) => column);
+}
+
+class $$LocalStatusesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalStatusesTable,
+          LocalStatuse,
+          $$LocalStatusesTableFilterComposer,
+          $$LocalStatusesTableOrderingComposer,
+          $$LocalStatusesTableAnnotationComposer,
+          $$LocalStatusesTableCreateCompanionBuilder,
+          $$LocalStatusesTableUpdateCompanionBuilder,
+          (
+            LocalStatuse,
+            BaseReferences<_$AppDatabase, $LocalStatusesTable, LocalStatuse>,
+          ),
+          LocalStatuse,
+          PrefetchHooks Function()
+        > {
+  $$LocalStatusesTableTableManager(_$AppDatabase db, $LocalStatusesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalStatusesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalStatusesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalStatusesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> idStatut = const Value.absent(),
+                Value<int> authorID = const Value.absent(),
+                Value<String?> authorNom = const Value.absent(),
+                Value<String?> authorAvatar = const Value.absent(),
+                Value<int> type = const Value.absent(),
+                Value<String?> textContent = const Value.absent(),
+                Value<String?> mediaUrl = const Value.absent(),
+                Value<String?> localMediaPath = const Value.absent(),
+                Value<String?> backgroundColor = const Value.absent(),
+                Value<int?> mediaDurationMs = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> expiresAt = const Value.absent(),
+                Value<bool> isMine = const Value.absent(),
+              }) => LocalStatusesCompanion(
+                idStatut: idStatut,
+                authorID: authorID,
+                authorNom: authorNom,
+                authorAvatar: authorAvatar,
+                type: type,
+                textContent: textContent,
+                mediaUrl: mediaUrl,
+                localMediaPath: localMediaPath,
+                backgroundColor: backgroundColor,
+                mediaDurationMs: mediaDurationMs,
+                createdAt: createdAt,
+                expiresAt: expiresAt,
+                isMine: isMine,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> idStatut = const Value.absent(),
+                required int authorID,
+                Value<String?> authorNom = const Value.absent(),
+                Value<String?> authorAvatar = const Value.absent(),
+                Value<int> type = const Value.absent(),
+                Value<String?> textContent = const Value.absent(),
+                Value<String?> mediaUrl = const Value.absent(),
+                Value<String?> localMediaPath = const Value.absent(),
+                Value<String?> backgroundColor = const Value.absent(),
+                Value<int?> mediaDurationMs = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime expiresAt,
+                Value<bool> isMine = const Value.absent(),
+              }) => LocalStatusesCompanion.insert(
+                idStatut: idStatut,
+                authorID: authorID,
+                authorNom: authorNom,
+                authorAvatar: authorAvatar,
+                type: type,
+                textContent: textContent,
+                mediaUrl: mediaUrl,
+                localMediaPath: localMediaPath,
+                backgroundColor: backgroundColor,
+                mediaDurationMs: mediaDurationMs,
+                createdAt: createdAt,
+                expiresAt: expiresAt,
+                isMine: isMine,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalStatusesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalStatusesTable,
+      LocalStatuse,
+      $$LocalStatusesTableFilterComposer,
+      $$LocalStatusesTableOrderingComposer,
+      $$LocalStatusesTableAnnotationComposer,
+      $$LocalStatusesTableCreateCompanionBuilder,
+      $$LocalStatusesTableUpdateCompanionBuilder,
+      (
+        LocalStatuse,
+        BaseReferences<_$AppDatabase, $LocalStatusesTable, LocalStatuse>,
+      ),
+      LocalStatuse,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3066,4 +7087,12 @@ class $AppDatabaseManager {
       $$LocalConversationsTableTableManager(_db, _db.localConversations);
   $$LocalMessagesTableTableManager get localMessages =>
       $$LocalMessagesTableTableManager(_db, _db.localMessages);
+  $$LocalUsersTableTableManager get localUsers =>
+      $$LocalUsersTableTableManager(_db, _db.localUsers);
+  $$LocalCallsTableTableManager get localCalls =>
+      $$LocalCallsTableTableManager(_db, _db.localCalls);
+  $$LocalMeetingsTableTableManager get localMeetings =>
+      $$LocalMeetingsTableTableManager(_db, _db.localMeetings);
+  $$LocalStatusesTableTableManager get localStatuses =>
+      $$LocalStatusesTableTableManager(_db, _db.localStatuses);
 }

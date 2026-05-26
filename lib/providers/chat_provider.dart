@@ -19,8 +19,8 @@ class ChatProvider extends ChangeNotifier {
   final Map<int, PresenceInfo> _presence = {};
   bool _bound = false;
 
-  ChatProvider({required TalkyApiClient api}) : _api = api {
-    repository = ChatRepository(api: _api);
+  ChatProvider({required TalkyApiClient api, AppDatabase? database}) : _api = api {
+    repository = ChatRepository(api: _api, database: database);
   }
 
   PresenceInfo? presenceOf(int userID) => _presence[userID];

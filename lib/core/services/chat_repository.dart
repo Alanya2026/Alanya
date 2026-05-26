@@ -53,6 +53,8 @@ class ChatRepository {
     _dao.purgeGhostMessages();
     _dao.purgeDuplicateOptimistics();
     _dao.purgeDuplicateByMsgId();
+    // Best-effort eviction LRU au démarrage (non-bloquant).
+    _mediaCache.evictIfNeeded();
 
     if (_listenersBound) return;
     _listenersBound = true;
@@ -250,25 +252,85 @@ class ChatRepository {
       );
     } catch (e) {
       debugPrint('[ChatRepo] upload média échoué: $e');
-      await _dao.markFailed(clientId);
+      // Erreur réseau (timeout / socket coupé) → laisser en pending pour rejeu
+      // par flushOutbox à la reconnexion. Erreur fatale (4xx/5xx serveur) →
+      // markFailed pour ne pas tourner en boucle.
+      if (_isTransientNetworkError(e)) {
+        debugPrint('[ChatRepo] upload différé — pending intact pour rejeu');
+      } else {
+        await _dao.markFailed(clientId);
+      }
     }
   }
 
+  bool _isTransientNetworkError(Object e) {
+    if (e is TalkyException) {
+      // statusCode 0 = pas de réponse HTTP (offline / timeout). 5xx aussi
+      // raisonnable à retenter. 4xx = erreur cliente, on abandonne.
+      return e.statusCode == 0 || (e.statusCode >= 500 && e.statusCode < 600);
+    }
+    return true; // exceptions Dart inattendues : on est prudent et on retente
+  }
+
   /// Renvoie tous les messages en attente (appelé à la reconnexion socket).
+  /// Gère AUSSI les uploads de fichier qui n'ont pas pu aboutir : si un
+  /// message porte `pendingUploadPath` sans `mediaUrl`, on relance l'upload
+  /// avant l'émission du message:send.
   Future<void> flushOutbox() async {
     final pending = await _dao.pendingMessages();
     for (final m in pending) {
-      _emitSend(
-        clientId: m.clientId,
-        conversationID: m.conversationID,
-        content: m.content,
-        type: m.type,
-        mediaUrl: m.mediaUrl,
-        mediaName: m.mediaName,
-        mediaDuration: m.mediaDuration,
-        replyToID: m.replyToID,
-        replyToContent: m.replyToContent,
-      );
+      final needsUpload = m.pendingUploadPath != null &&
+          m.pendingUploadPath!.isNotEmpty &&
+          (m.mediaUrl == null || m.mediaUrl!.isEmpty);
+
+      if (needsUpload) {
+        final file = File(m.pendingUploadPath!);
+        if (!file.existsSync()) {
+          debugPrint('[ChatRepo] flush: fichier disparu pour ${m.clientId} → failed');
+          await _dao.markFailed(m.clientId);
+          continue;
+        }
+        try {
+          final res = await _api.uploadMedia(file);
+          final url = res['url'] as String?;
+          if (url == null) throw Exception('upload sans url');
+          await (_db.update(_db.localMessages)..where((x) => x.clientId.equals(m.clientId)))
+              .write(LocalMessagesCompanion(
+            mediaUrl: Value(url),
+            pendingUploadPath: const Value(null),
+            status: const Value(1),
+          ));
+          _emitSend(
+            clientId: m.clientId,
+            conversationID: m.conversationID,
+            content: m.content,
+            type: m.type,
+            mediaUrl: url,
+            mediaName: m.mediaName,
+            mediaDuration: m.mediaDuration,
+            replyToID: m.replyToID,
+            replyToContent: m.replyToContent,
+          );
+        } catch (e) {
+          debugPrint('[ChatRepo] flush upload échoué pour ${m.clientId}: $e');
+          if (!_isTransientNetworkError(e)) {
+            await _dao.markFailed(m.clientId);
+          }
+          // On laisse tomber la suite pour ce message, on retentera plus tard.
+        }
+      } else {
+        _emitSend(
+          clientId: m.clientId,
+          conversationID: m.conversationID,
+          content: m.content,
+          type: m.type,
+          mediaUrl: m.mediaUrl,
+          mediaName: m.mediaName,
+          mediaDuration: m.mediaDuration,
+          replyToID: m.replyToID,
+          replyToContent: m.replyToContent,
+        );
+      }
     }
     // Rejoue les accusés de lecture émis hors-ligne.
     if (_api.isSocketConnected && _pendingReads.isNotEmpty) {
@@ -392,15 +454,23 @@ class ChatRepository {
     final mtype = _toInt(json['type']);
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
-    if (mediaUrl != null && msgID != 0 && (mtype == 1 || mtype == 3)) {
-      _cacheMedia(msgID, mediaUrl);
+    if (mediaUrl != null && msgID != 0) {
+      if (mtype == 1 || mtype == 3) {
+        // Images, audio : auto-cache toujours.
+        _cacheMedia(msgID, mediaUrl);
+      } else if (mtype == 4) {
+        // Fichiers : auto-cache si < 5 MB (sinon coût data trop élevé,
+        // ouverture manuelle redéclenchera ensureCached).
+        _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
+      }
+      // Vidéos (mtype==2) : on-demand uniquement (déjà via tap → ensureCached).
     }
   }
 
-  Future<void> _cacheMedia(int msgID, String url) async {
-    final path = await _mediaCache.ensureCached(url);
+  Future<void> _cacheMedia(int msgID, String url, {int? maxBytes}) async {
+    final path = await _mediaCache.ensureCached(url, maxBytes: maxBytes);
     if (path != null) await _dao.setLocalMediaPath(msgID, path);
-  } 
+  }
 
   void _onMessageStatus(dynamic data) {
     if (data is! Map) return;

@@ -7,9 +7,8 @@ import 'package:path_provider/path_provider.dart';
 
 part 'app_database.g.dart';
 
- 
 //  Base SQLite locale (drift) — miroir offline-first des conversations
- 
+
 /// Conversations mises en cache localement.
 class LocalConversations extends Table {
   IntColumn get conversID => integer()();
@@ -23,14 +22,14 @@ class LocalConversations extends Table {
   IntColumn get lastMessageStatus => integer().nullable()();
   IntColumn get unreadCount => integer().withDefault(const Constant(0))();
   BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
-  BoolColumn get isArchived => boolean().withDefault(const Constant(false))(); 
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   TextColumn get participantsJson => text().withDefault(const Constant('[]'))();
 
   @override
   Set<Column> get primaryKey => {conversID};
 }
 
-/// Messages mis en cache localement 
+/// Messages mis en cache localement
 class LocalMessages extends Table {
   TextColumn get clientId => text()();
 
@@ -75,13 +74,119 @@ class LocalMessages extends Table {
   Set<Column> get primaryKey => {clientId};
 }
 
-@DriftDatabase(tables: [LocalConversations, LocalMessages])
+/// Utilisateurs connus (contacts préférés + caches d'auteurs de messages).
+class LocalUsers extends Table {
+  IntColumn get alanyaID => integer()();
+  TextColumn get nom => text().withDefault(const Constant(''))();
+  TextColumn get pseudo => text().withDefault(const Constant(''))();
+  TextColumn get alanyaPhone => text().withDefault(const Constant(''))();
+  TextColumn get email => text().withDefault(const Constant(''))();
+  TextColumn get avatarUrl => text().withDefault(const Constant(''))();
+  IntColumn get idPays => integer().withDefault(const Constant(0))();
+  TextColumn get paysLibelle => text().nullable()();
+  BoolColumn get isOnline => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get lastSeen => dateTime().nullable()();
+  BoolColumn get isPreferredContact => boolean().withDefault(const Constant(false))();
+  IntColumn get typeCompte => integer().withDefault(const Constant(0))();
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {alanyaID};
+}
+
+/// Historique d'appels mis en cache localement.
+class LocalCalls extends Table {
+  IntColumn get idCall => integer()();
+  IntColumn get idCaller => integer()();
+  IntColumn get idReceiver => integer()();
+
+  /// 0=audio, 1=vidéo
+  IntColumn get type => integer().withDefault(const Constant(0))();
+
+  /// 0=missed, 1=answered, 2=rejected, 3=outgoing answered…
+  IntColumn get status => integer().withDefault(const Constant(0))();
+  IntColumn get duration => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  /// Snapshot dénormalisé pour affichage offline (avatar/nom du correspondant).
+  TextColumn get otherNom => text().nullable()();
+  TextColumn get otherAvatar => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {idCall};
+}
+
+/// Réunions planifiées / passées mises en cache.
+class LocalMeetings extends Table {
+  IntColumn get idMeeting => integer()();
+  TextColumn get objet => text().withDefault(const Constant(''))();
+  TextColumn get room => text().withDefault(const Constant(''))();
+  DateTimeColumn get startTime => dateTime()();
+  IntColumn get duree => integer().withDefault(const Constant(60))();
+  IntColumn get typeMedia => integer().withDefault(const Constant(0))();
+  IntColumn get organiserID => integer().withDefault(const Constant(0))();
+  TextColumn get organiserNom => text().nullable()();
+  TextColumn get participantsJson => text().withDefault(const Constant('[]'))();
+
+  /// 0=upcoming, 1=ongoing, 2=ended, 3=cancelled
+  IntColumn get statut => integer().withDefault(const Constant(0))();
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {idMeeting};
+}
+
+/// Statuts / stories mis en cache (TTL = expiresAt).
+class LocalStatuses extends Table {
+  IntColumn get idStatut => integer()();
+  IntColumn get authorID => integer()();
+  TextColumn get authorNom => text().nullable()();
+  TextColumn get authorAvatar => text().nullable()();
+
+  /// 0=texte, 1=image, 2=vidéo, 3=audio
+  IntColumn get type => integer().withDefault(const Constant(0))();
+  TextColumn get textContent => text().nullable()();
+  TextColumn get mediaUrl => text().nullable()();
+  TextColumn get localMediaPath => text().nullable()();
+  TextColumn get backgroundColor => text().nullable()();
+  IntColumn get mediaDurationMs => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get expiresAt => dateTime()();
+  BoolColumn get isMine => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {idStatut};
+}
+
+@DriftDatabase(
+  tables: [
+    LocalConversations,
+    LocalMessages,
+    LocalUsers,
+    LocalCalls,
+    LocalMeetings,
+    LocalStatuses,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(localUsers);
+            await m.createTable(localCalls);
+            await m.createTable(localMeetings);
+            await m.createTable(localStatuses);
+          }
+        },
+      );
 }
 
 LazyDatabase _openConnection() {
