@@ -8,6 +8,7 @@ import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
+import '../../core/utils/country_utils.dart';
 import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
@@ -372,69 +373,10 @@ class _Header extends StatelessWidget {
         ],
         if ((user.paysLibelle ?? '').isNotEmpty) ...[
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                _flagEmoji(user.paysLibelle!),
-                style: const TextStyle(fontSize: 18),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                user.paysLibelle!,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-              ),
-            ],
-          ),
+          CountryRow(country: user.paysLibelle!),
         ],
       ],
     );
-  }
-
-  static String _flagEmoji(String country) {
-    // Mapping libellé (table `pays`) → ISO 3166-1 alpha-2.
-    // Ajouter une entrée ici quand un pays est ajouté en DB.
-    const iso = {
-      'france': 'FR',
-      'united states': 'US',
-      'united kingdom': 'GB',
-      'germany': 'DE',
-      'spain': 'ES',
-      'italy': 'IT',
-      'belgium': 'BE',
-      'switzerland': 'CH',
-      'canada': 'CA',
-      'cameroun': 'CM',
-      'congo': 'CD',
-      'gabon': 'GA',
-      'côte d\'ivoire': 'CI',
-      'senegal': 'SN',
-      'mali': 'ML',
-      'burkina faso': 'BF',
-      'niger': 'NE',
-      'chad': 'TD',
-      'central african republic': 'CF',
-      'equatorial guinea': 'GQ',
-      'china': 'CN',
-      'japan': 'JP',
-      'india': 'IN',
-      'brazil': 'BR',
-      'argentina': 'AR',
-      'mexico': 'MX',
-      'australia': 'AU',
-      'russia': 'RU',
-      'south africa': 'ZA',
-      'nigeria': 'NG',
-    };
-    final code = iso[country.toLowerCase().trim()];
-    if (code == null || code.length != 2) return '🌍';
-    // Construction algorithmique : chaque lettre ISO → regional indicator symbol.
-    const base = 0x1F1E6; // 'A' regional indicator
-    final a = 'A'.codeUnitAt(0);
-    return String.fromCharCodes([
-      base + code.codeUnitAt(0) - a,
-      base + code.codeUnitAt(1) - a,
-    ]);
   }
 }
 
