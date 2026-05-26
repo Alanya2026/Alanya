@@ -183,12 +183,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    // On injecte kGlassNavBarSpace dans viewPadding.bottom : ce canal n'est
+    // pas consommé par SafeArea, donc le contenu scrolle plein écran et
+    // passe derrière le glass. En revanche le Scaffold des onglets enfants
+    // l'utilise pour positionner ses FAB → ils sont automatiquement remontés
+    // au-dessus de la nav sans modif dans chaque écran.
+    final injectedMq = mq.copyWith(
+      viewPadding: mq.viewPadding.copyWith(
+        bottom: mq.viewPadding.bottom + kGlassNavBarSpace,
+      ),
+      padding: mq.padding.copyWith(
+        bottom: mq.padding.bottom + kGlassNavBarSpace,
+      ),
+    );
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 80),
+          MediaQuery(
+            data: injectedMq,
             child: PageView(
               controller: _pageController,
               onPageChanged: _onPageChanged,
@@ -199,9 +214,12 @@ class _HomeScreenState extends State<HomeScreen> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: GlassNavBar(
-              selectedIndex: _selectedIndex,
-              onItemTapped: _onItemTapped,
+            child: SafeArea(
+              top: false,
+              child: GlassNavBar(
+                selectedIndex: _selectedIndex,
+                onItemTapped: _onItemTapped,
+              ),
             ),
           ),
         ],

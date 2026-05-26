@@ -5,12 +5,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
+import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../core/db/app_database.dart';
+import '../calls/group_participants_picker_screen.dart';
+import '../calls/ongoing_call_screen.dart';
 import 'contact_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
@@ -81,6 +84,76 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
+  Future<void> _startGroupCall(bool isVideo) async {
+    if (_group == null) return;
+    final auth = context.read<AuthProvider>();
+    final me = auth.currentUser;
+    if (me == null) return;
+
+    final members = _group!.participants;
+    final others =
+        members.where((u) => u.alanyaID != me.alanyaID).toList();
+
+    if (others.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucun autre membre à appeler')),
+      );
+      return;
+    }
+
+    List<User> targets;
+    if (others.length <= 9) {
+      targets = others;
+    } else {
+      final picked = await Navigator.push<List<User>>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GroupParticipantsPickerScreen(
+            members: others,
+            isVideo: isVideo,
+          ),
+        ),
+      );
+      if (picked == null || picked.isEmpty || !mounted) return;
+      targets = picked;
+    }
+
+    final cs = context.read<CallService>();
+    if (cs.status != CallStatus.idle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Un appel est déjà en cours')),
+      );
+      return;
+    }
+
+    final roster = targets
+        .map((u) => GroupParticipantInfo(
+              id: u.alanyaID.toString(),
+              name: u.nom.isNotEmpty ? u.nom : u.pseudo,
+              photo: u.avatarUrl,
+            ))
+        .toList();
+
+    final roomId =
+        'group_${widget.conversationId}_${DateTime.now().millisecondsSinceEpoch}';
+
+    await cs.createGroupCall(
+      roomId: roomId,
+      myId: me.alanyaID,
+      myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+      myPhoto: me.avatarUrl,
+      targetUserIds: targets.map((u) => u.alanyaID).toList(),
+      isVideo: isVideo,
+      targets: roster,
+    );
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
+    );
+  }
+
   Future<void> _leaveGroup() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -139,6 +212,20 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: _group == null
+            ? null
+            : [
+                IconButton(
+                  icon: const Icon(Icons.videocam_outlined),
+                  tooltip: 'Appel vidéo',
+                  onPressed: () => _startGroupCall(true),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.call_outlined),
+                  tooltip: 'Appel vocal',
+                  onPressed: () => _startGroupCall(false),
+                ),
+              ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

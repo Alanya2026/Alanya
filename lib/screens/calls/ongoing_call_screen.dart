@@ -111,7 +111,11 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
       _localRenderer.srcObject = null;
       _remoteRenderer.srcObject = null;
     }
-    await cs.endCall();
+    if (cs.groupRoomId != null) {
+      await cs.leaveGroupCall();
+    } else {
+      await cs.endCall();
+    }
     if (mounted) Navigator.of(context).maybePop();
   }
 
@@ -134,14 +138,17 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     return Consumer<CallService>(
       builder: (_, cs, __) {
         final isVideo = cs.isVideo;
-        final hasRemoteVideo = isVideo && _remoteRenderer.srcObject != null;
+        final isGroup = cs.groupRoomId != null;
+        final hasRemoteVideo = !isGroup && isVideo && _remoteRenderer.srcObject != null;
         return Scaffold(
           backgroundColor: Colors.black,
           body: Stack(
             fit: StackFit.expand,
             children: [
-              // Background : remote video plein écran si vidéo, sinon gradient + avatar
-              if (hasRemoteVideo)
+              // Background : grille groupe / remote vidéo plein écran / avatar
+              if (isGroup)
+                _GroupGrid(streams: cs.groupRemoteStreams, roster: cs.groupRoster)
+              else if (hasRemoteVideo)
                 RTCVideoView(
                   _remoteRenderer,
                   objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
@@ -166,8 +173,12 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                 right: 0,
                 top: MediaQuery.of(context).padding.top,
                 child: _TopBar(
-                  name: cs.remoteUserName ?? 'Appel',
-                  status: _statusLabel(cs),
+                  name: isGroup
+                      ? 'Appel groupé'
+                      : (cs.remoteUserName ?? 'Appel'),
+                  status: isGroup
+                      ? '${cs.groupRemoteStreams.length + 1} participants'
+                      : _statusLabel(cs),
                   duration: cs.status == CallStatus.connected
                       ? cs.formattedDuration
                       : null,
@@ -438,6 +449,177 @@ class _RoundButton extends StatelessWidget {
           color: active ? Colors.black : Colors.white,
           size: 26,
         ),
+      ),
+    );
+  }
+}
+
+// ─── Grille appel de groupe ────────────────────────────────────────────
+
+class _GroupGrid extends StatelessWidget {
+  const _GroupGrid({required this.streams, required this.roster});
+
+  final Map<String, MediaStream> streams;
+  final Map<String, GroupParticipantInfo> roster;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = streams.entries.toList();
+    if (entries.isEmpty) {
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1A237E), Color(0xFF000000)],
+          ),
+        ),
+        alignment: Alignment.center,
+        child: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Colors.white),
+            SizedBox(height: 16),
+            Text(
+              'En attente des participants…',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
+      );
+    }
+    return Container(
+      color: Colors.black,
+      padding: const EdgeInsets.fromLTRB(8, 80, 8, 140),
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 200,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: entries.length,
+        itemBuilder: (_, i) {
+          final e = entries[i];
+          final info = roster[e.key];
+          return _RemoteTile(
+            key: ValueKey('remote_${e.key}'),
+            userId: e.key,
+            stream: e.value,
+            name: info?.name ?? 'Participant',
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _RemoteTile extends StatefulWidget {
+  const _RemoteTile({
+    super.key,
+    required this.userId,
+    required this.stream,
+    required this.name,
+  });
+
+  final String userId;
+  final MediaStream stream;
+  final String name;
+
+  @override
+  State<_RemoteTile> createState() => _RemoteTileState();
+}
+
+class _RemoteTileState extends State<_RemoteTile> {
+  final RTCVideoRenderer _renderer = RTCVideoRenderer();
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _renderer.initialize();
+    if (!mounted) return;
+    _renderer.srcObject = widget.stream;
+    setState(() => _ready = true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RemoteTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_ready && oldWidget.stream != widget.stream) {
+      _renderer.srcObject = widget.stream;
+    }
+  }
+
+  @override
+  void dispose() {
+    _renderer.srcObject = null;
+    _renderer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = widget.name.isNotEmpty
+        ? widget.name.substring(0, 1).toUpperCase()
+        : '?';
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(color: const Color(0xFF1F2233)),
+          if (_ready)
+            RTCVideoView(
+              _renderer,
+              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+            ),
+          // Avatar fallback (visible si pas de track vidéo)
+          if (_ready && _renderer.videoWidth == 0)
+            Center(
+              child: CircleAvatar(
+                radius: 36,
+                backgroundColor: const Color(0xFF3949AB),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Colors.black87, Colors.transparent],
+                ),
+              ),
+              child: Text(
+                widget.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

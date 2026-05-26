@@ -11,6 +11,14 @@ import 'webrtc_service.dart';
 
 enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
 
+/// Infos minimales d'un participant d'appel de groupe (pour l'UI grille).
+class GroupParticipantInfo {
+  final String id;
+  final String name;
+  final String? photo;
+  const GroupParticipantInfo({required this.id, required this.name, this.photo});
+}
+
 class CallService extends ChangeNotifier {
   final TalkyApiClient _apiClient;
   final WebRTCService _webrtc = WebRTCService();
@@ -49,6 +57,9 @@ class CallService extends ChangeNotifier {
   final Map<String, List<RTCIceCandidate>> _groupPendingIce = {};
   final Set<String> _groupRemoteDescSet = <String>{};
 
+  // Roster de l'appel de groupe (userId → infos d'affichage).
+  final Map<String, GroupParticipantInfo> _groupRoster = {};
+
   //  Getters 
   CallStatus get status => _status;
   int? get remoteUserId => _remoteUserId;
@@ -67,6 +78,7 @@ class CallService extends ChangeNotifier {
   String? get groupRoomId => _groupRoomId;
   Map<String, MediaStream> get groupRemoteStreams => _groupRemoteStreams;
   List<String> get groupParticipants => _groupParticipants;
+  Map<String, GroupParticipantInfo> get groupRoster => _groupRoster;
 
   Call? get currentCall {
     if (_remoteUserId == null && _remoteUserName == null) return null;
@@ -268,7 +280,7 @@ class CallService extends ChangeNotifier {
       ));
     });
 
-    // Appels de groupe 
+    // Appels de groupe
     // Invitation à un appel de groupe
     _apiClient.onSocketEvent(SocketEvents.groupCallInvite, (data) {
       if (data is! Map) return;
@@ -277,6 +289,15 @@ class CallService extends ChangeNotifier {
       _remoteUserPhoto = data['callerPhoto'] as String?;
       _isVideo = data['isVideo'] == true;
       _groupRoomId = data['roomId'] as String?;
+      // Le caller est notre seule info connue à l'instant T → on le pose dans le roster
+      final callerId = data['callerId']?.toString();
+      if (callerId != null && callerId.isNotEmpty) {
+        _groupRoster[callerId] = GroupParticipantInfo(
+          id: callerId,
+          name: (_remoteUserName?.isNotEmpty == true) ? _remoteUserName! : 'Participant',
+          photo: _remoteUserPhoto,
+        );
+      }
       _status = CallStatus.incoming;
       notifyListeners();
     });
@@ -285,16 +306,42 @@ class CallService extends ChangeNotifier {
     _apiClient.onSocketEvent(SocketEvents.groupUserJoined, (data) async {
       if (data is! Map) return;
       final userId = data['userId'].toString();
+      final userName = (data['userName'] as String?) ?? '';
+      final userPhoto = data['userPhoto'] as String?;
+      _groupRoster[userId] = GroupParticipantInfo(
+        id: userId,
+        name: userName.isNotEmpty ? userName : 'Participant',
+        photo: userPhoto,
+      );
+      notifyListeners();
       if (_groupPeerConnections.containsKey(userId)) return;
       await _createGroupPeerAndOffer(userId);
     });
 
-    // Liste des participants existants 
+    // Liste des participants existants
     _apiClient.onSocketEvent(SocketEvents.groupParticipants, (data) {
       if (data is! Map) return;
       final participants = (data['participants'] as List?)?.map((e) => e.toString()).toList() ?? [];
       _groupParticipants = participants;
       notifyListeners();
+      // Pour les IDs sans entrée roster, on résout le nom/photo via l'API.
+      for (final id in participants) {
+        if (_groupRoster.containsKey(id)) continue;
+        final intId = int.tryParse(id);
+        if (intId == null) continue;
+        _apiClient.getUserById(intId).then((u) {
+          final nom = (u['nom'] as String?) ?? '';
+          final pseudo = (u['pseudo'] as String?) ?? '';
+          _groupRoster[id] = GroupParticipantInfo(
+            id: id,
+            name: nom.isNotEmpty ? nom : (pseudo.isNotEmpty ? pseudo : 'Participant'),
+            photo: u['avatar_url'] as String?,
+          );
+          notifyListeners();
+        }).catchError((e) {
+          debugPrint('[CallService] roster getUserById($id) failed: $e');
+        });
+      }
     });
 
     // Participant quitte le groupe
@@ -639,8 +686,11 @@ class CallService extends ChangeNotifier {
     _callEndedByUs = false;
   }
 
-  //  APPELS DE GROUPE 
+  //  APPELS DE GROUPE
   /// Crée un appel de groupe et invite [targetUserIds].
+  ///
+  /// [targets] (optionnel) pré-remplit le roster pour afficher noms et photos
+  /// dans la grille avant que les participants ne rejoignent.
   Future<void> createGroupCall({
     required String roomId,
     required int myId,
@@ -648,10 +698,22 @@ class CallService extends ChangeNotifier {
     String? myPhoto,
     required List<int> targetUserIds,
     required bool isVideo,
+    List<GroupParticipantInfo>? targets,
   }) async {
     if (_status != CallStatus.idle) return;
     _groupRoomId = roomId;
     _status = CallStatus.outgoing;
+    // Pré-remplit le roster : moi-même + les cibles connues
+    _groupRoster[myId.toString()] = GroupParticipantInfo(
+      id: myId.toString(),
+      name: myName,
+      photo: myPhoto,
+    );
+    if (targets != null) {
+      for (final t in targets) {
+        _groupRoster[t.id] = t;
+      }
+    }
     notifyListeners();
 
     try {
@@ -677,15 +739,28 @@ class CallService extends ChangeNotifier {
   }
 
   /// Rejoint un appel de groupe existant (après invitation).
+  ///
+  /// [callerInfo] (optionnel) ajoute l'appelant au roster (utile si on n'a
+  /// pas reçu l'event `groupCallInvite` qui le peuple normalement).
   Future<void> joinGroupCall({
     required String roomId,
     required int myId,
     required String myName,
     String? myPhoto,
     required bool isVideo,
+    GroupParticipantInfo? callerInfo,
   }) async {
     _groupRoomId = roomId;
     _status = CallStatus.joining;
+    // Moi-même dans le roster
+    _groupRoster[myId.toString()] = GroupParticipantInfo(
+      id: myId.toString(),
+      name: myName,
+      photo: myPhoto,
+    );
+    if (callerInfo != null) {
+      _groupRoster[callerInfo.id] = callerInfo;
+    }
     notifyListeners();
 
     try {
@@ -729,6 +804,22 @@ class CallService extends ChangeNotifier {
     await _terminateGroupCall();
   }
 
+  /// Rejet local d'une invitation entrante d'appel de groupe.
+  /// Le backend n'expose pas de "reject_group_call" — on se contente de
+  /// reset l'état local pour ne pas rester bloqué en CallStatus.incoming.
+  Future<void> rejectGroupCall() async {
+    if (_groupRoomId == null && _status != CallStatus.incoming) return;
+    await _ringtone.stop();
+    await _callKit.endAll();
+    _groupRoster.clear();
+    _groupRoomId = null;
+    _remoteUserId = null;
+    _remoteUserName = null;
+    _remoteUserPhoto = null;
+    _status = CallStatus.idle;
+    notifyListeners();
+  }
+
   Future<void> _terminateGroupCall() async {
     for (final pc in _groupPeerConnections.values) {
       await pc.close();
@@ -738,6 +829,7 @@ class CallService extends ChangeNotifier {
     _groupParticipants.clear();
     _groupPendingIce.clear();
     _groupRemoteDescSet.clear();
+    _groupRoster.clear();
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _groupRoomId = null;

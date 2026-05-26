@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/status_provider.dart';
 import '../../talky_models.dart';
 import '../../widgets/status_ring_avatar.dart';
+import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'status_create_screen.dart';
 import 'status_viewer_screen.dart';
 
@@ -50,7 +51,7 @@ class _StatusesScreenState extends State<StatusesScreen> {
         onRefresh: () => provider.refresh(),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
           children: [
             // Mon statut
             _MyStatusTile(
@@ -88,6 +89,11 @@ class _StatusesScreenState extends State<StatusesScreen> {
             const SizedBox(height: 80),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _openCreate(context),
+        backgroundColor: Colors.indigo,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

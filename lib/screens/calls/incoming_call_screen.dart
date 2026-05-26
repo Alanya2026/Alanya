@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/call_service.dart';
+import '../../providers/auth_provider.dart';
 import 'ongoing_call_screen.dart';
 
 /// Écran d'appel entrant.
@@ -70,33 +71,66 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     if (_navigated) return;
     _navigated = true;
     final cs = Provider.of<CallService>(context, listen: false);
-    await cs.rejectCall();
+    if (cs.groupRoomId != null) {
+      await cs.rejectGroupCall();
+    } else {
+      await cs.rejectCall();
+    }
     if (mounted) Navigator.of(context).maybePop();
   }
 
   Future<void> _accept() async {
     if (_navigated) return;
     _navigated = true;
-    
+
     final cs = Provider.of<CallService>(context, listen: false);
+
+    // Cas appel de groupe : rejoindre via joinGroupCall
+    if (cs.groupRoomId != null) {
+      final me = context.read<AuthProvider>().currentUser;
+      if (me == null) {
+        if (mounted) Navigator.of(context).maybePop();
+        return;
+      }
+      final callerInfo = (cs.remoteUserId != null)
+          ? GroupParticipantInfo(
+              id: cs.remoteUserId.toString(),
+              name: (cs.remoteUserName?.isNotEmpty == true)
+                  ? cs.remoteUserName!
+                  : 'Participant',
+              photo: cs.remoteUserPhoto,
+            )
+          : null;
+      await cs.joinGroupCall(
+        roomId: cs.groupRoomId!,
+        myId: me.alanyaID,
+        myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+        myPhoto: me.avatarUrl,
+        isVideo: cs.isVideo,
+        callerInfo: callerInfo,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
+      );
+      return;
+    }
+
+    // Cas appel 1-à-1 : comportement actuel
     await cs.answerCall();
-    
-    // Widget may be deactivated during await, check mounted before using context
+
     if (!mounted) return;
 
     if (cs.errorMessage != null) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(cs.errorMessage!),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 4),
       ));
-      if (mounted) Navigator.of(context).maybePop();
+      Navigator.of(context).maybePop();
       return;
     }
 
-    // Verify widget is still mounted before navigation
-    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
     );
@@ -108,6 +142,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       builder: (_, cs, __) {
         final caller = cs.currentCall?.caller;
         final isVideo = cs.isVideo;
+        final isGroup = cs.groupRoomId != null;
         final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : 'Inconnu';
         final initial = name.substring(0, 1).toUpperCase();
 
@@ -125,7 +160,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                 children: [
                   const SizedBox(height: 24),
                   Text(
-                    isVideo ? 'Appel vidéo entrant' : 'Appel vocal entrant',
+                    isGroup
+                        ? (isVideo ? 'Appel groupé vidéo entrant' : 'Appel groupé entrant')
+                        : (isVideo ? 'Appel vidéo entrant' : 'Appel vocal entrant'),
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 14,

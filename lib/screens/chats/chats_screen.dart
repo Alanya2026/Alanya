@@ -5,6 +5,7 @@ import '../../core/db/app_database.dart';
 import '../../core/db/chat_dao.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 
@@ -83,6 +84,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 return RefreshIndicator(
                   onRefresh: () => chat.refreshConversations(),
                   child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
                     itemCount: convs.length,
                     itemBuilder: (context, index) => _buildTile(context, chat, convs[index]),
                   ),

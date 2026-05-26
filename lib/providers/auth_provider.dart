@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
 import '../talky_api_client.dart';
@@ -119,6 +121,35 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('[AuthProvider] Register Exception: $e');
     } finally {
       _setLoading(false);
+    }
+  }
+
+  /// Upload une nouvelle photo de profil puis rafraîchit le user.
+  /// Retourne l'URL servie par le backend. Lève en cas d'échec.
+  Future<String> updateAvatar(File file) async {
+    final res = await _apiClient.uploadAvatar(file);
+    final url = (res['url'] as String?)?.trim();
+    if (url == null || url.isEmpty) {
+      throw TalkyException('Réponse upload invalide', 0);
+    }
+    await _refreshCurrentUser();
+    return url;
+  }
+
+  /// Supprime la photo de profil (remet la valeur sentinelle backend).
+  Future<void> removeAvatar() async {
+    await _apiClient.updateMe(avatarUrl: 'NON DEFINI');
+    await _refreshCurrentUser();
+  }
+
+  Future<void> _refreshCurrentUser() async {
+    try {
+      final data = await _apiClient.getMe();
+      _currentUser = User.fromJson(data);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[AuthProvider] _refreshCurrentUser error: $e');
+      rethrow;
     }
   }
 

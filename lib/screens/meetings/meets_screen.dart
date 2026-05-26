@@ -7,6 +7,7 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/services/push_service.dart';
+import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'join_meet_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'ongoing_meet_screen.dart';
@@ -324,6 +325,7 @@ class _MeetingList extends StatelessWidget {
         color: Colors.indigo,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
           children: [
             SizedBox(height: MediaQuery.of(context).size.height * 0.15),
             Center(
@@ -359,7 +361,7 @@ class _MeetingList extends StatelessWidget {
       onRefresh: onRefresh,
       color: Colors.indigo,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, kGlassNavBarSpace),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: meetings.length,
         itemBuilder: (context, index) => _MeetingCard(

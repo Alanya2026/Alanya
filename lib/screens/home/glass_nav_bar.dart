@@ -2,6 +2,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+/// Espace réservé en bas du body pour que les contenus scrollables
+/// puissent dépasser jusqu'au-dessus de la nav flottante (le scroll
+/// passe visuellement derrière le glass, et le dernier item reste
+/// accessible). À utiliser comme `padding: EdgeInsets.only(bottom: kGlassNavBarSpace)`
+/// sur les ListView/SingleChildScrollView racine de chaque onglet.
+const double kGlassNavBarSpace = 96.0;
+
 class GlassNavBar extends StatelessWidget {
   const GlassNavBar({
     super.key,

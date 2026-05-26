@@ -5,6 +5,7 @@ import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
+import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
 import 'ongoing_call_screen.dart';
 import 'keypad_screen.dart';
@@ -136,6 +137,7 @@ class _CallsScreenState extends State<CallsScreen> {
               : RefreshIndicator(
                   onRefresh: _loadRecentCalls,
                   child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
                     itemCount: _recentCalls.length,
                     itemBuilder: (context, index) {
                       final call = _recentCalls[index];

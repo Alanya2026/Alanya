@@ -9,6 +9,7 @@ import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/add_contact_sheet.dart';
 import '../chats/contact_detail_screen.dart';
+import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
 import 'preferred_contacts_screen.dart';
@@ -172,12 +173,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
         child: Column(
           children: [
             const SizedBox(height: 20),
 
             // ── En-tête profil ───────────────────────────────────────────
-            _ProfileHeader(user: _user, isLoading: _isLoading),
+            _ProfileHeader(
+              user: _user,
+              isLoading: _isLoading,
+              onEdited: _loadUser,
+            ),
 
             const SizedBox(height: 20),
 
@@ -266,11 +272,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  _buildMenuItem(CupertinoIcons.person, 'Compte', () {
-                    Navigator.push(
+                  _buildMenuItem(CupertinoIcons.person, 'Compte', () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const EditProfileScreen()),
                     );
+                    if (mounted) _loadUser();
                   }),
                   const Divider(height: 1),
                   _buildMenuItem(CupertinoIcons.chat_bubble, 'Discussions', () {}),
@@ -380,8 +387,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class _ProfileHeader extends StatelessWidget {
   final User? user;
   final bool isLoading;
+  final VoidCallback? onEdited;
 
-  const _ProfileHeader({required this.user, required this.isLoading});
+  const _ProfileHeader({
+    required this.user,
+    required this.isLoading,
+    this.onEdited,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -430,10 +442,13 @@ class _ProfileHeader extends StatelessWidget {
                 bottom: 0,
                 right: 0,
                 child: GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                  ),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                    );
+                    onEdited?.call();
+                  },
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: const BoxDecoration(
@@ -458,6 +473,10 @@ class _ProfileHeader extends StatelessWidget {
               user?.nom ?? 'User',
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
+            if ((user?.typeCompte ?? 0) >= 1) ...[
+              const SizedBox(height: 6),
+              _RoleBadge(typeCompte: user!.typeCompte),
+            ],
             if (pseudo.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(
@@ -656,6 +675,42 @@ class _EmptyContacts extends StatelessWidget {
             label: const Text(
               'Ajouter un contact',
               style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Badge de rôle (admin / super admin) ────────────────────────────────
+
+class _RoleBadge extends StatelessWidget {
+  final int typeCompte;
+  const _RoleBadge({required this.typeCompte});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, fg, bg) = typeCompte >= 2
+        ? ('Super Admin', Icons.shield, const Color(0xFF6B3CD2), const Color(0xFFEDE3FC))
+        : ('Admin', Icons.verified_user, const Color(0xFF1E66D8), const Color(0xFFE3EEFE));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: fg),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: fg,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
             ),
           ),
         ],
