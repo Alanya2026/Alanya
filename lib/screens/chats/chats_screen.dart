@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/profile_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
@@ -123,28 +124,18 @@ class _ChatsScreenState extends State<ChatsScreen> {
     final live = otherId != null ? chat.presenceOf(otherId) : null;
     final isOnline = live?.online ?? (other?['is_online'] == 1 || other?['is_online'] == true);
 
-    final hasAvatar = displayAvatar != null && displayAvatar.isNotEmpty;
-    final Widget? avatarFallback = !hasAvatar
-        ? (conv.isGroup
-            ? const Icon(CupertinoIcons.group, color: Colors.indigo)
-            : Text(
-                displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  color: Colors.indigo,
-                  fontWeight: FontWeight.bold,
-                ),
-              ))
-        : null;
-
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       leading: Stack(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.indigo.shade100,
-            backgroundImage: hasAvatar ? NetworkImage(displayAvatar) : null,
-            child: avatarFallback,
+          ProfileAvatar(
+            imageUrl: displayAvatar,
+            name: displayName,
+            userId: otherId ?? 0,
+            isGroup: conv.isGroup,
+            conversationId: conv.conversID,
+            size: 56,
+            borderRadius: 28,
           ),
           if (isOnline && !conv.isGroup)
             Positioned(

@@ -16,6 +16,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/profile_avatar.dart';
 import '../calls/ongoing_call_screen.dart';
 import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
@@ -475,56 +476,44 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       )
                   : null),
           child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.indigo.shade100,
-              backgroundImage:
-                  (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty)
-                      ? CachedNetworkImageProvider(widget.avatarUrl!)
-                      : null,
-              child: (widget.avatarUrl == null || widget.avatarUrl!.isEmpty)
-                  ? (widget.isGroup
-                      ? const Icon(Icons.group, color: Colors.indigo, size: 20)
-                      : Text(
-                          widget.userName.isNotEmpty
-                              ? widget.userName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: Colors.indigo,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ))
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.userName,
-                    style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Builder(builder: (_) {
-                    final label = _partnerIsTyping ? 'en train d\'écrire...' : _presenceLabel();
-                    if (label.isEmpty) return const SizedBox.shrink();
-                    final online = !_partnerIsTyping && label == 'En ligne';
-                    return Text(
-                      label,
-                      style: TextStyle(
-                        color: _partnerIsTyping
-                            ? Colors.indigo
-                            : (online ? Colors.green : Colors.black45),
-                        fontSize: 12,
-                      ),
-                    );
-                  }),
-                ],
+            children: [
+              ProfileAvatar(
+                imageUrl: widget.avatarUrl,
+                name: widget.userName,
+                userId: widget.userId ?? 0,
+                isGroup: widget.isGroup,
+                conversationId: widget.conversationId,
+                size: 36,
+                borderRadius: 18,
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.userName,
+                      style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Builder(builder: (_) {
+                      final label = _partnerIsTyping ? 'en train d\'écrire...' : _presenceLabel();
+                      if (label.isEmpty) return const SizedBox.shrink();
+                      final online = !_partnerIsTyping && label == 'En ligne';
+                      return Text(
+                        label,
+                        style: TextStyle(
+                          color: _partnerIsTyping
+                              ? Colors.indigo
+                              : (online ? Colors.green : Colors.black45),
+                          fontSize: 12,
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
         actions: [

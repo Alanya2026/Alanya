@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
-import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
+import '../../widgets/profile_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
 import 'ongoing_call_screen.dart';
@@ -211,24 +211,13 @@ class _CallsScreenState extends State<CallsScreen> {
 
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        leading: CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.indigo.shade50,
-                          backgroundImage: otherUser != null
-                              ? avatarImage(otherUser.avatarUrl)
-                              : null,
-                          child: otherUser == null ||
-                                  !hasValidAvatarUrl(otherUser.avatarUrl)
-                              ? Text(
-                                  otherUser?.nom.isNotEmpty == true
-                                      ? otherUser!.nom[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    color: Colors.indigo,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )
-                              : null,
+                        leading: ProfileAvatar(
+                          imageUrl: otherUser?.avatarUrl,
+                          name: otherUser?.nom ?? 'Inconnu',
+                          userId: otherUser?.alanyaID ?? 0,
+                          isGroup: false,
+                          size: 56,
+                          borderRadius: 28,
                         ),
                         title: Text(
                           otherUser?.nom ?? 'Inconnu',

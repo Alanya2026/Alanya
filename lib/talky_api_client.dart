@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' show MediaType;
 import 'package:mime/mime.dart' show lookupMimeType;
@@ -102,6 +103,45 @@ class TalkyApiClient {
     }
   }
 
+  /// Libellé lisible du téléphone (marque + modèle) à envoyer dans
+  /// `device_model` lors de login/register, stocké dans userAccess.device.
+  /// Best-effort : retourne 'INDEFINI' si l'info n'est pas disponible.
+  static Future<String> _currentDeviceModel() async {
+    try {
+      final info = DeviceInfoPlugin();
+      if (kIsWeb) {
+        final b = await info.webBrowserInfo;
+        return b.browserName.name;
+      }
+      switch (Platform.operatingSystem) {
+        case 'android':
+          final a = await info.androidInfo;
+          final brand = (a.manufacturer.isNotEmpty ? a.manufacturer : a.brand).trim();
+          final model = a.model.trim();
+          final label = (brand.isEmpty ? model : '$brand $model').trim();
+          return label.isEmpty ? 'INDEFINI' : label;
+        case 'ios':
+          final i = await info.iosInfo;
+          final machine = i.utsname.machine.trim();
+          final model = i.model.trim();
+          return machine.isNotEmpty ? 'Apple $machine' : (model.isEmpty ? 'INDEFINI' : 'Apple $model');
+        case 'macos':
+          final m = await info.macOsInfo;
+          return m.model.isNotEmpty ? m.model : 'macOS';
+        case 'windows':
+          final w = await info.windowsInfo;
+          return w.computerName.isNotEmpty ? w.computerName : 'Windows';
+        case 'linux':
+          final l = await info.linuxInfo;
+          return l.prettyName.isNotEmpty ? l.prettyName : 'Linux';
+        default:
+          return 'INDEFINI';
+      }
+    } catch (_) {
+      return 'INDEFINI';
+    }
+  }
+
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -111,6 +151,7 @@ class TalkyApiClient {
     String? fcmToken,
     String? deviceId,
   }) async {
+    final deviceModel = await _currentDeviceModel();
     final response = await _client.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
@@ -122,6 +163,7 @@ class TalkyApiClient {
         if (idPays != null) 'idPays': idPays,
         if (fcmToken != null) 'fcm_token': fcmToken,
         if (deviceId != null) 'device_ID': deviceId,
+        'device_model': deviceModel,
         'os_system': _currentOs(),
       }),
     );
@@ -137,6 +179,7 @@ class TalkyApiClient {
     String? fcmToken,
     String? deviceId,
   }) async {
+    final deviceModel = await _currentDeviceModel();
     final response = await _client.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
@@ -145,6 +188,7 @@ class TalkyApiClient {
         'password': password,
         if (fcmToken != null) 'fcm_token': fcmToken,
         if (deviceId != null) 'device_ID': deviceId,
+        'device_model': deviceModel,
         'os_system': _currentOs(),
       }),
     );

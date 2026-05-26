@@ -74,6 +74,9 @@ dependencies:
   # ── Connectivité (offline detection au niveau OS) ────────────────
   connectivity_plus: ^6.1.0
 
+  # ── Identification appareil (marque + modèle pour userAccess) ────
+  device_info_plus: ^10.1.2
+
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la
 # version Linux maintenue (l'app cible mobile, ceci débloque le build).
