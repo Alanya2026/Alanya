@@ -235,13 +235,6 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
                 ),
               ),
             const SizedBox(height: 16),
-            Text(
-              'Pas de photo',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.indigo.shade600,
-              ),
-            ),
           ],
         ),
       ),

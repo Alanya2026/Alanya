@@ -22,6 +22,7 @@ class ChatsScreen extends StatefulWidget {
 class _ChatsScreenState extends State<ChatsScreen> {
   int _myId = 0;
   String _search = '';
+  String _filter = 'all'; // 'all', 'discussions', 'groups', 'unread'
 
   @override
   void initState() {
@@ -67,14 +68,33 @@ class _ChatsScreenState extends State<ChatsScreen> {
               ),
             ),
           ),
+          // Filtres
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              children: [
+                _buildFilterChip('Tous', 'all'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Discussions', 'discussions'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Groupes', 'groups'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Non lus', 'unread'),
+              ],
+            ),
+          ),
           Expanded(
             child: StreamBuilder<List<LocalConversation>>(
               stream: chat.watchConversations(),
               builder: (context, snapshot) {
                 final all = snapshot.data ?? const [];
-                final convs = _search.isEmpty
+                var convs = _search.isEmpty
                     ? all
                     : all.where((c) => _displayName(c).toLowerCase().contains(_search)).toList();
+                
+                // Appliquer le filtre
+                convs = _applyFilter(convs);
 
                 if (snapshot.connectionState == ConnectionState.waiting && all.isEmpty) {
                   return const Center(child: CircularProgressIndicator());
@@ -288,4 +308,40 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
     return '${local.day}/${local.month}';
   }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isActive = _filter == value;
+    return FilterChip(
+      label: Text(label),
+      selected: isActive,
+      onSelected: (selected) {
+        setState(() => _filter = value);
+      },
+      backgroundColor: Colors.grey.shade100,
+      selectedColor: Colors.indigo.shade50,
+      labelStyle: TextStyle(
+        color: isActive ? Colors.indigo : Colors.black87,
+        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+      ),
+      side: BorderSide(
+        color: isActive ? Colors.indigo : Colors.transparent,
+        width: 1.5,
+      ),
+    );
+  }
+
+  List<LocalConversation> _applyFilter(List<LocalConversation> convs) {
+    switch (_filter) {
+      case 'discussions':
+        return convs.where((c) => !c.isGroup).toList();
+      case 'groups':
+        return convs.where((c) => c.isGroup).toList();
+      case 'unread':
+        return convs.where((c) => c.unreadCount > 0).toList();
+      case 'all':
+      default:
+        return convs;
+    }
+  }
 }
+
