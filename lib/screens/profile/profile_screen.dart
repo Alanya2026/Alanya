@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -338,7 +339,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }),
                   if (!_isLoading && _user != null && _user!.typeCompte >= 1) ...[
                     const Divider(height: 1),
-                    _buildMenuItem(Icons.admin_panel_settings, 'Dashboard Admin', () {
+                    _buildMenuItem(Icons.admin_panel_settings, 'Tableau de bord Admin', () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
@@ -467,22 +468,20 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: const Color(0xFFCBD0E8),
-                backgroundImage: hasPhoto
-                    ? avatarImage(user!.avatarUrl)
-                    : null,
-                child: hasPhoto
-                    ? null
-                    : Text(
-                        initial,
-                        style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+              ClipOval(
+                child: SizedBox(
+                  width: 120,
+                  height: 120,
+                  child: hasPhoto
+                      ? CachedNetworkImage(
+                          imageUrl: user!.avatarUrl.trim(),
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(color: const Color(0xFFCBD0E8)),
+                          errorWidget: (_, __, ___) =>
+                              _AvatarFallback(initial: initial, fontSize: 40),
+                        )
+                      : _AvatarFallback(initial: initial, fontSize: 40),
+                ),
               ),
               Positioned(
                 bottom: 0,
@@ -625,20 +624,20 @@ class _ContactChip extends StatelessWidget {
           children: [
             Stack(
               children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: const Color(0xFFCBD0E8),
-                  backgroundImage: hasPhoto ? avatarImage(user.avatarUrl) : null,
-                  child: hasPhoto
-                      ? null
-                      : Text(
-                          initial,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
+                ClipOval(
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: hasPhoto
+                        ? CachedNetworkImage(
+                            imageUrl: user.avatarUrl.trim(),
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(color: const Color(0xFFCBD0E8)),
+                            errorWidget: (_, __, ___) =>
+                                _AvatarFallback(initial: initial, fontSize: 18),
+                          )
+                        : _AvatarFallback(initial: initial, fontSize: 18),
+                  ),
                 ),
                 if (user.isOnline)
                   Positioned(
@@ -760,6 +759,28 @@ class _RoleBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  final String initial;
+  final double fontSize;
+  const _AvatarFallback({required this.initial, required this.fontSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFCBD0E8),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       ),
     );
   }

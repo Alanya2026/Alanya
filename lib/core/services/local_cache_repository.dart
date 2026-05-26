@@ -102,7 +102,7 @@ class LocalCacheRepository {
         .watch();
   }
 
-  Future<void> syncCalls() async {
+  Future<void> syncCalls({required int myId}) async {
     try {
       final raw = await _api.getCallHistory();
       final now = DateTime.now();
@@ -110,8 +110,10 @@ class LocalCacheRepository {
         for (final r in raw.whereType<Map<String, dynamic>>()) {
           final c = Call.fromJson(r);
           if (c.idCall == 0) continue;
-          // Snapshot du correspondant (caller ou receiver selon l'utilisateur)
-          final other = c.caller ?? c.receiver;
+          // Snapshot du correspondant : on doit prendre celui qui n'est PAS
+          // l'utilisateur courant — sinon les appels sortants stockent mon
+          // propre nom/avatar et l'UI offline les affiche à la place du contact.
+          final other = (c.idCaller == myId) ? c.receiver : c.caller;
           b.insert(
             _db.localCalls,
             _callToCompanion(c, other),

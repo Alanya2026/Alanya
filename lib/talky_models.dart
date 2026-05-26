@@ -68,6 +68,11 @@ class User {
         'type_compte': typeCompte,
         'is_online': isOnline,
         'last_seen': lastSeen,
+        'pays_libelle': paysLibelle,
+        'exclus': exclus,
+        'exclude_at': excludeAt,
+        'exclude_reason': excludeReason,
+        'created_at': createdAt,
       };
 }
 

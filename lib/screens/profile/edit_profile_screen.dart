@@ -32,6 +32,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadUser() async {
+    // 1) Hydrate immédiatement depuis le cache AuthProvider (offline-safe).
+    final cached = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (cached != null && mounted) {
+      setState(() {
+        _user = cached;
+        _nameController.text = cached.nom;
+        _pseudoController.text = cached.pseudo;
+        _isLoading = false;
+      });
+    }
+
+    // 2) Rafraîchit depuis l'API ; en cas d'échec on garde le cache.
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
@@ -43,7 +55,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _isLoading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && _user == null) setState(() => _isLoading = false);
     }
   }
 
@@ -242,7 +254,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Edit Profile',
+          'Modifier le profil',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -255,7 +267,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.indigo),
                   )
                 : const Text(
-                    'Save',
+                    'Enregistrer',
                     style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
           ),
@@ -272,7 +284,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 40),
                   TextField(
                     decoration: InputDecoration(
-                      labelText: 'Name',
+                      labelText: 'Nom',
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -295,7 +307,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   TextField(
                     readOnly: true,
                     decoration: InputDecoration(
-                      labelText: 'Phone (Alanya Phone)',
+                      labelText: 'Téléphone (Téléphone Alanya)',
                       prefixIcon: const Icon(Icons.phone_outlined),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),

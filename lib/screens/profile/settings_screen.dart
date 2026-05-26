@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/avatar_utils.dart';
+import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 
@@ -21,17 +23,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadUserData() async {
+    // 1) Hydrate immédiatement depuis le cache AuthProvider (offline-safe).
+    final cached = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (cached != null && mounted) {
+      setState(() {
+        _user = cached;
+        _isLoading = false;
+      });
+    }
+
+    // 2) Rafraîchit depuis l'API ; en cas d'échec on garde le cache.
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
+      if (!mounted) return;
       setState(() {
-        // Backend returns an object directly (rows[0])
-        final Map<String, dynamic> userData = data;
-        _user = User.fromJson(userData);
+        _user = User.fromJson(data);
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() => _isLoading = false);
+    } catch (_) {
+      if (mounted && _user == null) setState(() => _isLoading = false);
     }
   }
 
@@ -47,7 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Settings',
+          'Paramètres',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
@@ -68,22 +79,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           CircleAvatar(
                             radius: 30,
                             backgroundColor: Colors.indigo.shade100,
-                            backgroundImage: (_user?.avatarUrl != null &&
-                                    _user!.avatarUrl.isNotEmpty)
-                                ? NetworkImage(_user!.avatarUrl)
-                                : null,
-                            child: (_user?.avatarUrl == null ||
-                                    _user!.avatarUrl.isEmpty)
-                                ? Text(
-                                    _user?.nom.substring(0, 1).toUpperCase() ??
-                                        'U',
+                            backgroundImage:
+                                hasValidAvatarUrl(_user?.avatarUrl)
+                                    ? avatarImage(_user!.avatarUrl)
+                                    : null,
+                            child: hasValidAvatarUrl(_user?.avatarUrl)
+                                ? null
+                                : Text(
+                                    _user?.nom.isNotEmpty == true
+                                        ? _user!.nom
+                                            .substring(0, 1)
+                                            .toUpperCase()
+                                        : 'U',
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.indigo,
                                     ),
-                                  )
-                                : null,
+                                  ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -125,14 +138,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Alanya Phone',
+                                  'Téléphone Alanya',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey,
                                   ),
                                 ),
                                 Text(
-                                  _user?.alanyaPhone ?? 'Not set',
+                                  _user?.alanyaPhone ?? 'Non défini',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
@@ -148,20 +161,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 24),
           _buildSettingsGroup(
-            title: 'General',
+            title: 'Général',
             items: [
-              _buildSettingsItem(Icons.chat, 'Chats', 'Theme, wallpapers, chat history'),
-              _buildSettingsItem(Icons.notifications, 'Notifications', 'Message, group & call tones'),
-              _buildSettingsItem(Icons.data_usage, 'Storage and Data', 'Network usage, auto-download'),
+              _buildSettingsItem(Icons.chat, 'Discussions', 'Thème, fonds d\'écran, historique des discussions'),
+              _buildSettingsItem(Icons.notifications, 'Notifications', 'Sonneries de message, groupe et appel'),
+              _buildSettingsItem(Icons.data_usage, 'Stockage et données', 'Utilisation du réseau, téléchargement auto'),
             ],
           ),
           const SizedBox(height: 24),
           _buildSettingsGroup(
-            title: 'Account',
+            title: 'Compte',
             items: [
-              _buildSettingsItem(Icons.security, 'Security', 'Two-step verification'),
-              _buildSettingsItem(Icons.lock, 'Privacy', 'Block contacts, disappearing messages'),
-              _buildSettingsItem(Icons.delete_outline, 'Delete My Account', '', isDestructive: true),
+              _buildSettingsItem(Icons.security, 'Sécurité', 'Vérification en deux étapes'),
+              _buildSettingsItem(Icons.lock, 'Confidentialité', 'Bloquer les contacts, messages éphémères'),
+              _buildSettingsItem(Icons.delete_outline, 'Supprimer le compte', '', isDestructive: true),
             ],
           ),
         ],

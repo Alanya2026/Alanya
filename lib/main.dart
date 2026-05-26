@@ -123,7 +123,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
               if (mounted) {
                 final cache = Provider.of<LocalCacheRepository>(context, listen: false);
                 cache.syncPreferredContacts();
-                cache.syncCalls();
+                cache.syncCalls(myId: myId);
                 cache.syncMeetings();
                 cache.purgeExpiredStatuses();
               }
@@ -139,7 +139,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   chatProvider.repository.flushOutbox();
                   chatProvider.refreshConversations();
                   cache.syncPreferredContacts();
-                  cache.syncCalls();
+                  cache.syncCalls(myId: myId);
                   cache.syncMeetings();
                 });
               }

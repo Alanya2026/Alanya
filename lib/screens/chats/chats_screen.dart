@@ -42,7 +42,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          'Chats',
+          'Discussions',
           style: TextStyle(color: Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -56,7 +56,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
             child: TextField(
               onChanged: (v) => setState(() => _search = v.toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'Search...',
+                hintText: 'Rechercher...',
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 filled: true,
                 fillColor: Colors.grey.shade100,
@@ -101,7 +101,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 }
                 if (convs.isEmpty) {
                   return Center(
-                    child: Text('No conversations yet', style: TextStyle(color: Colors.grey.shade600)),
+                    child: Text('Aucune discussion', style: TextStyle(color: Colors.grey.shade600)),
                   );
                 }
                 return RefreshIndicator(
@@ -186,7 +186,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           ],
           Expanded(
             child: Text(
-              conv.lastMessage ?? 'No messages yet',
+              conv.lastMessage ?? 'Aucun message',
               style: TextStyle(
                 color: conv.unreadCount > 0 ? Colors.black87 : Colors.grey.shade600,
                 fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
@@ -242,15 +242,23 @@ class _ChatsScreenState extends State<ChatsScreen> {
   Map<String, dynamic>? _otherParticipant(LocalConversation conv) {
     final parts = decodeParticipants(conv.participantsJson);
     for (final p in parts) {
-      if (p['alanyaID'] != _myId) return p;
+      // Conversion explicite : le JSON peut sérialiser alanyaID en string.
+      final id = _toInt(p['alanyaID']);
+      if (_myId != 0 && id != 0 && id != _myId) return p;
     }
-    return parts.isNotEmpty ? parts.first : null;
+    return null;
   }
 
   String _displayName(LocalConversation conv) {
     if (conv.isGroup) return conv.groupName ?? 'Groupe';
     final other = _otherParticipant(conv);
     return (other?['nom'] as String?) ?? 'Inconnu';
+  }
+
+  static int _toInt(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '') ?? 0;
   }
 
   // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec.
