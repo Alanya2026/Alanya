@@ -135,9 +135,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 final cache =
                     Provider.of<LocalCacheRepository>(context, listen: false);
                 connectivity.addBackOnlineListener(() {
-                  debugPrint('[AuthWrapper] Réseau revenu → flush + refresh');
-                  chatProvider.repository.flushOutbox();
-                  chatProvider.refreshConversations();
+                  debugPrint('[AuthWrapper] Réseau revenu → refresh caches secondaires');
+                  // Le re-sync chat (flushOutbox + refreshConversations + resync
+                  // conv active + rejoin room) est désormais piloté par
+                  // ChatProvider._onSocketReady déclenché sur `auth:verified`.
+                  // On s'évite ainsi la race où le socket pas encore authentifié
+                  // ferait no-oper le flush ici.
                   cache.syncPreferredContacts();
                   cache.syncCalls(myId: myId);
                   cache.syncMeetings();

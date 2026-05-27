@@ -44,6 +44,16 @@ class ChatProvider extends ChangeNotifier {
   Stream<List<LocalConversation>> watchConversations() => repository.watchConversations();
   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
       repository.watchMessages(conversationID);
+
+  /// Outbox réactif (compteur pour le badge sur l'onglet Discussions).
+  Stream<int> pendingMessagesCount() async* {
+    yield (await repository.dao.pendingMessages()).length;
+    await for (final _ in repository.watchConversations()) {
+      // Le badge se rafraîchit indirectement quand la liste de conv change
+      // (envoi, ack, échec). Coût négligeable.
+      yield (await repository.dao.pendingMessages()).length;
+    }
+  }
  
   Future<void> bind(int myId) async {
     repository.bind(myId);
@@ -56,9 +66,18 @@ class ChatProvider extends ChangeNotifier {
     await repository.flushOutbox();
   }
 
-  void _onSocketReady(dynamic _) {
-    repository.flushOutbox();
-    refreshConversations();
+  Future<void> _onSocketReady(dynamic _) async {
+    try {
+      // Ordre critique : on flush l'outbox + accusés de lecture AVANT de
+      // re-fetcher la liste, sinon le unreadCount serveur peut revenir > 0
+      // et faire flickr le badge alors qu'on l'a déjà marqué lu offline.
+      await repository.flushOutbox();
+      await refreshConversations();
+      await repository.resyncActiveConversation();
+      repository.rejoinActiveRoom();
+    } catch (e) {
+      debugPrint('[ChatProvider] _onSocketReady: $e');
+    }
   }
  
   Future<void> refreshConversations() async {

@@ -44,7 +44,7 @@ class ChatRepository {
   int get myId => _myId;
   Stream<List<LocalConversation>> watchConversations() => _dao.watchConversations();
   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
-      _dao.watchMessages(conversationID);
+      _dao.watchMessages(conversationID, _myId);
  
   void bind(int myId) {
     if (myId == 0) return; 
@@ -86,19 +86,27 @@ class ChatRepository {
     }
   }
 
-  /// Charge l'historique d'une conversation 
+  /// Charge l'historique d'une conversation.
+  /// Si `delta == true`, ne récupère que les messages plus récents que le
+  /// dernier confirmé en local (curseur `after` côté API).
   Future<void> syncMessages(int conversationID, {bool delta = false}) async {
     try {
-      final raw = await _api.getMessages(conversationID, limit: 50);
+      List<dynamic> raw;
+      if (delta) {
+        final last = await _dao.maxServerMsgId(conversationID);
+        raw = await _api.getMessages(conversationID, limit: 50, after: last > 0 ? last : null);
+      } else {
+        raw = await _api.getMessages(conversationID, limit: 50);
+      }
       for (final j in raw.whereType<Map<String, dynamic>>()) {
-        await _upsertServerMsg(j); // dédoublonne les optimistes non confirmés
+        await _upsertServerMsg(j, prefetchMedia: true);
       }
     } catch (e) {
       debugPrint('[ChatRepo] syncMessages($conversationID) échouée: $e');
     }
   }
 
-  /// Charge une page d'anciens messages 
+  /// Charge une page d'anciens messages
   Future<int> loadOlderMessages(int conversationID, {int limit = 30}) async {
     try {
       final oldest = await _dao.minServerMsgId(conversationID);
@@ -106,7 +114,7 @@ class ChatRepository {
       final raw = await _api.getMessages(conversationID, limit: limit, before: oldest);
       final list = raw.whereType<Map<String, dynamic>>().toList();
       for (final j in list) {
-        await _upsertServerMsg(j);
+        await _upsertServerMsg(j, prefetchMedia: true);
       }
       return list.length;
     } catch (e) {
@@ -120,15 +128,15 @@ class ChatRepository {
     required String content,
     int? replyToID,
     String? replyToContent,
+    int isStatusReply = 0,
   }) async {
     if (_myId == 0) {
       debugPrint('[ChatRepo] sendText ignoré : utilisateur non lié (myId=0)');
       return;
     }
     final clientId = _newClientId();
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
 
-     
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
       conversationID: conversationID,
@@ -139,11 +147,11 @@ class ChatRepository {
       status: const Value(0),
       replyToID: Value(replyToID),
       replyToContent: Value(replyToContent),
+      isStatusReply: Value(isStatusReply),
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(conversationID, content, 0, now,
         senderID: _myId, status: 0);
-
 
     _emitSend(
       clientId: clientId,
@@ -152,7 +160,27 @@ class ChatRepository {
       type: 0,
       replyToID: replyToID,
       replyToContent: replyToContent,
+      isStatusReply: isStatusReply,
     );
+  }
+
+  /// Aperçu canonique pour les messages média : on respecte le `content` saisi
+  /// s'il existe, sinon on retombe sur l'emoji + libellé de type. Évite que
+  /// l'aperçu de conv affiche un nom de fichier brut (`IMG_2026.jpg`).
+  static String _previewForMedia(int type, String? content, String? mediaName) {
+    if (content != null && content.trim().isNotEmpty) return content;
+    switch (type) {
+      case 1:
+        return '📷 Photo';
+      case 2:
+        return '🎥 Vidéo';
+      case 3:
+        return '🎵 Audio';
+      case 4:
+        return mediaName?.isNotEmpty == true ? '📎 $mediaName' : '📎 Fichier';
+      default:
+        return mediaName ?? 'Média';
+    }
   }
 
 
@@ -166,7 +194,7 @@ class ChatRepository {
     String? content,
   }) async {
     final clientId = _newClientId();
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -182,7 +210,8 @@ class ChatRepository {
       localMediaPath: Value(localMediaPath),
       syncPending: const Value(true),
     ));
-    _bumpConversationSummary(conversationID, content ?? mediaName ?? 'Média', type, now,
+    _bumpConversationSummary(
+        conversationID, _previewForMedia(type, content, mediaName), type, now,
         senderID: _myId, status: 0);
 
     _emitSend(
@@ -209,7 +238,7 @@ class ChatRepository {
       return;
     }
     final clientId = _newClientId();
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
     final name = mediaName ?? file.path.split('/').last;
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
@@ -226,7 +255,8 @@ class ChatRepository {
       pendingUploadPath: Value(file.path),
       syncPending: const Value(true),
     ));
-    _bumpConversationSummary(conversationID, content ?? name, type, now,
+    _bumpConversationSummary(
+        conversationID, _previewForMedia(type, content, name), type, now,
         senderID: _myId, status: 0);
 
     try {
@@ -333,7 +363,7 @@ class ChatRepository {
       }
     }
     // Rejoue les accusés de lecture émis hors-ligne.
-    if (_api.isSocketConnected && _pendingReads.isNotEmpty) {
+    if (_api.isSocketReady && _pendingReads.isNotEmpty) {
       for (final convID in _pendingReads.toList()) {
         _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': convID});
       }
@@ -351,9 +381,17 @@ class ChatRepository {
     }
   }
 
-  /// Supprime un message (pour moi ou pour tous). Application locale immédiate.
+  /// Supprime un message :
+  ///  - [forAll]=true : soft delete partagé (`isDeleted=1`), le bubble devient
+  ///    « Ce message a été supprimé » côté tous les participants.
+  ///  - [forAll]=false : suppression locale uniquement, on pose `deletedForID`
+  ///    sur l'utilisateur courant pour le masquer pour lui seul.
   Future<void> deleteMessage(int msgID, {bool forAll = false}) async {
-    await _dao.softDeleteByServerId(msgID);
+    if (forAll) {
+      await _dao.softDeleteByServerId(msgID);
+    } else {
+      await _dao.softDeleteForUser(msgID, _myId);
+    }
     try {
       await _api.deleteMessage(msgID, forAll: forAll);
     } catch (e) {
@@ -361,24 +399,56 @@ class ChatRepository {
     }
   }
 
+  /// Remet un message échoué en file d'envoi (déclenché par l'utilisateur via
+  /// le menu contextuel). Le prochain `flushOutbox` le rejoue.
+  Future<void> retryMessage(String clientId) async {
+    await _dao.retryFailed(clientId);
+    if (_api.isSocketReady) {
+      await flushOutbox();
+    }
+  }
+
   Future<void> markAsRead(int conversationID) async {
     await _dao.markConversationRead(conversationID, _myId);
     await _dao.setUnread(conversationID, 0);
-    if (_api.isSocketConnected) {
+    if (_api.isSocketReady) {
       _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': conversationID});
     } else {
-      // Hors-ligne : on rejouera la lecture à la reconnexion (sinon le serveur
-      // garde unread>0 et un futur sync ramènerait le message comme non-lu).
+      // Hors-ligne ou socket non-authentifié : on rejouera la lecture à la
+      // reconnexion (sinon le serveur garde unread>0 et un futur sync ramènerait
+      // le message comme non-lu).
       _pendingReads.add(conversationID);
     }
     _api.markConversationAsRead(conversationID).ignore();
   }
 
+  /// Re-sync de la conversation actuellement à l'écran après reconnexion.
+  /// Évite à l'utilisateur de quitter/rouvrir la conv pour voir les messages
+  /// reçus pendant la coupure.
+  Future<void> resyncActiveConversation() async {
+    if (_activeConversationID == 0) return;
+    await syncMessages(_activeConversationID, delta: true);
+  }
 
-  Future<void> _upsertServerMsg(Map<String, dynamic> json) async {
+  /// Ré-émet `joinConversation` pour la conv active après reconnexion (les
+  /// rooms socket.io sont volatiles, le serveur ne les restaure pas).
+  void rejoinActiveRoom() {
+    if (_activeConversationID == 0) return;
+    if (!_api.isSocketReady) return;
+    _api.sendSocketEvent(
+      SocketEvents.joinConversation,
+      {'conversationID': _activeConversationID},
+    );
+  }
+
+
+  Future<void> _upsertServerMsg(
+    Map<String, dynamic> json, {
+    bool prefetchMedia = false,
+  }) async {
     final msgID = _toInt(json['msgID']);
     final convID = _toInt(json['conversationID']);
-    if (msgID == 0) { 
+    if (msgID == 0) {
       await _dao.upsertMessage(_msgJsonToCompanion(json));
       return;
     }
@@ -386,9 +456,10 @@ class ChatRepository {
     final srvKey = 'srv_$msgID';
     final clientId = json['clientId']?.toString();
     final content = json['content']?.toString();
-    final mediaName = json['mediaName']?.toString(); 
+    final mediaName = json['mediaName']?.toString();
+    bool wasNew = false;
     await _db.transaction(() async {
-      String? carriedLocalPath; 
+      String? carriedLocalPath;
       final candidates = await (_db.select(_db.localMessages)
             ..where((m) {
               final sameOtherKey = m.msgID.equals(msgID) & m.clientId.equals(srvKey).not();
@@ -405,6 +476,10 @@ class ChatRepository {
             }))
           .get();
 
+      // Si aucun candidat n'existait avec ce msgID confirmé, c'est un message
+      // nouveau pour la base locale → on déclenchera l'auto-cache du média.
+      wasNew = candidates.every((m) => m.msgID != msgID);
+
       for (final m in candidates) {
         carriedLocalPath ??= m.localMediaPath;
         await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
@@ -420,6 +495,21 @@ class ChatRepository {
       }
       await _dao.upsertMessage(companion);
     });
+
+    // Préfetch média (images/audio toujours, fichiers < 5 Mo) pour rendre
+    // l'historique consultable offline. On ne déclenche que pour les messages
+    // réellement nouveaux afin d'éviter de recharger l'identique à chaque sync.
+    if (prefetchMedia && wasNew) {
+      final mtype = _toInt(json['type']);
+      final mediaUrl = json['mediaUrl']?.toString();
+      if (mediaUrl != null && mediaUrl.isNotEmpty) {
+        if (mtype == 1 || mtype == 3) {
+          _cacheMedia(msgID, mediaUrl);
+        } else if (mtype == 4) {
+          _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
+        }
+      }
+    }
   }
 
   Future<void> _onMessageReceived(dynamic data) async {
@@ -431,13 +521,17 @@ class ChatRepository {
     if (senderID0 == _myId) return;
 
     final convID = _toInt(json['conversationID']);
-    final content = (json['content'] ?? json['mediaName'] ?? 'Média').toString();
-    final type = json['type'] ?? 0;
-    final at = _parseDate(json['sendAt']) ?? DateTime.now();
+    final type = _toInt(json['type']);
+    final preview = _previewForMedia(
+      type,
+      json['content']?.toString(),
+      json['mediaName']?.toString(),
+    );
+    final at = _parseDate(json['sendAt']) ?? DateTime.now().toUtc();
     final isActive = convID != 0 && convID == _activeConversationID;
 
     // Conversation ouverte → message lu immédiatement (pas de badge non-lu).
-    _bumpConversationSummary(convID, content, type, at,
+    _bumpConversationSummary(convID, preview, type, at,
         fromOther: !isActive, senderID: senderID0);
     if (isActive) {
       await _dao.markConversationRead(convID, _myId);
@@ -518,8 +612,15 @@ class ChatRepository {
     int? mediaDuration,
     int? replyToID,
     String? replyToContent,
+    int isStatusReply = 0,
   }) {
-    if (!_api.isSocketConnected) return;
+    // Garde stricte : tant que le socket n'est pas authentifié, le serveur
+    // ignore l'emit silencieusement. On laisse la ligne `syncPending=true` ;
+    // `flushOutbox` la rejouera quand `auth:verified` aura déclenché _onSocketReady.
+    if (!_api.isSocketReady) {
+      debugPrint('[ChatRepo] _emitSend différé (socket non prêt) clientId=$clientId');
+      return;
+    }
     _api.sendSocketEvent(SocketEvents.messageSend, {
       'clientId': clientId,
       'conversationID': conversationID,
@@ -530,7 +631,10 @@ class ChatRepository {
       if (mediaDuration != null) 'mediaDuration': mediaDuration,
       if (replyToID != null) 'replyToID': replyToID,
       if (replyToContent != null) 'replyToContent': replyToContent,
+      if (isStatusReply != 0) 'isStatusReply': isStatusReply,
     });
+    // Marque la ligne comme « tout juste émise » → backoff outbox.
+    _dao.touchEmitted(clientId);
   }
 
   Future<void> _bumpConversationSummary(
@@ -589,6 +693,7 @@ class ChatRepository {
       type: Value(_toInt(j['type'])),
       status: Value(_toInt(j['status'], fallback: 1)),
       sendAt: Value(_parseDate(j['sendAt']) ?? DateTime.now()),
+      deliveredAt: Value(_parseDate(j['deliveredAt'])),
       readAt: Value(_parseDate(j['readAt'])),
       mediaUrl: Value(j['mediaUrl']?.toString()),
       mediaName: Value(j['mediaName']?.toString()),
@@ -596,12 +701,15 @@ class ChatRepository {
       replyToID: Value(j['replyToID'] == null ? null : _toInt(j['replyToID'])),
       replyToContent: Value(j['replyToContent']?.toString()),
       isEdited: Value(j['isEdited'] == 1 || j['isEdited'] == true),
+      editedAt: Value(_parseDate(j['editedAt'])),
       isDeleted: Value(j['isDeleted'] == 1 || j['isDeleted'] == true),
+      deletedForID: Value(j['deletedForID'] == null ? null : _toInt(j['deletedForID'])),
       isStatusReply: Value(_toInt(j['isStatusReply'])),
       senderNom: Value(j['sender_nom']?.toString()),
       senderPseudo: Value(j['sender_pseudo']?.toString()),
       senderAvatar: Value(j['sender_avatar']?.toString()),
       syncPending: const Value(false),
+      lastEmittedAt: const Value(null),
     );
   }
 

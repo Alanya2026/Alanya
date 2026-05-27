@@ -25,9 +25,15 @@ class TalkyApiClient {
   // Callbacks Socket globaux (pour CallService, MeetingService)
   final Map<String, List<Function(dynamic)>> _socketListeners = {};
 
+  /// Vrai uniquement après que le serveur a confirmé `auth:verified`. Le simple
+  /// `_socket.connected` ne suffit pas : émettre avant l'auth fait silencieusement
+  /// jeter les events côté serveur.
+  bool _isSocketAuthVerified = false;
+
   String? get accessToken        => _accessToken;
   String? get currentRefreshToken => _refreshToken;
   bool   get isSocketConnected   => _socket?.connected ?? false;
+  bool   get isSocketReady       => isSocketConnected && _isSocketAuthVerified;
 
   TalkyApiClient({http.Client? client}) : _client = client ?? http.Client();
 
@@ -485,9 +491,15 @@ class TalkyApiClient {
 
   // ── MESSAGES ──────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getMessages(int conversID, {int limit = 50, int? before}) async {
+  Future<List<dynamic>> getMessages(
+    int conversID, {
+    int limit = 50,
+    int? before,
+    int? after,
+  }) async {
     String url = '$baseUrl/conversations/$conversID/messages?limit=$limit';
     if (before != null) url += '&before=$before';
+    if (after != null) url += '&after=$after';
     final data = await _handleRequest(
       () => _client.get(Uri.parse(url), headers: _headers),
     );
@@ -732,6 +744,7 @@ class TalkyApiClient {
 
     _socket!.on(SocketEvents.authVerified, (data) {
       debugPrint('[Socket] Authentifié: ${data['alanyaID']}');
+      _isSocketAuthVerified = true;
       // Signaler présence en ligne
       _socket!.emit(SocketEvents.presenceOnline, {'userID': data['alanyaID']});
       // Rejouer les listeners en attente
@@ -740,16 +753,22 @@ class TalkyApiClient {
 
     _socket!.on(SocketEvents.authError, (data) {
       debugPrint('[Socket] Erreur auth: ${data['message']}');
+      _isSocketAuthVerified = false;
     });
 
     _socket!.on(SocketEvents.authConflict, (data) {
       debugPrint('[Socket] Conflit connexion: ${data['message']}');
+      _isSocketAuthVerified = false;
     });
 
-    _socket!.onDisconnect((_) => debugPrint('[Socket] Déconnecté'));
+    _socket!.onDisconnect((_) {
+      debugPrint('[Socket] Déconnecté');
+      _isSocketAuthVerified = false;
+    });
     _socket!.onError((err) => debugPrint('[Socket] Erreur: $err'));
     _socket!.onReconnect((_) {
       debugPrint('[Socket] Reconnecté — ré-auth');
+      _isSocketAuthVerified = false;
       _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
     });
 
@@ -769,6 +788,7 @@ class TalkyApiClient {
   }
 
   void disconnectSocket() {
+    _isSocketAuthVerified = false;
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
@@ -776,8 +796,8 @@ class TalkyApiClient {
   }
 
   void sendSocketEvent(String event, dynamic data) {
-    if (_socket?.connected != true) {
-      debugPrint('[Socket] ** Tentative d\'emit "$event" sans connexion');
+    if (!isSocketReady) {
+      debugPrint('[Socket] ** emit "$event" différé (socket non prêt — connected=$isSocketConnected, auth=$_isSocketAuthVerified)');
       return;
     }
     _socket!.emit(event, data);
@@ -803,6 +823,19 @@ class TalkyApiClient {
   void offSocketEvent(String event) {
     _socketListeners.remove(event);
     _socket?.off(event);
+  }
+
+  /// Retire un callback précis pour un event donné, sans détruire les autres
+  /// listeners du même event. Utilisé par les écrans (chat_detail) qui ne
+  /// doivent pas évincer les listeners globaux (chat_repository, etc.) en se
+  /// fermant.
+  void removeSocketListener(String event, Function(dynamic) callback) {
+    final list = _socketListeners[event];
+    if (list != null) {
+      list.remove(callback);
+      if (list.isEmpty) _socketListeners.remove(event);
+    }
+    _socket?.off(event, callback);
   }
 
   // ── STATUTS ───────────────────────────────────────────────────────

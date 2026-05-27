@@ -42,10 +42,15 @@ class ChatDao {
 
   // MESSAGES 
 
-  /// Messages d'une conversation (anciens → récents), masque les supprimés.
-  Stream<List<LocalMessage>> watchMessages(int conversationID) {
+  /// Messages d'une conversation (anciens → récents).
+  /// Les messages soft-deletés ([isDeleted]=1) sont conservés pour afficher
+  /// « Ce message a été supprimé ». Les messages supprimés « pour moi » via
+  /// [deletedForID] sont en revanche masqués pour cet utilisateur uniquement.
+  Stream<List<LocalMessage>> watchMessages(int conversationID, int myId) {
     return (db.select(db.localMessages)
-          ..where((m) => m.conversationID.equals(conversationID) & m.isDeleted.equals(false))
+          ..where((m) =>
+              m.conversationID.equals(conversationID) &
+              (m.deletedForID.isNull() | m.deletedForID.equals(myId).not()))
           ..orderBy([(m) => OrderingTerm(expression: m.sendAt)]))
         .watch();
   }
@@ -83,11 +88,35 @@ class ChatDao {
   }
 
   /// Messages en attente d'envoi (outbox), du plus ancien au plus récent.
-  Future<List<LocalMessage>> pendingMessages() {
+  /// Filtre les lignes émises il y a moins de [cooldown] (backoff côté client)
+  /// pour ne pas spammer le serveur en cas de race auth/connect.
+  Future<List<LocalMessage>> pendingMessages({
+    Duration cooldown = const Duration(seconds: 5),
+  }) {
+    final threshold = DateTime.now().subtract(cooldown);
     return (db.select(db.localMessages)
-          ..where((m) => m.syncPending.equals(true))
+          ..where((m) =>
+              m.syncPending.equals(true) &
+              (m.lastEmittedAt.isNull() |
+                  m.lastEmittedAt.isSmallerThanValue(threshold)))
           ..orderBy([(m) => OrderingTerm(expression: m.sendAt)]))
         .get();
+  }
+
+  /// Marque un message comme « tout juste émis » pour le backoff outbox.
+  Future<void> touchEmitted(String clientId) {
+    return (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
+        .write(LocalMessagesCompanion(lastEmittedAt: Value(DateTime.now())));
+  }
+
+  /// Remet un message échoué en file d'envoi (reset backoff, statut sending).
+  Future<void> retryFailed(String clientId) {
+    return (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
+        .write(const LocalMessagesCompanion(
+      status: Value(0),
+      syncPending: Value(true),
+      lastEmittedAt: Value(null),
+    ));
   }
 
  
@@ -147,9 +176,18 @@ class ChatDao {
         .write(LocalConversationsCompanion(lastMessageStatus: Value(status)));
   }
 
+  /// Marque un message comme définitivement échoué. Sort de l'outbox : il ne sera
+  /// pas retenté automatiquement. L'utilisateur peut relancer via [retryFailed].
   Future<void> markFailed(String clientId) {
     return (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
-        .write(const LocalMessagesCompanion(status: Value(4), syncPending: Value(true)));
+        .write(const LocalMessagesCompanion(status: Value(4), syncPending: Value(false)));
+  }
+
+  /// Variante de soft-delete « pour moi seulement » : pose `deletedForID = userId`
+  /// sans toucher au flag `isDeleted` (la cellule reste visible côté l'autre device).
+  Future<void> softDeleteForUser(int msgID, int userId) {
+    return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
+        .write(LocalMessagesCompanion(deletedForID: Value(userId)));
   }
 
   Future<void> updateContentByServerId(int msgID, String content) {
@@ -173,8 +211,16 @@ class ChatDao {
   }
 
  
+  /// Purge agressive : ne supprime que les optimistes vraiment fantômes
+  /// (msgID=0 ET senderID=0 ET plus dans l'outbox). On évite de jeter des
+  /// confirmations serveur dont le `senderID` aurait été corrompu.
   Future<int> purgeGhostMessages() {
-    return (db.delete(db.localMessages)..where((m) => m.senderID.equals(0))).go();
+    return (db.delete(db.localMessages)
+          ..where((m) =>
+              m.senderID.equals(0) &
+              m.msgID.equals(0) &
+              m.syncPending.equals(false)))
+        .go();
   }
 
  
