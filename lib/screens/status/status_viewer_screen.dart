@@ -6,7 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/status_provider.dart';
+import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/utils/avatar_utils.dart';
 import 'status_views_screen.dart';
@@ -38,6 +41,11 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   ChewieController? _chewieCtrl;
   AudioPlayer? _audioPlayer;
 
+  // ── Réponse à un statut ──────────────────────────────────────────────
+  final TextEditingController _replyController = TextEditingController();
+  final FocusNode _replyFocus = FocusNode();
+  bool _sendingReply = false;
+
   Statut get _current => widget.statuses[_index];
 
   @override
@@ -55,6 +63,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   void dispose() {
     _progress.dispose();
     _disposeMedia();
+    _replyController.dispose();
+    _replyFocus.dispose();
     super.dispose();
   }
 
@@ -174,6 +184,65 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     }
   }
 
+  // Aperçu textuel du statut courant pour la `replyToContent` du message.
+  String _statusPreview() {
+    final s = _current;
+    if (s.text != null && s.text!.trim().isNotEmpty) return s.text!.trim();
+    switch (s.type) {
+      case 1:
+        return '📷 Photo';
+      case 2:
+        return '🎥 Vidéo';
+      case 3:
+        return '🎵 Audio';
+      default:
+        return 'Statut';
+    }
+  }
+
+  Future<void> _sendReply() async {
+    final text = _replyController.text.trim();
+    if (text.isEmpty || _sendingReply) return;
+    final author = _current.alanyaID;
+    if (author == 0) return;
+
+    setState(() => _sendingReply = true);
+    try {
+      final api = context.read<TalkyApiClient>();
+      final chat = context.read<ChatProvider>();
+      // Récupère (ou crée) la conv 1-1 avec l'auteur. Le backend renvoie la
+      // conv existante si elle est déjà ouverte → idempotent.
+      final result = await api.createConversation(participantID: author);
+      final convId = result['conversID'] as int?;
+      if (convId == null) throw Exception('conversID manquant');
+
+      await chat.repository.sendText(
+        conversationID: convId,
+        content: text,
+        replyToContent: _statusPreview(),
+        isStatusReply: 1,
+      );
+
+      if (!mounted) return;
+      _replyController.clear();
+      _replyFocus.unfocus();
+      _setPaused(false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Réponse envoyée'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Échec de l\'envoi : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sendingReply = false);
+    }
+  }
+
   Future<void> _confirmDelete() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -279,22 +348,102 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
               bottom: 0,
               left: 0,
               right: 0,
-              child: _Footer(
-                statut: s,
-                isMine: widget.isMine,
-                onLike: _toggleLike,
-                onDelete: _confirmDelete,
-                onShowViews: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => StatusViewsScreen(statusId: s.id),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!widget.isMine) _buildReplyBar(),
+                  _Footer(
+                    statut: s,
+                    isMine: widget.isMine,
+                    onLike: _toggleLike,
+                    onDelete: _confirmDelete,
+                    onShowViews: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StatusViewsScreen(statusId: s.id),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildReplyBar() {
+    return Consumer<ConnectivityProvider>(
+      builder: (context, conn, _) {
+        final online = conn.isOnline;
+        final canSend = online && !_sendingReply;
+        return Padding(
+          // Évite que le clavier ou la home indicator ne masque la barre.
+          padding: EdgeInsets.only(
+            left: 12,
+            right: 12,
+            bottom: 12 + MediaQuery.of(context).viewInsets.bottom,
+            top: 4,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(140),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: Colors.white24, width: 1),
+                  ),
+                  child: TextField(
+                    controller: _replyController,
+                    focusNode: _replyFocus,
+                    style: const TextStyle(color: Colors.white),
+                    minLines: 1,
+                    maxLines: 4,
+                    onTap: () => _setPaused(true),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) {
+                      if (canSend) _sendReply();
+                    },
+                    decoration: InputDecoration(
+                      hintText: online
+                          ? 'Répondre au statut…'
+                          : 'Indisponible hors ligne',
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Material(
+                color: canSend ? Colors.indigo : Colors.grey.shade600,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: canSend ? _sendReply : null,
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: _sendingReply
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send, color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
