@@ -18,6 +18,13 @@ class ChatDao {
         .watch();
   }
 
+  /// Suivi réactif d'une conversation isolée (header de chat_detail, etc.).
+  Stream<LocalConversation?> watchConversation(int conversID) {
+    return (db.select(db.localConversations)
+          ..where((c) => c.conversID.equals(conversID)))
+        .watchSingleOrNull();
+  }
+
   Future<void> upsertConversation(LocalConversationsCompanion conv) {
     return db.into(db.localConversations).insertOnConflictUpdate(conv);
   }
@@ -154,6 +161,23 @@ class ChatDao {
         .write(const LocalMessagesCompanion(status: Value(3)));
   }
 
+    /// Atomically mark all messages in a conversation as read and reset unread
+    /// counter. This prevents races where an incoming message increments the
+    /// unread count while we reset it.
+    Future<void> markConversationReadAtomic(int conversationID, int myId) async {
+      await db.transaction(() async {
+    await (db.update(db.localMessages)
+      ..where((m) =>
+          m.conversationID.equals(conversationID) &
+          m.senderID.equals(myId).not() &
+          m.status.isSmallerThanValue(3)))
+        .write(const LocalMessagesCompanion(status: Value(3)));
+
+    await (db.update(db.localConversations)..where((c) => c.conversID.equals(conversationID)))
+        .write(const LocalConversationsCompanion(unreadCount: Value(0)));
+      });
+    }
+
   /// Fait monter le statut de MES messages envoyés dans une conversation
   
   Future<void> bumpMyMessagesStatus(int conversationID, int myId, int status) {
@@ -181,6 +205,14 @@ class ChatDao {
   Future<void> markFailed(String clientId) {
     return (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
         .write(const LocalMessagesCompanion(status: Value(4), syncPending: Value(false)));
+  }
+
+  /// Incrémente le compteur de retry pour un message identifié par `clientId`.
+  Future<void> incrementRetryCount(String clientId) async {
+    final row = await (db.select(db.localMessages)..where((m) => m.clientId.equals(clientId))).getSingleOrNull();
+    final current = row?.retryCount ?? 0;
+    await (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
+      .write(LocalMessagesCompanion(retryCount: Value(current + 1)));
   }
 
   /// Variante de soft-delete « pour moi seulement » : pose `deletedForID = userId`
@@ -215,37 +247,56 @@ class ChatDao {
   /// (msgID=0 ET senderID=0 ET plus dans l'outbox). On évite de jeter des
   /// confirmations serveur dont le `senderID` aurait été corrompu.
   Future<int> purgeGhostMessages() {
-    return (db.delete(db.localMessages)
-          ..where((m) =>
-              m.senderID.equals(0) &
-              m.msgID.equals(0) &
-              m.syncPending.equals(false)))
-        .go();
+      final onHourAgo = DateTime.now().toUtc().subtract(const Duration(hours: 1));
+      return (db.delete(db.localMessages)
+        ..where((m) =>
+        m.clientId.like('c_%') &
+        m.msgID.equals(0) &
+        m.syncPending.equals(false) &
+        m.sendAt.isSmallerThanValue(onHourAgo)))
+      .go();
   }
 
  
   Future<void> purgeDuplicateOptimistics() async {
-    final all = await db.select(db.localMessages).get();
+    // Charger uniquement les optimistes et confirmations séparément pour éviter
+    // de charger toute la table et faire des deletes sériels.
+    final optimistics = await (db.select(db.localMessages)
+          ..where((m) => m.msgID.equals(0)))
+        .get();
+
     String sig(LocalMessage m) =>
         '${m.conversationID}|${m.senderID}|${m.content ?? ''}|${m.type}|${m.mediaName ?? ''}';
-    final confirmed = <String>{};
-    for (final m in all) {
-      if (m.msgID > 0) confirmed.add(sig(m));
+
+    final confirmedRows = await (db.select(db.localMessages)
+          ..where((m) => m.msgID.isBiggerThanValue(0)))
+        .get();
+    final confirmed = confirmedRows.map(sig).toSet();
+
+    final idsToDelete = <String>[];
+    for (final m in optimistics) {
+      if (confirmed.contains(sig(m))) idsToDelete.add(m.clientId);
     }
-    for (final m in all) {
-      if (m.msgID == 0 && confirmed.contains(sig(m))) {
-        await (db.delete(db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
+
+    if (idsToDelete.isNotEmpty) {
+      for (final clientId in idsToDelete) {
+        await (db.delete(db.localMessages)..where((t) => t.clientId.equals(clientId))).go();
       }
     }
   }
 
   /// Garantit qu'un même msgID (>0) n'a qu'une seule ligne  
   Future<void> purgeDuplicateByMsgId() async {
-    final all = await db.select(db.localMessages).get();
+    final confirmed = await (db.select(db.localMessages)
+          ..where((m) => m.msgID.isBiggerThanValue(0)))
+        .get();
+
     final byMsg = <int, List<LocalMessage>>{};
-    for (final m in all) {
-      if (m.msgID > 0) (byMsg[m.msgID] ??= []).add(m);
+    for (final m in confirmed) {
+      (byMsg[m.msgID] ??= []).add(m);
     }
+
+    final idsToDelete = <String>[];
     for (final entry in byMsg.entries) {
       if (entry.value.length < 2) continue;
       entry.value.sort((a, b) {
@@ -254,7 +305,13 @@ class ChatDao {
         return aSrv.compareTo(bSrv);
       });
       for (final m in entry.value.skip(1)) {
-        await (db.delete(db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
+        idsToDelete.add(m.clientId);
+      }
+    }
+
+    if (idsToDelete.isNotEmpty) {
+      for (final clientId in idsToDelete) {
+        await (db.delete(db.localMessages)..where((t) => t.clientId.equals(clientId))).go();
       }
     }
   }

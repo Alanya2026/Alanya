@@ -77,6 +77,9 @@ class LocalMessages extends Table {
 
   /// Dernier instant d'émission via le socket — sert au backoff de l'outbox.
   DateTimeColumn get lastEmittedAt => dateTime().nullable()();
+  
+  /// Nombre de tentatives de retry pour ce message (failed -> retry).
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {clientId};
@@ -181,7 +184,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -198,6 +201,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(localMessages, localMessages.editedAt);
             await m.addColumn(localMessages, localMessages.deletedForID);
             await m.addColumn(localMessages, localMessages.lastEmittedAt);
+          }
+          if (from < 4) {
+            await m.addColumn(localMessages, localMessages.retryCount);
           }
         },
       );
