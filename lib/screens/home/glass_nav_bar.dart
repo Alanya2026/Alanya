@@ -1,6 +1,9 @@
 import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/chat_provider.dart';
 
 /// Espace réservé en bas du body pour que les contenus scrollables
 /// puissent dépasser jusqu'au-dessus de la nav flottante (le scroll
@@ -95,7 +98,7 @@ class _NavItem extends StatelessWidget {
       CupertinoIcons.person_fill,
     ];
 
-    const labels = ['Chats', 'Calls', 'Status', 'Meets', 'Profile'];
+    const labels = ['Chats', 'Appels', 'Statuts', 'Réunions', 'Profil'];
 
     return GestureDetector(
       onTap: onTap,
@@ -111,10 +114,14 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? activeIcons[index] : icons[index],
+            _IconWithBadge(
+              icon: isSelected ? activeIcons[index] : icons[index],
               color: isSelected ? Colors.indigo : Colors.grey.shade400,
-              size: 22,
+              // Badge orange "outbox" uniquement sur l'onglet Chats.
+              badgeStream: index == 0
+                  ? context.select<ChatProvider, Stream<int>>(
+                      (c) => c.pendingMessagesCount())
+                  : null,
             ),
             const SizedBox(height: 2),
             Text(
@@ -128,6 +135,59 @@ class _NavItem extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _IconWithBadge extends StatelessWidget {
+  const _IconWithBadge({
+    required this.icon,
+    required this.color,
+    this.badgeStream,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Stream<int>? badgeStream;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Icon(icon, color: color, size: 22);
+    if (badgeStream == null) return base;
+    return StreamBuilder<int>(
+      stream: badgeStream,
+      builder: (context, snap) {
+        final count = snap.data ?? 0;
+        if (count <= 0) return base;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            base,
+            Positioned(
+              right: -6,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFB74D),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
+                child: Text(
+                  count > 9 ? '9+' : '$count',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

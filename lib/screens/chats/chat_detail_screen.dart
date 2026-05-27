@@ -10,6 +10,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
+import 'package:video_player/video_player.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
@@ -99,7 +100,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _chat.repository.setActiveConversation(convId);
     _chat.repository.markAsRead(convId);
 
-    // 3. Écoute les indicateurs "en train d'écrire".
+    // 3. Écoute les indicateurs "en train d'écrire". On garde les références
+    //    précises afin de pouvoir n'enlever QUE ces callbacks au dispose
+    //    (sinon on évincerait aussi d'éventuels listeners globaux).
     _apiClient.onSocketEvent(SocketEvents.typingStarted, _onTypingStarted);
     _apiClient.onSocketEvent(SocketEvents.typingStopped, _onTypingStopped);
   }
@@ -152,6 +155,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Si le message est en échec d'envoi, on propose en priorité le retry.
+            if (isMe && msg.status == 4)
+              ListTile(
+                leading: const Icon(Icons.refresh, color: Colors.indigo),
+                title: const Text('Réessayer l\'envoi'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _chat.repository.retryMessage(msg.clientId);
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.reply, color: Colors.indigo),
               title: const Text('Répondre'),
@@ -170,7 +183,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   Navigator.pop(context);
                 },
               ),
-            if (isMe && isText)
+            if (isMe && isText && !msg.isDeleted)
               ListTile(
                 leading: const Icon(Icons.edit, color: Colors.indigo),
                 title: const Text('Modifier'),
@@ -179,7 +192,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   _showEditDialog(msg);
                 },
               ),
-            if (isMe)
+            if (isMe && !msg.isDeleted)
               ListTile(
                 leading: const Icon(Icons.delete_forever, color: Colors.red),
                 title: const Text('Supprimer pour tout le monde'),
@@ -284,7 +297,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _pickVideo() async {
     final x = await _picker.pickVideo(source: ImageSource.gallery);
-    if (x != null) _sendMediaFile(File(x.path), type: 2);
+    if (x == null) return;
+    final file = File(x.path);
+    // Extraction de la durée pour peupler `mediaDuration` (sinon les vidéos
+    // arrivent côté serveur sans length → impossible d'afficher 00:23 dans
+    // la liste des médias d'une conv ou dans la bulle).
+    int? durSec;
+    final ctrl = VideoPlayerController.file(file);
+    try {
+      await ctrl.initialize();
+      durSec = ctrl.value.duration.inSeconds;
+    } catch (e) {
+      debugPrint('[ChatDetail] _pickVideo: durée non lue ($e)');
+    } finally {
+      await ctrl.dispose();
+    }
+    _sendMediaFile(file, type: 2, duration: durSec);
   }
 
   Future<void> _pickFile() async {
@@ -426,8 +454,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final convId = widget.conversationId;
     if (convId != null) _chat.repository.clearActiveConversation(convId);
     _stopTyping();
-    _apiClient.offSocketEvent(SocketEvents.typingStarted);
-    _apiClient.offSocketEvent(SocketEvents.typingStopped);
+    // On retire UNIQUEMENT nos callbacks (les autres écrans/services restent
+    // abonnés). offSocketEvent vidait l'event entier → régression critique.
+    _apiClient.removeSocketListener(SocketEvents.typingStarted, _onTypingStarted);
+    _apiClient.removeSocketListener(SocketEvents.typingStopped, _onTypingStopped);
     _messageController.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
@@ -669,17 +699,39 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               child: Column(
                 crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
+                  if (msg.isStatusReply != 0)
+                    _buildStatusReplyChip(isMe),
                   if (msg.replyToContent != null && msg.replyToContent!.isNotEmpty)
                     _buildReplyQuote(msg.replyToContent!, isMe),
-                  if (msg.type != 0) _buildMedia(msg, isMe),
-                  if (msg.content != null && msg.content!.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
-                      child: Text(
-                        msg.content!,
-                        style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15),
+                  if (msg.isDeleted)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.block,
+                            size: 14,
+                            color: isMe ? Colors.white60 : Colors.black38),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Ce message a été supprimé',
+                          style: TextStyle(
+                            color: isMe ? Colors.white60 : Colors.black38,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    if (msg.type != 0) _buildMedia(msg, isMe),
+                    if (msg.content != null && msg.content!.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
+                        child: Text(
+                          msg.content!,
+                          style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15),
+                        ),
                       ),
-                    ),
+                  ],
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -688,9 +740,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         _formatTime(msg.sendAt),
                         style: TextStyle(color: isMe ? Colors.white70 : Colors.black45, fontSize: 10),
                       ),
-                      if (isMe) ...[
+                      if (msg.isEdited && !msg.isDeleted) ...[
                         const SizedBox(width: 4),
-                        _statusIcon(msg.status),
+                        Tooltip(
+                          message: msg.editedAt != null
+                              ? 'Modifié à ${_formatTime(msg.editedAt!)}'
+                              : 'Modifié',
+                          child: Text(
+                            '· modifié',
+                            style: TextStyle(
+                              color: isMe ? Colors.white60 : Colors.black38,
+                              fontSize: 10,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (isMe && !msg.isDeleted) ...[
+                        const SizedBox(width: 4),
+                        _statusIcon(msg.status, deliveredAt: msg.deliveredAt, readAt: msg.readAt),
                       ],
                     ],
                   ),
@@ -750,22 +818,58 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  // ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec
-  Widget _statusIcon(int status) {
+  // ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec.
+  // Tooltips remontent l'heure exacte via deliveredAt/readAt quand dispos.
+  Widget _statusIcon(int status, {DateTime? deliveredAt, DateTime? readAt}) {
+    Widget wrap(String tooltip, Widget child) =>
+        Tooltip(message: tooltip, child: child);
     switch (status) {
       case 0:
-        return const Icon(Icons.schedule, size: 11, color: Colors.white70);
+        return wrap('En attente',
+            const Icon(Icons.schedule, size: 11, color: Colors.white70));
       case 1:
-        return const Icon(Icons.check, size: 12, color: Colors.white70);
+        return wrap('Envoyé',
+            const Icon(Icons.check, size: 12, color: Colors.white70));
       case 2:
-        return const Icon(Icons.done_all, size: 12, color: Colors.white70);
+        return wrap(
+            deliveredAt != null
+                ? 'Livré à ${_formatTime(deliveredAt)}'
+                : 'Livré',
+            const Icon(Icons.done_all, size: 12, color: Colors.white70));
       case 3:
-        return const Icon(Icons.done_all, size: 12, color: Color(0xFF4FC3F7));
+        return wrap(
+            readAt != null ? 'Lu à ${_formatTime(readAt)}' : 'Lu',
+            const Icon(Icons.done_all, size: 12, color: Color(0xFF4FC3F7)));
       case 4:
-        return const Icon(Icons.error_outline, size: 12, color: Colors.redAccent);
+        return wrap('Échec — appui long pour réessayer',
+            const Icon(Icons.error_outline, size: 12, color: Colors.redAccent));
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  // Chip "Réponse à un statut" affichée au sommet du bubble.
+  Widget _buildStatusReplyChip(bool isMe) {
+    final fg = isMe ? Colors.white70 : Colors.indigo;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome_motion, size: 12, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            'Réponse à un statut',
+            style: TextStyle(
+              color: fg,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Rendu média selon le type ──────────────────────────────────────
@@ -861,7 +965,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final res = await OpenFilex.open(path);
     if (res.type != ResultType.done && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Aucune app pour ouvrir ce fichier (${res.message})'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Aucune application pour ouvrir ce fichier (${res.message})'), backgroundColor: Colors.red),
       );
     }
   }
@@ -1037,7 +1141,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               minLines: 1,
               scrollPhysics: const ClampingScrollPhysics(),
               decoration: InputDecoration(
-                hintText: 'Type a message...',
+                hintText: 'Tapez un message...',
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
