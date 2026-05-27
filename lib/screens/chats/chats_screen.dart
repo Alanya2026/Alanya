@@ -1,10 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/db/chat_dao.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/profile_avatar.dart';
@@ -20,14 +20,12 @@ class ChatsScreen extends StatefulWidget {
 }
 
 class _ChatsScreenState extends State<ChatsScreen> {
-  int _myId = 0;
   String _search = '';
   String _filter = 'all'; // 'all', 'discussions', 'groups', 'unread'
 
   @override
   void initState() {
     super.initState();
-    _myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
     // Rafraîchit depuis le serveur en arrière-plan (l'UI s'affiche déjà du cache).
     Provider.of<ChatProvider>(context, listen: false).refreshConversations();
   }
@@ -35,6 +33,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   Widget build(BuildContext context) {
     final chat = Provider.of<ChatProvider>(context);
+    // Lecture réactive de l'ID courant : si AuthProvider notifie un changement
+    // (ex: hydratation tardive du cache), le rendu reconnaît immédiatement
+    // qui est « moi » dans la liste des conversations.
+    final myId = context.select<AuthProvider, int>(
+      (a) => a.currentUser?.alanyaID ?? 0,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -91,7 +95,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 final all = snapshot.data ?? const [];
                 var convs = _search.isEmpty
                     ? all
-                    : all.where((c) => _displayName(c).toLowerCase().contains(_search)).toList();
+                    : all.where((c) => _displayName(c, myId).toLowerCase().contains(_search)).toList();
                 
                 // Appliquer le filtre
                 convs = _applyFilter(convs);
@@ -109,7 +113,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   child: ListView.builder(
                     padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
                     itemCount: convs.length,
-                    itemBuilder: (context, index) => _buildTile(context, chat, convs[index]),
+                    itemBuilder: (context, index) =>
+                        _buildTile(context, chat, convs[index], myId),
                   ),
                 );
               },
@@ -117,26 +122,40 @@ class _ChatsScreenState extends State<ChatsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push<User>(
-            context,
-            MaterialPageRoute(builder: (_) => const NewChatScreen()),
+      floatingActionButton: Consumer<ConnectivityProvider>(
+        builder: (context, conn, _) {
+          final online = conn.isOnline;
+          return FloatingActionButton(
+            onPressed: online
+                ? () async {
+                    final result = await Navigator.push<User>(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NewChatScreen()),
+                    );
+                    if (result != null && mounted) {
+                      _openChatWithUser(result);
+                    }
+                  }
+                : () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Nouvelle discussion indisponible hors ligne'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+            backgroundColor: online ? Colors.indigo : Colors.grey.shade400,
+            child: const Icon(Icons.chat, color: Colors.white),
           );
-          
-          if (result != null && mounted) {
-            _openChatWithUser(result);
-          }
         },
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.chat, color: Colors.white),
       ),
     );
   }
 
-  Widget _buildTile(BuildContext context, ChatProvider chat, LocalConversation conv) {
-    final other = _otherParticipant(conv);
-    final displayName = _displayName(conv);
+  Widget _buildTile(
+      BuildContext context, ChatProvider chat, LocalConversation conv, int myId) {
+    final other = _otherParticipant(conv, myId);
+    final displayName = _displayName(conv, myId);
     final displayAvatar = conv.isGroup ? conv.groupPhoto : other?['avatar_url'] as String?;
     final otherId = other?['alanyaID'] as int?;
 
@@ -180,7 +199,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       subtitle: Row(
         children: [
           // Accusé (✓ / ✓✓ / ✓✓ bleu) si le dernier message est le mien.
-          if (conv.lastMessageSenderID == _myId && conv.lastMessage != null) ...[
+          if (conv.lastMessageSenderID == myId && conv.lastMessage != null) ...[
             _previewStatusIcon(conv.lastMessageStatus),
             const SizedBox(width: 4),
           ],
@@ -239,19 +258,19 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  Map<String, dynamic>? _otherParticipant(LocalConversation conv) {
+  Map<String, dynamic>? _otherParticipant(LocalConversation conv, int myId) {
     final parts = decodeParticipants(conv.participantsJson);
     for (final p in parts) {
       // Conversion explicite : le JSON peut sérialiser alanyaID en string.
       final id = _toInt(p['alanyaID']);
-      if (_myId != 0 && id != 0 && id != _myId) return p;
+      if (myId != 0 && id != 0 && id != myId) return p;
     }
     return null;
   }
 
-  String _displayName(LocalConversation conv) {
+  String _displayName(LocalConversation conv, int myId) {
     if (conv.isGroup) return conv.groupName ?? 'Groupe';
-    final other = _otherParticipant(conv);
+    final other = _otherParticipant(conv, myId);
     return (other?['nom'] as String?) ?? 'Inconnu';
   }
 
@@ -281,10 +300,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
   Future<void> _openChatWithUser(User user) async {
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
       final result = await apiClient.createConversation(participantID: user.alanyaID);
       final conversationId = result['conversID'] as int?;
-      
+
       if (conversationId != null && mounted) {
+        // La conv vient d'être créée côté serveur : on relit la liste pour
+        // qu'elle apparaisse aussitôt dans le `StreamBuilder` au retour.
+        await chatProvider.refreshConversations();
+        if (!mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(

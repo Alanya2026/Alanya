@@ -3,9 +3,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import '../../providers/chat_provider.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   final List<User> members;
@@ -48,7 +49,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   Future<void> _create() async {
     if (_nameController.text.isEmpty || _members.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fill all fields')),
+        const SnackBar(content: Text('Remplir tous les champs et ajouter au moins un membre')),
       );
       return;
     }
@@ -71,7 +72,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       if (mounted) {
         setState(() => _creating = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Erreur : $e')),
         );
       }
     }
@@ -122,14 +123,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
             // Name field
             Text(
-              'Group Name',
+              'Nom du groupe',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                hintText: 'Enter group name',
+                hintText: 'Entrez le nom du groupe',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -178,7 +179,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                               ),
                             ),
                             Text(
-                              member.alanyaPhone ?? '',
+                              member.alanyaPhone,
                               style: const TextStyle(fontSize: 12),
                             ),
                           ],
@@ -196,24 +197,37 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             const SizedBox(height: 32),
 
             // Create button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _creating ? null : _create,
-                icon: _creating
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(CupertinoIcons.check_mark),
-                label: Text(_creating ? 'Creating...' : 'Create Group'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
+            Consumer<ConnectivityProvider>(
+              builder: (context, conn, _) {
+                final online = conn.isOnline;
+                final disabled = _creating || !online;
+                return SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: disabled ? null : _create,
+                    icon: _creating
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(online
+                            ? CupertinoIcons.check_mark
+                            : CupertinoIcons.wifi_slash),
+                    label: Text(_creating
+                        ? 'Création...'
+                        : (online
+                            ? 'Créer le groupe'
+                            : 'Indisponible hors ligne')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey.shade400,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
