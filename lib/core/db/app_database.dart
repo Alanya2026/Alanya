@@ -45,6 +45,7 @@ class LocalMessages extends Table {
   /// 0=sending 1=sent 2=delivered 3=read 4=failed
   IntColumn get status => integer().withDefault(const Constant(0))();
   DateTimeColumn get sendAt => dateTime()();
+  DateTimeColumn get deliveredAt => dateTime().nullable()();
   DateTimeColumn get readAt => dateTime().nullable()();
 
   TextColumn get mediaUrl => text().nullable()();
@@ -60,7 +61,11 @@ class LocalMessages extends Table {
   IntColumn get replyToID => integer().nullable()();
   TextColumn get replyToContent => text().nullable()();
   BoolColumn get isEdited => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get editedAt => dateTime().nullable()();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+
+  /// alanyaID de l'utilisateur pour qui le message est masqué (suppression "pour moi").
+  IntColumn get deletedForID => integer().nullable()();
   IntColumn get isStatusReply => integer().withDefault(const Constant(0))();
 
   TextColumn get senderNom => text().nullable()();
@@ -69,6 +74,9 @@ class LocalMessages extends Table {
 
   /// true tant que le message n'a pas été remis au serveur (outbox).
   BoolColumn get syncPending => boolean().withDefault(const Constant(false))();
+
+  /// Dernier instant d'émission via le socket — sert au backoff de l'outbox.
+  DateTimeColumn get lastEmittedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};
@@ -173,7 +181,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -184,6 +192,12 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(localCalls);
             await m.createTable(localMeetings);
             await m.createTable(localStatuses);
+          }
+          if (from < 3) {
+            await m.addColumn(localMessages, localMessages.deliveredAt);
+            await m.addColumn(localMessages, localMessages.editedAt);
+            await m.addColumn(localMessages, localMessages.deletedForID);
+            await m.addColumn(localMessages, localMessages.lastEmittedAt);
           }
         },
       );

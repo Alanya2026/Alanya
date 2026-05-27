@@ -109,8 +109,9 @@ class Message {
   final int conversationID;
   final String? content;
   final int type; // 0=texte,1=image,2=vidéo,3=audio,4=fichier
-  final int status; // 1=envoyé,2=livré,3=lu
+  final int status; // 0=sending,1=sent,2=delivered,3=read
   final String sendAt;
+  final String? deliveredAt;
   final String? readAt;
   final String? mediaUrl;
   final String? mediaName;
@@ -118,7 +119,9 @@ class Message {
   final int? replyToID;
   final String? replyToContent;
   final bool isEdited;
+  final String? editedAt;
   final bool isDeleted;
+  final int? deletedForID;
   final int isStatusReply;
   // Jointure users
   final String? senderNom;
@@ -133,6 +136,7 @@ class Message {
     required this.type,
     required this.status,
     required this.sendAt,
+    this.deliveredAt,
     this.readAt,
     this.mediaUrl,
     this.mediaName,
@@ -140,7 +144,9 @@ class Message {
     this.replyToID,
     this.replyToContent,
     required this.isEdited,
+    this.editedAt,
     required this.isDeleted,
+    this.deletedForID,
     required this.isStatusReply,
     this.senderNom,
     this.senderPseudo,
@@ -155,6 +161,7 @@ class Message {
         type: json['type'] ?? 0,
         status: json['status'] ?? 1,
         sendAt: json['sendAt'] ?? '',
+        deliveredAt: json['deliveredAt'],
         readAt: json['readAt'],
         mediaUrl: json['mediaUrl'],
         mediaName: json['mediaName'],
@@ -162,7 +169,13 @@ class Message {
         replyToID: json['replyToID'],
         replyToContent: json['replyToContent'],
         isEdited: json['isEdited'] == 1 || json['isEdited'] == true,
+        editedAt: json['editedAt'],
         isDeleted: json['isDeleted'] == 1 || json['isDeleted'] == true,
+        deletedForID: json['deletedForID'] is int
+            ? json['deletedForID'] as int
+            : (json['deletedForID'] == null
+                ? null
+                : int.tryParse(json['deletedForID'].toString())),
         isStatusReply: json['isStatusReply'] ?? 0,
         senderNom: json['sender_nom'],
         senderPseudo: json['sender_pseudo'],

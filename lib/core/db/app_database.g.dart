@@ -893,6 +893,17 @@ class $LocalMessagesTable extends LocalMessages
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _deliveredAtMeta = const VerificationMeta(
+    'deliveredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deliveredAt = GeneratedColumn<DateTime>(
+    'delivered_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _readAtMeta = const VerificationMeta('readAt');
   @override
   late final GeneratedColumn<DateTime> readAt = GeneratedColumn<DateTime>(
@@ -995,6 +1006,17 @@ class $LocalMessagesTable extends LocalMessages
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _editedAtMeta = const VerificationMeta(
+    'editedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> editedAt = GeneratedColumn<DateTime>(
+    'edited_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isDeletedMeta = const VerificationMeta(
     'isDeleted',
   );
@@ -1009,6 +1031,17 @@ class $LocalMessagesTable extends LocalMessages
       'CHECK ("is_deleted" IN (0, 1))',
     ),
     defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _deletedForIDMeta = const VerificationMeta(
+    'deletedForID',
+  );
+  @override
+  late final GeneratedColumn<int> deletedForID = GeneratedColumn<int>(
+    'deleted_for_i_d',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _isStatusReplyMeta = const VerificationMeta(
     'isStatusReply',
@@ -1070,6 +1103,18 @@ class $LocalMessagesTable extends LocalMessages
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _lastEmittedAtMeta = const VerificationMeta(
+    'lastEmittedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastEmittedAt =
+      GeneratedColumn<DateTime>(
+        'last_emitted_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     clientId,
@@ -1080,6 +1125,7 @@ class $LocalMessagesTable extends LocalMessages
     type,
     status,
     sendAt,
+    deliveredAt,
     readAt,
     mediaUrl,
     mediaName,
@@ -1089,12 +1135,15 @@ class $LocalMessagesTable extends LocalMessages
     replyToID,
     replyToContent,
     isEdited,
+    editedAt,
     isDeleted,
+    deletedForID,
     isStatusReply,
     senderNom,
     senderPseudo,
     senderAvatar,
     syncPending,
+    lastEmittedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1167,6 +1216,15 @@ class $LocalMessagesTable extends LocalMessages
     } else if (isInserting) {
       context.missing(_sendAtMeta);
     }
+    if (data.containsKey('delivered_at')) {
+      context.handle(
+        _deliveredAtMeta,
+        deliveredAt.isAcceptableOrUnknown(
+          data['delivered_at']!,
+          _deliveredAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('read_at')) {
       context.handle(
         _readAtMeta,
@@ -1233,10 +1291,25 @@ class $LocalMessagesTable extends LocalMessages
         isEdited.isAcceptableOrUnknown(data['is_edited']!, _isEditedMeta),
       );
     }
+    if (data.containsKey('edited_at')) {
+      context.handle(
+        _editedAtMeta,
+        editedAt.isAcceptableOrUnknown(data['edited_at']!, _editedAtMeta),
+      );
+    }
     if (data.containsKey('is_deleted')) {
       context.handle(
         _isDeletedMeta,
         isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('deleted_for_i_d')) {
+      context.handle(
+        _deletedForIDMeta,
+        deletedForID.isAcceptableOrUnknown(
+          data['deleted_for_i_d']!,
+          _deletedForIDMeta,
+        ),
       );
     }
     if (data.containsKey('is_status_reply')) {
@@ -1281,6 +1354,15 @@ class $LocalMessagesTable extends LocalMessages
         ),
       );
     }
+    if (data.containsKey('last_emitted_at')) {
+      context.handle(
+        _lastEmittedAtMeta,
+        lastEmittedAt.isAcceptableOrUnknown(
+          data['last_emitted_at']!,
+          _lastEmittedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1322,6 +1404,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.dateTime,
         data['${effectivePrefix}send_at'],
       )!,
+      deliveredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}delivered_at'],
+      ),
       readAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}read_at'],
@@ -1358,10 +1444,18 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.bool,
         data['${effectivePrefix}is_edited'],
       )!,
+      editedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}edited_at'],
+      ),
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
       )!,
+      deletedForID: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_for_i_d'],
+      ),
       isStatusReply: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}is_status_reply'],
@@ -1382,6 +1476,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.bool,
         data['${effectivePrefix}sync_pending'],
       )!,
+      lastEmittedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_emitted_at'],
+      ),
     );
   }
 
@@ -1406,6 +1504,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   /// 0=sending 1=sent 2=delivered 3=read 4=failed
   final int status;
   final DateTime sendAt;
+  final DateTime? deliveredAt;
   final DateTime? readAt;
   final String? mediaUrl;
   final String? mediaName;
@@ -1419,7 +1518,11 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   final int? replyToID;
   final String? replyToContent;
   final bool isEdited;
+  final DateTime? editedAt;
   final bool isDeleted;
+
+  /// alanyaID de l'utilisateur pour qui le message est masqué (suppression "pour moi").
+  final int? deletedForID;
   final int isStatusReply;
   final String? senderNom;
   final String? senderPseudo;
@@ -1427,6 +1530,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
 
   /// true tant que le message n'a pas été remis au serveur (outbox).
   final bool syncPending;
+
+  /// Dernier instant d'émission via le socket — sert au backoff de l'outbox.
+  final DateTime? lastEmittedAt;
   const LocalMessage({
     required this.clientId,
     required this.msgID,
@@ -1436,6 +1542,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     required this.type,
     required this.status,
     required this.sendAt,
+    this.deliveredAt,
     this.readAt,
     this.mediaUrl,
     this.mediaName,
@@ -1445,12 +1552,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     this.replyToID,
     this.replyToContent,
     required this.isEdited,
+    this.editedAt,
     required this.isDeleted,
+    this.deletedForID,
     required this.isStatusReply,
     this.senderNom,
     this.senderPseudo,
     this.senderAvatar,
     required this.syncPending,
+    this.lastEmittedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1465,6 +1575,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     map['type'] = Variable<int>(type);
     map['status'] = Variable<int>(status);
     map['send_at'] = Variable<DateTime>(sendAt);
+    if (!nullToAbsent || deliveredAt != null) {
+      map['delivered_at'] = Variable<DateTime>(deliveredAt);
+    }
     if (!nullToAbsent || readAt != null) {
       map['read_at'] = Variable<DateTime>(readAt);
     }
@@ -1490,7 +1603,13 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       map['reply_to_content'] = Variable<String>(replyToContent);
     }
     map['is_edited'] = Variable<bool>(isEdited);
+    if (!nullToAbsent || editedAt != null) {
+      map['edited_at'] = Variable<DateTime>(editedAt);
+    }
     map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || deletedForID != null) {
+      map['deleted_for_i_d'] = Variable<int>(deletedForID);
+    }
     map['is_status_reply'] = Variable<int>(isStatusReply);
     if (!nullToAbsent || senderNom != null) {
       map['sender_nom'] = Variable<String>(senderNom);
@@ -1502,6 +1621,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       map['sender_avatar'] = Variable<String>(senderAvatar);
     }
     map['sync_pending'] = Variable<bool>(syncPending);
+    if (!nullToAbsent || lastEmittedAt != null) {
+      map['last_emitted_at'] = Variable<DateTime>(lastEmittedAt);
+    }
     return map;
   }
 
@@ -1517,6 +1639,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       type: Value(type),
       status: Value(status),
       sendAt: Value(sendAt),
+      deliveredAt: deliveredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deliveredAt),
       readAt: readAt == null && nullToAbsent
           ? const Value.absent()
           : Value(readAt),
@@ -1542,7 +1667,13 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ? const Value.absent()
           : Value(replyToContent),
       isEdited: Value(isEdited),
+      editedAt: editedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(editedAt),
       isDeleted: Value(isDeleted),
+      deletedForID: deletedForID == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedForID),
       isStatusReply: Value(isStatusReply),
       senderNom: senderNom == null && nullToAbsent
           ? const Value.absent()
@@ -1554,6 +1685,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ? const Value.absent()
           : Value(senderAvatar),
       syncPending: Value(syncPending),
+      lastEmittedAt: lastEmittedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastEmittedAt),
     );
   }
 
@@ -1571,6 +1705,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       type: serializer.fromJson<int>(json['type']),
       status: serializer.fromJson<int>(json['status']),
       sendAt: serializer.fromJson<DateTime>(json['sendAt']),
+      deliveredAt: serializer.fromJson<DateTime?>(json['deliveredAt']),
       readAt: serializer.fromJson<DateTime?>(json['readAt']),
       mediaUrl: serializer.fromJson<String?>(json['mediaUrl']),
       mediaName: serializer.fromJson<String?>(json['mediaName']),
@@ -1582,12 +1717,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       replyToID: serializer.fromJson<int?>(json['replyToID']),
       replyToContent: serializer.fromJson<String?>(json['replyToContent']),
       isEdited: serializer.fromJson<bool>(json['isEdited']),
+      editedAt: serializer.fromJson<DateTime?>(json['editedAt']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      deletedForID: serializer.fromJson<int?>(json['deletedForID']),
       isStatusReply: serializer.fromJson<int>(json['isStatusReply']),
       senderNom: serializer.fromJson<String?>(json['senderNom']),
       senderPseudo: serializer.fromJson<String?>(json['senderPseudo']),
       senderAvatar: serializer.fromJson<String?>(json['senderAvatar']),
       syncPending: serializer.fromJson<bool>(json['syncPending']),
+      lastEmittedAt: serializer.fromJson<DateTime?>(json['lastEmittedAt']),
     );
   }
   @override
@@ -1602,6 +1740,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'type': serializer.toJson<int>(type),
       'status': serializer.toJson<int>(status),
       'sendAt': serializer.toJson<DateTime>(sendAt),
+      'deliveredAt': serializer.toJson<DateTime?>(deliveredAt),
       'readAt': serializer.toJson<DateTime?>(readAt),
       'mediaUrl': serializer.toJson<String?>(mediaUrl),
       'mediaName': serializer.toJson<String?>(mediaName),
@@ -1611,12 +1750,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'replyToID': serializer.toJson<int?>(replyToID),
       'replyToContent': serializer.toJson<String?>(replyToContent),
       'isEdited': serializer.toJson<bool>(isEdited),
+      'editedAt': serializer.toJson<DateTime?>(editedAt),
       'isDeleted': serializer.toJson<bool>(isDeleted),
+      'deletedForID': serializer.toJson<int?>(deletedForID),
       'isStatusReply': serializer.toJson<int>(isStatusReply),
       'senderNom': serializer.toJson<String?>(senderNom),
       'senderPseudo': serializer.toJson<String?>(senderPseudo),
       'senderAvatar': serializer.toJson<String?>(senderAvatar),
       'syncPending': serializer.toJson<bool>(syncPending),
+      'lastEmittedAt': serializer.toJson<DateTime?>(lastEmittedAt),
     };
   }
 
@@ -1629,6 +1771,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     int? type,
     int? status,
     DateTime? sendAt,
+    Value<DateTime?> deliveredAt = const Value.absent(),
     Value<DateTime?> readAt = const Value.absent(),
     Value<String?> mediaUrl = const Value.absent(),
     Value<String?> mediaName = const Value.absent(),
@@ -1638,12 +1781,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     Value<int?> replyToID = const Value.absent(),
     Value<String?> replyToContent = const Value.absent(),
     bool? isEdited,
+    Value<DateTime?> editedAt = const Value.absent(),
     bool? isDeleted,
+    Value<int?> deletedForID = const Value.absent(),
     int? isStatusReply,
     Value<String?> senderNom = const Value.absent(),
     Value<String?> senderPseudo = const Value.absent(),
     Value<String?> senderAvatar = const Value.absent(),
     bool? syncPending,
+    Value<DateTime?> lastEmittedAt = const Value.absent(),
   }) => LocalMessage(
     clientId: clientId ?? this.clientId,
     msgID: msgID ?? this.msgID,
@@ -1653,6 +1799,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     type: type ?? this.type,
     status: status ?? this.status,
     sendAt: sendAt ?? this.sendAt,
+    deliveredAt: deliveredAt.present ? deliveredAt.value : this.deliveredAt,
     readAt: readAt.present ? readAt.value : this.readAt,
     mediaUrl: mediaUrl.present ? mediaUrl.value : this.mediaUrl,
     mediaName: mediaName.present ? mediaName.value : this.mediaName,
@@ -1670,12 +1817,17 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
         ? replyToContent.value
         : this.replyToContent,
     isEdited: isEdited ?? this.isEdited,
+    editedAt: editedAt.present ? editedAt.value : this.editedAt,
     isDeleted: isDeleted ?? this.isDeleted,
+    deletedForID: deletedForID.present ? deletedForID.value : this.deletedForID,
     isStatusReply: isStatusReply ?? this.isStatusReply,
     senderNom: senderNom.present ? senderNom.value : this.senderNom,
     senderPseudo: senderPseudo.present ? senderPseudo.value : this.senderPseudo,
     senderAvatar: senderAvatar.present ? senderAvatar.value : this.senderAvatar,
     syncPending: syncPending ?? this.syncPending,
+    lastEmittedAt: lastEmittedAt.present
+        ? lastEmittedAt.value
+        : this.lastEmittedAt,
   );
   LocalMessage copyWithCompanion(LocalMessagesCompanion data) {
     return LocalMessage(
@@ -1689,6 +1841,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       type: data.type.present ? data.type.value : this.type,
       status: data.status.present ? data.status.value : this.status,
       sendAt: data.sendAt.present ? data.sendAt.value : this.sendAt,
+      deliveredAt: data.deliveredAt.present
+          ? data.deliveredAt.value
+          : this.deliveredAt,
       readAt: data.readAt.present ? data.readAt.value : this.readAt,
       mediaUrl: data.mediaUrl.present ? data.mediaUrl.value : this.mediaUrl,
       mediaName: data.mediaName.present ? data.mediaName.value : this.mediaName,
@@ -1706,7 +1861,11 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ? data.replyToContent.value
           : this.replyToContent,
       isEdited: data.isEdited.present ? data.isEdited.value : this.isEdited,
+      editedAt: data.editedAt.present ? data.editedAt.value : this.editedAt,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      deletedForID: data.deletedForID.present
+          ? data.deletedForID.value
+          : this.deletedForID,
       isStatusReply: data.isStatusReply.present
           ? data.isStatusReply.value
           : this.isStatusReply,
@@ -1720,6 +1879,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       syncPending: data.syncPending.present
           ? data.syncPending.value
           : this.syncPending,
+      lastEmittedAt: data.lastEmittedAt.present
+          ? data.lastEmittedAt.value
+          : this.lastEmittedAt,
     );
   }
 
@@ -1734,6 +1896,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('type: $type, ')
           ..write('status: $status, ')
           ..write('sendAt: $sendAt, ')
+          ..write('deliveredAt: $deliveredAt, ')
           ..write('readAt: $readAt, ')
           ..write('mediaUrl: $mediaUrl, ')
           ..write('mediaName: $mediaName, ')
@@ -1743,12 +1906,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('replyToID: $replyToID, ')
           ..write('replyToContent: $replyToContent, ')
           ..write('isEdited: $isEdited, ')
+          ..write('editedAt: $editedAt, ')
           ..write('isDeleted: $isDeleted, ')
+          ..write('deletedForID: $deletedForID, ')
           ..write('isStatusReply: $isStatusReply, ')
           ..write('senderNom: $senderNom, ')
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
-          ..write('syncPending: $syncPending')
+          ..write('syncPending: $syncPending, ')
+          ..write('lastEmittedAt: $lastEmittedAt')
           ..write(')'))
         .toString();
   }
@@ -1763,6 +1929,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     type,
     status,
     sendAt,
+    deliveredAt,
     readAt,
     mediaUrl,
     mediaName,
@@ -1772,12 +1939,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     replyToID,
     replyToContent,
     isEdited,
+    editedAt,
     isDeleted,
+    deletedForID,
     isStatusReply,
     senderNom,
     senderPseudo,
     senderAvatar,
     syncPending,
+    lastEmittedAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -1791,6 +1961,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.type == this.type &&
           other.status == this.status &&
           other.sendAt == this.sendAt &&
+          other.deliveredAt == this.deliveredAt &&
           other.readAt == this.readAt &&
           other.mediaUrl == this.mediaUrl &&
           other.mediaName == this.mediaName &&
@@ -1800,12 +1971,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.replyToID == this.replyToID &&
           other.replyToContent == this.replyToContent &&
           other.isEdited == this.isEdited &&
+          other.editedAt == this.editedAt &&
           other.isDeleted == this.isDeleted &&
+          other.deletedForID == this.deletedForID &&
           other.isStatusReply == this.isStatusReply &&
           other.senderNom == this.senderNom &&
           other.senderPseudo == this.senderPseudo &&
           other.senderAvatar == this.senderAvatar &&
-          other.syncPending == this.syncPending);
+          other.syncPending == this.syncPending &&
+          other.lastEmittedAt == this.lastEmittedAt);
 }
 
 class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
@@ -1817,6 +1991,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<int> type;
   final Value<int> status;
   final Value<DateTime> sendAt;
+  final Value<DateTime?> deliveredAt;
   final Value<DateTime?> readAt;
   final Value<String?> mediaUrl;
   final Value<String?> mediaName;
@@ -1826,12 +2001,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<int?> replyToID;
   final Value<String?> replyToContent;
   final Value<bool> isEdited;
+  final Value<DateTime?> editedAt;
   final Value<bool> isDeleted;
+  final Value<int?> deletedForID;
   final Value<int> isStatusReply;
   final Value<String?> senderNom;
   final Value<String?> senderPseudo;
   final Value<String?> senderAvatar;
   final Value<bool> syncPending;
+  final Value<DateTime?> lastEmittedAt;
   final Value<int> rowid;
   const LocalMessagesCompanion({
     this.clientId = const Value.absent(),
@@ -1842,6 +2020,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.type = const Value.absent(),
     this.status = const Value.absent(),
     this.sendAt = const Value.absent(),
+    this.deliveredAt = const Value.absent(),
     this.readAt = const Value.absent(),
     this.mediaUrl = const Value.absent(),
     this.mediaName = const Value.absent(),
@@ -1851,12 +2030,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.replyToID = const Value.absent(),
     this.replyToContent = const Value.absent(),
     this.isEdited = const Value.absent(),
+    this.editedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
+    this.deletedForID = const Value.absent(),
     this.isStatusReply = const Value.absent(),
     this.senderNom = const Value.absent(),
     this.senderPseudo = const Value.absent(),
     this.senderAvatar = const Value.absent(),
     this.syncPending = const Value.absent(),
+    this.lastEmittedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LocalMessagesCompanion.insert({
@@ -1868,6 +2050,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.type = const Value.absent(),
     this.status = const Value.absent(),
     required DateTime sendAt,
+    this.deliveredAt = const Value.absent(),
     this.readAt = const Value.absent(),
     this.mediaUrl = const Value.absent(),
     this.mediaName = const Value.absent(),
@@ -1877,12 +2060,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.replyToID = const Value.absent(),
     this.replyToContent = const Value.absent(),
     this.isEdited = const Value.absent(),
+    this.editedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
+    this.deletedForID = const Value.absent(),
     this.isStatusReply = const Value.absent(),
     this.senderNom = const Value.absent(),
     this.senderPseudo = const Value.absent(),
     this.senderAvatar = const Value.absent(),
     this.syncPending = const Value.absent(),
+    this.lastEmittedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientId = Value(clientId),
        conversationID = Value(conversationID),
@@ -1897,6 +2083,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<int>? type,
     Expression<int>? status,
     Expression<DateTime>? sendAt,
+    Expression<DateTime>? deliveredAt,
     Expression<DateTime>? readAt,
     Expression<String>? mediaUrl,
     Expression<String>? mediaName,
@@ -1906,12 +2093,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<int>? replyToID,
     Expression<String>? replyToContent,
     Expression<bool>? isEdited,
+    Expression<DateTime>? editedAt,
     Expression<bool>? isDeleted,
+    Expression<int>? deletedForID,
     Expression<int>? isStatusReply,
     Expression<String>? senderNom,
     Expression<String>? senderPseudo,
     Expression<String>? senderAvatar,
     Expression<bool>? syncPending,
+    Expression<DateTime>? lastEmittedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1923,6 +2113,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (type != null) 'type': type,
       if (status != null) 'status': status,
       if (sendAt != null) 'send_at': sendAt,
+      if (deliveredAt != null) 'delivered_at': deliveredAt,
       if (readAt != null) 'read_at': readAt,
       if (mediaUrl != null) 'media_url': mediaUrl,
       if (mediaName != null) 'media_name': mediaName,
@@ -1932,12 +2123,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (replyToID != null) 'reply_to_i_d': replyToID,
       if (replyToContent != null) 'reply_to_content': replyToContent,
       if (isEdited != null) 'is_edited': isEdited,
+      if (editedAt != null) 'edited_at': editedAt,
       if (isDeleted != null) 'is_deleted': isDeleted,
+      if (deletedForID != null) 'deleted_for_i_d': deletedForID,
       if (isStatusReply != null) 'is_status_reply': isStatusReply,
       if (senderNom != null) 'sender_nom': senderNom,
       if (senderPseudo != null) 'sender_pseudo': senderPseudo,
       if (senderAvatar != null) 'sender_avatar': senderAvatar,
       if (syncPending != null) 'sync_pending': syncPending,
+      if (lastEmittedAt != null) 'last_emitted_at': lastEmittedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1951,6 +2145,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<int>? type,
     Value<int>? status,
     Value<DateTime>? sendAt,
+    Value<DateTime?>? deliveredAt,
     Value<DateTime?>? readAt,
     Value<String?>? mediaUrl,
     Value<String?>? mediaName,
@@ -1960,12 +2155,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<int?>? replyToID,
     Value<String?>? replyToContent,
     Value<bool>? isEdited,
+    Value<DateTime?>? editedAt,
     Value<bool>? isDeleted,
+    Value<int?>? deletedForID,
     Value<int>? isStatusReply,
     Value<String?>? senderNom,
     Value<String?>? senderPseudo,
     Value<String?>? senderAvatar,
     Value<bool>? syncPending,
+    Value<DateTime?>? lastEmittedAt,
     Value<int>? rowid,
   }) {
     return LocalMessagesCompanion(
@@ -1977,6 +2175,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       type: type ?? this.type,
       status: status ?? this.status,
       sendAt: sendAt ?? this.sendAt,
+      deliveredAt: deliveredAt ?? this.deliveredAt,
       readAt: readAt ?? this.readAt,
       mediaUrl: mediaUrl ?? this.mediaUrl,
       mediaName: mediaName ?? this.mediaName,
@@ -1986,12 +2185,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       replyToID: replyToID ?? this.replyToID,
       replyToContent: replyToContent ?? this.replyToContent,
       isEdited: isEdited ?? this.isEdited,
+      editedAt: editedAt ?? this.editedAt,
       isDeleted: isDeleted ?? this.isDeleted,
+      deletedForID: deletedForID ?? this.deletedForID,
       isStatusReply: isStatusReply ?? this.isStatusReply,
       senderNom: senderNom ?? this.senderNom,
       senderPseudo: senderPseudo ?? this.senderPseudo,
       senderAvatar: senderAvatar ?? this.senderAvatar,
       syncPending: syncPending ?? this.syncPending,
+      lastEmittedAt: lastEmittedAt ?? this.lastEmittedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2023,6 +2225,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (sendAt.present) {
       map['send_at'] = Variable<DateTime>(sendAt.value);
     }
+    if (deliveredAt.present) {
+      map['delivered_at'] = Variable<DateTime>(deliveredAt.value);
+    }
     if (readAt.present) {
       map['read_at'] = Variable<DateTime>(readAt.value);
     }
@@ -2050,8 +2255,14 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (isEdited.present) {
       map['is_edited'] = Variable<bool>(isEdited.value);
     }
+    if (editedAt.present) {
+      map['edited_at'] = Variable<DateTime>(editedAt.value);
+    }
     if (isDeleted.present) {
       map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (deletedForID.present) {
+      map['deleted_for_i_d'] = Variable<int>(deletedForID.value);
     }
     if (isStatusReply.present) {
       map['is_status_reply'] = Variable<int>(isStatusReply.value);
@@ -2067,6 +2278,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     }
     if (syncPending.present) {
       map['sync_pending'] = Variable<bool>(syncPending.value);
+    }
+    if (lastEmittedAt.present) {
+      map['last_emitted_at'] = Variable<DateTime>(lastEmittedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -2085,6 +2299,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('type: $type, ')
           ..write('status: $status, ')
           ..write('sendAt: $sendAt, ')
+          ..write('deliveredAt: $deliveredAt, ')
           ..write('readAt: $readAt, ')
           ..write('mediaUrl: $mediaUrl, ')
           ..write('mediaName: $mediaName, ')
@@ -2094,12 +2309,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('replyToID: $replyToID, ')
           ..write('replyToContent: $replyToContent, ')
           ..write('isEdited: $isEdited, ')
+          ..write('editedAt: $editedAt, ')
           ..write('isDeleted: $isDeleted, ')
+          ..write('deletedForID: $deletedForID, ')
           ..write('isStatusReply: $isStatusReply, ')
           ..write('senderNom: $senderNom, ')
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
           ..write('syncPending: $syncPending, ')
+          ..write('lastEmittedAt: $lastEmittedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5237,6 +5455,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<int> type,
       Value<int> status,
       required DateTime sendAt,
+      Value<DateTime?> deliveredAt,
       Value<DateTime?> readAt,
       Value<String?> mediaUrl,
       Value<String?> mediaName,
@@ -5246,12 +5465,15 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<int?> replyToID,
       Value<String?> replyToContent,
       Value<bool> isEdited,
+      Value<DateTime?> editedAt,
       Value<bool> isDeleted,
+      Value<int?> deletedForID,
       Value<int> isStatusReply,
       Value<String?> senderNom,
       Value<String?> senderPseudo,
       Value<String?> senderAvatar,
       Value<bool> syncPending,
+      Value<DateTime?> lastEmittedAt,
       Value<int> rowid,
     });
 typedef $$LocalMessagesTableUpdateCompanionBuilder =
@@ -5264,6 +5486,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<int> type,
       Value<int> status,
       Value<DateTime> sendAt,
+      Value<DateTime?> deliveredAt,
       Value<DateTime?> readAt,
       Value<String?> mediaUrl,
       Value<String?> mediaName,
@@ -5273,12 +5496,15 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<int?> replyToID,
       Value<String?> replyToContent,
       Value<bool> isEdited,
+      Value<DateTime?> editedAt,
       Value<bool> isDeleted,
+      Value<int?> deletedForID,
       Value<int> isStatusReply,
       Value<String?> senderNom,
       Value<String?> senderPseudo,
       Value<String?> senderAvatar,
       Value<bool> syncPending,
+      Value<DateTime?> lastEmittedAt,
       Value<int> rowid,
     });
 
@@ -5331,6 +5557,11 @@ class $$LocalMessagesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get deliveredAt => $composableBuilder(
+    column: $table.deliveredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get readAt => $composableBuilder(
     column: $table.readAt,
     builder: (column) => ColumnFilters(column),
@@ -5376,8 +5607,18 @@ class $$LocalMessagesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get editedAt => $composableBuilder(
+    column: $table.editedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get isDeleted => $composableBuilder(
     column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedForID => $composableBuilder(
+    column: $table.deletedForID,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5403,6 +5644,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<bool> get syncPending => $composableBuilder(
     column: $table.syncPending,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastEmittedAt => $composableBuilder(
+    column: $table.lastEmittedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5456,6 +5702,11 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get deliveredAt => $composableBuilder(
+    column: $table.deliveredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get readAt => $composableBuilder(
     column: $table.readAt,
     builder: (column) => ColumnOrderings(column),
@@ -5501,8 +5752,18 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get editedAt => $composableBuilder(
+    column: $table.editedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isDeleted => $composableBuilder(
     column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedForID => $composableBuilder(
+    column: $table.deletedForID,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5528,6 +5789,11 @@ class $$LocalMessagesTableOrderingComposer
 
   ColumnOrderings<bool> get syncPending => $composableBuilder(
     column: $table.syncPending,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastEmittedAt => $composableBuilder(
+    column: $table.lastEmittedAt,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -5567,6 +5833,11 @@ class $$LocalMessagesTableAnnotationComposer
   GeneratedColumn<DateTime> get sendAt =>
       $composableBuilder(column: $table.sendAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get deliveredAt => $composableBuilder(
+    column: $table.deliveredAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get readAt =>
       $composableBuilder(column: $table.readAt, builder: (column) => column);
 
@@ -5602,8 +5873,16 @@ class $$LocalMessagesTableAnnotationComposer
   GeneratedColumn<bool> get isEdited =>
       $composableBuilder(column: $table.isEdited, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get editedAt =>
+      $composableBuilder(column: $table.editedAt, builder: (column) => column);
+
   GeneratedColumn<bool> get isDeleted =>
       $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedForID => $composableBuilder(
+    column: $table.deletedForID,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get isStatusReply => $composableBuilder(
     column: $table.isStatusReply,
@@ -5625,6 +5904,11 @@ class $$LocalMessagesTableAnnotationComposer
 
   GeneratedColumn<bool> get syncPending => $composableBuilder(
     column: $table.syncPending,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastEmittedAt => $composableBuilder(
+    column: $table.lastEmittedAt,
     builder: (column) => column,
   );
 }
@@ -5668,6 +5952,7 @@ class $$LocalMessagesTableTableManager
                 Value<int> type = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<DateTime> sendAt = const Value.absent(),
+                Value<DateTime?> deliveredAt = const Value.absent(),
                 Value<DateTime?> readAt = const Value.absent(),
                 Value<String?> mediaUrl = const Value.absent(),
                 Value<String?> mediaName = const Value.absent(),
@@ -5677,12 +5962,15 @@ class $$LocalMessagesTableTableManager
                 Value<int?> replyToID = const Value.absent(),
                 Value<String?> replyToContent = const Value.absent(),
                 Value<bool> isEdited = const Value.absent(),
+                Value<DateTime?> editedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
+                Value<int?> deletedForID = const Value.absent(),
                 Value<int> isStatusReply = const Value.absent(),
                 Value<String?> senderNom = const Value.absent(),
                 Value<String?> senderPseudo = const Value.absent(),
                 Value<String?> senderAvatar = const Value.absent(),
                 Value<bool> syncPending = const Value.absent(),
+                Value<DateTime?> lastEmittedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion(
                 clientId: clientId,
@@ -5693,6 +5981,7 @@ class $$LocalMessagesTableTableManager
                 type: type,
                 status: status,
                 sendAt: sendAt,
+                deliveredAt: deliveredAt,
                 readAt: readAt,
                 mediaUrl: mediaUrl,
                 mediaName: mediaName,
@@ -5702,12 +5991,15 @@ class $$LocalMessagesTableTableManager
                 replyToID: replyToID,
                 replyToContent: replyToContent,
                 isEdited: isEdited,
+                editedAt: editedAt,
                 isDeleted: isDeleted,
+                deletedForID: deletedForID,
                 isStatusReply: isStatusReply,
                 senderNom: senderNom,
                 senderPseudo: senderPseudo,
                 senderAvatar: senderAvatar,
                 syncPending: syncPending,
+                lastEmittedAt: lastEmittedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5720,6 +6012,7 @@ class $$LocalMessagesTableTableManager
                 Value<int> type = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 required DateTime sendAt,
+                Value<DateTime?> deliveredAt = const Value.absent(),
                 Value<DateTime?> readAt = const Value.absent(),
                 Value<String?> mediaUrl = const Value.absent(),
                 Value<String?> mediaName = const Value.absent(),
@@ -5729,12 +6022,15 @@ class $$LocalMessagesTableTableManager
                 Value<int?> replyToID = const Value.absent(),
                 Value<String?> replyToContent = const Value.absent(),
                 Value<bool> isEdited = const Value.absent(),
+                Value<DateTime?> editedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
+                Value<int?> deletedForID = const Value.absent(),
                 Value<int> isStatusReply = const Value.absent(),
                 Value<String?> senderNom = const Value.absent(),
                 Value<String?> senderPseudo = const Value.absent(),
                 Value<String?> senderAvatar = const Value.absent(),
                 Value<bool> syncPending = const Value.absent(),
+                Value<DateTime?> lastEmittedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion.insert(
                 clientId: clientId,
@@ -5745,6 +6041,7 @@ class $$LocalMessagesTableTableManager
                 type: type,
                 status: status,
                 sendAt: sendAt,
+                deliveredAt: deliveredAt,
                 readAt: readAt,
                 mediaUrl: mediaUrl,
                 mediaName: mediaName,
@@ -5754,12 +6051,15 @@ class $$LocalMessagesTableTableManager
                 replyToID: replyToID,
                 replyToContent: replyToContent,
                 isEdited: isEdited,
+                editedAt: editedAt,
                 isDeleted: isDeleted,
+                deletedForID: deletedForID,
                 isStatusReply: isStatusReply,
                 senderNom: senderNom,
                 senderPseudo: senderPseudo,
                 senderAvatar: senderAvatar,
                 syncPending: syncPending,
+                lastEmittedAt: lastEmittedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
