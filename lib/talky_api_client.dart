@@ -444,7 +444,7 @@ class TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
-  /// Crée un groupe — le backend attend { participantIDs[], GroupName, groupPhoto }
+  /// Crée un groupe — le backend attend { participantIDs[], groupName, groupPhoto }
   Future<Map<String, dynamic>> createGroup({
     required List<int> participantIDs,
     required String groupName,
@@ -456,7 +456,7 @@ class TalkyApiClient {
         headers: _headers,
         body: jsonEncode({
           'participantIDs': participantIDs,
-          'GroupName': groupName,
+          'groupName': groupName,
           if (groupPhoto != null) 'groupPhoto': groupPhoto,
         }),
       ),
