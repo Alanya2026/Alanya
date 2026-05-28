@@ -6,7 +6,7 @@ import '../../talky_models.dart';
 import '../../core/utils/avatar_utils.dart';
 import 'admin_user_detail_screen.dart';
 
-enum _UserFilter { all, online, banned }
+enum _UserFilter { all, online, banned, admin }
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -18,6 +18,13 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _searchCtrl = TextEditingController();
   _UserFilter _filter = _UserFilter.all;
+
+  String? get _statusFilter => switch (_filter) {
+    _UserFilter.online => 'online',
+    _UserFilter.banned => 'banned',
+    _UserFilter.admin => 'admin',
+    _UserFilter.all => null,
+  };
 
   @override
   void initState() {
@@ -37,38 +44,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _refresh() async {
     final p = context.read<AdminProvider>();
-    await Future.wait([p.loadStats(), p.loadUsers(search: _searchCtrl.text)]);
-  }
-
-  List<User> _filteredUsers(List<User> users) {
-    final q = _searchCtrl.text.trim().toLowerCase();
-    Iterable<User> base = users;
-    switch (_filter) {
-      case _UserFilter.online:
-        base = base.where((u) => u.isOnline && !u.exclus);
-        break;
-      case _UserFilter.banned:
-        base = base.where((u) => u.exclus);
-        break;
-      case _UserFilter.all:
-        break;
-    }
-    if (q.isNotEmpty) {
-      base = base.where((u) {
-        return u.nom.toLowerCase().contains(q) ||
-            u.pseudo.toLowerCase().contains(q) ||
-            u.alanyaPhone.toLowerCase().contains(q) ||
-            u.alanyaID.toString().contains(q);
-      });
-    }
-    return base.toList();
+    await Future.wait([
+      p.loadStats(),
+      p.loadUsers(search: _searchCtrl.text, status: _statusFilter),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
     final stats = provider.stats;
-    final users = _filteredUsers(provider.users);
+    final users = provider.users;
 
     final onlinePct = stats.totalUsers > 0
         ? (stats.onlineUsers * 100 / stats.totalUsers)
@@ -120,10 +106,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'Gérez les utilisateurs et surveillance',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -197,7 +180,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           label: 'Tous',
                           icon: CupertinoIcons.person_2,
                           selected: _filter == _UserFilter.all,
-                          onTap: () => setState(() => _filter = _UserFilter.all),
+                          onTap: () {
+                            setState(() => _filter = _UserFilter.all);
+                            context.read<AdminProvider>().loadUsers(
+                              search: _searchCtrl.text,
+                              status: _statusFilter,
+                              page: 1,
+                            );
+                          },
                           showCheck: true,
                         ),
                       ),
@@ -207,8 +197,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           label: 'En ligne',
                           icon: CupertinoIcons.circle_fill,
                           selected: _filter == _UserFilter.online,
-                          onTap: () =>
-                              setState(() => _filter = _UserFilter.online),
+                          onTap: () {
+                            setState(() => _filter = _UserFilter.online);
+                            context.read<AdminProvider>().loadUsers(
+                              search: _searchCtrl.text,
+                              status: _statusFilter,
+                              page: 1,
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -217,8 +213,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           label: 'Bannis',
                           icon: CupertinoIcons.nosign,
                           selected: _filter == _UserFilter.banned,
-                          onTap: () =>
-                              setState(() => _filter = _UserFilter.banned),
+                          onTap: () {
+                            setState(() => _filter = _UserFilter.banned);
+                            context.read<AdminProvider>().loadUsers(
+                              search: _searchCtrl.text,
+                              status: _statusFilter,
+                              page: 1,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _FilterChip(
+                          label: 'Administrateurs',
+                          icon: CupertinoIcons.shield_lefthalf_fill,
+                          selected: _filter == _UserFilter.admin,
+                          onTap: () {
+                            setState(() => _filter = _UserFilter.admin);
+                            context.read<AdminProvider>().loadUsers(
+                              search: _searchCtrl.text,
+                              status: _statusFilter,
+                              page: 1,
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -246,7 +264,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           size: 20,
                         ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                        ),
                         suffixIcon: _searchCtrl.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(
@@ -256,7 +276,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 onPressed: () {
                                   _searchCtrl.clear();
                                   provider.setSearchQuery('');
-                                  provider.loadUsers();
+                                  provider.loadUsers(status: _statusFilter);
                                   setState(() {});
                                 },
                               )
@@ -265,7 +285,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       onChanged: (val) {
                         setState(() {});
                         provider.setSearchQuery(val);
-                        provider.loadUsers(search: val);
+                        provider.loadUsers(search: val, status: _statusFilter);
                       },
                     ),
                   ),
@@ -309,19 +329,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         itemBuilder: (ctx, idx) {
                           final user = users[idx];
-                          return _UserTile(
-                            user: user,
-                            provider: provider,
-                          );
+                          return _UserTile(user: user, provider: provider);
                         },
                       ),
                     ),
                   const SizedBox(height: 16),
 
                   // Pagination
-                  if (_filter == _UserFilter.all &&
-                      _searchCtrl.text.isEmpty &&
-                      provider.totalUsers > provider.limit)
+                  if (provider.totalUsers > provider.limit)
                     _Pagination(
                       page: provider.page,
                       limit: provider.limit,
@@ -329,6 +344,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       isLoading: provider.isLoadingUsers,
                       onChangePage: (p) => provider.loadUsers(
                         search: _searchCtrl.text,
+                        status: _statusFilter,
                         page: p,
                         limit: provider.limit,
                       ),
@@ -543,9 +559,7 @@ class _UserTile extends StatelessWidget {
                       : null,
                   child: !hasValidAvatarUrl(user.avatarUrl)
                       ? Text(
-                          user.nom.isNotEmpty
-                              ? user.nom[0].toUpperCase()
-                              : '?',
+                          user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?',
                           style: TextStyle(
                             color: Colors.grey.shade500,
                             fontWeight: FontWeight.w600,
@@ -633,20 +647,16 @@ class _UserTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    user.pseudo.isNotEmpty ? '@${user.pseudo}' : user.alanyaPhone,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
+                    user.pseudo.isNotEmpty
+                        ? '@${user.pseudo}'
+                        : user.alanyaPhone,
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${user.alanyaID}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade400,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                   ),
                 ],
               ),
@@ -783,10 +793,7 @@ class _Pagination extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '$from–$to sur $total',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
               ],
             ),

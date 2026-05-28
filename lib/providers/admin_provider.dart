@@ -20,13 +20,13 @@ class AdminStats {
   });
 
   factory AdminStats.fromCounters(Map<String, dynamic> json) => AdminStats(
-        totalUsers: _i(json['totalUsers']),
-        onlineUsers: _i(json['onlineUsers']),
-        bannedUsers: _i(json['bannedUsers']),
-        messagesPeriod: _i(json['messagesPeriod']),
-        callsPeriod: _i(json['callsPeriod']),
-        statusesPeriod: _i(json['statusesPeriod']),
-      );
+    totalUsers: _i(json['totalUsers']),
+    onlineUsers: _i(json['onlineUsers']),
+    bannedUsers: _i(json['bannedUsers']),
+    messagesPeriod: _i(json['messagesPeriod']),
+    callsPeriod: _i(json['callsPeriod']),
+    statusesPeriod: _i(json['statusesPeriod']),
+  );
 
   static int _i(dynamic v) => v is int ? v : (v is num ? v.toInt() : 0);
 }
@@ -64,6 +64,7 @@ class AdminProvider extends ChangeNotifier {
 
   Future<void> loadUsers({
     String? search,
+    String? status,
     int page = 1,
     int limit = 20,
   }) async {
@@ -75,6 +76,7 @@ class AdminProvider extends ChangeNotifier {
     try {
       final res = await _api.adminGetUsers(
         search: search ?? _searchQuery,
+        status: status,
         page: page,
         limit: limit,
       );
