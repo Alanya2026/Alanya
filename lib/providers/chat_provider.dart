@@ -68,6 +68,7 @@ class ChatProvider extends ChangeNotifier {
       _api.onSocketEvent(SocketEvents.messageSent, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.messageUpdated, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.messageDeleted, _onConversationChanged);
+      _api.onSocketEvent(SocketEvents.messageStatus, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationChanged);
     }
     await refreshConversations();
@@ -85,6 +86,7 @@ class ChatProvider extends ChangeNotifier {
       _api.removeSocketListener(SocketEvents.messageSent, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.messageUpdated, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.messageDeleted, _onConversationChanged);
+      _api.removeSocketListener(SocketEvents.messageStatus, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationChanged);
     }
     _refreshDebounce?.cancel();
