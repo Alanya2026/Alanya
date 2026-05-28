@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../core/db/app_database.dart';
@@ -18,6 +20,7 @@ class ChatProvider extends ChangeNotifier {
 
   final Map<int, PresenceInfo> _presence = {};
   bool _bound = false;
+  Timer? _refreshDebounce;
 
   ChatProvider({required TalkyApiClient api, AppDatabase? database}) : _api = api {
     repository = ChatRepository(api: _api, database: database);
@@ -56,14 +59,39 @@ class ChatProvider extends ChangeNotifier {
   }
  
   Future<void> bind(int myId) async {
-    repository.bind(myId);
+    await repository.bind(myId);
     if (!_bound) {
       _bound = true;
-      _api.onSocketEvent(SocketEvents.presenceUpdated, _onPresenceUpdated); 
+      _api.onSocketEvent(SocketEvents.presenceUpdated, _onPresenceUpdated);
       _api.onSocketEvent(SocketEvents.authVerified, _onSocketReady);
+      _api.onSocketEvent(SocketEvents.messageReceived, _onConversationChanged);
+      _api.onSocketEvent(SocketEvents.messageSent, _onConversationChanged);
+      _api.onSocketEvent(SocketEvents.messageUpdated, _onConversationChanged);
+      _api.onSocketEvent(SocketEvents.messageDeleted, _onConversationChanged);
+      _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationChanged);
     }
     await refreshConversations();
     await repository.flushOutbox();
+  }
+
+  /// Réinitialise l'état (listeners + présence) pour autoriser un nouveau
+  /// `bind` après un logout dans la même session d'app.
+  void unbind() {
+    if (_bound) {
+      _bound = false;
+      _api.removeSocketListener(SocketEvents.presenceUpdated, _onPresenceUpdated);
+      _api.removeSocketListener(SocketEvents.authVerified, _onSocketReady);
+      _api.removeSocketListener(SocketEvents.messageReceived, _onConversationChanged);
+      _api.removeSocketListener(SocketEvents.messageSent, _onConversationChanged);
+      _api.removeSocketListener(SocketEvents.messageUpdated, _onConversationChanged);
+      _api.removeSocketListener(SocketEvents.messageDeleted, _onConversationChanged);
+      _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationChanged);
+    }
+    _refreshDebounce?.cancel();
+    _refreshDebounce = null;
+    repository.unbind();
+    _presence.clear();
+    notifyListeners();
   }
 
   Future<void> _onSocketReady(dynamic _) async {
@@ -78,6 +106,13 @@ class ChatProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('[ChatProvider] _onSocketReady: $e');
     }
+  }
+
+  void _onConversationChanged(dynamic _) {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 200), () {
+      refreshConversations();
+    });
   }
  
   Future<void> refreshConversations() async {
