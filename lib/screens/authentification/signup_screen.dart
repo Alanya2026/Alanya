@@ -111,7 +111,7 @@ class _SignupScreenState extends State<SignupScreen> {
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  hintText: 'Full Name',
+                  hintText: 'Nom complet',
                   prefixIcon: const Icon(Icons.person_outline),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -140,7 +140,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: 'Email address',
+                  hintText: 'Adresse e-mail',
                   prefixIcon: const Icon(Icons.email_outlined),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -155,7 +155,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  hintText: 'Password',
+                  hintText: 'Mot de passe',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -215,7 +215,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         )
                       : const Text(
-                          'Sign Up',
+                          'Inscription',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +10,7 @@ import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
-import 'core/services/call_service.dart';
+import 'core/services/call_service.dart'; 
 import 'core/services/callkit_service.dart';
 import 'core/services/local_cache_repository.dart';
 import 'core/services/meeting_service.dart';
@@ -100,116 +102,169 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  AuthProvider? _authProvider;
+  int? _boundUserId;
+
   @override
   void initState() {
     super.initState();
     debugPrint('[AuthWrapper] initState - Lancement de init()');
+    _authProvider = Provider.of<AuthProvider>(context, listen: false);
+    _authProvider!.addListener(_onAuthChanged);
+    Future.microtask(_bootstrap);
+  }
+
+  @override
+  void dispose() {
+    _authProvider?.removeListener(_onAuthChanged);
+    super.dispose();
+  }
+
+  /// Bootstrap initial : restaure la session puis lie les providers et services
+  /// au compte courant si l'utilisateur est déjà loggé.
+  Future<void> _bootstrap() async {
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      await authProvider.init();
+      debugPrint('[AuthWrapper] !! init() complété');
+      await _syncSessionBindings();
+
+      try {
+        await PushService.init(apiClient, navKey: navigatorKey);
+      } catch (e) {
+        debugPrint('[AuthWrapper] PushService init failed: $e');
+      }
+
+      void dispatch(IncomingCallAction action) {
+        if (!mounted) return;
+        final callService = Provider.of<CallService>(context, listen: false);
+        switch (action.action) {
+          case IncomingCallActionType.accept:
+            callService.acceptIncomingCallFromPush(
+              callId:      action.callId,
+              callerId:    action.callerId,
+              callerName:  action.callerName,
+              callerPhoto: action.callerPhoto,
+              isVideo:     action.isVideo,
+              roomId:      action.roomId,
+            );
+            break;
+          case IncomingCallActionType.decline:
+          case IncomingCallActionType.timeout:
+          case IncomingCallActionType.ended:
+            callService.rejectIncomingCallFromPush(
+              callerId: action.callerId,
+            );
+            break;
+        }
+      }
+
+      CallKitService.instance.actions.listen(dispatch);
+
+      final pending = CallKitService.instance.consumePendingAction();
+      if (pending != null) {
+        debugPrint('[AuthWrapper]  Pending CallKit action trouvée: ${pending.action}');
+        debugPrint('[AuthWrapper] Dispatcher l\'action...');
+        dispatch(pending);
+        debugPrint('[AuthWrapper] !! Action dispatchée');
+      } else {
+        debugPrint('[AuthWrapper] ℹ Aucune action pending au démarrage');
+      }
+    } catch (e) {
+      debugPrint('[AuthWrapper] ** Erreur init: $e');
+      debugPrint('[AuthWrapper] Stack: ${StackTrace.current}');
+    }
+  }
+
+  /// Appelé sur chaque changement d'AuthProvider (login, logout, refresh user).
+  /// Déclenche un bind/unbind des providers dépendants de l'identité.
+  void _onAuthChanged() {
+    unawaited(_syncSessionBindings());
+  }
+
+  /// Aligne l'état des providers (chat, status, admin) sur l'utilisateur
+  /// actuellement loggé. Idempotent : ne re-bind pas si déjà bind pour cet ID.
+  Future<void> _syncSessionBindings() async {
+    if (!mounted) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final myId = authProvider.currentUser?.alanyaID;
+
+    // Logout : on était bind, plus d'utilisateur → libère les listeners.
+    if (myId == null) {
+      if (_boundUserId != null) {
+        debugPrint('[AuthWrapper] Logout détecté → unbind providers');
+        try {
+          Provider.of<ChatProvider>(context, listen: false).unbind();
+        } catch (e) {
+          debugPrint('[AuthWrapper] ChatProvider.unbind échoué: $e');
+        }
+        try {
+          Provider.of<StatusProvider>(context, listen: false).unbind();
+        } catch (e) {
+          debugPrint('[AuthWrapper] StatusProvider.unbind échoué: $e');
+        }
+        _boundUserId = null;
+      }
+      return;
+    }
+
+    // Déjà bind sur le même utilisateur, rien à faire.
+    if (myId == _boundUserId) return;
+
+    // Changement d'utilisateur : on libère l'ancien bind avant le neuf.
+    if (_boundUserId != null && _boundUserId != myId) {
+      try {
+        Provider.of<ChatProvider>(context, listen: false).unbind();
+        Provider.of<StatusProvider>(context, listen: false).unbind();
+      } catch (e) {
+        debugPrint('[AuthWrapper] unbind avant switch user: $e');
+      }
+    }
+
+    _boundUserId = myId;
+    debugPrint('[AuthWrapper] Bind providers pour userID=$myId');
+
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final statusProvider = Provider.of<StatusProvider>(context, listen: false);
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-    Future.microtask(
-      () async {
-        try {
-          await authProvider.init();
-          debugPrint('[AuthWrapper] !! init() complété');
 
-          final myId = authProvider.currentUser?.alanyaID;
-          if (myId != null) {
-            try {
-              await chatProvider.bind(myId);
-              // Sync background du cache lecture (contacts, calls, meetings).
-              if (mounted) {
-                final cache = Provider.of<LocalCacheRepository>(context, listen: false);
-                cache.syncPreferredContacts();
-                cache.syncCalls(myId: myId);
-                cache.syncMeetings();
-                cache.purgeExpiredStatuses();
-              }
-              // Resync à chaque retour online (réseau OS), au-delà du seul
-              // auth:verified — ça couvre les coupures Wi-Fi/4G transitoires.
-              if (mounted) {
-                final connectivity =
-                    Provider.of<ConnectivityProvider>(context, listen: false);
-                final cache =
-                    Provider.of<LocalCacheRepository>(context, listen: false);
-                connectivity.addBackOnlineListener(() {
-                  debugPrint('[AuthWrapper] Réseau revenu → refresh caches secondaires');
-                  // Le re-sync chat (flushOutbox + refreshConversations + resync
-                  // conv active + rejoin room) est désormais piloté par
-                  // ChatProvider._onSocketReady déclenché sur `auth:verified`.
-                  // On s'évite ainsi la race où le socket pas encore authentifié
-                  // ferait no-oper le flush ici.
-                  cache.syncPreferredContacts();
-                  cache.syncCalls(myId: myId);
-                  cache.syncMeetings();
-                });
-              }
-            } catch (e) {
-              debugPrint('[AuthWrapper] ChatProvider.bind échoué: $e');
-            }
-            
-            try {
-              await statusProvider.bind(myId);
-            } catch (e) {
-              debugPrint('[AuthWrapper] StatusProvider.bind échoué: $e');
-            }
-            
-            try {
-              await adminProvider.loadStats();
-            } catch (e) {
-              debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e');
-            }
-          }
-          
-          try {
-            await PushService.init(apiClient, navKey: navigatorKey);
-          } catch (e) {
-            debugPrint('[AuthWrapper] PushService init failed: $e');
-          }
+    try {
+      await chatProvider.bind(myId);
+      if (mounted) {
+        final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+        cache.syncPreferredContacts();
+        cache.syncCalls(myId: myId);
+        cache.syncMeetings();
+        cache.purgeExpiredStatuses();
+      }
+      if (mounted) {
+        final connectivity =
+            Provider.of<ConnectivityProvider>(context, listen: false);
+        final cache =
+            Provider.of<LocalCacheRepository>(context, listen: false);
+        connectivity.addBackOnlineListener(() {
+          debugPrint('[AuthWrapper] Réseau revenu → refresh caches secondaires');
+          cache.syncPreferredContacts();
+          cache.syncCalls(myId: myId);
+          cache.syncMeetings();
+        });
+      }
+    } catch (e) {
+      debugPrint('[AuthWrapper] ChatProvider.bind échoué: $e');
+    }
 
-          void dispatch(IncomingCallAction action) {
-            if (!mounted) return;
-            final callService = Provider.of<CallService>(context, listen: false);
-            switch (action.action) {
-              case IncomingCallActionType.accept:
-                callService.acceptIncomingCallFromPush(
-                  callId:      action.callId,
-                  callerId:    action.callerId,
-                  callerName:  action.callerName,
-                  callerPhoto: action.callerPhoto,
-                  isVideo:     action.isVideo,
-                  roomId:      action.roomId,
-                );
-                break;
-              case IncomingCallActionType.decline:
-              case IncomingCallActionType.timeout:
-              case IncomingCallActionType.ended:
-                callService.rejectIncomingCallFromPush(
-                  callerId: action.callerId,
-                );
-                break;
-            }
-          }
+    try {
+      await statusProvider.bind(myId);
+    } catch (e) {
+      debugPrint('[AuthWrapper] StatusProvider.bind échoué: $e');
+    }
 
-          CallKitService.instance.actions.listen(dispatch);
-          
-          final pending = CallKitService.instance.consumePendingAction();
-          if (pending != null) {
-            debugPrint('[AuthWrapper]  Pending CallKit action trouvée: ${pending.action}');
-            debugPrint('[AuthWrapper] Dispatcher l\'action...');
-            dispatch(pending);
-            debugPrint('[AuthWrapper] !! Action dispatchée');
-          } else {
-            debugPrint('[AuthWrapper] ℹ Aucune action pending au démarrage');
-          }
-        } catch (e) {
-          debugPrint('[AuthWrapper] ** Erreur init: $e');
-          debugPrint('[AuthWrapper] Stack: ${StackTrace.current}');
-        }
-      },
-    );
+    try {
+      await adminProvider.loadStats();
+    } catch (e) {
+      debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e');
+    }
   }
 
   @override

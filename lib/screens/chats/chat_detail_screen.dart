@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/db/app_database.dart';
+import '../../core/db/chat_dao.dart' show decodeParticipants;
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -527,6 +528,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Builder(builder: (_) {
+                      // Groupes : on n'affiche jamais une présence (ça n'a pas
+                      // de sens pour N membres). On liste les noms des autres
+                      // participants avec ellipsis automatique si ça déborde.
+                      if (widget.isGroup) {
+                        return _buildGroupMembersLine();
+                      }
                       final label = _partnerIsTyping ? 'en train d\'écrire...' : _presenceLabel();
                       if (label.isEmpty) return const SizedBox.shrink();
                       final online = !_partnerIsTyping && label == 'En ligne';
@@ -657,6 +664,37 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final uid = widget.userId;
     if (uid == null) return '';
     return _chat.presenceLabel(uid);
+  }
+
+  /// Sous-titre groupe : liste des noms des autres participants, séparés
+  /// par des virgules. L'`overflow: ellipsis` du `Text` rajoute '…'
+  /// automatiquement quand la ligne dépasse la largeur disponible.
+  Widget _buildGroupMembersLine() {
+    final convId = widget.conversationId;
+    if (convId == null) return const SizedBox.shrink();
+    return StreamBuilder<LocalConversation?>(
+      stream: _chat.repository.watchConversation(convId),
+      builder: (context, snap) {
+        final conv = snap.data;
+        if (conv == null) return const SizedBox.shrink();
+        final parts = decodeParticipants(conv.participantsJson);
+        final names = <String>[];
+        for (final p in parts) {
+          final id = p['alanyaID'];
+          // Exclure soi-même (qu'il soit stocké en int ou en string).
+          if (_myId != null && id.toString() == _myId.toString()) continue;
+          final nom = (p['nom'] as String?)?.trim();
+          if (nom != null && nom.isNotEmpty) names.add(nom);
+        }
+        if (names.isEmpty) return const SizedBox.shrink();
+        return Text(
+          names.join(', '),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.black45, fontSize: 12),
+        );
+      },
+    );
   }
 
   Widget _buildMessageBubble(LocalMessage msg, bool isMe) {
@@ -1096,15 +1134,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
 
   Widget _buildInputBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10, offset: const Offset(0, -5)),
-        ],
-      ),
-      child: SafeArea(
+    // Conteneur transparent : les bulles défilent en dessous pour donner
+    // l'effet « flottant » WhatsApp. Le SafeArea pose la marge système.
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
         child: _isRecording ? _buildRecordingBar() : _buildComposeBar(),
       ),
     );
@@ -1114,54 +1149,72 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        IconButton(
-          icon: Icon(_showEmoji ? Icons.keyboard : Icons.emoji_emotions_outlined, color: Colors.grey),
-          onPressed: _toggleEmoji,
-        ),
-        IconButton(
-          icon: const Icon(Icons.attach_file, color: Colors.grey),
-          onPressed: _showAttachSheet,
-        ),
+        // Capsule blanche flottante : emoji · TextField · pièce jointe.
         Expanded(
           child: Container(
-            constraints: const BoxConstraints(maxHeight: 150),
+            constraints: const BoxConstraints(maxHeight: 160),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: TextField(
-              controller: _messageController,
-              focusNode: _inputFocus,
-              onChanged: _onTextChanged,
-              onTap: () {
-                if (_showEmoji) setState(() => _showEmoji = false);
-              },
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
-              maxLines: null,
-              minLines: 1,
-              scrollPhysics: const ClampingScrollPhysics(),
-              decoration: InputDecoration(
-                hintText: 'Tapez un message...',
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(20),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
                 ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                IconButton(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  constraints: const BoxConstraints(),
+                  icon: Icon(
+                    _showEmoji ? Icons.keyboard : Icons.emoji_emotions_outlined,
+                    color: Colors.grey.shade500,
+                    size: 24,
+                  ),
+                  onPressed: _toggleEmoji,
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    focusNode: _inputFocus,
+                    onChanged: _onTextChanged,
+                    onTap: () {
+                      if (_showEmoji) setState(() => _showEmoji = false);
+                    },
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _sendMessage(),
+                    maxLines: null,
+                    minLines: 1,
+                    scrollPhysics: const ClampingScrollPhysics(),
+                    decoration: InputDecoration(
+                      hintText: 'Message…',
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  constraints: const BoxConstraints(),
+                  icon: Icon(Icons.attach_file, color: Colors.grey.shade500, size: 22),
+                  onPressed: _showAttachSheet,
+                ),
+                const SizedBox(width: 4),
+              ],
             ),
           ),
         ),
         const SizedBox(width: 8),
-        // Champ vide → micro (tap pour démarrer) ; sinon → envoyer.
-        Container(
-          decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
-          child: IconButton(
-            icon: Icon(_hasText ? Icons.send : Icons.mic, color: Colors.white, size: 22),
-            onPressed: _hasText ? _sendMessage : _startRecording,
-          ),
+        // Bouton rond séparé : micro (champ vide) ou envoyer (champ rempli).
+        _RoundActionButton(
+          icon: _hasText ? Icons.send : Icons.mic,
+          onTap: _hasText ? _sendMessage : _startRecording,
         ),
       ],
     );
@@ -1170,47 +1223,84 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget _buildRecordingBar() {
     return Row(
       children: [
-        // Annuler
-        IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 26),
-          onPressed: () => _stopRecording(send: false),
-        ),
+        // Capsule rouge flottante : annuler · timer · libellé.
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(24),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(20),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 24),
+                  onPressed: () => _stopRecording(send: false),
+                ),
+                const SizedBox(width: 8),
                 _RecordingDot(),
                 const SizedBox(width: 10),
                 Text(
                   _fmtRec(_recordSeconds),
                   style: const TextStyle(
                     color: Colors.black87,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text('Enregistrement…', style: TextStyle(color: Colors.red.shade400, fontSize: 13)),
+                Expanded(
+                  child: Text(
+                    'Enregistrement…',
+                    style: TextStyle(color: Colors.red.shade400, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
         ),
         const SizedBox(width: 8),
-        // Envoyer
-        Container(
-          decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
-          child: IconButton(
-            icon: const Icon(Icons.send, color: Colors.white, size: 22),
-            onPressed: () => _stopRecording(send: true),
-          ),
+        _RoundActionButton(
+          icon: Icons.send,
+          onTap: () => _stopRecording(send: true),
         ),
       ],
+    );
+  }
+}
+
+/// Bouton circulaire indigo en relief (50 px) — utilisé pour mic / send.
+class _RoundActionButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _RoundActionButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.indigo,
+      shape: const CircleBorder(),
+      elevation: 3,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 50,
+          height: 50,
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+      ),
     );
   }
 }

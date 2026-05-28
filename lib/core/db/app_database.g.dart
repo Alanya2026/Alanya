@@ -1115,6 +1115,18 @@ class $LocalMessagesTable extends LocalMessages
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _retryCountMeta = const VerificationMeta(
+    'retryCount',
+  );
+  @override
+  late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
+    'retry_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientId,
@@ -1144,6 +1156,7 @@ class $LocalMessagesTable extends LocalMessages
     senderAvatar,
     syncPending,
     lastEmittedAt,
+    retryCount,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1363,6 +1376,12 @@ class $LocalMessagesTable extends LocalMessages
         ),
       );
     }
+    if (data.containsKey('retry_count')) {
+      context.handle(
+        _retryCountMeta,
+        retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
+      );
+    }
     return context;
   }
 
@@ -1480,6 +1499,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_emitted_at'],
       ),
+      retryCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retry_count'],
+      )!,
     );
   }
 
@@ -1533,6 +1556,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
 
   /// Dernier instant d'émission via le socket — sert au backoff de l'outbox.
   final DateTime? lastEmittedAt;
+
+  /// Nombre de tentatives de retry pour ce message (failed -> retry).
+  final int retryCount;
   const LocalMessage({
     required this.clientId,
     required this.msgID,
@@ -1561,6 +1587,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     this.senderAvatar,
     required this.syncPending,
     this.lastEmittedAt,
+    required this.retryCount,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1624,6 +1651,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     if (!nullToAbsent || lastEmittedAt != null) {
       map['last_emitted_at'] = Variable<DateTime>(lastEmittedAt);
     }
+    map['retry_count'] = Variable<int>(retryCount);
     return map;
   }
 
@@ -1688,6 +1716,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       lastEmittedAt: lastEmittedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lastEmittedAt),
+      retryCount: Value(retryCount),
     );
   }
 
@@ -1726,6 +1755,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       senderAvatar: serializer.fromJson<String?>(json['senderAvatar']),
       syncPending: serializer.fromJson<bool>(json['syncPending']),
       lastEmittedAt: serializer.fromJson<DateTime?>(json['lastEmittedAt']),
+      retryCount: serializer.fromJson<int>(json['retryCount']),
     );
   }
   @override
@@ -1759,6 +1789,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'senderAvatar': serializer.toJson<String?>(senderAvatar),
       'syncPending': serializer.toJson<bool>(syncPending),
       'lastEmittedAt': serializer.toJson<DateTime?>(lastEmittedAt),
+      'retryCount': serializer.toJson<int>(retryCount),
     };
   }
 
@@ -1790,6 +1821,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     Value<String?> senderAvatar = const Value.absent(),
     bool? syncPending,
     Value<DateTime?> lastEmittedAt = const Value.absent(),
+    int? retryCount,
   }) => LocalMessage(
     clientId: clientId ?? this.clientId,
     msgID: msgID ?? this.msgID,
@@ -1828,6 +1860,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     lastEmittedAt: lastEmittedAt.present
         ? lastEmittedAt.value
         : this.lastEmittedAt,
+    retryCount: retryCount ?? this.retryCount,
   );
   LocalMessage copyWithCompanion(LocalMessagesCompanion data) {
     return LocalMessage(
@@ -1882,6 +1915,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       lastEmittedAt: data.lastEmittedAt.present
           ? data.lastEmittedAt.value
           : this.lastEmittedAt,
+      retryCount: data.retryCount.present
+          ? data.retryCount.value
+          : this.retryCount,
     );
   }
 
@@ -1914,7 +1950,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
           ..write('syncPending: $syncPending, ')
-          ..write('lastEmittedAt: $lastEmittedAt')
+          ..write('lastEmittedAt: $lastEmittedAt, ')
+          ..write('retryCount: $retryCount')
           ..write(')'))
         .toString();
   }
@@ -1948,6 +1985,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     senderAvatar,
     syncPending,
     lastEmittedAt,
+    retryCount,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -1979,7 +2017,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.senderPseudo == this.senderPseudo &&
           other.senderAvatar == this.senderAvatar &&
           other.syncPending == this.syncPending &&
-          other.lastEmittedAt == this.lastEmittedAt);
+          other.lastEmittedAt == this.lastEmittedAt &&
+          other.retryCount == this.retryCount);
 }
 
 class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
@@ -2010,6 +2049,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<String?> senderAvatar;
   final Value<bool> syncPending;
   final Value<DateTime?> lastEmittedAt;
+  final Value<int> retryCount;
   final Value<int> rowid;
   const LocalMessagesCompanion({
     this.clientId = const Value.absent(),
@@ -2039,6 +2079,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.senderAvatar = const Value.absent(),
     this.syncPending = const Value.absent(),
     this.lastEmittedAt = const Value.absent(),
+    this.retryCount = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LocalMessagesCompanion.insert({
@@ -2069,6 +2110,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.senderAvatar = const Value.absent(),
     this.syncPending = const Value.absent(),
     this.lastEmittedAt = const Value.absent(),
+    this.retryCount = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientId = Value(clientId),
        conversationID = Value(conversationID),
@@ -2102,6 +2144,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<String>? senderAvatar,
     Expression<bool>? syncPending,
     Expression<DateTime>? lastEmittedAt,
+    Expression<int>? retryCount,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2132,6 +2175,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (senderAvatar != null) 'sender_avatar': senderAvatar,
       if (syncPending != null) 'sync_pending': syncPending,
       if (lastEmittedAt != null) 'last_emitted_at': lastEmittedAt,
+      if (retryCount != null) 'retry_count': retryCount,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2164,6 +2208,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<String?>? senderAvatar,
     Value<bool>? syncPending,
     Value<DateTime?>? lastEmittedAt,
+    Value<int>? retryCount,
     Value<int>? rowid,
   }) {
     return LocalMessagesCompanion(
@@ -2194,6 +2239,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       senderAvatar: senderAvatar ?? this.senderAvatar,
       syncPending: syncPending ?? this.syncPending,
       lastEmittedAt: lastEmittedAt ?? this.lastEmittedAt,
+      retryCount: retryCount ?? this.retryCount,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2282,6 +2328,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (lastEmittedAt.present) {
       map['last_emitted_at'] = Variable<DateTime>(lastEmittedAt.value);
     }
+    if (retryCount.present) {
+      map['retry_count'] = Variable<int>(retryCount.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2318,6 +2367,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('senderAvatar: $senderAvatar, ')
           ..write('syncPending: $syncPending, ')
           ..write('lastEmittedAt: $lastEmittedAt, ')
+          ..write('retryCount: $retryCount, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5474,6 +5524,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<String?> senderAvatar,
       Value<bool> syncPending,
       Value<DateTime?> lastEmittedAt,
+      Value<int> retryCount,
       Value<int> rowid,
     });
 typedef $$LocalMessagesTableUpdateCompanionBuilder =
@@ -5505,6 +5556,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<String?> senderAvatar,
       Value<bool> syncPending,
       Value<DateTime?> lastEmittedAt,
+      Value<int> retryCount,
       Value<int> rowid,
     });
 
@@ -5649,6 +5701,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<DateTime> get lastEmittedAt => $composableBuilder(
     column: $table.lastEmittedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5796,6 +5853,11 @@ class $$LocalMessagesTableOrderingComposer
     column: $table.lastEmittedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalMessagesTableAnnotationComposer
@@ -5911,6 +5973,11 @@ class $$LocalMessagesTableAnnotationComposer
     column: $table.lastEmittedAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalMessagesTableTableManager
@@ -5971,6 +6038,7 @@ class $$LocalMessagesTableTableManager
                 Value<String?> senderAvatar = const Value.absent(),
                 Value<bool> syncPending = const Value.absent(),
                 Value<DateTime?> lastEmittedAt = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion(
                 clientId: clientId,
@@ -6000,6 +6068,7 @@ class $$LocalMessagesTableTableManager
                 senderAvatar: senderAvatar,
                 syncPending: syncPending,
                 lastEmittedAt: lastEmittedAt,
+                retryCount: retryCount,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6031,6 +6100,7 @@ class $$LocalMessagesTableTableManager
                 Value<String?> senderAvatar = const Value.absent(),
                 Value<bool> syncPending = const Value.absent(),
                 Value<DateTime?> lastEmittedAt = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion.insert(
                 clientId: clientId,
@@ -6060,6 +6130,7 @@ class $$LocalMessagesTableTableManager
                 senderAvatar: senderAvatar,
                 syncPending: syncPending,
                 lastEmittedAt: lastEmittedAt,
+                retryCount: retryCount,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

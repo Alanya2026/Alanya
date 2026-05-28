@@ -57,7 +57,7 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to join meeting: $e')),
+          SnackBar(content: Text('Échec de la connexion à la réunion : $e')),
         );
       }
     } finally {
@@ -117,7 +117,7 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
             TextField(
               controller: _codeController,
               decoration: InputDecoration(
-                hintText: 'Example: abc-defg-hij',
+                hintText: 'Exemple : abc-defg-hij',
                 filled: true,
                 fillColor: Colors.grey.shade100,
                 border: OutlineInputBorder(
@@ -133,7 +133,7 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
             ),
             const SizedBox(height: 32),
             const Text(
-              'To join a meeting, you need a code like abc-defg-hij. If you received a meeting link, you can click on the link instead.',
+              'Pour rejoindre une réunion, vous avez besoin d’un code comme abc-defg-hij. Si vous avez reçu un lien de réunion, vous pouvez cliquer sur le lien à la place.',
               style: TextStyle(
                 color: Colors.grey,
                 fontSize: 14,

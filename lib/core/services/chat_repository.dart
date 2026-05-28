@@ -25,6 +25,8 @@ class ChatRepository {
 
   /// Lectures à confirmer au serveur dès la reconnexion (lecture hors-ligne).
   final Set<int> _pendingReads = {};
+  /// Retry tracker pour les lectures hors-ligne (conversationID -> retryCount)
+  final Map<int, int> _pendingReadsRetry = {};
 
   void setActiveConversation(int conversationID) =>
       _activeConversationID = conversationID;
@@ -43,18 +45,32 @@ class ChatRepository {
   ChatDao get dao => _dao;
   int get myId => _myId;
   Stream<List<LocalConversation>> watchConversations() => _dao.watchConversations();
+  Stream<LocalConversation?> watchConversation(int conversationID) =>
+      _dao.watchConversation(conversationID);
   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
       _dao.watchMessages(conversationID, _myId);
  
-  void bind(int myId) {
-    if (myId == 0) return; 
+  /// Handler `auth:verified`. Méthode (et non lambda stockée) pour garder
+  /// une référence stable utilisable par `removeSocketListener` au logout.
+  Future<void> _onAuthVerified(dynamic _) async {
+    try {
+      rejoinActiveRoom();
+      await resyncActiveConversation();
+      await _flushPendingReads();
+    } catch (e) {
+      debugPrint('[ChatRepo] authVerified handler failed: $e');
+    }
+  }
+
+  Future<void> bind(int myId) async {
+    if (myId == 0) return;
     _myId = myId;
 
-    _dao.purgeGhostMessages();
-    _dao.purgeDuplicateOptimistics();
-    _dao.purgeDuplicateByMsgId();
-    // Best-effort eviction LRU au démarrage (non-bloquant).
-    _mediaCache.evictIfNeeded();
+    // Purges et éviction attendues au démarrage pour stabiliser la DB.
+    await _dao.purgeGhostMessages();
+    await _dao.purgeDuplicateOptimistics();
+    await _dao.purgeDuplicateByMsgId();
+    await _mediaCache.evictIfNeeded();
 
     if (_listenersBound) return;
     _listenersBound = true;
@@ -65,6 +81,27 @@ class ChatRepository {
     _api.onSocketEvent(SocketEvents.messageDeleted, _onMessageDeleted);
     _api.onSocketEvent(SocketEvents.messageStatus, _onMessageStatus);
     _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
+    _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
+  }
+
+  /// Détache les listeners socket et autorise un futur `bind` (cas logout/login
+  /// dans la même session d'app). `disconnectSocket` aurait déjà vidé le
+  /// registre côté API client, mais on remet le drapeau à zéro pour que la
+  /// prochaine connexion repasse par l'enregistrement complet.
+  void unbind() {
+    if (!_listenersBound) return;
+    _listenersBound = false;
+    _api.removeSocketListener(SocketEvents.messageReceived, _onMessageReceived);
+    _api.removeSocketListener(SocketEvents.messageSent, _onMessageSent);
+    _api.removeSocketListener(SocketEvents.messageUpdated, _onMessageUpdated);
+    _api.removeSocketListener(SocketEvents.messageDeleted, _onMessageDeleted);
+    _api.removeSocketListener(SocketEvents.messageStatus, _onMessageStatus);
+    _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
+    _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
+    _activeConversationID = 0;
+    _pendingReads.clear();
+    _pendingReadsRetry.clear();
+    _myId = 0;
   }
 
   void _onConversationCreated(dynamic data) {
@@ -369,6 +406,66 @@ class ChatRepository {
       }
       _pendingReads.clear();
     }
+
+    // Retry des messages marqués failed (status==4) avec retryCount < 3
+    final failed = await (_db.select(_db.localMessages)
+          ..where((m) => m.status.equals(4) & m.retryCount.isSmallerThanValue(3)))
+        .get();
+    for (final m in failed) {
+      await _dao.incrementRetryCount(m.clientId);
+      final needsUpload = m.pendingUploadPath != null &&
+          m.pendingUploadPath!.isNotEmpty &&
+          (m.mediaUrl == null || m.mediaUrl!.isEmpty);
+
+      if (needsUpload) {
+        final file = File(m.pendingUploadPath!);
+        if (!file.existsSync()) {
+          debugPrint('[ChatRepo] retry: fichier disparu pour ${m.clientId} → keep failed');
+          continue;
+        }
+        try {
+          final res = await _api.uploadMedia(file);
+          final url = res['url'] as String?;
+          if (url == null) throw Exception('upload sans url');
+          await (_db.update(_db.localMessages)..where((x) => x.clientId.equals(m.clientId)))
+              .write(LocalMessagesCompanion(
+            mediaUrl: Value(url),
+            pendingUploadPath: const Value(null),
+            status: const Value(1),
+          ));
+          _emitSend(
+            clientId: m.clientId,
+            conversationID: m.conversationID,
+            content: m.content,
+            type: m.type,
+            mediaUrl: url,
+            mediaName: m.mediaName,
+            mediaDuration: m.mediaDuration,
+            replyToID: m.replyToID,
+            replyToContent: m.replyToContent,
+          );
+        } catch (e) {
+          debugPrint('[ChatRepo] retry upload échoué pour ${m.clientId}: $e');
+          if (!_isTransientNetworkError(e)) {
+            await _dao.markFailed(m.clientId);
+          }
+        }
+      } else {
+        // Message texte ou média déjà uploadé : remettre en pending et réémettre
+        await _dao.retryFailed(m.clientId);
+        _emitSend(
+          clientId: m.clientId,
+          conversationID: m.conversationID,
+          content: m.content,
+          type: m.type,
+          mediaUrl: m.mediaUrl,
+          mediaName: m.mediaName,
+          mediaDuration: m.mediaDuration,
+          replyToID: m.replyToID,
+          replyToContent: m.replyToContent,
+        );
+      }
+    }
   }
 
   /// Modifie un message texte (le mien). Applique localement puis serveur.
@@ -409,17 +506,24 @@ class ChatRepository {
   }
 
   Future<void> markAsRead(int conversationID) async {
-    await _dao.markConversationRead(conversationID, _myId);
-    await _dao.setUnread(conversationID, 0);
+    await _dao.markConversationReadAtomic(conversationID, _myId);
     if (_api.isSocketReady) {
-      _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': conversationID});
+      try {
+        _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': conversationID});
+        _pendingReadsRetry.remove(conversationID);
+      } catch (e) {
+        debugPrint('[ChatRepo] sendSocketEvent failed: $e');
+        _pendingReadsRetry[conversationID] = (_pendingReadsRetry[conversationID] ?? 0) + 1;
+      }
     } else {
-      // Hors-ligne ou socket non-authentifié : on rejouera la lecture à la
-      // reconnexion (sinon le serveur garde unread>0 et un futur sync ramènerait
-      // le message comme non-lu).
-      _pendingReads.add(conversationID);
+      // Hors-ligne ou socket non-authentifié : stocker pour rejouer plus tard.
+      _pendingReadsRetry[conversationID] = (_pendingReadsRetry[conversationID] ?? 0);
     }
-    _api.markConversationAsRead(conversationID).ignore();
+    try {
+      await _api.markConversationAsRead(conversationID);
+    } catch (e) {
+      debugPrint('[ChatRepo] markConversationAsRead HTTP failed: $e');
+    }
   }
 
   /// Re-sync de la conversation actuellement à l'écran après reconnexion.
@@ -441,6 +545,20 @@ class ChatRepository {
     );
   }
 
+  Future<void> _flushPendingReads() async {
+    if (!_api.isSocketReady || _pendingReadsRetry.isEmpty) return;
+    for (final convID in _pendingReadsRetry.keys.toList()) {
+      try {
+        _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': convID});
+        _pendingReadsRetry.remove(convID);
+      } catch (e) {
+        debugPrint('[ChatRepo] _flushPendingReads send failed for $convID: $e');
+        _pendingReadsRetry[convID] = (_pendingReadsRetry[convID] ?? 0) + 1;
+        if ((_pendingReadsRetry[convID] ?? 0) > 3) _pendingReadsRetry.remove(convID);
+      }
+    }
+  }
+
 
   Future<void> _upsertServerMsg(
     Map<String, dynamic> json, {
@@ -460,24 +578,34 @@ class ChatRepository {
     bool wasNew = false;
     await _db.transaction(() async {
       String? carriedLocalPath;
+
+      // Création d'un prédicat optimiste plus strict pour éviter d'associer
+      // par erreur un message d'un autre utilisateur ayant le même contenu.
       final candidates = await (_db.select(_db.localMessages)
             ..where((m) {
+              // Ligne déjà confirmée avec le même msgID mais clé différente
               final sameOtherKey = m.msgID.equals(msgID) & m.clientId.equals(srvKey).not();
+
+              // Base optimiste : même conversation et msgID==0
               final optimisticBase = m.conversationID.equals(convID) & m.msgID.equals(0);
-              Expression<bool> optimistic;
+
+              // Match prioritaire par clientId si fourni par le serveur
+              Expression<bool> optimistic = const Constant(false);
               if (clientId != null && clientId.isNotEmpty) {
                 optimistic = optimisticBase & m.clientId.equals(clientId);
               } else if (content != null && content.isNotEmpty) {
-                optimistic = optimisticBase & m.content.equals(content);
-              } else {
-                optimistic = optimisticBase & m.mediaName.equals(mediaName ?? '');
+                // Pour matcher sur le contenu, restreindre au messages dont
+                // l'émetteur local est bien l'utilisateur courant (évite collisions)
+                optimistic = optimisticBase & m.content.equals(content) & m.senderID.equals(_myId);
+              } else if (mediaName != null && mediaName.isNotEmpty) {
+                optimistic = optimisticBase & m.mediaName.equals(mediaName) & m.senderID.equals(_myId);
               }
+
               return sameOtherKey | optimistic;
             }))
           .get();
 
-      // Si aucun candidat n'existait avec ce msgID confirmé, c'est un message
-      // nouveau pour la base locale → on déclenchera l'auto-cache du média.
+      // Nouveau message local si aucun candidat avec ce msgID confirmé
       wasNew = candidates.every((m) => m.msgID != msgID);
 
       for (final m in candidates) {
@@ -485,14 +613,13 @@ class ChatRepository {
         await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
       }
 
-      // PK toujours normalisée à `srv_<msgID>` : le clientId du JSON (présent sur
-      // `message:sent`) ne sert qu'au matching de l'optimiste ci-dessus, jamais de
-      // clé stockée. Sinon `message:received` (→ srv_X) et `message:sent` (→ c_X)
-      // créeraient DEUX lignes pour le même msgID = doublon chez l'émetteur.
+      // Insère une seule ligne normalisée `srv_<msgID>` (clé primaire stable).
       var companion = _msgJsonToCompanion(json).copyWith(clientId: Value(srvKey));
       if (carriedLocalPath != null) {
         companion = companion.copyWith(localMediaPath: Value(carriedLocalPath));
       }
+
+      debugPrint('[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
       await _dao.upsertMessage(companion);
     });
 
@@ -657,10 +784,15 @@ class ChatRepository {
     );
     await _db.into(_db.localConversations).insertOnConflictUpdate(companion);
     if (fromOther) {
-      final current = await (_db.select(_db.localConversations)
-            ..where((c) => c.conversID.equals(conversID)))
-          .getSingleOrNull();
-      await _dao.setUnread(conversID, (current?.unreadCount ?? 0) + 1);
+      // Only increment unread if the conversation is not currently active.
+      if (conversID != _activeConversationID) {
+        await _db.transaction(() async {
+          final current = await (_db.select(_db.localConversations)
+                ..where((c) => c.conversID.equals(conversID)))
+              .getSingleOrNull();
+          await _dao.setUnread(conversID, (current?.unreadCount ?? 0) + 1);
+        });
+      }
     }
   }
 

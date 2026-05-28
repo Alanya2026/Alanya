@@ -351,19 +351,19 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (!widget.isMine) _buildReplyBar(),
-                  _Footer(
-                    statut: s,
-                    isMine: widget.isMine,
-                    onLike: _toggleLike,
-                    onDelete: _confirmDelete,
-                    onShowViews: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => StatusViewsScreen(statusId: s.id),
+                  if (!widget.isMine)
+                    _buildReplyBar()
+                  else
+                    _Footer(
+                      statut: s,
+                      onDelete: _confirmDelete,
+                      onShowViews: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StatusViewsScreen(statusId: s.id),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -378,6 +378,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       builder: (context, conn, _) {
         final online = conn.isOnline;
         final canSend = online && !_sendingReply;
+        final liked = _current.likedByMe;
         return Padding(
           // Évite que le clavier ou la home indicator ne masque la barre.
           padding: EdgeInsets.only(
@@ -418,7 +419,26 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
+              // Cœur : se remplit quand on like, se vide quand on dislike.
+              // Le tap déclenche _toggleLike (qui gère l'optimistic update).
+              IconButton(
+                tooltip: liked ? 'Je n\'aime plus' : 'J\'aime',
+                onPressed: _toggleLike,
+                iconSize: 28,
+                splashRadius: 22,
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  transitionBuilder: (child, anim) =>
+                      ScaleTransition(scale: anim, child: child),
+                  child: Icon(
+                    liked ? Icons.favorite : Icons.favorite_border,
+                    key: ValueKey<bool>(liked),
+                    color: liked ? Colors.redAccent : Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
               Material(
                 color: canSend ? Colors.indigo : Colors.grey.shade600,
                 shape: const CircleBorder(),
@@ -620,17 +640,15 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// Footer affiché uniquement sur ses propres statuts (vues / likes / supprimer).
+/// Pour les statuts d'autrui, le like est intégré à la reply bar.
 class _Footer extends StatelessWidget {
   final Statut statut;
-  final bool isMine;
-  final VoidCallback onLike;
   final VoidCallback onDelete;
   final VoidCallback onShowViews;
 
   const _Footer({
     required this.statut,
-    required this.isMine,
-    required this.onLike,
     required this.onDelete,
     required this.onShowViews,
   });
@@ -651,74 +669,36 @@ class _Footer extends StatelessWidget {
             colors: [Colors.transparent, Colors.black.withAlpha(180)],
           ),
         ),
-        child: isMine ? _mineFooter(context) : _otherFooter(context),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            InkWell(
+              onTap: onShowViews,
+              child: Row(
+                children: [
+                  const Icon(Icons.visibility, color: Colors.white, size: 20),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${statut.viewedBy} vue${statut.viewedBy > 1 ? 's' : ''}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(width: 14),
+                  const Icon(Icons.favorite, color: Colors.redAccent, size: 20),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${statut.likedBy}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.white),
+              onPressed: onDelete,
+            ),
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _mineFooter(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        InkWell(
-          onTap: onShowViews,
-          child: Row(
-            children: [
-              const Icon(Icons.visibility, color: Colors.white, size: 20),
-              const SizedBox(width: 6),
-              Text(
-                '${statut.viewedBy} vue${statut.viewedBy > 1 ? 's' : ''}',
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(width: 14),
-              const Icon(Icons.favorite, color: Colors.redAccent, size: 20),
-              const SizedBox(width: 6),
-              Text(
-                '${statut.likedBy}',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.white),
-          onPressed: onDelete,
-        ),
-      ],
-    );
-  }
-
-  Widget _otherFooter(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        GestureDetector(
-          onTap: onLike,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(40),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white24),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  statut.likedByMe ? Icons.favorite : Icons.favorite_border,
-                  color: statut.likedByMe ? Colors.redAccent : Colors.white,
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  statut.likedByMe ? 'Aimé' : 'J\'aime',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -110,13 +110,21 @@ class StatusProvider extends ChangeNotifier {
   void unbind() {
     if (!_bound) return;
     _bound = false;
-    _api.offSocketEvent(SocketEvents.statusCreated);
-    _api.offSocketEvent(SocketEvents.statusViewed);
-    _api.offSocketEvent(SocketEvents.statusLiked);
-    _api.offSocketEvent(SocketEvents.statusUnliked);
-    _api.offSocketEvent(SocketEvents.statusDeleted);
+    _api.removeSocketListener(SocketEvents.statusCreated, _onStatusCreated);
+    _api.removeSocketListener(SocketEvents.statusViewed, _onStatusViewed);
+    _api.removeSocketListener(SocketEvents.statusLiked, _onStatusLiked);
+    _api.removeSocketListener(SocketEvents.statusUnliked, _onStatusUnliked);
+    _api.removeSocketListener(SocketEvents.statusDeleted, _onStatusDeleted);
     _purgeTimer?.cancel();
     _purgeTimer = null;
+    // Purge l'état en mémoire pour ne pas exposer les statuts d'un compte
+    // à l'utilisateur suivant en cas de logout/login dans la même session.
+    _byAuthor.clear();
+    _mine.clear();
+    _seenIds.clear();
+    _viewsCache.clear();
+    _myId = 0;
+    notifyListeners();
   }
 
   @override

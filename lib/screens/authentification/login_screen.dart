@@ -67,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 32),
               const Text(
-                'Welcome Back',
+                'Bienvenue',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 32,
@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Sign in to continue to Talky',
+                'Connectez-vous pour continuer vers Alanya',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _alanyaPhoneController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  hintText: 'Alanya Phone Ex : 340364',
+                  hintText: 'Téléphone Alanya ex : 340364',
                   prefixIcon: const Icon(Icons.phone_outlined),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  hintText: 'Password',
+                  hintText: 'Mot de passe',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -135,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   },
                   child: const Text(
-                    'Forgot Password?',
+                    'Mot de passe oublié ?',
                     style: TextStyle(color: Colors.indigo),
                   ),
                 ),
@@ -180,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         )
                       : const Text(
-                          'Sign In',
+                          'Se connecter',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),
@@ -189,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Don't have an account?"),
+                  const Text("Pas encore de compte?"),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -200,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                     child: const Text(
-                      'Sign Up',
+                      'S\'inscrire',
                       style: TextStyle(
                         color: Colors.indigo,
                         fontWeight: FontWeight.bold,

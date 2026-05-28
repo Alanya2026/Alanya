@@ -747,8 +747,6 @@ class TalkyApiClient {
       _isSocketAuthVerified = true;
       // Signaler présence en ligne
       _socket!.emit(SocketEvents.presenceOnline, {'userID': data['alanyaID']});
-      // Rejouer les listeners en attente
-      _replayPendingListeners();
     });
 
     _socket!.on(SocketEvents.authError, (data) {
@@ -772,19 +770,17 @@ class TalkyApiClient {
       _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
     });
 
-    _socket!.connect();
-  }
-
-  void _replayPendingListeners() {
-    debugPrint('[Socket] 🔄 Replay ${_socketListeners.length} listener group(s)');
+    // Ré-attache au socket fraîchement créé les listeners externes déjà
+    // enregistrés via `onSocketEvent` (utile après un logout/login : les modules
+    // clients gardent leurs callbacks via _socketListeners, mais le _socket a
+    // été détruit puis recréé).
     _socketListeners.forEach((event, callbacks) {
-      // !! IMPORTANT : Nettoyer les anciens listeners d'abord
-      _socket?.off(event);
-      debugPrint('[Socket] 🔄 Replay event "$event" (${callbacks.length} callback(s))');
       for (final cb in callbacks) {
-        _socket?.on(event, cb);
+        _socket!.on(event, cb);
       }
     });
+
+    _socket!.connect();
   }
 
   void disconnectSocket() {
@@ -804,20 +800,17 @@ class TalkyApiClient {
   }
 
   void onSocketEvent(String event, Function(dynamic) callback) {
-    // !! Stocker une seule fois pour replay après reconnexion
+    // Registre pour ré-attacher au prochain `connectSocket()` (cas logout/login
+    // où `_socket` est recréé). socket.io conserve ses listeners au travers des
+    // reconnexions auto donc on n'a pas besoin de re-binder à chaque fois.
     final listeners = _socketListeners.putIfAbsent(event, () => []);
-    
-    // !! Éviter les doublons (même si peu probable)
-    if (!listeners.contains(callback)) {
-      listeners.add(callback);
-      debugPrint('[Socket] 📌 Listener enregistré pour "$event"');
-    }
-    
-    // !! Enregistrer le listener socket.io s'il n'est pas déjà là
-    if (_socket?.connected == true) {
-      _socket?.on(event, callback);
-      debugPrint('[Socket] !! Listener activé pour "$event" sur socket actif');
-    }
+    if (listeners.contains(callback)) return;
+    listeners.add(callback);
+    debugPrint('[Socket] 📌 Listener enregistré pour "$event"');
+
+    // Attache directement au socket s'il existe : `.on` accepte avant connect
+    // et la livraison se déclenche dès qu'un event arrive (post auth:verified).
+    _socket?.on(event, callback);
   }
 
   void offSocketEvent(String event) {
