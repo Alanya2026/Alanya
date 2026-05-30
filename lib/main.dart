@@ -10,6 +10,7 @@ import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
+import 'core/theme/app_theme.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/local_cache_repository.dart';
@@ -75,22 +76,10 @@ class TalkyApp extends StatelessWidget {
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Talky',
-        theme: ThemeData(
-          primarySwatch: Colors.indigo,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-          scaffoldBackgroundColor: Colors.white,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-            iconTheme: IconThemeData(color: Colors.black),
-            titleTextStyle: TextStyle(
-              color: Colors.black,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        // Mode sombre prêt mais désactivé à la livraison (cf. AppTheme).
+        themeMode: ThemeMode.light,
         home: const AuthWrapper(),
       ),
     );
