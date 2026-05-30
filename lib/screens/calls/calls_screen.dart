@@ -6,13 +6,13 @@ import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
+import '../../widgets/animated_search_bar.dart';
 import '../../widgets/profile_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
 import 'ongoing_call_screen.dart';
 import 'keypad_screen.dart';
 import 'select_contact_screen.dart';
-import '../shared/schedule_screen.dart';
 
 class CallsScreen extends StatefulWidget {
   const CallsScreen({super.key});
@@ -26,12 +26,31 @@ class _CallsScreenState extends State<CallsScreen> {
   bool _isLoading = true;
   // !! ID mis en cache — pas de FutureBuilder dans chaque ListTile
   int _myId = 0;
+  bool _searchOpen = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _search = '';
 
   @override
   void initState() {
     super.initState();
     _initCurrentUser();
     _loadRecentCalls();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _searchOpen = !_searchOpen;
+      if (!_searchOpen) {
+        _searchCtrl.clear();
+        _search = '';
+      }
+    });
   }
 
   void _initCurrentUser() {
@@ -173,12 +192,17 @@ class _CallsScreenState extends State<CallsScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month, color: Colors.black),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ScheduleScreen()),
-            ),
+            icon: Icon(_searchOpen ? Icons.close : Icons.search, color: Colors.black),
+            tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
+            onPressed: _toggleSearch,
           ),
+          // IconButton(
+          //   icon: const Icon(Icons.calendar_month, color: Colors.black),
+          //   onPressed: () => Navigator.push(
+          //     context,
+          //     MaterialPageRoute(builder: (_) => const ScheduleScreen()),
+          //   ),
+          // ),
           IconButton(
             icon: const Icon(Icons.add_call, color: Colors.black),
             onPressed: () => Navigator.push(
@@ -188,26 +212,57 @@ class _CallsScreenState extends State<CallsScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _recentCalls.isEmpty
-              ? const Center(
-                  child: Text(
-                    'Aucun appel récent',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadRecentCalls,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
-                    itemCount: _recentCalls.length,
-                    itemBuilder: (context, index) {
-                      final call = _recentCalls[index];
-                      // !! Calcul direct — pas de FutureBuilder
-                      final otherUser = call.idCaller != _myId ? call.caller : call.receiver;
-                      final isMissed = call.isMissed;
-                      final isVideo = call.isVideo;
+      body: Column(
+        children: [
+          AnimatedSearchBar(
+            open: _searchOpen,
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _search = v.toLowerCase()),
+            onClose: _toggleSearch,
+          ),
+          Expanded(child: _buildList()),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const KeypadScreen()),
+        ),
+        backgroundColor: Colors.indigo,
+        child: const Icon(Icons.dialpad, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildList() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final filtered = _search.isEmpty
+        ? _recentCalls
+        : _recentCalls.where((call) {
+            final otherUser = call.idCaller != _myId ? call.caller : call.receiver;
+            return (otherUser?.nom ?? '').toLowerCase().contains(_search);
+          }).toList();
+    if (filtered.isEmpty) {
+      return Center(
+        child: Text(
+          _search.isEmpty ? 'Aucun appel récent' : 'Aucun résultat',
+          style: const TextStyle(color: Colors.grey, fontSize: 16),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _loadRecentCalls,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
+        itemCount: filtered.length,
+        itemBuilder: (context, index) {
+          final call = filtered[index];
+          // !! Calcul direct — pas de FutureBuilder
+          final otherUser = call.idCaller != _myId ? call.caller : call.receiver;
+          final isMissed = call.isMissed;
+          final isVideo = call.isVideo;
 
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -267,17 +322,8 @@ class _CallsScreenState extends State<CallsScreen> {
                                     ),
                                   ),
                                 ),
-                      );
-                    },
-                  ),
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const KeypadScreen()),
-        ),
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.dialpad, color: Colors.white),
+          );
+        },
       ),
     );
   }

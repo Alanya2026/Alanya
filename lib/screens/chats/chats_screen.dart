@@ -7,6 +7,7 @@ import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/animated_search_bar.dart';
 import '../../widgets/profile_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
@@ -22,12 +23,30 @@ class ChatsScreen extends StatefulWidget {
 class _ChatsScreenState extends State<ChatsScreen> {
   String _search = '';
   String _filter = 'all'; // 'all', 'discussions', 'groups', 'unread'
+  bool _searchOpen = false;
+  final TextEditingController _searchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     // Rafraîchit depuis le serveur en arrière-plan (l'UI s'affiche déjà du cache).
     Provider.of<ChatProvider>(context, listen: false).refreshConversations();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _searchOpen = !_searchOpen;
+      if (!_searchOpen) {
+        _searchCtrl.clear();
+        _search = '';
+      }
+    });
   }
 
   @override
@@ -50,27 +69,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
           style: TextStyle(color: Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            icon: Icon(_searchOpen ? Icons.close : Icons.search, color: Colors.black),
+            tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
+            onPressed: _toggleSearch,
+          ),
           IconButton(icon: const Icon(Icons.more_vert, color: Colors.black), onPressed: () {}),
         ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: TextField(
-              onChanged: (v) => setState(() => _search = v.toLowerCase()),
-              decoration: InputDecoration(
-                hintText: 'Rechercher...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
+          AnimatedSearchBar(
+            open: _searchOpen,
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _search = v.toLowerCase()),
+            onClose: _toggleSearch,
           ),
           // Filtres
           SingleChildScrollView(

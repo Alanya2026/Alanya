@@ -9,6 +9,7 @@ import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/services/push_service.dart';
+import '../../widgets/animated_search_bar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'join_meet_screen.dart';
 import 'meeting_detail_screen.dart';
@@ -29,6 +30,9 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
   bool _isLoading = true;
   String _userInitial = 'U';
   int _myId = 0;
+  bool _searchOpen = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _search = '';
 
   // Recharge la liste en temps réel à la réception d'une notification meeting
   // (invitation reçue, rappel) — sans avoir à rafraîchir manuellement.
@@ -48,7 +52,23 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
   void dispose() {
     _meetingNotifSub?.cancel();
     _tabController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _searchOpen = !_searchOpen;
+      if (!_searchOpen) {
+        _searchCtrl.clear();
+        _search = '';
+      }
+    });
+  }
+
+  List<Meeting> _filtered(List<Meeting> list) {
+    if (_search.isEmpty) return list;
+    return list.where((m) => m.objet.toLowerCase().contains(_search)).toList();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -219,22 +239,27 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
         ),
         actions: [
           IconButton(
+            icon: Icon(_searchOpen ? Icons.close : Icons.search, color: Colors.black),
+            tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
+            onPressed: _toggleSearch,
+          ),
+          IconButton(
             icon: const Icon(Icons.calendar_month_outlined, color: Colors.black),
             tooltip: 'Planifier',
             onPressed: _openSchedule,
           ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: _openSchedule,
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.indigo.shade100,
-              child: Text(
-                _userInitial,
-                style: const TextStyle(color: Colors.indigo, fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
+          // const SizedBox(width: 4),
+          // GestureDetector(
+          //   onTap: _openSchedule,
+          //   child: CircleAvatar(
+          //     radius: 16,
+          //     backgroundColor: Colors.indigo.shade100,
+          //     child: Text(
+          //       _userInitial,
+          //       style: const TextStyle(color: Colors.indigo, fontSize: 12, fontWeight: FontWeight.bold),
+          //     ),
+          //   ),
+          // ),
           const SizedBox(width: 16),
         ],
         bottom: TabBar(
@@ -253,6 +278,12 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
       ),
       body: Column(
         children: [
+          AnimatedSearchBar(
+            open: _searchOpen,
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _search = v.toLowerCase()),
+            onClose: _toggleSearch,
+          ),
           // Boutons d'action rapide
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -290,8 +321,10 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
                     controller: _tabController,
                     children: [
                       _MeetingList(
-                        meetings: _todayMeetings,
-                        emptyMessage: "Aucune réunion aujourd'hui",
+                        meetings: _filtered(_todayMeetings),
+                        emptyMessage: _search.isEmpty
+                            ? "Aucune réunion aujourd'hui"
+                            : 'Aucun résultat',
                         emptyIcon: CupertinoIcons.calendar_badge_plus,
                         onRefresh: _loadMeetings,
                         showScheduleButton: true,
@@ -299,8 +332,10 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
                         onOpenDetail: _openDetail,
                       ),
                       _MeetingList(
-                        meetings: _upcomingMeetings,
-                        emptyMessage: 'Aucune réunion à venir',
+                        meetings: _filtered(_upcomingMeetings),
+                        emptyMessage: _search.isEmpty
+                            ? 'Aucune réunion à venir'
+                            : 'Aucun résultat',
                         emptyIcon: CupertinoIcons.calendar,
                         onRefresh: _loadMeetings,
                         showScheduleButton: true,
@@ -308,8 +343,10 @@ class _MeetsScreenState extends State<MeetsScreen> with SingleTickerProviderStat
                         onOpenDetail: _openDetail,
                       ),
                       _MeetingList(
-                        meetings: _pastMeetings,
-                        emptyMessage: 'Aucune réunion passée',
+                        meetings: _filtered(_pastMeetings),
+                        emptyMessage: _search.isEmpty
+                            ? 'Aucune réunion passée'
+                            : 'Aucun résultat',
                         emptyIcon: CupertinoIcons.clock,
                         onRefresh: _loadMeetings,
                         showScheduleButton: false,
