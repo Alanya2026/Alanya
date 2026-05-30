@@ -1,9 +1,13 @@
-import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../core/theme/app_dimens.dart';
+import 'common/app_avatar.dart';
 import 'profile_image_modal.dart';
 
-/// Avatar carré réutilisable qui ouvre le modal au clic
+/// Avatar carré réutilisable qui ouvre le modal de profil au clic.
+///
+/// Le rendu (image réseau/locale + fallback initiales) est délégué à
+/// [AppAvatar] ; ce widget ne gère plus que l'ouverture du modal.
 class ProfileAvatar extends StatelessWidget {
   final String? imageUrl;
   final String? localPath;
@@ -22,13 +26,21 @@ class ProfileAvatar extends StatelessWidget {
     required this.userId,
     this.isGroup = false,
     this.conversationId,
-    this.size = 60,
-    this.borderRadius = 12,
+    this.size = AppSizes.avatarLg,
+    this.borderRadius = AppRadius.sm,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAvatar(
+      imageUrl: imageUrl,
+      localPath: localPath,
+      name: name,
+      isGroup: isGroup,
+      size: size,
+      shape: AppAvatarShape.squircle,
+      cornerRadius: borderRadius,
+      showShadow: true,
       onTap: () {
         showDialog(
           context: context,
@@ -43,79 +55,6 @@ class ProfileAvatar extends StatelessWidget {
           ),
         );
       },
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(borderRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(13),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: _buildImage(),
-      ),
-    );
-  }
-
-  Widget _buildImage() {
-    final hasImage = (imageUrl != null && imageUrl!.isNotEmpty) ||
-        localPath != null;
-
-    if (!hasImage) {
-      return _buildFallback();
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: _buildImageContent(),
-    );
-  }
-
-  Widget _buildImageContent() {
-    if (localPath != null) {
-      return Image.file(
-        File(localPath!),
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFallback(),
-      );
-    }
-
-    return CachedNetworkImage(
-      imageUrl: imageUrl ?? '',
-      fit: BoxFit.cover,
-      placeholder: (_, __) => Container(
-        color: Colors.grey.shade200,
-      ),
-      errorWidget: (_, __, ___) => _buildFallback(),
-    );
-  }
-
-  Widget _buildFallback() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        color: Colors.indigo.shade100,
-      ),
-      child: Center(
-        child: isGroup
-            ? Icon(
-                Icons.group,
-                size: size * 0.5,
-                color: Colors.indigo,
-              )
-            : Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: TextStyle(
-                  fontSize: size * 0.4,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
-                ),
-              ),
-      ),
     );
   }
 }

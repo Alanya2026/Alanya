@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_dimens.dart';
+import '../core/theme/app_theme.dart';
+
 /// Carte blanche arrondie réutilisable, avec titre optionnel et action
 /// « Voir tout » (>) à droite. Sert de conteneur aux sections de la fiche.
 class SectionCard extends StatelessWidget {
@@ -8,7 +11,7 @@ class SectionCard extends StatelessWidget {
     required this.child,
     this.title,
     this.onSeeAll,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(AppSpacing.lg),
   });
 
   final Widget child;
@@ -18,50 +21,53 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: AppSpacing.screenH,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: colors.surface,
+        borderRadius: AppRadius.brMd,
+        boxShadow: AppShadows.subtle,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (title != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.sm,
+                0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title!,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
+                  Text(title!, style: context.text.titleSmall),
                   if (onSeeAll != null)
                     TextButton(
                       onPressed: onSeeAll,
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Voir tout',
-                              style: TextStyle(color: Colors.indigo, fontSize: 13)),
-                          Icon(Icons.chevron_right, color: Colors.indigo, size: 18),
+                          Text(
+                            'Voir tout',
+                            style: context.text.labelMedium?.copyWith(
+                              color: colors.primary,
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
+                            color: colors.primary,
+                            size: AppIconSize.sm,
+                          ),
                         ],
                       ),
                     ),

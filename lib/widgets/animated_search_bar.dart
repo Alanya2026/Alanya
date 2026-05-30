@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_dimens.dart';
+import '../core/theme/app_theme.dart';
+
 /// Barre de recherche pliable affichée sous l'AppBar.
 /// L'écran parent garde la source de vérité (`open`, contrôleur) et bascule
 /// l'état via un IconButton(search) dans son AppBar. Quand `open` passe à true,
@@ -56,26 +59,40 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> {
       alignment: Alignment.topCenter,
       child: widget.open
           ? Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.sm,
+              ),
               child: TextField(
                 controller: widget.controller,
                 focusNode: _focus,
                 onChanged: widget.onChanged,
                 textInputAction: TextInputAction.search,
+                style: context.text.bodyLarge,
                 decoration: InputDecoration(
                   hintText: widget.hintText,
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  prefixIcon: Icon(Icons.search_rounded,
+                      color: context.colors.onSurfaceVariant),
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
+                    icon: Icon(Icons.close_rounded,
+                        color: context.colors.onSurfaceVariant),
                     onPressed: widget.onClose,
                     tooltip: 'Fermer',
                   ),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
+                  border: const OutlineInputBorder(
+                    borderRadius: AppRadius.brPill,
                     borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: AppRadius.brPill,
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: AppRadius.brPill,
+                    borderSide: BorderSide(color: context.colors.primary, width: 1.5),
                   ),
                 ),
               ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_dimens.dart';
+import '../core/theme/app_theme.dart';
+
 /// Action rapide circulaire avec libellé (favoris, recherche, effacer…).
 /// Gère un état « actif » optionnel (ex. favori ajouté → étoile pleine).
 class QuickActionButton extends StatelessWidget {
@@ -9,8 +12,8 @@ class QuickActionButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.active = false,
-    this.activeColor = Colors.amber,
-    this.color = Colors.indigo,
+    this.activeColor = const Color(0xFFF59E0B),
+    this.color,
   });
 
   final IconData icon;
@@ -18,16 +21,20 @@ class QuickActionButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool active;
   final Color activeColor;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final effective = active ? activeColor : color;
+    final base = color ?? context.colors.primary;
+    final effective = active ? activeColor : base;
     return InkWell(
       borderRadius: BorderRadius.circular(40),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm - 2,
+          vertical: AppSpacing.xs,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -38,13 +45,10 @@ class QuickActionButton extends StatelessWidget {
                 color: effective.withAlpha(active ? 38 : 22),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: effective, size: 24),
+              child: Icon(icon, color: effective, size: AppIconSize.md),
             ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 11.5, color: Colors.black54),
-            ),
+            AppSpacing.vGapSm,
+            Text(label, style: context.text.labelSmall),
           ],
         ),
       ),
