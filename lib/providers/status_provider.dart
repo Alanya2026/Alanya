@@ -198,7 +198,7 @@ class StatusProvider extends ChangeNotifier {
       return s;
     } catch (e) {
       debugPrint('[StatusProvider] createText error: $e');
-      return null;
+      rethrow;
     }
   }
 
@@ -225,7 +225,7 @@ class StatusProvider extends ChangeNotifier {
       return s;
     } catch (e) {
       debugPrint('[StatusProvider] createMedia error: $e');
-      return null;
+      rethrow;
     }
   }
 

@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:record/record.dart';
 import '../../providers/status_provider.dart';
 
 enum _StatusType { text, photo, video, audio }
@@ -31,9 +35,18 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   late final TabController _tabController;
   _StatusType _type = _StatusType.text;
   final _textCtrl = TextEditingController();
+  final _captionCtrl = TextEditingController();
   File? _mediaFile;
   Color _bgColor = const Color(0xFFE53935);
   bool _publishing = false;
+
+  // Audio (onglet 4) : enregistrement vocal + import de fichier.
+  final AudioRecorder _recorder = AudioRecorder();
+  bool _isRecording = false;
+  int _recordSeconds = 0;
+  Timer? _recordTimer;
+  int? _audioDurationMs;
+  String? _audioName;
 
   @override
   void initState() {
@@ -43,9 +56,18 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       if (_tabController.indexIsChanging) return;
       final next = _StatusType.values[_tabController.index];
       if (next == _type) return;
+      if (_isRecording) {
+        _recordTimer?.cancel();
+        _recorder.stop();
+      }
       setState(() {
         _type = next;
         _mediaFile = null;
+        _captionCtrl.clear();
+        _isRecording = false;
+        _recordSeconds = 0;
+        _audioDurationMs = null;
+        _audioName = null;
       });
     });
   }
@@ -54,6 +76,9 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   void dispose() {
     _tabController.dispose();
     _textCtrl.dispose();
+    _captionCtrl.dispose();
+    _recordTimer?.cancel();
+    _recorder.dispose();
     super.dispose();
   }
 
@@ -75,14 +100,82 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     final picker = ImagePicker();
     final file = video
         ? await picker.pickVideo(source: source)
-        : await picker.pickImage(source: source);
+        // Compression : une photo plein format (surtout prise à l'instant via
+        // l'appareil) est trop lourde et l'upload échoue. On la réduit comme le chat.
+        : await picker.pickImage(source: source, imageQuality: 80, maxWidth: 1920);
     if (file != null) setState(() => _mediaFile = File(file.path));
   }
 
-  Future<void> _pickAudio() async {
-    final picker = ImagePicker();
-    final file = await picker.pickVideo(source: ImageSource.gallery);
-    if (file != null) setState(() => _mediaFile = File(file.path));
+  // ── Audio : enregistrement vocal ─────────────────────────────────
+  Future<void> _startRecording() async {
+    if (!await _recorder.hasPermission()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permission micro refusée')),
+        );
+      }
+      return;
+    }
+    final dir = await getTemporaryDirectory();
+    final path =
+        '${dir.path}/status_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path);
+    if (!mounted) return;
+    setState(() {
+      _isRecording = true;
+      _recordSeconds = 0;
+      _mediaFile = null;
+      _audioDurationMs = null;
+      _audioName = null;
+    });
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordSeconds++);
+    });
+  }
+
+  Future<void> _stopRecording({required bool keep}) async {
+    _recordTimer?.cancel();
+    final path = await _recorder.stop();
+    final seconds = _recordSeconds;
+    if (!mounted) return;
+    if (keep && path != null && seconds >= 1) {
+      setState(() {
+        _isRecording = false;
+        _mediaFile = File(path);
+        _audioDurationMs = seconds * 1000;
+        _audioName = 'Message vocal';
+      });
+    } else {
+      if (path != null) {
+        try {
+          File(path).deleteSync();
+        } catch (_) {}
+      }
+      setState(() {
+        _isRecording = false;
+        _recordSeconds = 0;
+      });
+    }
+  }
+
+  // ── Audio : import d'un fichier audio uniquement ─────────────────
+  Future<void> _pickAudioFile() async {
+    final res = await FilePicker.platform.pickFiles(type: FileType.audio);
+    final path = res?.files.single.path;
+    if (path != null && mounted) {
+      setState(() {
+        _mediaFile = File(path);
+        _audioDurationMs = null;
+        _audioName = res!.files.single.name;
+      });
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    final m = (seconds ~/ 60).toString();
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   // ── Color picker (bottom sheet) ──────────────────────────────────
@@ -173,11 +266,14 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
             backgroundColor: _bgColor.toARGB32().toRadixString(16).padLeft(8, '0'),
           );
         case _StatusType.photo:
-          await provider.createMedia(file: _mediaFile!, type: 1);
+          await provider.createMedia(
+              file: _mediaFile!, type: 1, caption: _captionCtrl.text.trim());
         case _StatusType.video:
-          await provider.createMedia(file: _mediaFile!, type: 2);
+          await provider.createMedia(
+              file: _mediaFile!, type: 2, caption: _captionCtrl.text.trim());
         case _StatusType.audio:
-          await provider.createMedia(file: _mediaFile!, type: 3);
+          await provider.createMedia(
+              file: _mediaFile!, type: 3, mediaDurationMs: _audioDurationMs);
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -292,7 +388,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
         return _CircleAction(
           icon: Icons.audio_file_rounded,
           color: Colors.indigo,
-          onTap: _pickAudio,
+          onTap: _pickAudioFile,
         );
     }
   }
@@ -376,6 +472,34 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
               right: 16,
               child: _Chip(icon: Icons.movie, label: 'Vidéo'),
             ),
+
+          // Description optionnelle (champ `text` en BD) — facultative.
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 84 + MediaQuery.of(context).padding.bottom,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _captionCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                cursorColor: Colors.white,
+                minLines: 1,
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Ajouter une description…',
+                  hintStyle:
+                      TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                ),
+              ),
+            ),
+          ),
         ],
       );
     }
@@ -433,44 +557,91 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 
   Widget _buildAudioCanvas() {
     final hasFile = _mediaFile != null;
+    final Color circleColor = _isRecording
+        ? Colors.red
+        : (hasFile ? Colors.indigo : Colors.indigo.shade50);
+    final IconData circleIcon = _isRecording
+        ? Icons.graphic_eq_rounded
+        : (hasFile ? Icons.audiotrack_rounded : Icons.mic_rounded);
+
     return Container(
       color: const Color(0xFFF4F5F8),
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: hasFile ? Colors.indigo : Colors.indigo.shade50,
-                shape: BoxShape.circle,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: circleColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  circleIcon,
+                  size: 44,
+                  color: (_isRecording || hasFile) ? Colors.white : Colors.indigo,
+                ),
               ),
-              child: Icon(
-                hasFile ? Icons.audiotrack_rounded : Icons.mic_rounded,
-                size: 44,
-                color: hasFile ? Colors.white : Colors.indigo,
+              const SizedBox(height: 18),
+              Text(
+                _isRecording
+                    ? 'Enregistrement… ${_formatDuration(_recordSeconds)}'
+                    : hasFile
+                        ? (_audioName ?? 'Message vocal')
+                        : 'Enregistrez un vocal ou importez un fichier audio',
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              hasFile
-                  ? (_mediaFile!.path.split('/').last)
-                  : 'Ajouter un fichier audio',
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            _ChoiceButton(
-              icon: Icons.upload_file_rounded,
-              label: hasFile ? 'Changer le fichier' : 'Choisir un fichier',
-              onTap: _pickAudio,
-            ),
-          ],
+              if (hasFile && !_isRecording && _audioDurationMs != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _formatDuration((_audioDurationMs! / 1000).round()),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                ),
+              const SizedBox(height: 18),
+              if (_isRecording)
+                Wrap(
+                  spacing: 12,
+                  children: [
+                    _ChoiceButton(
+                      icon: Icons.delete_outline,
+                      label: 'Annuler',
+                      onTap: () => _stopRecording(keep: false),
+                    ),
+                    _ChoiceButton(
+                      icon: Icons.check_rounded,
+                      label: 'Terminer',
+                      onTap: () => _stopRecording(keep: true),
+                    ),
+                  ],
+                )
+              else
+                Wrap(
+                  spacing: 12,
+                  children: [
+                    _ChoiceButton(
+                      icon: Icons.mic_rounded,
+                      label: hasFile ? 'Réenregistrer' : 'Enregistrer',
+                      onTap: _startRecording,
+                    ),
+                    _ChoiceButton(
+                      icon: Icons.upload_file_rounded,
+                      label: 'Importer',
+                      onTap: _pickAudioFile,
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );
