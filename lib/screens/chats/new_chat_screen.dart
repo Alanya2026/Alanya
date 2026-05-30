@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/db/app_database.dart';
+import '../../core/utils/avatar_utils.dart';
+import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import '../../core/utils/avatar_utils.dart';
 import '../../widgets/add_contact_sheet.dart';
+import 'chat_detail_screen.dart';
 import 'select_members_screen.dart';
 
 class NewChatScreen extends StatefulWidget {
@@ -163,6 +166,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // Section "Groupes" : visible uniquement quand on
+                          // recherche, listant mes groupes dont le nom matche.
+                          if (hasQuery) _buildGroupsSection(),
                           Padding(
                             padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                             child: Text(
@@ -267,6 +273,85 @@ class _NewChatScreenState extends State<NewChatScreen> {
         onAdded: (_) => _loadContacts(),
       ),
     );
+  }
+
+  Widget _buildGroupsSection() {
+    final chat = context.read<ChatProvider>();
+    final query = _searchController.text.trim().toLowerCase();
+    return StreamBuilder<List<LocalConversation>>(
+      stream: chat.watchConversations(),
+      builder: (_, snap) {
+        final groups = (snap.data ?? const <LocalConversation>[])
+            .where((c) =>
+                c.isGroup &&
+                (c.groupName ?? '').toLowerCase().contains(query))
+            .toList();
+        if (groups.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+              child: Text(
+                'Groupes',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+            for (final g in groups)
+              InkWell(
+                onTap: () => _openGroup(g),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.indigo.shade50,
+                        backgroundImage: avatarImage(g.groupPhoto),
+                        child: hasValidAvatarUrl(g.groupPhoto)
+                            ? null
+                            : const Icon(Icons.group, color: Colors.indigo),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          g.groupName ?? 'Groupe',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const Divider(height: 1),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openGroup(LocalConversation g) {
+    // On sort de l'écran "Nouveau message" puis on ouvre la discussion du
+    // groupe : le retour mène ainsi à la liste des conversations.
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    navigator.push(MaterialPageRoute(
+      builder: (_) => ChatDetailScreen(
+        userName: g.groupName ?? 'Groupe',
+        conversationId: g.conversID,
+        userId: null,
+        isGroup: true,
+        avatarUrl: g.groupPhoto,
+      ),
+    ));
   }
 
   Widget _buildActionTile(IconData icon, String text, VoidCallback onTap) {
