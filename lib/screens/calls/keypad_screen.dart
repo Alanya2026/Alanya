@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import 'ongoing_call_screen.dart';
 
 class KeypadScreen extends StatefulWidget {
@@ -88,7 +91,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(callService.errorMessage!),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
             duration: const Duration(seconds: 4),
           ),
         );
@@ -106,12 +109,9 @@ class _KeypadScreenState extends State<KeypadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -120,7 +120,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
           const Spacer(),
           // Number display or User found
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
             height: 80,
             alignment: Alignment.center,
             child: _isSearching
@@ -131,23 +131,17 @@ class _KeypadScreenState extends State<KeypadScreen> {
                         children: [
                           Text(
                             _foundUser!.nom,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: context.text.headlineSmall,
                           ),
                           Text(
                             '@${_foundUser!.pseudo}',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
+                            style: context.text.bodyMedium,
                           ),
                         ],
                       )
                     : Text(
                         _phoneNumber,
-                        style: const TextStyle(
+                        style: context.text.headlineLarge?.copyWith(
                           fontSize: 40,
                           fontWeight: FontWeight.w400,
                           letterSpacing: 2,
@@ -156,7 +150,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl),
           // Keypad
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -187,14 +181,14 @@ class _KeypadScreenState extends State<KeypadScreen> {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: Colors.indigo.shade50,
+                        color: context.colors.primaryContainer,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.indigo),
+                        border: Border.all(color: context.colors.primary),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         CupertinoIcons.videocam_fill,
-                        color: Colors.indigo,
-                        size: 28,
+                        color: context.colors.primary,
+                        size: AppIconSize.lg,
                       ),
                     ),
                   )
@@ -205,13 +199,13 @@ class _KeypadScreenState extends State<KeypadScreen> {
                   child: Container(
                     width: 72,
                     height: 72,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
+                    decoration: BoxDecoration(
+                      color: context.semantic.success,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       CupertinoIcons.phone_fill,
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 36,
                     ),
                   ),
@@ -222,8 +216,8 @@ class _KeypadScreenState extends State<KeypadScreen> {
                     onPressed: _onDelete,
                     icon: Icon(
                       _foundUser != null ? Icons.clear : CupertinoIcons.delete_left,
-                      size: 28,
-                      color: Colors.grey,
+                      size: AppIconSize.lg,
+                      color: context.colors.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -246,7 +240,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: context.semantic.surfaceMuted,
               shape: BoxShape.circle,
             ),
             child: Column(
@@ -254,12 +248,15 @@ class _KeypadScreenState extends State<KeypadScreen> {
               children: [
                 Text(
                   numbers[index],
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w500),
+                  style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w500),
                 ),
                 if (letters[index].isNotEmpty)
                   Text(
                     letters[index],
-                    style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+                    style: context.text.labelSmall?.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
               ],
             ),

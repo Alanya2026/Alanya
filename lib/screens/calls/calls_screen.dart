@@ -7,7 +7,11 @@ import '../../providers/auth_provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/local_hidden_store.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../widgets/animated_search_bar.dart';
+import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
@@ -166,7 +170,7 @@ class _CallsScreenState extends State<CallsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(callService.errorMessage!),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
             duration: const Duration(seconds: 4),
           ),
         );
@@ -183,29 +187,17 @@ class _CallsScreenState extends State<CallsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Appels',
-          style: TextStyle(color: Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
-        ),
+        title: Text('Appels', style: context.text.headlineLarge),
         actions: [
           IconButton(
-            icon: Icon(_searchOpen ? Icons.close : Icons.search, color: Colors.black),
+            icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded),
             tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
             onPressed: _toggleSearch,
           ),
-          // IconButton(
-          //   icon: const Icon(Icons.calendar_month, color: Colors.black),
-          //   onPressed: () => Navigator.push(
-          //     context,
-          //     MaterialPageRoute(builder: (_) => const ScheduleScreen()),
-          //   ),
-          // ),
           IconButton(
-            icon: const Icon(Icons.add_call, color: Colors.black),
+            icon: const Icon(Icons.add_call),
+            tooltip: 'Nouvel appel',
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SelectContactScreen()),
@@ -229,15 +221,14 @@ class _CallsScreenState extends State<CallsScreen> {
           context,
           MaterialPageRoute(builder: (_) => const KeypadScreen()),
         ),
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.dialpad, color: Colors.white),
+        child: const Icon(Icons.dialpad),
       ),
     );
   }
 
   Widget _buildList() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingState();
     }
     // Réactif : se rebuild quand l'utilisateur supprime un appel localement.
     final hidden = context.watch<LocalHiddenStore>();
@@ -249,13 +240,15 @@ class _CallsScreenState extends State<CallsScreen> {
             return (otherUser?.nom ?? '').toLowerCase().contains(_search);
           }).toList();
     if (filtered.isEmpty) {
-      return Center(
-        child: Text(
-          _search.isEmpty ? 'Aucun appel récent' : 'Aucun résultat',
-          style: const TextStyle(color: Colors.grey, fontSize: 16),
-        ),
+      return EmptyState(
+        icon: Icons.call_outlined,
+        title: _search.isEmpty ? 'Aucun appel récent' : 'Aucun résultat',
+        message: _search.isEmpty
+            ? 'Vos appels passés et reçus apparaîtront ici.'
+            : 'Essayez un autre nom.',
       );
     }
+    final colors = context.colors;
     return RefreshIndicator(
       onRefresh: _loadRecentCalls,
       child: ListView.builder(
@@ -268,65 +261,63 @@ class _CallsScreenState extends State<CallsScreen> {
           final isMissed = call.isMissed;
           final isVideo = call.isVideo;
 
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        onLongPress: () => _showCallActions(call, otherUser?.nom ?? 'Inconnu'),
-                        leading: ProfileAvatar(
-                          imageUrl: otherUser?.avatarUrl,
-                          name: otherUser?.nom ?? 'Inconnu',
-                          userId: otherUser?.alanyaID ?? 0,
-                          isGroup: false,
-                          size: 56,
-                          borderRadius: 28,
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            onLongPress: () => _showCallActions(call, otherUser?.nom ?? 'Inconnu'),
+            leading: ProfileAvatar(
+              imageUrl: otherUser?.avatarUrl,
+              name: otherUser?.nom ?? 'Inconnu',
+              userId: otherUser?.alanyaID ?? 0,
+              isGroup: false,
+              size: AppSizes.avatarLg,
+              borderRadius: AppSizes.avatarLg / 2,
+            ),
+            title: Text(
+              otherUser?.nom ?? 'Inconnu',
+              style: context.text.titleMedium?.copyWith(
+                color: isMissed ? colors.error : colors.onSurface,
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Row(
+                children: [
+                  Icon(
+                    isMissed ? Icons.call_missed : Icons.call_made,
+                    size: 16,
+                    color: isMissed ? colors.error : context.semantic.success,
+                  ),
+                  AppSpacing.hGapXs,
+                  Flexible(
+                    child: Text(
+                      '${_formatDate(call.createdAt)} • ${isVideo ? "Vidéo" : "Audio"}'
+                      '${call.duree != null && call.duree! > 0 ? " • ${call.formattedDuration}" : ""}',
+                      style: context.text.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            trailing: IconButton(
+              icon: Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded),
+              color: colors.primary,
+              onPressed: () => _callFromHistory(call, isVideo),
+            ),
+            onTap: otherUser == null
+                ? null
+                : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CallDetailScreen(
+                          user: otherUser,
+                          call: call,
                         ),
-                        title: Text(
-                          otherUser?.nom ?? 'Inconnu',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: isMissed ? Colors.red : Colors.black87,
-                          ),
-                        ),
-                        subtitle: Row(
-                          children: [
-                            Icon(
-                              isMissed ? Icons.call_missed : Icons.call_made,
-                              size: 16,
-                              color: isMissed ? Colors.red : Colors.green,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                '${_formatDate(call.createdAt)} • ${isVideo ? "Vidéo" : "Audio"}',
-                                style: TextStyle(color: Colors.grey.shade600),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (call.duree != null && call.duree! > 0) ...[
-                              Text(' • ${call.formattedDuration}',
-                                  style: TextStyle(color: Colors.grey.shade600),
-                                  overflow: TextOverflow.ellipsis),
-                            ],
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: Icon(
-                            isVideo ? Icons.videocam : Icons.call,
-                            color: Colors.indigo,
-                          ),
-                          onPressed: () => _callFromHistory(call, isVideo),
-                        ),
-                        onTap: otherUser == null
-                            ? null
-                            : () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => CallDetailScreen(
-                                      user: otherUser,
-                                      call: call,
-                                    ),
-                                  ),
-                                ),
+                      ),
+                    ),
           );
         },
       ),
@@ -335,42 +326,33 @@ class _CallsScreenState extends State<CallsScreen> {
 
   Future<void> _showCallActions(Call call, String name) async {
     final hidden = context.read<LocalHiddenStore>();
-    await showModalBottomSheet<void>(
+    final error = context.colors.error;
+    await showAppBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetCtx) => SafeArea(
+      builder: (sheetCtx) => AppBottomSheet(
+        padding: EdgeInsets.zero,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text(
-                name,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.xs,
               ),
+              child: Text(name, style: context.text.titleMedium),
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              title: const Text('Supprimer', style: TextStyle(color: Colors.redAccent)),
+              leading: Icon(Icons.delete_outline, color: error),
+              title: Text('Supprimer', style: TextStyle(color: error)),
               onTap: () async {
                 Navigator.pop(sheetCtx);
                 await hidden.hideCall(call.idCall);
               },
             ),
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
           ],
         ),
       ),
