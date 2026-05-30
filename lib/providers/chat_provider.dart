@@ -39,9 +39,9 @@ class ChatProvider extends ChangeNotifier {
     final isToday = ls.year == now.year && ls.month == now.month && ls.day == now.day;
     final yest = now.subtract(const Duration(days: 1));
     final isYesterday = ls.year == yest.year && ls.month == yest.month && ls.day == yest.day;
-    if (isToday) return 'Vu(e) à $hm';
-    if (isYesterday) return 'Vu(e) hier à $hm';
-    return 'Vu(e) le ${ls.day}/${ls.month}';
+    if (isToday) return 'Vu à $hm';
+    if (isYesterday) return 'Vu hier à $hm';
+    return 'Vu le ${ls.day}/${ls.month}';
   }
  
   Stream<List<LocalConversation>> watchConversations() => repository.watchConversations();

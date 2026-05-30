@@ -179,7 +179,7 @@ class _ProfileCard extends StatelessWidget {
           _InfoRow(label: 'Email', value: user.email),
           if ((user.paysLibelle ?? '').isNotEmpty)
             _InfoRow(label: 'Pays', value: user.paysLibelle!),
-          _InfoRow(label: 'Inscrit le', value: _formatDate(user.createdAt)),
+          _InfoRow(label: 'Inscrit(e) le', value: _formatDate(user.createdAt)),
           _InfoRow(label: 'Dernière vue', value: _formatDate(user.lastSeen)),
           if (user.exclus && (user.excludeReason ?? '').isNotEmpty)
             _InfoRow(label: 'Motif ban', value: user.excludeReason!),
