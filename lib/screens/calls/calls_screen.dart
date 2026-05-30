@@ -6,6 +6,7 @@ import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
+import '../../core/services/local_hidden_store.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/profile_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
@@ -238,9 +239,12 @@ class _CallsScreenState extends State<CallsScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+    // Réactif : se rebuild quand l'utilisateur supprime un appel localement.
+    final hidden = context.watch<LocalHiddenStore>();
+    final visible = _recentCalls.where((c) => !hidden.isCallHidden(c.idCall));
     final filtered = _search.isEmpty
-        ? _recentCalls
-        : _recentCalls.where((call) {
+        ? visible.toList()
+        : visible.where((call) {
             final otherUser = call.idCaller != _myId ? call.caller : call.receiver;
             return (otherUser?.nom ?? '').toLowerCase().contains(_search);
           }).toList();
@@ -266,6 +270,7 @@ class _CallsScreenState extends State<CallsScreen> {
 
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        onLongPress: () => _showCallActions(call, otherUser?.nom ?? 'Inconnu'),
                         leading: ProfileAvatar(
                           imageUrl: otherUser?.avatarUrl,
                           name: otherUser?.nom ?? 'Inconnu',
@@ -324,6 +329,50 @@ class _CallsScreenState extends State<CallsScreen> {
                                 ),
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _showCallActions(Call call, String name) async {
+    final hidden = context.read<LocalHiddenStore>();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(
+                name,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: const Text('Supprimer', style: TextStyle(color: Colors.redAccent)),
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                await hidden.hideCall(call.idCall);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
