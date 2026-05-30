@@ -483,6 +483,22 @@ class TalkyApiClient {
     );
   }
 
+  /// Ajoute des participants à un groupe existant. Idempotent côté serveur
+  /// (les IDs déjà membres sont ignorés). L'appelant doit être membre.
+  Future<Map<String, dynamic>> addParticipants(
+    int conversID,
+    List<int> participantIDs,
+  ) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('$baseUrl/conversations/$conversID/participants'),
+        headers: _headers,
+        body: jsonEncode({'participantIDs': participantIDs}),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
   Future<void> deleteConversation(int conversID) async {
     await _handleRequest(
       () => _client.delete(Uri.parse('$baseUrl/conversations/$conversID'), headers: _headers),

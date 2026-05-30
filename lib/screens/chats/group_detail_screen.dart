@@ -14,6 +14,7 @@ import '../../core/utils/avatar_utils.dart';
 import '../../core/db/app_database.dart';
 import '../calls/group_participants_picker_screen.dart';
 import '../calls/ongoing_call_screen.dart';
+import '../meetings/participant_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
@@ -154,6 +155,45 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
+  Future<void> _addParticipants() async {
+    if (_group == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final api = Provider.of<TalkyApiClient>(context, listen: false);
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+
+    final excludeIds = _group!.participants.map((u) => u.alanyaID).toSet();
+
+    final picked = await Navigator.push<List<User>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ParticipantPickerScreen(
+          confirmLabel: 'Ajouter',
+          // Pas de plafond strict côté serveur ; on garde le défaut de 9.
+          excludeIds: excludeIds,
+        ),
+      ),
+    );
+    if (picked == null || picked.isEmpty || !mounted) return;
+
+    try {
+      await api.addParticipants(
+        widget.conversationId,
+        picked.map((u) => u.alanyaID).toList(),
+      );
+      await chat.refreshConversations();
+      if (!mounted) return;
+      await _loadGroup();
+      messenger.showSnackBar(SnackBar(
+        content: Text('${picked.length} participant(s) ajouté(s)'),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Erreur : $e'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
   Future<void> _leaveGroup() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -266,6 +306,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                     const SizedBox(height: 16),
                     _MembersCard(
                       participants: _group?.participants ?? [],
+                      onAddParticipants: _addParticipants,
                     ),
                     const SizedBox(height: 16),
                     _DangerCard(onLeave: _leaveGroup),
@@ -665,8 +706,12 @@ class _MediaCardState extends State<_MediaCard> {
 
 class _MembersCard extends StatelessWidget {
   final List<User> participants;
+  final VoidCallback? onAddParticipants;
 
-  const _MembersCard({required this.participants});
+  const _MembersCard({
+    required this.participants,
+    this.onAddParticipants,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -686,6 +731,27 @@ class _MembersCard extends StatelessWidget {
               ),
             ),
           ),
+          if (onAddParticipants != null)
+            ListTile(
+              leading: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.indigo.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person_add_alt_1, color: Colors.indigo),
+              ),
+              title: const Text(
+                'Ajouter des participants',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  color: Colors.indigo,
+                ),
+              ),
+              onTap: onAddParticipants,
+            ),
           ...participants.map((member) {
             final isYou = member.alanyaID ==
                 context.read<AuthProvider>().currentUser?.alanyaID;

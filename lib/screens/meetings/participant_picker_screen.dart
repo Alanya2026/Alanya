@@ -9,12 +9,15 @@ class ParticipantPickerScreen extends StatefulWidget {
   final String confirmLabel;
   // 9 invités max : l'organisateur occupe la 10e place
   final int maxSelectable;
+  // IDs à exclure de la liste affichée (ex. membres déjà dans un groupe).
+  final Set<int> excludeIds;
 
   const ParticipantPickerScreen({
     super.key,
     this.initialSelected = const [],
     this.confirmLabel = 'Confirmer',
     this.maxSelectable = 9,
+    this.excludeIds = const {},
   });
 
   @override
@@ -55,6 +58,7 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
       setState(() {
         _results = data
             .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .where((u) => !widget.excludeIds.contains(u.alanyaID))
             .toList();
         _isLoading = false;
         _showingContacts = true;
@@ -91,6 +95,7 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
       setState(() {
         _results = data
             .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .where((u) => !widget.excludeIds.contains(u.alanyaID))
             .toList();
         _isLoading = false;
       });
