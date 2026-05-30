@@ -15,14 +15,19 @@ import '../../core/utils/avatar_utils.dart';
 import 'status_views_screen.dart';
 
 class StatusViewerScreen extends StatefulWidget {
-  final List<Statut> statuses;
-  final int startIndex;
+  /// Liste des contacts visibles dans la section où l'utilisateur est entré.
+  /// Chaque entrée = liste de statuts d'un contact (ordre chrono ASC).
+  /// Permet le swipe horizontal entre contacts dans une même section.
+  final List<List<Statut>> contactGroups;
+  final int startContactIndex;
+  final int startItemIndex;
   final bool isMine;
 
   const StatusViewerScreen({
     super.key,
-    required this.statuses,
-    required this.startIndex,
+    required this.contactGroups,
+    required this.startContactIndex,
+    this.startItemIndex = 0,
     required this.isMine,
   });
 
@@ -34,7 +39,9 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     with SingleTickerProviderStateMixin {
   static const Duration _textImageDuration = Duration(seconds: 5);
 
-  late int _index;
+  late int _contactIndex;
+  late int _itemIndex;
+  late PageController _pageCtrl;
   late AnimationController _progress;
   bool _paused = false;
   VideoPlayerController? _videoCtrl;
@@ -46,12 +53,17 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   final FocusNode _replyFocus = FocusNode();
   bool _sendingReply = false;
 
-  Statut get _current => widget.statuses[_index];
+  List<Statut> get _currentGroup => widget.contactGroups[_contactIndex];
+  Statut get _current => _currentGroup[_itemIndex];
 
   @override
   void initState() {
     super.initState();
-    _index = widget.startIndex.clamp(0, widget.statuses.length - 1);
+    final maxContact = widget.contactGroups.length - 1;
+    _contactIndex = widget.startContactIndex.clamp(0, maxContact < 0 ? 0 : maxContact);
+    final maxItem = _currentGroup.length - 1;
+    _itemIndex = widget.startItemIndex.clamp(0, maxItem < 0 ? 0 : maxItem);
+    _pageCtrl = PageController(initialPage: _contactIndex);
     _progress = AnimationController(vsync: this)
       ..addStatusListener((s) {
         if (s == AnimationStatus.completed) _next();
@@ -61,6 +73,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
 
   @override
   void dispose() {
+    _pageCtrl.dispose();
     _progress.dispose();
     _disposeMedia();
     _replyController.dispose();
@@ -137,19 +150,42 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   }
 
   void _next() {
-    if (_index < widget.statuses.length - 1) {
-      setState(() => _index++);
+    if (_itemIndex < _currentGroup.length - 1) {
+      setState(() => _itemIndex++);
       _loadCurrent();
+    } else if (_contactIndex < widget.contactGroups.length - 1) {
+      _pageCtrl.nextPage(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     } else {
       Navigator.pop(context);
     }
   }
 
   void _prev() {
-    if (_index > 0) {
-      setState(() => _index--);
+    if (_itemIndex > 0) {
+      setState(() => _itemIndex--);
       _loadCurrent();
+    } else if (_contactIndex > 0) {
+      _pageCtrl.previousPage(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     }
+  }
+
+  /// Appelée par PageView (swipe manuel) ET par les transitions programmées
+  /// de _next/_prev (animateToPage déclenche onPageChanged à la fin).
+  void _onPageChanged(int newIdx) {
+    if (newIdx == _contactIndex) return;
+    final forward = newIdx > _contactIndex;
+    final lastItem = widget.contactGroups[newIdx].length - 1;
+    setState(() {
+      _contactIndex = newIdx;
+      _itemIndex = forward ? 0 : (lastItem < 0 ? 0 : lastItem);
+    });
+    _loadCurrent();
   }
 
   void _setPaused(bool paused) {
@@ -274,7 +310,26 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Stack(
+        // PageView horizontal : permet de passer d'un contact à l'autre via swipe.
+        // Seule la page courante affiche le contenu live ; les pages voisines
+        // sont des placeholders noirs (transition de ~250ms, peu perceptible).
+        child: PageView.builder(
+          controller: _pageCtrl,
+          onPageChanged: _onPageChanged,
+          itemCount: widget.contactGroups.length,
+          itemBuilder: (context, pageIdx) {
+            if (pageIdx != _contactIndex) {
+              return const ColoredBox(color: Colors.black);
+            }
+            return _buildCurrentPage(s);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentPage(Statut s) {
+    return Stack(
           children: [
             // Contenu
             Positioned.fill(child: _buildContent(s)),
@@ -311,8 +366,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
               child: Column(
                 children: [
                   _ProgressBars(
-                    count: widget.statuses.length,
-                    currentIndex: _index,
+                    count: _currentGroup.length,
+                    currentIndex: _itemIndex,
                     progress: _progress,
                   ),
                   _Header(
@@ -368,9 +423,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
               ),
             ),
           ],
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildReplyBar() {
