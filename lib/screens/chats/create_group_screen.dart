@@ -59,14 +59,20 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       final api = Provider.of<TalkyApiClient>(context, listen: false);
       final chat = Provider.of<ChatProvider>(context, listen: false);
 
+      String? photoUrl;
+      if (_photoFile != null) {
+        final res = await api.uploadAvatar(_photoFile!);
+        photoUrl = (res['url'] as String?)?.trim();
+      }
+
       await api.createGroup(
         groupName: _nameController.text,
         participantIDs: _members.map((m) => m.alanyaID).toList(),
+        groupPhoto: photoUrl,
       );
 
-      if (!mounted) return;
-
       await chat.refreshConversations();
+      if (!mounted) return;
       Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e) {
       if (mounted) {
