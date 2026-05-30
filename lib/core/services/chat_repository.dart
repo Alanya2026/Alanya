@@ -505,6 +505,28 @@ class ChatRepository {
     }
   }
 
+  /// Met à jour l'épinglage côté serveur (conv_participants) puis localement.
+  /// Optimistic : on écrit la valeur en cache d'abord pour un feedback instantané.
+  Future<void> setConversationPinned(int conversID, bool pinned) async {
+    await _dao.setPinned(conversID, pinned);
+    try {
+      await _api.updateConversation(conversID, isPinned: pinned);
+    } catch (e) {
+      await _dao.setPinned(conversID, !pinned);
+      rethrow;
+    }
+  }
+
+  Future<void> setConversationArchived(int conversID, bool archived) async {
+    await _dao.setArchived(conversID, archived);
+    try {
+      await _api.updateConversation(conversID, isArchived: archived);
+    } catch (e) {
+      await _dao.setArchived(conversID, !archived);
+      rethrow;
+    }
+  }
+
   Future<void> markAsRead(int conversationID) async {
     await _dao.markConversationReadAtomic(conversationID, _myId);
     if (_api.isSocketReady) {

@@ -47,6 +47,16 @@ class ChatDao {
         .write(LocalConversationsCompanion(unreadCount: Value(count)));
   }
 
+  Future<void> setPinned(int conversID, bool pinned) {
+    return (db.update(db.localConversations)..where((c) => c.conversID.equals(conversID)))
+        .write(LocalConversationsCompanion(isPinned: Value(pinned)));
+  }
+
+  Future<void> setArchived(int conversID, bool archived) {
+    return (db.update(db.localConversations)..where((c) => c.conversID.equals(conversID)))
+        .write(LocalConversationsCompanion(isArchived: Value(archived)));
+  }
+
   // MESSAGES 
 
   /// Messages d'une conversation (anciens → récents).

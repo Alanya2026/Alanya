@@ -489,6 +489,26 @@ class TalkyApiClient {
     );
   }
 
+  /// Met à jour les flags par-utilisateur d'une conversation (épinglage,
+  /// archivage). Le backend les stocke dans conv_participants.
+  Future<void> updateConversation(
+    int conversID, {
+    bool? isPinned,
+    bool? isArchived,
+  }) async {
+    final body = <String, dynamic>{};
+    if (isPinned != null) body['isPinned'] = isPinned ? 1 : 0;
+    if (isArchived != null) body['isArchived'] = isArchived ? 1 : 0;
+    if (body.isEmpty) return;
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('$baseUrl/conversations/$conversID'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
   // ── MESSAGES ──────────────────────────────────────────────────────
 
   Future<List<dynamic>> getMessages(

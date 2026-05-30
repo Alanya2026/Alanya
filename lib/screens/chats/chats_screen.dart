@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/db/chat_dao.dart';
+import '../../core/services/local_hidden_store.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
@@ -22,7 +23,7 @@ class ChatsScreen extends StatefulWidget {
 
 class _ChatsScreenState extends State<ChatsScreen> {
   String _search = '';
-  String _filter = 'all'; // 'all', 'discussions', 'groups', 'unread'
+  String _filter = 'all'; // 'all', 'discussions', 'groups', 'unread', 'archived'
   bool _searchOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -58,6 +59,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
     final myId = context.select<AuthProvider, int>(
       (a) => a.currentUser?.alanyaID ?? 0,
     );
+    // Réactif : si une conv est masquée/affichée localement, la liste se met
+    // à jour automatiquement.
+    final hidden = context.watch<LocalHiddenStore>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -91,13 +95,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               children: [
-                _buildFilterChip('Tous', 'all'),
+                _buildFilterChip('Tous', 'all', Icons.apps_rounded),
                 const SizedBox(width: 8),
-                _buildFilterChip('Discussions', 'discussions'),
+                _buildFilterChip('Discussions', 'discussions', Icons.person_outline),
                 const SizedBox(width: 8),
-                _buildFilterChip('Groupes', 'groups'),
+                _buildFilterChip('Groupes', 'groups', Icons.groups_rounded),
                 const SizedBox(width: 8),
-                _buildFilterChip('Non lus', 'unread'),
+                _buildFilterChip('Non lus', 'unread', Icons.mark_email_unread_outlined),
+                const SizedBox(width: 8),
+                _buildFilterChip('Archivés', 'archived', Icons.archive_outlined),
               ],
             ),
           ),
@@ -106,11 +112,19 @@ class _ChatsScreenState extends State<ChatsScreen> {
               stream: chat.watchConversations(),
               builder: (context, snapshot) {
                 final all = snapshot.data ?? const [];
-                var convs = _search.isEmpty
-                    ? all
-                    : all.where((c) => _displayName(c, myId).toLowerCase().contains(_search)).toList();
-                
-                // Appliquer le filtre
+                // Toujours masquer les conversations supprimées localement
+                // (jusqu'à ce qu'un nouveau message les fasse réapparaître).
+                var convs = all
+                    .where((c) => !hidden.isConversationHidden(c.conversID, c.lastMessageAt))
+                    .toList();
+                if (_search.isNotEmpty) {
+                  convs = convs
+                      .where((c) =>
+                          _displayName(c, myId).toLowerCase().contains(_search))
+                      .toList();
+                }
+                // Appliquer le filtre (chips). Le chip « Archivés » est seul à
+                // afficher les conv archivées ; les autres chips les excluent.
                 convs = _applyFilter(convs);
 
                 if (snapshot.connectionState == ConnectionState.waiting && all.isEmpty) {
@@ -178,6 +192,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      onLongPress: () => _showConversationActions(context, conv, myId),
       leading: Stack(
         children: [
           ProfileAvatar(
@@ -241,17 +256,27 @@ class _ChatsScreenState extends State<ChatsScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          if (conv.unreadCount > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
-              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              child: Text(
-                '${conv.unreadCount}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (conv.isPinned)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Icon(Icons.push_pin, size: 14, color: Colors.grey.shade500),
+                ),
+              if (conv.unreadCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
+                  constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                  child: Text(
+                    '${conv.unreadCount}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
       onTap: () {
@@ -354,39 +379,133 @@ class _ChatsScreenState extends State<ChatsScreen> {
     return '${local.day}/${local.month}';
   }
 
-  Widget _buildFilterChip(String label, String value) {
+  Widget _buildFilterChip(String label, String value, IconData icon) {
     final isActive = _filter == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isActive,
-      onSelected: (selected) {
-        setState(() => _filter = value);
-      },
-      backgroundColor: Colors.grey.shade100,
-      selectedColor: Colors.indigo.shade50,
-      labelStyle: TextStyle(
-        color: isActive ? Colors.indigo : Colors.black87,
-        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-      ),
-      side: BorderSide(
-        color: isActive ? Colors.indigo : Colors.transparent,
-        width: 1.5,
+    final fg = isActive ? Colors.white : Colors.grey.shade700;
+    return GestureDetector(
+      onTap: () => setState(() => _filter = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.indigo : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: fg,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   List<LocalConversation> _applyFilter(List<LocalConversation> convs) {
+    if (_filter == 'archived') {
+      return convs.where((c) => c.isArchived).toList();
+    }
+    // Pour tous les autres chips, on exclut les conversations archivées.
+    final visible = convs.where((c) => !c.isArchived);
     switch (_filter) {
       case 'discussions':
-        return convs.where((c) => !c.isGroup).toList();
+        return visible.where((c) => !c.isGroup).toList();
       case 'groups':
-        return convs.where((c) => c.isGroup).toList();
+        return visible.where((c) => c.isGroup).toList();
       case 'unread':
-        return convs.where((c) => c.unreadCount > 0).toList();
+        return visible.where((c) => c.unreadCount > 0).toList();
       case 'all':
       default:
-        return convs;
+        return visible.toList();
     }
+  }
+
+  // ── Actions sur tuile (long press) ─────────────────────────────────
+
+  Future<void> _showConversationActions(
+    BuildContext context,
+    LocalConversation conv,
+    int myId,
+  ) async {
+    final repo = context.read<ChatProvider>().repository;
+    final hidden = context.read<LocalHiddenStore>();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(
+                _displayName(conv, myId),
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+            ),
+            ListTile(
+              leading: Icon(conv.isPinned ? Icons.push_pin_outlined : Icons.push_pin),
+              title: Text(conv.isPinned ? 'Désépingler' : 'Épingler'),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(sheetCtx);
+                try {
+                  await repo.setConversationPinned(conv.conversID, !conv.isPinned);
+                } catch (e) {
+                  messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
+                }
+              },
+            ),
+            ListTile(
+              leading: Icon(conv.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined),
+              title: Text(conv.isArchived ? 'Désarchiver' : 'Archiver'),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(sheetCtx);
+                try {
+                  await repo.setConversationArchived(conv.conversID, !conv.isArchived);
+                } catch (e) {
+                  messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: const Text('Supprimer', style: TextStyle(color: Colors.redAccent)),
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                await hidden.hideConversation(conv.conversID);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 }
 

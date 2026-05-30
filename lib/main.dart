@@ -10,9 +10,10 @@ import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
-import 'core/services/call_service.dart'; 
+import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/local_cache_repository.dart';
+import 'core/services/local_hidden_store.dart';
 import 'core/services/meeting_service.dart';
 import 'core/services/push_service.dart';
 import 'firebase_options.dart';
@@ -67,6 +68,8 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminProvider(api: apiClient)),
         //  ConnectivityProvider : état réseau OS pour l'UI offline + triggers
         ChangeNotifierProvider(create: (_) => ConnectivityProvider(api: apiClient)),
+        //  LocalHiddenStore : conv et appels masqués localement (par appareil)
+        ChangeNotifierProvider(create: (_) => LocalHiddenStore()..load()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
