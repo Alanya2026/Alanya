@@ -3,7 +3,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
+import '../../widgets/common/app_badge.dart';
 
 /// Espace réservé en bas du body pour que les contenus scrollables
 /// puissent dépasser jusqu'au-dessus de la nav flottante (le scroll
@@ -25,32 +29,19 @@ class GlassNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 6, 20, 12),
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(50),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: Colors.black.withAlpha(18),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.fromLTRB(AppSpacing.xl, 6, AppSpacing.xl, AppSpacing.md),
+      decoration: const BoxDecoration(boxShadow: AppShadows.strong),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: AppRadius.brPill,
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(130),
-              borderRadius: BorderRadius.circular(28),
+              color: AppColors.white.withAlpha(130),
+              borderRadius: AppRadius.brPill,
               border: Border.all(
-                color: Colors.white.withAlpha(150),
+                color: AppColors.white.withAlpha(150),
                 width: 1,
               ),
             ),
@@ -100,23 +91,27 @@ class _NavItem extends StatelessWidget {
 
     const labels = ['Chats', 'Appels', 'Statuts', 'Réunions', 'Profil'];
 
+    final colors = context.colors;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: AppDurations.fast,
         curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.indigo.withAlpha(25) : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          color: isSelected ? colors.primary.withAlpha(25) : Colors.transparent,
+          borderRadius: AppRadius.brSm,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             _IconWithBadge(
               icon: isSelected ? activeIcons[index] : icons[index],
-              color: isSelected ? Colors.indigo : Colors.grey.shade400,
+              color: isSelected ? colors.primary : colors.onSurfaceVariant,
               // Badge orange "outbox" uniquement sur l'onglet Chats.
               badgeStream: index == 0
                   ? context.select<ChatProvider, Stream<int>>(
@@ -126,10 +121,9 @@ class _NavItem extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               labels[index],
-              style: TextStyle(
-                color: isSelected ? Colors.indigo : Colors.grey.shade500,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                fontSize: 10,
+              style: context.text.labelSmall?.copyWith(
+                color: isSelected ? colors.primary : colors.onSurfaceVariant,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ],
@@ -152,7 +146,7 @@ class _IconWithBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = Icon(icon, color: color, size: 22);
+    final base = Icon(icon, color: color, size: AppIconSize.sm + 2);
     if (badgeStream == null) return base;
     return StreamBuilder<int>(
       stream: badgeStream,
@@ -164,25 +158,13 @@ class _IconWithBadge extends StatelessWidget {
           children: [
             base,
             Positioned(
-              right: -6,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFB74D),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white, width: 1),
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
-                child: Text(
-                  count > 9 ? '9+' : '$count',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              right: -8,
+              top: -6,
+              child: CountBadge(
+                count: count,
+                color: context.semantic.warning,
+                textColor: context.semantic.onWarning,
+                borderColor: AppColors.white,
               ),
             ),
           ],

@@ -3,12 +3,15 @@ import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/db/chat_dao.dart';
 import '../../core/services/local_hidden_store.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/animated_search_bar.dart';
+import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
@@ -64,21 +67,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
     final hidden = context.watch<LocalHiddenStore>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Discussions',
-          style: TextStyle(color: Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
-        ),
+        title: Text('Discussions', style: context.text.headlineLarge),
         actions: [
           IconButton(
-            icon: Icon(_searchOpen ? Icons.close : Icons.search, color: Colors.black),
+            icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded),
             tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
             onPressed: _toggleSearch,
           ),
-          IconButton(icon: const Icon(Icons.more_vert, color: Colors.black), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
         ],
       ),
       body: Column(
@@ -92,17 +89,20 @@ class _ChatsScreenState extends State<ChatsScreen> {
           // Filtres
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
             child: Row(
               children: [
                 _buildFilterChip('Tous', 'all', Icons.apps_rounded),
-                const SizedBox(width: 8),
+                AppSpacing.hGapSm,
                 _buildFilterChip('Discussions', 'discussions', Icons.person_outline),
-                const SizedBox(width: 8),
+                AppSpacing.hGapSm,
                 _buildFilterChip('Groupes', 'groups', Icons.groups_rounded),
-                const SizedBox(width: 8),
+                AppSpacing.hGapSm,
                 _buildFilterChip('Non lus', 'unread', Icons.mark_email_unread_outlined),
-                const SizedBox(width: 8),
+                AppSpacing.hGapSm,
                 _buildFilterChip('Archivés', 'archived', Icons.archive_outlined),
               ],
             ),
@@ -128,11 +128,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 convs = _applyFilter(convs);
 
                 if (snapshot.connectionState == ConnectionState.waiting && all.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const LoadingState();
                 }
                 if (convs.isEmpty) {
-                  return Center(
-                    child: Text('Aucune discussion', style: TextStyle(color: Colors.grey.shade600)),
+                  return EmptyState(
+                    icon: _filter == 'archived'
+                        ? Icons.archive_outlined
+                        : Icons.chat_bubble_outline_rounded,
+                    title: _search.isNotEmpty
+                        ? 'Aucun résultat'
+                        : _filter == 'archived'
+                            ? 'Aucune conversation archivée'
+                            : 'Aucune discussion',
+                    message: _search.isNotEmpty
+                        ? 'Essayez un autre terme de recherche.'
+                        : 'Démarrez une nouvelle discussion avec le bouton +.',
                   );
                 }
                 return RefreshIndicator(
@@ -171,8 +181,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                       ),
                     );
                   },
-            backgroundColor: online ? Colors.indigo : Colors.grey.shade400,
-            child: const Icon(Icons.chat, color: Colors.white),
+            backgroundColor: online ? null : context.colors.outlineVariant,
+            child: const Icon(Icons.chat_rounded),
           );
         },
       ),
@@ -190,8 +200,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
     final live = otherId != null ? chat.presenceOf(otherId) : null;
     final isOnline = live?.online ?? (other?['is_online'] == 1 || other?['is_online'] == true);
 
+    final colors = context.colors;
+    final hasUnread = conv.unreadCount > 0;
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
       onLongPress: () => _showConversationActions(context, conv, myId),
       leading: Stack(
         children: [
@@ -201,48 +216,45 @@ class _ChatsScreenState extends State<ChatsScreen> {
             userId: otherId ?? 0,
             isGroup: conv.isGroup,
             conversationId: conv.conversID,
-            size: 56,
-            borderRadius: 28,
+            size: AppSizes.avatarLg,
+            borderRadius: AppSizes.avatarLg / 2,
           ),
           if (isOnline && !conv.isGroup)
-            Positioned(
+            const Positioned(
               right: 0,
               bottom: 0,
-              child: Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
+              child: PresenceDot(online: true, size: 14),
             ),
         ],
       ),
       title: Text(
         displayName,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        style: context.text.titleMedium,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Row(
-        children: [
-          // Accusé (✓ / ✓✓ / ✓✓ bleu) si le dernier message est le mien.
-          if (conv.lastMessageSenderID == myId && conv.lastMessage != null) ...[
-            _previewStatusIcon(conv.lastMessageStatus),
-            const SizedBox(width: 4),
-          ],
-          Expanded(
-            child: Text(
-              conv.lastMessage ?? 'Aucun message',
-              style: TextStyle(
-                color: conv.unreadCount > 0 ? Colors.black87 : Colors.grey.shade600,
-                fontWeight: conv.unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Row(
+          children: [
+            // Accusé (✓ / ✓✓ / ✓✓ bleu) si le dernier message est le mien.
+            if (conv.lastMessageSenderID == myId && conv.lastMessage != null) ...[
+              _previewStatusIcon(conv.lastMessageStatus),
+              AppSpacing.hGapXs,
+            ],
+            Expanded(
+              child: Text(
+                conv.lastMessage ?? 'Aucun message',
+                style: context.text.bodyMedium?.copyWith(
+                  color: hasUnread ? colors.onSurface : colors.onSurfaceVariant,
+                  fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -250,31 +262,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
         children: [
           Text(
             _formatTime(conv.lastMessageAt),
-            style: TextStyle(
-              fontSize: 12,
-              color: conv.unreadCount > 0 ? Colors.indigo : Colors.grey.shade600,
+            style: context.text.labelSmall?.copyWith(
+              color: hasUnread ? colors.primary : colors.onSurfaceVariant,
+              fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 4),
+          AppSpacing.vGapXs,
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (conv.isPinned)
                 Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Icon(Icons.push_pin, size: 14, color: Colors.grey.shade500),
+                  padding: const EdgeInsets.only(right: AppSpacing.xs + 2),
+                  child: Icon(Icons.push_pin, size: 14, color: colors.onSurfaceVariant),
                 ),
-              if (conv.unreadCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: const BoxDecoration(color: Colors.indigo, shape: BoxShape.circle),
-                  constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                  child: Text(
-                    '${conv.unreadCount}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
+              if (hasUnread) CountBadge(count: conv.unreadCount),
             ],
           ),
         ],
@@ -320,18 +322,19 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec.
   Widget _previewStatusIcon(int? status) {
+    final muted = context.colors.onSurfaceVariant;
     switch (status) {
       case 0:
-        return Icon(Icons.schedule, size: 13, color: Colors.grey.shade500);
+        return Icon(Icons.schedule, size: 13, color: muted);
       case 2:
-        return Icon(Icons.done_all, size: 14, color: Colors.grey.shade500);
+        return Icon(Icons.done_all, size: 14, color: muted);
       case 3:
-        return const Icon(Icons.done_all, size: 14, color: Color(0xFF4FC3F7));
+        return Icon(Icons.done_all, size: 14, color: context.colors.primary);
       case 4:
-        return const Icon(Icons.error_outline, size: 14, color: Colors.redAccent);
+        return Icon(Icons.error_outline, size: 14, color: context.colors.error);
       case 1:
       default:
-        return Icon(Icons.check, size: 14, color: Colors.grey.shade500);
+        return Icon(Icons.check, size: 14, color: muted);
     }
   }
 
@@ -380,31 +383,30 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   Widget _buildFilterChip(String label, String value, IconData icon) {
+    final colors = context.colors;
     final isActive = _filter == value;
-    final fg = isActive ? Colors.white : Colors.grey.shade700;
+    final fg = isActive ? colors.onPrimary : colors.onSurfaceVariant;
     return GestureDetector(
       onTap: () => setState(() => _filter = value),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: AppDurations.fast,
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md + 2,
+          vertical: AppSpacing.sm + 1,
+        ),
         decoration: BoxDecoration(
-          color: isActive ? Colors.indigo : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(22),
+          color: isActive ? colors.primary : context.semantic.surfaceMuted,
+          borderRadius: AppRadius.brPill,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 16, color: fg),
-            const SizedBox(width: 6),
+            AppSpacing.hGapSm,
             Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: fg,
-                letterSpacing: 0.1,
-              ),
+              style: context.text.labelMedium?.copyWith(color: fg),
             ),
           ],
         ),
@@ -440,32 +442,23 @@ class _ChatsScreenState extends State<ChatsScreen> {
   ) async {
     final repo = context.read<ChatProvider>().repository;
     final hidden = context.read<LocalHiddenStore>();
-    await showModalBottomSheet<void>(
+    final error = context.colors.error;
+    await showAppBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetCtx) => SafeArea(
+      builder: (sheetCtx) => AppBottomSheet(
+        padding: EdgeInsets.zero,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text(
-                _displayName(conv, myId),
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.xs,
               ),
+              child: Text(_displayName(conv, myId), style: context.text.titleMedium),
             ),
             ListTile(
               leading: Icon(conv.isPinned ? Icons.push_pin_outlined : Icons.push_pin),
@@ -494,14 +487,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              title: const Text('Supprimer', style: TextStyle(color: Colors.redAccent)),
+              leading: Icon(Icons.delete_outline, color: error),
+              title: Text('Supprimer', style: TextStyle(color: error)),
               onTap: () async {
                 Navigator.pop(sheetCtx);
                 await hidden.hideConversation(conv.conversID);
               },
             ),
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
           ],
         ),
       ),

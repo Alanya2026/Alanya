@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/push_service.dart';
 import '../../providers/auth_provider.dart';
@@ -113,12 +115,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showInviteSnackBar(MeetingNotifData notif) {
+    final onBrand = context.colors.onPrimary;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.videocam, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
+            Icon(Icons.videocam_rounded, color: onBrand, size: AppIconSize.sm),
+            AppSpacing.hGapMd,
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -126,13 +129,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     notif.meetingTitle,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: context.text.titleSmall?.copyWith(color: onBrand),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     'Invitation de ${notif.organiserName}',
-                    style: const TextStyle(fontSize: 12),
+                    style: context.text.bodySmall?.copyWith(color: onBrand.withAlpha(220)),
                   ),
                 ],
               ),
@@ -142,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
         action: notif.meetingId != 0
             ? SnackBarAction(
                 label: 'Voir',
-                textColor: Colors.white,
+                textColor: onBrand,
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -151,10 +154,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             : null,
-        backgroundColor: Colors.indigo.shade700,
+        backgroundColor: context.colors.primary,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.brSm),
       ),
     );
   }
@@ -253,74 +256,68 @@ class _ReminderDialogState extends State<_ReminderDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xxl,
+        AppSpacing.xl,
+        AppSpacing.xxl,
+        0,
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
-              color: Colors.indigo.shade50,
+              color: colors.primaryContainer,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.videocam_rounded, color: Colors.indigo, size: 32),
+            child: Icon(Icons.videocam_rounded, color: colors.primary, size: 32),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          AppSpacing.vGapLg,
+          Text(
             'Réunion dans moins de 10 minutes',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            style: context.text.titleMedium,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          AppSpacing.vGapSm,
           Text(
             widget.notif.meetingTitle,
-            style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+            style: context.text.bodyLarge,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          AppSpacing.vGapXs,
           Text(
             'Organisé par ${widget.notif.organiserName}',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            style: context.text.bodySmall,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
+          AppSpacing.vGapXxl,
         ],
       ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
       actions: [
         Row(
           children: [
             Expanded(
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
                 child: const Text('Plus tard'),
               ),
             ),
-            const SizedBox(width: 12),
+            AppSpacing.hGapMd,
             Expanded(
-              child: ElevatedButton(
+              child: FilledButton(
                 onPressed: _join,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  elevation: 0,
-                ),
-                child: const Text(
-                        'Rejoindre',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                child: const Text('Rejoindre'),
               ),
             ),
           ],
