@@ -170,6 +170,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
         debugPrint('[AuthWrapper] !! Action dispatchée');
       } else {
         debugPrint('[AuthWrapper] ℹ Aucune action pending au démarrage');
+        // Pas d'action explicite (corps de notif tapé) mais un appel CallKit est
+        // peut-être encore actif → afficher l'écran d'appel entrant qui sonne.
+        final active = await CallKitService.instance.getActiveCall();
+        if (active != null && mounted) {
+          debugPrint('[AuthWrapper]  Appel CallKit actif trouvé → écran d\'appel entrant');
+          Provider.of<CallService>(context, listen: false).prepareIncomingFromCallKit(
+            callId:      active['callId'] as String,
+            callerId:    active['callerId'] as String,
+            callerName:  active['callerName'] as String,
+            callerPhoto: active['callerPhoto'] as String?,
+            isVideo:     active['isVideo'] as bool,
+            roomId:      active['roomId'] as String?,
+          );
+        }
       }
     } catch (e) {
       debugPrint('[AuthWrapper] ** Erreur init: $e');

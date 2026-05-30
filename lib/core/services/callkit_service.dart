@@ -161,6 +161,33 @@ class CallKitService {
     return p;
   }
 
+  /// Métadonnées du 1er appel CallKit encore actif (entrant non décliné/terminé).
+  /// Sert au démarrage à froid quand l'utilisateur a tapé le corps de la notif
+  /// (aucun event accept/decline n'est émis) : permet d'afficher l'écran d'appel.
+  /// Retourne null si aucun appel actif.
+  Future<Map<String, dynamic>?> getActiveCall() async {
+    if (kIsWeb) return null;
+    try {
+      final calls = await FlutterCallkitIncoming.activeCalls();
+      if (calls is List && calls.isNotEmpty) {
+        final c = calls.first as Map?;
+        if (c == null) return null;
+        final extra = (c['extra'] as Map?) ?? const {};
+        return {
+          'callId':      (extra['callId'] ?? c['id'] ?? '').toString(),
+          'callerId':    (extra['callerId'] ?? c['handle'] ?? '').toString(),
+          'callerName':  (extra['callerName'] ?? c['nameCaller'] ?? '').toString(),
+          'callerPhoto': extra['callerPhoto']?.toString(),
+          'isVideo':     extra['isVideo'] == true || extra['isVideo'] == 'true',
+          'roomId':      extra['roomId']?.toString(),
+        };
+      }
+    } catch (e) {
+      debugPrint('[CallKit] activeCalls error: $e');
+    }
+    return null;
+  }
+
   void dispose() {
     _eventSub?.cancel();
     _actions.close();

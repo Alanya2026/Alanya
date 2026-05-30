@@ -145,6 +145,32 @@ class CallService extends ChangeNotifier {
     }
   }
 
+  /// Prépare l'état d'appel entrant à partir d'un appel CallKit encore actif,
+  /// SANS armer l'auto-réponse. Utilisé au démarrage à froid quand l'utilisateur
+  /// a tapé le corps de la notif (pas le bouton « Accepter ») : on affiche l'écran
+  /// d'appel entrant qui sonne et l'utilisateur décroche manuellement.
+  void prepareIncomingFromCallKit({
+    required String callId,
+    required String callerId,
+    required String callerName,
+    String? callerPhoto,
+    required bool isVideo,
+    String? roomId,
+  }) {
+    // Un appel est déjà en cours de traitement → ne pas écraser l'état.
+    if (_status != CallStatus.idle) return;
+    debugPrint('[CallService] 📲 prepareIncomingFromCallKit callId=$callId caller=$callerId');
+
+    _remoteUserId = int.tryParse(callerId);
+    _remoteUserName = callerName;
+    _remoteUserPhoto = callerPhoto;
+    _isVideo = isVideo;
+    _currentCallId = callId.isNotEmpty ? callId : null;
+    _groupRoomId = (roomId != null && roomId.isNotEmpty) ? roomId : null;
+    _status = CallStatus.incoming;
+    notifyListeners();
+  }
+
   /// Appelée depuis main.dart quand l'utilisateur refuse un appel via CallKit.
   Future<void> rejectIncomingCallFromPush({required String callerId}) async {
     debugPrint('[CallService] 📲 rejectIncomingCallFromPush caller=$callerId');
