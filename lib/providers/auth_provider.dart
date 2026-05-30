@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -27,15 +28,22 @@ class AuthProvider extends ChangeNotifier {
   Future<void> init() async {
     try {
       await _storage.init();
-      // Hydrate immédiatement depuis le cache pour afficher quelque chose
-      // même hors ligne / avant la réponse réseau.
+      // Hydrate immédiatement depuis le cache : si on a un user, on marque
+      // l'app initialisée TOUT DE SUITE pour éviter le spinner pendant le
+      // getMe réseau (jusqu'à 15s). Le rafraîchissement serveur tourne en
+      // tâche de fond et notifyListeners() rebuilde la UI si le user a changé.
       try {
         final cached = await _storage.getUser();
         if (cached != null) {
           _currentUser = cached;
+          _isInitialized = true;
           notifyListeners();
+          unawaited(_checkAuthStatus());
+          return;
         }
       } catch (_) {}
+      // Pas de cache → on doit attendre la décision réseau pour savoir si
+      // on affiche le Login ou le Home.
       await _checkAuthStatus();
     } catch (e) {
       debugPrint('[AuthProvider] ** init() error: $e');
