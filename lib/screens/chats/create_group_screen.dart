@@ -3,10 +3,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/common/common.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   final List<User> members;
@@ -49,7 +53,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   Future<void> _create() async {
     if (_nameController.text.isEmpty || _members.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Remplir tous les champs et ajouter au moins un membre')),
+        const SnackBar(
+            content: Text(
+                'Remplir tous les champs et ajouter au moins un membre')),
       );
       return;
     }
@@ -87,14 +93,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Group'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Créer un groupe')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.card,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -106,7 +107,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: AppColors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(60),
                     image: _photoFile != null
                         ? DecorationImage(
@@ -118,76 +119,64 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   child: _photoFile == null
                       ? Icon(
                           CupertinoIcons.camera,
-                          color: Colors.grey,
+                          color: context.colors.onSurfaceVariant,
                           size: 40,
                         )
                       : null,
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            AppSpacing.vGapXxl,
 
             // Name field
-            Text(
-              'Nom du groupe',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 8),
+            Text('Nom du groupe', style: context.text.titleSmall),
+            AppSpacing.vGapSm,
             TextField(
               controller: _nameController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Entrez le nom du groupe',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
               ),
             ),
-            const SizedBox(height: 24),
+            AppSpacing.vGapXxl,
 
             // Members
-            Text(
-              'Members (${_members.length})',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 8),
+            Text('Membres (${_members.length})',
+                style: context.text.titleSmall),
+            AppSpacing.vGapSm,
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _members.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => AppSpacing.vGapSm,
               itemBuilder: (_, idx) {
                 final member = _members[idx];
                 return Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                      horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.surfaceMuted,
+                    borderRadius: AppRadius.brSm,
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        child:
-                            Text(member.nom.substring(0, 1).toUpperCase()),
+                      AppAvatar(
+                        name: member.nom,
+                        imageUrl: member.avatarUrl.isNotEmpty
+                            ? member.avatarUrl
+                            : null,
+                        size: AppSizes.avatarSm,
                       ),
-                      const SizedBox(width: 12),
+                      AppSpacing.hGapMd,
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              member.nom,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              member.alanyaPhone,
-                              style: const TextStyle(fontSize: 12),
-                            ),
+                            Text(member.nom,
+                                style: context.text.titleSmall),
+                            Text(member.alanyaPhone,
+                                style: context.text.bodySmall?.copyWith(
+                                    color:
+                                        context.colors.onSurfaceVariant)),
                           ],
                         ),
                       ),
@@ -200,7 +189,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 );
               },
             ),
-            const SizedBox(height: 32),
+            AppSpacing.vGapXxl,
 
             // Create button
             Consumer<ConnectivityProvider>(
@@ -226,10 +215,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                             ? 'Créer le groupe'
                             : 'Indisponible hors ligne')),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade400,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+                      shape: const RoundedRectangleBorder(
+                          borderRadius: AppRadius.brMd),
+                      elevation: 0,
                     ),
                   ),
                 );

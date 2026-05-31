@@ -1,9 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/admin_provider.dart';
 import '../../talky_models.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../widgets/common/common.dart';
 import 'admin_user_detail_screen.dart';
 
 enum _UserFilter { all, online, banned, admin }
@@ -20,11 +23,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   _UserFilter _filter = _UserFilter.all;
 
   String? get _statusFilter => switch (_filter) {
-    _UserFilter.online => 'online',
-    _UserFilter.banned => 'banned',
-    _UserFilter.admin => 'admin',
-    _UserFilter.all => null,
-  };
+        _UserFilter.online => 'online',
+        _UserFilter.banned => 'banned',
+        _UserFilter.admin => 'admin',
+        _UserFilter.all => null,
+      };
 
   @override
   void initState() {
@@ -64,16 +67,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         : 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FA),
+      backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         centerTitle: true,
-        title: const Text(
-          'Tableau de bord',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
+        title: const Text('Tableau de bord'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.maybePop(context),
@@ -91,39 +88,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: provider.isLoadingStats && provider.users.isEmpty
-            ? const Center(child: CircularProgressIndicator())
+            ? const LoadingState()
             : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl),
                 children: [
-                  const Text(
-                    'Bienvenue',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                  Text('Bienvenue', style: context.text.headlineLarge),
+                  AppSpacing.vGapSm,
                   Text(
                     'Gérez les utilisateurs et surveillance',
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                    style: context.text.bodySmall
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
-                  const SizedBox(height: 24),
+                  AppSpacing.vGapXxl,
                   Text(
                     "Vue d'ensemble",
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: context.text.titleSmall
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
-                  const SizedBox(height: 12),
+                  AppSpacing.vGapMd,
                   GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
+                    mainAxisSpacing: AppSpacing.md,
+                    crossAxisSpacing: AppSpacing.md,
                     childAspectRatio: 1.05,
                     children: [
                       _GradientStatCard(
@@ -170,7 +159,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  AppSpacing.vGapXl,
 
                   // Filter chips
                   Row(
@@ -183,15 +172,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           onTap: () {
                             setState(() => _filter = _UserFilter.all);
                             context.read<AdminProvider>().loadUsers(
-                              search: _searchCtrl.text,
-                              status: _statusFilter,
-                              page: 1,
-                            );
+                                  search: _searchCtrl.text,
+                                  status: _statusFilter,
+                                  page: 1,
+                                );
                           },
                           showCheck: true,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      AppSpacing.hGapSm,
                       Expanded(
                         child: _FilterChip(
                           label: 'En ligne',
@@ -200,14 +189,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           onTap: () {
                             setState(() => _filter = _UserFilter.online);
                             context.read<AdminProvider>().loadUsers(
-                              search: _searchCtrl.text,
-                              status: _statusFilter,
-                              page: 1,
-                            );
+                                  search: _searchCtrl.text,
+                                  status: _statusFilter,
+                                  page: 1,
+                                );
                           },
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      AppSpacing.hGapSm,
                       Expanded(
                         child: _FilterChip(
                           label: 'Bannis',
@@ -216,106 +205,79 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           onTap: () {
                             setState(() => _filter = _UserFilter.banned);
                             context.read<AdminProvider>().loadUsers(
-                              search: _searchCtrl.text,
-                              status: _statusFilter,
-                              page: 1,
-                            );
+                                  search: _searchCtrl.text,
+                                  status: _statusFilter,
+                                  page: 1,
+                                );
                           },
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      AppSpacing.hGapSm,
                       Expanded(
                         child: _FilterChip(
-                          label: 'Administrateurs',
+                          label: 'Admins',
                           icon: CupertinoIcons.shield_lefthalf_fill,
                           selected: _filter == _UserFilter.admin,
                           onTap: () {
                             setState(() => _filter = _UserFilter.admin);
                             context.read<AdminProvider>().loadUsers(
-                              search: _searchCtrl.text,
-                              status: _statusFilter,
-                              page: 1,
-                            );
+                                  search: _searchCtrl.text,
+                                  status: _statusFilter,
+                                  page: 1,
+                                );
                           },
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  AppSpacing.vGapMd,
 
                   // Search bar
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      decoration: InputDecoration(
-                        hintText: 'Rechercher par nom, pseudo ou ...',
-                        hintStyle: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 14,
-                        ),
-                        prefixIcon: Icon(
-                          CupertinoIcons.search,
-                          color: Colors.grey.shade500,
-                          size: 20,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                        ),
-                        suffixIcon: _searchCtrl.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(
-                                  CupertinoIcons.xmark_circle_fill,
-                                  size: 18,
-                                ),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  provider.setSearchQuery('');
-                                  provider.loadUsers(status: _statusFilter);
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                      ),
-                      onChanged: (val) {
-                        setState(() {});
-                        provider.setSearchQuery(val);
-                        provider.loadUsers(search: val, status: _statusFilter);
-                      },
-                    ),
+                  AppSearchField(
+                    controller: _searchCtrl,
+                    hintText: 'Rechercher par nom, pseudo ou ...',
+                    onChanged: (val) {
+                      setState(() {});
+                      provider.setSearchQuery(val);
+                      provider.loadUsers(
+                          search: val, status: _statusFilter);
+                    },
+                    onClear: () {
+                      _searchCtrl.clear();
+                      provider.setSearchQuery('');
+                      provider.loadUsers(status: _statusFilter);
+                      setState(() {});
+                    },
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.vGapLg,
 
                   // Users list
                   if (provider.error != null)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: Text(
                         provider.error!,
-                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                        style: TextStyle(
+                            color: context.colors.error, fontSize: 13),
                       ),
                     ),
                   if (users.isEmpty && !provider.isLoadingUsers)
                     const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: Text('Aucun utilisateur trouvé')),
+                      padding: EdgeInsets.all(AppSpacing.xxl),
+                      child: Center(
+                          child: Text('Aucun utilisateur trouvé')),
                     )
                   else if (provider.isLoadingUsers && users.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: EdgeInsets.all(AppSpacing.lg),
                       child: Center(child: CircularProgressIndicator()),
                     )
                   else
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        color: context.colors.surface,
+                        borderRadius: AppRadius.brSm,
+                        border: Border.all(color: context.colors.outline),
                       ),
                       child: ListView.separated(
                         shrinkWrap: true,
@@ -323,17 +285,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         itemCount: users.length,
                         separatorBuilder: (_, __) => Divider(
                           height: 1,
-                          color: Colors.grey.shade200,
-                          indent: 16,
-                          endIndent: 16,
+                          color: context.colors.outline,
+                          indent: AppSpacing.lg,
+                          endIndent: AppSpacing.lg,
                         ),
                         itemBuilder: (ctx, idx) {
                           final user = users[idx];
-                          return _UserTile(user: user, provider: provider);
+                          return _UserTile(
+                              user: user, provider: provider);
                         },
                       ),
                     ),
-                  const SizedBox(height: 16),
+                  AppSpacing.vGapLg,
 
                   // Pagination
                   if (provider.totalUsers > provider.limit)
@@ -375,7 +338,7 @@ class _GradientStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.brLg,
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -391,7 +354,6 @@ class _GradientStatCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Decorative bubble
           Positioned(
             right: -20,
             top: -20,
@@ -407,14 +369,11 @@ class _GradientStatCard extends StatelessWidget {
           Positioned(
             right: 8,
             bottom: -10,
-            child: Icon(
-              icon,
-              size: 80,
-              color: Colors.white.withValues(alpha: 0.10),
-            ),
+            child: Icon(icon, size: 80,
+                color: Colors.white.withValues(alpha: 0.10)),
           ),
           Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -425,11 +384,11 @@ class _GradientStatCard extends StatelessWidget {
                       height: 34,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.20),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: AppRadius.brSm,
                       ),
                       child: Icon(icon, color: Colors.white, size: 18),
                     ),
-                    const SizedBox(width: 10),
+                    AppSpacing.hGapSm,
                     Expanded(
                       child: Text(
                         label,
@@ -453,7 +412,7 @@ class _GradientStatCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 2),
+                AppSpacing.vGapXs,
                 Text(
                   sub,
                   style: TextStyle(
@@ -487,18 +446,25 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = selected ? const Color(0xFFE3EEFE) : Colors.white;
-    final border = selected ? const Color(0xFFBFD6FB) : const Color(0xFFE5E7EB);
-    final fg = selected ? const Color(0xFF1E66D8) : Colors.black87;
+    final bg = selected
+        ? context.colors.primaryContainer
+        : context.colors.surface;
+    final border = selected
+        ? context.colors.primaryContainer
+        : context.colors.outline;
+    final fg = selected
+        ? context.colors.primary
+        : context.colors.onSurface;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: AppRadius.brSm,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md, horizontal: AppSpacing.sm),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadius.brSm,
           border: Border.all(color: border),
         ),
         child: Row(
@@ -506,10 +472,10 @@ class _FilterChip extends StatelessWidget {
           children: [
             if (showCheck && selected) ...[
               Icon(Icons.check, size: 16, color: fg),
-              const SizedBox(width: 4),
+              AppSpacing.hGapXs,
             ],
             Icon(icon, size: 16, color: fg),
-            const SizedBox(width: 6),
+            AppSpacing.hGapSm,
             Flexible(
               child: Text(
                 label,
@@ -537,35 +503,24 @@ class _UserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AdminUserDetailScreen(userId: user.alanyaID),
-          ),
-        );
-      },
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              AdminUserDetailScreen(userId: user.alanyaID),
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.md),
         child: Row(
           children: [
             Stack(
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: const Color(0xFFEDEDED),
-                  backgroundImage: hasValidAvatarUrl(user.avatarUrl)
-                      ? NetworkImage(user.avatarUrl)
-                      : null,
-                  child: !hasValidAvatarUrl(user.avatarUrl)
-                      ? Text(
-                          user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        )
-                      : null,
+                AppAvatar(
+                  imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
+                  name: user.nom.isNotEmpty ? user.nom : '?',
+                  size: AppSizes.avatarMd,
                 ),
                 if (user.isOnline)
                   Positioned(
@@ -575,15 +530,16 @@ class _UserTile extends StatelessWidget {
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF3FA45F),
+                        color: AppColors.online,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(
+                            color: context.colors.surface, width: 2),
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(width: 12),
+            AppSpacing.hGapMd,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,29 +549,23 @@ class _UserTile extends StatelessWidget {
                       Flexible(
                         child: Text(
                           user.nom.isNotEmpty ? user.nom : '—',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
+                          style: context.text.titleSmall,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (user.exclus) ...[
-                        const SizedBox(width: 6),
+                        AppSpacing.hGapSm,
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
+                              horizontal: AppSpacing.sm - 2, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFDECEC),
-                            borderRadius: BorderRadius.circular(6),
+                            color: AppColors.errorContainer,
+                            borderRadius: _kBrXs,
                           ),
-                          child: const Text(
+                          child: Text(
                             'Banni',
                             style: TextStyle(
-                              color: Color(0xFFD8453E),
+                              color: context.colors.error,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -623,20 +573,18 @@ class _UserTile extends StatelessWidget {
                         ),
                       ],
                       if (user.typeCompte >= 1) ...[
-                        const SizedBox(width: 6),
+                        AppSpacing.hGapSm,
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
+                              horizontal: AppSpacing.sm - 2, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE3EEFE),
-                            borderRadius: BorderRadius.circular(6),
+                            color: context.colors.primaryContainer,
+                            borderRadius: _kBrXs,
                           ),
-                          child: const Text(
+                          child: Text(
                             'Admin',
                             style: TextStyle(
-                              color: Color(0xFF1E66D8),
+                              color: context.colors.primary,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -645,18 +593,20 @@ class _UserTile extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  AppSpacing.vGapXs,
                   Text(
                     user.pseudo.isNotEmpty
                         ? '@${user.pseudo}'
                         : user.alanyaPhone,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    style: context.text.bodySmall?.copyWith(
+                        color: context.colors.onSurfaceVariant),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  AppSpacing.vGapXs,
                   Text(
                     '${user.alanyaID}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                    style: context.text.labelSmall
+                        ?.copyWith(color: context.colors.outlineVariant),
                   ),
                 ],
               ),
@@ -669,6 +619,9 @@ class _UserTile extends StatelessWidget {
   }
 }
 
+// Petit rayon pour les badges inline — non défini dans AppRadius.
+const _kBrXs = BorderRadius.all(Radius.circular(6));
+
 class _UserActions extends StatelessWidget {
   final User user;
   final AdminProvider provider;
@@ -678,35 +631,29 @@ class _UserActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton(
-      icon: Icon(Icons.more_vert, color: Colors.grey.shade500),
+      icon: Icon(Icons.more_vert, color: context.colors.onSurfaceVariant),
       itemBuilder: (context) => [
         if (!user.exclus)
           PopupMenuItem(
             child: const Text('Bannir'),
-            onTap: () async {
-              await provider.toggleBan(user);
-            },
+            onTap: () async => await provider.toggleBan(user),
           )
         else
           PopupMenuItem(
             child: const Text('Débannir'),
-            onTap: () async {
-              await provider.toggleBan(user);
-            },
+            onTap: () async => await provider.toggleBan(user),
           ),
         if (user.typeCompte < 1)
           PopupMenuItem(
             child: const Text('Rendre admin'),
-            onTap: () async {
-              await provider.setAccountType(user.alanyaID, 1);
-            },
+            onTap: () async =>
+                await provider.setAccountType(user.alanyaID, 1),
           )
         else
           PopupMenuItem(
             child: const Text('Rétrograder'),
-            onTap: () async {
-              await provider.setAccountType(user.alanyaID, 0);
-            },
+            onTap: () async =>
+                await provider.setAccountType(user.alanyaID, 0),
           ),
         PopupMenuItem(
           child: const Text('Supprimer'),
@@ -725,7 +672,7 @@ class _UserActions extends StatelessWidget {
                     onPressed: () => Navigator.pop(ctx, true),
                     child: const Text(
                       'Supprimer',
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(color: AppColors.error),
                     ),
                   ),
                 ],
@@ -765,11 +712,12 @@ class _Pagination extends StatelessWidget {
     final to = (page * limit).clamp(0, total);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        color: context.colors.surface,
+        borderRadius: AppRadius.brSm,
+        border: Border.all(color: context.colors.outline),
       ),
       child: Row(
         children: [
@@ -778,27 +726,24 @@ class _Pagination extends StatelessWidget {
             enabled: canPrev,
             onTap: () => onChangePage(page - 1),
           ),
-          const SizedBox(width: 8),
+          AppSpacing.hGapSm,
           Expanded(
             child: Column(
               children: [
                 Text(
                   'Page $page / $pageCount',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: Colors.black,
-                  ),
+                  style: context.text.labelMedium,
                 ),
-                const SizedBox(height: 2),
+                AppSpacing.vGapXs,
                 Text(
                   '$from–$to sur $total',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  style: context.text.labelSmall?.copyWith(
+                      color: context.colors.onSurfaceVariant),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          AppSpacing.hGapSm,
           _PageBtn(
             icon: CupertinoIcons.chevron_right,
             enabled: canNext,
@@ -822,19 +767,22 @@ class _PageBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = enabled ? const Color(0xFF1E66D8) : Colors.grey.shade400;
-    final bg = enabled ? const Color(0xFFE3EEFE) : const Color(0xFFF3F4F6);
+    final color =
+        enabled ? context.colors.primary : context.colors.outline;
+    final bg = enabled
+        ? context.colors.primaryContainer
+        : context.semantic.surfaceMuted;
     return InkWell(
       onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: AppRadius.brSm,
       child: Container(
         width: 38,
         height: 38,
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AppRadius.brSm,
         ),
-        child: Icon(icon, color: color, size: 18),
+        child: Icon(icon, color: color, size: AppIconSize.sm),
       ),
     );
   }

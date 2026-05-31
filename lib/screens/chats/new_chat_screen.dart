@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/add_contact_sheet.dart';
+import '../../widgets/common/common.dart';
 import 'chat_detail_screen.dart';
 import 'select_members_screen.dart';
 
@@ -41,7 +44,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getContacts();
       setState(() {
-        _contacts = (data as List)
+        _contacts = data
             .map((json) => User.fromJson(json as Map<String, dynamic>))
             .toList();
         _filteredUsers = _contacts;
@@ -67,7 +70,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
       final data = await apiClient.searchUsers(query);
       if (mounted) {
         setState(() {
-          _filteredUsers = (data as List)
+          _filteredUsers = data
               .map((json) => User.fromJson(json as Map<String, dynamic>))
               .toList();
         });
@@ -87,42 +90,24 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final hasQuery = _searchController.text.trim().isNotEmpty;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Nouveau message',
-          style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Nouveau message'),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+            child: AppSearchField(
               controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Rechercher par nom, pseudo ou téléphone…',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                suffixIcon: hasQuery
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                        onPressed: _clearSearch,
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              hintText: 'Rechercher par nom, pseudo ou téléphone…',
+              onChanged: (_) {},
+              onClear: _clearSearch,
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.sm - 2),
             child: Row(
               children: [
                 _buildActionTile(
@@ -130,10 +115,11 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   'Nouveau groupe',
                   () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const SelectMembersScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const SelectMembersScreen()),
                   ),
                 ),
-                const SizedBox(width: 12),
+                AppSpacing.hGapMd,
                 _buildActionTile(
                   Icons.person_add_alt_1,
                   'Ajouter',
@@ -144,40 +130,28 @@ class _NewChatScreenState extends State<NewChatScreen> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+                ? const LoadingState()
                 : _filteredUsers.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              hasQuery ? Icons.person_search : Icons.people_outline,
-                              size: 48,
-                              color: Colors.grey.shade300,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              hasQuery ? 'Aucun résultat' : 'Aucun contact',
-                              style: TextStyle(color: Colors.grey.shade500),
-                            ),
-                          ],
-                        ),
+                    ? EmptyState(
+                        icon: hasQuery
+                            ? Icons.person_search
+                            : Icons.people_outline,
+                        title: hasQuery ? 'Aucun résultat' : 'Aucun contact',
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Section "Groupes" : visible uniquement quand on
-                          // recherche, listant mes groupes dont le nom matche.
                           if (hasQuery) _buildGroupsSection(),
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                            padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.xl,
+                                AppSpacing.md,
+                                AppSpacing.xl,
+                                AppSpacing.xs),
                             child: Text(
                               hasQuery ? 'Résultats' : 'Contacts préférés',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
-                                letterSpacing: 0.2,
+                              style: context.text.labelMedium?.copyWith(
+                                color: context.colors.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -186,31 +160,25 @@ class _NewChatScreenState extends State<NewChatScreen> {
                               itemCount: _filteredUsers.length,
                               itemBuilder: (_, idx) {
                                 final user = _filteredUsers[idx];
-                                final initial = user.nom.isNotEmpty
-                                    ? user.nom[0].toUpperCase()
-                                    : '?';
                                 return InkWell(
                                   onTap: () => Navigator.pop(context, user),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 10,
-                                    ),
+                                        horizontal: AppSpacing.lg,
+                                        vertical: AppSpacing.sm),
                                     child: Row(
                                       children: [
                                         Stack(
                                           children: [
-                                            CircleAvatar(
-                                              radius: 24,
-                                              backgroundColor: Colors.indigo.shade50,
-                                              backgroundImage: avatarImage(user.avatarUrl),
-                                              child: hasValidAvatarUrl(user.avatarUrl)
-                                                  ? null
-                                                  : Text(initial,
-                                                      style: const TextStyle(
-                                                          color: Colors.indigo,
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 16)),
+                                            AppAvatar(
+                                              imageUrl: user.avatarUrl
+                                                      .isNotEmpty
+                                                  ? user.avatarUrl
+                                                  : null,
+                                              name: user.nom.isNotEmpty
+                                                  ? user.nom
+                                                  : user.pseudo,
+                                              size: AppSizes.avatarMd,
                                             ),
                                             if (user.isOnline)
                                               Positioned(
@@ -220,30 +188,36 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                                   width: 10,
                                                   height: 10,
                                                   decoration: BoxDecoration(
-                                                    color: Colors.green,
+                                                    color: AppColors.online,
                                                     shape: BoxShape.circle,
                                                     border: Border.all(
-                                                        color: Colors.white, width: 1.5),
+                                                        color: context
+                                                            .colors.surface,
+                                                        width: 1.5),
                                                   ),
                                                 ),
                                               ),
                                           ],
                                         ),
-                                        const SizedBox(width: 14),
+                                        AppSpacing.hGapMd,
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                user.nom.isNotEmpty ? user.nom : user.pseudo,
-                                                style: const TextStyle(
-                                                    fontWeight: FontWeight.w600, fontSize: 15),
+                                                user.nom.isNotEmpty
+                                                    ? user.nom
+                                                    : user.pseudo,
+                                                style: context.text.titleSmall,
                                               ),
                                               if (user.pseudo.isNotEmpty)
                                                 Text(
                                                   '@${user.pseudo}',
-                                                  style: TextStyle(
-                                                      color: Colors.grey.shade500, fontSize: 13),
+                                                  style: context.text.bodySmall
+                                                      ?.copyWith(
+                                                          color: context.colors
+                                                              .onSurfaceVariant),
                                                 ),
                                             ],
                                           ),
@@ -291,40 +265,35 @@ class _NewChatScreenState extends State<NewChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.xs),
               child: Text(
                 'Groupes',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade600,
-                  letterSpacing: 0.2,
-                ),
+                style: context.text.labelMedium
+                    ?.copyWith(color: context.colors.onSurfaceVariant),
               ),
             ),
             for (final g in groups)
               InkWell(
                 onTap: () => _openGroup(g),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Colors.indigo.shade50,
-                        backgroundImage: avatarImage(g.groupPhoto),
-                        child: hasValidAvatarUrl(g.groupPhoto)
-                            ? null
-                            : const Icon(Icons.group, color: Colors.indigo),
+                      AppAvatar(
+                        imageUrl: g.groupPhoto?.isNotEmpty == true
+                            ? g.groupPhoto
+                            : null,
+                        name: g.groupName ?? 'Groupe',
+                        isGroup: true,
+                        size: AppSizes.avatarMd,
                       ),
-                      const SizedBox(width: 14),
+                      AppSpacing.hGapMd,
                       Expanded(
                         child: Text(
                           g.groupName ?? 'Groupe',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
+                          style: context.text.titleSmall,
                         ),
                       ),
                     ],
@@ -339,8 +308,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
   }
 
   void _openGroup(LocalConversation g) {
-    // On sort de l'écran "Nouveau message" puis on ouvre la discussion du
-    // groupe : le retour mène ainsi à la liste des conversations.
     final navigator = Navigator.of(context);
     navigator.pop();
     navigator.push(MaterialPageRoute(
@@ -354,26 +321,27 @@ class _NewChatScreenState extends State<NewChatScreen> {
     ));
   }
 
-  Widget _buildActionTile(IconData icon, String text, VoidCallback onTap) {
+  Widget _buildActionTile(
+      IconData icon, String text, VoidCallback onTap) {
     return Expanded(
       child: Material(
-        color: Colors.indigo.withAlpha(20),
-        borderRadius: BorderRadius.circular(16),
+        color: context.colors.primaryContainer,
+        borderRadius: AppRadius.brMd,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.brMd,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: Colors.indigo, size: 26),
-                const SizedBox(height: 6),
+                Icon(icon, color: context.colors.primary, size: 26),
+                AppSpacing.vGapXs,
                 Text(
                   text,
-                  style: const TextStyle(
-                    color: Colors.indigo,
-                    fontSize: 12.5,
+                  style: context.text.labelSmall?.copyWith(
+                    color: context.colors.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

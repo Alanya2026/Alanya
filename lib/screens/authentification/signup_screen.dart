@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 
@@ -40,14 +43,14 @@ class _SignupScreenState extends State<SignupScreen> {
                 'Notez ce numéro — il vous servira à vous connecter :',
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
+              AppSpacing.vGapXl,
               Text(
                 alanyaPhone,
                 style: const TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 8,
-                  color: Colors.indigo,
+                  color: AppColors.brandPrimary,
                 ),
               ),
             ],
@@ -73,84 +76,57 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
-              const Text(
-                'Create Account',
+              AppSpacing.vGapLg,
+              Text(
+                'Créer un compte',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: context.text.headlineLarge,
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Connect with your friends today!',
+              AppSpacing.vGapSm,
+              Text(
+                'Rejoignez la communauté Talky !',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                ),
+                style: context.text.bodyLarge
+                    ?.copyWith(color: context.colors.onSurfaceVariant),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: AppSpacing.xxxl + 16),
               TextField(
                 controller: _nameController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Nom complet',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
+                  prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.vGapLg,
               TextField(
                 controller: _pseudoController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Pseudo',
-                  prefixIcon: const Icon(Icons.alternate_email),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
+                  prefixIcon: Icon(Icons.alternate_email),
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.vGapLg,
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Adresse e-mail',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
+                  prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.vGapLg,
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
@@ -159,50 +135,41 @@ class _SignupScreenState extends State<SignupScreen> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              AppSpacing.vGapXxl,
               Consumer<AuthProvider>(
                 builder: (context, auth, _) => auth.error != null
                     ? Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: AppSpacing.card,
                         decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.errorContainer,
+                          borderRadius: AppRadius.brSm,
                         ),
                         child: Text(
                           auth.error!,
-                          style: TextStyle(color: Colors.red.shade700),
+                          style:
+                              TextStyle(color: context.colors.error),
                           textAlign: TextAlign.center,
                         ),
                       )
                     : const SizedBox.shrink(),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.vGapLg,
               Consumer<AuthProvider>(
                 builder: (context, auth, _) => ElevatedButton(
                   onPressed: auth.isLoading ? null : _signup,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+                    shape: const RoundedRectangleBorder(
+                        borderRadius: AppRadius.brMd),
                     elevation: 0,
                   ),
                   child: auth.isLoading
@@ -211,15 +178,17 @@ class _SignupScreenState extends State<SignupScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: AppColors.white,
                           ),
                         )
                       : const Text(
                           'Inscription',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),
               ),
+              AppSpacing.vGapXxl,
             ],
           ),
         ),

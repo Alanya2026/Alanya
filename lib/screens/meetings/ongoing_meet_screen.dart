@@ -2,9 +2,19 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
+
+// Couleurs spécifiques à l'UI Google-Meet de la réunion (aucun token AppColors
+// ne correspond exactement à ce gris-anthracite, distinct du bleu immersif).
+const _kMeetBg = Color(0xFF202124);
+const _kMeetTile = Color(0xFF3C4043);
+const _kMeetSheet = Color(0xFF2D2D2D);
+// Petit rayon pour les étiquettes de tuile vidéo.
+const _kBrXs = BorderRadius.all(Radius.circular(4));
 
 class OngoingMeetScreen extends StatefulWidget {
   const OngoingMeetScreen({super.key});
@@ -16,10 +26,6 @@ class OngoingMeetScreen extends StatefulWidget {
 class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final Map<String, RTCVideoRenderer> _remoteRenderers = {};
-  // Signature (id du stream + nb de pistes) par pair. Sert à détecter qu'une
-  // piste vidéo s'est ajoutée à un stream déjà rendu (les pistes audio/vidéo
-  // arrivent via deux onTrack successifs) afin de réassigner le srcObject —
-  // sinon le renderer reste figé sur l'audio seul et la vidéo est noire.
   final Map<String, String> _remoteStreamSignatures = {};
   bool _localRendererReady = false;
 
@@ -35,7 +41,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   }
 
   Future<void> _setupRenderer() async {
-    final meetingService = Provider.of<MeetingService>(context, listen: false);
+    final meetingService =
+        Provider.of<MeetingService>(context, listen: false);
     await _localRenderer.initialize();
     if (!mounted) return;
 
@@ -52,7 +59,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
 
   void _onMeetingServiceChanged() {
     if (!mounted) return;
-    final meetingService = Provider.of<MeetingService>(context, listen: false);
+    final meetingService =
+        Provider.of<MeetingService>(context, listen: false);
 
     if (meetingService.status == MeetingStatus.ended) {
       meetingService.removeListener(_onMeetingServiceChanged);
@@ -65,11 +73,11 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       _localRenderer.srcObject = meetingService.localStream;
     }
 
-    // _syncRemoteRenderers déclenche déjà son propre setState une fois terminé.
     _syncRemoteRenderers(meetingService.remoteStreams);
   }
 
-  Future<void> _syncRemoteRenderers(Map<String, dynamic> remoteStreams) async {
+  Future<void> _syncRemoteRenderers(
+      Map<String, dynamic> remoteStreams) async {
     final currentKeys = Set<String>.from(_remoteRenderers.keys);
     final newKeys = Set<String>.from(remoteStreams.keys);
 
@@ -87,8 +95,6 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       _remoteStreamSignatures[key] = _streamSignature(remoteStreams[key]);
     }
 
-    // Pairs déjà rendus : si la composition du stream a changé (piste vidéo
-    // ajoutée après l'audio), réassigner le srcObject pour forcer le rendu.
     for (final key in newKeys.intersection(currentKeys)) {
       final sig = _streamSignature(remoteStreams[key]);
       if (_remoteStreamSignatures[key] != sig) {
@@ -102,7 +108,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
 
   @override
   void dispose() {
-    final meetingService = Provider.of<MeetingService>(context, listen: false);
+    final meetingService =
+        Provider.of<MeetingService>(context, listen: false);
     meetingService.removeListener(_onMeetingServiceChanged);
     _localRenderer.dispose();
     for (final r in _remoteRenderers.values) {
@@ -114,11 +121,12 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   void _showParticipantsPanel(MeetingService meetingService) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF2D2D2D),
+      backgroundColor: _kMeetSheet,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: AppRadius.sheetTop,
       ),
-      builder: (_) => _ParticipantsSheet(meetingService: meetingService),
+      builder: (_) =>
+          _ParticipantsSheet(meetingService: meetingService),
     );
   }
 
@@ -127,7 +135,10 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     return Consumer<MeetingService>(
       builder: (context, meetingService, _) {
         final meeting = meetingService.currentMeeting;
-        final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
+        final myId = Provider.of<AuthProvider>(context, listen: false)
+                .currentUser
+                ?.alanyaID ??
+            0;
         final isOrganiser = meeting?.idOrganiser == myId;
 
         return PopScope(
@@ -138,178 +149,209 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
             if (context.mounted) Navigator.of(context).pop();
           },
           child: Scaffold(
-          backgroundColor: const Color(0xFF202124),
-          body: SafeArea(
-            child: Column(
-              children: [
-                // ── Top Bar ───────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white),
-                              onPressed: () async {
-                                await meetingService.leaveMeeting();
-                                if (context.mounted) Navigator.pop(context);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                meeting?.objet ?? 'Meeting',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+            backgroundColor: _kMeetBg,
+            body: SafeArea(
+              child: Column(
+                children: [
+                  // ── Top Bar ─────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back,
+                                    color: Colors.white),
+                                onPressed: () async {
+                                  await meetingService.leaveMeeting();
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                  }
+                                },
                               ),
+                              AppSpacing.hGapSm,
+                              Flexible(
+                                child: Text(
+                                  meeting?.objet ?? 'Meeting',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Text(
+                              meetingService.formattedDuration,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 13),
+                            ),
+                            AppSpacing.hGapXs,
+                            IconButton(
+                              icon: const Icon(
+                                  CupertinoIcons.switch_camera,
+                                  color: Colors.white),
+                              onPressed: () =>
+                                  meetingService.switchCamera(),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.people_outline,
+                                  color: Colors.white),
+                              onPressed: () =>
+                                  _showParticipantsPanel(meetingService),
                             ),
                           ],
                         ),
-                      ),
-                      Row(
-                        children: [
-                          Text(
-                            meetingService.formattedDuration,
-                            style: const TextStyle(color: Colors.white54, fontSize: 13),
-                          ),
-                          const SizedBox(width: 4),
-                          IconButton(
-                            icon: const Icon(CupertinoIcons.switch_camera, color: Colors.white),
-                            onPressed: () => meetingService.switchCamera(),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.people_outline, color: Colors.white),
-                            onPressed: () => _showParticipantsPanel(meetingService),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                // ── Grille vidéo ─────────────────────────────────────
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: _remoteRenderers.isEmpty
-                        ? _buildVideoTile(
-                            label: 'Vous',
-                            renderer: _localRenderer,
-                            isVideoOff: meetingService.isVideoOff || !_localRendererReady,
-                            isMuted: meetingService.isMuted,
-                            mirror: true,
-                          )
-                        : GridView.count(
-                            crossAxisCount: _remoteRenderers.length < 2 ? 1 : 2,
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                            childAspectRatio: 0.8,
-                            children: [
-                              _buildVideoTile(
-                                label: 'Vous',
-                                renderer: _localRenderer,
-                                isVideoOff: meetingService.isVideoOff || !_localRendererReady,
-                                isMuted: meetingService.isMuted,
-                                mirror: true,
-                              ),
-                              ..._remoteRenderers.entries.map((entry) {
-                                final participant = meeting?.participants
-                                    .where((p) => p.participantID.toString() == entry.key)
-                                    .firstOrNull;
-                                final label = participant?.nom ??
-                                    participant?.pseudo ??
-                                    'User ${entry.key}';
-                                return _buildVideoTile(
-                                  label: label,
-                                  renderer: entry.value,
-                                  isVideoOff: false,
-                                  isMuted: false,
-                                );
-                              }),
-                            ],
-                          ),
+                  // ── Grille vidéo ─────────────────────────────────
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      child: _remoteRenderers.isEmpty
+                          ? _buildVideoTile(
+                              label: 'Vous',
+                              renderer: _localRenderer,
+                              isVideoOff: meetingService.isVideoOff ||
+                                  !_localRendererReady,
+                              isMuted: meetingService.isMuted,
+                              mirror: true,
+                            )
+                          : GridView.count(
+                              crossAxisCount:
+                                  _remoteRenderers.length < 2 ? 1 : 2,
+                              mainAxisSpacing: AppSpacing.sm,
+                              crossAxisSpacing: AppSpacing.sm,
+                              childAspectRatio: 0.8,
+                              children: [
+                                _buildVideoTile(
+                                  label: 'Vous',
+                                  renderer: _localRenderer,
+                                  isVideoOff: meetingService.isVideoOff ||
+                                      !_localRendererReady,
+                                  isMuted: meetingService.isMuted,
+                                  mirror: true,
+                                ),
+                                ..._remoteRenderers.entries.map((entry) {
+                                  final participant = meeting?.participants
+                                      .where((p) =>
+                                          p.participantID.toString() ==
+                                          entry.key)
+                                      .firstOrNull;
+                                  final label = participant?.nom ??
+                                      participant?.pseudo ??
+                                      'User ${entry.key}';
+                                  return _buildVideoTile(
+                                    label: label,
+                                    renderer: entry.value,
+                                    isVideoOff: false,
+                                    isMuted: false,
+                                  );
+                                }),
+                              ],
+                            ),
+                    ),
                   ),
-                ),
 
-                // ── Contrôles bas ─────────────────────────────────────
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                  color: const Color(0xFF202124),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildControlBtn(
-                        icon: Icons.call_end,
-                        color: Colors.red,
-                        iconColor: Colors.white,
-                        onTap: () async {
-                          await meetingService.leaveMeeting();
-                          if (context.mounted) Navigator.pop(context);
-                        },
-                        isLarge: true,
-                      ),
-                      _buildControlBtn(
-                        icon: meetingService.isVideoOff
-                            ? CupertinoIcons.video_camera
-                            : CupertinoIcons.video_camera_solid,
-                        color: meetingService.isVideoOff ? Colors.white : Colors.white24,
-                        iconColor: meetingService.isVideoOff ? Colors.black : Colors.white,
-                        onTap: () => meetingService.toggleVideo(),
-                      ),
-                      _buildControlBtn(
-                        icon: meetingService.isMuted
-                            ? CupertinoIcons.mic_off
-                            : CupertinoIcons.mic,
-                        color: meetingService.isMuted ? Colors.white : Colors.white24,
-                        iconColor: meetingService.isMuted ? Colors.black : Colors.white,
-                        onTap: () => meetingService.toggleMute(),
-                      ),
-                      _buildControlBtn(
-                        icon: Icons.chat_bubble_outline,
-                        color: Colors.white24,
-                        iconColor: Colors.white,
-                        onTap: () => _showMeetingChat(context, meetingService),
-                      ),
-                      if (isOrganiser)
+                  // ── Contrôles bas ──────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.lg,
+                        horizontal: AppSpacing.xxl),
+                    color: _kMeetBg,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
                         _buildControlBtn(
-                          icon: Icons.stop_circle_outlined,
-                          color: Colors.red.shade900,
+                          icon: Icons.call_end,
+                          color: AppColors.error,
                           iconColor: Colors.white,
-                          onTap: () => _confirmEndForAll(context, meetingService),
-                        )
-                      else
+                          onTap: () async {
+                            await meetingService.leaveMeeting();
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                          isLarge: true,
+                        ),
                         _buildControlBtn(
-                          icon: Icons.more_vert,
+                          icon: meetingService.isVideoOff
+                              ? CupertinoIcons.video_camera
+                              : CupertinoIcons.video_camera_solid,
+                          color: meetingService.isVideoOff
+                              ? Colors.white
+                              : Colors.white24,
+                          iconColor: meetingService.isVideoOff
+                              ? Colors.black
+                              : Colors.white,
+                          onTap: () => meetingService.toggleVideo(),
+                        ),
+                        _buildControlBtn(
+                          icon: meetingService.isMuted
+                              ? CupertinoIcons.mic_off
+                              : CupertinoIcons.mic,
+                          color: meetingService.isMuted
+                              ? Colors.white
+                              : Colors.white24,
+                          iconColor: meetingService.isMuted
+                              ? Colors.black
+                              : Colors.white,
+                          onTap: () => meetingService.toggleMute(),
+                        ),
+                        _buildControlBtn(
+                          icon: Icons.chat_bubble_outline,
                           color: Colors.white24,
                           iconColor: Colors.white,
-                          onTap: () => _showParticipantsPanel(meetingService),
+                          onTap: () =>
+                              _showMeetingChat(context, meetingService),
                         ),
-                    ],
+                        if (isOrganiser)
+                          _buildControlBtn(
+                            icon: Icons.stop_circle_outlined,
+                            color: const Color(0xFFB71C1C),
+                            iconColor: Colors.white,
+                            onTap: () => _confirmEndForAll(
+                                context, meetingService),
+                          )
+                        else
+                          _buildControlBtn(
+                            icon: Icons.more_vert,
+                            color: Colors.white24,
+                            iconColor: Colors.white,
+                            onTap: () =>
+                                _showParticipantsPanel(meetingService),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           ),
         );
       },
     );
   }
 
-  Future<void> _confirmEndForAll(BuildContext context, MeetingService meetingService) async {
+  Future<void> _confirmEndForAll(
+      BuildContext context, MeetingService meetingService) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF2D2D2D),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Terminer pour tous', style: TextStyle(color: Colors.white)),
+        backgroundColor: _kMeetSheet,
+        shape: const RoundedRectangleBorder(
+            borderRadius: AppRadius.brMd),
+        title: const Text('Terminer pour tous',
+            style: TextStyle(color: Colors.white)),
         content: const Text(
           'Voulez-vous mettre fin à la réunion pour tous les participants ?',
           style: TextStyle(color: Colors.white70),
@@ -317,11 +359,13 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler', style: TextStyle(color: Colors.white54)),
+            child: const Text('Annuler',
+                style: TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Terminer', style: TextStyle(color: Colors.red)),
+            child: const Text('Terminer',
+                style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -340,53 +384,59 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     bool mirror = false,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF3C4043),
-        borderRadius: BorderRadius.circular(12),
+      decoration: const BoxDecoration(
+        color: _kMeetTile,
+        borderRadius: AppRadius.brMd,
       ),
       child: Stack(
         children: [
           if (!isVideoOff && renderer.srcObject != null)
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.brMd,
               child: RTCVideoView(
                 renderer,
                 mirror: mirror,
-                objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                objectFit:
+                    RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
               ),
             )
           else
             Center(
               child: CircleAvatar(
                 radius: 40,
-                backgroundColor: Colors.indigo,
+                backgroundColor: AppColors.brandPrimary,
                 child: Text(
                   label.isNotEmpty ? label[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 32, color: Colors.white),
+                  style: const TextStyle(
+                      fontSize: 32, color: Colors.white),
                 ),
               ),
             ),
           Positioned(
-            bottom: 12,
-            left: 12,
+            bottom: AppSpacing.md,
+            left: AppSpacing.md,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+              decoration: const BoxDecoration(
                 color: Colors.black54,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: _kBrXs,
               ),
-              child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+              child: Text(label,
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 12)),
             ),
           ),
           Positioned(
-            top: 12,
-            right: 12,
+            top: AppSpacing.md,
+            right: AppSpacing.md,
             child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+              padding: const EdgeInsets.all(AppSpacing.xs),
+              decoration: const BoxDecoration(
+                  color: Colors.black54, shape: BoxShape.circle),
               child: Icon(
                 isMuted ? Icons.mic_off : Icons.mic,
-                color: isMuted ? Colors.red : Colors.white,
+                color: isMuted ? AppColors.error : Colors.white,
                 size: 14,
               ),
             ),
@@ -406,21 +456,23 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(isLarge ? 16 : 12),
+        padding: EdgeInsets.all(isLarge ? AppSpacing.lg : AppSpacing.md),
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        child: Icon(icon, color: iconColor, size: isLarge ? 32 : 24),
+        child: Icon(icon,
+            color: iconColor, size: isLarge ? 32 : AppIconSize.md),
       ),
     );
   }
 
-  void _showMeetingChat(BuildContext context, MeetingService meetingService) {
+  void _showMeetingChat(
+      BuildContext context, MeetingService meetingService) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF2D2D2D),
+      backgroundColor: _kMeetSheet,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => _MeetingChatSheet(meetingService: meetingService),
+          borderRadius: AppRadius.sheetTop),
+      builder: (ctx) =>
+          _MeetingChatSheet(meetingService: meetingService),
     );
   }
 }
@@ -433,9 +485,13 @@ class _ParticipantsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
+    final myId = Provider.of<AuthProvider>(context, listen: false)
+            .currentUser
+            ?.alanyaID ??
+        0;
     final meeting = meetingService.currentMeeting;
-    final connectedIds = Set<String>.from(meetingService.remoteStreams.keys);
+    final connectedIds =
+        Set<String>.from(meetingService.remoteStreams.keys);
     final participants = meeting?.participants ?? [];
 
     return ChangeNotifierProvider.value(
@@ -449,9 +505,9 @@ class _ParticipantsSheet extends StatelessWidget {
             expand: false,
             builder: (_, controller) => Column(
               children: [
-                // Handle
                 Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  margin: const EdgeInsets.only(
+                      top: AppSpacing.md, bottom: AppSpacing.sm),
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
@@ -460,7 +516,8 @@ class _ParticipantsSheet extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl, vertical: AppSpacing.xs),
                   child: Row(
                     children: [
                       const Text(
@@ -471,23 +528,23 @@ class _ParticipantsSheet extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      AppSpacing.hGapSm,
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.white12,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: AppRadius.brSm,
                         ),
                         child: Text(
                           '${participants.length}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                // Liste des participants
                 Expanded(
                   child: participants.isEmpty
                       ? const Center(
@@ -498,15 +555,19 @@ class _ParticipantsSheet extends StatelessWidget {
                         )
                       : ListView.builder(
                           controller: controller,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xl),
                           itemCount: participants.length,
                           itemBuilder: (_, i) {
                             final p = participants[i];
                             final isConnected = p.connecte ||
-                                connectedIds.contains(p.participantID.toString());
-                            final name = p.nom ?? p.pseudo ?? 'Participant';
+                                connectedIds.contains(
+                                    p.participantID.toString());
+                            final name =
+                                p.nom ?? p.pseudo ?? 'Participant';
                             final isMe = p.participantID == myId;
-                            final isHost = meeting?.idOrganiser == p.participantID;
+                            final isHost =
+                                meeting?.idOrganiser == p.participantID;
                             return _ParticipantRow(
                               name: isMe ? '$name (vous)' : name,
                               avatarUrl: p.avatarUrl,
@@ -541,18 +602,19 @@ class _ParticipantRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         children: [
           Stack(
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: Colors.indigo.shade800,
+                backgroundColor: AppColors.brandPrimaryDark,
                 backgroundImage: avatarImage(avatarUrl),
                 child: hasValidAvatarUrl(avatarUrl)
                     ? null
-                    : Text(initial, style: const TextStyle(color: Colors.white)),
+                    : Text(initial,
+                        style: const TextStyle(color: Colors.white)),
               ),
               if (isConnected)
                 Positioned(
@@ -562,36 +624,44 @@ class _ParticipantRow extends StatelessWidget {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: Colors.green,
+                      color: AppColors.online,
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF2D2D2D), width: 1.5),
+                      border: Border.all(
+                          color: _kMeetSheet, width: 1.5),
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(width: 12),
+          AppSpacing.hGapMd,
           Expanded(
-            child: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            child: Text(name,
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 14)),
           ),
           if (isHost)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.indigo.withAlpha(60),
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.brandPrimary.withAlpha(60),
+                borderRadius: AppRadius.brSm,
               ),
               child: const Text(
                 'Hôte',
-                style: TextStyle(color: Colors.indigo, fontSize: 11, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: AppColors.brandPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold),
               ),
             ),
           if (!isConnected)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: 3),
               decoration: BoxDecoration(
                 color: Colors.white10,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadius.brSm,
               ),
               child: const Text(
                 'Invité',
@@ -625,13 +695,16 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID ?? 0;
+    final myId = Provider.of<AuthProvider>(context, listen: false)
+            .currentUser
+            ?.alanyaID ??
+        0;
     return ChangeNotifierProvider.value(
       value: widget.meetingService,
       child: Consumer<MeetingService>(
         builder: (context, svc, _) => Column(
           children: [
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
             Container(
               width: 40,
               height: 4,
@@ -641,10 +714,13 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
               ),
             ),
             const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(AppSpacing.lg),
               child: Text(
                 'Chat',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
               ),
             ),
             Expanded(
@@ -656,39 +732,49 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                       ),
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg),
                       itemCount: svc.chatMessages.length,
                       itemBuilder: (_, i) {
                         final msg = svc.chatMessages[i];
                         final isMe = msg.userId == myId.toString();
                         final meeting = svc.currentMeeting;
                         final participant = meeting?.participants
-                            .where((p) => p.participantID.toString() == msg.userId)
+                            .where((p) =>
+                                p.participantID.toString() == msg.userId)
                             .firstOrNull;
                         final senderName = isMe
                             ? 'Vous'
-                            : (participant?.nom ?? participant?.pseudo ?? 'User ${msg.userId}');
+                            : (participant?.nom ??
+                                participant?.pseudo ??
+                                'User ${msg.userId}');
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm),
                           child: Column(
                             crossAxisAlignment: isMe
                                 ? CrossAxisAlignment.end
                                 : CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                senderName,
-                                style: const TextStyle(color: Colors.white54, fontSize: 11),
-                              ),
-                              const SizedBox(height: 2),
+                              Text(senderName,
+                                  style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 11)),
+                              AppSpacing.vGapXs,
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                    vertical: AppSpacing.sm),
                                 decoration: BoxDecoration(
-                                  color: isMe ? Colors.indigo.shade700 : Colors.white12,
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: isMe
+                                      ? AppColors.brandPrimaryStrong
+                                      : Colors.white12,
+                                  borderRadius: AppRadius.brMd,
                                 ),
                                 child: Text(
                                   msg.message,
-                                  style: const TextStyle(color: Colors.white),
+                                  style: const TextStyle(
+                                      color: Colors.white),
                                 ),
                               ),
                             ],
@@ -699,9 +785,10 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
             ),
             Padding(
               padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
               ),
               child: Row(
                 children: [
@@ -711,20 +798,24 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: 'Message...',
-                        hintStyle: const TextStyle(color: Colors.white38),
+                        hintStyle:
+                            const TextStyle(color: Colors.white38),
                         filled: true,
                         fillColor: Colors.white12,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: AppRadius.brPill,
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.sm),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  AppSpacing.hGapSm,
                   IconButton(
-                    icon: const Icon(Icons.send, color: Colors.indigo),
+                    icon: const Icon(Icons.send,
+                        color: AppColors.brandPrimary),
                     onPressed: () {
                       final text = _ctrl.text.trim();
                       if (text.isEmpty) return;

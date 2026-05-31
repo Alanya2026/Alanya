@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import '../../core/theme/app_colors.dart';
 
 /// Bulle de lecture d'un message vocal : play/pause, barre de progression
 /// et durée. Privilégie le fichier local (offline) puis l'URL réseau.
@@ -27,11 +28,12 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   bool _ready = false;
   bool _loading = false;
 
-  Color get _fg => widget.isMe ? Colors.white : Colors.indigo;
+  Color get _fg => widget.isMe ? AppColors.white : AppColors.brandPrimary;
 
   Future<void> _ensureLoaded() async {
     if (_ready) return;
-    final hasLocal = widget.localPath != null && File(widget.localPath!).existsSync();
+    final hasLocal =
+        widget.localPath != null && File(widget.localPath!).existsSync();
     if (hasLocal) {
       await _player.setFilePath(widget.localPath!);
     } else if (widget.networkUrl != null) {
@@ -89,10 +91,18 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                 constraints: const BoxConstraints(),
                 icon: _loading
                     ? SizedBox(
-                        width: 22, height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: _fg),
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: _fg),
                       )
-                    : Icon(playing ? Icons.pause_circle_filled : Icons.play_circle_fill, color: _fg, size: 34),
+                    : Icon(
+                        playing
+                            ? Icons.pause_circle_filled
+                            : Icons.play_circle_fill,
+                        color: _fg,
+                        size: 34,
+                      ),
                 onPressed: _toggle,
               );
             },
@@ -102,11 +112,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             child: StreamBuilder<Duration>(
               stream: _player.positionStream,
               builder: (context, snap) {
-                final total = _player.duration ?? Duration(seconds: widget.durationSeconds);
+                final total = _player.duration ??
+                    Duration(seconds: widget.durationSeconds);
                 final pos = snap.data ?? Duration.zero;
                 final ratio = total.inMilliseconds == 0
                     ? 0.0
-                    : (pos.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
+                    : (pos.inMilliseconds / total.inMilliseconds)
+                        .clamp(0.0, 1.0);
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -122,7 +134,8 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                       _player.playing || pos > Duration.zero
                           ? _fmt(pos)
                           : _fmt(Duration(seconds: widget.durationSeconds)),
-                      style: TextStyle(color: _fg.withAlpha(200), fontSize: 11),
+                      style: TextStyle(
+                          color: _fg.withAlpha(200), fontSize: 11),
                     ),
                   ],
                 );

@@ -1,9 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/status_provider.dart';
 import '../../talky_models.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../widgets/common/common.dart';
 
 class StatusViewsScreen extends StatefulWidget {
   final int statusId;
@@ -20,25 +22,22 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
     final provider = context.read<StatusProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vues'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Vues')),
       body: FutureBuilder<List<StatutView>>(
         future: provider.getViews(widget.statusId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           final data = snapshot.data;
           if (data == null || data.isEmpty) {
-            return Center(child: Text('Aucune vue', style: TextStyle(color: Colors.grey.shade600)));
+            return const EmptyState(
+              icon: Icons.visibility_off_outlined,
+              title: 'Aucune vue',
+            );
           }
 
           final views = snapshot.data!;
-          // Trier du plus récent au plus ancien
           views.sort((a, b) => b.seenAt.compareTo(a.seenAt));
 
           return ListView.separated(
@@ -46,32 +45,31 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
             separatorBuilder: (_, __) => const Divider(),
             itemBuilder: (_, idx) {
               final v = views[idx];
-              final initial = v.nom.isNotEmpty ? v.nom[0].toUpperCase() : '?';
               return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.indigo.shade50,
-                  backgroundImage: hasValidAvatarUrl(v.avatarUrl)
-                      ? CachedNetworkImageProvider(v.avatarUrl!)
-                      : null,
-                  child: !hasValidAvatarUrl(v.avatarUrl)
-                      ? Text(initial,
-                          style: const TextStyle(
-                              color: Colors.indigo, fontWeight: FontWeight.bold))
-                      : null,
+                leading: AppAvatar(
+                  imageUrl: v.avatarUrl,
+                  name: v.nom,
+                  size: AppSizes.avatarMd,
                 ),
-                title: Text(v.nom),
-                subtitle: Text(v.pseudo),
+                title: Text(v.nom, style: context.text.titleSmall),
+                subtitle: Text(
+                  v.pseudo,
+                  style: context.text.bodySmall
+                      ?.copyWith(color: context.colors.onSurfaceVariant),
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (v.liked)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 8),
-                        child: Icon(Icons.favorite, color: Colors.red, size: 18),
+                      Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.sm),
+                        child: Icon(Icons.favorite,
+                            color: AppColors.error, size: AppIconSize.sm),
                       ),
                     Text(
                       _formatSeenAt(v.seenAt),
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: context.text.labelSmall
+                          ?.copyWith(color: context.colors.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -89,7 +87,8 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
     if (dt == null) return '';
     final local = dt.toLocal();
     final now = DateTime.now();
-    final hm = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    final hm =
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 
     if (local.day == now.day &&
         local.month == now.month &&

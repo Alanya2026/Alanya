@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_dimens.dart';
+import '../core/theme/app_theme.dart';
 import '../core/services/call_service.dart';
 import '../talky_api_client.dart';
 import '../screens/chats/fullscreen_profile_image_viewer.dart';
@@ -10,7 +13,7 @@ import '../screens/chats/group_detail_screen.dart';
 import '../screens/chats/chat_detail_screen.dart';
 import '../screens/calls/ongoing_call_screen.dart';
 
-/// Modal pour afficher l'image de profil avec CTA
+/// Modal pour afficher l'image de profil avec CTA.
 class ProfileImageModal extends StatefulWidget {
   final String? imageUrl;
   final String? localPath;
@@ -51,7 +54,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: GestureDetector(
-          onTap: () {}, // Empêche la fermeture au clic sur le modal
+          onTap: () {},
           child: Column(
             children: [
               Expanded(
@@ -75,47 +78,39 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Header avec nom - attaché au-dessus de l'image
+                            // Header nom
                             Container(
                               width: 300,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
+                                  horizontal: AppSpacing.lg,
+                                  vertical: AppSpacing.md),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: context.colors.surface,
                                 borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  topRight: Radius.circular(16),
+                                  topLeft: Radius.circular(AppRadius.md),
+                                  topRight: Radius.circular(AppRadius.md),
                                 ),
                               ),
                               child: Text(
                                 widget.name,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: context.text.titleLarge,
                               ),
                             ),
                             _buildProfileImage(),
-                            // Bande CTA directement attachée sous la photo
+                            // Bande CTA
                             Container(
                               width: 300,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
+                                  horizontal: AppSpacing.lg,
+                                  vertical: AppSpacing.sm),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: context.colors.surface,
                                 borderRadius: const BorderRadius.only(
-                                  bottomLeft: Radius.circular(16),
-                                  bottomRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(AppRadius.md),
+                                  bottomRight: Radius.circular(AppRadius.md),
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withAlpha(20),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
+                                boxShadow: AppShadows.medium,
                               ),
                               child: Row(
                                 mainAxisAlignment:
@@ -128,16 +123,14 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
                                     _buildCTAIcon(
                                         Icons.call,
                                         'Audio',
-                                        () =>
-                                            _initiateCall(isVideo: false)),
+                                        () => _initiateCall(isVideo: false)),
                                     _buildCTAIcon(
                                         Icons.videocam_outlined,
                                         'Vidéo',
-                                        () =>
-                                            _initiateCall(isVideo: true)),
+                                        () => _initiateCall(isVideo: true)),
                                   ],
-                                  _buildCTAIcon(Icons.info_outlined, 'Info',
-                                      _openContactDetail),
+                                  _buildCTAIcon(
+                                      Icons.info_outlined, 'Info', _openContactDetail),
                                 ],
                               ),
                             ),
@@ -148,7 +141,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: AppSpacing.xxxl + 8),
             ],
           ),
         ),
@@ -157,19 +150,16 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
   }
 
   Widget _buildProfileImage() {
-    final hasImage = (widget.imageUrl != null &&
-            widget.imageUrl!.isNotEmpty) ||
-        widget.localPath != null;
+    final hasImage =
+        (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) ||
+            widget.localPath != null;
 
-    if (!hasImage) {
-      return _buildFallback();
-    }
+    if (!hasImage) return _buildFallback();
 
     return Container(
       width: 300,
       height: 300,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.zero,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(50),
@@ -178,10 +168,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.zero,
-        child: _buildImageContent(),
-      ),
+      child: ClipRect(child: _buildImageContent()),
     );
   }
 
@@ -198,9 +185,9 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
       imageUrl: widget.imageUrl ?? '',
       fit: BoxFit.cover,
       placeholder: (_, __) => Container(
-        color: Colors.grey.shade300,
+        color: AppColors.surfaceSubtle,
         child: const Center(
-          child: CircularProgressIndicator(color: Colors.indigo),
+          child: CircularProgressIndicator(color: AppColors.brandPrimary),
         ),
       ),
       errorWidget: (_, __, ___) => _buildFallback(),
@@ -211,10 +198,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
     return Container(
       width: 300,
       height: 300,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.zero,
-        color: Colors.indigo.shade100,
-      ),
+      color: AppColors.brandContainer,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -223,7 +207,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
               const Icon(
                 Icons.group,
                 size: 80,
-                color: Colors.indigo,
+                color: AppColors.brandPrimary,
               )
             else
               Text(
@@ -231,10 +215,10 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
                 style: const TextStyle(
                   fontSize: 80,
                   fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
+                  color: AppColors.brandPrimary,
                 ),
               ),
-            const SizedBox(height: 16),
+            AppSpacing.vGapLg,
           ],
         ),
       ),
@@ -249,22 +233,22 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
         width: 44,
         height: 44,
         decoration: const BoxDecoration(
-          color: Colors.indigo,
+          color: AppColors.brandPrimary,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child: Icon(icon, color: Colors.white, size: AppIconSize.sm),
       ),
     );
   }
 
+  // ── Actions ────────────────────────────────────────────────────────
+
   Future<void> _openChat() async {
     if (widget.isGroup) return;
-
     try {
       final result =
           await _apiClient.createConversation(participantID: widget.userId);
       final conversationId = result['conversID'] as int?;
-
       if (conversationId != null && mounted) {
         Navigator.pop(context);
         Navigator.push(
@@ -283,8 +267,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Erreur lors de l\'ouverture du chat')),
+          const SnackBar(content: Text('Erreur lors de l\'ouverture du chat')),
         );
       }
     }
@@ -292,12 +275,10 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
 
   Future<void> _initiateCall({required bool isVideo}) async {
     if (widget.isGroup) return;
-
     try {
       final userData = await _apiClient.getMe();
       final myId = userData['alanyaID'] ?? 0;
       final myPhoto = userData['avatar_url'];
-
       if (!mounted) return;
 
       await _callService.initiateCall(
@@ -309,14 +290,13 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
         targetUserPhoto: widget.imageUrl,
         isVideo: isVideo,
       );
-
       if (!mounted) return;
 
       if (_callService.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_callService.errorMessage!),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
         return;
@@ -331,22 +311,18 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur: $e')));
       }
     }
   }
 
   Future<void> _openContactDetail() async {
     Navigator.pop(context);
-
     if (widget.isGroup) {
-      // Ouvrir GroupDetailScreen pour les groupes
       if (widget.conversationId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Erreur : ID du groupe introuvable')),
+          const SnackBar(content: Text('Erreur : ID du groupe introuvable')),
         );
         return;
       }
@@ -361,7 +337,6 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
         ),
       );
     } else {
-      // Ouvrir ContactDetailScreen pour les contacts
       Navigator.push(
         context,
         MaterialPageRoute(

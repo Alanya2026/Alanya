@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/services/local_cache_repository.dart';
-import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/common/common.dart';
 import 'meeting_lobby_screen.dart';
 import 'participant_picker_screen.dart';
 
@@ -31,15 +34,17 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   }
 
   Future<void> _load() async {
-    // 1) Hydrate depuis le cache local pour un affichage instantané (offline-safe).
     final me = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+    final cache =
+        Provider.of<LocalCacheRepository>(context, listen: false);
     final api = Provider.of<TalkyApiClient>(context, listen: false);
     final myId = me?.alanyaID ?? 0;
-    final myName = (me?.nom.isNotEmpty == true) ? me!.nom : (me?.pseudo ?? '');
+    final myName =
+        (me?.nom.isNotEmpty == true) ? me!.nom : (me?.pseudo ?? '');
     try {
       final local = await cache.watchMeetings().first;
-      final found = local.where((m) => m.idMeeting == widget.meetingId).firstOrNull;
+      final found =
+          local.where((m) => m.idMeeting == widget.meetingId).firstOrNull;
       if (found != null && mounted) {
         final cachedMeeting = Meeting(
           idMeeting: found.idMeeting,
@@ -66,7 +71,6 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       }
     } catch (_) {}
 
-    // 2) Rafraîchit depuis l'API.
     try {
       final results = await Future.wait([
         api.getMeeting(widget.meetingId),
@@ -77,7 +81,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       final meeting = Meeting.fromJson(results[0]);
       final freshMe = results[1];
       final freshId = (freshMe['alanyaID'] as num?)?.toInt() ?? myId;
-      final freshName = freshMe['nom'] as String? ?? freshMe['pseudo'] as String? ?? myName;
+      final freshName = freshMe['nom'] as String? ??
+          freshMe['pseudo'] as String? ??
+          myName;
 
       setState(() {
         _meeting = meeting;
@@ -91,10 +97,10 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (_meeting == null) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Impossible de charger la réunion : $e')),
+          SnackBar(
+              content: Text('Impossible de charger la réunion : $e')),
         );
       }
-      // Sinon on garde silencieusement le cache.
     }
   }
 
@@ -102,16 +108,16 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     final meeting = _meeting;
     if (meeting == null) return;
 
-    final existing = meeting.participants
-        .map((p) => p.participantID)
-        .toSet();
+    final existing =
+        meeting.participants.map((p) => p.participantID).toSet();
 
     final result = await Navigator.push<List<User>>(
       context,
       MaterialPageRoute(
         builder: (_) => ParticipantPickerScreen(
           confirmLabel: 'Inviter',
-          maxSelectable: 9 - meeting.participants.length.clamp(0, 9),
+          maxSelectable:
+              9 - meeting.participants.length.clamp(0, 9),
         ),
       ),
     );
@@ -132,16 +138,15 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${newIds.length} participant(s) invité(s)'),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
       );
       _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
     }
   }
 
@@ -152,7 +157,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: const RoundedRectangleBorder(
+            borderRadius: AppRadius.brMd),
         title: const Text('Annuler la réunion'),
         content: const Text(
           'Cette action est irréversible. La réunion sera supprimée pour tous les participants.',
@@ -164,7 +170,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Annuler la réunion', style: TextStyle(color: Colors.red)),
+            child: Text('Annuler la réunion',
+                style: TextStyle(color: context.colors.error)),
           ),
         ],
       ),
@@ -179,9 +186,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
     }
   }
 
@@ -203,25 +209,21 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Détail de la réunion',
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
-        ),
+        leading: const BackButton(),
+        title: const Text('Détail de la réunion'),
         actions: [
           if (_isOrganiser && _meeting != null && !_meeting!.isEnd)
             IconButton(
-              icon: const Icon(Icons.person_add_outlined, color: Colors.indigo),
+              icon: Icon(Icons.person_add_outlined,
+                  color: context.colors.primary),
               tooltip: 'Inviter',
               onPressed: _inviteMore,
             ),
           if (_isOrganiser && _meeting != null && !_meeting!.isEnd)
             IconButton(
-              icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+              icon: Icon(Icons.cancel_outlined,
+                  color: context.colors.error),
               tooltip: 'Annuler',
               onPressed: _cancelMeeting,
             ),
@@ -233,20 +235,24 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ? FloatingActionButton.extended(
               heroTag: 'meeting_detail_join_fab',
               onPressed: _openLobby,
-              backgroundColor: Colors.indigo,
-              foregroundColor: Colors.white,
               icon: Icon(
-                _meeting!.typeMedia == 0 ? Icons.videocam : Icons.phone,
+                _meeting!.typeMedia == 0
+                    ? Icons.videocam
+                    : Icons.phone,
               ),
               label: const Text('Rejoindre',
                   style: TextStyle(fontWeight: FontWeight.bold)),
             )
           : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.centerFloat,
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+          ? const LoadingState()
           : _meeting == null
-              ? const Center(child: Text('Réunion introuvable'))
+              ? const EmptyState(
+                  icon: Icons.event_busy_outlined,
+                  title: 'Réunion introuvable',
+                )
               : _MeetingDetailBody(
                   meeting: _meeting!,
                   myId: _myId,
@@ -281,11 +287,14 @@ class _MeetingDetailBody extends StatelessWidget {
   _MeetingStatus _computeStatus() {
     if (meeting.isEnd) return _MeetingStatus.ended;
     final now = DateTime.now();
-    if (meeting.startDateTime.isBefore(now) && meeting.endDateTime.isAfter(now)) {
+    if (meeting.startDateTime.isBefore(now) &&
+        meeting.endDateTime.isAfter(now)) {
       return _MeetingStatus.inProgress;
     }
     final diff = meeting.startDateTime.difference(now);
-    if (!diff.isNegative && diff.inMinutes <= 15) return _MeetingStatus.soon;
+    if (!diff.isNegative && diff.inMinutes <= 15) {
+      return _MeetingStatus.soon;
+    }
     if (diff.isNegative) return _MeetingStatus.ended;
     return _MeetingStatus.scheduled;
   }
@@ -301,8 +310,19 @@ class _MeetingDetailBody extends StatelessWidget {
     final d = meeting.startDateTime;
     final e = meeting.endDateTime;
     const months = [
-      '', 'jan', 'fév', 'mar', 'avr', 'mai', 'jun',
-      'jul', 'aoû', 'sep', 'oct', 'nov', 'déc',
+      '',
+      'jan',
+      'fév',
+      'mar',
+      'avr',
+      'mai',
+      'jun',
+      'jul',
+      'aoû',
+      'sep',
+      'oct',
+      'nov',
+      'déc',
     ];
     final date = '${d.day} ${months[d.month]} ${d.year}';
     String hm(DateTime dt) =>
@@ -315,83 +335,96 @@ class _MeetingDetailBody extends StatelessWidget {
     final status = _computeStatus();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 100),
       children: [
-        // ── Header ───────────────────────────────────────────────────
-        const SizedBox(height: 8),
+        AppSpacing.vGapSm,
         Row(
           children: [
             Expanded(
               child: Text(
                 meeting.objet,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: context.text.headlineSmall,
               ),
             ),
-            const SizedBox(width: 12),
-            _StatusBadge(status: status),
+            AppSpacing.hGapMd,
+            _statusChip(status),
           ],
         ),
-        const SizedBox(height: 8),
+        AppSpacing.vGapSm,
         Row(
           children: [
             Icon(
-              meeting.typeMedia == 0 ? Icons.videocam_outlined : Icons.phone_outlined,
-              size: 16,
-              color: Colors.grey.shade500,
+              meeting.typeMedia == 0
+                  ? Icons.videocam_outlined
+                  : Icons.phone_outlined,
+              size: AppIconSize.sm,
+              color: context.colors.onSurfaceVariant,
             ),
-            const SizedBox(width: 6),
+            AppSpacing.hGapSm,
             Text(
               meeting.typeMedia == 0 ? 'Réunion vidéo' : 'Appel audio',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+              style: context.text.bodySmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        AppSpacing.vGapXxl,
         const Divider(),
-        const SizedBox(height: 16),
+        AppSpacing.vGapLg,
 
-        // ── Infos date/heure ─────────────────────────────────────────
         _InfoRow(icon: Icons.access_time, text: _formatDateTime()),
-        const SizedBox(height: 12),
-        _InfoRow(icon: Icons.timelapse, text: 'Durée : ${_formatDuration(meeting.duree)}'),
-        const SizedBox(height: 12),
+        AppSpacing.vGapMd,
+        _InfoRow(
+            icon: Icons.timelapse,
+            text: 'Durée : ${_formatDuration(meeting.duree)}'),
+        AppSpacing.vGapMd,
         _InfoRow(
           icon: Icons.person_outline,
-          text: 'Organisé par ${meeting.organiserNom ?? meeting.organiserPseudo ?? 'Inconnu'}',
+          text:
+              'Organisé par ${meeting.organiserNom ?? meeting.organiserPseudo ?? 'Inconnu'}',
         ),
-        const SizedBox(height: 24),
+        AppSpacing.vGapXxl,
         const Divider(),
-        const SizedBox(height: 16),
+        AppSpacing.vGapLg,
 
-        // ── Participants ─────────────────────────────────────────────
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               'Participants (${meeting.participants.length}/10)',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              style: context.text.titleSmall,
             ),
             if (isOrganiser && !meeting.isEnd)
               GestureDetector(
                 onTap: onInvite,
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.add, size: 16, color: Colors.indigo),
-                    SizedBox(width: 4),
-                    Text('Inviter', style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600)),
+                    Icon(Icons.add,
+                        size: AppIconSize.sm,
+                        color: context.colors.primary),
+                    AppSpacing.hGapXs,
+                    Text(
+                      'Inviter',
+                      style: context.text.labelMedium?.copyWith(
+                        color: context.colors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 12),
+        AppSpacing.vGapMd,
         if (meeting.participants.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
             child: Center(
               child: Text(
                 'Aucun participant pour le moment',
-                style: TextStyle(color: Colors.grey.shade500),
+                style: context.text.bodySmall
+                    ?.copyWith(color: context.colors.onSurfaceVariant),
               ),
             ),
           )
@@ -401,65 +434,30 @@ class _MeetingDetailBody extends StatelessWidget {
                 isMe: p.participantID == myId,
               )),
 
-        const SizedBox(height: 32),
+        AppSpacing.vGapXxl,
       ],
     );
   }
-}
 
-// ─── Badge de statut ──────────────────────────────────────────────────────────
-
-enum _MeetingStatus { scheduled, soon, inProgress, ended }
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final _MeetingStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    late String label;
-    late Color bg;
-    late Color fg;
-
+  Widget _statusChip(_MeetingStatus status) {
     switch (status) {
       case _MeetingStatus.inProgress:
-        label = 'En cours';
-        bg = Colors.green.shade50;
-        fg = Colors.green.shade700;
+        return const StatusChip(
+            label: 'En cours', tone: StatusChipTone.success);
       case _MeetingStatus.soon:
-        label = 'Bientôt';
-        bg = Colors.orange.shade50;
-        fg = Colors.orange.shade700;
+        return const StatusChip(
+            label: 'Bientôt', tone: StatusChipTone.warning);
       case _MeetingStatus.scheduled:
-        label = 'Planifiée';
-        bg = Colors.indigo.shade50;
-        fg = Colors.indigo;
+        return const StatusChip(
+            label: 'Planifiée', tone: StatusChipTone.brand);
       case _MeetingStatus.ended:
-        label = 'Terminée';
-        bg = Colors.grey.shade100;
-        fg = Colors.grey;
+        return const StatusChip(
+            label: 'Terminée', tone: StatusChipTone.neutral);
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (status == _MeetingStatus.inProgress)
-            Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.only(right: 5),
-              decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
-            ),
-          Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.bold, fontSize: 12)),
-        ],
-      ),
-    );
   }
 }
+
+enum _MeetingStatus { scheduled, soon, inProgress, ended }
 
 // ─── Ligne d'info ─────────────────────────────────────────────────────────────
 
@@ -473,10 +471,10 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: Colors.indigo.shade300),
-        const SizedBox(width: 10),
+        Icon(icon, size: AppIconSize.sm, color: context.colors.primary),
+        AppSpacing.hGapSm,
         Expanded(
-          child: Text(text, style: TextStyle(color: Colors.grey.shade800, fontSize: 14)),
+          child: Text(text, style: context.text.bodyMedium),
         ),
       ],
     );
@@ -486,32 +484,28 @@ class _InfoRow extends StatelessWidget {
 // ─── Tuile participant ─────────────────────────────────────────────────────────
 
 class _ParticipantTile extends StatelessWidget {
-  const _ParticipantTile({required this.participant, required this.isMe});
+  const _ParticipantTile(
+      {required this.participant, required this.isMe});
 
   final MeetingParticipant participant;
   final bool isMe;
 
   @override
   Widget build(BuildContext context) {
-    final name = participant.nom ?? participant.pseudo ?? 'Participant';
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final name =
+        participant.nom ?? participant.pseudo ?? 'Participant';
     final accepted = participant.status == 1;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: Colors.indigo.shade50,
-                backgroundImage: avatarImage(participant.avatarUrl),
-                child: hasValidAvatarUrl(participant.avatarUrl)
-                    ? null
-                    : Text(initial,
-                        style: const TextStyle(
-                            color: Colors.indigo, fontWeight: FontWeight.bold)),
+              AppAvatar(
+                imageUrl: participant.avatarUrl,
+                name: name,
+                size: AppSizes.avatarSm,
               ),
               if (participant.connecte)
                 Positioned(
@@ -521,42 +515,48 @@ class _ParticipantTile extends StatelessWidget {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: Colors.green,
+                      color: AppColors.online,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
+                      border: Border.all(
+                          color: context.colors.surface, width: 1.5),
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(width: 12),
+          AppSpacing.hGapMd,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   isMe ? '$name (vous)' : name,
-                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                  style: context.text.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w500),
                 ),
-                if (participant.pseudo != null && participant.pseudo!.isNotEmpty)
+                if (participant.pseudo != null &&
+                    participant.pseudo!.isNotEmpty)
                   Text(
                     '@${participant.pseudo}',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                    style: context.text.bodySmall
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
               ],
             ),
           ),
-          // Statut
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
             decoration: BoxDecoration(
-              color: accepted ? Colors.green.shade50 : Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(10),
+              color: accepted
+                  ? AppColors.successContainer
+                  : AppColors.warningContainer,
+              borderRadius: AppRadius.brSm,
             ),
             child: Text(
               accepted ? 'Accepté' : 'En attente',
               style: TextStyle(
-                color: accepted ? Colors.green.shade700 : Colors.orange.shade700,
+                color: accepted ? AppColors.success : AppColors.warning,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -567,4 +567,3 @@ class _ParticipantTile extends StatelessWidget {
     );
   }
 }
-

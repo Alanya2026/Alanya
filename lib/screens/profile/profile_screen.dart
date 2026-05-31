@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/country_utils.dart';
 import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
@@ -39,8 +41,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUser() async {
-    // 1) Hydrate immédiatement depuis le cache AuthProvider (offline-safe).
-    final cached = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final cached =
+        Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (cached != null && mounted) {
       setState(() {
         _user = cached;
@@ -48,21 +50,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     }
 
-    // 2) Rafraîchit depuis l'API ; en cas d'échec on garde le cache.
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
       if (!mounted) return;
       final user = User.fromJson(data);
-      final full = await apiClient.getUserById(user.alanyaID).catchError((_) => <String, dynamic>{});
+      final full = await apiClient
+          .getUserById(user.alanyaID)
+          .catchError((_) => <String, dynamic>{});
       if (!mounted) return;
-      final paysLibelle = full['pays_libelle'] as String? ?? user.paysLibelle;
+      final paysLibelle =
+          full['pays_libelle'] as String? ?? user.paysLibelle;
       setState(() {
         _user = User(
           alanyaID: user.alanyaID,
           nom: user.nom,
           pseudo: user.pseudo,
-          alanyaPhone: full['alanyaPhone'] as String? ?? user.alanyaPhone,
+          alanyaPhone:
+              full['alanyaPhone'] as String? ?? user.alanyaPhone,
           email: user.email,
           idPays: user.idPays,
           avatarUrl: user.avatarUrl,
@@ -74,15 +79,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       });
     } catch (_) {
-      // Réseau indisponible : on garde l'affichage du cache (déjà posé en étape 1).
       if (mounted && _user == null) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loadContacts() async {
-    // 1) Hydrate depuis le cache local.
     try {
-      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      final cache =
+          Provider.of<LocalCacheRepository>(context, listen: false);
       final local = await cache.watchPreferredContacts().first;
       if (!mounted) return;
       if (local.isNotEmpty) {
@@ -95,19 +99,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (_) {}
 
-    // 2) Rafraîchit depuis l'API.
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getContacts();
       if (!mounted) return;
       setState(() {
         _contacts = data
-            .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .map((e) =>
+                e is User ? e : User.fromJson(e as Map<String, dynamic>))
             .toList();
         _loadingContacts = false;
       });
       if (mounted) {
-        final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+        final cache =
+            Provider.of<LocalCacheRepository>(context, listen: false);
         cache.syncPreferredContacts();
       }
     } catch (_) {
@@ -130,7 +135,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
   Future<void> _logout() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider =
+        Provider.of<AuthProvider>(context, listen: false);
     await authProvider.logout();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
@@ -145,7 +151,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       await apiClient.removeContact(user.alanyaID);
       if (!mounted) return;
-      setState(() => _contacts.removeWhere((u) => u.alanyaID == user.alanyaID));
+      setState(
+          () => _contacts.removeWhere((u) => u.alanyaID == user.alanyaID));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -161,9 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => AddContactSheet(
         existingIds: _contacts.map((u) => u.alanyaID).toSet(),
-        onAdded: (user) {
-          setState(() => _contacts.add(user));
-        },
+        onAdded: (user) => setState(() => _contacts.add(user)),
       ),
     );
   }
@@ -171,36 +176,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showContactOptions(User user) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: AppRadius.sheetTop),
       builder: (_) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
             Container(
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppColors.outlineStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 16),
+            AppSpacing.vGapLg,
             ListTile(
-              leading: const Icon(Icons.person_remove_outlined, color: Colors.red),
+              leading: Icon(Icons.person_remove_outlined,
+                  color: context.colors.error),
               title: Text(
                 'Retirer ${user.nom.isNotEmpty ? user.nom : user.pseudo} des contacts préférés',
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: context.colors.error),
               ),
               onTap: () {
                 Navigator.pop(context);
                 _removeContact(user);
               },
             ),
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
           ],
         ),
       ),
@@ -210,82 +215,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Profil',
-          style: TextStyle(color: Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
-        ),
+        title: Text('Profil', style: context.text.headlineLarge),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
         child: Column(
           children: [
-            const SizedBox(height: 20),
-
-            // ── En-tête profil ───────────────────────────────────────────
+            AppSpacing.vGapXl,
             _ProfileHeader(
               user: _user,
               isLoading: _isLoading,
               onEdited: _loadUser,
             ),
+            AppSpacing.vGapXl,
 
-            const SizedBox(height: 20),
-
-            // ── Section contacts préférés ─────────────────────────────
+            // Section contacts préférés
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: AppSpacing.screenH,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Contacts préférés',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    style: context.text.titleMedium,
                   ),
                   if (_contacts.length > 4)
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PreferredContactsScreen(
-                              contacts: _contacts,
-                              onLongPress: _showContactOptions,
-                              onAddContact: _openAddContact,
-                            ),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PreferredContactsScreen(
+                            contacts: _contacts,
+                            onLongPress: _showContactOptions,
+                            onAddContact: _openAddContact,
                           ),
-                        );
-                      },
+                        ),
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             '+${_contacts.length - 4}',
-                            style: const TextStyle(
-                              color: Colors.indigo,
+                            style: context.text.labelMedium?.copyWith(
+                              color: context.colors.primary,
                               fontWeight: FontWeight.w600,
-                              fontSize: 14,
                             ),
                           ),
-                          const Icon(Icons.chevron_right, size: 18, color: Colors.indigo),
+                          Icon(Icons.chevron_right,
+                              size: AppIconSize.sm,
+                              color: context.colors.primary),
                         ],
                       ),
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.vGapMd,
 
             _loadingContacts
-                ? const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(color: Colors.indigo),
+                ? Padding(
+                    padding: AppSpacing.card,
+                    child: const CircularProgressIndicator(),
                   )
                 : _contacts.isEmpty
-                    ? _EmptyContacts(onAdd: () {
-                        Navigator.push(
+                    ? _EmptyContacts(
+                        onAdd: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => PreferredContactsScreen(
@@ -294,55 +290,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onAddContact: _openAddContact,
                             ),
                           ),
-                        );
-                      })
+                        ),
+                      )
                     : _ContactGrid(
                         contacts: _contacts,
                         onLongPress: _showContactOptions,
                       ),
 
-            const SizedBox(height: 20),
+            AppSpacing.vGapXl,
 
-            // ── Menu paramètres ─────────────────────────────────────────
+            // Menu paramètres
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
+              margin: AppSpacing.screenH,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(13),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
+                color: context.colors.surface,
+                borderRadius: AppRadius.brMd,
+                boxShadow: AppShadows.subtle,
               ),
               child: Column(
                 children: [
-                  _buildMenuItem(CupertinoIcons.person, 'Compte', () async {
+                  _buildMenuItem(CupertinoIcons.person, 'Compte',
+                      () async {
                     await Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen()),
                     );
                     if (mounted) _loadUser();
                   }),
                   const Divider(height: 1),
-                  _buildMenuItem(CupertinoIcons.chat_bubble, 'Discussions', () {}),
+                  _buildMenuItem(
+                      CupertinoIcons.chat_bubble, 'Discussions', () {}),
                   const Divider(height: 1),
-                  _buildMenuItem(CupertinoIcons.bell, 'Notifications', () {}),
+                  _buildMenuItem(
+                      CupertinoIcons.bell, 'Notifications', () {}),
                   const Divider(height: 1),
-                  _buildMenuItem(CupertinoIcons.settings, 'Paramètres', () {
+                  _buildMenuItem(CupertinoIcons.settings, 'Paramètres',
+                      () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const SettingsScreen()),
                     );
                   }),
-                  if (!_isLoading && _user != null && _user!.typeCompte >= 1) ...[
+                  if (!_isLoading &&
+                      _user != null &&
+                      _user!.typeCompte >= 1) ...[
                     const Divider(height: 1),
-                    _buildMenuItem(Icons.admin_panel_settings, 'Tableau de bord Admin', () {
+                    _buildMenuItem(Icons.admin_panel_settings,
+                        'Tableau de bord Admin', () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const AdminDashboardScreen()),
                       );
                     }),
                   ],
@@ -350,48 +351,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            AppSpacing.vGapXl,
 
-            // ── Déconnexion ─────────────────────────────────────────────
+            // Déconnexion
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
+              margin: AppSpacing.screenH,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(13),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
+                color: context.colors.surface,
+                borderRadius: AppRadius.brMd,
+                boxShadow: AppShadows.subtle,
               ),
               child: ListTile(
                 leading: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.errorContainer,
+                    borderRadius: AppRadius.brSm,
                   ),
-                  child: const Icon(
-                    Icons.logout,
-                    color: Colors.red,
-                    size: 20,
-                  ),
+                  child: Icon(Icons.logout,
+                      color: context.colors.error,
+                      size: AppIconSize.sm),
                 ),
-                title: const Text(
+                title: Text(
                   'Déconnexion',
-                  style: TextStyle(
+                  style: context.text.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: Colors.red,
+                    color: context.colors.error,
                   ),
                 ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(Icons.arrow_forward_ios,
+                    size: 16, color: context.colors.outlineVariant),
                 onTap: _logout,
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: AppSpacing.xxxl + 8),
           ],
         ),
       ),
@@ -399,31 +393,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildMenuItem(
-    IconData icon,
-    String title,
-    VoidCallback onTap,
-  ) {
+      IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: Colors.indigo.shade50,
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.brandContainer,
+          borderRadius: AppRadius.brSm,
         ),
-        child: Icon(
-          icon,
-          color: Colors.indigo,
-          size: 20,
-        ),
+        child: Icon(icon, color: AppColors.brandPrimary, size: AppIconSize.sm),
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w500,
-          color: Colors.black87,
-        ),
+        style: context.text.bodyLarge
+            ?.copyWith(fontWeight: FontWeight.w500),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+      trailing: Icon(Icons.arrow_forward_ios,
+          size: 16, color: context.colors.outlineVariant),
       onTap: onTap,
     );
   }
@@ -444,25 +430,21 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPhoto = user != null && hasValidAvatarUrl(user!.avatarUrl);
-    final initial = user?.nom.isNotEmpty == true ? user!.nom[0].toUpperCase() : 'U';
+    final hasPhoto = user != null && (user!.avatarUrl.isNotEmpty);
+    final initial =
+        user?.nom.isNotEmpty == true ? user!.nom[0].toUpperCase() : 'U';
     final pseudo = user?.pseudo ?? '';
     final phone = user?.alanyaPhone ?? '';
     final pays = user?.paysLibelle ?? '';
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      margin: AppSpacing.screenH,
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.xxxl, horizontal: AppSpacing.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: context.colors.surface,
+        borderRadius: AppRadius.brMd,
+        boxShadow: AppShadows.subtle,
       ),
       child: Column(
         children: [
@@ -476,7 +458,8 @@ class _ProfileHeader extends StatelessWidget {
                       ? CachedNetworkImage(
                           imageUrl: user!.avatarUrl.trim(),
                           fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(color: const Color(0xFFCBD0E8)),
+                          placeholder: (_, __) =>
+                              Container(color: AppColors.brandContainer),
                           errorWidget: (_, __, ___) =>
                               _AvatarFallback(initial: initial, fontSize: 40),
                         )
@@ -490,57 +473,60 @@ class _ProfileHeader extends StatelessWidget {
                   onTap: () async {
                     await Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen()),
                     );
                     onEdited?.call();
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: Colors.indigo,
+                    padding: const EdgeInsets.all(AppSpacing.sm - 2),
+                    decoration: BoxDecoration(
+                      color: context.colors.primary,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.camera_alt,
-                      color: Colors.white,
-                      size: 18,
+                      color: AppColors.white,
+                      size: AppIconSize.sm,
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          AppSpacing.vGapLg,
           if (isLoading)
             const CircularProgressIndicator()
           else ...[
             Text(
               user?.nom ?? 'User',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: context.text.headlineSmall,
             ),
             if ((user?.typeCompte ?? 0) >= 1) ...[
-              const SizedBox(height: 6),
+              AppSpacing.vGapSm,
               _RoleBadge(typeCompte: user!.typeCompte),
             ],
             if (pseudo.isNotEmpty) ...[
-              const SizedBox(height: 2),
+              AppSpacing.vGapXs,
               Text(
                 '@$pseudo',
-                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                style: context.text.bodyLarge?.copyWith(
+                    color: context.colors.onSurfaceVariant),
               ),
             ],
             if (phone.isNotEmpty) ...[
-              const SizedBox(height: 6),
+              AppSpacing.vGapSm,
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.phone_iphone, size: 16, color: Colors.indigo.shade400),
-                  const SizedBox(width: 4),
+                  Icon(Icons.phone_iphone,
+                      size: AppIconSize.sm,
+                      color: context.colors.primary),
+                  AppSpacing.hGapXs,
                   Text(
                     'AlanyaPhone $phone',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF1E66D8),
+                    style: context.text.bodyMedium?.copyWith(
+                      color: context.colors.primary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -548,7 +534,7 @@ class _ProfileHeader extends StatelessWidget {
               ),
             ],
             if (pays.isNotEmpty) ...[
-              const SizedBox(height: 4),
+              AppSpacing.vGapXs,
               CountryRow(country: pays),
             ],
           ],
@@ -570,22 +556,20 @@ class _ContactGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayed = contacts.take(4).toList();
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      margin: AppSpacing.screenH,
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.lg, horizontal: AppSpacing.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: context.colors.surface,
+        borderRadius: AppRadius.brMd,
+        boxShadow: AppShadows.subtle,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: displayed.map((user) => _ContactChip(user: user, onLongPress: onLongPress)).toList(),
+        children: displayed
+            .map((user) =>
+                _ContactChip(user: user, onLongPress: onLongPress))
+            .toList(),
       ),
     );
   }
@@ -599,24 +583,25 @@ class _ContactChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPhoto = hasValidAvatarUrl(user.avatarUrl);
-    final initial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
+    final hasPhoto = user.avatarUrl.isNotEmpty;
+    final initial =
+        user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
     final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
-    final shortName = displayName.length > 8 ? '${displayName.substring(0, 7)}…' : displayName;
+    final shortName = displayName.length > 8
+        ? '${displayName.substring(0, 7)}…'
+        : displayName;
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ContactDetailScreen(
-              userId: user.alanyaID,
-              initialName: user.nom,
-              initialAvatar: user.avatarUrl,
-            ),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ContactDetailScreen(
+            userId: user.alanyaID,
+            initialName: user.nom,
+            initialAvatar: user.avatarUrl,
           ),
-        );
-      },
+        ),
+      ),
       onLongPress: () => onLongPress(user),
       child: SizedBox(
         width: 64,
@@ -626,13 +611,14 @@ class _ContactChip extends StatelessWidget {
               children: [
                 ClipOval(
                   child: SizedBox(
-                    width: 56,
-                    height: 56,
+                    width: AppSizes.avatarLg,
+                    height: AppSizes.avatarLg,
                     child: hasPhoto
                         ? CachedNetworkImage(
                             imageUrl: user.avatarUrl.trim(),
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(color: const Color(0xFFCBD0E8)),
+                            placeholder: (_, __) =>
+                                Container(color: AppColors.brandContainer),
                             errorWidget: (_, __, ___) =>
                                 _AvatarFallback(initial: initial, fontSize: 18),
                           )
@@ -647,26 +633,29 @@ class _ContactChip extends StatelessWidget {
                       width: 11,
                       height: 11,
                       decoration: BoxDecoration(
-                        color: Colors.green,
+                        color: AppColors.online,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(
+                            color: context.colors.surface, width: 1.5),
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 6),
+            AppSpacing.vGapSm,
             Text(
               shortName,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              style: context.text.labelSmall
+                  ?.copyWith(fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 3),
+            AppSpacing.vGapXs,
             Text(
               user.alanyaPhone,
-              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+              style: context.text.labelSmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -688,38 +677,38 @@ class _EmptyContacts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+      margin: AppSpacing.screenH,
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.xxl + 4, horizontal: AppSpacing.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: context.colors.surface,
+        borderRadius: AppRadius.brMd,
+        border: Border.all(color: context.colors.outline),
       ),
       child: Column(
         children: [
-          Icon(CupertinoIcons.person_2, size: 44, color: Colors.grey.shade300),
-          const SizedBox(height: 12),
+          Icon(CupertinoIcons.person_2,
+              size: 44, color: context.colors.outline),
+          AppSpacing.vGapMd,
           Text(
             'Aucun contact préféré',
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
+            style: context.text.titleSmall
+                ?.copyWith(color: context.colors.onSurfaceVariant),
           ),
-          const SizedBox(height: 6),
+          AppSpacing.vGapSm,
           Text(
             'Ajoutez des contacts pour les retrouver\nrapidement lors de vos réunions',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+            style: context.text.bodySmall
+                ?.copyWith(color: context.colors.outlineVariant),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.lg + 2),
           TextButton.icon(
             onPressed: onAdd,
-            icon: const Icon(Icons.add_circle_outline, color: Colors.indigo),
+            icon: const Icon(Icons.add_circle_outline),
             label: const Text(
               'Ajouter un contact',
-              style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -728,7 +717,7 @@ class _EmptyContacts extends StatelessWidget {
   }
 }
 
-// ─── Badge de rôle (admin / super admin) ────────────────────────────────
+// ─── Badge de rôle ────────────────────────────────────────────────────────
 
 class _RoleBadge extends StatelessWidget {
   final int typeCompte;
@@ -736,20 +725,24 @@ class _RoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Couleurs spécifiques aux badges admin — pas de token car design intentionnel.
     final (label, icon, fg, bg) = typeCompte >= 2
-        ? ('Super Admin', Icons.shield, const Color(0xFF6B3CD2), const Color(0xFFEDE3FC))
-        : ('Admin', Icons.verified_user, const Color(0xFF1E66D8), const Color(0xFFE3EEFE));
+        ? ('Super Admin', Icons.shield, const Color(0xFF6B3CD2),
+            const Color(0xFFEDE3FC))
+        : ('Admin', Icons.verified_user, context.colors.primary,
+            context.colors.primaryContainer);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.brPill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: fg),
-          const SizedBox(width: 5),
+          AppSpacing.hGapXs,
           Text(
             label,
             style: TextStyle(
@@ -772,14 +765,14 @@ class _AvatarFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFCBD0E8),
+      color: AppColors.brandContainer,
       alignment: Alignment.center,
       child: Text(
         initial,
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: AppColors.brandPrimary,
         ),
       ),
     );

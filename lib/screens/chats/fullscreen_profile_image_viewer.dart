@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
 
 /// Visionneuse plein écran pour les images de profil avec zoom.
 /// Affiche uniquement l'image zoomable avec un bouton retour.
@@ -24,12 +25,12 @@ class _FullscreenProfileImageViewerState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -44,8 +45,8 @@ class _FullscreenProfileImageViewerState
   }
 
   Widget _buildImage() {
-    final hasLocal = widget.localPath != null &&
-        File(widget.localPath!).existsSync();
+    final hasLocal =
+        widget.localPath != null && File(widget.localPath!).existsSync();
 
     if (hasLocal) {
       return Image.file(File(widget.localPath!));
@@ -55,14 +56,17 @@ class _FullscreenProfileImageViewerState
       return CachedNetworkImage(
         imageUrl: widget.imageUrl!,
         placeholder: (_, __) =>
-            const CircularProgressIndicator(color: Colors.white),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image,
-            color: Colors.white54, size: 64),
+            const CircularProgressIndicator(color: AppColors.white),
+        errorWidget: (_, __, ___) =>
+            const Icon(Icons.broken_image, color: Colors.white54, size: 64),
         fit: BoxFit.contain,
       );
     }
 
-    return const Icon(Icons.image_not_supported,
-        color: Colors.white54, size: 64);
+    return const Icon(
+      Icons.image_not_supported,
+      color: Colors.white54,
+      size: 64,
+    );
   }
 }

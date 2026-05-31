@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/country_utils.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/common/common.dart';
 import '../../widgets/contact_action_button.dart';
 import '../chats/chat_detail_screen.dart';
 import 'ongoing_call_screen.dart';
@@ -122,94 +125,91 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   void _snack(String msg, {bool error = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: error ? Colors.red : null),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: error ? AppColors.error : null,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final initial = _displayName.isNotEmpty ? _displayName[0].toUpperCase() : '?';
     final avatar = widget.user.avatarUrl;
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.grey.shade50,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
+      appBar: AppBar(),
       body: ListView(
         children: [
-          const SizedBox(height: 8),
+          AppSpacing.vGapSm,
           // En-tête : photo + nom + identifiants
           Column(
             children: [
-              CircleAvatar(
-                radius: 56,
-                backgroundColor: Colors.indigo.shade100,
-                backgroundImage: hasValidAvatarUrl(avatar)
-                    ? NetworkImage(avatar)
-                    : null,
-                child: hasValidAvatarUrl(avatar)
-                    ? null
-                    : Text(initial,
-                        style: const TextStyle(
-                            fontSize: 40, fontWeight: FontWeight.bold, color: Colors.indigo)),
-              ),
-              const SizedBox(height: 14),
-              Text(_displayName,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              AppAvatar(imageUrl: avatar, name: _displayName, size: 112),
+              AppSpacing.vGapMd,
+              Text(_displayName, style: context.text.headlineMedium),
               if (widget.user.pseudo.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text('@${widget.user.pseudo}',
-                    style: TextStyle(fontSize: 15, color: Colors.grey.shade600)),
+                AppSpacing.vGapXs,
+                Text(
+                  '@${widget.user.pseudo}',
+                  style: context.text.bodyLarge?.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
               ],
               if (_phone.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                AppSpacing.vGapSm,
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.phone_iphone, size: 15, color: Colors.indigo.shade300),
-                    const SizedBox(width: 4),
-                    Text('AlanyaPhone $_phone',
-                        style: const TextStyle(fontSize: 14, color: Colors.indigo)),
+                    Icon(Icons.phone_iphone,
+                        size: AppIconSize.sm, color: context.colors.primary),
+                    AppSpacing.hGapXs,
+                    Text(
+                      'AlanyaPhone $_phone',
+                      style: context.text.bodyMedium
+                          ?.copyWith(color: context.colors.primary),
+                    ),
                   ],
                 ),
               ],
               if (_paysLibelle.isNotEmpty) ...[
-                const SizedBox(height: 4),
+                AppSpacing.vGapXs,
                 CountryRow(country: _paysLibelle),
               ],
             ],
           ),
-          const SizedBox(height: 24),
+          AppSpacing.vGapXxl,
           // Raccourcis rapides
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: AppSpacing.screenH,
             child: Row(
               children: [
                 ContactActionButton(
                     icon: Icons.call,
                     label: 'Appel',
                     onTap: () => _initiateCall(isVideo: false)),
-                const SizedBox(width: 10),
+                AppSpacing.hGapSm,
                 ContactActionButton(
                     icon: Icons.videocam,
                     label: 'Vidéo',
                     onTap: () => _initiateCall(isVideo: true)),
-                const SizedBox(width: 10),
+                AppSpacing.hGapSm,
                 ContactActionButton(
-                    icon: Icons.sms_outlined, label: 'Message', onTap: _openMessage),
-                const SizedBox(width: 10),
+                    icon: Icons.sms_outlined,
+                    label: 'Message',
+                    onTap: _openMessage),
+                AppSpacing.hGapSm,
                 ContactActionButton(
                   icon: _isFavorite ? Icons.star : Icons.star_border,
                   label: _isFavorite ? 'Favori' : 'Ajouter',
-                  color: _isFavorite ? Colors.amber.shade700 : Colors.indigo,
+                  color: _isFavorite
+                      ? Colors.amber.shade700
+                      : context.colors.primary,
                   onTap: _toggleFavorite,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.vGapXxl,
           _buildCallInfo(),
         ],
       ),
@@ -220,46 +220,40 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     final c = widget.call;
     final missed = c.isMissed;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
+      margin: AppSpacing.screenH,
+      padding: AppSpacing.card,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withAlpha(10),
-              blurRadius: 8,
-              offset: const Offset(0, 3)),
-        ],
+        color: context.colors.surface,
+        borderRadius: AppRadius.brMd,
+        boxShadow: AppShadows.subtle,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Dernier appel',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
-          const SizedBox(height: 12),
+          Text('Dernier appel', style: context.text.titleMedium),
+          AppSpacing.vGapMd,
           _infoRow(
             icon: missed ? Icons.call_missed : Icons.call_made,
-            iconColor: missed ? Colors.red : Colors.green,
+            iconColor: missed ? context.colors.error : context.semantic.online,
             label: c.statusLabel,
           ),
-          const SizedBox(height: 8),
+          AppSpacing.vGapSm,
           _infoRow(
             icon: c.isVideo ? Icons.videocam : Icons.call,
-            iconColor: Colors.indigo,
+            iconColor: context.colors.primary,
             label: c.isVideo ? 'Appel vidéo' : 'Appel audio',
           ),
-          const SizedBox(height: 8),
+          AppSpacing.vGapSm,
           _infoRow(
             icon: Icons.schedule,
-            iconColor: Colors.black45,
+            iconColor: context.colors.onSurfaceVariant,
             label: _formatDate(c.createdAt),
           ),
           if (c.duree != null && c.duree! > 0) ...[
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
             _infoRow(
               icon: Icons.timer_outlined,
-              iconColor: Colors.black45,
+              iconColor: context.colors.onSurfaceVariant,
               label: 'Durée ${c.formattedDuration}',
             ),
           ],
@@ -275,9 +269,9 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   }) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: iconColor),
-        const SizedBox(width: 10),
-        Text(label, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+        Icon(icon, size: AppIconSize.sm, color: iconColor),
+        AppSpacing.hGapSm,
+        Text(label, style: context.text.bodyMedium),
       ],
     );
   }

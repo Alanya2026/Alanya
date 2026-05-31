@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
 import '../core/utils/avatar_utils.dart';
 
 /// Avatar circulaire encadré d'un anneau segmenté (un arc par statut).
@@ -36,8 +37,7 @@ class StatusRingAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inner = size - strokeWidth * 2 - 4;
-    final showPreview =
-        previewUrl != null && hasValidAvatarUrl(previewUrl);
+    final showPreview = previewUrl != null && hasValidAvatarUrl(previewUrl);
     final showAvatar = hasValidAvatarUrl(avatarUrl);
 
     final center = showPreview
@@ -48,9 +48,10 @@ class StatusRingAvatar extends StatelessWidget {
           )
         : CircleAvatar(
             radius: inner / 2,
-            backgroundColor: Colors.grey.shade300,
-            backgroundImage:
-                showAvatar ? CachedNetworkImageProvider(avatarUrl!) : null,
+            backgroundColor: AppColors.outlineStrong,
+            backgroundImage: showAvatar
+                ? CachedNetworkImageProvider(avatarUrl!)
+                : null,
             onBackgroundImageError: showAvatar ? (_, __) {} : null,
             child: !showAvatar
                 ? Text(
@@ -60,14 +61,15 @@ class StatusRingAvatar extends StatelessWidget {
                     style: TextStyle(
                       fontSize: inner * 0.4,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
+                      color: AppColors.textSecondary,
                     ),
                   )
                 : null,
           );
 
     if (totalCount == 0) {
-      return SizedBox(width: size, height: size, child: Center(child: center));
+      return SizedBox(
+          width: size, height: size, child: Center(child: center));
     }
 
     return SizedBox(
@@ -96,7 +98,8 @@ class StatusRingAvatar extends StatelessWidget {
             Positioned(
               right: 2,
               bottom: 2,
-              child: _TypeBadge(icon: Icons.music_note, size: inner * 0.3),
+              child:
+                  _TypeBadge(icon: Icons.music_note, size: inner * 0.3),
             ),
           if (overlay != null)
             Positioned(right: 0, bottom: 0, child: overlay!),
@@ -138,8 +141,9 @@ class _RingPainter extends CustomPainter {
     required this.gapDeg,
   });
 
-  static const _unseenColor = Color(0xFF25D366); // vert WhatsApp
-  static const _seenColor = Color(0xFFBDBDBD);
+  // Couleurs intentionnelles de l'anneau de statut (style WhatsApp).
+  static const _unseenColor = Color(0xFF25D366);
+  static const _seenColor = AppColors.outlineStrong;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -152,7 +156,6 @@ class _RingPainter extends CustomPainter {
     final arcDeg = (360 - gap * n) / n;
     final arcRad = arcDeg * math.pi / 180;
     final gapRad = gap * math.pi / 180;
-    // Commence à -90° (haut) pour un rendu naturel
     double start = -math.pi / 2 + gapRad / 2;
     for (var i = 0; i < n; i++) {
       final paint = Paint()

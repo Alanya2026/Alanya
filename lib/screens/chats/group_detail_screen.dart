@@ -5,6 +5,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -12,6 +15,7 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../core/db/app_database.dart';
+import '../../widgets/common/common.dart';
 import '../calls/group_participants_picker_screen.dart';
 import '../calls/ongoing_call_screen.dart';
 import '../meetings/participant_picker_screen.dart';
@@ -48,7 +52,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   Future<void> _loadGroup() async {
     try {
       final chat = context.read<ChatProvider>();
-      final conversations = await chat.repository.watchConversations().first;
+      final conversations =
+          await chat.repository.watchConversations().first;
       final localConv = conversations
           .where((c) => c.conversID == widget.conversationId)
           .firstOrNull;
@@ -78,7 +83,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   List<User> _parseParticipants(String json) {
     try {
-      final data = (jsonDecode(json) as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final data =
+          (jsonDecode(json) as List?)?.cast<Map<String, dynamic>>() ?? [];
       return data.map((j) => User.fromJson(j)).toList();
     } catch (_) {
       return [];
@@ -161,14 +167,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final api = Provider.of<TalkyApiClient>(context, listen: false);
     final chat = Provider.of<ChatProvider>(context, listen: false);
 
-    final excludeIds = _group!.participants.map((u) => u.alanyaID).toSet();
+    final excludeIds =
+        _group!.participants.map((u) => u.alanyaID).toSet();
 
     final picked = await Navigator.push<List<User>>(
       context,
       MaterialPageRoute(
         builder: (_) => ParticipantPickerScreen(
           confirmLabel: 'Ajouter',
-          // Pas de plafond strict côté serveur ; on garde le défaut de 9.
           excludeIds: excludeIds,
         ),
       ),
@@ -189,7 +195,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     } catch (e) {
       messenger.showSnackBar(SnackBar(
         content: Text('Erreur : $e'),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error,
       ));
     }
   }
@@ -199,7 +205,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Quitter le groupe ?'),
-        content: const Text('Vous ne verrez plus ce groupe dans votre liste de discussions.'),
+        content: const Text(
+            'Vous ne verrez plus ce groupe dans votre liste de discussions.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -207,7 +214,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Quitter', style: TextStyle(color: Colors.red)),
+            child: Text('Quitter',
+                style: TextStyle(color: context.colors.error)),
           ),
         ],
       ),
@@ -227,9 +235,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur : $e'),
-            backgroundColor: Colors.red,
-          ),
+              content: Text('Erreur : $e'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -238,20 +245,11 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F8),
+      backgroundColor: AppColors.surfaceMuted,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F5F8),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        backgroundColor: AppColors.surfaceMuted,
         centerTitle: true,
-        title: const Text(
-          'Infos du groupe',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('Infos du groupe'),
         actions: _group == null
             ? null
             : [
@@ -268,29 +266,16 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingState()
           : _group == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.group_off,
-                        color: Colors.grey,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Groupe introuvable'),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Retour'),
-                      ),
-                    ],
-                  ),
+              ? EmptyState(
+                  icon: Icons.group_off,
+                  title: 'Groupe introuvable',
+                  message: 'Ce groupe n\'est plus accessible.',
                 )
               : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xxl),
                   children: [
                     _Header(
                       groupName: widget.groupName,
@@ -298,17 +283,17 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                       groupPhoto: _group!.groupPhoto,
                       memberCount: _group!.participants.length,
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.vGapLg,
                     _MediaCard(
                       conversationId: widget.conversationId,
                       conversationName: widget.groupName,
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.vGapLg,
                     _MembersCard(
                       participants: _group?.participants ?? [],
                       onAddParticipants: _addParticipants,
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.vGapLg,
                     _DangerCard(onLeave: _leaveGroup),
                   ],
                 ),
@@ -321,21 +306,17 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 class _Card extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
-  const _Card({required this.child, this.padding = const EdgeInsets.all(16)});
+  const _Card(
+      {required this.child,
+      this.padding = const EdgeInsets.all(AppSpacing.lg)});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: context.colors.surface,
+        borderRadius: AppRadius.brMd,
+        boxShadow: AppShadows.subtle,
       ),
       child: Padding(padding: padding, child: child),
     );
@@ -360,44 +341,29 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarUrl = groupAvatar ?? groupPhoto;
-    final hasPhoto = hasValidAvatarUrl(avatarUrl ?? '');
 
     return _Card(
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.xxxl, horizontal: AppSpacing.lg),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 60,
-            backgroundColor: const Color(0xFFCBD0E8),
-            backgroundImage: hasPhoto ? CachedNetworkImageProvider(avatarUrl!) : null,
-            child: hasPhoto
-                ? null
-                : Text(
-                    groupName.isNotEmpty ? groupName[0].toUpperCase() : 'G',
-                    style: const TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+          AppAvatar(
+            imageUrl: avatarUrl?.isNotEmpty == true ? avatarUrl : null,
+            name: groupName,
+            isGroup: true,
+            size: 120,
           ),
-          const SizedBox(height: 16),
+          AppSpacing.vGapLg,
           Text(
             groupName,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: Colors.black,
-            ),
+            style: context.text.headlineSmall,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 6),
+          AppSpacing.vGapSm,
           Text(
             'Groupe • $memberCount membres',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
+            style: context.text.bodySmall
+                ?.copyWith(color: context.colors.onSurfaceVariant),
           ),
         ],
       ),
@@ -456,14 +422,10 @@ class _MediaCardState extends State<_MediaCard> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Médias, liens et docs',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
+                  style: context.text.titleSmall,
                 ),
               ),
               InkWell(
@@ -476,36 +438,34 @@ class _MediaCardState extends State<_MediaCard> {
                     ),
                   ),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
                   child: Row(
                     children: [
                       Text(
                         'Voir tout',
-                        style: TextStyle(
-                          color: Color(0xFF1E66D8),
+                        style: context.text.labelMedium?.copyWith(
+                          color: context.colors.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: Color(0xFF1E66D8),
-                        size: 18,
-                      ),
+                      Icon(Icons.chevron_right,
+                          color: context.colors.primary, size: AppIconSize.sm),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          AppSpacing.vGapLg,
           _mediaMessages.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   child: Center(
                     child: Text(
                       'Aucun média partagé',
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                      style: context.text.bodySmall?.copyWith(
+                          color: context.colors.onSurfaceVariant),
                     ),
                   ),
                 )
@@ -514,7 +474,7 @@ class _MediaCardState extends State<_MediaCard> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _mediaMessages.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, __) => AppSpacing.hGapSm,
                     itemBuilder: (context, index) {
                       final msg = _mediaMessages[index];
                       return GestureDetector(
@@ -532,7 +492,7 @@ class _MediaCardState extends State<_MediaCard> {
                                 ),
                               ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: AppRadius.brSm,
                           child: SizedBox(
                             width: 80,
                             height: 80,
@@ -565,49 +525,40 @@ class _MediaCardState extends State<_MediaCard> {
   Widget _buildThumb(LocalMessage msg) {
     if (msg.type == 4) {
       final name = msg.mediaName ?? 'Document';
-      final ext = name.contains('.')
-          ? name.split('.').last.toUpperCase()
-          : 'FILE';
+      final ext =
+          name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
       return Container(
-        color: Colors.grey.shade200,
+        color: AppColors.surfaceSubtle,
         child: Center(
           child: Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
               color: _docColor(ext),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.brSm,
             ),
             child: Center(
               child: Text(
                 ext,
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700),
               ),
             ),
           ),
         ),
       );
     }
-
-    if (msg.type == 2) {
-      return Container(color: Colors.grey.shade200);
-    }
+    if (msg.type == 2) return Container(color: AppColors.surfaceSubtle);
 
     final hasLocal = msg.localMediaPath != null &&
         File(msg.localMediaPath!).existsSync();
     if (hasLocal) {
-      return Image.file(
-        File(msg.localMediaPath!),
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          color: Colors.grey.shade200,
-          child: const Icon(Icons.image, color: Colors.grey),
-        ),
-      );
+      return Image.file(File(msg.localMediaPath!),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              Container(color: AppColors.surfaceSubtle));
     }
     final url = msg.mediaUrl;
     if (url != null && url.isNotEmpty) {
@@ -617,17 +568,12 @@ class _MediaCardState extends State<_MediaCard> {
         height: 80,
         fit: BoxFit.cover,
         placeholder: (context, url) =>
-            Container(color: Colors.grey.shade200),
-        errorWidget: (context, url, error) => Container(
-          color: Colors.grey.shade200,
-          child: const Icon(Icons.image, color: Colors.grey),
-        ),
+            Container(color: AppColors.surfaceSubtle),
+        errorWidget: (context, url, error) =>
+            Container(color: AppColors.surfaceSubtle),
       );
     }
-    return Container(
-      color: Colors.grey.shade200,
-      child: const Icon(Icons.image, color: Colors.grey),
-    );
+    return Container(color: AppColors.surfaceSubtle);
   }
 
   Color _docColor(String ext) {
@@ -672,9 +618,8 @@ class _MediaCardState extends State<_MediaCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Impossible de télécharger le fichier'),
-            backgroundColor: Colors.red,
-          ),
+              content: Text('Impossible de télécharger le fichier'),
+              backgroundColor: AppColors.error),
         );
       }
       return;
@@ -686,7 +631,7 @@ class _MediaCardState extends State<_MediaCard> {
         SnackBar(
           content:
               Text('Aucune app pour ouvrir ce fichier (${res.message})'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -696,8 +641,8 @@ class _MediaCardState extends State<_MediaCard> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          const Center(child: CircularProgressIndicator(color: Colors.white)),
+      builder: (_) => const Center(
+          child: CircularProgressIndicator(color: Colors.white)),
     );
   }
 }
@@ -716,81 +661,64 @@ class _MembersCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm,
+                AppSpacing.lg, AppSpacing.xs),
             child: Text(
               '${participants.length} membres',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
+              style: context.text.titleSmall,
             ),
           ),
           if (onAddParticipants != null)
             ListTile(
               leading: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.indigo.shade50,
+                width: AppSizes.avatarMd,
+                height: AppSizes.avatarMd,
+                decoration: const BoxDecoration(
+                  color: AppColors.brandContainer,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person_add_alt_1, color: Colors.indigo),
+                child: const Icon(Icons.person_add_alt_1,
+                    color: AppColors.brandPrimary),
               ),
-              title: const Text(
+              title: Text(
                 'Ajouter des participants',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  color: Colors.indigo,
-                ),
+                style: context.text.titleSmall
+                    ?.copyWith(color: context.colors.primary),
               ),
               onTap: onAddParticipants,
             ),
           ...participants.map((member) {
             final isYou = member.alanyaID ==
                 context.read<AuthProvider>().currentUser?.alanyaID;
-            final hasPhoto = hasValidAvatarUrl(member.avatarUrl);
 
             return ListTile(
-              leading: CircleAvatar(
-                radius: 24,
-                backgroundColor: const Color(0xFFCBD0E8),
-                backgroundImage:
-                    hasPhoto ? CachedNetworkImageProvider(member.avatarUrl) : null,
-                child: hasPhoto
-                    ? null
-                    : Text(
-                        member.nom.isNotEmpty
-                            ? member.nom[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+              leading: AppAvatar(
+                imageUrl: hasValidAvatarUrl(member.avatarUrl)
+                    ? member.avatarUrl
+                    : null,
+                name: member.nom.isNotEmpty ? member.nom : member.pseudo,
+                size: AppSizes.avatarMd,
               ),
               title: Text(
-                isYou ? 'Vous' : (member.nom.isNotEmpty ? member.nom : member.pseudo),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  color: Colors.black,
-                ),
+                isYou
+                    ? 'Vous'
+                    : (member.nom.isNotEmpty ? member.nom : member.pseudo),
+                style: context.text.titleSmall,
               ),
               subtitle: (!isYou && member.isOnline)
-                  ? const Text(
+                  ? Text(
                       'En ligne',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                      style: context.text.bodySmall?.copyWith(
+                          color: context.colors.onSurfaceVariant),
                     )
                   : null,
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+              trailing: Icon(Icons.chevron_right,
+                  color: context.colors.outlineVariant),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -821,17 +749,19 @@ class _DangerCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: InkWell(
         onTap: onLeave,
+        borderRadius: AppRadius.brMd,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.lg + 2),
           child: Row(
             children: [
-              const Icon(Icons.exit_to_app, color: Color(0xFFEF4444), size: 22),
-              const SizedBox(width: 12),
-              const Text(
+              Icon(Icons.exit_to_app,
+                  color: AppColors.error, size: AppIconSize.md),
+              AppSpacing.hGapMd,
+              Text(
                 'Quitter le groupe',
-                style: TextStyle(
-                  color: Color(0xFFEF4444),
-                  fontSize: 15,
+                style: context.text.bodyLarge?.copyWith(
+                  color: AppColors.error,
                   fontWeight: FontWeight.w600,
                 ),
               ),

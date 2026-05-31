@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
 import '../../core/services/call_service.dart';
 
 /// Écran d'appel en cours (1-à-1, audio ou vidéo).
@@ -38,15 +40,15 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     if (!mounted) return;
 
     final cs = Provider.of<CallService>(context, listen: false);
-    
+
     // !! FIX: Assigner les streams immédiatement s'ils existent
     debugPrint('[OngoingCall] 📹 Init renderers');
     debugPrint('[OngoingCall] Local stream: ${cs.localStream != null ? "!!" : "**"}');
     debugPrint('[OngoingCall] Remote stream: ${cs.remoteStream != null ? "!!" : "**"}');
-    
+
     _localRenderer.srcObject = cs.localStream;
     _remoteRenderer.srcObject = cs.remoteStream;
-    
+
     // !! S'abonner aux changements de CallService
     cs.addListener(_onCallChanged);
 
@@ -66,7 +68,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
       if (_renderersReady) {
         final localChanged = _localRenderer.srcObject != cs.localStream;
         final remoteChanged = _remoteRenderer.srcObject != cs.remoteStream;
-        
+
         if (localChanged) {
           debugPrint('[OngoingCall] 📹 Update local renderer: ${cs.localStream != null ? "stream" : "null"}');
           _localRenderer.srcObject = cs.localStream;
@@ -139,9 +141,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
       builder: (_, cs, __) {
         final isVideo = cs.isVideo;
         final isGroup = cs.groupRoomId != null;
-        final hasRemoteVideo = !isGroup && isVideo && _remoteRenderer.srcObject != null;
+        final hasRemoteVideo =
+            !isGroup && isVideo && _remoteRenderer.srcObject != null;
         return Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: AppColors.black,
           body: Stack(
             fit: StackFit.expand,
             children: [
@@ -162,8 +165,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
               // Local video PiP (vidéo uniquement)
               if (isVideo && _renderersReady && _localRenderer.srcObject != null)
                 Positioned(
-                  right: 16,
-                  top: MediaQuery.of(context).padding.top + 12,
+                  right: AppSpacing.lg,
+                  top: MediaQuery.of(context).padding.top + AppSpacing.md,
                   child: _LocalPiP(renderer: _localRenderer),
                 ),
 
@@ -246,13 +249,13 @@ class _AudioBackdrop extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF1A237E), Color(0xFF000000)],
+          colors: [AppColors.brandPrimaryDark, AppColors.black],
         ),
       ),
       alignment: Alignment.center,
       child: CircleAvatar(
         radius: 90,
-        backgroundColor: const Color(0xFF3949AB),
+        backgroundColor: AppColors.brandPrimary,
         backgroundImage: hasPhoto ? NetworkImage(url) : null,
         child: hasPhoto
             ? null
@@ -279,9 +282,9 @@ class _LocalPiP extends StatelessWidget {
     return Container(
       width: 110,
       height: 160,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
+      decoration: const BoxDecoration(
+        borderRadius: AppRadius.brSm,
+        boxShadow: [
           BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 4)),
         ],
       ),
@@ -311,7 +314,8 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.lg),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -322,7 +326,8 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(CupertinoIcons.chevron_down, color: Colors.white, size: 28),
+            icon: const Icon(CupertinoIcons.chevron_down,
+                color: Colors.white, size: 28),
             onPressed: onMinimize,
           ),
           Expanded(
@@ -337,7 +342,7 @@ class _TopBar extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 4),
+                AppSpacing.vGapXs,
                 Text(
                   duration ?? status,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
@@ -378,7 +383,8 @@ class _BottomControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 24, 20, 24 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xxl, AppSpacing.xl,
+          AppSpacing.xxl + MediaQuery.of(context).padding.bottom),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
@@ -440,13 +446,15 @@ class _RoundButton extends StatelessWidget {
         width: 60,
         height: 60,
         decoration: BoxDecoration(
-          color: active ? Colors.white : Colors.white.withValues(alpha: 0.18),
+          color: active
+              ? AppColors.white
+              : Colors.white.withValues(alpha: 0.18),
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
         ),
         child: Icon(
           icon,
-          color: active ? Colors.black : Colors.white,
+          color: active ? AppColors.black : AppColors.white,
           size: 26,
         ),
       ),
@@ -471,7 +479,7 @@ class _GroupGrid extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF1A237E), Color(0xFF000000)],
+            colors: [AppColors.brandPrimaryDark, AppColors.black],
           ),
         ),
         alignment: Alignment.center,
@@ -479,7 +487,7 @@ class _GroupGrid extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(color: Colors.white),
-            SizedBox(height: 16),
+            SizedBox(height: AppSpacing.lg),
             Text(
               'En attente des participants…',
               style: TextStyle(color: Colors.white70, fontSize: 14),
@@ -489,13 +497,14 @@ class _GroupGrid extends StatelessWidget {
       );
     }
     return Container(
-      color: Colors.black,
-      padding: const EdgeInsets.fromLTRB(8, 80, 8, 140),
+      color: AppColors.black,
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm, 80, AppSpacing.sm, 140),
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 200,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
           childAspectRatio: 0.75,
         ),
         itemCount: entries.length,
@@ -568,11 +577,11 @@ class _RemoteTileState extends State<_RemoteTile> {
         ? widget.name.substring(0, 1).toUpperCase()
         : '?';
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: AppRadius.brMd,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Container(color: const Color(0xFF1F2233)),
+          Container(color: AppColors.immersiveSurface),
           if (_ready)
             RTCVideoView(
               _renderer,
@@ -583,7 +592,7 @@ class _RemoteTileState extends State<_RemoteTile> {
             Center(
               child: CircleAvatar(
                 radius: 36,
-                backgroundColor: const Color(0xFF3949AB),
+                backgroundColor: AppColors.brandPrimary,
                 child: Text(
                   initial,
                   style: const TextStyle(
@@ -599,7 +608,8 @@ class _RemoteTileState extends State<_RemoteTile> {
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: AppSpacing.sm - 2),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
@@ -634,17 +644,21 @@ class _HangUpButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: const SizedBox(
         width: 68,
         height: 68,
-        decoration: const BoxDecoration(
-          color: Color(0xFFE53935),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 4)),
-          ],
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.error,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black54, blurRadius: 12, offset: Offset(0, 4)),
+            ],
+          ),
+          child: Icon(CupertinoIcons.phone_down_fill,
+              color: Colors.white, size: 30),
         ),
-        child: const Icon(CupertinoIcons.phone_down_fill, color: Colors.white, size: 30),
       ),
     );
   }

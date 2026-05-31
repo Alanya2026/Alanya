@@ -1,7 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../talky_models.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../widgets/common/common.dart';
 import '../chats/contact_detail_screen.dart';
 
 class PreferredContactsScreen extends StatelessWidget {
@@ -19,49 +22,43 @@ class PreferredContactsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
+        title: Text(
           'Contacts préférés',
-          style: TextStyle(color: Colors.black, fontSize: 22, fontWeight: FontWeight.bold),
+          style: context.text.headlineSmall,
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           TextButton.icon(
             onPressed: onAddContact,
-            icon: const Icon(Icons.add, size: 18, color: Colors.indigo),
-            label: const Text(
+            icon: Icon(Icons.add, size: AppIconSize.sm,
+                color: context.colors.primary),
+            label: Text(
               'Ajouter',
-              style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: context.colors.primary,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ],
       ),
       body: contacts.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(CupertinoIcons.person_2, size: 56, color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucun contact préféré',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
-                  ),
-                ],
-              ),
+          ? EmptyState(
+              icon: CupertinoIcons.person_2,
+              title: 'Aucun contact préféré',
             )
           : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
               itemCount: contacts.length,
               itemBuilder: (context, index) {
                 final user = contacts[index];
-                return _ContactTile(user: user, onLongPress: () => onLongPress(user));
+                return _ContactTile(
+                    user: user, onLongPress: () => onLongPress(user));
               },
             ),
     );
@@ -76,51 +73,41 @@ class _ContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPhoto = hasValidAvatarUrl(user.avatarUrl);
-    final initial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
-    final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final displayName =
+        user.nom.isNotEmpty ? user.nom : user.pseudo;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: context.colors.surface,
+          borderRadius: AppRadius.brSm,
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ContactDetailScreen(
-                  userId: user.alanyaID,
-                  initialName: user.nom,
-                  initialAvatar: user.avatarUrl,
-                ),
+          borderRadius: AppRadius.brSm,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ContactDetailScreen(
+                userId: user.alanyaID,
+                initialName: user.nom,
+                initialAvatar: user.avatarUrl,
               ),
-            );
-          },
+            ),
+          ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: Row(
               children: [
                 Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: const Color(0xFFCBD0E8),
-                      backgroundImage: hasPhoto ? avatarImage(user.avatarUrl) : null,
-                      child: hasPhoto
-                          ? null
-                          : Text(
-                              initial,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
+                    AppAvatar(
+                      imageUrl: user.avatarUrl.isNotEmpty
+                          ? user.avatarUrl
+                          : null,
+                      name: displayName,
+                      size: AppSizes.avatarMd,
                     ),
                     if (user.isOnline)
                       Positioned(
@@ -130,31 +117,31 @@ class _ContactTile extends StatelessWidget {
                           width: 10,
                           height: 10,
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: AppColors.online,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
+                            border: Border.all(
+                                color: context.colors.surface, width: 1.5),
                           ),
                         ),
                       ),
                   ],
                 ),
-                const SizedBox(width: 14),
+                AppSpacing.hGapMd,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        displayName,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                      ),
+                      Text(displayName, style: context.text.titleSmall),
                       if (user.pseudo.isNotEmpty)
                         Text(
                           '@${user.pseudo}',
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                          style: context.text.bodySmall?.copyWith(
+                              color: context.colors.onSurfaceVariant),
                         ),
                       Text(
                         user.alanyaPhone,
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                        style: context.text.bodySmall?.copyWith(
+                            color: context.colors.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -162,12 +149,14 @@ class _ContactTile extends StatelessWidget {
                 GestureDetector(
                   onTap: onLongPress,
                   child: Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(AppSpacing.sm - 2),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.errorContainer,
+                      borderRadius: AppRadius.brSm,
                     ),
-                    child: Icon(Icons.person_remove_outlined, color: Colors.red, size: 18),
+                    child: Icon(Icons.person_remove_outlined,
+                        color: context.colors.error,
+                        size: AppIconSize.sm),
                   ),
                 ),
               ],

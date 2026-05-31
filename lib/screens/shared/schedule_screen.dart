@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../meetings/participant_picker_screen.dart';
@@ -17,7 +19,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
   int _selectedDuration = 60;
-  int _typeMedia = 0; // 0 = vidéo+audio, 1 = audio seulement
+  int _typeMedia = 0;
   bool _isLoading = false;
   List<User> _selectedParticipants = [];
 
@@ -38,7 +40,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: Colors.indigo),
+          colorScheme: ColorScheme.light(primary: context.colors.primary),
         ),
         child: child!,
       ),
@@ -52,7 +54,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       initialTime: _selectedTime,
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: Colors.indigo),
+          colorScheme: ColorScheme.light(primary: context.colors.primary),
         ),
         child: child!,
       ),
@@ -77,7 +79,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez saisir un titre pour la réunion')),
+        const SnackBar(
+            content: Text('Veuillez saisir un titre pour la réunion')),
       );
       return;
     }
@@ -105,7 +108,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
       final data = await apiClient.createMeeting(
         objet: title,
-        // UTC explicite : évite tout décalage selon le fuseau serveur/client.
         startTime: startDateTime.toUtc().toIso8601String(),
         room: roomCode,
         duree: _selectedDuration,
@@ -113,7 +115,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (_selectedParticipants.isNotEmpty) {
-        final meetingId = data['idMeeting'] as int? ?? data['id'] as int?;
+        final meetingId =
+            data['idMeeting'] as int? ?? data['id'] as int?;
         if (meetingId != null) {
           final ids = _selectedParticipants.map((u) => u.alanyaID).toList();
           await apiClient.inviteParticipants(meetingId, ids);
@@ -145,8 +148,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       return 'Demain';
     }
     const months = [
-      '', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun',
-      'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc',
+      '',
+      'Jan',
+      'Fév',
+      'Mar',
+      'Avr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Aoû',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Déc',
     ];
     return '${_selectedDate.day} ${months[_selectedDate.month]} ${_selectedDate.year}';
   }
@@ -154,44 +168,39 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Planifier une réunion',
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Planifier une réunion'),
         actions: [
           _isLoading
               ? const Padding(
-                  padding: EdgeInsets.all(14),
+                  padding: EdgeInsets.all(AppSpacing.md),
                   child: SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.indigo),
+                    child:
+                        CircularProgressIndicator(strokeWidth: 2),
                   ),
                 )
               : TextButton(
                   onPressed: _save,
-                  child: const Text(
+                  child: Text(
                     'Créer',
                     style: TextStyle(
-                      color: Colors.indigo,
+                      color: context.colors.primary,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
                 ),
-          const SizedBox(width: 8),
+          AppSpacing.hGapSm,
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: AppSpacing.card,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -200,13 +209,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               controller: _titleController,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
-              decoration: const InputDecoration(
+              style: context.text.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
                 hintText: 'Titre de la réunion',
-                hintStyle: TextStyle(
-                  fontSize: 22,
+                hintStyle: context.text.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w400,
-                  color: Colors.grey,
+                  color: context.colors.onSurfaceVariant,
                 ),
                 border: InputBorder.none,
               ),
@@ -215,7 +224,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
             // Type de réunion
             _SectionLabel(label: 'Type'),
-            const SizedBox(height: 10),
+            AppSpacing.vGapSm,
             Row(
               children: [
                 _TypeChip(
@@ -224,7 +233,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   selected: _typeMedia == 0,
                   onTap: () => setState(() => _typeMedia = 0),
                 ),
-                const SizedBox(width: 12),
+                AppSpacing.hGapMd,
                 _TypeChip(
                   label: 'Audio',
                   icon: CupertinoIcons.phone_fill,
@@ -233,11 +242,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: AppSpacing.xxl + 4),
 
             // Date et heure
             _SectionLabel(label: 'Date et heure'),
-            const SizedBox(height: 10),
+            AppSpacing.vGapSm,
             Row(
               children: [
                 Expanded(
@@ -247,7 +256,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     onTap: _selectDate,
                   ),
                 ),
-                const SizedBox(width: 12),
+                AppSpacing.hGapMd,
                 Expanded(
                   child: _PickerTile(
                     icon: Icons.access_time,
@@ -257,30 +266,38 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: AppSpacing.xxl + 4),
 
             // Durée
             _SectionLabel(label: 'Durée'),
-            const SizedBox(height: 10),
+            AppSpacing.vGapSm,
             Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
               children: List.generate(_durations.length, (i) {
                 final selected = _selectedDuration == _durations[i];
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedDuration = _durations[i]),
+                  onTap: () =>
+                      setState(() => _selectedDuration = _durations[i]),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    duration: AppDurations.fast,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg + 2, vertical: AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: selected ? Colors.indigo : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
+                      color: selected
+                          ? context.colors.primary
+                          : context.semantic.surfaceMuted,
+                      borderRadius: AppRadius.brSm,
                     ),
                     child: Text(
                       _durationLabels[i],
                       style: TextStyle(
-                        color: selected ? Colors.white : Colors.black87,
-                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                        color: selected
+                            ? context.colors.onPrimary
+                            : context.colors.onSurface,
+                        fontWeight: selected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         fontSize: 14,
                       ),
                     ),
@@ -288,76 +305,88 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 );
               }),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: AppSpacing.xxl + 4),
 
             // Participants
             _SectionLabel(label: 'Participants'),
-            const SizedBox(height: 10),
+            AppSpacing.vGapSm,
             GestureDetector(
               onTap: _openParticipantPicker,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(14),
+                  color: context.semantic.surfaceMuted,
+                  borderRadius: AppRadius.brSm,
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.person_add_outlined, color: Colors.indigo, size: 20),
-                    const SizedBox(width: 12),
+                    Icon(Icons.person_add_outlined,
+                        color: context.colors.primary,
+                        size: AppIconSize.sm),
+                    AppSpacing.hGapMd,
                     Expanded(
                       child: Text(
                         _selectedParticipants.isEmpty
                             ? 'Ajouter des participants'
                             : '${_selectedParticipants.length} participant${_selectedParticipants.length > 1 ? 's' : ''} sélectionné${_selectedParticipants.length > 1 ? 's' : ''}',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: _selectedParticipants.isEmpty ? Colors.grey : Colors.black87,
-                          fontWeight: _selectedParticipants.isEmpty ? FontWeight.normal : FontWeight.w500,
+                        style: context.text.bodyMedium?.copyWith(
+                          color: _selectedParticipants.isEmpty
+                              ? context.colors.onSurfaceVariant
+                              : context.colors.onSurface,
+                          fontWeight: _selectedParticipants.isEmpty
+                              ? FontWeight.normal
+                              : FontWeight.w500,
                         ),
                       ),
                     ),
-                    Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                    Icon(Icons.chevron_right,
+                        color: context.colors.outlineVariant),
                   ],
                 ),
               ),
             ),
             if (_selectedParticipants.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              AppSpacing.vGapSm,
               Wrap(
-                spacing: 8,
-                runSpacing: 6,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm - 2,
                 children: _selectedParticipants.map((user) {
-                  final initial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
+                  final initial =
+                      user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
                   return Chip(
                     avatar: CircleAvatar(
-                      backgroundColor: Colors.indigo.shade300,
-                      child: Text(initial, style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      backgroundColor: context.colors.primary,
+                      child: Text(initial,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 11)),
                     ),
                     label: Text(
                       user.nom.isNotEmpty ? user.nom : user.pseudo,
-                      style: const TextStyle(fontSize: 13),
+                      style: context.text.labelMedium,
                     ),
                     deleteIcon: const Icon(Icons.close, size: 16),
-                    onDeleted: () => setState(
-                      () => _selectedParticipants.removeWhere((u) => u.alanyaID == user.alanyaID),
-                    ),
-                    backgroundColor: Colors.white,
+                    onDeleted: () => setState(() =>
+                        _selectedParticipants.removeWhere(
+                            (u) => u.alanyaID == user.alanyaID)),
+                    backgroundColor: context.colors.surface,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(color: Colors.indigo.shade200),
+                      borderRadius: AppRadius.brPill,
+                      side:
+                          BorderSide(color: context.colors.primaryContainer),
                     ),
                   );
                 }).toList(),
               ),
             ],
-            const SizedBox(height: 28),
+            const SizedBox(height: AppSpacing.xxl + 4),
 
             // Résumé
             _SummaryCard(
               date: _formatDate(),
               time: _selectedTime.format(context),
-              duration: _durationLabels[_durations.indexOf(_selectedDuration)],
+              duration:
+                  _durationLabels[_durations.indexOf(_selectedDuration)],
               typeMedia: _typeMedia,
             ),
           ],
@@ -375,10 +404,9 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
+      style: context.text.labelMedium?.copyWith(
+        color: context.colors.primary,
         fontWeight: FontWeight.bold,
-        color: Colors.indigo,
-        fontSize: 13,
         letterSpacing: 0.5,
       ),
     );
@@ -403,23 +431,35 @@ class _TypeChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        duration: AppDurations.fast,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl, vertical: AppSpacing.md),
         decoration: BoxDecoration(
-          color: selected ? Colors.indigo : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(14),
-          border: selected ? null : Border.all(color: Colors.grey.shade300),
+          color: selected
+              ? context.colors.primary
+              : context.semantic.surfaceMuted,
+          borderRadius: AppRadius.brSm,
+          border: selected
+              ? null
+              : Border.all(color: context.colors.outline),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: selected ? Colors.white : Colors.grey.shade600),
-            const SizedBox(width: 8),
+            Icon(icon,
+                size: AppIconSize.sm,
+                color: selected
+                    ? context.colors.onPrimary
+                    : context.colors.onSurfaceVariant),
+            AppSpacing.hGapSm,
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : Colors.black87,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                color: selected
+                    ? context.colors.onPrimary
+                    : context.colors.onSurface,
+                fontWeight:
+                    selected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ],
@@ -430,7 +470,8 @@ class _TypeChip extends StatelessWidget {
 }
 
 class _PickerTile extends StatelessWidget {
-  const _PickerTile({required this.icon, required this.label, required this.onTap});
+  const _PickerTile(
+      {required this.icon, required this.label, required this.onTap});
 
   final IconData icon;
   final String label;
@@ -441,19 +482,22 @@ class _PickerTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(14),
+          color: context.semantic.surfaceMuted,
+          borderRadius: AppRadius.brSm,
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: Colors.indigo),
-            const SizedBox(width: 10),
+            Icon(icon,
+                size: AppIconSize.sm, color: context.colors.primary),
+            AppSpacing.hGapSm,
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                style: context.text.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -480,32 +524,32 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.card,
       decoration: BoxDecoration(
-        color: Colors.indigo.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.indigo.shade100),
+        color: context.colors.primaryContainer,
+        borderRadius: AppRadius.brMd,
+        border: Border.all(
+            color: context.colors.primaryContainer.withAlpha(180)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Résumé',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo, fontSize: 13),
+            style: context.text.labelMedium?.copyWith(
+              color: context.colors.primary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 10),
+          AppSpacing.vGapSm,
+          _SummaryRow(icon: Icons.calendar_today_outlined, text: '$date à $time'),
+          AppSpacing.vGapXs,
+          _SummaryRow(icon: Icons.timelapse, text: 'Durée : $duration'),
+          AppSpacing.vGapXs,
           _SummaryRow(
-            icon: Icons.calendar_today_outlined,
-            text: '$date à $time',
-          ),
-          const SizedBox(height: 6),
-          _SummaryRow(
-            icon: Icons.timelapse,
-            text: 'Durée : $duration',
-          ),
-          const SizedBox(height: 6),
-          _SummaryRow(
-            icon: typeMedia == 0 ? Icons.videocam_outlined : Icons.phone_outlined,
+            icon: typeMedia == 0
+                ? Icons.videocam_outlined
+                : Icons.phone_outlined,
             text: typeMedia == 0 ? 'Réunion vidéo' : 'Appel audio',
           ),
         ],
@@ -523,9 +567,13 @@ class _SummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 15, color: Colors.indigo.shade400),
-        const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: Colors.indigo.shade700, fontSize: 13)),
+        Icon(icon, size: AppIconSize.sm - 4, color: context.colors.primary),
+        AppSpacing.hGapSm,
+        Text(
+          text,
+          style: context.text.bodySmall
+              ?.copyWith(color: context.colors.primary),
+        ),
       ],
     );
   }

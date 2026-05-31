@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
 import '../../core/services/meeting_service.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -28,8 +30,6 @@ class MeetingLobbyScreen extends StatefulWidget {
 
 class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   final RTCVideoRenderer _previewRenderer = RTCVideoRenderer();
-  // Stream possédé par MeetingService (préparé via prepareLocalMedia). On garde
-  // juste une référence locale pour l'affichage de la preview.
   MediaStream? _previewStream;
   late final MeetingService _meetingService;
 
@@ -52,23 +52,18 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   void dispose() {
     _previewRenderer.srcObject = null;
     _previewRenderer.dispose();
-    // Le stream appartient à MeetingService : ne le libérer que si l'utilisateur
-    // a quitté le lobby SANS rejoindre la réunion.
     _meetingService.releaseLocalMediaIfNotJoined();
     super.dispose();
   }
 
   Future<void> _initPreview() async {
     await _previewRenderer.initialize();
-    // Prépare le stream directement dans MeetingService (un seul getUserMedia
-    // pour toute la durée de vie : preview + réunion).
     final stream = await _meetingService.prepareLocalMedia(
       video: widget.typeMedia == 0,
     );
     if (!mounted) return;
     setState(() {
       _previewStream = stream;
-      // La preview vidéo n'est affichée que pour les réunions vidéo.
       _previewRenderer.srcObject = widget.typeMedia == 0 ? stream : null;
     });
   }
@@ -79,7 +74,6 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
       final data = await api.getMeeting(widget.meetingId);
       if (!mounted) return;
       final meeting = Meeting.fromJson(data);
-
       setState(() {
         _meeting = meeting;
         _loadingMeeting = false;
@@ -101,8 +95,6 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
 
   Future<void> _join() async {
     setState(() => _joining = true);
-    // Détacher la preview du renderer (le stream reste vivant dans
-    // MeetingService et sera réutilisé tel quel par la réunion).
     _previewRenderer.srcObject = null;
 
     try {
@@ -128,7 +120,7 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: AppColors.immersiveBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -137,32 +129,32 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _loadingMeeting
-              ? 'Réunion'
-              : (_meeting?.objet ?? 'Réunion'),
-          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
+          _loadingMeeting ? 'Réunion' : (_meeting?.objet ?? 'Réunion'),
+          style: const TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w600),
         ),
       ),
       body: Column(
         children: [
-          // ── Prévisualisation caméra ────────────────────────────────
+          // ── Prévisualisation caméra ───────────────────────────��────
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.sm),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: AppRadius.brLg,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Fond sombre
-                    Container(color: const Color(0xFF2D2D44)),
-
-                    // Vidéo ou avatar
+                    Container(color: AppColors.immersiveSurface),
                     if (_previewStream != null && _isCamOn)
                       RTCVideoView(
                         _previewRenderer,
                         mirror: true,
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        objectFit:
+                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                       )
                     else
                       Center(
@@ -171,29 +163,29 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                           children: [
                             CircleAvatar(
                               radius: 44,
-                              backgroundColor: Colors.indigo.shade700,
+                              backgroundColor: AppColors.brandPrimaryStrong,
                               child: Text(
                                 widget.myName.isNotEmpty
                                     ? widget.myName[0].toUpperCase()
                                     : '?',
-                                style: const TextStyle(fontSize: 36, color: Colors.white),
+                                style: const TextStyle(
+                                    fontSize: 36, color: Colors.white),
                               ),
                             ),
                             if (!_isCamOn) ...[
-                              const SizedBox(height: 12),
-                              Text(
+                              AppSpacing.vGapMd,
+                              const Text(
                                 'Caméra désactivée',
-                                style: TextStyle(color: Colors.white54, fontSize: 13),
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 13),
                               ),
                             ],
                           ],
                         ),
                       ),
-
-                    // Nom en bas
                     Positioned(
-                      bottom: 16,
-                      left: 16,
+                      bottom: AppSpacing.lg,
+                      left: AppSpacing.lg,
                       child: Text(
                         widget.myName.isNotEmpty ? widget.myName : 'Vous',
                         style: const TextStyle(
@@ -212,10 +204,10 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
           // ── Contrôles + bouton rejoindre ───────────────────────────
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xl),
               child: Column(
                 children: [
-                  // Toggles micro / caméra
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -226,29 +218,27 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                         onTap: _toggleMic,
                       ),
                       if (widget.typeMedia == 0) ...[
-                        const SizedBox(width: 24),
+                        const SizedBox(width: AppSpacing.xxl),
                         _LobbyToggle(
                           icon: _isCamOn ? Icons.videocam : Icons.videocam_off,
-                          label: _isCamOn ? 'Caméra active' : 'Caméra coupée',
+                          label:
+                              _isCamOn ? 'Caméra active' : 'Caméra coupée',
                           active: _isCamOn,
                           onTap: _toggleCam,
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 20),
-
-                  // Bouton Rejoindre
+                  AppSpacing.vGapXl,
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _joining ? null : _join,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(54),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                        minimumSize:
+                            const Size.fromHeight(AppSizes.buttonHeight + 6),
+                        shape: const RoundedRectangleBorder(
+                            borderRadius: AppRadius.brMd),
                         elevation: 0,
                       ),
                       child: _joining
@@ -297,15 +287,16 @@ class _LobbyToggle extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(AppSpacing.md + 2),
             decoration: BoxDecoration(
-              color: active ? Colors.white24 : Colors.red.shade700,
+              color: active ? Colors.white24 : AppColors.error,
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: Colors.white, size: 26),
           ),
-          const SizedBox(height: 6),
-          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+          AppSpacing.vGapSm,
+          Text(label,
+              style: const TextStyle(color: Colors.white60, fontSize: 11)),
         ],
       ),
     );

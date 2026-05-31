@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_dimens.dart';
+import '../core/theme/app_theme.dart';
 import '../core/utils/country_flag.dart';
 import '../talky_models.dart' show Pays;
+import 'common/common.dart';
 
 /// Feuille modale de sélection de pays, avec recherche par nom ou préfixe.
 /// Renvoie le [Pays] choisi via Navigator.pop.
 class CountryPickerSheet extends StatefulWidget {
-  const CountryPickerSheet({super.key, required this.countries, this.selectedId});
+  const CountryPickerSheet(
+      {super.key, required this.countries, this.selectedId});
 
   final List<Pays> countries;
   final int? selectedId;
@@ -20,7 +25,8 @@ class CountryPickerSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => CountryPickerSheet(countries: countries, selectedId: selectedId),
+      builder: (_) =>
+          CountryPickerSheet(countries: countries, selectedId: selectedId),
     );
   }
 
@@ -36,7 +42,8 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
     if (q.isEmpty) return widget.countries;
     return widget.countries
         .where((p) =>
-            p.libelle.toLowerCase().contains(q) || p.prefix.toLowerCase().contains(q))
+            p.libelle.toLowerCase().contains(q) ||
+            p.prefix.toLowerCase().contains(q))
         .toList();
   }
 
@@ -49,44 +56,36 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
       expand: false,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: context.colors.surface,
+            borderRadius: AppRadius.sheetTop,
           ),
           child: Column(
             children: [
-              const SizedBox(height: 10),
+              AppSpacing.vGapSm,
               Container(
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: AppColors.outlineStrong,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                child: TextField(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                    AppSpacing.md, AppSpacing.lg, AppSpacing.sm),
+                child: AppSearchField(
+                  hintText: 'Rechercher un pays...',
                   autofocus: true,
                   onChanged: (v) => setState(() => _query = v),
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher un pays...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  ),
                 ),
               ),
               Expanded(
                 child: _filtered.isEmpty
-                    ? const Center(
-                        child: Text('Aucun pays trouvé',
-                            style: TextStyle(color: Colors.black45)))
+                    ? EmptyState(
+                        icon: Icons.public_off,
+                        title: 'Aucun pays trouvé',
+                      )
                     : ListView.builder(
                         controller: scrollController,
                         itemCount: _filtered.length,
@@ -104,7 +103,8 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
                                 ? Text('+${p.prefix}')
                                 : null,
                             trailing: selected
-                                ? const Icon(Icons.check_circle, color: Colors.indigo)
+                                ? Icon(Icons.check_circle,
+                                    color: context.colors.primary)
                                 : null,
                             onTap: () => Navigator.pop(context, p),
                           );

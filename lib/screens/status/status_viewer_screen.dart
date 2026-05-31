@@ -6,18 +6,17 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/utils/avatar_utils.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../providers/status_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import '../../core/utils/avatar_utils.dart';
 import 'status_views_screen.dart';
 
 class StatusViewerScreen extends StatefulWidget {
-  /// Liste des contacts visibles dans la section où l'utilisateur est entré.
-  /// Chaque entrée = liste de statuts d'un contact (ordre chrono ASC).
-  /// Permet le swipe horizontal entre contacts dans une même section.
   final List<List<Statut>> contactGroups;
   final int startContactIndex;
   final int startItemIndex;
@@ -48,7 +47,6 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   ChewieController? _chewieCtrl;
   AudioPlayer? _audioPlayer;
 
-  // ── Réponse à un statut ──────────────────────────────────────────────
   final TextEditingController _replyController = TextEditingController();
   final FocusNode _replyFocus = FocusNode();
   bool _sendingReply = false;
@@ -60,9 +58,11 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   void initState() {
     super.initState();
     final maxContact = widget.contactGroups.length - 1;
-    _contactIndex = widget.startContactIndex.clamp(0, maxContact < 0 ? 0 : maxContact);
+    _contactIndex = widget.startContactIndex
+        .clamp(0, maxContact < 0 ? 0 : maxContact);
     final maxItem = _currentGroup.length - 1;
-    _itemIndex = widget.startItemIndex.clamp(0, maxItem < 0 ? 0 : maxItem);
+    _itemIndex =
+        widget.startItemIndex.clamp(0, maxItem < 0 ? 0 : maxItem);
     _pageCtrl = PageController(initialPage: _contactIndex);
     _progress = AnimationController(vsync: this)
       ..addStatusListener((s) {
@@ -101,7 +101,6 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     }
     Duration totalDuration = _textImageDuration;
     if (s.type == 2 && s.mediaUrl != null) {
-      // Vidéo
       final v = VideoPlayerController.networkUrl(Uri.parse(s.mediaUrl!));
       try {
         await v.initialize();
@@ -118,14 +117,15 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         totalDuration = _textImageDuration;
       }
     } else if (s.type == 3 && s.mediaUrl != null) {
-      // Audio
       final p = AudioPlayer();
       try {
         await p.setUrl(s.mediaUrl!);
         await p.play();
         _audioPlayer = p;
         totalDuration = p.duration ??
-            Duration(milliseconds: s.mediaDurationMs ?? _textImageDuration.inMilliseconds);
+            Duration(
+                milliseconds: s.mediaDurationMs ??
+                    _textImageDuration.inMilliseconds);
         p.playerStateStream.listen((st) {
           if (st.processingState == ProcessingState.completed) _next();
         });
@@ -155,7 +155,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       _loadCurrent();
     } else if (_contactIndex < widget.contactGroups.length - 1) {
       _pageCtrl.nextPage(
-        duration: const Duration(milliseconds: 250),
+        duration: AppDurations.normal,
         curve: Curves.easeOut,
       );
     } else {
@@ -169,14 +169,12 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       _loadCurrent();
     } else if (_contactIndex > 0) {
       _pageCtrl.previousPage(
-        duration: const Duration(milliseconds: 250),
+        duration: AppDurations.normal,
         curve: Curves.easeOut,
       );
     }
   }
 
-  /// Appelée par PageView (swipe manuel) ET par les transitions programmées
-  /// de _next/_prev (animateToPage déclenche onPageChanged à la fin).
   void _onPageChanged(int newIdx) {
     if (newIdx == _contactIndex) return;
     final forward = newIdx > _contactIndex;
@@ -206,8 +204,6 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     final provider = context.read<StatusProvider>();
     final id = _current.id;
     _setPaused(true);
-    // toggleLike applique l'optimistic update avant le await réseau,
-    // donc lancer le rebuild immédiatement reflète le nouvel état.
     final future = provider.toggleLike(id);
     setState(() {});
     try {
@@ -220,7 +216,6 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     }
   }
 
-  // Aperçu textuel du statut courant pour la `replyToContent` du message.
   String _statusPreview() {
     final s = _current;
     if (s.text != null && s.text!.trim().isNotEmpty) return s.text!.trim();
@@ -246,8 +241,6 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     try {
       final api = context.read<TalkyApiClient>();
       final chat = context.read<ChatProvider>();
-      // Récupère (ou crée) la conv 1-1 avec l'auteur. Le backend renvoie la
-      // conv existante si elle est déjà ouverte → idempotent.
       final result = await api.createConversation(participantID: author);
       final convId = result['conversID'] as int?;
       if (convId == null) throw Exception('conversID manquant');
@@ -271,9 +264,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec de l\'envoi : $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Échec de l\'envoi : $e')));
     } finally {
       if (mounted) setState(() => _sendingReply = false);
     }
@@ -291,7 +283,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
             child: const Text('Annuler'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Supprimer'),
           ),
@@ -308,18 +300,15 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   Widget build(BuildContext context) {
     final s = _current;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       body: SafeArea(
-        // PageView horizontal : permet de passer d'un contact à l'autre via swipe.
-        // Seule la page courante affiche le contenu live ; les pages voisines
-        // sont des placeholders noirs (transition de ~250ms, peu perceptible).
         child: PageView.builder(
           controller: _pageCtrl,
           onPageChanged: _onPageChanged,
           itemCount: widget.contactGroups.length,
           itemBuilder: (context, pageIdx) {
             if (pageIdx != _contactIndex) {
-              return const ColoredBox(color: Colors.black);
+              return const ColoredBox(color: AppColors.black);
             }
             return _buildCurrentPage(s);
           },
@@ -330,100 +319,95 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
 
   Widget _buildCurrentPage(Statut s) {
     return Stack(
-          children: [
-            // Contenu
-            Positioned.fill(child: _buildContent(s)),
-            // Gestes (tap zones + long press)
-            Positioned.fill(
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: _prev,
-                      onLongPressStart: (_) => _setPaused(true),
-                      onLongPressEnd: (_) => _setPaused(false),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 7,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: _next,
-                      onLongPressStart: (_) => _setPaused(true),
-                      onLongPressEnd: (_) => _setPaused(false),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Barres de progression + header
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Column(
-                children: [
-                  _ProgressBars(
-                    count: _currentGroup.length,
-                    currentIndex: _itemIndex,
-                    progress: _progress,
-                  ),
-                  _Header(
-                    statut: s,
-                    onClose: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            // Caption (image/vidéo avec texte)
-            if ((s.type == 1 || s.type == 2) &&
-                (s.text != null && s.text!.trim().isNotEmpty))
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: widget.isMine ? 96 : 80,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(120),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    s.text!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
+      children: [
+        Positioned.fill(child: _buildContent(s)),
+        Positioned.fill(
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _prev,
+                  onLongPressStart: (_) => _setPaused(true),
+                  onLongPressEnd: (_) => _setPaused(false),
                 ),
               ),
-            // Footer
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!widget.isMine)
-                    _buildReplyBar()
-                  else
-                    _Footer(
-                      statut: s,
-                      onDelete: _confirmDelete,
-                      onShowViews: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => StatusViewsScreen(statusId: s.id),
-                        ),
-                      ),
-                    ),
-                ],
+              Expanded(
+                flex: 7,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _next,
+                  onLongPressStart: (_) => _setPaused(true),
+                  onLongPressEnd: (_) => _setPaused(false),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Column(
+            children: [
+              _ProgressBars(
+                count: _currentGroup.length,
+                currentIndex: _itemIndex,
+                progress: _progress,
+              ),
+              _Header(
+                statut: s,
+                onClose: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+        if ((s.type == 1 || s.type == 2) &&
+            (s.text != null && s.text!.trim().isNotEmpty))
+          Positioned(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            bottom: widget.isMine ? 96 : 80,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(120),
+                borderRadius: AppRadius.brSm,
+              ),
+              child: Text(
+                s.text!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 15),
               ),
             ),
-          ],
-        );
+          ),
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!widget.isMine)
+                _buildReplyBar()
+              else
+                _Footer(
+                  statut: s,
+                  onDelete: _confirmDelete,
+                  onShowViews: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StatusViewsScreen(statusId: s.id),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildReplyBar() {
@@ -433,12 +417,11 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         final canSend = online && !_sendingReply;
         final liked = _current.likedByMe;
         return Padding(
-          // Évite que le clavier ou la home indicator ne masque la barre.
           padding: EdgeInsets.only(
-            left: 12,
-            right: 12,
-            bottom: 12 + MediaQuery.of(context).viewInsets.bottom,
-            top: 4,
+            left: AppSpacing.md,
+            right: AppSpacing.md,
+            bottom: AppSpacing.md + MediaQuery.of(context).viewInsets.bottom,
+            top: AppSpacing.xs,
           ),
           child: Row(
             children: [
@@ -446,7 +429,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.black.withAlpha(140),
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: AppRadius.brPill,
                     border: Border.all(color: Colors.white24, width: 1),
                   ),
                   child: TextField(
@@ -467,21 +450,19 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                       hintStyle: const TextStyle(color: Colors.white54),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
-              // Cœur : se remplit quand on like, se vide quand on dislike.
-              // Le tap déclenche _toggleLike (qui gère l'optimistic update).
+              AppSpacing.hGapXs,
               IconButton(
                 tooltip: liked ? 'Je n\'aime plus' : 'J\'aime',
                 onPressed: _toggleLike,
                 iconSize: 28,
                 splashRadius: 22,
                 icon: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
+                  duration: AppDurations.fast,
                   transitionBuilder: (child, anim) =>
                       ScaleTransition(scale: anim, child: child),
                   child: Icon(
@@ -491,9 +472,11 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
+              AppSpacing.hGapXs,
               Material(
-                color: canSend ? Colors.indigo : Colors.grey.shade600,
+                color: canSend
+                    ? AppColors.brandPrimary
+                    : AppColors.textSecondary,
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
@@ -503,13 +486,14 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                     height: 44,
                     child: _sendingReply
                         ? const Padding(
-                            padding: EdgeInsets.all(12),
+                            padding: EdgeInsets.all(AppSpacing.md),
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.send, color: Colors.white, size: 20),
+                        : const Icon(Icons.send,
+                            color: Colors.white, size: AppIconSize.sm),
                   ),
                 ),
               ),
@@ -522,12 +506,12 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
 
   Widget _buildContent(Statut s) {
     switch (s.type) {
-      case 0: // Texte
-        final bg = _parseColor(s.backgroundColor) ?? Colors.indigo;
+      case 0:
+        final bg = _parseColor(s.backgroundColor) ?? AppColors.brandPrimary;
         return Container(
           color: bg,
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Text(
             s.text ?? '',
             textAlign: TextAlign.center,
@@ -538,18 +522,20 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
             ),
           ),
         );
-      case 1: // Image
+      case 1:
         return Center(
           child: CachedNetworkImage(
             imageUrl: s.mediaUrl ?? '',
             fit: BoxFit.contain,
             placeholder: (_, __) =>
                 const Center(child: CircularProgressIndicator()),
-            errorWidget: (_, __, ___) =>
-                const Icon(Icons.broken_image, color: Colors.white54, size: 64),
+            errorWidget: (_, __, ___) => const Icon(
+                Icons.broken_image,
+                color: Colors.white54,
+                size: 64),
           ),
         );
-      case 2: // Vidéo
+      case 2:
         if (_chewieCtrl != null) {
           return Center(
             child: AspectRatio(
@@ -559,7 +545,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           );
         }
         return const Center(child: CircularProgressIndicator());
-      case 3: // Audio
+      case 3:
         return _AudioContent(statut: s);
       default:
         return const SizedBox.shrink();
@@ -590,7 +576,8 @@ class _ProgressBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
       child: Row(
         children: List.generate(count, (i) {
           return Expanded(
@@ -609,7 +596,8 @@ class _ProgressBars extends StatelessWidget {
                               : 0.0,
                       minHeight: 3,
                       backgroundColor: Colors.white.withAlpha(70),
-                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                      valueColor:
+                          const AlwaysStoppedAnimation(Colors.white),
                     ),
                   );
                 },
@@ -648,12 +636,13 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 4, 8),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.xs, AppSpacing.xs, AppSpacing.sm),
       child: Row(
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: Colors.grey.shade700,
+            backgroundColor: AppColors.immersiveSurface,
             backgroundImage: _previewImage(statut),
             child: _previewImage(statut) == null
                 ? Text(
@@ -664,7 +653,7 @@ class _Header extends StatelessWidget {
                   )
                 : null,
           ),
-          const SizedBox(width: 10),
+          AppSpacing.hGapSm,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,13 +661,12 @@ class _Header extends StatelessWidget {
                 Text(
                   statut.nom ?? 'Moi',
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                      color: Colors.white, fontWeight: FontWeight.w600),
                 ),
                 Text(
                   _relative(statut.createdAt),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style:
+                      const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
@@ -693,8 +681,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Footer affiché uniquement sur ses propres statuts (vues / likes / supprimer).
-/// Pour les statuts d'autrui, le like est intégré à la reply bar.
 class _Footer extends StatelessWidget {
   final Statut statut;
   final VoidCallback onDelete;
@@ -709,12 +695,11 @@ class _Footer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Absorbe les taps dans la zone du footer pour éviter qu'ils
-      // déclenchent prev/next du viewer en dessous.
       behavior: HitTestBehavior.opaque,
       onTap: () {},
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -729,15 +714,16 @@ class _Footer extends StatelessWidget {
               onTap: onShowViews,
               child: Row(
                 children: [
-                  const Icon(Icons.visibility, color: Colors.white, size: 20),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.visibility, color: Colors.white, size: AppIconSize.sm),
+                  AppSpacing.hGapSm,
                   Text(
                     '${statut.viewedBy} vue${statut.viewedBy > 1 ? 's' : ''}',
                     style: const TextStyle(color: Colors.white),
                   ),
-                  const SizedBox(width: 14),
-                  const Icon(Icons.favorite, color: Colors.redAccent, size: 20),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: AppSpacing.md + 2),
+                  const Icon(Icons.favorite,
+                      color: Colors.redAccent, size: AppIconSize.sm),
+                  AppSpacing.hGapSm,
                   Text(
                     '${statut.likedBy}',
                     style: const TextStyle(color: Colors.white),
@@ -764,9 +750,9 @@ class _AudioContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.indigo.shade900,
+      color: AppColors.brandPrimaryDark,
       alignment: Alignment.center,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -778,9 +764,9 @@ class _AudioContent extends StatelessWidget {
                 ? const Icon(Icons.person, size: 60, color: Colors.white)
                 : null,
           ),
-          const SizedBox(height: 24),
+          AppSpacing.vGapXxl,
           const Icon(Icons.audiotrack, color: Colors.white, size: 36),
-          const SizedBox(height: 8),
+          AppSpacing.vGapSm,
           Text(
             statut.nom ?? '',
             style: const TextStyle(
@@ -789,7 +775,7 @@ class _AudioContent extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 6),
+          AppSpacing.hGapSm,
           Text(
             'Message vocal en cours...',
             style: TextStyle(color: Colors.white.withAlpha(180)),

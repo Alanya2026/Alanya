@@ -6,6 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/status_provider.dart';
 
 enum _StatusType { text, photo, video, audio }
@@ -20,16 +23,16 @@ class StatusCreateScreen extends StatefulWidget {
 class _StatusCreateScreenState extends State<StatusCreateScreen>
     with SingleTickerProviderStateMixin {
   static const List<Color> _palette = [
-    Color(0xFFE53935), // red
-    Color(0xFF3949AB), // indigo
-    Color(0xFF00897B), // teal
-    Color(0xFFFB8C00), // orange
-    Color(0xFF8E24AA), // purple
-    Color(0xFF1E88E5), // blue
-    Color(0xFFD81B60), // pink
-    Color(0xFFFFB300), // amber
-    Color(0xFF424242), // grey-dark
-    Color(0xFF6D4C41), // brown
+    Color(0xFFE53935),
+    Color(0xFF3949AB),
+    Color(0xFF00897B),
+    Color(0xFFFB8C00),
+    Color(0xFF8E24AA),
+    Color(0xFF1E88E5),
+    Color(0xFFD81B60),
+    Color(0xFFFFB300),
+    Color(0xFF424242),
+    Color(0xFF6D4C41),
   ];
 
   late final TabController _tabController;
@@ -40,7 +43,6 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   Color _bgColor = const Color(0xFFE53935);
   bool _publishing = false;
 
-  // Audio (onglet 4) : enregistrement vocal + import de fichier.
   final AudioRecorder _recorder = AudioRecorder();
   bool _isRecording = false;
   int _recordSeconds = 0;
@@ -100,9 +102,8 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     final picker = ImagePicker();
     final file = video
         ? await picker.pickVideo(source: source)
-        // Compression : une photo plein format (surtout prise à l'instant via
-        // l'appareil) est trop lourde et l'upload échoue. On la réduit comme le chat.
-        : await picker.pickImage(source: source, imageQuality: 80, maxWidth: 1920);
+        : await picker.pickImage(
+            source: source, imageQuality: 80, maxWidth: 1920);
     if (file != null) setState(() => _mediaFile = File(file.path));
   }
 
@@ -183,13 +184,12 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   Future<void> _openColorPicker() async {
     final picked = await showModalBottomSheet<Color>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: context.colors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
       builder: (_) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,17 +199,17 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppColors.outlineStrong,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.vGapLg,
               const Text(
                 'Couleur de fond',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.vGapLg,
               Wrap(
                 spacing: 14,
                 runSpacing: 14,
@@ -263,7 +263,8 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
         case _StatusType.text:
           await provider.createText(
             text: _textCtrl.text.trim(),
-            backgroundColor: _bgColor.toARGB32().toRadixString(16).padLeft(8, '0'),
+            backgroundColor:
+                _bgColor.toARGB32().toRadixString(16).padLeft(8, '0'),
           );
         case _StatusType.photo:
           await provider.createMedia(
@@ -290,29 +291,20 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Nouveau statut',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
+        title: const Text('Nouveau statut'),
         centerTitle: true,
         actions: [
           IconButton(
             icon: Icon(
               Icons.send_rounded,
-              color: _canPublish ? Colors.indigo : Colors.grey.shade300,
+              color: _canPublish
+                  ? context.colors.primary
+                  : context.colors.outline,
             ),
             onPressed: _canPublish ? _publish : null,
           ),
@@ -321,13 +313,6 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           preferredSize: const Size.fromHeight(64),
           child: TabBar(
             controller: _tabController,
-            labelColor: Colors.indigo,
-            unselectedLabelColor: Colors.grey.shade500,
-            indicatorColor: Colors.indigo,
-            indicatorWeight: 2.5,
-            labelStyle:
-                const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-            unselectedLabelStyle: const TextStyle(fontSize: 13),
             tabs: const [
               Tab(icon: Icon(Icons.text_fields, size: 22), text: 'Texte'),
               Tab(icon: Icon(Icons.photo, size: 22), text: 'Photo'),
@@ -340,20 +325,18 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       body: Stack(
         children: [
           Positioned.fill(child: _buildCanvas()),
-
-          // FAB bottom-left contextuel selon le mode
           Positioned(
-            left: 16,
-            bottom: 16 + MediaQuery.of(context).padding.bottom,
+            left: AppSpacing.lg,
+            bottom: AppSpacing.lg + MediaQuery.of(context).padding.bottom,
             child: _buildLeftAction(),
           ),
-
-          // Pill "Publier" bottom-right
           Positioned(
-            right: 16,
+            right: AppSpacing.lg,
             bottom: 18 + MediaQuery.of(context).padding.bottom,
             child: _PublishPill(
-              color: _type == _StatusType.text ? _bgColor : Colors.indigo,
+              color: _type == _StatusType.text
+                  ? _bgColor
+                  : context.colors.primary,
               enabled: _canPublish,
               loading: _publishing,
               onTap: _publish,
@@ -369,25 +352,25 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       case _StatusType.text:
         return _CircleAction(
           icon: Icons.palette_rounded,
-          color: Colors.indigo,
+          color: context.colors.primary,
           onTap: _openColorPicker,
         );
       case _StatusType.photo:
         return _CircleAction(
           icon: Icons.photo_library_rounded,
-          color: Colors.indigo,
+          color: context.colors.primary,
           onTap: () => _pickMedia(ImageSource.gallery),
         );
       case _StatusType.video:
         return _CircleAction(
           icon: Icons.video_library_rounded,
-          color: Colors.indigo,
+          color: context.colors.primary,
           onTap: () => _pickMedia(ImageSource.gallery, video: true),
         );
       case _StatusType.audio:
         return _CircleAction(
           icon: Icons.audio_file_rounded,
-          color: Colors.indigo,
+          color: context.colors.primary,
           onTap: _pickAudioFile,
         );
     }
@@ -445,7 +428,6 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
         fit: StackFit.expand,
         children: [
           Image.file(_mediaFile!, fit: BoxFit.cover),
-          // Voile bas pour assurer la lisibilité des contrôles
           Positioned(
             left: 0,
             right: 0,
@@ -468,22 +450,21 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           ),
           if (isVideo)
             const Positioned(
-              top: 16,
-              right: 16,
+              top: AppSpacing.lg,
+              right: AppSpacing.lg,
               child: _Chip(icon: Icons.movie, label: 'Vidéo'),
             ),
-
-          // Description optionnelle (champ `text` en BD) — facultative.
           Positioned(
-            left: 16,
-            right: 16,
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
             bottom: 84 + MediaQuery.of(context).padding.bottom,
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: AppRadius.brPill,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: TextField(
                 controller: _captionCtrl,
                 style: const TextStyle(color: Colors.white, fontSize: 16),
@@ -504,7 +485,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       );
     }
     return Container(
-      color: const Color(0xFFF4F5F8),
+      color: AppColors.surfaceMuted,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -512,28 +493,24 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
             Container(
               width: 96,
               height: 96,
-              decoration: BoxDecoration(
-                color: Colors.indigo.shade50,
+              decoration: const BoxDecoration(
+                color: AppColors.brandContainer,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isVideo ? Icons.videocam_rounded : Icons.add_a_photo_rounded,
                 size: 44,
-                color: Colors.indigo,
+                color: AppColors.brandPrimary,
               ),
             ),
-            const SizedBox(height: 18),
+            AppSpacing.vGapXl,
             Text(
               isVideo ? 'Ajouter une vidéo' : 'Ajouter une photo',
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+              style: context.text.titleMedium,
             ),
-            const SizedBox(height: 18),
+            AppSpacing.vGapXl,
             Wrap(
-              spacing: 12,
+              spacing: AppSpacing.md,
               children: [
                 _ChoiceButton(
                   icon: Icons.photo_library_outlined,
@@ -558,17 +535,17 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   Widget _buildAudioCanvas() {
     final hasFile = _mediaFile != null;
     final Color circleColor = _isRecording
-        ? Colors.red
-        : (hasFile ? Colors.indigo : Colors.indigo.shade50);
+        ? AppColors.error
+        : (hasFile ? AppColors.brandPrimary : AppColors.brandContainer);
     final IconData circleIcon = _isRecording
         ? Icons.graphic_eq_rounded
         : (hasFile ? Icons.audiotrack_rounded : Icons.mic_rounded);
 
     return Container(
-      color: const Color(0xFFF4F5F8),
+      color: AppColors.surfaceMuted,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -582,35 +559,34 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                 child: Icon(
                   circleIcon,
                   size: 44,
-                  color: (_isRecording || hasFile) ? Colors.white : Colors.indigo,
+                  color: (_isRecording || hasFile)
+                      ? Colors.white
+                      : AppColors.brandPrimary,
                 ),
               ),
-              const SizedBox(height: 18),
+              AppSpacing.vGapXl,
               Text(
                 _isRecording
                     ? 'Enregistrement… ${_formatDuration(_recordSeconds)}'
                     : hasFile
                         ? (_audioName ?? 'Message vocal')
                         : 'Enregistrez un vocal ou importez un fichier audio',
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
+                style: context.text.titleMedium,
                 textAlign: TextAlign.center,
               ),
               if (hasFile && !_isRecording && _audioDurationMs != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
                   child: Text(
                     _formatDuration((_audioDurationMs! / 1000).round()),
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                    style: context.text.bodyMedium?.copyWith(
+                        color: context.colors.onSurfaceVariant),
                   ),
                 ),
-              const SizedBox(height: 18),
+              AppSpacing.vGapXl,
               if (_isRecording)
                 Wrap(
-                  spacing: 12,
+                  spacing: AppSpacing.md,
                   children: [
                     _ChoiceButton(
                       icon: Icons.delete_outline,
@@ -626,7 +602,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                 )
               else
                 Wrap(
-                  spacing: 12,
+                  spacing: AppSpacing.md,
                   children: [
                     _ChoiceButton(
                       icon: Icons.mic_rounded,
@@ -679,7 +655,7 @@ class _CircleAction extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, color: Colors.white, size: 24),
+        child: Icon(icon, color: Colors.white, size: AppIconSize.md),
       ),
     );
   }
@@ -700,17 +676,17 @@ class _PublishPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = Colors.white;
+    const fg = Colors.white;
     final bg = enabled ? color : color.withValues(alpha: 0.45);
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: AppDurations.fast,
         height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 22),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: AppRadius.brPill,
           boxShadow: enabled
               ? [
                   BoxShadow(
@@ -725,7 +701,7 @@ class _PublishPill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (loading)
-              SizedBox(
+              const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
@@ -734,11 +710,11 @@ class _PublishPill extends StatelessWidget {
                 ),
               )
             else
-              Icon(Icons.send_rounded, color: fg, size: 20),
-            const SizedBox(width: 8),
+              const Icon(Icons.send_rounded, color: fg, size: AppIconSize.sm),
+            AppSpacing.hGapSm,
             Text(
               loading ? 'Envoi…' : 'Publier',
-              style: TextStyle(
+              style: const TextStyle(
                 color: fg,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -766,15 +742,16 @@ class _ChoiceButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 18),
+      icon: Icon(icon, size: AppIconSize.sm),
       label: Text(label),
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.indigo,
+        backgroundColor: context.colors.surface,
+        foregroundColor: context.colors.primary,
         elevation: 0,
-        side: const BorderSide(color: Colors.indigo),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        side: BorderSide(color: context.colors.primary),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.brSm),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
       ),
     );
   }
@@ -788,16 +765,17 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm + 2, vertical: AppSpacing.sm - 2),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.brPill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: Colors.white),
-          const SizedBox(width: 5),
+          AppSpacing.hGapXs,
           Text(
             label,
             style: const TextStyle(

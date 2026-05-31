@@ -3,10 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/common/common.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -32,8 +35,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadUser() async {
-    // 1) Hydrate immédiatement depuis le cache AuthProvider (offline-safe).
-    final cached = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final cached =
+        Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (cached != null && mounted) {
       setState(() {
         _user = cached;
@@ -43,7 +46,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
     }
 
-    // 2) Rafraîchit depuis l'API ; en cas d'échec on garde le cache.
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getMe();
@@ -63,48 +65,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _openAvatarSheet() async {
     if (_uploadingAvatar) return;
-    final hasPhoto = hasValidAvatarUrl(_user?.avatarUrl);
+    final hasPhoto = _user?.avatarUrl.isNotEmpty == true;
 
     final choice = await showModalBottomSheet<_AvatarAction>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: context.colors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
       builder: (_) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
             Container(
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppColors.outlineStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 16),
+            AppSpacing.vGapLg,
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: Colors.indigo),
+              leading: Icon(Icons.photo_camera_outlined,
+                  color: context.colors.primary),
               title: const Text('Prendre une photo'),
               onTap: () => Navigator.pop(context, _AvatarAction.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: Colors.indigo),
+              leading: Icon(Icons.photo_library_outlined,
+                  color: context.colors.primary),
               title: const Text('Choisir depuis la galerie'),
               onTap: () => Navigator.pop(context, _AvatarAction.gallery),
             ),
             if (hasPhoto)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text(
+                leading: Icon(Icons.delete_outline,
+                    color: context.colors.error),
+                title: Text(
                   'Supprimer la photo',
-                  style: TextStyle(color: Colors.red),
+                  style: TextStyle(color: context.colors.error),
                 ),
                 onTap: () => Navigator.pop(context, _AvatarAction.remove),
               ),
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
           ],
         ),
       ),
@@ -141,7 +144,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       await auth.updateAvatar(File(picked.path));
       if (!mounted) return;
 
-      // Resync local depuis le provider (déjà rechargé)
       setState(() {
         _user = auth.currentUser ?? _user;
         _uploadingAvatar = false;
@@ -163,7 +165,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+            const RoundedRectangleBorder(borderRadius: AppRadius.brMd),
         title: const Text('Supprimer la photo ?'),
         content: const Text('Votre photo de profil sera retirée.'),
         actions: [
@@ -173,7 +176,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: context.colors.error),
             child: const Text('Supprimer'),
           ),
         ],
@@ -245,75 +248,65 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Modifier le profil',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Modifier le profil'),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.indigo),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: context.colors.primary),
                   )
-                : const Text(
+                : Text(
                     'Enregistrer',
-                    style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                        color: context.colors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16),
                   ),
           ),
-          const SizedBox(width: 8),
+          AppSpacing.hGapSm,
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingState()
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: AppSpacing.card,
               child: Column(
                 children: [
                   Center(child: _buildAvatar()),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: AppSpacing.xxxl + 8),
                   TextField(
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Nom',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      prefixIcon: Icon(Icons.person_outline),
                     ),
                     controller: _nameController,
                   ),
-                  const SizedBox(height: 24),
+                  AppSpacing.vGapXxl,
                   TextField(
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Pseudo',
-                      prefixIcon: const Icon(Icons.alternate_email),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      prefixIcon: Icon(Icons.alternate_email),
                     ),
                     controller: _pseudoController,
                   ),
-                  const SizedBox(height: 24),
+                  AppSpacing.vGapXxl,
                   TextField(
                     readOnly: true,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Téléphone (Téléphone Alanya)',
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      prefixIcon: Icon(Icons.phone_outlined),
                     ),
-                    controller: TextEditingController(text: _user?.alanyaPhone ?? ''),
+                    controller: TextEditingController(
+                        text: _user?.alanyaPhone ?? ''),
                   ),
                 ],
               ),
@@ -322,27 +315,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildAvatar() {
-    final hasPhoto = hasValidAvatarUrl(_user?.avatarUrl);
     return GestureDetector(
       onTap: _openAvatarSheet,
       child: Stack(
         children: [
-          CircleAvatar(
-            radius: 60,
-            backgroundColor: Colors.indigo.shade100,
-            backgroundImage: hasPhoto ? avatarImage(_user!.avatarUrl) : null,
-            child: hasPhoto
-                ? null
-                : Text(
-                    _user?.nom.isNotEmpty == true
-                        ? _user!.nom.substring(0, 1).toUpperCase()
-                        : 'U',
-                    style: const TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo,
-                    ),
-                  ),
+          AppAvatar(
+            imageUrl: _user?.avatarUrl,
+            name: _user?.nom.isNotEmpty == true ? _user!.nom : 'U',
+            size: 120,
           ),
           if (_uploadingAvatar)
             Positioned.fill(
@@ -353,7 +333,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 child: const Center(
                   child: CircularProgressIndicator(
-                    color: Colors.white,
+                    color: AppColors.white,
                     strokeWidth: 2.5,
                   ),
                 ),
@@ -363,13 +343,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             bottom: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.indigo,
+                color: context.colors.primary,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
+                border: Border.all(color: context.colors.surface, width: 3),
               ),
-              child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+              child: const Icon(Icons.camera_alt, color: AppColors.white,
+                  size: AppIconSize.sm),
             ),
           ),
         ],

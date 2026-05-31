@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
+import '../../widgets/common/common.dart';
 
 class ContactsScreen extends StatelessWidget {
   const ContactsScreen({super.key});
@@ -6,88 +10,72 @@ class ContactsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.indigo,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Select Contact',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              'Contacts',
+              style: context.text.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
-            Text(
+            // Nombre de contacts dynamique à brancher — données factices pour l'instant
+            const Text(
               '254 contacts',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(fontSize: 12),
             ),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
       body: ListView.builder(
         itemCount: 20,
         itemBuilder: (context, index) {
           if (index == 0) {
-            return _buildActionTile(Icons.group_add, 'New Group');
+            return _buildActionTile(context, Icons.group_add, 'Nouveau groupe');
           }
           if (index == 1) {
-            return _buildActionTile(Icons.person_add, 'New Contact');
+            return _buildActionTile(context, Icons.person_add, 'Nouveau contact');
           }
-          
+
           final contactIndex = index - 2;
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            leading: CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.indigo.shade50,
-              child: Text(
-                'C$contactIndex',
-                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
-              ),
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
+            leading: AppAvatar(
+              name: 'C$contactIndex',
+              size: AppSizes.avatarMd,
             ),
             title: Text(
               'Contact $contactIndex',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: context.text.titleSmall,
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Hey there! I am using Talky.',
-              style: TextStyle(color: Colors.grey),
+              style: context.text.bodySmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
-            onTap: () {
-              Navigator.pop(context); // Would navigate to chat detail with this user
-            },
+            onTap: () => Navigator.pop(context),
           );
         },
       ),
     );
   }
 
-  Widget _buildActionTile(IconData icon, String text) {
+  Widget _buildActionTile(
+      BuildContext context, IconData icon, String text) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl, vertical: AppSpacing.md),
       leading: CircleAvatar(
-        radius: 24,
-        backgroundColor: Colors.indigo,
-        child: Icon(icon, color: Colors.white),
+        radius: AppSizes.avatarMd / 2,
+        backgroundColor: AppColors.brandPrimary,
+        child: Icon(icon, color: AppColors.white),
       ),
-      title: Text(
-        text,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
+      title: Text(text, style: context.text.titleSmall),
       onTap: () {},
     );
   }

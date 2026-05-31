@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/common/common.dart';
 
 class ParticipantPickerScreen extends StatefulWidget {
   final List<User> initialSelected;
   final String confirmLabel;
-  // 9 invités max : l'organisateur occupe la 10e place
   final int maxSelectable;
-  // IDs à exclure de la liste affichée (ex. membres déjà dans un groupe).
   final Set<int> excludeIds;
 
   const ParticipantPickerScreen({
@@ -21,10 +22,12 @@ class ParticipantPickerScreen extends StatefulWidget {
   });
 
   @override
-  State<ParticipantPickerScreen> createState() => _ParticipantPickerScreenState();
+  State<ParticipantPickerScreen> createState() =>
+      _ParticipantPickerScreenState();
 }
 
-class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
+class _ParticipantPickerScreenState
+    extends State<ParticipantPickerScreen> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
 
@@ -57,7 +60,8 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
       if (!mounted) return;
       setState(() {
         _results = data
-            .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .map((e) =>
+                e is User ? e : User.fromJson(e as Map<String, dynamic>))
             .where((u) => !widget.excludeIds.contains(u.alanyaID))
             .toList();
         _isLoading = false;
@@ -94,7 +98,8 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
       if (!mounted) return;
       setState(() {
         _results = data
-            .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .map((e) =>
+                e is User ? e : User.fromJson(e as Map<String, dynamic>))
             .where((u) => !widget.excludeIds.contains(u.alanyaID))
             .toList();
         _isLoading = false;
@@ -104,7 +109,8 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
     }
   }
 
-  bool _isSelected(User user) => _selected.any((u) => u.alanyaID == user.alanyaID);
+  bool _isSelected(User user) =>
+      _selected.any((u) => u.alanyaID == user.alanyaID);
 
   bool get _atLimit => _selected.length >= widget.maxSelectable;
 
@@ -135,27 +141,23 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context, null),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Ajouter des participants',
-              style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w600),
-            ),
+            const Text('Ajouter des participants'),
             Text(
               '${_selected.length}/${widget.maxSelectable} sélectionné${_selected.length > 1 ? 's' : ''}',
-              style: TextStyle(
-                fontSize: 12,
-                color: _atLimit ? Colors.orange.shade700 : Colors.grey,
-                fontWeight: _atLimit ? FontWeight.bold : FontWeight.normal,
+              style: context.text.labelSmall?.copyWith(
+                color: _atLimit
+                    ? context.semantic.warning
+                    : context.colors.onSurfaceVariant,
+                fontWeight:
+                    _atLimit ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ],
@@ -166,35 +168,40 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
               onPressed: _confirm,
               child: Text(
                 widget.confirmLabel,
-                style: const TextStyle(
-                  color: Colors.indigo,
+                style: TextStyle(
+                  color: context.colors.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
             ),
-          const SizedBox(width: 8),
+          AppSpacing.hGapSm,
         ],
       ),
       body: Column(
         children: [
           // Chips des sélectionnés
-          if (_selected.isNotEmpty) _SelectedChips(selected: _selected, onRemove: _toggle),
+          if (_selected.isNotEmpty)
+            _SelectedChips(selected: _selected, onRemove: _toggle),
 
           // Banner limite atteinte
           if (_atLimit)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: Colors.orange.shade50,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              color: AppColors.warningContainer,
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
-                  const SizedBox(width: 8),
+                  Icon(Icons.info_outline,
+                      size: AppIconSize.sm,
+                      color: AppColors.warning),
+                  AppSpacing.hGapSm,
                   Expanded(
                     child: Text(
                       'Limite de ${widget.maxSelectable} participants atteinte (10 avec l\'organisateur). Retirez un participant pour en ajouter un autre.',
-                      style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
+                      style: context.text.labelSmall
+                          ?.copyWith(color: AppColors.warning),
                     ),
                   ),
                 ],
@@ -203,43 +210,29 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
 
           // Barre de recherche
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
+            child: AppSearchField(
               controller: _searchController,
-              autofocus: false,
-              decoration: InputDecoration(
-                hintText: 'Rechercher par nom, pseudo…',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              hintText: 'Rechercher par nom, pseudo…',
+              onChanged: (_) {},
+              onClear: () {
+                _searchController.clear();
+              },
             ),
           ),
 
           // Label section
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl, vertical: AppSpacing.xs),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 _showingContacts ? 'Contacts' : 'Résultats',
-                style: const TextStyle(
+                style: context.text.labelSmall?.copyWith(
+                  color: context.colors.primary,
                   fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
-                  fontSize: 12,
                   letterSpacing: 0.4,
                 ),
               ),
@@ -249,15 +242,23 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
           // Liste
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+                ? const LoadingState()
                 : _results.isEmpty
-                    ? _EmptyState(
-                        isSearching: !_showingContacts,
-                        query: _searchController.text,
+                    ? EmptyState(
+                        icon: _showingContacts
+                            ? Icons.group_outlined
+                            : Icons.person_search,
+                        title: _showingContacts
+                            ? 'Aucun contact pour le moment'
+                            : 'Aucun résultat pour "${_searchController.text}"',
+                        message: _showingContacts
+                            ? 'Recherchez un utilisateur par nom ou pseudo'
+                            : null,
                       )
                     : ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.only(
+                            bottom: AppSpacing.lg),
                         itemCount: _results.length,
                         itemBuilder: (context, index) {
                           final user = _results[index];
@@ -273,23 +274,24 @@ class _ParticipantPickerScreenState extends State<ParticipantPickerScreen> {
           ),
         ],
       ),
-      // Bouton flottant si sélection
       bottomNavigationBar: _selected.isNotEmpty
           ? SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.xl,
+                    AppSpacing.sm, AppSpacing.xl, AppSpacing.md),
                 child: ElevatedButton(
                   onPressed: _confirm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    minimumSize:
+                        const Size.fromHeight(AppSizes.buttonHeight + 4),
+                    shape: const RoundedRectangleBorder(
+                        borderRadius: AppRadius.brMd),
                     elevation: 0,
                   ),
                   child: Text(
                     '${widget.confirmLabel} · ${_selected.length} participant${_selected.length > 1 ? 's' : ''}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
               ),
@@ -310,28 +312,32 @@ class _SelectedChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.indigo.shade50,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      color: AppColors.brandContainer,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       child: Wrap(
-        spacing: 8,
-        runSpacing: 6,
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm - 2,
         children: selected.map((user) {
-          final initial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
+          final initial =
+              user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
           return Chip(
             avatar: CircleAvatar(
-              backgroundColor: Colors.indigo.shade300,
-              child: Text(initial, style: const TextStyle(color: Colors.white, fontSize: 11)),
+              backgroundColor: context.colors.primary,
+              child: Text(initial,
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 11)),
             ),
             label: Text(
               user.nom.isNotEmpty ? user.nom : user.pseudo,
-              style: const TextStyle(fontSize: 13),
+              style: context.text.labelMedium,
             ),
             deleteIcon: const Icon(Icons.close, size: 16),
             onDeleted: () => onRemove(user),
-            backgroundColor: Colors.white,
+            backgroundColor: context.colors.surface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: Colors.indigo.shade200),
+              borderRadius: AppRadius.brPill,
+              side: BorderSide(color: context.colors.primaryContainer),
             ),
           );
         }).toList(),
@@ -357,128 +363,83 @@ class _UserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
     return InkWell(
       onTap: disabled ? null : onTap,
       child: Opacity(
         opacity: disabled ? 0.4 : 1.0,
         child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            // Avatar
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: Colors.indigo.shade50,
-                  backgroundImage: avatarImage(user.avatarUrl),
-                  child: hasValidAvatarUrl(user.avatarUrl)
-                      ? null
-                      : Text(initial,
-                          style: const TextStyle(
-                              color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-                if (user.isOnline)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 14),
-            // Nom + pseudo
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+          child: Row(
+            children: [
+              Stack(
                 children: [
-                  Text(
-                    user.nom.isNotEmpty ? user.nom : user.pseudo,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  AppAvatar(
+                    imageUrl: user.avatarUrl.isNotEmpty
+                        ? user.avatarUrl
+                        : null,
+                    name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+                    size: AppSizes.avatarMd,
                   ),
-                  if (user.pseudo.isNotEmpty)
-                    Text(
-                      '@${user.pseudo}',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                  if (user.isOnline)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: AppColors.online,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: context.colors.surface, width: 1.5),
+                        ),
+                      ),
                     ),
                 ],
               ),
-            ),
-            // Checkbox
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: selected ? Colors.indigo : Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? Colors.indigo : Colors.grey.shade400,
-                  width: 2,
+              AppSpacing.hGapMd,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.nom.isNotEmpty ? user.nom : user.pseudo,
+                      style: context.text.titleSmall,
+                    ),
+                    if (user.pseudo.isNotEmpty)
+                      Text(
+                        '@${user.pseudo}',
+                        style: context.text.bodySmall?.copyWith(
+                            color: context.colors.onSurfaceVariant),
+                      ),
+                  ],
                 ),
               ),
-              child: selected
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : null,
-            ),
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-}
-
-// ─── État vide ───────────────────────────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.isSearching, required this.query});
-
-  final bool isSearching;
-  final String query;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isSearching && query.isNotEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.person_search, size: 48, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text(
-              'Aucun utilisateur trouvé pour "$query"',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-            ),
-          ],
-        ),
-      );
-    }
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.group_outlined, size: 48, color: Colors.grey.shade300),
-          const SizedBox(height: 12),
-          Text(
-            'Aucun contact pour le moment',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+              AnimatedContainer(
+                duration: AppDurations.fast,
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? context.colors.primary
+                      : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected
+                        ? context.colors.primary
+                        : context.colors.outline,
+                    width: 2,
+                  ),
+                ),
+                child: selected
+                    ? const Icon(Icons.check,
+                        color: Colors.white, size: 16)
+                    : null,
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Recherchez un utilisateur par nom ou pseudo',
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-          ),
-        ],
+        ),
       ),
     );
   }

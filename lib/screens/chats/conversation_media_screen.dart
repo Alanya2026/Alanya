@@ -4,8 +4,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/db/app_database.dart';
 import '../../providers/chat_provider.dart';
+import '../../widgets/common/common.dart';
 import 'media_viewer_screen.dart';
 
 class _DateGroup {
@@ -63,24 +67,20 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     final documents = <LocalMessage>[];
     final links = <LocalMessage>[];
     for (final m in messages) {
-      if (m.type == 1) {
-        if (m.mediaUrl != null && m.mediaUrl!.isNotEmpty) {
-          images.add(m);
-        }
-      } else if (m.type == 2) {
-        if (m.mediaUrl != null && m.mediaUrl!.isNotEmpty) {
-          videos.add(m);
-        }
-      } else if (m.type == 4) {
-        if (m.mediaUrl != null && m.mediaUrl!.isNotEmpty) {
-          documents.add(m);
-        }
+      if (m.type == 1 && m.mediaUrl != null && m.mediaUrl!.isNotEmpty) {
+        images.add(m);
+      } else if (m.type == 2 &&
+          m.mediaUrl != null &&
+          m.mediaUrl!.isNotEmpty) {
+        videos.add(m);
+      } else if (m.type == 4 &&
+          m.mediaUrl != null &&
+          m.mediaUrl!.isNotEmpty) {
+        documents.add(m);
       }
       final c = m.content;
-      if (c != null && c.isNotEmpty) {
-        if (_hasUrl(c)) {
-          links.add(m);
-        }
+      if (c != null && c.isNotEmpty && _hasUrl(c)) {
+        links.add(m);
       }
     }
     if (!mounted) return;
@@ -93,43 +93,29 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     });
   }
 
-  bool _hasUrl(String text) {
-    return text.contains('http://') || text.contains('https://');
-  }
+  bool _hasUrl(String text) =>
+      text.contains('http://') || text.contains('https://');
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F8),
+      backgroundColor: AppColors.surfaceMuted,
       appBar: AppBar(
         title: Text(
           '${widget.conversationName} — Médias',
-          style: const TextStyle(fontSize: 16),
+          style: context.text.titleMedium,
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Container(
-            color: Colors.white,
+            color: context.colors.surface,
             child: TabBar(
               controller: _tabController,
-              labelColor: Colors.indigo,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.indigo,
               indicatorSize: TabBarIndicatorSize.tab,
-              labelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-              unselectedLabelStyle: const TextStyle(fontSize: 12),
               tabs: const [
                 Tab(icon: Icon(Icons.image, size: 22), text: 'Images'),
                 Tab(icon: Icon(Icons.videocam, size: 22), text: 'Vidéos'),
-                Tab(
-                    icon: Icon(Icons.description, size: 22),
-                    text: 'Documents'),
+                Tab(icon: Icon(Icons.description, size: 22), text: 'Documents'),
                 Tab(icon: Icon(Icons.link, size: 22), text: 'Liens'),
               ],
             ),
@@ -137,7 +123,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingState()
           : TabBarView(
               controller: _tabController,
               children: [
@@ -153,36 +139,22 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   // ── Images ──────────────────────────────────────────────────────────
 
   Widget _buildImageGrid() {
-    if (_images.isEmpty) {
-      return _emptyState(CupertinoIcons.photo, 'Aucune image');
-    }
+    if (_images.isEmpty) return _emptyState(CupertinoIcons.photo, 'Aucune image');
     return _buildDateSections(_images, isGrid: true, isVideo: false);
   }
 
-  // ── Vidéos ──────────────────────────────────────────────────────────
-
   Widget _buildVideoGrid() {
-    if (_videos.isEmpty) {
-      return _emptyState(CupertinoIcons.videocam, 'Aucune vidéo');
-    }
+    if (_videos.isEmpty) return _emptyState(CupertinoIcons.videocam, 'Aucune vidéo');
     return _buildDateSections(_videos, isGrid: true, isVideo: true);
   }
 
-  // ── Documents ───────────────────────────────────────────────────────
-
   Widget _buildDocumentList() {
-    if (_documents.isEmpty) {
-      return _emptyState(Icons.insert_drive_file, 'Aucun document');
-    }
+    if (_documents.isEmpty) return _emptyState(Icons.insert_drive_file, 'Aucun document');
     return _buildDateSections(_documents, isGrid: false);
   }
 
-  // ── Liens ───────────────────────────────────────────────────────────
-
   Widget _buildLinksList() {
-    if (_links.isEmpty) {
-      return _emptyState(CupertinoIcons.link, 'Aucun lien');
-    }
+    if (_links.isEmpty) return _emptyState(CupertinoIcons.link, 'Aucun lien');
     return _buildDateSections(_links, isGrid: false);
   }
 
@@ -230,7 +202,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     final groups = _groupByDate(messages);
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       itemCount: groups.length,
       itemBuilder: (context, index) {
         final group = groups[index];
@@ -238,20 +210,18 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
               child: Text(
                 group.label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
+                style: context.text.labelMedium?.copyWith(
+                    color: context.colors.onSurface,
+                    fontWeight: FontWeight.w700),
               ),
             ),
             if (isGrid)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 child: GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -268,13 +238,13 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
               )
             else
               ...group.items.map((msg) => Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                     child: msg.type == 4
                         ? _buildDocTile(msg)
                         : _buildLinkTile(msg),
                   )),
-            const SizedBox(height: 8),
+            AppSpacing.vGapSm,
           ],
         );
       },
@@ -283,49 +253,42 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
 
   Widget _buildDocTile(LocalMessage msg) {
     final name = msg.mediaName ?? 'Document';
-    final ext = name.contains('.')
-        ? name.split('.').last.toUpperCase()
-        : 'FILE';
+    final ext =
+        name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: context.colors.surface,
+        borderRadius: AppRadius.brSm,
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.xs),
         leading: Container(
           width: 44,
           height: 44,
           decoration: BoxDecoration(
             color: _docColor(ext),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: AppRadius.brSm,
           ),
           child: Center(
-            child: Text(
-              ext,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: Text(ext,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700)),
           ),
         ),
-        title: Text(
-          name,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: Text(name,
+            style: context.text.titleSmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
         subtitle: Text(
           '${msg.sendAt.day}/${msg.sendAt.month}/${msg.sendAt.year}',
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+          style: context.text.labelSmall
+              ?.copyWith(color: context.colors.onSurfaceVariant),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        trailing: Icon(Icons.chevron_right,
+            color: context.colors.outlineVariant),
         onTap: () => _openDoc(msg),
       ),
     );
@@ -334,39 +297,32 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   Widget _buildLinkTile(LocalMessage msg) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: context.colors.surface,
+        borderRadius: AppRadius.brSm,
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.xs),
         leading: Container(
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.infoContainer,
+            borderRadius: AppRadius.brSm,
           ),
-          child: const Icon(
-            CupertinoIcons.link,
-            color: Colors.blue,
-            size: 22,
-          ),
+          child: const Icon(CupertinoIcons.link, color: AppColors.info, size: 22),
         ),
-        title: Text(
-          msg.content ?? 'Lien',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: Text(msg.content ?? 'Lien',
+            style: context.text.titleSmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
         subtitle: Text(
           '${msg.sendAt.day}/${msg.sendAt.month}/${msg.sendAt.year}',
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+          style: context.text.labelSmall
+              ?.copyWith(color: context.colors.onSurfaceVariant),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        trailing: Icon(Icons.chevron_right,
+            color: context.colors.outlineVariant),
       ),
     );
   }
@@ -374,19 +330,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   // ── Shared widgets ──────────────────────────────────────────────────
 
   Widget _emptyState(IconData icon, String text) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 56, color: Colors.grey.shade300),
-          const SizedBox(height: 12),
-          Text(
-            text,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
-          ),
-        ],
-      ),
-    );
+    return EmptyState(icon: icon, title: text);
   }
 
   Widget _gridItem(LocalMessage msg, {required bool isVideo}) {
@@ -408,7 +352,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(6),
-              color: Colors.grey.shade200,
+              color: AppColors.surfaceSubtle,
             ),
             clipBehavior: Clip.antiAlias,
             child: _buildThumbnail(msg, msg.localMediaPath ?? msg.mediaUrl),
@@ -431,50 +375,35 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   }
 
   Widget _buildThumbnail(LocalMessage msg, String? url) {
-    if (msg.type == 2) {
-      return Container(color: Colors.grey.shade300);
-    }
-    final hasLocal = msg.localMediaPath != null &&
-        File(msg.localMediaPath!).existsSync();
+    if (msg.type == 2) return Container(color: AppColors.surfaceSubtle);
+    final hasLocal =
+        msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
     if (hasLocal) {
-      return Image.file(
-        File(msg.localMediaPath!),
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            Container(color: Colors.grey.shade300),
-      );
+      return Image.file(File(msg.localMediaPath!),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              Container(color: AppColors.surfaceSubtle));
     }
     if (url != null && url.isNotEmpty) {
       return CachedNetworkImage(
         imageUrl: url,
         fit: BoxFit.cover,
-        placeholder: (context, url) =>
-            const Center(child: CircularProgressIndicator()),
+        placeholder: (context, url) => const LoadingState(),
         errorWidget: (context, url, error) =>
-            Container(color: Colors.grey.shade300),
+            Container(color: AppColors.surfaceSubtle),
       );
     }
-    return Container(color: Colors.grey.shade300);
+    return Container(color: AppColors.surfaceSubtle);
   }
 
   Color _docColor(String ext) {
     switch (ext) {
-      case 'PDF':
-        return Colors.red.shade400;
-      case 'DOC':
-      case 'DOCX':
-        return Colors.blue.shade400;
-      case 'XLS':
-      case 'XLSX':
-        return Colors.green.shade400;
-      case 'PPT':
-      case 'PPTX':
-        return Colors.orange.shade400;
-      case 'ZIP':
-      case 'RAR':
-        return Colors.purple.shade400;
-      default:
-        return Colors.grey.shade500;
+      case 'PDF': return Colors.red.shade400;
+      case 'DOC': case 'DOCX': return Colors.blue.shade400;
+      case 'XLS': case 'XLSX': return Colors.green.shade400;
+      case 'PPT': case 'PPTX': return Colors.orange.shade400;
+      case 'ZIP': case 'RAR': return Colors.purple.shade400;
+      default: return Colors.grey.shade500;
     }
   }
 
@@ -499,9 +428,8 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Impossible de télécharger le fichier'),
-            backgroundColor: Colors.red,
-          ),
+              content: Text('Impossible de télécharger le fichier'),
+              backgroundColor: AppColors.error),
         );
       }
       return;
@@ -511,9 +439,8 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     if (res.type != ResultType.done && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              'Aucune app pour ouvrir ce fichier (${res.message})'),
-          backgroundColor: Colors.red,
+          content: Text('Aucune app pour ouvrir ce fichier (${res.message})'),
+          backgroundColor: AppColors.error,
         ),
       );
     }

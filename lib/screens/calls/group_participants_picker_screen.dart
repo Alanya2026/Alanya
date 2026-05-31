@@ -1,8 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/utils/avatar_utils.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../talky_models.dart';
+import '../../widgets/common/common.dart';
 
 /// Sélecteur de participants pour un appel de groupe lancé depuis un groupe
 /// > 10 membres. Retourne la `List<User>` choisie via `Navigator.pop`.
@@ -35,9 +37,7 @@ class _GroupParticipantsPickerScreenState
         if (_selected.length >= widget.maxSelection) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'Maximum ${widget.maxSelection} participants',
-              ),
+              content: Text('Maximum ${widget.maxSelection} participants'),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -58,32 +58,23 @@ class _GroupParticipantsPickerScreenState
   Widget build(BuildContext context) {
     final canConfirm = _selected.isNotEmpty;
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          '${_selected.length} / ${widget.maxSelection}',
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: Text('${_selected.length} / ${widget.maxSelection}'),
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(28),
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
             child: Text(
               widget.isVideo
                   ? 'Sélectionnez jusqu\'à ${widget.maxSelection} membres pour l\'appel vidéo'
                   : 'Sélectionnez jusqu\'à ${widget.maxSelection} membres pour l\'appel vocal',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              style: context.text.bodySmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
           ),
         ),
@@ -93,31 +84,17 @@ class _GroupParticipantsPickerScreenState
         itemBuilder: (context, index) {
           final user = widget.members[index];
           final isSelected = _selected.contains(user.alanyaID);
-          final hasPhoto = hasValidAvatarUrl(user.avatarUrl);
-          final initial =
-              user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
           return CheckboxListTile(
             value: isSelected,
             onChanged: (_) => _toggle(user),
             controlAffinity: ListTileControlAffinity.trailing,
-            activeColor: Colors.indigo,
+            activeColor: context.colors.primary,
             secondary: Stack(
               children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: const Color(0xFFCBD0E8),
-                  backgroundImage:
-                      hasPhoto ? CachedNetworkImageProvider(user.avatarUrl) : null,
-                  child: hasPhoto
-                      ? null
-                      : Text(
-                          initial,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
+                AppAvatar(
+                  imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
+                  name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+                  size: AppSizes.avatarSm,
                 ),
                 if (user.isOnline)
                   Positioned(
@@ -127,9 +104,10 @@ class _GroupParticipantsPickerScreenState
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: Colors.green,
+                        color: AppColors.online,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(
+                            color: context.colors.surface, width: 1.5),
                       ),
                     ),
                   ),
@@ -137,12 +115,13 @@ class _GroupParticipantsPickerScreenState
             ),
             title: Text(
               user.nom.isNotEmpty ? user.nom : user.pseudo,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              style: context.text.titleSmall,
             ),
             subtitle: user.alanyaPhone.isNotEmpty
                 ? Text(
                     user.alanyaPhone,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    style: context.text.bodySmall
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
                   )
                 : null,
           );
@@ -150,22 +129,21 @@ class _GroupParticipantsPickerScreenState
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
           child: ElevatedButton.icon(
             onPressed: canConfirm ? _confirm : null,
             icon: Icon(widget.isVideo ? Icons.videocam : Icons.call),
             label: Text(
-              widget.isVideo ? 'Démarrer l\'appel vidéo' : 'Démarrer l\'appel vocal',
+              widget.isVideo
+                  ? 'Démarrer l\'appel vidéo'
+                  : 'Démarrer l\'appel vocal',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.indigo,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey.shade300,
-              minimumSize: const Size.fromHeight(50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
+              minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+              shape:
+                  const RoundedRectangleBorder(borderRadius: AppRadius.brSm),
             ),
           ),
         ),

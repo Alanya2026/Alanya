@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import 'ongoing_call_screen.dart';
@@ -124,7 +126,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     if (cs.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(cs.errorMessage!),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error,
         duration: const Duration(seconds: 4),
       ));
       Navigator.of(context).maybePop();
@@ -152,13 +154,13 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF1A237E), Color(0xFF000000)],
+                colors: [AppColors.brandPrimaryDark, AppColors.black],
               ),
             ),
             child: SafeArea(
               child: Column(
                 children: [
-                  const SizedBox(height: 24),
+                  AppSpacing.vGapXxl,
                   Text(
                     isGroup
                         ? (isVideo ? 'Appel groupé vidéo entrant' : 'Appel groupé entrant')
@@ -171,7 +173,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   ),
                   const Spacer(),
                   _AvatarPulse(animation: _pulse, initial: initial, photoUrl: caller?.avatarUrl),
-                  const SizedBox(height: 28),
+                  AppSpacing.vGapXxl,
                   Text(
                     name,
                     style: const TextStyle(
@@ -181,7 +183,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.vGapSm,
                   const Text(
                     'Talky',
                     style: TextStyle(color: Colors.white54, fontSize: 14),
@@ -195,7 +197,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                         _CallActionButton(
                           icon: CupertinoIcons.phone_down_fill,
                           label: 'Refuser',
-                          color: const Color(0xFFE53935),
+                          color: AppColors.error,
                           onTap: _reject,
                         ),
                         _CallActionButton(
@@ -203,7 +205,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                               ? CupertinoIcons.video_camera_solid
                               : CupertinoIcons.phone_fill,
                           label: 'Accepter',
-                          color: const Color(0xFF43A047),
+                          color: AppColors.success,
                           onTap: _accept,
                         ),
                       ],
@@ -270,7 +272,7 @@ class _AvatarPulse extends StatelessWidget {
               ),
               CircleAvatar(
                 radius: 72,
-                backgroundColor: const Color(0xFF3949AB),
+                backgroundColor: AppColors.brandPrimary,
                 backgroundImage: hasPhoto ? NetworkImage(url) : null,
                 child: hasPhoto
                     ? null
@@ -327,7 +329,7 @@ class _CallActionButton extends StatelessWidget {
             child: Icon(icon, color: Colors.white, size: 32),
           ),
         ),
-        const SizedBox(height: 12),
+        AppSpacing.vGapMd,
         Text(
           label,
           style: const TextStyle(color: Colors.white70, fontSize: 13),

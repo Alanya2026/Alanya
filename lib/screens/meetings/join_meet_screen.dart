@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../talky_api_client.dart';
 import '../../core/services/meeting_service.dart';
 import 'ongoing_meet_screen.dart';
@@ -41,7 +43,8 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
       final myId = userData['alanyaID'] ?? 0;
       final myName = userData['nom'] ?? userData['pseudo'] ?? '';
 
-      final meetingService = Provider.of<MeetingService>(context, listen: false);
+      final meetingService =
+          Provider.of<MeetingService>(context, listen: false);
       await meetingService.joinByRoom(
         roomCode: _codeController.text.trim(),
         myId: myId,
@@ -68,18 +71,12 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Join a meeting',
-          style: TextStyle(color: Colors.black, fontSize: 18),
-        ),
+        title: const Text('Rejoindre une réunion'),
         actions: [
           TextButton(
             onPressed: _isCodeValid && !_isJoining ? _joinMeeting : null,
@@ -90,55 +87,42 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    'Join',
+                    'Rejoindre',
                     style: TextStyle(
-                      color: _isCodeValid ? Colors.indigo : Colors.grey,
+                      color: _isCodeValid
+                          ? context.colors.primary
+                          : context.colors.onSurfaceVariant,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
           ),
-          const SizedBox(width: 8),
+          AppSpacing.hGapSm,
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: AppSpacing.card,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Enter the meeting code provided by the organizer',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
-              ),
+            Text(
+              'Entrez le code de réunion fourni par l\'organisateur',
+              style: context.text.bodyLarge,
             ),
-            const SizedBox(height: 24),
+            AppSpacing.vGapXxl,
             TextField(
               controller: _codeController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Exemple : abc-defg-hij',
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.indigo, width: 2),
-                ),
               ),
               style: const TextStyle(fontSize: 18, letterSpacing: 1.2),
             ),
-            const SizedBox(height: 32),
-            const Text(
-              'Pour rejoindre une réunion, vous avez besoin d’un code comme abc-defg-hij. Si vous avez reçu un lien de réunion, vous pouvez cliquer sur le lien à la place.',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
-                height: 1.5,
-              ),
+            AppSpacing.vGapXxl,
+            Text(
+              'Pour rejoindre une réunion, vous avez besoin d\'un code comme abc-defg-hij. '
+              'Si vous avez reçu un lien de réunion, vous pouvez cliquer sur le lien à la place.',
+              style: context.text.bodySmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
           ],
         ),

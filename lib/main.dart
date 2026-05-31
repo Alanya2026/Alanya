@@ -11,6 +11,7 @@ import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/local_cache_repository.dart';
@@ -52,35 +53,31 @@ class TalkyApp extends StatelessWidget {
     final localCache = LocalCacheRepository(db: database, api: apiClient);
     return MultiProvider(
       providers: [
+        // ThemeController en tête : MaterialApp en dépend via Consumer.
+        ChangeNotifierProvider(create: (_) => ThemeController()..load()),
         Provider<TalkyApiClient>.value(value: apiClient),
         Provider<AppDatabase>.value(value: database),
         Provider<LocalCacheRepository>.value(value: localCache),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: apiClient)),
-        //  CallService enregistré
         ChangeNotifierProvider(create: (_) => CallService(apiClient: apiClient)),
-        //  MeetingService enregistré (manquait)
         ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
-        //  ChatProvider : chats offline-first (drift) + présence temps réel
         ChangeNotifierProvider.value(value: chatProvider),
-        //  StatusProvider : statuts/stories avec persistence offline
         ChangeNotifierProvider(
             create: (_) => StatusProvider(api: apiClient, cache: localCache)),
-        //  AdminProvider : dashboard admin avec pagination
         ChangeNotifierProvider(create: (_) => AdminProvider(api: apiClient)),
-        //  ConnectivityProvider : état réseau OS pour l'UI offline + triggers
         ChangeNotifierProvider(create: (_) => ConnectivityProvider(api: apiClient)),
-        //  LocalHiddenStore : conv et appels masqués localement (par appareil)
         ChangeNotifierProvider(create: (_) => LocalHiddenStore()..load()),
       ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        debugShowCheckedModeBanner: false,
-        title: 'Talky',
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        // Mode sombre prêt mais désactivé à la livraison (cf. AppTheme).
-        themeMode: ThemeMode.light,
-        home: const AuthWrapper(),
+      child: Consumer<ThemeController>(
+        builder: (_, tc, __) => MaterialApp(
+          navigatorKey: navigatorKey,
+          debugShowCheckedModeBanner: false,
+          title: 'Talky',
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: tc.mode,
+          home: const AuthWrapper(),
+        ),
       ),
     );
   }

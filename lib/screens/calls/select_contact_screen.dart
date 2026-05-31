@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/common/common.dart';
 import 'ongoing_call_screen.dart';
 
 class SelectContactScreen extends StatefulWidget {
@@ -39,7 +43,10 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.getContacts();
       setState(() {
-        _allContacts = (data as List?)?.map((json) => User.fromJson(json as Map<String, dynamic>)).toList() ?? [];
+        _allContacts = (data as List?)
+                ?.map((json) => User.fromJson(json as Map<String, dynamic>))
+                .toList() ??
+            [];
         _filteredContacts = _allContacts;
         _isLoading = false;
       });
@@ -112,8 +119,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
         if (_selectedIds.length >= _maxSelection) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                  'Maximum 9 participants'),
+              content: Text('Maximum 9 participants'),
               duration: Duration(seconds: 2),
             ),
           );
@@ -148,7 +154,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(callService.errorMessage!),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
           duration: const Duration(seconds: 4),
         ),
       );
@@ -221,88 +227,65 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            _selecting ? Icons.close : Icons.arrow_back,
-            color: Colors.black,
-          ),
-          onPressed: _selecting ? _exitSelectMode : () => Navigator.pop(context),
+          icon: Icon(_selecting ? Icons.close : Icons.arrow_back),
+          onPressed:
+              _selecting ? _exitSelectMode : () => Navigator.pop(context),
         ),
         title: Text(
           _selecting
               ? '${_selectedIds.length} / $_maxSelection'
               : 'Nouvel appel',
-          style: const TextStyle(
-              color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: TextField(
-              controller: _searchController,
-              enabled: !_selecting,
-              decoration: InputDecoration(
-                hintText: 'Rechercher par nom, pseudo ou téléphone…',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                        onPressed: _clearSearch,
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            child: IgnorePointer(
+              ignoring: _selecting,
+              child: Opacity(
+                opacity: _selecting ? 0.45 : 1.0,
+                child: AppSearchField(
+                  controller: _searchController,
+                  hintText: 'Rechercher par nom, pseudo ou téléphone…',
+                  onChanged: (_) {},
+                  onClear: _clearSearch,
                 ),
               ),
             ),
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+                ? const LoadingState()
                 : _filteredContacts.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _searchController.text.isNotEmpty ? Icons.person_search : Icons.people_outline,
-                              size: 48,
-                              color: Colors.grey.shade300,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _searchController.text.isNotEmpty ? 'Aucun résultat' : 'Aucun contact',
-                              style: TextStyle(color: Colors.grey.shade500),
-                            ),
-                          ],
-                        ),
+                    ? EmptyState(
+                        icon: _searchController.text.isNotEmpty
+                            ? Icons.person_search
+                            : Icons.people_outline,
+                        title: _searchController.text.isNotEmpty
+                            ? 'Aucun résultat'
+                            : 'Aucun contact',
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                            padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.xl,
+                                AppSpacing.md,
+                                AppSpacing.xl,
+                                AppSpacing.xs),
                             child: Text(
                               _selecting
                                   ? 'Appui long pour quitter la sélection'
                                   : (_searchController.text.isNotEmpty
                                       ? 'Résultats'
                                       : 'Contacts préférés'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
-                                letterSpacing: 0.2,
+                              style: context.text.labelMedium?.copyWith(
+                                color: context.colors.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -325,31 +308,17 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   }
 
   Widget _buildContactTile(User user) {
-    final initial =
-        user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
     final isSelected = _selectedIds.contains(user.alanyaID);
 
     return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       leading: Stack(
         children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: Colors.indigo.shade50,
-            backgroundImage: user.avatarUrl.isNotEmpty
-                ? NetworkImage(user.avatarUrl)
-                : null,
-            child: user.avatarUrl.isEmpty
-                ? Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Colors.indigo,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  )
-                : null,
+          AppAvatar(
+            imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
+            name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+            size: AppSizes.avatarMd,
           ),
           if (_selecting && isSelected)
             Positioned(
@@ -359,9 +328,9 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(
-                  color: Colors.indigo,
+                  color: context.colors.primary,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: context.colors.surface, width: 2),
                 ),
                 child: const Icon(Icons.check, color: Colors.white, size: 12),
               ),
@@ -370,27 +339,28 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       ),
       title: Text(
         user.nom.isNotEmpty ? user.nom : user.pseudo,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        style: context.text.titleSmall,
       ),
       subtitle: Text(
         '@${user.pseudo} • ${user.alanyaPhone}',
-        style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        style: context.text.bodySmall
+            ?.copyWith(color: context.colors.onSurfaceVariant),
       ),
       trailing: _selecting
           ? Checkbox(
               value: isSelected,
-              activeColor: Colors.indigo,
+              activeColor: context.colors.primary,
               onChanged: (_) => _toggleSelection(user),
             )
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.videocam, color: Colors.indigo),
+                  icon: Icon(Icons.videocam, color: context.colors.primary),
                   onPressed: () => _initiateCall(user, true),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.call, color: Colors.green),
+                  icon: Icon(Icons.call, color: context.semantic.online),
                   onPressed: () => _initiateCall(user, false),
                 ),
               ],
@@ -404,37 +374,33 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     final disabled = _selectedIds.isEmpty;
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
         decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
+          color: context.colors.surface,
+          boxShadow: AppShadows.medium,
         ),
         child: Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: disabled ? null : () => _initiateGroupCall(false),
-                icon: const Icon(Icons.call, color: Colors.green),
-                label: const Text(
+                icon: Icon(Icons.call, color: context.semantic.success),
+                label: Text(
                   'Appel vocal',
-                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: context.semantic.success,
+                      fontWeight: FontWeight.bold),
                 ),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  side: const BorderSide(color: Colors.green),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+                  side: BorderSide(color: context.semantic.success),
+                  shape: const RoundedRectangleBorder(
+                      borderRadius: AppRadius.brSm),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            AppSpacing.hGapMd,
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: disabled ? null : () => _initiateGroupCall(true),
@@ -444,13 +410,9 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey.shade300,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+                  shape: const RoundedRectangleBorder(
+                      borderRadius: AppRadius.brSm),
                 ),
               ),
             ),

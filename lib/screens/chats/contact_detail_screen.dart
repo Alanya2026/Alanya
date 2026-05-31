@@ -4,12 +4,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/utils/country_utils.dart';
+import '../../widgets/common/common.dart';
 import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
@@ -54,7 +58,6 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   Future<void> _load() async {
     final cache = context.read<LocalCacheRepository>();
 
-    // 1) Affichage immédiat depuis l'initial passé OU le cache local.
     if (widget.initialName.isNotEmpty || widget.initialAvatar.isNotEmpty) {
       setState(() {
         _contact = User(
@@ -95,7 +98,6 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       }
     } catch (_) {}
 
-    // 2) Rafraîchit depuis l'API + upsert dans le cache pour la prochaine fois.
     try {
       final data = await _api.getUserById(widget.userId);
       bool fav = false;
@@ -191,7 +193,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     }
     final confirmed = await _confirm(
       title: 'Effacer les messages ?',
-      message: 'Les messages locaux de cette discussion seront supprimés.',
+      message:
+          'Les messages locaux de cette discussion seront supprimés.',
       confirmLabel: 'Effacer',
       destructive: true,
     );
@@ -249,7 +252,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
             child: Text(
               confirmLabel,
               style: TextStyle(
-                color: destructive ? Colors.red : null,
+                color: destructive ? context.colors.error : null,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -262,7 +265,9 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   void _snack(String msg, {bool error = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: error ? Colors.red : null),
+      SnackBar(
+          content: Text(msg),
+          backgroundColor: error ? AppColors.error : null),
     );
   }
 
@@ -271,11 +276,9 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F8),
+      backgroundColor: AppColors.surfaceMuted,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F5F8),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        backgroundColor: AppColors.surfaceMuted,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -298,15 +301,18 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                 child: Text(_isBlocked ? 'Débloquer' : 'Bloquer'),
               ),
               if (widget.conversationId != null) ...const [
-                PopupMenuItem(value: 'clear', child: Text('Effacer les messages')),
-                PopupMenuItem(value: 'delete', child: Text('Supprimer la discussion')),
+                PopupMenuItem(
+                    value: 'clear', child: Text('Effacer les messages')),
+                PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Supprimer la discussion')),
               ],
             ],
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingState()
           : _contact == null
               ? _ErrorState(name: widget.initialName)
               : _buildContent(_contact!),
@@ -315,28 +321,29 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
 
   Widget _buildContent(User u) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg,
+          AppSpacing.xxl),
       children: [
         _Header(user: u),
-        const SizedBox(height: 20),
+        AppSpacing.vGapXl,
         _PrimaryActions(
           onCall: () => _snack('Appel à venir'),
           onVideo: () => _snack('Vidéo à venir'),
           onMessage: _openChat,
         ),
-        const SizedBox(height: 16),
+        AppSpacing.vGapLg,
         _QuickActionsCard(
           isFavorite: _isFavorite,
           onToggleFavorite: _toggleFavorite,
           onSearch: () => _snack('Recherche à venir'),
           onClear: _clearMessages,
         ),
-        const SizedBox(height: 16),
+        AppSpacing.vGapLg,
         _MediaCard(
           conversationId: widget.conversationId,
           conversationName: u.nom,
         ),
-        const SizedBox(height: 16),
+        AppSpacing.vGapLg,
         _DangerActionsCard(
           isBlocked: _isBlocked,
           isFavorite: _isFavorite,
@@ -350,7 +357,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   }
 }
 
-// ── HEADER (avatar + name + identifiants) ────────────────────────────
+// ── HEADER ────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   final User user;
@@ -359,59 +366,29 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = user.nom.isNotEmpty ? user.nom : user.pseudo;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return Column(
       children: [
-        CircleAvatar(
-          radius: 60,
-          backgroundColor: const Color(0xFFCBD0E8),
-          backgroundImage: user.avatarUrl.isNotEmpty
-              ? CachedNetworkImageProvider(user.avatarUrl)
-              : null,
-          child: user.avatarUrl.isEmpty
-              ? Text(
-                  initial,
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                )
-              : null,
-        ),
-        const SizedBox(height: 14),
-        Text(
-          name,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: Colors.black,
-          ),
-          textAlign: TextAlign.center,
-        ),
+        AppAvatar(imageUrl: user.avatarUrl, name: name, size: 120),
+        AppSpacing.vGapMd,
+        Text(name, style: context.text.headlineSmall, textAlign: TextAlign.center),
         if (user.pseudo.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            '@${user.pseudo}',
-            style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
-          ),
+          AppSpacing.vGapXs,
+          Text('@${user.pseudo}',
+              style: context.text.bodyLarge
+                  ?.copyWith(color: context.colors.onSurfaceVariant)),
         ],
         if (user.alanyaPhone.isNotEmpty) ...[
-          const SizedBox(height: 6),
+          AppSpacing.vGapSm,
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.phone_iphone,
-                size: 16,
-                color: Colors.indigo.shade400,
-              ),
-              const SizedBox(width: 4),
+              Icon(Icons.phone_iphone,
+                  size: AppIconSize.sm, color: context.colors.primary),
+              AppSpacing.hGapXs,
               Text(
                 'AlanyaPhone ${user.alanyaPhone}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF1E66D8),
+                style: context.text.bodyMedium?.copyWith(
+                  color: context.colors.primary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -419,7 +396,7 @@ class _Header extends StatelessWidget {
           ),
         ],
         if ((user.paysLibelle ?? '').isNotEmpty) ...[
-          const SizedBox(height: 4),
+          AppSpacing.vGapXs,
           CountryRow(country: user.paysLibelle!),
         ],
       ],
@@ -427,7 +404,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── PRIMARY ACTIONS (Appel / Vidéo / Message) ────────────────────────
+// ── PRIMARY ACTIONS ────────────────────────────────────────────────────
 
 class _PrimaryActions extends StatelessWidget {
   final VoidCallback onCall;
@@ -443,29 +420,11 @@ class _PrimaryActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: _PrimaryActionTile(
-            icon: Icons.call,
-            label: 'Appel',
-            onTap: onCall,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _PrimaryActionTile(
-            icon: Icons.videocam,
-            label: 'Vidéo',
-            onTap: onVideo,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _PrimaryActionTile(
-            icon: Icons.chat_bubble,
-            label: 'Message',
-            onTap: onMessage,
-          ),
-        ),
+        Expanded(child: _PrimaryActionTile(icon: Icons.call, label: 'Appel', onTap: onCall)),
+        AppSpacing.hGapMd,
+        Expanded(child: _PrimaryActionTile(icon: Icons.videocam, label: 'Vidéo', onTap: onVideo)),
+        AppSpacing.hGapMd,
+        Expanded(child: _PrimaryActionTile(icon: Icons.chat_bubble, label: 'Message', onTap: onMessage)),
       ],
     );
   }
@@ -475,35 +434,27 @@ class _PrimaryActionTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _PrimaryActionTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _PrimaryActionTile({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFE3EEFE),
-      borderRadius: BorderRadius.circular(16),
+      color: context.colors.primaryContainer,
+      borderRadius: AppRadius.brMd,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.brMd,
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg + 2),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: const Color(0xFF1E66D8), size: 28),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF1E66D8),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              Icon(icon, color: context.colors.primary, size: 28),
+              AppSpacing.vGapSm,
+              Text(label,
+                  style: context.text.labelSmall?.copyWith(
+                      color: context.colors.primary,
+                      fontWeight: FontWeight.w700)),
             ],
           ),
         ),
@@ -512,7 +463,7 @@ class _PrimaryActionTile extends StatelessWidget {
   }
 }
 
-// ── QUICK ACTIONS (Ajouter favori / Rechercher / Effacer) ────────────
+// ── QUICK ACTIONS ──────────────────────────────────────────────────────
 
 class _QuickActionsCard extends StatelessWidget {
   final bool isFavorite;
@@ -529,15 +480,15 @@ class _QuickActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.sm),
       child: Row(
         children: [
           Expanded(
             child: _QuickAction(
               icon: isFavorite ? Icons.star : Icons.star_border,
               label: isFavorite ? 'Favori' : 'Ajouter',
-              iconColor: isFavorite ? Colors.amber.shade600 : const Color(0xFF1E66D8),
-              bg: isFavorite ? const Color(0xFFFEF3CB) : const Color(0xFFE3EEFE),
+              iconColor: isFavorite ? Colors.amber.shade600 : context.colors.primary,
+              bg: isFavorite ? const Color(0xFFFEF3CB) : context.colors.primaryContainer,
               onTap: onToggleFavorite,
             ),
           ),
@@ -545,8 +496,8 @@ class _QuickActionsCard extends StatelessWidget {
             child: _QuickAction(
               icon: Icons.search,
               label: 'Rechercher',
-              iconColor: const Color(0xFF1E66D8),
-              bg: const Color(0xFFE3EEFE),
+              iconColor: context.colors.primary,
+              bg: context.colors.primaryContainer,
               onTap: onSearch,
             ),
           ),
@@ -554,8 +505,8 @@ class _QuickActionsCard extends StatelessWidget {
             child: _QuickAction(
               icon: Icons.cleaning_services,
               label: 'Effacer',
-              iconColor: const Color(0xFF1E66D8),
-              bg: const Color(0xFFE3EEFE),
+              iconColor: context.colors.primary,
+              bg: context.colors.primaryContainer,
               onTap: onClear,
             ),
           ),
@@ -583,21 +534,22 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: AppRadius.brSm,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
         child: Column(
           children: [
             Container(
               width: 56,
               height: 56,
               decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-              child: Icon(icon, color: iconColor, size: 24),
+              child: Icon(icon, color: iconColor, size: AppIconSize.md),
             ),
-            const SizedBox(height: 6),
+            AppSpacing.vGapSm,
             Text(
               label,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+              style: context.text.labelSmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
           ],
         ),
@@ -611,10 +563,7 @@ class _QuickAction extends StatelessWidget {
 class _MediaCard extends StatefulWidget {
   final int? conversationId;
   final String conversationName;
-  const _MediaCard({
-    required this.conversationId,
-    required this.conversationName,
-  });
+  const _MediaCard({required this.conversationId, required this.conversationName});
 
   @override
   State<_MediaCard> createState() => _MediaCardState();
@@ -653,21 +602,13 @@ class _MediaCardState extends State<_MediaCard> {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Expanded(
-                child: Text(
-                  'Médias, liens et docs',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
+              Expanded(
+                child: Text('Médias, liens et docs', style: context.text.titleSmall),
               ),
               if (widget.conversationId != null)
                 InkWell(
@@ -680,37 +621,30 @@ class _MediaCardState extends State<_MediaCard> {
                       ),
                     ),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
                     child: Row(
                       children: [
-                        Text(
-                          'Voir tout',
-                          style: TextStyle(
-                            color: Color(0xFF1E66D8),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFF1E66D8),
-                          size: 18,
-                        ),
+                        Text('Voir tout',
+                            style: context.text.labelMedium?.copyWith(
+                                color: context.colors.primary,
+                                fontWeight: FontWeight.w600)),
+                        Icon(Icons.chevron_right,
+                            color: context.colors.primary, size: AppIconSize.sm),
                       ],
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          AppSpacing.vGapLg,
           _mediaMessages.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   child: Center(
-                    child: Text(
-                      'Aucun média partagé',
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
-                    ),
+                    child: Text('Aucun média partagé',
+                        style: context.text.bodySmall
+                            ?.copyWith(color: context.colors.onSurfaceVariant)),
                   ),
                 )
               : SizedBox(
@@ -718,7 +652,7 @@ class _MediaCardState extends State<_MediaCard> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _mediaMessages.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, __) => AppSpacing.hGapSm,
                     itemBuilder: (context, index) {
                       final msg = _mediaMessages[index];
                       return GestureDetector(
@@ -736,7 +670,7 @@ class _MediaCardState extends State<_MediaCard> {
                                 ),
                               ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: AppRadius.brSm,
                           child: SizedBox(
                             width: 80,
                             height: 80,
@@ -769,49 +703,30 @@ class _MediaCardState extends State<_MediaCard> {
   Widget _buildThumb(LocalMessage msg) {
     if (msg.type == 4) {
       final name = msg.mediaName ?? 'Document';
-      final ext = name.contains('.')
-          ? name.split('.').last.toUpperCase()
-          : 'FILE';
+      final ext = name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
       return Container(
-        color: Colors.grey.shade200,
+        color: AppColors.surfaceSubtle,
         child: Center(
           child: Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: _docColor(ext),
-              borderRadius: BorderRadius.circular(8),
-            ),
+            decoration: BoxDecoration(color: _docColor(ext), borderRadius: AppRadius.brSm),
             child: Center(
-              child: Text(
-                ext,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              child: Text(ext,
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
             ),
           ),
         ),
       );
     }
+    if (msg.type == 2) return Container(color: AppColors.surfaceSubtle);
 
-    if (msg.type == 2) {
-      return Container(color: Colors.grey.shade200);
-    }
-
-    final hasLocal = msg.localMediaPath != null &&
-        File(msg.localMediaPath!).existsSync();
+    final hasLocal = msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
     if (hasLocal) {
-      return Image.file(
-        File(msg.localMediaPath!),
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          color: Colors.grey.shade200,
-          child: const Icon(Icons.image, color: Colors.grey),
-        ),
-      );
+      return Image.file(File(msg.localMediaPath!),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(color: AppColors.surfaceSubtle));
     }
     final url = msg.mediaUrl;
     if (url != null && url.isNotEmpty) {
@@ -820,44 +735,26 @@ class _MediaCardState extends State<_MediaCard> {
         width: 80,
         height: 80,
         fit: BoxFit.cover,
-        placeholder: (context, url) =>
-            Container(color: Colors.grey.shade200),
-        errorWidget: (context, url, error) => Container(
-          color: Colors.grey.shade200,
-          child: const Icon(Icons.image, color: Colors.grey),
-        ),
+        placeholder: (context, url) => Container(color: AppColors.surfaceSubtle),
+        errorWidget: (context, url, error) => Container(color: AppColors.surfaceSubtle),
       );
     }
-    return Container(
-      color: Colors.grey.shade200,
-      child: const Icon(Icons.image, color: Colors.grey),
-    );
+    return Container(color: AppColors.surfaceSubtle);
   }
 
   Color _docColor(String ext) {
     switch (ext) {
-      case 'PDF':
-        return Colors.red.shade400;
-      case 'DOC':
-      case 'DOCX':
-        return Colors.blue.shade400;
-      case 'XLS':
-      case 'XLSX':
-        return Colors.green.shade400;
-      case 'PPT':
-      case 'PPTX':
-        return Colors.orange.shade400;
-      case 'ZIP':
-      case 'RAR':
-        return Colors.purple.shade400;
-      default:
-        return Colors.grey.shade500;
+      case 'PDF': return Colors.red.shade400;
+      case 'DOC': case 'DOCX': return Colors.blue.shade400;
+      case 'XLS': case 'XLSX': return Colors.green.shade400;
+      case 'PPT': case 'PPTX': return Colors.orange.shade400;
+      case 'ZIP': case 'RAR': return Colors.purple.shade400;
+      default: return Colors.grey.shade500;
     }
   }
 
   Future<void> _openDoc(LocalMessage msg) async {
-    String? path = (msg.localMediaPath != null &&
-            File(msg.localMediaPath!).existsSync())
+    String? path = (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
         ? msg.localMediaPath
         : null;
 
@@ -876,9 +773,8 @@ class _MediaCardState extends State<_MediaCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Impossible de télécharger le fichier'),
-            backgroundColor: Colors.red,
-          ),
+              content: Text('Impossible de télécharger le fichier'),
+              backgroundColor: AppColors.error),
         );
       }
       return;
@@ -888,9 +784,8 @@ class _MediaCardState extends State<_MediaCard> {
     if (res.type != ResultType.done && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('Aucune app pour ouvrir ce fichier (${res.message})'),
-          backgroundColor: Colors.red,
+          content: Text('Aucune app pour ouvrir ce fichier (${res.message})'),
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -900,8 +795,7 @@ class _MediaCardState extends State<_MediaCard> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          const Center(child: CircularProgressIndicator(color: Colors.white)),
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.white)),
     );
   }
 }
@@ -957,31 +851,23 @@ class _DangerRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _DangerRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _DangerRow({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFFEF4444), size: 22),
-            const SizedBox(width: 14),
+            Icon(icon, color: AppColors.error, size: AppIconSize.md),
+            AppSpacing.hGapMd,
             Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFFEF4444),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: Text(label,
+                  style: context.text.bodyLarge?.copyWith(
+                      color: AppColors.error, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -996,14 +882,14 @@ class _DangerDivider extends StatelessWidget {
     return Divider(
       height: 1,
       thickness: 1,
-      color: Colors.grey.shade200,
-      indent: 16,
-      endIndent: 16,
+      color: context.colors.outline,
+      indent: AppSpacing.lg,
+      endIndent: AppSpacing.lg,
     );
   }
 }
 
-// ── ERROR STATE ───────────────────────────────────────────────────────
+// ── ERROR STATE ────────────────────────────────────────────────────────
 
 class _ErrorState extends StatelessWidget {
   final String name;
@@ -1015,19 +901,17 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            CupertinoIcons.exclamationmark_circle,
-            color: Colors.grey,
-            size: 48,
-          ),
-          const SizedBox(height: 12),
+          Icon(CupertinoIcons.exclamationmark_circle,
+              color: context.colors.onSurfaceVariant, size: 48),
+          AppSpacing.vGapMd,
           Text(
             name.isNotEmpty
                 ? 'Impossible de charger $name'
                 : 'Contact introuvable',
-            style: TextStyle(color: Colors.grey.shade700),
+            style: context.text.bodyMedium
+                ?.copyWith(color: context.colors.onSurfaceVariant),
           ),
-          const SizedBox(height: 16),
+          AppSpacing.vGapLg,
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Retour'),
@@ -1043,21 +927,17 @@ class _ErrorState extends StatelessWidget {
 class _Card extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
-  const _Card({required this.child, required this.padding});
+  const _Card(
+      {required this.child,
+      this.padding = const EdgeInsets.all(AppSpacing.lg)});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: context.colors.surface,
+        borderRadius: AppRadius.brMd,
+        boxShadow: AppShadows.subtle,
       ),
       child: Padding(padding: padding, child: child),
     );

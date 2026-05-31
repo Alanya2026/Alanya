@@ -1,11 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_dimens.dart';
+import '../core/theme/app_theme.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
+import 'common/common.dart';
 
 class AddContactSheet extends StatefulWidget {
   const AddContactSheet({
+    super.key,
     required this.existingIds,
     required this.onAdded,
   });
@@ -58,7 +63,8 @@ class _AddContactSheetState extends State<AddContactSheet> {
       if (!mounted) return;
       setState(() {
         _results = data
-            .map((e) => e is User ? e : User.fromJson(e as Map<String, dynamic>))
+            .map((e) =>
+                e is User ? e : User.fromJson(e as Map<String, dynamic>))
             .toList();
         _isLoading = false;
       });
@@ -77,18 +83,18 @@ class _AddContactSheetState extends State<AddContactSheet> {
       setState(() => _adding.remove(user.alanyaID));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${user.nom.isNotEmpty ? user.nom : user.pseudo} ajouté aux contacts préférés'),
+          content: Text(
+              '${user.nom.isNotEmpty ? user.nom : user.pseudo} ajouté aux contacts préférés'),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: AppColors.success,
           duration: const Duration(seconds: 2),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _adding.remove(user.alanyaID));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erreur: $e')));
     }
   }
 
@@ -103,96 +109,65 @@ class _AddContactSheetState extends State<AddContactSheet> {
       maxChildSize: 0.95,
       expand: false,
       builder: (_, scrollController) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: BoxDecoration(
+          color: context.colors.surface,
+          borderRadius: AppRadius.sheetTop,
         ),
         child: Column(
           children: [
-            const SizedBox(height: 10),
+            AppSpacing.vGapSm,
             Container(
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppColors.outlineStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            AppSpacing.vGapLg,
+            Text(
               'Ajouter un contact préféré',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              style: context.text.titleLarge,
             ),
-            const SizedBox(height: 16),
-            // Champ de recherche
+            AppSpacing.vGapLg,
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: TextField(
+              padding: AppSpacing.screenH,
+              child: AppSearchField(
                 controller: _searchController,
+                hintText: 'Rechercher par nom, pseudo ou téléphone…',
                 autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher par nom, pseudo ou téléphone…',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _results = []);
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+                onChanged: (_) {},
+                onClear: () {
+                  _searchController.clear();
+                  setState(() => _results = []);
+                },
               ),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.vGapMd,
 
-            // Résultats
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+                  ? const LoadingState()
                   : _results.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _searchController.text.length >= 2
-                                    ? Icons.person_search
-                                    : CupertinoIcons.search,
-                                size: 44,
-                                color: Colors.grey.shade300,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _searchController.text.length < 2
-                                    ? 'Tapez au moins 2 caractères'
-                                    : 'Aucun résultat',
-                                style: TextStyle(color: Colors.grey.shade500),
-                              ),
-                            ],
-                          ),
+                      ? EmptyState(
+                          icon: _searchController.text.length < 2
+                              ? CupertinoIcons.search
+                              : Icons.person_search,
+                          title: _searchController.text.length < 2
+                              ? 'Tapez au moins 2 caractères'
+                              : 'Aucun résultat',
                         )
                       : ListView.builder(
                           controller: scrollController,
-                          padding: const EdgeInsets.only(bottom: 16),
+                          padding:
+                              const EdgeInsets.only(bottom: AppSpacing.lg),
                           itemCount: _results.length,
                           itemBuilder: (_, index) {
                             final user = _results[index];
-                            final alreadyContact = _isAlreadyContact(user);
-                            final isAdding = _adding.contains(user.alanyaID);
-
                             return AddContactItem(
                               user: user,
-                              alreadyContact: alreadyContact,
-                              isAdding: isAdding,
+                              alreadyContact: _isAlreadyContact(user),
+                              isAdding: _adding.contains(user.alanyaID),
                               onAdd: () => _addContact(user),
                             );
                           },
@@ -205,9 +180,10 @@ class _AddContactSheetState extends State<AddContactSheet> {
   }
 }
 
-/// Widget réutilisable pour afficher un élément de contact dans la liste
+/// Widget réutilisable pour afficher un élément de contact dans la liste.
 class AddContactItem extends StatelessWidget {
   const AddContactItem({
+    super.key,
     required this.user,
     required this.alreadyContact,
     required this.isAdding,
@@ -221,33 +197,17 @@ class AddContactItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial =
-        user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?';
-
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 4,
-      ),
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundColor: Colors.indigo.shade50,
-        backgroundImage: user.avatarUrl.isNotEmpty
-            ? NetworkImage(user.avatarUrl)
-            : null,
-        child: user.avatarUrl.isEmpty
-            ? Text(
-                initial,
-                style: const TextStyle(
-                  color: Colors.indigo,
-                  fontWeight: FontWeight.bold,
-                ),
-              )
-            : null,
+          horizontal: AppSpacing.xl, vertical: AppSpacing.xs),
+      leading: AppAvatar(
+        imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
+        name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+        size: AppSizes.avatarMd,
       ),
       title: Text(
         user.nom.isNotEmpty ? user.nom : user.pseudo,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+        style: context.text.titleSmall,
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,36 +215,35 @@ class AddContactItem extends StatelessWidget {
           if (user.pseudo.isNotEmpty)
             Text(
               '@${user.pseudo}',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+              style: context.text.labelSmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
           Text(
             user.alanyaPhone,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            style: context.text.labelSmall
+                ?.copyWith(color: context.colors.onSurfaceVariant),
           ),
         ],
       ),
       trailing: alreadyContact
           ? Chip(
-              label: const Text(
-                'Déjà ajouté',
-                style: TextStyle(fontSize: 12),
-              ),
-              backgroundColor: Colors.grey.shade100,
+              label: const Text('Déjà ajouté', style: TextStyle(fontSize: 12)),
+              backgroundColor: AppColors.surfaceMuted,
               padding: EdgeInsets.zero,
             )
           : isAdding
-              ? const SizedBox(
+              ? SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.indigo,
+                    color: context.colors.primary,
                   ),
                 )
               : IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.person_add_outlined,
-                    color: Colors.indigo,
+                    color: context.colors.primary,
                   ),
                   onPressed: onAdd,
                 ),

@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../../core/theme/app_colors.dart';
 
 /// Visionneuse plein écran pour image ou vidéo.
 /// Privilégie le fichier local (offline) puis l'URL réseau.
@@ -35,10 +36,12 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   }
 
   Future<void> _initVideo() async {
-    final hasLocal = widget.localPath != null && File(widget.localPath!).existsSync();
+    final hasLocal =
+        widget.localPath != null && File(widget.localPath!).existsSync();
     _video = hasLocal
         ? VideoPlayerController.file(File(widget.localPath!))
-        : VideoPlayerController.networkUrl(Uri.parse(widget.networkUrl ?? ''));
+        : VideoPlayerController.networkUrl(
+            Uri.parse(widget.networkUrl ?? ''));
     await _video!.initialize();
     if (!mounted) return;
     setState(() {
@@ -61,31 +64,42 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(widget.title ?? '', style: const TextStyle(color: Colors.white, fontSize: 16)),
+        backgroundColor: AppColors.black,
+        iconTheme: const IconThemeData(color: AppColors.white),
+        title: Text(
+          widget.title ?? '',
+          style: const TextStyle(color: AppColors.white, fontSize: 16),
+        ),
       ),
       body: Center(child: widget.isVideo ? _buildVideo() : _buildImage()),
     );
   }
 
   Widget _buildVideo() {
-    if (_chewie == null) return const CircularProgressIndicator(color: Colors.white);
+    if (_chewie == null) {
+      return const CircularProgressIndicator(color: AppColors.white);
+    }
     return Chewie(controller: _chewie!);
   }
 
   Widget _buildImage() {
-    final hasLocal = widget.localPath != null && File(widget.localPath!).existsSync();
+    final hasLocal =
+        widget.localPath != null && File(widget.localPath!).existsSync();
     if (hasLocal) {
       return InteractiveViewer(child: Image.file(File(widget.localPath!)));
     }
     return InteractiveViewer(
       child: CachedNetworkImage(
         imageUrl: widget.networkUrl ?? '',
-        placeholder: (_, __) => const CircularProgressIndicator(color: Colors.white),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white54, size: 64),
+        placeholder: (_, __) =>
+            const CircularProgressIndicator(color: AppColors.white),
+        errorWidget: (_, __, ___) => const Icon(
+          Icons.broken_image,
+          color: Colors.white54,
+          size: 64,
+        ),
       ),
     );
   }

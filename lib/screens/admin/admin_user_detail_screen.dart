@@ -1,10 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/admin_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
-import '../../core/utils/avatar_utils.dart';
+import '../../widgets/common/common.dart';
 
 class AdminUserDetailScreen extends StatefulWidget {
   final int userId;
@@ -12,7 +15,8 @@ class AdminUserDetailScreen extends StatefulWidget {
   const AdminUserDetailScreen({super.key, required this.userId});
 
   @override
-  State<AdminUserDetailScreen> createState() => _AdminUserDetailScreenState();
+  State<AdminUserDetailScreen> createState() =>
+      _AdminUserDetailScreenState();
 }
 
 class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
@@ -31,7 +35,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
     final user = await provider.getUserById(widget.userId);
     if (mounted) {
       setState(() {
-        _appBarName = user.nom.isNotEmpty ? user.nom : 'Utilisateur';
+        _appBarName =
+            user.nom.isNotEmpty ? user.nom : 'Utilisateur';
       });
     }
     Map<String, dynamic> activity = const {};
@@ -40,9 +45,11 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
       activity = await api.adminGetUserActivity(widget.userId);
     } catch (_) {}
     try {
-      logins = await api.adminGetUserLogins(widget.userId, limit: 10);
+      logins =
+          await api.adminGetUserLogins(widget.userId, limit: 10);
     } catch (_) {}
-    return _UserDetailData(user: user, activity: activity, logins: logins);
+    return _UserDetailData(
+        user: user, activity: activity, logins: logins);
   }
 
   Future<void> _reload() async {
@@ -54,20 +61,11 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F8),
+      backgroundColor: AppColors.surfaceMuted,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFFF4F5F8),
-        foregroundColor: Colors.black,
+        backgroundColor: AppColors.surfaceMuted,
         centerTitle: true,
-        title: Text(
-          _appBarName,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
-          ),
-        ),
+        title: Text(_appBarName),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.maybePop(context),
@@ -77,16 +75,17 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           if (!snapshot.hasData) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: AppSpacing.card,
                 child: Text(
                   'Erreur: ${snapshot.error ?? "données indisponibles"}',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade700),
+                  style: context.text.bodyMedium
+                      ?.copyWith(color: context.colors.onSurface),
                 ),
               ),
             );
@@ -96,14 +95,15 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
           return RefreshIndicator(
             onRefresh: _reload,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xxxl),
               children: [
                 _ProfileCard(user: user),
-                const SizedBox(height: 16),
+                AppSpacing.vGapLg,
                 _ActivityCard(activity: data.activity),
-                const SizedBox(height: 16),
+                AppSpacing.vGapLg,
                 _LoginsCard(logins: data.logins),
-                const SizedBox(height: 16),
+                AppSpacing.vGapLg,
                 _ActionsCard(user: user, onChanged: _reload),
               ],
             ),
@@ -134,56 +134,48 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.xxl, AppSpacing.xl, AppSpacing.sm),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 56,
-            backgroundColor: const Color(0xFFCBD0E8),
-            backgroundImage: hasValidAvatarUrl(user.avatarUrl)
-                ? NetworkImage(user.avatarUrl)
-                : null,
-            child: !hasValidAvatarUrl(user.avatarUrl)
-                ? Text(
-                    user.nom.isNotEmpty ? user.nom[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
-                : null,
+          AppAvatar(
+            imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
+            name: user.nom.isNotEmpty ? user.nom : '?',
+            size: 112,
           ),
-          const SizedBox(height: 14),
+          AppSpacing.vGapMd,
           Text(
             user.nom.isNotEmpty ? user.nom : '—',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
-            ),
+            style: context.text.headlineSmall,
           ),
-          const SizedBox(height: 4),
+          AppSpacing.vGapXs,
           if (user.pseudo.isNotEmpty)
             Text(
               '@${user.pseudo}',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              style: context.text.bodyMedium
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
-          const SizedBox(height: 10),
+          AppSpacing.vGapSm,
           _RoleBadge(typeCompte: user.typeCompte, banned: user.exclus),
-          const SizedBox(height: 16),
-          Divider(color: Colors.grey.shade200, height: 1),
-          const SizedBox(height: 8),
+          AppSpacing.vGapLg,
+          Divider(color: context.colors.outline, height: 1),
+          AppSpacing.vGapSm,
           _InfoRow(label: 'ID', value: '${user.alanyaID}'),
           _InfoRow(label: 'Téléphone', value: user.alanyaPhone),
           _InfoRow(label: 'Email', value: user.email),
           if ((user.paysLibelle ?? '').isNotEmpty)
             _InfoRow(label: 'Pays', value: user.paysLibelle!),
-          _InfoRow(label: 'Inscrit(e) le', value: _formatDate(user.createdAt)),
-          _InfoRow(label: 'Dernière vue', value: _formatDate(user.lastSeen)),
-          if (user.exclus && (user.excludeReason ?? '').isNotEmpty)
-            _InfoRow(label: 'Motif ban', value: user.excludeReason!),
-          const SizedBox(height: 8),
+          _InfoRow(
+              label: 'Inscrit(e) le',
+              value: _formatDate(user.createdAt)),
+          _InfoRow(
+              label: 'Dernière vue',
+              value: _formatDate(user.lastSeen)),
+          if (user.exclus &&
+              (user.excludeReason ?? '').isNotEmpty)
+            _InfoRow(
+                label: 'Motif ban', value: user.excludeReason!),
+          AppSpacing.vGapSm,
         ],
       ),
     );
@@ -207,25 +199,26 @@ class _RoleBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, fg, bg) = banned
-        ? ('Banni', const Color(0xFFD8453E), const Color(0xFFFDECEC))
+        ? ('Banni', context.colors.error, AppColors.errorContainer)
         : typeCompte >= 2
-            ? ('Super Admin', const Color(0xFF6B3CD2), const Color(0xFFEDE3FC))
+            ? ('Super Admin', const Color(0xFF6B3CD2),
+                const Color(0xFFEDE3FC))
             : typeCompte >= 1
-                ? ('Admin', const Color(0xFF1E66D8), const Color(0xFFE3EEFE))
-                : ('Utilisateur', Colors.grey.shade700, const Color(0xFFEDEDF1));
+                ? ('Admin', context.colors.primary,
+                    context.colors.primaryContainer)
+                : ('Utilisateur', context.colors.onSurfaceVariant,
+                    context.semantic.surfaceMuted);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm - 2),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.brPill,
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: fg,
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
-        ),
+            color: fg, fontWeight: FontWeight.w600, fontSize: 13),
       ),
     );
   }
@@ -239,7 +232,7 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -247,17 +240,15 @@ class _InfoRow extends StatelessWidget {
             width: 110,
             child: Text(
               label,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              style: context.text.bodyMedium
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: Colors.black,
-              ),
+              style: context.text.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -281,6 +272,7 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Couleurs sémantiques intentionnelles pour les métriques d'activité.
     final items = [
       _ActivityItem(
         label: 'Messages',
@@ -300,15 +292,15 @@ class _ActivityCard extends StatelessWidget {
         label: 'Appels émis',
         value: _i('callsMade'),
         icon: Icons.phone_forwarded,
-        iconColor: const Color(0xFFF59E0B),
-        bg: const Color(0xFFFDF3E2),
+        iconColor: AppColors.warning,
+        bg: AppColors.warningContainer,
       ),
       _ActivityItem(
         label: 'Appels reçus',
         value: _i('callsReceived'),
         icon: Icons.phone_callback,
-        iconColor: const Color(0xFFEF4444),
-        bg: const Color(0xFFFDECEC),
+        iconColor: AppColors.error,
+        bg: AppColors.errorContainer,
       ),
       _ActivityItem(
         label: 'Statuts',
@@ -319,25 +311,18 @@ class _ActivityCard extends StatelessWidget {
       ),
     ];
     return _Card(
-      padding: const EdgeInsets.all(20),
+      padding: AppSpacing.card,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Activité',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 14),
+          Text('Activité', style: context.text.titleLarge),
+          AppSpacing.vGapMd,
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
+            mainAxisSpacing: AppSpacing.sm,
+            crossAxisSpacing: AppSpacing.sm,
             childAspectRatio: 2.4,
             children: items,
           ),
@@ -364,10 +349,10 @@ class _ActivityItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.brSm,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -381,7 +366,7 @@ class _ActivityItem extends StatelessWidget {
             ),
             child: Icon(icon, color: iconColor, size: 16),
           ),
-          const SizedBox(width: 10),
+          AppSpacing.hGapSm,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,20 +374,14 @@ class _ActivityItem extends StatelessWidget {
               children: [
                 Text(
                   '$value',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                    height: 1.15,
-                  ),
+                  style: context.text.titleSmall
+                      ?.copyWith(height: 1.15),
                 ),
                 Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade700,
-                    height: 1.2,
-                  ),
+                  style: context.text.labelSmall?.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                      height: 1.2),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -423,23 +402,17 @@ class _LoginsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      padding: const EdgeInsets.all(20),
+      padding: AppSpacing.card,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Connexions récentes',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 12),
+          Text('Connexions récentes', style: context.text.titleLarge),
+          AppSpacing.vGapMd,
           if (logins.isEmpty)
             Text(
               'Aucune connexion enregistrée',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              style: context.text.bodyMedium
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             )
           else
             ...logins.take(5).map((raw) {
@@ -485,7 +458,7 @@ class _LoginRow extends StatelessWidget {
       if (ip.isNotEmpty) ip,
     ];
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm - 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -493,34 +466,28 @@ class _LoginRow extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: const Color(0xFFE3EEFE),
-              borderRadius: BorderRadius.circular(8),
+              color: context.colors.primaryContainer,
+              borderRadius: AppRadius.brSm,
             ),
-            child: const Icon(
+            child: Icon(
               CupertinoIcons.device_phone_portrait,
               size: 16,
-              color: Color(0xFF1E66D8),
+              color: context.colors.primary,
             ),
           ),
-          const SizedBox(width: 10),
+          AppSpacing.hGapSm,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _fmt(date),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
+                Text(_fmt(date),
+                    style: context.text.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600)),
                 if (subtitleParts.isNotEmpty)
                   Text(
                     subtitleParts.join(' · '),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
+                    style: context.text.bodySmall?.copyWith(
+                        color: context.colors.onSurfaceVariant),
                     overflow: TextOverflow.ellipsis,
                   ),
               ],
@@ -567,7 +534,7 @@ class _ActionsCard extends StatelessWidget {
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text(
               'Supprimer',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: AppColors.error),
             ),
           ),
         ],
@@ -583,52 +550,47 @@ class _ActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      padding: const EdgeInsets.fromLTRB(20, 20, 12, 8),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.xl, AppSpacing.md, AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8, bottom: 4),
-            child: Text(
-              'Actions',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(
+                right: AppSpacing.sm, bottom: AppSpacing.xs),
+            child: Text('Actions', style: context.text.titleLarge),
           ),
           _ActionRow(
             icon: user.exclus
                 ? CupertinoIcons.checkmark_circle_fill
                 : CupertinoIcons.nosign,
             label: user.exclus ? 'Débannir' : 'Bannir',
-            iconColor: user.exclus
-                ? const Color(0xFF16A34A)
-                : const Color(0xFFEF4444),
+            iconColor:
+                user.exclus ? AppColors.success : AppColors.error,
             iconBg: user.exclus
-                ? const Color(0xFFE7F6EC)
-                : const Color(0xFFFDECEC),
-            labelColor: user.exclus
-                ? const Color(0xFF16A34A)
-                : const Color(0xFFEF4444),
+                ? AppColors.successContainer
+                : AppColors.errorContainer,
+            labelColor:
+                user.exclus ? AppColors.success : AppColors.error,
             onTap: () => _toggleBan(context),
           ),
           _ActionRow(
             icon: user.typeCompte >= 1
                 ? CupertinoIcons.shield_slash_fill
                 : CupertinoIcons.shield_fill,
-            label: user.typeCompte >= 1 ? 'Rétrograder' : 'Rendre admin',
-            iconColor: const Color(0xFF1E66D8),
-            iconBg: const Color(0xFFE3EEFE),
+            label: user.typeCompte >= 1
+                ? 'Rétrograder'
+                : 'Rendre admin',
+            iconColor: context.colors.primary,
+            iconBg: context.colors.primaryContainer,
             onTap: () => _toggleAdmin(context),
           ),
           _ActionRow(
             icon: CupertinoIcons.trash_fill,
             label: 'Supprimer',
-            iconColor: const Color(0xFFB91C1C),
-            iconBg: const Color(0xFFFDECEC),
-            labelColor: const Color(0xFFB91C1C),
+            iconColor: AppColors.error,
+            iconBg: AppColors.errorContainer,
+            labelColor: AppColors.error,
             onTap: () => _delete(context),
           ),
         ],
@@ -657,9 +619,10 @@ class _ActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: AppRadius.brSm,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.sm, horizontal: AppSpacing.xs),
         child: Row(
           children: [
             Container(
@@ -667,25 +630,22 @@ class _ActionRow extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: iconBg,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: AppRadius.brSm,
               ),
-              child: Icon(icon, color: iconColor, size: 18),
+              child: Icon(icon, color: iconColor, size: AppIconSize.sm),
             ),
-            const SizedBox(width: 14),
+            AppSpacing.hGapMd,
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(
-                  fontSize: 15,
+                style: context.text.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: labelColor ?? Colors.black,
+                  color: labelColor ?? context.colors.onSurface,
                 ),
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: Colors.grey.shade400,
-            ),
+            Icon(Icons.chevron_right,
+                color: context.colors.outlineVariant),
           ],
         ),
       ),
@@ -705,15 +665,9 @@ class _Card extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.colors.surface,
+        borderRadius: AppRadius.brLg,
+        boxShadow: AppShadows.subtle,
       ),
       child: Padding(padding: padding, child: child),
     );
