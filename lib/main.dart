@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -10,6 +11,7 @@ import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
+import 'core/network/cert_pinning.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/services/call_service.dart';
@@ -29,6 +31,17 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[Main] ======== Application démarrée ========');
+
+  // Certificate pinning : le backend utilise un certificat auto-signé. On ne
+  // fait confiance qu'à ce certificat précis (embarqué dans les assets), ce qui
+  // règle le HandshakeException sans ouvrir la porte au MITM. Couvre http,
+  // uploads, socket.io et cached_network_image via HttpOverrides.global.
+  try {
+    HttpOverrides.global = await PinnedCertHttpOverrides.load();
+    debugPrint('[Main] Certificate pinning activé');
+  } catch (e) {
+    debugPrint('[Main] ** Échec activation cert pinning: $e');
+  }
 
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
