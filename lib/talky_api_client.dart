@@ -14,8 +14,8 @@ import 'talky_models.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production
-  static const String baseUrl   = 'http://158.220.107.211/api';
-  static const String socketUrl = 'http://158.220.107.211/';
+  static const String baseUrl   = 'https://158.220.107.211/api';
+  static const String socketUrl = 'https://158.220.107.211/';
 
   String? _accessToken;
   String? _refreshToken;
