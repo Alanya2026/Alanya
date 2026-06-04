@@ -276,9 +276,9 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surfaceMuted,
+      backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceMuted,
+        backgroundColor: context.semantic.surfaceMuted,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -487,8 +487,8 @@ class _QuickActionsCard extends StatelessWidget {
             child: _QuickAction(
               icon: isFavorite ? Icons.star : Icons.star_border,
               label: isFavorite ? 'Favori' : 'Ajouter',
-              iconColor: isFavorite ? Colors.amber.shade600 : context.colors.primary,
-              bg: isFavorite ? const Color(0xFFFEF3CB) : context.colors.primaryContainer,
+              iconColor: isFavorite ? context.semantic.warning : context.colors.primary,
+              bg: isFavorite ? context.semantic.warningContainer : context.colors.primaryContainer,
               onTap: onToggleFavorite,
             ),
           ),
@@ -705,7 +705,7 @@ class _MediaCardState extends State<_MediaCard> {
       final name = msg.mediaName ?? 'Document';
       final ext = name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
       return Container(
-        color: AppColors.surfaceSubtle,
+        color: context.colors.surfaceContainerHighest,
         child: Center(
           child: Container(
             width: 40,
@@ -720,13 +720,13 @@ class _MediaCardState extends State<_MediaCard> {
         ),
       );
     }
-    if (msg.type == 2) return Container(color: AppColors.surfaceSubtle);
+    if (msg.type == 2) return Container(color: context.colors.surfaceContainerHighest);
 
     final hasLocal = msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
     if (hasLocal) {
       return Image.file(File(msg.localMediaPath!),
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: AppColors.surfaceSubtle));
+          errorBuilder: (_, __, ___) => Container(color: context.colors.surfaceContainerHighest));
     }
     final url = msg.mediaUrl;
     if (url != null && url.isNotEmpty) {
@@ -735,11 +735,11 @@ class _MediaCardState extends State<_MediaCard> {
         width: 80,
         height: 80,
         fit: BoxFit.cover,
-        placeholder: (context, url) => Container(color: AppColors.surfaceSubtle),
-        errorWidget: (context, url, error) => Container(color: AppColors.surfaceSubtle),
+        placeholder: (context, url) => Container(color: context.colors.surfaceContainerHighest),
+        errorWidget: (context, url, error) => Container(color: context.colors.surfaceContainerHighest),
       );
     }
-    return Container(color: AppColors.surfaceSubtle);
+    return Container(color: context.colors.surfaceContainerHighest);
   }
 
   Color _docColor(String ext) {
