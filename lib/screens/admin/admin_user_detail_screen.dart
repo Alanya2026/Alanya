@@ -61,9 +61,9 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surfaceMuted,
+      backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceMuted,
+        backgroundColor: context.semantic.surfaceMuted,
         centerTitle: true,
         title: Text(_appBarName),
         leading: IconButton(
@@ -199,10 +199,10 @@ class _RoleBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, fg, bg) = banned
-        ? ('Banni', context.colors.error, AppColors.errorContainer)
+        ? ('Banni', context.colors.error, context.colors.errorContainer)
         : typeCompte >= 2
-            ? ('Super Admin', const Color(0xFF6B3CD2),
-                const Color(0xFFEDE3FC))
+            ? ('Super Admin', const Color(0xFF7C4DFF),
+                Color(0xFF7C4DFF).withValues(alpha: 0.16))
             : typeCompte >= 1
                 ? ('Admin', context.colors.primary,
                     context.colors.primaryContainer)
@@ -279,35 +279,30 @@ class _ActivityCard extends StatelessWidget {
         value: _i('messagesSent'),
         icon: CupertinoIcons.chat_bubble_2_fill,
         iconColor: const Color(0xFF3B82F6),
-        bg: const Color(0xFFEAF2FE),
       ),
       _ActivityItem(
         label: 'Conversations',
         value: _i('conversations'),
         icon: CupertinoIcons.chat_bubble_2,
         iconColor: const Color(0xFF14B8A6),
-        bg: const Color(0xFFE6F6F3),
       ),
       _ActivityItem(
         label: 'Appels émis',
         value: _i('callsMade'),
         icon: Icons.phone_forwarded,
         iconColor: AppColors.warning,
-        bg: AppColors.warningContainer,
       ),
       _ActivityItem(
         label: 'Appels reçus',
         value: _i('callsReceived'),
         icon: Icons.phone_callback,
         iconColor: AppColors.error,
-        bg: AppColors.errorContainer,
       ),
       _ActivityItem(
         label: 'Statuts',
         value: _i('statusesPublished'),
         icon: CupertinoIcons.sparkles,
         iconColor: const Color(0xFFEC4899),
-        bg: const Color(0xFFFCE7F1),
       ),
     ];
     return _Card(
@@ -337,13 +332,11 @@ class _ActivityItem extends StatelessWidget {
   final int value;
   final IconData icon;
   final Color iconColor;
-  final Color bg;
   const _ActivityItem({
     required this.label,
     required this.value,
     required this.icon,
     required this.iconColor,
-    required this.bg,
   });
 
   @override
@@ -351,7 +344,7 @@ class _ActivityItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: bg,
+        color: iconColor.withValues(alpha: 0.10),
         borderRadius: AppRadius.brSm,
       ),
       child: Row(
@@ -568,8 +561,8 @@ class _ActionsCard extends StatelessWidget {
             iconColor:
                 user.exclus ? AppColors.success : AppColors.error,
             iconBg: user.exclus
-                ? AppColors.successContainer
-                : AppColors.errorContainer,
+                ? context.semantic.successContainer
+                : context.colors.errorContainer,
             labelColor:
                 user.exclus ? AppColors.success : AppColors.error,
             onTap: () => _toggleBan(context),
@@ -589,7 +582,7 @@ class _ActionsCard extends StatelessWidget {
             icon: CupertinoIcons.trash_fill,
             label: 'Supprimer',
             iconColor: AppColors.error,
-            iconBg: AppColors.errorContainer,
+            iconBg: context.colors.errorContainer,
             labelColor: AppColors.error,
             onTap: () => _delete(context),
           ),
