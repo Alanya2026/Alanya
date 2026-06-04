@@ -26,6 +26,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.surfaceMuted,
     required this.immersiveBackground,
     required this.immersiveSurface,
+    required this.navGlass,
+    required this.navGlassBorder,
+    required this.navGlassBadgeBorder,
   });
 
   final Color success;
@@ -43,6 +46,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   final Color surfaceMuted;
   final Color immersiveBackground;
   final Color immersiveSurface;
+  final Color navGlass;
+  final Color navGlassBorder;
+  final Color navGlassBadgeBorder;
 
   static const AppSemanticColors light = AppSemanticColors(
     success: AppColors.success,
@@ -60,6 +66,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     surfaceMuted: AppColors.surfaceMuted,
     immersiveBackground: AppColors.immersiveBackground,
     immersiveSurface: AppColors.immersiveSurface,
+    navGlass: AppColors.navGlass,
+    navGlassBorder: AppColors.navGlassBorder,
+    navGlassBadgeBorder: AppColors.navGlassBadgeBorder,
   );
 
   static const AppSemanticColors dark = AppSemanticColors(
@@ -78,6 +87,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     surfaceMuted: AppColors.darkSurfaceMuted,
     immersiveBackground: AppColors.immersiveBackground,
     immersiveSurface: AppColors.immersiveSurface,
+    navGlass: AppColors.darkNavGlass,
+    navGlassBorder: AppColors.darkNavGlassBorder,
+    navGlassBadgeBorder: AppColors.darkNavGlassBadgeBorder,
   );
 
   @override
@@ -97,6 +109,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? surfaceMuted,
     Color? immersiveBackground,
     Color? immersiveSurface,
+    Color? navGlass,
+    Color? navGlassBorder,
+    Color? navGlassBadgeBorder,
   }) {
     return AppSemanticColors(
       success: success ?? this.success,
@@ -114,6 +129,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       surfaceMuted: surfaceMuted ?? this.surfaceMuted,
       immersiveBackground: immersiveBackground ?? this.immersiveBackground,
       immersiveSurface: immersiveSurface ?? this.immersiveSurface,
+      navGlass: navGlass ?? this.navGlass,
+      navGlassBorder: navGlassBorder ?? this.navGlassBorder,
+      navGlassBadgeBorder: navGlassBadgeBorder ?? this.navGlassBadgeBorder,
     );
   }
 
@@ -137,6 +155,10 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       immersiveBackground:
           Color.lerp(immersiveBackground, other.immersiveBackground, t)!,
       immersiveSurface: Color.lerp(immersiveSurface, other.immersiveSurface, t)!,
+      navGlass: Color.lerp(navGlass, other.navGlass, t)!,
+      navGlassBorder: Color.lerp(navGlassBorder, other.navGlassBorder, t)!,
+      navGlassBadgeBorder:
+          Color.lerp(navGlassBadgeBorder, other.navGlassBadgeBorder, t)!,
     );
   }
 }

@@ -3,7 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
@@ -28,6 +27,7 @@ class GlassNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final semantic = context.semantic;
     return Container(
       margin: const EdgeInsets.fromLTRB(AppSpacing.xl, 6, AppSpacing.xl, AppSpacing.md),
       decoration: const BoxDecoration(boxShadow: AppShadows.strong),
@@ -38,10 +38,10 @@ class GlassNavBar extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             decoration: BoxDecoration(
-              color: AppColors.white.withAlpha(130),
+              color: semantic.navGlass,
               borderRadius: AppRadius.brPill,
               border: Border.all(
-                color: AppColors.white.withAlpha(150),
+                color: semantic.navGlassBorder,
                 width: 1,
               ),
             ),
@@ -164,7 +164,7 @@ class _IconWithBadge extends StatelessWidget {
                 count: count,
                 color: context.semantic.warning,
                 textColor: context.semantic.onWarning,
-                borderColor: AppColors.white,
+                borderColor: context.semantic.navGlassBadgeBorder,
               ),
             ),
           ],

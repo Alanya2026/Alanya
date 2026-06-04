@@ -91,4 +91,22 @@ class AppColors {
   static const Color darkTextPrimary = Color(0xFFF2F4F8);
   static const Color darkTextSecondary = Color(0xFFAAB1C0);
   static const Color darkTextTertiary = Color(0xFF6F7787);
+
+  // ── Barre de navigation flottante « glass » ───────────────────────────
+  // Alpha pré-calculé dans le canal ARGB (pour rester `const`) : le panneau
+  // givré s'éclaircit par rapport au fond (blanc translucide en clair,
+  // surface élevée translucide en sombre) et le liseré capte la lumière.
+  /// Fond du panneau (blanc translucide, alpha 130).
+  static const Color navGlass = Color(0x82FFFFFF);
+  /// Liseré du panneau (blanc franc, alpha 150).
+  static const Color navGlassBorder = Color(0x96FFFFFF);
+  /// Anneau des badges posés sur le panneau (couleur du panneau, opaque).
+  static const Color navGlassBadgeBorder = white;
+
+  /// Fond du panneau en sombre (surfaceContainerHigh translucide, alpha 205).
+  static const Color darkNavGlass = Color(0xCD242832);
+  /// Liseré du panneau en sombre (blanc très discret, alpha 20).
+  static const Color darkNavGlassBorder = Color(0x14FFFFFF);
+  /// Anneau des badges en sombre (couleur du panneau, opaque).
+  static const Color darkNavGlassBadgeBorder = Color(0xFF242832);
 }
