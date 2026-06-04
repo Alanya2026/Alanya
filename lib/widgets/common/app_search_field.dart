@@ -16,6 +16,8 @@ class AppSearchField extends StatelessWidget {
     this.onClear,
     this.autofocus = false,
     this.focusNode,
+    this.fillColor,
+    this.borderColor,
   });
 
   final TextEditingController? controller;
@@ -24,6 +26,14 @@ class AppSearchField extends StatelessWidget {
   final VoidCallback? onClear;
   final bool autofocus;
   final FocusNode? focusNode;
+
+  /// Couleur de remplissage (sinon celle du thème). Utile pour détacher le
+  /// champ d'un fond `surfaceMuted` identique à la valeur par défaut.
+  final Color? fillColor;
+
+  /// Bordure au repos (sinon aucune, comme dans le thème). Le focus garde la
+  /// bordure primaire du thème.
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +56,14 @@ class AppSearchField extends StatelessWidget {
                     color: colors.onSurfaceVariant, size: AppIconSize.sm),
                 onPressed: onClear,
                 tooltip: 'Effacer',
+              ),
+        filled: fillColor != null ? true : null,
+        fillColor: fillColor,
+        enabledBorder: borderColor == null
+            ? null
+            : OutlineInputBorder(
+                borderRadius: AppRadius.brSm,
+                borderSide: BorderSide(color: borderColor!),
               ),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.md),

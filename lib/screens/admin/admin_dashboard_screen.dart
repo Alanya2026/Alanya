@@ -53,6 +53,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ]);
   }
 
+  void _applyFilter(_UserFilter filter) {
+    setState(() => _filter = filter);
+    context.read<AdminProvider>().loadUsers(
+          search: _searchCtrl.text,
+          status: _statusFilter,
+          page: 1,
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
@@ -161,81 +170,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   AppSpacing.vGapXl,
 
-                  // Filter chips
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _FilterChip(
-                          label: 'Tous',
-                          icon: CupertinoIcons.person_2,
-                          selected: _filter == _UserFilter.all,
-                          onTap: () {
-                            setState(() => _filter = _UserFilter.all);
-                            context.read<AdminProvider>().loadUsers(
-                                  search: _searchCtrl.text,
-                                  status: _statusFilter,
-                                  page: 1,
-                                );
-                          },
-                          showCheck: true,
-                        ),
-                      ),
-                      AppSpacing.hGapSm,
-                      Expanded(
-                        child: _FilterChip(
-                          label: 'En ligne',
-                          icon: CupertinoIcons.circle_fill,
-                          selected: _filter == _UserFilter.online,
-                          onTap: () {
-                            setState(() => _filter = _UserFilter.online);
-                            context.read<AdminProvider>().loadUsers(
-                                  search: _searchCtrl.text,
-                                  status: _statusFilter,
-                                  page: 1,
-                                );
-                          },
-                        ),
-                      ),
-                      AppSpacing.hGapSm,
-                      Expanded(
-                        child: _FilterChip(
-                          label: 'Bannis',
-                          icon: CupertinoIcons.nosign,
-                          selected: _filter == _UserFilter.banned,
-                          onTap: () {
-                            setState(() => _filter = _UserFilter.banned);
-                            context.read<AdminProvider>().loadUsers(
-                                  search: _searchCtrl.text,
-                                  status: _statusFilter,
-                                  page: 1,
-                                );
-                          },
-                        ),
-                      ),
-                      AppSpacing.hGapSm,
-                      Expanded(
-                        child: _FilterChip(
-                          label: 'Admins',
-                          icon: CupertinoIcons.shield_lefthalf_fill,
-                          selected: _filter == _UserFilter.admin,
-                          onTap: () {
-                            setState(() => _filter = _UserFilter.admin);
-                            context.read<AdminProvider>().loadUsers(
-                                  search: _searchCtrl.text,
-                                  status: _statusFilter,
-                                  page: 1,
-                                );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  AppSpacing.vGapMd,
-
-                  // Search bar
+                  // Barre de recherche — fond `surface` + bordure pour la
+                  // détacher du fond `surfaceMuted` de la page.
                   AppSearchField(
                     controller: _searchCtrl,
                     hintText: 'Rechercher par nom, pseudo ou ...',
+                    fillColor: context.colors.surface,
+                    borderColor: context.colors.outline,
                     onChanged: (val) {
                       setState(() {});
                       provider.setSearchQuery(val);
@@ -248,6 +189,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       provider.loadUsers(status: _statusFilter);
                       setState(() {});
                     },
+                  ),
+                  AppSpacing.vGapMd,
+
+                  // Filtres — pilules défilantes avec accents sémantiques.
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.none,
+                    child: Row(
+                      children: [
+                        _FilterChip(
+                          label: 'Tous',
+                          icon: CupertinoIcons.person_2,
+                          selected: _filter == _UserFilter.all,
+                          onTap: () => _applyFilter(_UserFilter.all),
+                        ),
+                        AppSpacing.hGapSm,
+                        _FilterChip(
+                          label: 'En ligne',
+                          icon: CupertinoIcons.circle_fill,
+                          accent: context.semantic.online,
+                          selected: _filter == _UserFilter.online,
+                          onTap: () => _applyFilter(_UserFilter.online),
+                        ),
+                        AppSpacing.hGapSm,
+                        _FilterChip(
+                          label: 'Bannis',
+                          icon: CupertinoIcons.nosign,
+                          accent: context.colors.error,
+                          selected: _filter == _UserFilter.banned,
+                          onTap: () => _applyFilter(_UserFilter.banned),
+                        ),
+                        AppSpacing.hGapSm,
+                        _FilterChip(
+                          label: 'Admins',
+                          icon: CupertinoIcons.shield_lefthalf_fill,
+                          selected: _filter == _UserFilter.admin,
+                          onTap: () => _applyFilter(_UserFilter.admin),
+                        ),
+                      ],
+                    ),
                   ),
                   AppSpacing.vGapLg,
 
@@ -434,57 +415,56 @@ class _FilterChip extends StatelessWidget {
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
-  final bool showCheck;
+
+  /// Couleur d'accent : teinte l'icône au repos et remplit la pilule
+  /// lorsqu'elle est sélectionnée. Par défaut, la couleur primaire.
+  final Color? accent;
 
   const _FilterChip({
     required this.label,
     required this.icon,
     required this.selected,
     required this.onTap,
-    this.showCheck = false,
+    this.accent,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bg = selected
-        ? context.colors.primaryContainer
-        : context.colors.surface;
-    final border = selected
-        ? context.colors.primaryContainer
-        : context.colors.outline;
-    final fg = selected
-        ? context.colors.primary
-        : context.colors.onSurface;
+    final colors = context.colors;
+    final accentColor = accent ?? colors.primary;
+    // On-color lisible quel que soit l'accent (vert, rouge, indigo clair…).
+    final onAccent =
+        ThemeData.estimateBrightnessForColor(accentColor) == Brightness.dark
+            ? Colors.white
+            : Colors.black;
+    final fg = selected ? onAccent : colors.onSurface;
+    final iconColor = selected ? onAccent : accentColor;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: AppRadius.brSm,
-      child: Container(
+      borderRadius: AppRadius.brPill,
+      child: AnimatedContainer(
+        duration: AppDurations.fast,
+        curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.md, horizontal: AppSpacing.sm),
+            vertical: AppSpacing.sm + 2, horizontal: AppSpacing.lg),
         decoration: BoxDecoration(
-          color: bg,
-          borderRadius: AppRadius.brSm,
-          border: Border.all(color: border),
+          color: selected ? accentColor : colors.surface,
+          borderRadius: AppRadius.brPill,
+          border: Border.all(color: selected ? accentColor : colors.outline),
+          boxShadow: selected ? AppShadows.subtle : null,
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (showCheck && selected) ...[
-              Icon(Icons.check, size: 16, color: fg),
-              AppSpacing.hGapXs,
-            ],
-            Icon(icon, size: 16, color: fg),
+            Icon(icon, size: 16, color: iconColor),
             AppSpacing.hGapSm,
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: fg,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-                overflow: TextOverflow.ellipsis,
+            Text(
+              label,
+              style: TextStyle(
+                color: fg,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ],
@@ -559,7 +539,7 @@ class _UserTile extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: AppSpacing.sm - 2, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.errorContainer,
+                            color: context.colors.errorContainer,
                             borderRadius: _kBrXs,
                           ),
                           child: Text(
