@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
@@ -542,6 +543,10 @@ class _ActionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Changement de rôle et suppression : réservés au super-admin
+    // (le backend renvoie 403 sinon) → masqués pour les admins simples.
+    final isSuper =
+        AdminProvider.isSuperAdmin(context.watch<AuthProvider>().currentUser);
     return _Card(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xl, AppSpacing.xl, AppSpacing.md, AppSpacing.sm),
@@ -567,25 +572,27 @@ class _ActionsCard extends StatelessWidget {
                 user.exclus ? AppColors.success : AppColors.error,
             onTap: () => _toggleBan(context),
           ),
-          _ActionRow(
-            icon: user.typeCompte >= 1
-                ? CupertinoIcons.shield_slash_fill
-                : CupertinoIcons.shield_fill,
-            label: user.typeCompte >= 1
-                ? 'Rétrograder'
-                : 'Rendre admin',
-            iconColor: context.colors.primary,
-            iconBg: context.colors.primaryContainer,
-            onTap: () => _toggleAdmin(context),
-          ),
-          _ActionRow(
-            icon: CupertinoIcons.trash_fill,
-            label: 'Supprimer',
-            iconColor: AppColors.error,
-            iconBg: context.colors.errorContainer,
-            labelColor: AppColors.error,
-            onTap: () => _delete(context),
-          ),
+          if (isSuper) ...[
+            _ActionRow(
+              icon: user.typeCompte >= 1
+                  ? CupertinoIcons.shield_slash_fill
+                  : CupertinoIcons.shield_fill,
+              label: user.typeCompte >= 1
+                  ? 'Rétrograder'
+                  : 'Rendre admin',
+              iconColor: context.colors.primary,
+              iconBg: context.colors.primaryContainer,
+              onTap: () => _toggleAdmin(context),
+            ),
+            _ActionRow(
+              icon: CupertinoIcons.trash_fill,
+              label: 'Supprimer',
+              iconColor: AppColors.error,
+              iconBg: context.colors.errorContainer,
+              labelColor: AppColors.error,
+              onTap: () => _delete(context),
+            ),
+          ],
         ],
       ),
     );

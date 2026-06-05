@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import 'admin_user_detail_screen.dart';
@@ -610,6 +611,10 @@ class _UserActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Les changements de rôle et la suppression sont réservés au super-admin
+    // (le backend renvoie 403 sinon) → on les masque aux admins simples.
+    final isSuper =
+        AdminProvider.isSuperAdmin(context.watch<AuthProvider>().currentUser);
     return PopupMenuButton(
       icon: Icon(Icons.more_vert, color: context.colors.onSurfaceVariant),
       itemBuilder: (context) => [
@@ -623,46 +628,48 @@ class _UserActions extends StatelessWidget {
             child: const Text('Débannir'),
             onTap: () async => await provider.toggleBan(user),
           ),
-        if (user.typeCompte < 1)
+        if (isSuper) ...[
+          if (user.typeCompte < 1)
+            PopupMenuItem(
+              child: const Text('Rendre admin'),
+              onTap: () async =>
+                  await provider.setAccountType(user.alanyaID, 1),
+            )
+          else
+            PopupMenuItem(
+              child: const Text('Rétrograder'),
+              onTap: () async =>
+                  await provider.setAccountType(user.alanyaID, 0),
+            ),
           PopupMenuItem(
-            child: const Text('Rendre admin'),
-            onTap: () async =>
-                await provider.setAccountType(user.alanyaID, 1),
-          )
-        else
-          PopupMenuItem(
-            child: const Text('Rétrograder'),
-            onTap: () async =>
-                await provider.setAccountType(user.alanyaID, 0),
-          ),
-        PopupMenuItem(
-          child: const Text('Supprimer'),
-          onTap: () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Supprimer l\'utilisateur ?'),
-                content: const Text('Cette action est irréversible.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Annuler'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text(
-                      'Supprimer',
-                      style: TextStyle(color: AppColors.error),
+            child: const Text('Supprimer'),
+            onTap: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Supprimer l\'utilisateur ?'),
+                  content: const Text('Cette action est irréversible.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Annuler'),
                     ),
-                  ),
-                ],
-              ),
-            );
-            if (confirmed == true) {
-              await provider.deleteUser(user.alanyaID);
-            }
-          },
-        ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text(
+                        'Supprimer',
+                        style: TextStyle(color: AppColors.error),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) {
+                await provider.deleteUser(user.alanyaID);
+              }
+            },
+          ),
+        ],
       ],
     );
   }
