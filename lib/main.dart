@@ -85,7 +85,7 @@ class TalkyApp extends StatelessWidget {
         builder: (_, tc, __) => MaterialApp(
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
-          title: 'Talky',
+          title: 'Alanya',
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: tc.mode,
