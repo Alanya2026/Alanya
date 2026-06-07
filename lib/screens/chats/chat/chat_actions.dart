@@ -1,0 +1,510 @@
+// Handlers & logique de l'écran de chat : envoi, médias, vocal, appels.
+// part of chat_detail_screen.dart.
+part of '../chat_detail_screen.dart';
+
+extension _ChatActions on _ChatDetailScreenState {
+  void _sendMessage() {
+    final text = _messageController.text.trim();
+    if (text.isEmpty || widget.conversationId == null || _myId == null) return;
+
+    _chat.repository.sendText(
+      conversationID: widget.conversationId!,
+      content: text,
+      replyToID: _replyTo?.msgID,
+      replyToContent: _replyTo == null ? null : _previewOf(_replyTo!),
+    );
+
+    _messageController.clear();
+    rebuild(() {
+      _hasText = false;
+      _replyTo = null;
+    });
+    _stopTyping();
+    _scrollToBottom();
+  }
+
+  String _previewOf(LocalMessage m) {
+    if (m.content != null && m.content!.isNotEmpty) return m.content!;
+    return _mediaLabel(m.type);
+  }
+
+  // ── Menu contextuel sur un message (appui long) ────────────────────
+  void _showMessageMenu(LocalMessage msg, bool isMe) {
+    final isText = msg.type == 0;
+    final primary = context.colors.primary;
+    final error = context.colors.error;
+    final muted = context.colors.onSurfaceVariant;
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Si le message est en échec d'envoi, on propose en priorité le retry.
+            if (isMe && msg.status == 4)
+              ListTile(
+                leading: Icon(Icons.refresh, color: primary),
+                title: const Text('Réessayer l\'envoi'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _chat.repository.retryMessage(msg.clientId);
+                },
+              ),
+            ListTile(
+              leading: Icon(Icons.reply, color: primary),
+              title: const Text('Répondre'),
+              onTap: () {
+                Navigator.pop(context);
+                rebuild(() => _replyTo = msg);
+                _inputFocus.requestFocus();
+              },
+            ),
+            if (isText && msg.content != null)
+              ListTile(
+                leading: Icon(Icons.copy, color: primary),
+                title: const Text('Copier'),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: msg.content!));
+                  Navigator.pop(context);
+                },
+              ),
+            if (isMe && isText && !msg.isDeleted)
+              ListTile(
+                leading: Icon(Icons.edit, color: primary),
+                title: const Text('Modifier'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showEditDialog(msg);
+                },
+              ),
+            if (isMe && !msg.isDeleted)
+              ListTile(
+                leading: Icon(Icons.delete_forever, color: error),
+                title: const Text('Supprimer pour tout le monde'),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (msg.msgID != 0) _chat.repository.deleteMessage(msg.msgID, forAll: true);
+                },
+              ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: muted),
+              title: const Text('Supprimer pour moi'),
+              onTap: () {
+                Navigator.pop(context);
+                if (msg.msgID != 0) _chat.repository.deleteMessage(msg.msgID, forAll: false);
+              },
+            ),
+            AppSpacing.vGapSm,
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(LocalMessage msg) {
+    final ctrl = TextEditingController(text: msg.content ?? '');
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Modifier le message'),
+        content: TextField(controller: ctrl, autofocus: true, maxLines: null),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () {
+              final t = ctrl.text.trim();
+              if (t.isNotEmpty && msg.msgID != 0) _chat.repository.editMessage(msg.msgID, t);
+              Navigator.pop(context);
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Médias ─────────────────────────────────────────────────────────
+  void _showAttachSheet() {
+    final sem = context.semantic;
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _attachOption(Icons.photo_library, 'Galerie', sem.info, _pickImageFromGallery),
+            _attachOption(Icons.camera_alt, 'Caméra', context.colors.primary, _pickImageFromCamera),
+            _attachOption(Icons.videocam, 'Vidéo', context.colors.error, _pickVideo),
+            _attachOption(Icons.insert_drive_file, 'Fichier', sem.warning, _pickFile),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _attachOption(IconData icon, String label, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
+      borderRadius: AppRadius.brSm,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(radius: 28, backgroundColor: color.withAlpha(30), child: Icon(icon, color: color)),
+            AppSpacing.vGapSm,
+            Text(label, style: context.text.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final x = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (x != null) _sendMediaFile(File(x.path), type: 1);
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    final x = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    if (x != null) _sendMediaFile(File(x.path), type: 1);
+  }
+
+  Future<void> _pickVideo() async {
+    final x = await _picker.pickVideo(source: ImageSource.gallery);
+    if (x == null) return;
+    final file = File(x.path);
+    // Extraction de la durée pour peupler `mediaDuration` (sinon les vidéos
+    // arrivent côté serveur sans length → impossible d'afficher 00:23 dans
+    // la liste des médias d'une conv ou dans la bulle).
+    int? durSec;
+    final ctrl = VideoPlayerController.file(file);
+    try {
+      await ctrl.initialize();
+      durSec = ctrl.value.duration.inSeconds;
+    } catch (e) {
+      debugPrint('[ChatDetail] _pickVideo: durée non lue ($e)');
+    } finally {
+      await ctrl.dispose();
+    }
+    _sendMediaFile(file, type: 2, duration: durSec);
+  }
+
+  Future<void> _pickFile() async {
+    final res = await FilePicker.platform.pickFiles(withData: false);
+    final path = res?.files.single.path;
+    if (path != null) _sendMediaFile(File(path), type: 4, name: res!.files.single.name);
+  }
+
+  void _sendMediaFile(File file, {required int type, String? name, int? duration}) {
+    if (widget.conversationId == null || _myId == null) return;
+
+    final size = file.existsSync() ? file.lengthSync() : 0;
+    if (size > _maxMediaBytes) {
+      final mb = (size / (1024 * 1024)).toStringAsFixed(1);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Fichier trop volumineux ($mb Mo). Limite : 50 Mo.'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
+    _chat.repository.sendMediaFile(
+      conversationID: widget.conversationId!,
+      type: type,
+      file: file,
+      mediaName: name,
+      mediaDuration: duration,
+    );
+    _scrollToBottom();
+  }
+
+  // ── Messages vocaux ────────────────────────────────────────────────
+  Future<void> _startRecording() async {
+    if (!await _recorder.hasPermission()) return;
+    final dir = await getTemporaryDirectory();
+    final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    if (!mounted) return;
+    rebuild(() {
+      _isRecording = true;
+      _recordSeconds = 0;
+    });
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) rebuild(() => _recordSeconds++);
+    });
+  }
+
+  Future<void> _stopRecording({required bool send}) async {
+    _recordTimer?.cancel();
+    final path = await _recorder.stop();
+    final seconds = _recordSeconds;
+    if (mounted) rebuild(() => _isRecording = false);
+
+    if (send && path != null && seconds >= 1) {
+      _sendMediaFile(File(path), type: 3, name: 'Message vocal', duration: seconds);
+    } else if (path != null) {
+      // Annulé ou trop court → supprimer le fichier temporaire.
+      try {
+        File(path).deleteSync();
+      } catch (_) {}
+    }
+  }
+
+  void _onTextChanged(String value) {
+    final has = value.trim().isNotEmpty;
+    if (has != _hasText) rebuild(() => _hasText = has);
+    if (widget.conversationId == null) return;
+    if (value.isEmpty) {
+      _stopTyping();
+      return;
+    }
+    _apiClient.sendSocketEvent(SocketEvents.typingStart, {'conversationID': widget.conversationId});
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 3), _stopTyping);
+  }
+
+  void _stopTyping() {
+    _typingTimer?.cancel();
+    if (widget.conversationId == null) return;
+    _apiClient.sendSocketEvent(SocketEvents.typingStop, {'conversationID': widget.conversationId});
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  String _formatTime(DateTime sendAt) {
+    final dt = sendAt.toLocal();
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _initiateCall({required bool isVideo}) async {
+    if (widget.isGroup) {
+      await _initiateGroupCall(isVideo: isVideo);
+      return;
+    }
+    if (widget.userId == null) return;
+    final callService = Provider.of<CallService>(context, listen: false);
+    final userData = await _apiClient.getMe();
+    if (!mounted) return;
+    final myId = userData['alanyaID'] ?? 0;
+    await callService.initiateCall(
+      targetUserId: widget.userId!,
+      myId: myId,
+      myName: userData['nom'] ?? userData['pseudo'] ?? '',
+      myPhoto: userData['avatar_url'],
+      targetUserName: widget.userName,
+      isVideo: isVideo,
+    );
+    if (!mounted) return;
+    if (callService.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(callService.errorMessage!),
+        backgroundColor: AppColors.error,
+        duration: const Duration(seconds: 4),
+      ));
+      return;
+    }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const OngoingCallScreen()));
+  }
+
+  Future<void> _initiateGroupCall({required bool isVideo}) async {
+    final convId = widget.conversationId;
+    if (convId == null) return;
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final me = auth.currentUser;
+    if (me == null) return;
+
+    final conversation = await _chat.repository.watchConversation(convId).first;
+    if (!mounted || conversation == null || !conversation.isGroup) return;
+
+    final parts = decodeParticipants(conversation.participantsJson);
+    final others = parts
+        .where((participant) => participant['alanyaID'].toString() != me.alanyaID.toString())
+        .map((participant) => User.fromJson(Map<String, dynamic>.from(participant)))
+        .toList();
+
+    if (others.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucun autre membre à appeler')),
+      );
+      return;
+    }
+
+    List<User> targets;
+    if (others.length <= 9) {
+      targets = others;
+    } else {
+      final picked = await Navigator.push<List<User>>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GroupParticipantsPickerScreen(
+            members: others,
+            isVideo: isVideo,
+          ),
+        ),
+      );
+      if (picked == null || picked.isEmpty || !mounted) return;
+      targets = picked;
+    }
+
+    final callService = Provider.of<CallService>(context, listen: false);
+    if (callService.status != CallStatus.idle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Un appel est déjà en cours')),
+      );
+      return;
+    }
+
+    final roster = targets
+        .map((user) => GroupParticipantInfo(
+              id: user.alanyaID.toString(),
+              name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+              photo: user.avatarUrl,
+            ))
+        .toList();
+
+    final roomId = 'group_${convId}_${DateTime.now().millisecondsSinceEpoch}';
+
+    await callService.createGroupCall(
+      roomId: roomId,
+      myId: me.alanyaID,
+      myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+      myPhoto: me.avatarUrl,
+      targetUserIds: targets.map((user) => user.alanyaID).toList(),
+      isVideo: isVideo,
+      targets: roster,
+    );
+
+    if (!mounted) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const OngoingCallScreen()));
+  }
+
+  String _presenceLabel() {
+    final uid = widget.userId;
+    if (uid == null) return '';
+    return _chat.presenceLabel(uid);
+  }
+
+  bool _hasLocal(LocalMessage msg) =>
+      msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
+
+  Future<void> _openViewer(LocalMessage msg, {required bool isVideo}) async {
+    String? localPath =
+        (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
+            ? msg.localMediaPath
+            : null;
+
+    // Vidéo : télécharger en local d'abord (lecture fichier = plus fiable que
+    // le streaming, et fonctionne ensuite hors-ligne).
+    if (isVideo && localPath == null && msg.mediaUrl != null) {
+      _showLoading();
+      localPath = await _chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
+      if (localPath != null && msg.msgID != 0) {
+        await _chat.repository.dao.setLocalMediaPath(msg.msgID, localPath);
+      }
+      if (mounted) Navigator.of(context, rootNavigator: true).pop(); // ferme le loader
+    }
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MediaViewerScreen(
+          isVideo: isVideo,
+          localPath: localPath,
+          networkUrl: msg.mediaUrl,
+          title: msg.mediaName,
+        ),
+      ),
+    );
+  }
+
+  void _showLoading() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  // Télécharge si besoin puis ouvre le fichier avec l'app système (PDF, doc…).
+  Future<void> _openFile(LocalMessage msg) async {
+    String? path =
+        (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
+            ? msg.localMediaPath
+            : null;
+
+    if (path == null) {
+      if (msg.mediaUrl == null) return;
+      _showLoading();
+      path = await _chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
+      if (path != null && msg.msgID != 0) {
+        await _chat.repository.dao.setLocalMediaPath(msg.msgID, path);
+      }
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (path == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de télécharger le fichier'), backgroundColor: AppColors.error),
+        );
+      }
+      return;
+    }
+
+    final res = await OpenFilex.open(path);
+    if (res.type != ResultType.done && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Aucune application pour ouvrir ce fichier (${res.message})'), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
+  String _mediaLabel(int type) {
+    switch (type) {
+      case 1:
+        return '📷 Photo';
+      case 2:
+        return '🎥 Vidéo';
+      case 3:
+        return '🎵 Audio';
+      case 4:
+        return '📎 Fichier';
+      default:
+        return '';
+    }
+  }
+
+  void _toggleEmoji() {
+    if (_showEmoji) {
+      rebuild(() => _showEmoji = false);
+      _inputFocus.requestFocus();
+    } else {
+      FocusScope.of(context).unfocus(); // ferme le clavier système
+      rebuild(() => _showEmoji = true);
+    }
+  }
+
+  String _fmtRec(int s) =>
+      '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+}
