@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../core/services/connectivity_service.dart';
+import '../core/utils/app_log.dart';
 import '../talky_api_client.dart';
 
 /// État de connectivité combiné : "online" = OS réseau disponible.
@@ -37,7 +38,9 @@ class ConnectivityProvider extends ChangeNotifier {
     try {
       _hasNetwork = await _service.currentNetwork;
       notifyListeners();
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.w('Connectivity', 'Lecture état réseau initial échouée', e, st);
+    }
     _sub = _service.hasNetwork.listen((v) {
       final wasOnline = _hasNetwork;
       _hasNetwork = v;

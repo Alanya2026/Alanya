@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../utils/app_log.dart';
 
 //  Télécharge et conserve les médias reçus dans le dossier de l'app pour
 //  une consultation hors-ligne. Évince les plus vieux fichiers (LRU) quand
@@ -44,7 +45,9 @@ class MediaCacheService {
         // Touch pour LRU
         try {
           file.setLastAccessedSync(DateTime.now());
-        } catch (_) {}
+        } catch (e, st) {
+          AppLog.w('MediaCache', 'Touch LRU (setLastAccessed) échoué', e, st);
+        }
         return file.path;
       }
 
@@ -83,7 +86,9 @@ class MediaCacheService {
       for (final f in files) {
         try {
           total += f.lengthSync();
-        } catch (_) {}
+        } catch (e, st) {
+          AppLog.w('MediaCache', 'Lecture taille fichier cache échouée', e, st);
+        }
       }
       return total;
     } catch (e) {
@@ -126,7 +131,9 @@ class MediaCacheService {
           e.file.deleteSync();
           running -= e.length;
           evicted++;
-        } catch (_) {}
+        } catch (err, st) {
+          AppLog.w('MediaCache', 'Éviction fichier cache échouée', err, st);
+        }
       }
       if (evicted > 0) {
         debugPrint('[MediaCache] LRU évincé $evicted fichier(s), '

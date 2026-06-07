@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_log.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
@@ -44,11 +45,15 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
     List<dynamic> logins = const [];
     try {
       activity = await api.adminGetUserActivity(widget.userId);
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('AdminUserDetail', 'adminGetUserActivity échoué', e, st);
+    }
     try {
       logins =
           await api.adminGetUserLogins(widget.userId, limit: 10);
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('AdminUserDetail', 'adminGetUserLogins échoué', e, st);
+    }
     return _UserDetailData(
         user: user, activity: activity, logins: logins);
   }

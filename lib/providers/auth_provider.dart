@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
+import '../core/utils/app_log.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
 
@@ -41,7 +42,9 @@ class AuthProvider extends ChangeNotifier {
           unawaited(_checkAuthStatus());
           return;
         }
-      } catch (_) {}
+      } catch (e, st) {
+        AppLog.w('AuthProvider', 'Hydratation user (cache) échouée', e, st);
+      }
       // Pas de cache → on doit attendre la décision réseau pour savoir si
       // on affiche le Login ou le Home.
       await _checkAuthStatus();
@@ -76,7 +79,9 @@ class AuthProvider extends ChangeNotifier {
       _apiClient.connectSocket();
     } catch (e) {
       debugPrint('[AuthProvider] ** _checkAuthStatus error: $e');
-      try { await _storage.clearAll(); } catch (_) {}
+      try { await _storage.clearAll(); } catch (e2, st) {
+        AppLog.w('AuthProvider', 'clearAll après erreur auth échoué', e2, st);
+      }
       _apiClient.logout();
       _currentUser = null;
     }

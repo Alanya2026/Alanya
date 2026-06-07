@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_log.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -96,14 +97,18 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('ContactDetail', 'Chargement contact (cache) échoué', e, st);
+    }
 
     try {
       final data = await _api.getUserById(widget.userId);
       bool fav = false;
       try {
         fav = await _api.checkIsContact(widget.userId);
-      } catch (_) {}
+      } catch (e, st) {
+        AppLog.e('ContactDetail', 'checkIsContact échoué', e, st);
+      }
       if (!mounted) return;
       final user = User.fromJson(data);
       setState(() {
@@ -221,7 +226,16 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     if (confirmed != true || !mounted) return;
     try {
       await _api.deleteConversation(convId);
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('ContactDetail', 'deleteConversation serveur échouée', e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Discussion supprimée localement (serveur injoignable)'),
+          ),
+        );
+      }
+    }
     if (!mounted) return;
     final dao = context.read<ChatProvider>().repository.dao;
     await dao.deleteConversation(convId);

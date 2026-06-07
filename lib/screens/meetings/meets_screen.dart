@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_log.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
@@ -87,7 +88,9 @@ class _MeetsScreenState extends State<MeetsScreen>
       });
       // ignore: unused_local_variable
       final _ = name;
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('MeetsScreen', 'Chargement profil (getMe) échoué', e, st);
+    }
   }
 
   Future<void> _loadMeetings() async {
@@ -104,7 +107,9 @@ class _MeetsScreenState extends State<MeetsScreen>
       } else {
         setState(() => _isLoading = true);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('MeetsScreen', 'Chargement réunions (cache) échoué', e, st);
+    }
 
     try {
       final meetingService =

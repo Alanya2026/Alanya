@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
@@ -80,11 +81,12 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       await chat.refreshConversations();
       if (!mounted) return;
       Navigator.popUntil(context, (route) => route.isFirst);
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('CreateGroup', 'Création du groupe échouée', e, st);
       if (mounted) {
         setState(() => _creating = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $e')),
+          const SnackBar(content: Text('Impossible de créer le groupe, réessayez')),
         );
       }
     }

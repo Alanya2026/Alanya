@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/status_provider.dart';
@@ -151,7 +152,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       if (path != null) {
         try {
           File(path).deleteSync();
-        } catch (_) {}
+        } catch (_) { /* fichier temporaire déjà absent — ignoré */ }
       }
       setState(() {
         _isRecording = false;
@@ -277,11 +278,13 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
               file: _mediaFile!, type: 3, mediaDurationMs: _audioDurationMs);
       }
       if (mounted) Navigator.pop(context);
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('StatusCreate', 'Publication du statut échouée', e, st);
       if (mounted) {
         setState(() => _publishing = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de publier le statut, réessayez')),
+        );
       }
     }
   }

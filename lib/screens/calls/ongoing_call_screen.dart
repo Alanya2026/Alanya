@@ -125,7 +125,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
   void dispose() {
     try {
       Provider.of<CallService>(context, listen: false).removeListener(_onCallChanged);
-    } catch (_) {}
+    } catch (_) { /* listener déjà retiré / provider absent — ignoré */ }
     if (_renderersReady) {
       _localRenderer.srcObject = null;
       _remoteRenderer.srcObject = null;

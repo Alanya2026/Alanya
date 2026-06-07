@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
+import '../../core/utils/app_log.dart';
 import '../../talky_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
@@ -97,7 +98,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } else {
         setState(() => _loadingContacts = true);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('ProfileScreen', 'Chargement contacts (cache) échoué', e, st);
+    }
 
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
@@ -153,10 +156,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(
           () => _contacts.removeWhere((u) => u.alanyaID == user.alanyaID));
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('ProfileScreen', 'Suppression contact préféré échouée', e, st);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+        const SnackBar(content: Text('Impossible de retirer ce contact, réessayez')),
       );
     }
   }

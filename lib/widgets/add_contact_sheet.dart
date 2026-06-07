@@ -6,6 +6,7 @@ import '../core/theme/app_dimens.dart';
 import '../core/theme/app_theme.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
+import '../core/utils/app_log.dart';
 import 'common/common.dart';
 
 class AddContactSheet extends StatefulWidget {
@@ -90,11 +91,13 @@ class _AddContactSheetState extends State<AddContactSheet> {
           duration: const Duration(seconds: 2),
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('AddContact', 'Ajout contact préféré échoué', e, st);
       if (!mounted) return;
       setState(() => _adding.remove(user.alanyaID));
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d\'ajouter ce contact, réessayez')),
+      );
     }
   }
 

@@ -6,6 +6,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_dimens.dart';
 import '../core/theme/app_theme.dart';
 import '../core/services/call_service.dart';
+import '../core/utils/app_log.dart';
 import '../talky_api_client.dart';
 import '../screens/chats/fullscreen_profile_image_viewer.dart';
 import '../screens/chats/contact_detail_screen.dart';
@@ -309,10 +310,12 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
           MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('ProfileImageModal', 'Lancement de l\'appel échoué', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de lancer l\'appel, réessayez')),
+        );
       }
     }
   }

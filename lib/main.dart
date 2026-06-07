@@ -12,6 +12,7 @@ import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
 import 'core/network/cert_pinning.dart';
+import 'core/utils/app_log.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/services/call_service.dart';
@@ -31,6 +32,19 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[Main] ======== Application démarrée ========');
+
+  // Capture centralisée des erreurs non interceptées (UI + asynchrones).
+  // Sans ça, une exception dans un build/callback partait dans le vide.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    AppLog.e('FlutterError', details.exceptionAsString(),
+        details.exception, details.stack);
+  };
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    AppLog.e('PlatformDispatcher', 'Erreur asynchrone non interceptée',
+        error, stack);
+    return true;
+  };
 
   // Certificate pinning : le backend utilise un certificat auto-signé. On ne
   // fait confiance qu'à ce certificat précis (embarqué dans les assets), ce qui

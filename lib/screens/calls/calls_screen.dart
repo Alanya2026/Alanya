@@ -5,6 +5,7 @@ import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/db/app_database.dart';
+import '../../core/utils/app_log.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/local_hidden_store.dart';
 import '../../core/theme/app_colors.dart';
@@ -78,7 +79,9 @@ class _CallsScreenState extends State<CallsScreen> {
       } else {
         setState(() => _isLoading = true);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('CallsScreen', 'Chargement appels (cache) échoué', e, st);
+    }
 
     // 2) Rafraîchit depuis l'API (best-effort, écrase le cache si succès).
     try {

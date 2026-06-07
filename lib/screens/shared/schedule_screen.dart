@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../talky_api_client.dart';
+import '../../core/utils/app_log.dart';
 import '../../talky_models.dart';
 import '../meetings/participant_picker_screen.dart';
 
@@ -124,11 +125,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       }
 
       if (mounted) Navigator.pop(context, true);
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('ScheduleScreen', 'Création de la réunion échouée', e, st);
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la création : $e')),
+          const SnackBar(content: Text('Impossible de créer la réunion, réessayez')),
         );
       }
     }

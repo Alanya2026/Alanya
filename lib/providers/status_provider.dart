@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/db/app_database.dart';
 import '../core/services/local_cache_repository.dart';
+import '../core/utils/app_log.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
 
@@ -336,7 +337,9 @@ class StatusProvider extends ChangeNotifier {
               })
           .toList();
       await prefs.setString(_viewsKey(id), jsonEncode(json));
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.w('StatusProvider', 'Persistance des vues échouée', e, st);
+    }
   }
 
   // ── Socket handlers ──────────────────────────────────────────────────
@@ -493,7 +496,9 @@ class StatusProvider extends ChangeNotifier {
       if (list is List) {
         _seenIds.addAll(list.whereType<int>());
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.w('StatusProvider', 'Lecture des statuts vus échouée', e, st);
+    }
   }
 
   Future<void> _saveSeenIds() async {
@@ -508,6 +513,8 @@ class StatusProvider extends ChangeNotifier {
           ..addAll(ids);
       }
       await prefs.setString(_seenKey, jsonEncode(ids));
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.w('StatusProvider', 'Persistance des statuts vus échouée', e, st);
+    }
   }
 }

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/call_service.dart';
@@ -192,9 +193,10 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       messenger.showSnackBar(SnackBar(
         content: Text('${picked.length} participant(s) ajouté(s)'),
       ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Erreur : $e'),
+    } catch (e, st) {
+      AppLog.e('GroupDetail', 'Ajout de participants échoué', e, st);
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Impossible d\'ajouter les participants, réessayez'),
         backgroundColor: AppColors.error,
       ));
     }
@@ -231,11 +233,12 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       if (!mounted) return;
       await chat.refreshConversations();
       if (mounted) Navigator.pop(context);
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('GroupDetail', 'Quitter le groupe échoué', e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Erreur : $e'),
+          const SnackBar(
+              content: Text('Impossible de quitter le groupe, réessayez'),
               backgroundColor: AppColors.error),
         );
       }

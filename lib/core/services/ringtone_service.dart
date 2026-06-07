@@ -77,7 +77,7 @@ class RingtoneService {
     try {
       if (wasActive == _ActiveSound.incoming) {
         await _systemRingtone.stop();
-        try { await Vibration.cancel(); } catch (_) {}
+        try { await Vibration.cancel(); } catch (_) { /* vibration non supportée — ignoré */ }
       } else if (wasActive == _ActiveSound.outgoing) {
         await _ringbackPlayer?.stop();
       }
@@ -112,13 +112,13 @@ class RingtoneService {
   void _startVibrationLoop() {
     if (kIsWeb) return;
     if (!Platform.isAndroid && !Platform.isIOS) return;
-    try { Vibration.vibrate(duration: 700); } catch (_) {}
+    try { Vibration.vibrate(duration: 700); } catch (_) { /* vibration non supportée — ignoré */ }
     _vibrationTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
       if (_active != _ActiveSound.incoming) {
         _vibrationTimer?.cancel();
         return;
       }
-      try { Vibration.vibrate(duration: 700); } catch (_) {}
+      try { Vibration.vibrate(duration: 700); } catch (_) { /* vibration non supportée — ignoré */ }
     });
   }
 }

@@ -252,7 +252,7 @@ extension _ChatActions on _ChatDetailScreenState {
       // Annulé ou trop court → supprimer le fichier temporaire.
       try {
         File(path).deleteSync();
-      } catch (_) {}
+      } catch (_) { /* fichier temporaire déjà absent — ignoré */ }
     }
   }
 

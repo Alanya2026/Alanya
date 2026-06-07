@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_log.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
@@ -69,7 +70,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       } else if (mounted) {
         setState(() => _isLoading = true);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.e('MeetingDetail', 'Chargement réunion (cache) échoué', e, st);
+    }
 
     try {
       final results = await Future.wait([
@@ -143,10 +146,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         ),
       );
       _load();
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('MeetingDetail', 'Invitation de participants échouée', e, st);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d\'inviter les participants, réessayez')),
+      );
     }
   }
 
@@ -184,10 +189,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       await api.deleteMeeting(meeting.idMeeting);
       if (!mounted) return;
       Navigator.pop(context, true);
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('MeetingDetail', 'Suppression de la réunion échouée', e, st);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de supprimer la réunion, réessayez')),
+      );
     }
   }
 
