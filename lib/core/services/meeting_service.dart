@@ -4,6 +4,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import 'call/speaking_detector.dart';
 
 enum MeetingStatus { idle, joining, connected, ended }
 
@@ -46,6 +47,9 @@ class MeetingService extends ChangeNotifier {
   // Messages in-meeting
   final List<ChatMessage> _chatMessages = [];
 
+  // Détection locale du locuteur actif (mesh meeting).
+  final SpeakingDetector speakingDetector = SpeakingDetector();
+
   // Getters 
   MeetingStatus get status => _status;
   Meeting? get currentMeeting => _currentMeeting;
@@ -56,8 +60,16 @@ class MeetingService extends ChangeNotifier {
   int get meetingDuration => _meetingDuration;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
 
+  Set<String> get activeSpeakers => speakingDetector.activeSpeakers;
+  bool get amISpeaking => speakingDetector.amISpeaking;
+  bool isUserSpeaking(String userId) => speakingDetector.isSpeaking(userId);
+
   MeetingService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
     _setupSocketListeners();
+    // Le détecteur est un ChangeNotifier séparé : on relaie ses
+    // changements pour que les écrans (Consumer<MeetingService>) se
+    // reconstruisent quand le locuteur actif change.
+    speakingDetector.addListener(notifyListeners);
   }
 
 
@@ -321,6 +333,7 @@ class MeetingService extends ChangeNotifier {
 
     _status = MeetingStatus.connected;
     _startDurationTimer();
+    speakingDetector.start(() => _peerConnections);
     notifyListeners();
   }
  
@@ -574,6 +587,7 @@ class MeetingService extends ChangeNotifier {
 
   // CLEANUP
   Future<void> _cleanup() async {
+    speakingDetector.stop();
     for (final pc in _peerConnections.values) {
       await pc.close();
     }
@@ -594,6 +608,7 @@ class MeetingService extends ChangeNotifier {
   @override
   void dispose() {
     _cleanup();
+    speakingDetector.dispose();
     super.dispose();
   }
 }

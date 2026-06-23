@@ -25,6 +25,11 @@ class WebRTCService {
   MediaStream? get localStream => _localStream;
   MediaStream? get remoteStream => _remoteStream;
 
+  /// Exposé pour `SpeakingDetector` (lecture de `getStats()` afin de
+  /// détecter qui parle). Ne pas utiliser pour modifier l'état du PC depuis
+  /// l'extérieur de ce service.
+  RTCPeerConnection? get peerConnection => _peerConnection;
+
   Future<bool> _requestMicrophonePermission() async {
     // Sur web, les permissions sont gérées par le navigateur
     if (kIsWeb) return true;
