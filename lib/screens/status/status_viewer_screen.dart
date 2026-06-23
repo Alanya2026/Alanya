@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
@@ -411,6 +412,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   }
 
   Widget _buildReplyBar() {
+    final colors = context.colors;
     return Consumer<ConnectivityProvider>(
       builder: (context, conn, _) {
         final online = conn.isOnline;
@@ -418,24 +420,27 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         final liked = _current.likedByMe;
         return Padding(
           padding: EdgeInsets.only(
-            left: AppSpacing.md,
-            right: AppSpacing.md,
+            left: AppSpacing.sm,
+            right: AppSpacing.sm,
             bottom: AppSpacing.md + MediaQuery.of(context).viewInsets.bottom,
-            top: AppSpacing.xs,
+            top: AppSpacing.sm,
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              // Capsule flottante identique à l'input des messages.
               Expanded(
                 child: Container(
+                  constraints: const BoxConstraints(maxHeight: 160),
                   decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(140),
+                    color: colors.surface,
                     borderRadius: AppRadius.brPill,
-                    border: Border.all(color: Colors.white24, width: 1),
+                    boxShadow: AppShadows.medium,
                   ),
                   child: TextField(
                     controller: _replyController,
                     focusNode: _replyFocus,
-                    style: const TextStyle(color: Colors.white),
+                    style: context.text.bodyLarge,
                     minLines: 1,
                     maxLines: 4,
                     onTap: () => _setPaused(true),
@@ -447,20 +452,22 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                       hintText: online
                           ? 'Répondre au statut…'
                           : 'Indisponible hors ligne',
-                      hintStyle: const TextStyle(color: Colors.white54),
+                      hintStyle: context.text.bodyLarge
+                          ?.copyWith(color: colors.onSurfaceVariant),
                       border: InputBorder.none,
+                      isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                     ),
                   ),
                 ),
               ),
-              AppSpacing.hGapXs,
               IconButton(
                 tooltip: liked ? 'Je n\'aime plus' : 'J\'aime',
                 onPressed: _toggleLike,
-                iconSize: 28,
+                iconSize: AppIconSize.md,
                 splashRadius: 22,
+                color: Colors.white,
                 icon: AnimatedSwitcher(
                   duration: AppDurations.fast,
                   transitionBuilder: (child, anim) =>
@@ -472,18 +479,18 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                   ),
                 ),
               ),
-              AppSpacing.hGapXs,
+              const SizedBox(width: AppSpacing.xs),
+              // Bouton rond séparé, comme dans l'input des messages.
               Material(
-                color: canSend
-                    ? AppColors.brandPrimary
-                    : AppColors.textSecondary,
+                color: canSend ? colors.primary : AppColors.textSecondary,
                 shape: const CircleBorder(),
+                elevation: 3,
                 child: InkWell(
                   customBorder: const CircleBorder(),
                   onTap: canSend ? _sendReply : null,
                   child: SizedBox(
-                    width: 44,
-                    height: 44,
+                    width: 50,
+                    height: 50,
                     child: _sendingReply
                         ? const Padding(
                             padding: EdgeInsets.all(AppSpacing.md),
@@ -492,8 +499,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.send,
-                            color: Colors.white, size: AppIconSize.sm),
+                        : Icon(Icons.send,
+                            color: colors.onPrimary, size: AppIconSize.sm + 2),
                   ),
                 ),
               ),

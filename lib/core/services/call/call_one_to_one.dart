@@ -27,11 +27,12 @@ extension CallOneToOne on CallService {
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
 
-      // Initialiser le routage audio
+      // Initialiser le routage audio : haut-parleur par défaut en vidéo,
+      // écouteur (oreille) par défaut en audio.
       if (!kIsWeb) {
-        _isSpeakerOn = true;
-        await audio.AudioHelper.setSpeakerphoneOn(true);
-        debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
+        _isSpeakerOn = isVideo;
+        await audio.AudioHelper.setSpeakerphoneOn(isVideo);
+        debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ${isVideo ? "ON" : "OFF"})');
       }
 
       // ICE candidates envoyés au destinataire
@@ -146,8 +147,8 @@ extension CallOneToOne on CallService {
       _webrtc.onRemoteStream = (_) { notify(); };
 
       if (!kIsWeb) {
-        _isSpeakerOn = true;
-        await audio.AudioHelper.setSpeakerphoneOn(true);
+        _isSpeakerOn = _isVideo;
+        await audio.AudioHelper.setSpeakerphoneOn(_isVideo);
       }
 
       _webrtc.onIceCandidate = (candidate) {

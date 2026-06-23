@@ -157,11 +157,12 @@ extension CallGroup on CallService {
     final iceServers = await _apiClient.fetchIceServers();
     await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
 
-    // Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement)
+    // Initialiser le routage audio pour les appels de groupe aussi (mobile uniquement) :
+    // haut-parleur par défaut en vidéo, écouteur par défaut en audio.
     if (!kIsWeb) {
-      _isSpeakerOn = true;
-      await audio.AudioHelper.setSpeakerphoneOn(true);
-      debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ON)');
+      _isSpeakerOn = isVideo;
+      await audio.AudioHelper.setSpeakerphoneOn(isVideo);
+      debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ${isVideo ? "ON" : "OFF"})');
     }
   }
 

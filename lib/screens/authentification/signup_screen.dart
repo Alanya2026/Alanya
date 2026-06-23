@@ -96,7 +96,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               AppSpacing.vGapSm,
               Text(
-                'Rejoignez la communauté Talky !',
+                'Rejoignez la communauté Alanya !',
                 textAlign: TextAlign.center,
                 style: context.text.bodyLarge
                     ?.copyWith(color: context.colors.onSurfaceVariant),

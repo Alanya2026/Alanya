@@ -7,7 +7,7 @@ extension _ChatInput on _ChatDetailScreenState {
     final colors = context.colors;
     return Container(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.sm, 0),
-      color: context.semantic.surfaceMuted,
+      color: context.semantic.brandContainer,
       child: Row(
         children: [
           Container(width: 3, height: 36, color: colors.primary),
