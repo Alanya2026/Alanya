@@ -8,6 +8,7 @@ import 'audio_helper.dart' as audio;
 import 'callkit_service.dart';
 import 'ringtone_service.dart';
 import 'webrtc_service.dart';
+import 'call/speaking_detector.dart'; // détection locale du locuteur actif
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -71,6 +72,9 @@ class CallService extends ChangeNotifier {
   bool _autoAnswerOnNextIncoming = false;
   String? _autoAnswerCallerId;
 
+  // Détection locale du locuteur actif (1-1 et groupe).
+  final SpeakingDetector speakingDetector = SpeakingDetector();
+
   //  Getters
   CallStatus get status => _status;
   int? get remoteUserId => _remoteUserId;
@@ -90,6 +94,12 @@ class CallService extends ChangeNotifier {
   Map<String, MediaStream> get groupRemoteStreams => _groupRemoteStreams;
   List<String> get groupParticipants => _groupParticipants;
   Map<String, GroupParticipantInfo> get groupRoster => _groupRoster;
+
+  // Locuteur actif : Set des userId (groupe) ou {SpeakingDetector.localKey}
+  // pour moi-même. Voir `speaking_detector.dart`.
+  Set<String> get activeSpeakers => speakingDetector.activeSpeakers;
+  bool get amISpeaking => speakingDetector.amISpeaking;
+  bool isUserSpeaking(String userId) => speakingDetector.isSpeaking(userId);
 
   Call? get currentCall {
     if (_remoteUserId == null && _remoteUserName == null) return null;
@@ -126,11 +136,28 @@ class CallService extends ChangeNotifier {
   CallService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
     _initRingtone();
     _setupSocketListeners();
+    // Le détecteur est un ChangeNotifier séparé : on relaie ses
+    // changements pour que les écrans (Consumer<CallService>) se
+    // reconstruisent quand le locuteur actif change.
+    speakingDetector.addListener(notify);
   }
 
   /// Pont public vers `notifyListeners()` (lui-même `@protected`), afin que les
   /// extensions de cette librairie puissent déclencher un rebuild de l'UI.
   void notify() => notifyListeners();
+
+  /// Démarre la détection du locuteur actif. [groupMode] détermine la
+  /// source des PeerConnection : mesh de groupe (`_groupPeerConnections`)
+  /// ou unique PeerConnection du 1-1 (clé = remoteUserId).
+  void _startSpeakingDetection({required bool groupMode}) {
+    speakingDetector.start(() {
+      if (groupMode) return _groupPeerConnections;
+      final pc = _webrtc.peerConnection;
+      final remoteId = _remoteUserId?.toString();
+      if (pc == null || remoteId == null) return <String, RTCPeerConnection>{};
+      return {remoteId: pc};
+    });
+  }
 
   Future<void> _initRingtone() async {
     try {
@@ -144,6 +171,7 @@ class CallService extends ChangeNotifier {
   @override
   void dispose() {
     _durationTimer?.cancel();
+    speakingDetector.dispose();
     _webrtc.dispose();
     _ringtone.stop();
     for (final pc in _groupPeerConnections.values) {
