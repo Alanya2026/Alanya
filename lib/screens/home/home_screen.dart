@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/call_service.dart';
+import '../../core/services/notification_navigation.dart';
 import '../../core/services/push_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -29,7 +30,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _incomingCallShown = false;
   late final PageController _pageController;
 
-  StreamSubscription<MeetingNotifData>? _meetingNotifSub;
+  StreamSubscription<NotificationAction>? _notifActionSub;
+
+  static const int _tabCalls = 1;
+  static const int _tabStatuses = 2;
+  static const int _tabMeetings = 3;
 
   final List<Widget> _screens = [
     const ChatsScreen(),
@@ -47,19 +52,21 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      // Appels entrants via CallService
       final callService = Provider.of<CallService>(context, listen: false);
       callService.addListener(_onCallStatusChanged);
       if (callService.status == CallStatus.incoming && !_incomingCallShown) {
         _showIncomingCall();
       }
 
-      // Notifications meeting via PushService
-      _meetingNotifSub = PushService.meetingNotifications.listen(_onMeetingNotif);
+      _notifActionSub =
+          PushService.notificationActions.listen(_onNotificationAction);
 
-      // Lier le ChatProvider à l'utilisateur courant (couvre login frais ET
-      // session restaurée) → active le temps réel et un senderID correct.
-      final myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID;
+      // Cold start : action reçue avant abonnement au stream
+      final pending = PushService.consumePendingAction();
+      if (pending != null) _onNotificationAction(pending);
+
+      final myId =
+          Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID;
       if (myId != null && myId != 0) {
         Provider.of<ChatProvider>(context, listen: false).bind(myId);
       }
@@ -71,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _pageController.dispose();
     Provider.of<CallService>(context, listen: false)
         .removeListener(_onCallStatusChanged);
-    _meetingNotifSub?.cancel();
+    _notifActionSub?.cancel();
     super.dispose();
   }
 
@@ -99,19 +106,78 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // ── Notifications meeting ────────────────────────────────────────────
+  // ── Notifications ────────────────────────────────────────────────────
 
-  void _onMeetingNotif(MeetingNotifData notif) {
+  void _onNotificationAction(NotificationAction action) {
     if (!mounted) return;
+    debugPrint('[HomeScreen] notif action: type=${action.type} tap=${action.fromTap}');
 
-    // Toujours switcher sur l'onglet Réunions
-    setState(() => _selectedIndex = 2);
+    final type = action.type;
+    if (type == 'message') {
+      if (action.fromTap) {
+        NotificationNavigation.openConversation(context, action.data);
+      }
+    } else if (type == 'call' || type == 'group_call') {
+      if (action.fromTap) _handleCallNotification(action.data);
+    } else if (type == 'meeting_invite' || type == 'meeting_reminder') {
+      _handleMeetingNotification(action);
+    } else if (type == 'status_view') {
+      if (action.fromTap) _switchToTab(_tabStatuses);
+    }
+  }
 
+  void _handleCallNotification(Map<String, String> data) {
+    final callService = Provider.of<CallService>(context, listen: false);
+    callService.prepareIncomingFromCallKit(
+      callId: data['callId'] ?? data['roomId'] ?? '',
+      callerId: data['callerId'] ?? '',
+      callerName: data['callerName'] ?? data['title'] ?? 'Appel',
+      callerPhoto: data['photo'],
+      isVideo: data['isVideo'] == 'true',
+      roomId: data['roomId'],
+    );
+    _switchToTab(_tabCalls);
+  }
+
+  void _handleMeetingNotification(NotificationAction action) {
+    final notif = MeetingNotifData(
+      type: action.data['type'] ?? action.type,
+      meetingId: int.tryParse(action.data['meetingId'] ?? '') ?? 0,
+      meetingTitle: action.data['meetingTitle'] ?? '',
+      organiserName: action.data['organiserName'] ?? '',
+      meetingTime: action.data['meetingTime'] ?? '',
+    );
+
+    if (action.fromTap) {
+      _switchToTab(_tabMeetings);
+      if (notif.meetingId != 0) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MeetingDetailScreen(meetingId: notif.meetingId),
+          ),
+        );
+      }
+      return;
+    }
+
+    _switchToTab(_tabMeetings);
     if (notif.type == 'meeting_reminder') {
       _showReminderDialog(notif);
     } else if (notif.type == 'meeting_invite') {
       _showInviteSnackBar(notif);
     }
+  }
+
+  void _switchToTab(int index) {
+    if (_selectedIndex != index) {
+      setState(() => _selectedIndex = index);
+    }
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _showInviteSnackBar(MeetingNotifData notif) {
@@ -187,11 +253,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    // On injecte kGlassNavBarSpace dans viewPadding.bottom : ce canal n'est
-    // pas consommé par SafeArea, donc le contenu scrolle plein écran et
-    // passe derrière le glass. En revanche le Scaffold des onglets enfants
-    // l'utilise pour positionner ses FAB → ils sont automatiquement remontés
-    // au-dessus de la nav sans modif dans chaque écran.
     final injectedMq = mq.copyWith(
       viewPadding: mq.viewPadding.copyWith(
         bottom: mq.viewPadding.bottom + kGlassNavBarSpace,

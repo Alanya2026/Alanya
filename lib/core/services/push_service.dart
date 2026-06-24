@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../talky_api_client.dart';
 import 'callkit_service.dart';
+import 'notification_navigation.dart';
 import 'ringtone_service.dart';
+
 const String _kDefaultFirebaseVapidKey =
     'BBde_uFKtUbLFwAQZ0Kd5ENuaPD1LuRf2ZvvHMPZ3wigioZpjIf7a9rh3pFcI2TRYRrC1YmoiRnAJ4n8io5QBTk';
 const String _kFirebaseVapidKey = String.fromEnvironment(
@@ -28,11 +30,11 @@ const _kChannelMeetings = AndroidNotificationChannel(
 
 /// Données d'une notification meeting diffusées sur [PushService.meetingNotifications].
 class MeetingNotifData {
-  final String type;        
+  final String type;
   final int meetingId;
   final String meetingTitle;
   final String organiserName;
-  final String meetingTime;  
+  final String meetingTime;
   const MeetingNotifData({
     required this.type,
     required this.meetingId,
@@ -50,12 +52,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (type == 'call' || type == 'group_call') {
     if (!kIsWeb) {
       await CallKitService.instance.showIncoming(
-        callId:      (data['callId'] ?? data['roomId'] ?? '').toString(),
-        callerId:    (data['callerId'] ?? '').toString(),
-        callerName:  (data['callerName'] ?? data['title'] ?? 'Appel').toString(),
+        callId: (data['callId'] ?? data['roomId'] ?? '').toString(),
+        callerId: (data['callerId'] ?? '').toString(),
+        callerName: (data['callerName'] ?? data['title'] ?? 'Appel').toString(),
         callerPhoto: data['photo']?.toString(),
-        isVideo:     data['isVideo'] == 'true',
-        roomId:      data['roomId']?.toString(),
+        isVideo: data['isVideo'] == 'true',
+        roomId: data['roomId']?.toString(),
         silent: true,
       );
     }
@@ -64,12 +66,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       await CallKitService.instance.endAll();
       await RingtoneService.stopAll();
     }
-  } else { 
+  } else {
     await _showBackgroundNotification(message);
   }
 }
 
-/// Affiche une notification locale  
+/// Affiche une notification locale avec payload pour le tap.
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
   if (kIsWeb) return;
   final data = message.data;
@@ -81,6 +83,7 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
   final isMeeting = type == 'meeting_invite' || type == 'meeting_reminder';
   final channelId = isMeeting ? 'talky_meetings' : 'talky_messages';
   final channelName = isMeeting ? 'Réunions' : 'Messages';
+  final payload = encodeNotificationPayload(Map<String, dynamic>.from(data));
 
   final plugin = FlutterLocalNotificationsPlugin();
   const initSettings = InitializationSettings(
@@ -107,6 +110,7 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
         icon: '@mipmap/ic_launcher',
       ),
     ),
+    payload: payload,
   );
 }
 
@@ -130,6 +134,20 @@ class PushService {
   String? _token;
   String? get currentToken => _token;
 
+  static NotificationAction? _pendingAction;
+
+  static final StreamController<NotificationAction> _actionCtrl =
+      StreamController.broadcast();
+  static Stream<NotificationAction> get notificationActions =>
+      _actionCtrl.stream;
+
+  /// Consomme l'action en attente (cold start avant abonnement au stream).
+  static NotificationAction? consumePendingAction() {
+    final action = _pendingAction;
+    _pendingAction = null;
+    return action;
+  }
+
   static final StreamController<MeetingNotifData> _meetingCtrl =
       StreamController.broadcast();
   static Stream<MeetingNotifData> get meetingNotifications =>
@@ -145,7 +163,6 @@ class PushService {
   }
 
   Future<void> _setup() async {
-    // Permission utilisateur
     final settings = await _fm.requestPermission(
       alert: true,
       badge: true,
@@ -158,7 +175,6 @@ class PushService {
       return;
     }
 
-    // Initialiser flutter_local_notifications (mobile uniquement)
     if (!kIsWeb) {
       const initSettings = InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -168,14 +184,23 @@ class PushService {
         onDidReceiveNotificationResponse: _onLocalNotifTap,
       );
 
-      // Créer les canaux Android
       final plugin = _local.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       await plugin?.createNotificationChannel(_kChannelMessages);
       await plugin?.createNotificationChannel(_kChannelMeetings);
+
+      // Cold start via tap sur notif locale
+      final launchDetails = await _local.getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp == true) {
+        final payload = launchDetails!.notificationResponse?.payload;
+        final action = decodeNotificationPayload(payload);
+        if (action != null) {
+          debugPrint('[Push] cold start via notif locale: type=${action.type}');
+          _dispatchNotificationAction(action);
+        }
+      }
     }
 
-    // Token FCM
     try {
       _token = kIsWeb && _kFirebaseVapidKey.isNotEmpty
           ? await _fm.getToken(vapidKey: _kFirebaseVapidKey)
@@ -186,22 +211,22 @@ class PushService {
       debugPrint('[Push] getToken error: $e');
     }
 
-    // Rotation du token
     _onTokenRefreshSub = _fm.onTokenRefresh.listen((t) {
       _token = t;
       _safeUpdateToken(t);
     });
 
-    // Messages foreground
     _onMessageSub = FirebaseMessaging.onMessage.listen(_handleForeground);
 
-    // App ouverte depuis notif background → tap
     _onMessageOpenedSub =
         FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedApp);
 
-    // App tuée → tap sur notif → redémarrage
+    // Cold start via tap sur notif FCM
     final initial = await _fm.getInitialMessage();
-    if (initial != null) _handleOpenedApp(initial);
+    if (initial != null) {
+      debugPrint('[Push] cold start via FCM: type=${initial.data['type']}');
+      _handleOpenedApp(initial);
+    }
   }
 
   Future<void> _safeUpdateToken(String token) async {
@@ -213,125 +238,109 @@ class PushService {
     }
   }
 
-  // Foreground
-
   void _handleForeground(RemoteMessage message) async {
     final data = message.data;
     final type = data['type']?.toString();
 
-    debugPrint('[Push] foreground: type=$type'); 
+    debugPrint('[Push] foreground: type=$type');
     if (type == 'call_ended') return;
 
     if (type == 'meeting_invite' || type == 'meeting_reminder') {
-      await _showMeetingLocalNotif(data);
-      _dispatchMeetingData(data);
-      return;
-    }
- 
-    if (type == 'call' || type == 'group_call') {
-      debugPrint('[Push] ℹ️ Appel géré via CallKit (pas de notif locale)'); 
+      await _showLocalNotif(data);
+      _dispatchNotificationAction(
+        NotificationAction.fromMap(data, fromTap: false),
+      );
       return;
     }
 
-    // Autres types : notif locale standard
+    if (type == 'call' || type == 'group_call') {
+      debugPrint('[Push] ℹ️ Appel géré via CallKit (pas de notif locale)');
+      return;
+    }
+
     if (!kIsWeb) {
       final title =
           (data['title'] ?? message.notification?.title ?? '').toString();
       final body =
           (data['body'] ?? message.notification?.body ?? '').toString();
       if (title.isNotEmpty || body.isNotEmpty) {
-        await _local.show(
-          DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          title,
-          body,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'talky_messages',
-              'Messages',
-              importance: Importance.high,
-              priority: Priority.high,
-            ),
-          ),
-        );
+        await _showLocalNotif(data, title: title, body: body);
       }
     }
   }
 
-  // Tap sur notif  
-
   void _handleOpenedApp(RemoteMessage message) {
     final data = message.data;
-    final type = data['type']?.toString();
-    debugPrint('[Push] opened from notif: type=$type');
-
-    if (type == 'meeting_invite' || type == 'meeting_reminder') {
-      _dispatchMeetingData(data);
-    }
+    debugPrint('[Push] opened from notif: type=${data['type']}');
+    if (data.isEmpty) return;
+    _dispatchNotificationAction(NotificationAction.fromMap(data));
   }
-
-  // Tap sur notif locale (foreground) ───────────────────────────────
 
   void _onLocalNotifTap(NotificationResponse response) {
-    final payload = response.payload;
-    if (payload == null) return; 
-    final parts = payload.split('|');
-    if (parts.length < 4) return;
-    final data = {
-      'type':          parts[0],
-      'meetingId':     parts[1],
-      'meetingTitle':  parts[2],
-      'organiserName': parts[3],
-      'meetingTime':   parts.length > 4 ? parts[4] : '',
-    };
-    _dispatchMeetingData(data);
+    final action = decodeNotificationPayload(response.payload);
+    if (action == null) return;
+    debugPrint('[Push] tap notif locale: type=${action.type}');
+    _dispatchNotificationAction(action);
   }
- 
-  Future<void> _showMeetingLocalNotif(Map<String, dynamic> data) async {
+
+  Future<void> _showLocalNotif(
+    Map<String, dynamic> data, {
+    String? title,
+    String? body,
+  }) async {
     if (kIsWeb) return;
 
-    final type         = data['type']?.toString() ?? '';
-    final title        = data['title']?.toString() ?? 'Réunion';
-    final body         = data['body']?.toString() ?? '';
-    final meetingId    = data['meetingId']?.toString() ?? '';
-    final meetingTitle = data['meetingTitle']?.toString() ?? '';
-    final organiser    = data['organiserName']?.toString() ?? '';
-    final meetingTime  = data['meetingTime']?.toString() ?? '';
-
-    final payload = '$type|$meetingId|$meetingTitle|$organiser|$meetingTime';
+    final type = data['type']?.toString() ?? '';
+    final notifTitle = title ?? data['title']?.toString() ?? 'Talky';
+    final notifBody = body ?? data['body']?.toString() ?? '';
+    final isMeeting = type == 'meeting_invite' || type == 'meeting_reminder';
+    final payload = encodeNotificationPayload(data);
 
     await _local.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
+      notifTitle,
+      notifBody,
       NotificationDetails(
         android: AndroidNotificationDetails(
-          'talky_meetings',
-          'Réunions',
-          importance: Importance.max,
+          isMeeting ? 'talky_meetings' : 'talky_messages',
+          isMeeting ? 'Réunions' : 'Messages',
+          importance: isMeeting ? Importance.max : Importance.high,
           priority: Priority.high,
-          color: const Color(0xFF3F51B5), // indigo
+          color: isMeeting ? const Color(0xFF3F51B5) : null,
           icon: '@mipmap/ic_launcher',
-          styleInformation: BigTextStyleInformation(body),
+          styleInformation: notifBody.isNotEmpty
+              ? BigTextStyleInformation(notifBody)
+              : null,
         ),
       ),
       payload: payload,
     );
   }
 
-  void _dispatchMeetingData(Map<String, dynamic> data) {
-    final meetingIdStr = data['meetingId']?.toString() ?? '0';
-    final meetingId = int.tryParse(meetingIdStr) ?? 0;
+  void _dispatchNotificationAction(NotificationAction action) {
+    if (action.type.isEmpty) return;
 
-    final notif = MeetingNotifData(
-      type:          data['type']?.toString() ?? '',
-      meetingId:     meetingId,
-      meetingTitle:  data['meetingTitle']?.toString() ?? '',
-      organiserName: data['organiserName']?.toString() ?? '',
-      meetingTime:   data['meetingTime']?.toString() ?? '',
-    );
+    _pendingAction = action;
+    _actionCtrl.add(action);
 
-    _meetingCtrl.add(notif);
-    _navKey?.currentState?.popUntil((route) => route.isFirst);
+    if (action.type == 'meeting_invite' || action.type == 'meeting_reminder') {
+      _emitMeetingRefresh(action.data);
+    }
+
+    if (action.fromTap) {
+      _navKey?.currentState?.popUntil((route) => route.isFirst);
+    }
+  }
+
+  void _emitMeetingRefresh(Map<String, String> data) {
+    final meetingId = int.tryParse(data['meetingId'] ?? '') ?? 0;
+    _meetingCtrl.add(MeetingNotifData(
+      type: data['type'] ?? '',
+      meetingId: meetingId,
+      meetingTitle: data['meetingTitle'] ?? '',
+      organiserName: data['organiserName'] ?? '',
+      meetingTime: data['meetingTime'] ?? '',
+    ));
   }
 
   Future<void> dispose() async {
