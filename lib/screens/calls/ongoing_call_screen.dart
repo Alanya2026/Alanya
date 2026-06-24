@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/services/call_service.dart';
+import '../../widgets/calls/speaking_indicator_border.dart';
 
 /// Écran d'appel en cours (1-à-1, audio ou vidéo).
 ///
@@ -150,7 +151,11 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
             children: [
               // Background : grille groupe / remote vidéo plein écran / avatar
               if (isGroup)
-                _GroupGrid(streams: cs.groupRemoteStreams, roster: cs.groupRoster)
+                _GroupGrid(
+                  streams: cs.groupRemoteStreams,
+                  roster: cs.groupRoster,
+                  activeSpeakers: cs.activeSpeakers,
+                )
               else if (hasRemoteVideo)
                 RTCVideoView(
                   _remoteRenderer,
@@ -160,6 +165,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                 _AudioBackdrop(
                   name: cs.remoteUserName ?? 'Inconnu',
                   photoUrl: cs.remoteUserPhoto,
+                  isSpeaking: cs.isUserSpeaking(
+                      cs.remoteUserId?.toString() ?? ''),
                 ),
 
               // Local video PiP (vidéo uniquement)
@@ -231,10 +238,15 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
 // ─── Sous-widgets ──────────────────────────────────────────────────────
 
 class _AudioBackdrop extends StatelessWidget {
-  const _AudioBackdrop({required this.name, required this.photoUrl});
+  const _AudioBackdrop({
+    required this.name,
+    required this.photoUrl,
+    this.isSpeaking = false,
+  });
 
   final String name;
   final String? photoUrl;
+  final bool isSpeaking;
 
   @override
   Widget build(BuildContext context) {
@@ -253,20 +265,25 @@ class _AudioBackdrop extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: CircleAvatar(
-        radius: 90,
-        backgroundColor: AppColors.brandPrimary,
-        backgroundImage: hasPhoto ? NetworkImage(url) : null,
-        child: hasPhoto
-            ? null
-            : Text(
-                initial,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 64,
-                  fontWeight: FontWeight.w600,
+      child: SpeakingIndicatorBorder(
+        isSpeaking: isSpeaking,
+        shape: BoxShape.circle,
+        borderWidth: 4,
+        child: CircleAvatar(
+          radius: 90,
+          backgroundColor: AppColors.brandPrimary,
+          backgroundImage: hasPhoto ? NetworkImage(url) : null,
+          child: hasPhoto
+              ? null
+              : Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 64,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -465,10 +482,15 @@ class _RoundButton extends StatelessWidget {
 // ─── Grille appel de groupe ────────────────────────────────────────────
 
 class _GroupGrid extends StatelessWidget {
-  const _GroupGrid({required this.streams, required this.roster});
+  const _GroupGrid({
+    required this.streams,
+    required this.roster,
+    required this.activeSpeakers,
+  });
 
   final Map<String, MediaStream> streams;
   final Map<String, GroupParticipantInfo> roster;
+  final Set<String> activeSpeakers;
 
   @override
   Widget build(BuildContext context) {
@@ -516,6 +538,7 @@ class _GroupGrid extends StatelessWidget {
             userId: e.key,
             stream: e.value,
             name: info?.name ?? 'Participant',
+            isSpeaking: activeSpeakers.contains(e.key),
           );
         },
       ),
@@ -529,11 +552,13 @@ class _RemoteTile extends StatefulWidget {
     required this.userId,
     required this.stream,
     required this.name,
+    required this.isSpeaking,
   });
 
   final String userId;
   final MediaStream stream;
   final String name;
+  final bool isSpeaking;
 
   @override
   State<_RemoteTile> createState() => _RemoteTileState();
@@ -576,9 +601,12 @@ class _RemoteTileState extends State<_RemoteTile> {
     final initial = widget.name.isNotEmpty
         ? widget.name.substring(0, 1).toUpperCase()
         : '?';
-    return ClipRRect(
+    return SpeakingIndicatorBorder(
+      isSpeaking: widget.isSpeaking,
       borderRadius: AppRadius.brMd,
-      child: Stack(
+      child: ClipRRect(
+        borderRadius: AppRadius.brMd,
+        child: Stack(
         fit: StackFit.expand,
         children: [
           Container(color: AppColors.immersiveSurface),
@@ -630,6 +658,7 @@ class _RemoteTileState extends State<_RemoteTile> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

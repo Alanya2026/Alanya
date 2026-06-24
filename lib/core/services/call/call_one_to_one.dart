@@ -184,6 +184,7 @@ extension CallOneToOne on CallService {
 
       _status = CallStatus.connected;
       _startDurationTimer();
+      _startSpeakingDetection(groupMode: false);
       // Synchronise la notif CallKit (passe en mode "appel en cours").
       if (_currentCallId != null && _currentCallId!.isNotEmpty) {
         await _callKit.setConnected(_currentCallId!);
@@ -243,6 +244,7 @@ extension CallOneToOne on CallService {
   }
 
   Future<void> _terminateCall() async {
+    speakingDetector.stop();
     await _ringtone.stop();
     await _callKit.endAll();
     await _webrtc.dispose();

@@ -35,7 +35,7 @@ class _SignupScreenState extends State<SignupScreen> {
         context: context,
         barrierDismissible: false,
         builder: (_) => AlertDialog(
-          title: const Text('Votre identifiant Talky'),
+          title: const Text('Votre identifiant Alanya'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

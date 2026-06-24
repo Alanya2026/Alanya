@@ -71,6 +71,7 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] !! Answer acceptée → CONNECTED');
         _status = CallStatus.connected;
         _startDurationTimer();
+        _startSpeakingDetection(groupMode: false);
       } catch (e) {
         debugPrint('[CallService] ** Erreur handleAnswer: $e');
         _status = CallStatus.idle;

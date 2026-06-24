@@ -45,6 +45,7 @@ extension CallGroup on CallService {
 
       _status = CallStatus.connected;
       _startDurationTimer();
+      _startSpeakingDetection(groupMode: true);
       notify();
     } catch (e) {
       debugPrint('[CallService] Erreur createGroupCall: $e');
@@ -91,6 +92,7 @@ extension CallGroup on CallService {
 
       _status = CallStatus.connected;
       _startDurationTimer();
+      _startSpeakingDetection(groupMode: true);
       notify();
     } catch (e) {
       debugPrint('[CallService] Erreur joinGroupCall: $e');
@@ -136,6 +138,7 @@ extension CallGroup on CallService {
   }
 
   Future<void> _terminateGroupCall() async {
+    speakingDetector.stop();
     for (final pc in _groupPeerConnections.values) {
       await pc.close();
     }

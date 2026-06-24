@@ -7,6 +7,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/calls/speaking_indicator_border.dart';
 
 // Couleurs spécifiques à l'UI Google-Meet de la réunion (aucun token AppColors
 // ne correspond exactement à ce gris-anthracite, distinct du bleu immersif).
@@ -226,6 +227,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               isVideoOff: meetingService.isVideoOff ||
                                   !_localRendererReady,
                               isMuted: meetingService.isMuted,
+                              isSpeaking: meetingService.amISpeaking,
                               mirror: true,
                             )
                           : GridView.count(
@@ -241,6 +243,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                   isVideoOff: meetingService.isVideoOff ||
                                       !_localRendererReady,
                                   isMuted: meetingService.isMuted,
+                                  isSpeaking: meetingService.amISpeaking,
                                   mirror: true,
                                 ),
                                 ..._remoteRenderers.entries.map((entry) {
@@ -257,6 +260,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                     renderer: entry.value,
                                     isVideoOff: false,
                                     isMuted: false,
+                                    isSpeaking: meetingService
+                                        .isUserSpeaking(entry.key),
                                   );
                                 }),
                               ],
@@ -381,9 +386,13 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     required RTCVideoRenderer renderer,
     required bool isVideoOff,
     required bool isMuted,
+    required bool isSpeaking,
     bool mirror = false,
   }) {
-    return Container(
+    return SpeakingIndicatorBorder(
+      isSpeaking: isSpeaking,
+      borderRadius: AppRadius.brMd,
+      child: Container(
       decoration: const BoxDecoration(
         color: _kMeetTile,
         borderRadius: AppRadius.brMd,
@@ -443,6 +452,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
