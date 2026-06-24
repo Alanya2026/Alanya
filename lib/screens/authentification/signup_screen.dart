@@ -126,6 +126,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
+              
               AppSpacing.vGapLg,
               TextField(
                 controller: _passwordController,
