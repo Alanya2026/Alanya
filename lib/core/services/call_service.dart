@@ -24,7 +24,13 @@ class GroupParticipantInfo {
   final String id;
   final String name;
   final String? photo;
-  const GroupParticipantInfo({required this.id, required this.name, this.photo});
+  bool isMuted;
+  GroupParticipantInfo({
+    required this.id,
+    required this.name,
+    this.photo,
+    this.isMuted = false,
+  });
 }
 
 class CallService extends ChangeNotifier {
@@ -47,6 +53,9 @@ class CallService extends ChangeNotifier {
   bool _isMuted = false;
   bool _isSpeakerOn = false;
   bool _isVideoOn = true;
+
+  // État mute du distant (appel 1-à-1)
+  bool _isRemoteMuted = false;
 
   // Erreurs
   String? _errorMessage;
@@ -84,6 +93,7 @@ class CallService extends ChangeNotifier {
   bool get isMuted => _isMuted;
   bool get isSpeakerOn => _isSpeakerOn;
   bool get isVideoOn => _isVideoOn;
+  bool get isRemoteMuted => _isRemoteMuted;
   int get callDuration => _callDuration;
   String? get errorMessage => _errorMessage;
   bool get callEndedByUs => _callEndedByUs;

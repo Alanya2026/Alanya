@@ -231,5 +231,26 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] group addCandidate échoué $fromUserId: $e');
       }
     });
+ 
+    // Mute state 1-à-1 : l'autre participant a coupé/activé son micro
+    _apiClient.onSocketEvent(SocketEvents.callMuteState, (data) {
+      if (data is! Map) return;
+      _isRemoteMuted = data['isMuted'] == true;
+      debugPrint('[CallService] 🎙 Remote mute state: $_isRemoteMuted');
+      notify();
+    });
+
+    // Mute state groupe : un participant a coupé/activé son micro
+    _apiClient.onSocketEvent(SocketEvents.groupMuteState, (data) {
+      if (data is! Map) return;
+      final userId = data['userId']?.toString();
+      final isMuted = data['isMuted'] == true;
+      if (userId == null) return;
+      debugPrint('[CallService] 🎙 Group mute state: userId=$userId isMuted=$isMuted');
+      if (_groupRoster.containsKey(userId)) {
+        _groupRoster[userId]!.isMuted = isMuted;
+        notify();
+      }
+    });
   }
 }

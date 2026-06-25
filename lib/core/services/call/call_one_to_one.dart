@@ -267,6 +267,7 @@ extension CallOneToOne on CallService {
     _isMuted = false;
     _isVideoOn = true;
     _isSpeakerOn = false;
+    _isRemoteMuted = false;
     _durationTimer?.cancel();
     _callEndedByUs = false;
   }

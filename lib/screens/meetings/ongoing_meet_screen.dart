@@ -259,7 +259,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                     label: label,
                                     renderer: entry.value,
                                     isVideoOff: false,
-                                    isMuted: false,
+                                    isMuted: meetingService.isParticipantMuted(entry.key),
                                     isSpeaking: meetingService
                                         .isUserSpeaking(entry.key),
                                   );

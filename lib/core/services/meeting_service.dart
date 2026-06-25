@@ -40,6 +40,9 @@ class MeetingService extends ChangeNotifier {
   bool _isMuted = false;
   bool _isVideoOff = false;
 
+  // États mute des participants distants (userId → isMuted)
+  final Map<String, bool> _remoteMutedStates = {};
+
   // Timer de durée
   Timer? _durationTimer;
   int _meetingDuration = 0;
@@ -57,6 +60,8 @@ class MeetingService extends ChangeNotifier {
   Map<String, MediaStream> get remoteStreams => _remoteStreams;
   bool get isMuted => _isMuted;
   bool get isVideoOff => _isVideoOff;
+  Map<String, bool> get remoteMutedStates => Map.unmodifiable(_remoteMutedStates);
+  bool isParticipantMuted(String userId) => _remoteMutedStates[userId] ?? false;
   int get meetingDuration => _meetingDuration;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
 
@@ -157,6 +162,17 @@ class MeetingService extends ChangeNotifier {
       } catch (e) {
         debugPrint('[MeetingService] addCandidate échoué pour $fromUserId: $e');
       }
+    });
+
+    // Mute state : un participant a coupé/réactivé son micro
+    _apiClient.onSocketEvent(SocketEvents.meetingMuteState, (data) {
+      if (data is! Map) return;
+      final userId = data['userId']?.toString();
+      final isMuted = data['isMuted'] == true;
+      if (userId == null) return;
+      debugPrint('[MeetingService] 🎙 Mute state: userId=$userId isMuted=$isMuted');
+      _remoteMutedStates[userId] = isMuted;
+      notifyListeners();
     });
   }
 
@@ -539,6 +555,7 @@ class MeetingService extends ChangeNotifier {
     _remoteStreams.remove(userId);
     _pendingIceByPeer.remove(userId);
     _remoteDescSetForPeer.remove(userId);
+    _remoteMutedStates.remove(userId);
     notifyListeners();
   }
 
@@ -549,6 +566,13 @@ class MeetingService extends ChangeNotifier {
       final track = _localStream!.getAudioTracks().first;
       track.enabled = !track.enabled;
       _isMuted = !track.enabled;
+      // Notifier les autres participants
+      if (_currentMeeting != null) {
+        _apiClient.sendSocketEvent(SocketEvents.meetingMuteState, {
+          'meetingId': _currentMeeting!.idMeeting,
+          'isMuted': _isMuted,
+        });
+      }
       notifyListeners();
     }
   }
@@ -603,6 +627,7 @@ class MeetingService extends ChangeNotifier {
     _currentMeeting = null;
     _isMuted = false;
     _isVideoOff = false;
+    _remoteMutedStates.clear();
   }
 
   @override

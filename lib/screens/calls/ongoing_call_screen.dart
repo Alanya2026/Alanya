@@ -167,6 +167,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                   photoUrl: cs.remoteUserPhoto,
                   isSpeaking: cs.isUserSpeaking(
                       cs.remoteUserId?.toString() ?? ''),
+                  isRemoteMuted: cs.isRemoteMuted,
                 ),
 
               // Local video PiP (vidéo uniquement)
@@ -242,11 +243,13 @@ class _AudioBackdrop extends StatelessWidget {
     required this.name,
     required this.photoUrl,
     this.isSpeaking = false,
+    this.isRemoteMuted = false,
   });
 
   final String name;
   final String? photoUrl;
   final bool isSpeaking;
+  final bool isRemoteMuted;
 
   @override
   Widget build(BuildContext context) {
@@ -265,25 +268,52 @@ class _AudioBackdrop extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: SpeakingIndicatorBorder(
-        isSpeaking: isSpeaking,
-        shape: BoxShape.circle,
-        borderWidth: 4,
-        child: CircleAvatar(
-          radius: 90,
-          backgroundColor: AppColors.brandPrimary,
-          backgroundImage: hasPhoto ? NetworkImage(url) : null,
-          child: hasPhoto
-              ? null
-              : Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 64,
-                    fontWeight: FontWeight.w600,
-                  ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SpeakingIndicatorBorder(
+            isSpeaking: isSpeaking,
+            shape: BoxShape.circle,
+            borderWidth: 4,
+            child: CircleAvatar(
+              radius: 90,
+              backgroundColor: AppColors.brandPrimary,
+              backgroundImage: hasPhoto ? NetworkImage(url) : null,
+              child: hasPhoto
+                  ? null
+                  : Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 64,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+          if (isRemoteMuted)
+            Positioned(
+              bottom: 80,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-        ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(CupertinoIcons.mic_off, color: Colors.redAccent, size: 16),
+                    SizedBox(width: 6),
+                    Text(
+                      'Micro coupé',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -539,6 +569,7 @@ class _GroupGrid extends StatelessWidget {
             stream: e.value,
             name: info?.name ?? 'Participant',
             isSpeaking: activeSpeakers.contains(e.key),
+            isMuted: info?.isMuted ?? false,
           );
         },
       ),
@@ -553,12 +584,14 @@ class _RemoteTile extends StatefulWidget {
     required this.stream,
     required this.name,
     required this.isSpeaking,
+    this.isMuted = false,
   });
 
   final String userId;
   final MediaStream stream;
   final String name;
   final bool isSpeaking;
+  final bool isMuted;
 
   @override
   State<_RemoteTile> createState() => _RemoteTileState();
@@ -645,15 +678,27 @@ class _RemoteTileState extends State<_RemoteTile> {
                   colors: [Colors.black87, Colors.transparent],
                 ),
               ),
-              child: Text(
-                widget.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (widget.isMuted)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(CupertinoIcons.mic_off,
+                          color: Colors.redAccent, size: 14),
+                    ),
+                ],
               ),
             ),
           ),

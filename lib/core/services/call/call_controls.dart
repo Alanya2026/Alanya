@@ -6,6 +6,19 @@ extension CallControls on CallService {
   Future<void> toggleMute() async {
     await _webrtc.toggleMic();
     _isMuted = !_isMuted;
+    // Notifier les autres participants de l'état micro
+    final isGroup = _groupRoomId != null;
+    if (isGroup) {
+      _apiClient.sendSocketEvent(SocketEvents.groupMuteState, {
+        'roomId': _groupRoomId,
+        'isMuted': _isMuted,
+      });
+    } else if (_remoteUserId != null) {
+      _apiClient.sendSocketEvent(SocketEvents.callMuteState, {
+        'toUserId': _remoteUserId,
+        'isMuted': _isMuted,
+      });
+    }
     notify();
   }
 

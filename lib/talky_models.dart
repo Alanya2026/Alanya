@@ -697,6 +697,11 @@ class SocketEvents {
   static const groupCallEnded     = 'group_call_ended';
   static const groupUserLeft      = 'group_user_left';
 
+  // Mute state (Flutter ↔ Backend ↔ Flutter)
+  static const callMuteState      = 'call:mute_state';
+  static const groupMuteState     = 'group:mute_state';
+  static const meetingMuteState   = 'meeting:mute_state';
+
   // Meetings (Flutter → Backend)
   static const meetingCreate      = 'meeting:create';
   static const meetingJoinRoom    = 'meeting:join_room';
