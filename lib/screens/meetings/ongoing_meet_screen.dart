@@ -29,6 +29,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   final Map<String, RTCVideoRenderer> _remoteRenderers = {};
   final Map<String, String> _remoteStreamSignatures = {};
   bool _localRendererReady = false;
+  bool _closing = false;
 
   String _streamSignature(dynamic stream) {
     if (stream is! MediaStream) return '';
@@ -38,7 +39,24 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<MeetingService>(context, listen: false)
+            .markMeetingUiVisible();
+      }
+    });
     _setupRenderer();
+  }
+
+  void _minimize() {
+    if (_closing || !mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  void _onFullscreenPop(bool didPop) {
+    if (!didPop || _closing || !mounted) return;
+    Provider.of<MeetingService>(context, listen: false)
+        .markMeetingUiMinimized();
   }
 
   Future<void> _setupRenderer() async {
@@ -65,6 +83,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
 
     if (meetingService.status == MeetingStatus.ended) {
       meetingService.removeListener(_onMeetingServiceChanged);
+      _closing = true;
       Navigator.of(context).pop();
       return;
     }
@@ -143,12 +162,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
         final isOrganiser = meeting?.idOrganiser == myId;
 
         return PopScope(
-          canPop: meetingService.status != MeetingStatus.connected,
-          onPopInvokedWithResult: (didPop, _) async {
-            if (didPop) return;
-            await meetingService.leaveMeeting();
-            if (context.mounted) Navigator.of(context).pop();
-          },
+          canPop: true,
+          onPopInvokedWithResult: (didPop, _) => _onFullscreenPop(didPop),
           child: Scaffold(
             backgroundColor: _kMeetBg,
             body: SafeArea(
@@ -165,14 +180,12 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                           child: Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.arrow_back,
-                                    color: Colors.white),
-                                onPressed: () async {
-                                  await meetingService.leaveMeeting();
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                  }
-                                },
+                                icon: const Icon(
+                                  CupertinoIcons.chevron_down,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                                onPressed: _minimize,
                               ),
                               AppSpacing.hGapSm,
                               Flexible(
@@ -283,6 +296,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                           color: AppColors.error,
                           iconColor: Colors.white,
                           onTap: () async {
+                            _closing = true;
                             await meetingService.leaveMeeting();
                             if (context.mounted) Navigator.pop(context);
                           },

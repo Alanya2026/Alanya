@@ -12,6 +12,7 @@ import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
 import 'core/network/cert_pinning.dart';
+import 'core/navigation/app_navigator.dart';
 import 'core/utils/app_log.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
@@ -25,9 +26,11 @@ import 'firebase_options.dart';
 import 'screens/authentification/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'talky_api_client.dart';
+import 'widgets/session/active_session_banner.dart';
 
 /// Clé globale exposée à PushService pour naviguer depuis les notifications.
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+@Deprecated('Use appNavigatorKey from core/navigation/app_navigator.dart')
+final GlobalKey<NavigatorState> navigatorKey = appNavigatorKey;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -103,6 +106,7 @@ class TalkyApp extends StatelessWidget {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: tc.mode,
+          builder: (context, child) => ActiveSessionChrome(child: child),
           home: const AuthWrapper(),
         ),
       ),

@@ -32,7 +32,23 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
   void initState() {
     super.initState();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<CallService>(context, listen: false).markCallUiVisible();
+      }
+    });
     _initRenderers();
+  }
+
+  /// Quitte l'écran plein sans raccrocher (chevron ou retour système).
+  void _minimize() {
+    if (_closing || !mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  void _onFullscreenPop(bool didPop) {
+    if (!didPop || _closing || !mounted) return;
+    Provider.of<CallService>(context, listen: false).markCallUiMinimized();
   }
 
   Future<void> _initRenderers() async {
@@ -102,7 +118,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
       _localRenderer.srcObject = null;
       _remoteRenderer.srcObject = null;
     }
-    if (mounted) Navigator.of(context).maybePop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _hangUp() async {
@@ -119,7 +135,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     } else {
       await cs.endCall();
     }
-    if (mounted) Navigator.of(context).maybePop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -138,7 +154,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CallService>(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) => _onFullscreenPop(didPop),
+      child: Consumer<CallService>(
       builder: (_, cs, __) {
         final isVideo = cs.isVideo;
         final isGroup = cs.groupRoomId != null;
@@ -193,7 +212,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
                   duration: cs.status == CallStatus.connected
                       ? cs.formattedDuration
                       : null,
-                  onMinimize: () => Navigator.of(context).maybePop(),
+                  onMinimize: _minimize,
                 ),
               ),
 
@@ -218,6 +237,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
           ),
         );
       },
+    ),
     );
   }
 
