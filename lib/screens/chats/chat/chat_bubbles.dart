@@ -31,6 +31,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
                   bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
                   bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
                 ),
+                border: _highlightMsgId == msg.msgID
+                    ? Border.all(
+                        color: isMe ? context.colors.onPrimary : context.colors.primary,
+                        width: 2,
+                      )
+                    : null,
                 boxShadow: AppShadows.subtle,
               ),
               child: Column(
@@ -38,8 +44,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 children: [
                   if (msg.isStatusReply != 0)
                     _buildStatusReplyChip(isMe),
-                  if (msg.replyToContent != null && msg.replyToContent!.isNotEmpty)
-                    _buildReplyQuote(msg.replyToContent!, isMe),
+                  if (msg.replyToContent != null &&
+                      msg.replyToContent!.isNotEmpty &&
+                      msg.replyToID != null &&
+                      msg.replyToID! > 0)
+                    _buildReplyQuote(msg.replyToContent!, isMe, replyToID: msg.replyToID!),
                   if (msg.isDeleted)
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -141,23 +150,30 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildReplyQuote(String content, bool isMe) {
+  Widget _buildReplyQuote(String content, bool isMe, {required int replyToID}) {
     final accent = isMe ? context.colors.onPrimary : context.colors.primary;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2, vertical: 6),
-      decoration: BoxDecoration(
-        color: accent.withAlpha(30),
-        border: Border(left: BorderSide(color: accent, width: 3)),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _scrollToReply(replyToID),
         borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        content,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: context.text.bodySmall?.copyWith(
-          color: _bubbleMuted(isMe),
-          fontStyle: FontStyle.italic,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2, vertical: 6),
+          decoration: BoxDecoration(
+            color: accent.withAlpha(30),
+            border: Border(left: BorderSide(color: accent, width: 3)),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            content,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.bodySmall?.copyWith(
+              color: _bubbleMuted(isMe),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
         ),
       ),
     );

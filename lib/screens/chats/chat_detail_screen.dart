@@ -73,6 +73,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _loadingOlder = false;
   bool _atBottom = true;
   bool _firstLoad = true;
+  bool _suppressAutoScroll = false;
+  int? _highlightMsgId;
+  int? _pendingScrollMsgId;
+  Timer? _highlightTimer;
+  final Map<int, GlobalKey> _messageKeys = {};
 
   final ImagePicker _picker = ImagePicker();
 
@@ -126,10 +131,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _chat.repository.markAsRead(convId);
   }
 
+  GlobalKey _keyForMessage(int msgID) =>
+      _messageKeys.putIfAbsent(msgID, GlobalKey.new);
+
   @override
   void dispose() {
     _typingTimer?.cancel();
     _recordTimer?.cancel();
+    _highlightTimer?.cancel();
     _recorder.dispose();
     final convId = widget.conversationId;
     if (convId != null) _chat.repository.clearActiveConversation(convId);
@@ -277,7 +286,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       }
                       // Auto-scroll au 1er chargement, si déjà en bas, ou quand
                       // l'indicateur de frappe apparaît.
-                      if (_firstLoad || _atBottom) {
+                      if (!_suppressAutoScroll && (_firstLoad || _atBottom)) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           _scrollToBottom();
                           _firstLoad = false;
@@ -295,7 +304,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           final prev = index > 0 ? messages[index - 1] : null;
                           final showDate = prev == null ||
                               !_sameDay(prev.sendAt.toLocal(), msg.sendAt.toLocal());
+                          if (msg.msgID == _pendingScrollMsgId) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              _tryRevealMessage(msg.msgID);
+                            });
+                          }
                           return Column(
+                            key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
                             children: [
                               if (showDate) _buildDateSeparator(msg.sendAt.toLocal()),
                               _buildMessageBubble(msg, msg.senderID == _myId),

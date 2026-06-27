@@ -287,6 +287,137 @@ extension _ChatActions on _ChatDetailScreenState {
     });
   }
 
+  Future<void> _scrollToReply(int replyToID) async {
+    final convId = widget.conversationId;
+    if (convId == null || replyToID <= 0) return;
+
+    _suppressAutoScroll = true;
+    _atBottom = false;
+
+    try {
+      final found = await _ensureMessageLoaded(convId, replyToID);
+      if (!mounted) return;
+      if (!found) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Message introuvable dans cette conversation')),
+        );
+        return;
+      }
+
+      final messages = await _chat.watchMessages(convId).first;
+      final index = messages.indexWhere((m) => m.msgID == replyToID);
+      if (index < 0) return;
+
+      rebuild(() => _pendingScrollMsgId = replyToID);
+      await WidgetsBinding.instance.endOfFrame;
+
+      if (await _tryRevealMessage(replyToID)) return;
+
+      final estimated = _estimateScrollOffset(index, messages);
+      if (_scrollController.hasClients) {
+        final max = _scrollController.position.maxScrollExtent;
+        await _scrollController.animateTo(
+          estimated.clamp(0.0, max),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+
+      for (var i = 0; i < 12; i++) {
+        await WidgetsBinding.instance.endOfFrame;
+        if (await _tryRevealMessage(replyToID)) return;
+
+        if (!_scrollController.hasClients) break;
+        final max = _scrollController.position.maxScrollExtent;
+        final nudge = (i + 1) * 150.0;
+        final target = i.isEven
+            ? (estimated - nudge).clamp(0.0, max)
+            : (estimated + nudge * 0.5).clamp(0.0, max);
+        await _scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeInOut,
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible d\'afficher le message')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        rebuild(() => _pendingScrollMsgId = null);
+        _suppressAutoScroll = false;
+      }
+    }
+  }
+
+  Future<bool> _tryRevealMessage(int msgID) async {
+    if (!mounted) return false;
+    final ctx = _messageKeys[msgID]?.currentContext;
+    if (ctx == null) return false;
+    await Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      alignment: 0.35,
+    );
+    _highlightMessage(msgID);
+    if (mounted) rebuild(() => _pendingScrollMsgId = null);
+    return true;
+  }
+
+  double _estimateScrollOffset(int index, List<LocalMessage> messages) {
+    const dateH = 42.0;
+    var offset = AppSpacing.lg.toDouble();
+    for (var i = 0; i < index; i++) {
+      final prev = i > 0 ? messages[i - 1] : null;
+      if (prev == null ||
+          !_sameDay(prev.sendAt.toLocal(), messages[i].sendAt.toLocal())) {
+        offset += dateH;
+      }
+      if (widget.isGroup && messages[i].senderID != _myId) offset += 22;
+      offset += _estimateBubbleHeight(messages[i]);
+    }
+    return offset;
+  }
+
+  double _estimateBubbleHeight(LocalMessage m) {
+    var h = 56.0;
+    if (m.replyToContent != null && m.replyToContent!.isNotEmpty) h += 36;
+    switch (m.type) {
+      case 1:
+      case 2:
+        return h + 130;
+      case 3:
+        return h + 8;
+      case 4:
+        return h - 4;
+      default:
+        final lines = ((m.content?.length ?? 0) / 38).ceil().clamp(1, 8);
+        return h + lines * 18;
+    }
+  }
+
+  Future<bool> _ensureMessageLoaded(int convId, int msgID) async {
+    for (var i = 0; i < 50; i++) {
+      final messages = await _chat.watchMessages(convId).first;
+      if (messages.any((m) => m.msgID == msgID)) return true;
+      final loaded = await _chat.repository.loadOlderMessages(convId);
+      if (loaded == 0) return false;
+    }
+    return false;
+  }
+
+  void _highlightMessage(int msgID) {
+    _highlightTimer?.cancel();
+    rebuild(() => _highlightMsgId = msgID);
+    _highlightTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) rebuild(() => _highlightMsgId = null);
+    });
+  }
+
   String _formatTime(DateTime sendAt) {
     final dt = sendAt.toLocal();
     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
