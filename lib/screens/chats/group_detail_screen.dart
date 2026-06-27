@@ -244,9 +244,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surfaceMuted,
+      backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceMuted,
+        backgroundColor: context.semantic.surfaceMuted,
         centerTitle: true,
         title: const Text('Infos du groupe'),
         actions: _group == null
@@ -522,12 +522,13 @@ class _MediaCardState extends State<_MediaCard> {
   }
 
   Widget _buildThumb(LocalMessage msg) {
+    final placeholder = context.colors.surfaceContainerHighest;
     if (msg.type == 4) {
       final name = msg.mediaName ?? 'Document';
       final ext =
           name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
       return Container(
-        color: AppColors.surfaceSubtle,
+        color: placeholder,
         child: Center(
           child: Container(
             width: 40,
@@ -549,15 +550,14 @@ class _MediaCardState extends State<_MediaCard> {
         ),
       );
     }
-    if (msg.type == 2) return Container(color: AppColors.surfaceSubtle);
+    if (msg.type == 2) return Container(color: placeholder);
 
     final hasLocal = msg.localMediaPath != null &&
         File(msg.localMediaPath!).existsSync();
     if (hasLocal) {
       return Image.file(File(msg.localMediaPath!),
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              Container(color: AppColors.surfaceSubtle));
+          errorBuilder: (_, __, ___) => Container(color: placeholder));
     }
     final url = msg.mediaUrl;
     if (url != null && url.isNotEmpty) {
@@ -566,13 +566,11 @@ class _MediaCardState extends State<_MediaCard> {
         width: 80,
         height: 80,
         fit: BoxFit.cover,
-        placeholder: (context, url) =>
-            Container(color: AppColors.surfaceSubtle),
-        errorWidget: (context, url, error) =>
-            Container(color: AppColors.surfaceSubtle),
+        placeholder: (context, url) => Container(color: placeholder),
+        errorWidget: (context, url, error) => Container(color: placeholder),
       );
     }
-    return Container(color: AppColors.surfaceSubtle);
+    return Container(color: placeholder);
   }
 
   Color _docColor(String ext) {
@@ -640,8 +638,8 @@ class _MediaCardState extends State<_MediaCard> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-          child: CircularProgressIndicator(color: Colors.white)),
+      builder: (_) => Center(
+          child: CircularProgressIndicator(color: context.colors.primary)),
     );
   }
 }
@@ -677,12 +675,12 @@ class _MembersCard extends StatelessWidget {
               leading: Container(
                 width: AppSizes.avatarMd,
                 height: AppSizes.avatarMd,
-                decoration: const BoxDecoration(
-                  color: AppColors.brandContainer,
+                decoration: BoxDecoration(
+                  color: context.colors.primaryContainer,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person_add_alt_1,
-                    color: AppColors.brandPrimary),
+                child: Icon(Icons.person_add_alt_1,
+                    color: context.colors.primary),
               ),
               title: Text(
                 'Ajouter des participants',
@@ -713,7 +711,7 @@ class _MembersCard extends StatelessWidget {
                   ? Text(
                       'En ligne',
                       style: context.text.bodySmall?.copyWith(
-                          color: context.colors.onSurfaceVariant),
+                          color: context.semantic.online),
                     )
                   : null,
               trailing: Icon(Icons.chevron_right,
@@ -755,12 +753,12 @@ class _DangerCard extends StatelessWidget {
           child: Row(
             children: [
               Icon(Icons.exit_to_app,
-                  color: AppColors.error, size: AppIconSize.md),
+                  color: context.colors.error, size: AppIconSize.md),
               AppSpacing.hGapMd,
               Text(
                 'Quitter le groupe',
                 style: context.text.bodyLarge?.copyWith(
-                  color: AppColors.error,
+                  color: context.colors.error,
                   fontWeight: FontWeight.w600,
                 ),
               ),
