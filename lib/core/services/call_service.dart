@@ -2,13 +2,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import '../../screens/calls/ongoing_call_screen.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'audio_helper.dart' as audio;
 import 'callkit_service.dart';
+import 'call_session_guard.dart';
 import 'ringtone_service.dart';
 import 'webrtc_service.dart';
 import 'call/speaking_detector.dart'; // détection locale du locuteur actif
+import '../navigation/app_navigator.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -16,6 +19,8 @@ part 'call/call_signaling.dart';  // listeners socket.io
 part 'call/call_one_to_one.dart'; // appels 1-à-1
 part 'call/call_group.dart';      // appels de groupe
 part 'call/call_controls.dart';   // contrôles médias + timer
+part 'call/call_session.dart';    // session audio / foreground en veille
+part 'call/call_ui.dart';         // bannière / minimiser l'écran d'appel
 
 enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
 
@@ -80,6 +85,10 @@ class CallService extends ChangeNotifier {
   // Auto-réponse (CallKit pré-accepté)
   bool _autoAnswerOnNextIncoming = false;
   String? _autoAnswerCallerId;
+
+  // UI minimisée (bannière flottante active).
+  bool _isCallUiMinimized = false;
+  bool _isCallUiRouteOpen = false;
 
   // Détection locale du locuteur actif (1-1 et groupe).
   final SpeakingDetector speakingDetector = SpeakingDetector();

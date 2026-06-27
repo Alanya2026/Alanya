@@ -72,6 +72,9 @@ extension CallSignaling on CallService {
         _status = CallStatus.connected;
         _startDurationTimer();
         _startSpeakingDetection(groupMode: false);
+        if (!kIsWeb) {
+          await _markCallSessionConnected();
+        }
       } catch (e) {
         debugPrint('[CallService] ** Erreur handleAnswer: $e');
         _status = CallStatus.idle;

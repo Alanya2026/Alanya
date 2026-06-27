@@ -69,6 +69,14 @@ extension CallOneToOne on CallService {
 
       _status = CallStatus.connecting;
 
+      if (!kIsWeb) {
+        await _acquireCallSession(
+          isVideo: isVideo,
+          displayName: targetUserName ?? 'Appel',
+          handle: targetUserId.toString(),
+        );
+      }
+
       // Ringback côté appelant
       _ringtone.startOutgoingRingback();
 
@@ -98,6 +106,7 @@ extension CallOneToOne on CallService {
       }
 
       _errorMessage = errorMsg;
+      await _releaseCallSession();
       await _webrtc.dispose();
       _resetCallState();
       _status = CallStatus.idle;
@@ -185,9 +194,14 @@ extension CallOneToOne on CallService {
       _status = CallStatus.connected;
       _startDurationTimer();
       _startSpeakingDetection(groupMode: false);
-      // Synchronise la notif CallKit (passe en mode "appel en cours").
-      if (_currentCallId != null && _currentCallId!.isNotEmpty) {
-        await _callKit.setConnected(_currentCallId!);
+      if (!kIsWeb) {
+        await _acquireCallSession(
+          isVideo: _isVideo,
+          displayName: _remoteUserName ?? 'Appel',
+          handle: _remoteUserId.toString(),
+          startCallKit: false,
+        );
+        await _markCallSessionConnected();
       }
       notify();
     } catch (e) {
@@ -246,6 +260,7 @@ extension CallOneToOne on CallService {
   Future<void> _terminateCall() async {
     speakingDetector.stop();
     await _ringtone.stop();
+    await _releaseCallSession();
     await _callKit.endAll();
     await _webrtc.dispose();
     _durationTimer?.cancel();
@@ -258,6 +273,7 @@ extension CallOneToOne on CallService {
   }
 
   void _resetCallState() {
+    _resetCallUiState();
     _remoteUserId = null;
     _remoteUserName = null;
     _remoteUserPhoto = null;

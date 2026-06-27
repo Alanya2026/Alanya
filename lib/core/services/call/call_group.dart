@@ -46,9 +46,19 @@ extension CallGroup on CallService {
       _status = CallStatus.connected;
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
+      if (!kIsWeb) {
+        _currentCallId = 'group_$roomId';
+        await _acquireCallSession(
+          isVideo: isVideo,
+          displayName: 'Appel groupé',
+          handle: roomId,
+        );
+        await _markCallSessionConnected();
+      }
       notify();
     } catch (e) {
       debugPrint('[CallService] Erreur createGroupCall: $e');
+      await _releaseCallSession();
       _status = CallStatus.idle;
       notify();
     }
@@ -93,9 +103,19 @@ extension CallGroup on CallService {
       _status = CallStatus.connected;
       _startDurationTimer();
       _startSpeakingDetection(groupMode: true);
+      if (!kIsWeb) {
+        _currentCallId = 'group_$roomId';
+        await _acquireCallSession(
+          isVideo: isVideo,
+          displayName: 'Appel groupé',
+          handle: roomId,
+        );
+        await _markCallSessionConnected();
+      }
       notify();
     } catch (e) {
       debugPrint('[CallService] Erreur joinGroupCall: $e');
+      await _releaseCallSession();
       _status = CallStatus.idle;
       notify();
     }
@@ -148,10 +168,13 @@ extension CallGroup on CallService {
     _groupPendingIce.clear();
     _groupRemoteDescSet.clear();
     _groupRoster.clear();
+    await _releaseCallSession();
+    await _callKit.endAll();
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _groupRoomId = null;
     _callDuration = 0;
+    _resetCallUiState();
     _status = CallStatus.idle;
     notify();
   }
