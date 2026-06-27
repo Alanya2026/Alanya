@@ -1,41 +1,72 @@
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
-import 'dart:io' show Platform;
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
-/// Classe AudioHelper pour gérer le routage audio WebRTC
-/// (Renommée de Helper pour éviter les conflits avec flutter_webrtc.Helper)
+/// Routage audio WebRTC et session audio « appel » (voiceCommunication).
 class AudioHelper {
-  /// Configure le speaker phone (sortie audio via haut-parleur)
-  /// Sur Android, nécessaire pour les appels vidéo et audio
-  static Future<void> setSpeakerphoneOn(bool on) async {
-    try {
-      if (kIsWeb) {
-        debugPrint('[AudioHelper]  Speaker phone: plateforme web (N/A)');
-        return;
-      }
+  static AudioSession? _session;
 
-      if (Platform.isAndroid) {
-        debugPrint('[AudioHelper]  Configuration speaker phone: $on');
-      } else if (Platform.isIOS) { 
-        debugPrint('[AudioHelper]  iOS speaker phone: $on (géré par système)'); 
-      }
+  /// Active la session audio pour un appel ou une réunion en cours.
+  static Future<void> configureCallAudio() async {
+    if (kIsWeb) return;
+    try {
+      _session ??= await AudioSession.instance;
+      await _session!.configure(const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.allowBluetooth,
+        avAudioSessionMode: AVAudioSessionMode.voiceChat,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.speech,
+          usage: AndroidAudioUsage.voiceCommunication,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: false,
+      ));
+      await _session!.setActive(true);
+      debugPrint('[AudioHelper] Session audio appel activée');
     } catch (e) {
-      debugPrint('[AudioHelper] ** Erreur setSpeakerphoneOn: $e');
+      debugPrint('[AudioHelper] ** configureCallAudio: $e');
     }
   }
 
-  /// Switch caméra (avant/arrière) 
-  static Future<void> switchCamera(dynamic videoTrack) async {
+  /// Relâche la session audio à la fin d'un appel/réunion.
+  static Future<void> releaseCallAudio() async {
+    if (kIsWeb) return;
     try {
-      if (kIsWeb) {
-        debugPrint('[AudioHelper] 📷 Switch camera: plateforme web (N/A)');
-        return;
-      }
-
-      debugPrint('[AudioHelper] 📷 Switch camera sur ${videoTrack.id}'); 
-      debugPrint('[AudioHelper] !! Caméra basculée');
+      await _session?.setActive(false);
+      debugPrint('[AudioHelper] Session audio appel relâchée');
     } catch (e) {
-      debugPrint('[AudioHelper] ** Erreur switchCamera: $e');
+      debugPrint('[AudioHelper] ** releaseCallAudio: $e');
+    }
+  }
+
+  /// Réactive la session après retour au premier plan.
+  static Future<void> reactivateCallAudio() async {
+    if (kIsWeb || _session == null) return;
+    try {
+      await _session!.setActive(true);
+    } catch (e) {
+      debugPrint('[AudioHelper] ** reactivateCallAudio: $e');
+    }
+  }
+
+  static Future<void> setSpeakerphoneOn(bool on) async {
+    if (kIsWeb) return;
+    try {
+      await Helper.setSpeakerphoneOn(on);
+      debugPrint('[AudioHelper] Speaker phone: $on');
+    } catch (e) {
+      debugPrint('[AudioHelper] ** setSpeakerphoneOn: $e');
+    }
+  }
+
+  static Future<void> switchCamera(MediaStreamTrack videoTrack) async {
+    if (kIsWeb) return;
+    try {
+      await Helper.switchCamera(videoTrack);
+    } catch (e) {
+      debugPrint('[AudioHelper] ** switchCamera: $e');
     }
   }
 }
-
