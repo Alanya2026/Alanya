@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, ChangeNotifier;
+import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../screens/meetings/ongoing_meet_screen.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'call/speaking_detector.dart';
+import 'call_session_guard.dart';
+import '../navigation/app_navigator.dart';
 
 enum MeetingStatus { idle, joining, connected, ended }
 
@@ -50,6 +54,10 @@ class MeetingService extends ChangeNotifier {
   // Messages in-meeting
   final List<ChatMessage> _chatMessages = [];
 
+  // UI minimisée (bannière flottante active).
+  bool _isMeetingUiMinimized = false;
+  bool _isMeetingUiRouteOpen = false;
+
   // Détection locale du locuteur actif (mesh meeting).
   final SpeakingDetector speakingDetector = SpeakingDetector();
 
@@ -68,6 +76,55 @@ class MeetingService extends ChangeNotifier {
   Set<String> get activeSpeakers => speakingDetector.activeSpeakers;
   bool get amISpeaking => speakingDetector.amISpeaking;
   bool isUserSpeaking(String userId) => speakingDetector.isSpeaking(userId);
+
+  bool get isMeetingActive =>
+      _status == MeetingStatus.joining || _status == MeetingStatus.connected;
+
+  bool get isMeetingUiMinimized => _isMeetingUiMinimized;
+
+  bool get isMeetingUiRouteOpen => _isMeetingUiRouteOpen;
+
+  bool get shouldShowMeetingBanner =>
+      isMeetingActive && _isMeetingUiMinimized;
+
+  void markMeetingUiVisible() {
+    _isMeetingUiRouteOpen = true;
+    _isMeetingUiMinimized = false;
+    notifyListeners();
+  }
+
+  void markMeetingUiMinimized() {
+    _isMeetingUiRouteOpen = false;
+    _isMeetingUiMinimized = true;
+    notifyListeners();
+  }
+
+  void markMeetingUiClosed() {
+    _isMeetingUiRouteOpen = false;
+    notifyListeners();
+  }
+
+  Future<void> showMeetingScreen() async {
+    if (!isMeetingActive || _isMeetingUiRouteOpen) return;
+
+    final navigator = appNavigator;
+    if (navigator == null) return;
+
+    await navigator.push(
+      MaterialPageRoute(builder: (_) => const OngoingMeetScreen()),
+    );
+
+    markMeetingUiClosed();
+    if (isMeetingActive && !_isMeetingUiMinimized) {
+      markMeetingUiMinimized();
+    }
+  }
+
+  Future<void> navigateToMeetingUi([BuildContext? context]) async {
+    if (context != null && !context.mounted) return;
+    if (!isMeetingActive || _isMeetingUiRouteOpen) return;
+    await showMeetingScreen();
+  }
 
   MeetingService({required TalkyApiClient apiClient}) : _apiClient = apiClient {
     _setupSocketListeners();
@@ -350,6 +407,21 @@ class MeetingService extends ChangeNotifier {
     _status = MeetingStatus.connected;
     _startDurationTimer();
     speakingDetector.start(() => _peerConnections);
+
+    if (!kIsWeb && _currentMeeting != null) {
+      final isVideo = _currentMeeting!.typeMedia == 0;
+      await CallSessionGuard.instance.acquire(
+        mode: isVideo ? SessionMode.video : SessionMode.audio,
+        callId: 'meeting_${_currentMeeting!.idMeeting}',
+        displayName: _currentMeeting!.objet,
+        handle: _currentMeeting!.room,
+        isVideo: isVideo,
+        getLocalStream: () => _localStream,
+        isVideoOn: () => !_isVideoOff,
+      );
+      await CallSessionGuard.instance.markConnected();
+    }
+
     notifyListeners();
   }
  
@@ -612,6 +684,9 @@ class MeetingService extends ChangeNotifier {
   // CLEANUP
   Future<void> _cleanup() async {
     speakingDetector.stop();
+    if (!kIsWeb) {
+      await CallSessionGuard.instance.release();
+    }
     for (final pc in _peerConnections.values) {
       await pc.close();
     }
@@ -628,6 +703,8 @@ class MeetingService extends ChangeNotifier {
     _isMuted = false;
     _isVideoOff = false;
     _remoteMutedStates.clear();
+    _isMeetingUiMinimized = false;
+    _isMeetingUiRouteOpen = false;
   }
 
   @override
