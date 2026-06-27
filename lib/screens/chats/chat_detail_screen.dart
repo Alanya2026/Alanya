@@ -23,6 +23,7 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/typing_indicator.dart';
 import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
@@ -63,7 +64,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   late final TalkyApiClient _apiClient;
   late final ChatProvider _chat;
   int? _myId;
-  bool _partnerIsTyping = false;
   bool _hasText = false;
   bool _showEmoji = false;
   LocalMessage? _replyTo;
@@ -124,22 +124,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _apiClient.sendSocketEvent(SocketEvents.joinConversation, {'conversationID': convId});
     _chat.repository.setActiveConversation(convId);
     _chat.repository.markAsRead(convId);
-
-    // 3. Écoute les indicateurs "en train d'écrire". On garde les références
-    //    précises afin de pouvoir n'enlever QUE ces callbacks au dispose
-    //    (sinon on évincerait aussi d'éventuels listeners globaux).
-    _apiClient.onSocketEvent(SocketEvents.typingStarted, _onTypingStarted);
-    _apiClient.onSocketEvent(SocketEvents.typingStopped, _onTypingStopped);
-  }
-
-  void _onTypingStarted(dynamic data) {
-    if (!mounted) return;
-    setState(() => _partnerIsTyping = true);
-  }
-
-  void _onTypingStopped(dynamic data) {
-    if (!mounted) return;
-    setState(() => _partnerIsTyping = false);
   }
 
   @override
@@ -150,10 +134,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final convId = widget.conversationId;
     if (convId != null) _chat.repository.clearActiveConversation(convId);
     _stopTyping();
-    // On retire UNIQUEMENT nos callbacks (les autres écrans/services restent
-    // abonnés). offSocketEvent vidait l'event entier → régression critique.
-    _apiClient.removeSocketListener(SocketEvents.typingStarted, _onTypingStarted);
-    _apiClient.removeSocketListener(SocketEvents.typingStopped, _onTypingStopped);
     _messageController.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
@@ -162,9 +142,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild sur changement de présence (header).
-    Provider.of<ChatProvider>(context);
+    // Rebuild sur changement de présence / typing (header + bulle).
+    final chat = Provider.of<ChatProvider>(context);
     final convId = widget.conversationId;
+    final partnerTyping = convId != null &&
+        chat.isPartnerTyping(
+          convId,
+          partnerUserId: widget.isGroup ? null : widget.userId,
+        );
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
@@ -226,15 +211,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       // de sens pour N membres). On liste les noms des autres
                       // participants avec ellipsis automatique si ça déborde.
                       if (widget.isGroup) {
+                        if (partnerTyping) {
+                          return Text(
+                            'En train d\'écrire…',
+                            style: context.text.bodySmall?.copyWith(
+                              color: context.colors.primary,
+                            ),
+                          );
+                        }
                         return _buildGroupMembersLine();
                       }
-                      final label = _partnerIsTyping ? 'en train d\'écrire...' : _presenceLabel();
+                      final label = partnerTyping ? 'en train d\'écrire…' : _presenceLabel();
                       if (label.isEmpty) return const SizedBox.shrink();
-                      final online = !_partnerIsTyping && label == 'En ligne';
+                      final online = !partnerTyping && label == 'En ligne';
                       return Text(
                         label,
                         style: context.text.bodySmall?.copyWith(
-                          color: _partnerIsTyping
+                          color: partnerTyping
                               ? context.colors.primary
                               : (online ? context.semantic.online : context.colors.onSurfaceVariant),
                         ),
@@ -275,15 +268,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
                         return const LoadingState();
                       }
-                      if (messages.isEmpty) {
+                      if (messages.isEmpty && !partnerTyping) {
                         return const EmptyState(
                           icon: Icons.waving_hand_outlined,
                           title: 'Aucun message',
                           message: 'Dites bonjour pour démarrer la conversation !',
                         );
                       }
-                      // Auto-scroll uniquement au 1er chargement ou si l'on
-                      // est déjà en bas (évite de sauter en chargeant l'historique).
+                      // Auto-scroll au 1er chargement, si déjà en bas, ou quand
+                      // l'indicateur de frappe apparaît.
                       if (_firstLoad || _atBottom) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           _scrollToBottom();
@@ -293,10 +286,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       return ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(AppSpacing.lg),
-                        itemCount: messages.length + (_partnerIsTyping ? 1 : 0),
+                        itemCount: messages.length + 1,
                         itemBuilder: (context, index) {
-                          if (_partnerIsTyping && index == messages.length) {
-                            return _buildTypingBubble();
+                          if (index == messages.length) {
+                            return TypingBubbleSlot(visible: partnerTyping);
                           }
                           final msg = messages[index];
                           final prev = index > 0 ? messages[index - 1] : null;

@@ -13,12 +13,20 @@ class PresenceInfo {
   final DateTime? lastSeen;
   const PresenceInfo({required this.online, this.lastSeen});
 }
+
+class TypingInfo {
+  final int userID;
+  final DateTime updatedAt;
+  const TypingInfo({required this.userID, required this.updatedAt});
+}
  
 class ChatProvider extends ChangeNotifier {
   final TalkyApiClient _api;
   late final ChatRepository repository;
 
   final Map<int, PresenceInfo> _presence = {};
+  final Map<int, TypingInfo> _typing = {};
+  final Map<int, Timer> _typingExpiry = {};
   bool _bound = false;
   Timer? _refreshDebounce;
 
@@ -27,6 +35,19 @@ class ChatProvider extends ChangeNotifier {
   }
 
   PresenceInfo? presenceOf(int userID) => _presence[userID];
+
+  /// Indique si un interlocuteur est en train d'écrire dans [conversationID].
+  /// Pour les discussions 1-1, [partnerUserId] filtre sur l'autre participant.
+  bool isPartnerTyping(int conversationID, {int? partnerUserId}) {
+    final info = _typing[conversationID];
+    if (info == null) return false;
+    if (info.userID == repository.myId) return false;
+    if (DateTime.now().difference(info.updatedAt) > const Duration(seconds: 4)) {
+      return false;
+    }
+    if (partnerUserId != null && info.userID != partnerUserId) return false;
+    return true;
+  }
  
   String presenceLabel(int userID) {
     final p = _presence[userID];
@@ -70,6 +91,8 @@ class ChatProvider extends ChangeNotifier {
       _api.onSocketEvent(SocketEvents.messageDeleted, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.messageStatus, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationChanged);
+      _api.onSocketEvent(SocketEvents.typingStarted, _onTypingStarted);
+      _api.onSocketEvent(SocketEvents.typingStopped, _onTypingStopped);
     }
     await refreshConversations();
     await repository.flushOutbox();
@@ -88,11 +111,18 @@ class ChatProvider extends ChangeNotifier {
       _api.removeSocketListener(SocketEvents.messageDeleted, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.messageStatus, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationChanged);
+      _api.removeSocketListener(SocketEvents.typingStarted, _onTypingStarted);
+      _api.removeSocketListener(SocketEvents.typingStopped, _onTypingStopped);
     }
     _refreshDebounce?.cancel();
     _refreshDebounce = null;
+    for (final t in _typingExpiry.values) {
+      t.cancel();
+    }
+    _typingExpiry.clear();
     repository.unbind();
     _presence.clear();
+    _typing.clear();
     notifyListeners();
   }
 
@@ -146,6 +176,35 @@ class ChatProvider extends ChangeNotifier {
       lastSeen: DateTime.tryParse(data['lastSeen']?.toString() ?? ''),
     );
     notifyListeners();
+  }
+
+  void _onTypingStarted(dynamic data) {
+    if (data is! Map) return;
+    final convId = _toInt(data['conversationID']);
+    final userID = _toInt(data['userID']);
+    if (convId == 0 || userID == 0 || userID == repository.myId) return;
+    _typing[convId] = TypingInfo(userID: userID, updatedAt: DateTime.now());
+    _scheduleTypingExpiry(convId);
+    notifyListeners();
+  }
+
+  void _onTypingStopped(dynamic data) {
+    if (data is! Map) return;
+    final convId = _toInt(data['conversationID']);
+    if (convId == 0) return;
+    _typingExpiry[convId]?.cancel();
+    _typingExpiry.remove(convId);
+    _typing.remove(convId);
+    notifyListeners();
+  }
+
+  void _scheduleTypingExpiry(int conversationID) {
+    _typingExpiry[conversationID]?.cancel();
+    _typingExpiry[conversationID] = Timer(const Duration(seconds: 4), () {
+      _typingExpiry.remove(conversationID);
+      _typing.remove(conversationID);
+      notifyListeners();
+    });
   }
 
   static int _toInt(dynamic v) {

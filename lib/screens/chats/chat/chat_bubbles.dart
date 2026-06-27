@@ -317,25 +317,4 @@ extension _ChatBubbles on _ChatDetailScreenState {
       ),
     );
   }
-
-  Widget _buildTypingBubble() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md + 2),
-        decoration: BoxDecoration(
-          color: context.colors.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(AppRadius.lg),
-            topRight: Radius.circular(AppRadius.lg),
-            bottomRight: Radius.circular(AppRadius.lg),
-          ),
-          boxShadow: AppShadows.subtle,
-        ),
-        child: Text('• • •',
-            style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 16, letterSpacing: 4)),
-      ),
-    );
-  }
 }

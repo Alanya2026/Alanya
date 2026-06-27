@@ -13,6 +13,7 @@ import '../../talky_models.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/typing_indicator.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
@@ -202,6 +203,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
     final colors = context.colors;
     final hasUnread = conv.unreadCount > 0;
+    final isTyping = chat.isPartnerTyping(
+      conv.conversID,
+      partnerUserId: conv.isGroup ? null : otherId,
+    );
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -235,26 +240,49 @@ class _ChatsScreenState extends State<ChatsScreen> {
       ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 2),
-        child: Row(
-          children: [
-            // Accusé (✓ / ✓✓ / ✓✓ bleu) si le dernier message est le mien.
-            if (conv.lastMessageSenderID == myId && conv.lastMessage != null) ...[
-              _previewStatusIcon(conv.lastMessageStatus),
-              AppSpacing.hGapXs,
-            ],
-            Expanded(
-              child: Text(
-                conv.lastMessage ?? 'Aucun message',
-                style: context.text.bodyMedium?.copyWith(
-                  color: hasUnread ? colors.onSurface : colors.onSurfaceVariant,
-                  fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+        child: isTyping
+            ? Row(
+                children: [
+                  TypingIndicator(
+                    color: colors.primary,
+                    dotSize: 5,
+                    spacing: 3,
+                  ),
+                  AppSpacing.hGapSm,
+                  Expanded(
+                    child: Text(
+                      conv.isGroup ? 'Quelqu\'un écrit…' : 'En train d\'écrire…',
+                      style: context.text.bodyMedium?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w500,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  // Accusé (✓ / ✓✓ / ✓✓ bleu) si le dernier message est le mien.
+                  if (conv.lastMessageSenderID == myId && conv.lastMessage != null) ...[
+                    _previewStatusIcon(conv.lastMessageStatus),
+                    AppSpacing.hGapXs,
+                  ],
+                  Expanded(
+                    child: Text(
+                      conv.lastMessage ?? 'Aucun message',
+                      style: context.text.bodyMedium?.copyWith(
+                        color: hasUnread ? colors.onSurface : colors.onSurfaceVariant,
+                        fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
