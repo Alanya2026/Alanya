@@ -319,7 +319,7 @@ extension _ChatActions on _ChatDetailScreenState {
       ));
       return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const OngoingCallScreen()));
+    await callService.navigateToCallUi(context);
   }
 
   Future<void> _initiateGroupCall({required bool isVideo}) async {
@@ -392,7 +392,7 @@ extension _ChatActions on _ChatDetailScreenState {
     );
 
     if (!mounted) return;
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const OngoingCallScreen()));
+    await callService.navigateToCallUi(context);
   }
 
   String _presenceLabel() {

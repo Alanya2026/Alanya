@@ -8,7 +8,6 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
-import 'ongoing_call_screen.dart';
 
 class SelectContactScreen extends StatefulWidget {
   const SelectContactScreen({super.key});
@@ -160,10 +159,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       );
       return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const OngoingCallScreen()),
-    );
+    await callService.navigateToCallUi(context);
   }
 
   Future<void> _initiateGroupCall(bool isVideo) async {
@@ -216,10 +212,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     );
 
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
-    );
+    await cs.navigateToCallUi(context);
   }
 
   // ── UI ─────────────────────────────────────────────────────────────

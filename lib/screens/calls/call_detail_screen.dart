@@ -11,7 +11,6 @@ import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/contact_action_button.dart';
 import '../chats/chat_detail_screen.dart';
-import 'ongoing_call_screen.dart';
 
 /// Fiche d'un appel récent : récap de l'appel + raccourcis rapides
 /// (appel audio, vidéo, message, contact préféré).
@@ -82,7 +81,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       _snack(callService.errorMessage!, error: true);
       return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const OngoingCallScreen()));
+    await callService.navigateToCallUi(context);
   }
 
   Future<void> _openMessage() async {

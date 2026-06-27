@@ -17,7 +17,6 @@ import '../../widgets/common/common.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'join_meet_screen.dart';
 import 'meeting_detail_screen.dart';
-import 'ongoing_meet_screen.dart';
 import 'participant_picker_screen.dart';
 import '../shared/schedule_screen.dart';
 
@@ -204,10 +203,7 @@ class _MeetsScreenState extends State<MeetsScreen>
       }
 
       if (!mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const OngoingMeetScreen()),
-      );
+      await meetingService.navigateToMeetingUi(context);
       if (mounted) _loadMeetings();
     } catch (e) {
       if (!mounted) return;

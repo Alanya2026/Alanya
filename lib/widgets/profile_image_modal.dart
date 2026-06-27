@@ -12,7 +12,6 @@ import '../screens/chats/fullscreen_profile_image_viewer.dart';
 import '../screens/chats/contact_detail_screen.dart';
 import '../screens/chats/group_detail_screen.dart';
 import '../screens/chats/chat_detail_screen.dart';
-import '../screens/calls/ongoing_call_screen.dart';
 
 /// Modal pour afficher l'image de profil avec CTA.
 class ProfileImageModal extends StatefulWidget {
@@ -305,10 +304,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
 
       if (mounted) {
         Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
-        );
+        await _callService.navigateToCallUi(context);
       }
     } catch (e, st) {
       AppLog.e('ProfileImageModal', 'Lancement de l\'appel échoué', e, st);

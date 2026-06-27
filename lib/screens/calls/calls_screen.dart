@@ -16,7 +16,6 @@ import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'call_detail_screen.dart';
-import 'ongoing_call_screen.dart';
 import 'keypad_screen.dart';
 import 'select_contact_screen.dart';
 
@@ -180,10 +179,7 @@ class _CallsScreenState extends State<CallsScreen> {
         return;
       }
       
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
-      );
+      await callService.navigateToCallUi(context);
     }
   }
 

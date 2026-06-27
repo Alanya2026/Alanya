@@ -8,7 +8,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/common/common.dart';
-import 'ongoing_call_screen.dart';
 
 class KeypadScreen extends StatefulWidget {
   const KeypadScreen({super.key});
@@ -246,12 +245,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
         );
         return;
       }
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const OngoingCallScreen(),
-        ),
-      );
+      await callService.navigateToCallUi(context);
     }
   }
 

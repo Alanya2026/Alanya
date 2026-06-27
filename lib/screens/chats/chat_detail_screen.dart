@@ -24,7 +24,6 @@ import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../calls/group_participants_picker_screen.dart';
-import '../calls/ongoing_call_screen.dart';
 import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
 import 'media_viewer_screen.dart';

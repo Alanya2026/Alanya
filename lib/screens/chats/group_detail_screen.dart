@@ -18,7 +18,6 @@ import '../../core/utils/avatar_utils.dart';
 import '../../core/db/app_database.dart';
 import '../../widgets/common/common.dart';
 import '../calls/group_participants_picker_screen.dart';
-import '../calls/ongoing_call_screen.dart';
 import '../meetings/participant_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'conversation_media_screen.dart';
@@ -156,10 +155,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
 
     if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
-    );
+    await cs.navigateToCallUi(context);
   }
 
   Future<void> _addParticipants() async {
