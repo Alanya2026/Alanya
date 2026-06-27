@@ -93,7 +93,46 @@ class CallKitService {
     await FlutterCallkitIncoming.showCallkitIncoming(params);
   }
 
-  
+  /// Démarre un appel sortant / réunion — active le foreground service Android.
+  Future<void> startOutgoingCall({
+    required String callId,
+    required String displayName,
+    required String handle,
+    required bool isVideo,
+  }) async {
+    if (kIsWeb) return;
+
+    final params = CallKitParams(
+      id: callId,
+      nameCaller: displayName,
+      appName: 'Alanya',
+      handle: handle,
+      type: isVideo ? 1 : 0,
+      duration: 0,
+      extra: {
+        'callId': callId,
+        'callerName': displayName,
+        'isVideo': isVideo,
+      },
+      android: const AndroidParams(
+        isCustomNotification: true,
+        isShowLogo: false,
+        ringtonePath: '',
+        backgroundColor: '#0955fa',
+        actionColor: '#4CAF50',
+        incomingCallNotificationChannelName: 'Appels en cours',
+        missedCallNotificationChannelName: 'Appels manqués',
+      ),
+    );
+
+    try {
+      await FlutterCallkitIncoming.startCall(params);
+      debugPrint('[CallKit] startCall callId=$callId');
+    } catch (e) {
+      debugPrint('[CallKit] startCall error: $e');
+    }
+  }
+
   Future<void> setConnected(String callId) async {
     if (kIsWeb) return;
     try {
