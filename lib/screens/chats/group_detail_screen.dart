@@ -10,6 +10,7 @@ import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/call_service.dart';
+import '../../core/call_limits.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
@@ -109,7 +110,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
 
     List<User> targets;
-    if (others.length <= 9) {
+    final maxOthers = CallLimits.maxSelectable(isVideo: isVideo);
+    if (others.length <= maxOthers) {
       targets = others;
     } else {
       final picked = await Navigator.push<List<User>>(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/call_limits.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -10,16 +11,23 @@ import '../../widgets/common/common.dart';
 class ParticipantPickerScreen extends StatefulWidget {
   final List<User> initialSelected;
   final String confirmLabel;
-  final int maxSelectable;
+  final int? maxSelectable;
+  final bool isVideo;
   final Set<int> excludeIds;
 
   const ParticipantPickerScreen({
     super.key,
     this.initialSelected = const [],
     this.confirmLabel = 'Confirmer',
-    this.maxSelectable = 9,
+    this.maxSelectable,
+    this.isVideo = true,
     this.excludeIds = const {},
   });
+
+  int get effectiveMaxSelectable =>
+      maxSelectable ?? CallLimits.maxSelectable(isVideo: isVideo);
+
+  int get maxTotal => CallLimits.maxParticipants(isVideo: isVideo);
 
   @override
   State<ParticipantPickerScreen> createState() =>
@@ -112,14 +120,14 @@ class _ParticipantPickerScreenState
   bool _isSelected(User user) =>
       _selected.any((u) => u.alanyaID == user.alanyaID);
 
-  bool get _atLimit => _selected.length >= widget.maxSelectable;
+  bool get _atLimit => _selected.length >= widget.effectiveMaxSelectable;
 
   void _toggle(User user) {
     if (!_isSelected(user) && _atLimit) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Maximum ${widget.maxSelectable} participants atteint (10 avec l\'organisateur)',
+            CallLimits.limitReachedMessage(isVideo: widget.isVideo),
           ),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
@@ -151,7 +159,7 @@ class _ParticipantPickerScreenState
           children: [
             const Text('Ajouter des participants'),
             Text(
-              '${_selected.length}/${widget.maxSelectable} sélectionné${_selected.length > 1 ? 's' : ''}',
+              '${_selected.length}/${widget.effectiveMaxSelectable} sélectionné${_selected.length > 1 ? 's' : ''}',
               style: context.text.labelSmall?.copyWith(
                 color: _atLimit
                     ? context.semantic.warning
@@ -199,7 +207,8 @@ class _ParticipantPickerScreenState
                   AppSpacing.hGapSm,
                   Expanded(
                     child: Text(
-                      'Limite de ${widget.maxSelectable} participants atteinte (10 avec l\'organisateur). Retirez un participant pour en ajouter un autre.',
+                      '${CallLimits.limitReachedMessage(isVideo: widget.isVideo)} '
+                      'Retirez un participant pour en ajouter un autre.',
                       style: context.text.labelSmall
                           ?.copyWith(color: AppColors.warning),
                     ),

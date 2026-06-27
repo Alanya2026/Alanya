@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/call_limits.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -17,7 +18,7 @@ class SelectContactScreen extends StatefulWidget {
 }
 
 class _SelectContactScreenState extends State<SelectContactScreen> {
-  static const int _maxSelection = 9;
+  static int get _maxSelection => CallLimits.maxSelectable(isVideo: false);
 
   List<User> _allContacts = [];
   List<User> _filteredContacts = [];
@@ -117,9 +118,12 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       } else {
         if (_selectedIds.length >= _maxSelection) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Maximum 9 participants'),
-              duration: Duration(seconds: 2),
+            SnackBar(
+              content: Text(
+                'Maximum $_maxSelection participants (appel audio). '
+                'Vidéo : ${CallLimits.maxSelectable(isVideo: true)} max.',
+              ),
+              duration: const Duration(seconds: 2),
             ),
           );
           return;
@@ -164,6 +168,17 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
 
   Future<void> _initiateGroupCall(bool isVideo) async {
     if (_selectedIds.isEmpty) return;
+
+    final maxOthers = CallLimits.maxSelectable(isVideo: isVideo);
+    if (_selectedIds.length > maxOthers) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(CallLimits.limitReachedMessage(isVideo: isVideo)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
 
     final auth = context.read<AuthProvider>();
     final me = auth.currentUser;

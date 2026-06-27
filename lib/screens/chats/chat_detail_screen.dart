@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/db/app_database.dart';
+import '../../core/call_limits.dart';
 import '../../core/db/chat_dao.dart' show decodeParticipants;
 import '../../core/services/call_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -37,6 +38,7 @@ part 'chat/chat_input.dart';    // barre de saisie, emoji, bandeau réponse
 
 // Limite alignée sur multer (50 Mo) côté backend.
 const int _maxMediaBytes = 50 * 1024 * 1024;
+const Duration _messageEditWindow = Duration(minutes: 30);
 
 class ChatDetailScreen extends StatefulWidget {
   final String userName;

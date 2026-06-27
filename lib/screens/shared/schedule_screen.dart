@@ -70,6 +70,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         builder: (_) => ParticipantPickerScreen(
           initialSelected: _selectedParticipants,
           confirmLabel: 'Confirmer',
+          isVideo: _typeMedia == 0,
         ),
       ),
     );

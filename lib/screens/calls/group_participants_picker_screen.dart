@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../../core/call_limits.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 
-/// Sélecteur de participants pour un appel de groupe lancé depuis un groupe
-/// > 10 membres. Retourne la `List<User>` choisie via `Navigator.pop`.
+/// Sélecteur de participants pour un appel de groupe dont le nombre de membres
+/// dépasse la limite autorisée. Retourne la `List<User>` choisie via `Navigator.pop`.
 class GroupParticipantsPickerScreen extends StatefulWidget {
   final List<User> members;
   final int maxSelection;
   final bool isVideo;
 
-  const GroupParticipantsPickerScreen({
+  GroupParticipantsPickerScreen({
     super.key,
     required this.members,
-    this.maxSelection = 9,
     required this.isVideo,
-  });
+    int? maxSelection,
+  }) : maxSelection =
+            maxSelection ?? CallLimits.maxSelectable(isVideo: isVideo);
 
   @override
   State<GroupParticipantsPickerScreen> createState() =>

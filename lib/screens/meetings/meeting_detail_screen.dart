@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/call_limits.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -114,13 +115,27 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     final existing =
         meeting.participants.map((p) => p.participantID).toSet();
 
+    final isVideoMeeting = meeting.typeMedia == 0;
+    final maxTotal = CallLimits.maxParticipantsForMeeting(meeting.typeMedia);
+    final remaining = maxTotal - meeting.participants.length;
+    if (remaining <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            CallLimits.limitReachedMessage(isVideo: isVideoMeeting),
+          ),
+        ),
+      );
+      return;
+    }
+
     final result = await Navigator.push<List<User>>(
       context,
       MaterialPageRoute(
         builder: (_) => ParticipantPickerScreen(
           confirmLabel: 'Inviter',
-          maxSelectable:
-              9 - meeting.participants.length.clamp(0, 9),
+          isVideo: isVideoMeeting,
+          maxSelectable: remaining,
         ),
       ),
     );
@@ -399,10 +414,13 @@ class _MeetingDetailBody extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Participants (${meeting.participants.length}/10)',
+              'Participants (${meeting.participants.length}/${CallLimits.maxParticipantsForMeeting(meeting.typeMedia)})',
               style: context.text.titleSmall,
             ),
-            if (isOrganiser && !meeting.isEnd)
+            if (isOrganiser &&
+                !meeting.isEnd &&
+                meeting.participants.length <
+                    CallLimits.maxParticipantsForMeeting(meeting.typeMedia))
               GestureDetector(
                 onTap: onInvite,
                 child: Row(

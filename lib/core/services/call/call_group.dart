@@ -16,6 +16,16 @@ extension CallGroup on CallService {
     List<GroupParticipantInfo>? targets,
   }) async {
     if (_status != CallStatus.idle) return;
+
+    final maxOthers = CallLimits.maxSelectable(isVideo: isVideo);
+    if (targetUserIds.length > maxOthers) {
+      debugPrint(
+        '[CallService] createGroupCall refusé : ${targetUserIds.length} cibles '
+        '(max $maxOthers en ${CallLimits.mediaLabel(isVideo: isVideo)})',
+      );
+      return;
+    }
+
     _groupRoomId = roomId;
     _status = CallStatus.outgoing;
     // Pré-remplit le roster : moi-même + les cibles connues

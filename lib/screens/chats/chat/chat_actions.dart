@@ -28,6 +28,11 @@ extension _ChatActions on _ChatDetailScreenState {
     return _mediaLabel(m.type);
   }
 
+  bool _canEditMessage(LocalMessage msg) {
+    final sent = msg.sendAt.toUtc();
+    return DateTime.now().toUtc().difference(sent) <= _messageEditWindow;
+  }
+
   // ── Menu contextuel sur un message (appui long) ────────────────────
   void _showMessageMenu(LocalMessage msg, bool isMe) {
     final isText = msg.type == 0;
@@ -70,7 +75,7 @@ extension _ChatActions on _ChatDetailScreenState {
                   Navigator.pop(context);
                 },
               ),
-            if (isMe && isText && !msg.isDeleted)
+            if (isMe && isText && !msg.isDeleted && _canEditMessage(msg))
               ListTile(
                 leading: Icon(Icons.edit, color: primary),
                 title: const Text('Modifier'),
@@ -104,6 +109,14 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   void _showEditDialog(LocalMessage msg) {
+    if (!_canEditMessage(msg)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La modification n\'est possible que dans les 30 minutes suivant l\'envoi'),
+        ),
+      );
+      return;
+    }
     final ctrl = TextEditingController(text: msg.content ?? '');
     showDialog(
       context: context,
@@ -478,7 +491,8 @@ extension _ChatActions on _ChatDetailScreenState {
     }
 
     List<User> targets;
-    if (others.length <= 9) {
+    final maxOthers = CallLimits.maxSelectable(isVideo: isVideo);
+    if (others.length <= maxOthers) {
       targets = others;
     } else {
       final picked = await Navigator.push<List<User>>(
