@@ -47,6 +47,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   bool _isLoading = true;
   bool _isFavorite = false;
   bool _isBlocked = false;
+  bool _blockedByThem = false;
   bool _busy = false;
 
   @override
@@ -109,11 +110,22 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       } catch (e, st) {
         AppLog.e('ContactDetail', 'checkIsContact échoué', e, st);
       }
+      ({bool isBlocked, bool blockedByThem}) blockStatus = (
+        isBlocked: false,
+        blockedByThem: false,
+      );
+      try {
+        blockStatus = await _api.getBlockStatus(widget.userId);
+      } catch (e, st) {
+        AppLog.e('ContactDetail', 'getBlockStatus échoué', e, st);
+      }
       if (!mounted) return;
       final user = User.fromJson(data);
       setState(() {
         _contact = user;
         _isFavorite = fav;
+        _isBlocked = blockStatus.isBlocked;
+        _blockedByThem = blockStatus.blockedByThem;
         _isLoading = false;
       });
       cache.upsertKnownUser(user, preferred: fav);
@@ -182,7 +194,10 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       } else {
         await _api.unblockUser(widget.userId);
       }
-      if (mounted) setState(() => _isBlocked = next);
+      if (mounted) setState(() {
+        _isBlocked = next;
+        if (next) _blockedByThem = false;
+      });
     } catch (e) {
       _snack('Action impossible : $e', error: true);
     } finally {
@@ -338,9 +353,10 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg,
           AppSpacing.xxl),
       children: [
-        _Header(user: u),
+        _Header(user: u, hidePhoto: _blockedByThem),
         AppSpacing.vGapXl,
         _PrimaryActions(
+          callsDisabled: _isBlocked || _blockedByThem,
           onCall: () => _snack('Appel à venir'),
           onVideo: () => _snack('Vidéo à venir'),
           onMessage: _openChat,
@@ -375,14 +391,19 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
 
 class _Header extends StatelessWidget {
   final User user;
-  const _Header({required this.user});
+  final bool hidePhoto;
+  const _Header({required this.user, this.hidePhoto = false});
 
   @override
   Widget build(BuildContext context) {
     final name = user.nom.isNotEmpty ? user.nom : user.pseudo;
     return Column(
       children: [
-        AppAvatar(imageUrl: user.avatarUrl, name: name, size: 120),
+        AppAvatar(
+          imageUrl: hidePhoto || user.avatarUrl.isEmpty ? null : user.avatarUrl,
+          name: name,
+          size: 120,
+        ),
         AppSpacing.vGapMd,
         Text(name, style: context.text.headlineSmall, textAlign: TextAlign.center),
         if (user.pseudo.isNotEmpty) ...[
@@ -424,19 +445,33 @@ class _PrimaryActions extends StatelessWidget {
   final VoidCallback onCall;
   final VoidCallback onVideo;
   final VoidCallback onMessage;
+  final bool callsDisabled;
   const _PrimaryActions({
     required this.onCall,
     required this.onVideo,
     required this.onMessage,
+    this.callsDisabled = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _PrimaryActionTile(icon: Icons.call, label: 'Appel', onTap: onCall)),
+        Expanded(
+          child: _PrimaryActionTile(
+            icon: Icons.call,
+            label: 'Appel',
+            onTap: callsDisabled ? null : onCall,
+          ),
+        ),
         AppSpacing.hGapMd,
-        Expanded(child: _PrimaryActionTile(icon: Icons.videocam, label: 'Vidéo', onTap: onVideo)),
+        Expanded(
+          child: _PrimaryActionTile(
+            icon: Icons.videocam,
+            label: 'Vidéo',
+            onTap: callsDisabled ? null : onVideo,
+          ),
+        ),
         AppSpacing.hGapMd,
         Expanded(child: _PrimaryActionTile(icon: Icons.chat_bubble, label: 'Message', onTap: onMessage)),
       ],
@@ -447,13 +482,19 @@ class _PrimaryActions extends StatelessWidget {
 class _PrimaryActionTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   const _PrimaryActionTile({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final color = enabled
+        ? context.colors.primary
+        : context.colors.onSurfaceVariant.withValues(alpha: 0.45);
     return Material(
-      color: context.colors.primaryContainer,
+      color: enabled
+          ? context.colors.primaryContainer
+          : context.colors.surfaceContainerHighest,
       borderRadius: AppRadius.brMd,
       child: InkWell(
         borderRadius: AppRadius.brMd,
@@ -463,11 +504,11 @@ class _PrimaryActionTile extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: context.colors.primary, size: 28),
+              Icon(icon, color: color, size: 28),
               AppSpacing.vGapSm,
               Text(label,
                   style: context.text.labelSmall?.copyWith(
-                      color: context.colors.primary,
+                      color: color,
                       fontWeight: FontWeight.w700)),
             ],
           ),

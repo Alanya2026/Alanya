@@ -44,6 +44,7 @@ class _ParticipantPickerScreenState
   bool _isLoading = false;
   bool _showingContacts = true;
   String _currentQuery = '';
+  final Map<int, ({bool isBlocked, bool blockedByThem})> _blockCache = {};
 
   @override
   void initState() {
@@ -122,18 +123,47 @@ class _ParticipantPickerScreenState
 
   bool get _atLimit => _selected.length >= widget.effectiveMaxSelectable;
 
-  void _toggle(User user) {
-    if (!_isSelected(user) && _atLimit) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            CallLimits.limitReachedMessage(isVideo: widget.isVideo),
+  Future<({bool isBlocked, bool blockedByThem})> _blockStatusFor(int userId) async {
+    if (_blockCache.containsKey(userId)) return _blockCache[userId]!;
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final status = await apiClient.getBlockStatus(userId);
+    _blockCache[userId] = status;
+    return status;
+  }
+
+  Future<void> _toggle(User user) async {
+    if (!_isSelected(user)) {
+      if (_atLimit) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              CallLimits.limitReachedMessage(isVideo: widget.isVideo),
+            ),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
           ),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
+        );
+        return;
+      }
+      try {
+        final status = await _blockStatusFor(user.alanyaID);
+        if (!mounted) return;
+        if (status.isBlocked || status.blockedByThem) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Impossible d\'inviter un contact bloqué'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de vérifier le contact')),
+        );
+        return;
+      }
     }
     setState(() {
       if (_isSelected(user)) {

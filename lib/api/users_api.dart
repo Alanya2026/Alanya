@@ -37,6 +37,17 @@ extension UsersApi on TalkyApiClient {
     );
   }
 
+  Future<({bool isBlocked, bool blockedByThem})> getBlockStatus(int userId) async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('${TalkyApiClient.baseUrl}/users/$userId/block'), headers: _headers),
+    );
+    final map = data as Map<String, dynamic>;
+    return (
+      isBlocked: map['isBlocked'] == true,
+      blockedByThem: map['blockedByThem'] == true,
+    );
+  }
+
   // ── CONTACTS PRÉFÉRÉS ─────────────────────────────────────────────
 
   Future<List<dynamic>> getContacts() async {

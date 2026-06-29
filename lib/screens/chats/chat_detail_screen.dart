@@ -89,6 +89,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   int _recordSeconds = 0;
   Timer? _recordTimer;
 
+  bool _isBlocked = false;
+  bool _blockedByThem = false;
+
   /// Pont public vers `setState()` (lui-même `@protected`), afin que les
   /// extensions de cette librairie puissent déclencher un rebuild.
   void rebuild(VoidCallback fn) => setState(fn);
@@ -122,6 +125,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final convId = widget.conversationId;
     if (convId == null) return;
 
+    if (!widget.isGroup && widget.userId != null) {
+      await _loadBlockStatus();
+    }
+
     // 1. Synchronise l'historique depuis le serveur (l'UI affiche déjà le cache).
     _chat.repository.syncMessages(convId);
 
@@ -132,6 +139,47 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _chat.repository.setActiveConversation(convId);
     _chat.repository.markAsRead(convId);
   }
+
+  Future<void> _loadBlockStatus() async {
+    final userId = widget.userId;
+    if (userId == null) return;
+    try {
+      final status = await _apiClient.getBlockStatus(userId);
+      if (!mounted) return;
+      setState(() {
+        _isBlocked = status.isBlocked;
+        _blockedByThem = status.blockedByThem;
+      });
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  Future<void> _unblockContact() async {
+    final userId = widget.userId;
+    if (userId == null) return;
+    try {
+      await _apiClient.unblockUser(userId);
+      if (!mounted) return;
+      setState(() {
+        _isBlocked = false;
+        _blockedByThem = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contact débloqué')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Impossible de débloquer : $e')),
+      );
+    }
+  }
+
+  bool get _callsDisabled =>
+      !widget.isGroup && (_isBlocked || _blockedByThem);
+
+  bool get _inputBlocked => !widget.isGroup && _isBlocked;
 
   GlobalKey _keyForMessage(int msgID) =>
       _messageKeys.putIfAbsent(msgID, GlobalKey.new);
@@ -184,7 +232,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       )
                   : null)
               : (widget.userId != null
-                  ? () => Navigator.push(
+                  ? () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => ContactDetailScreen(
@@ -194,7 +243,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             initialAvatar: widget.avatarUrl ?? '',
                           ),
                         ),
-                      )
+                      );
+                      if (mounted) _loadBlockStatus();
+                    }
                   : null),
           child: Row(
             children: [
@@ -204,6 +255,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 userId: widget.userId ?? 0,
                 isGroup: widget.isGroup,
                 conversationId: widget.conversationId,
+                hidePhoto: !widget.isGroup && _blockedByThem,
                 size: 40,
                 borderRadius: 20,
               ),
@@ -251,17 +303,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.videocam_rounded),
-            color: context.colors.primary,
-            onPressed: () => _initiateCall(isVideo: true),
-          ),
-          IconButton(
-            icon: const Icon(Icons.call_rounded),
-            color: context.colors.primary,
-            onPressed: () => _initiateCall(isVideo: false),
-          ),
-          AppSpacing.hGapSm,
+          if (!_callsDisabled) ...[
+            IconButton(
+              icon: const Icon(Icons.videocam_rounded),
+              color: context.colors.primary,
+              onPressed: () => _initiateCall(isVideo: true),
+            ),
+            IconButton(
+              icon: const Icon(Icons.call_rounded),
+              color: context.colors.primary,
+              onPressed: () => _initiateCall(isVideo: false),
+            ),
+            AppSpacing.hGapSm,
+          ],
         ],
       ),
       body: Column(
@@ -324,6 +378,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
           ),
           if (_replyTo != null) _buildReplyBanner(),
+          if (_inputBlocked) _buildBlockedBanner(),
           _buildInputBar(),
           if (_showEmoji) _buildEmojiPicker(),
         ],

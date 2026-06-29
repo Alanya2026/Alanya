@@ -4,6 +4,7 @@ part of '../chat_detail_screen.dart';
 
 extension _ChatActions on _ChatDetailScreenState {
   void _sendMessage() {
+    if (_inputBlocked) return;
     final text = _messageController.text.trim();
     if (text.isEmpty || widget.conversationId == null || _myId == null) return;
 
@@ -437,6 +438,12 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _initiateCall({required bool isVideo}) async {
+    if (_callsDisabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Appel impossible avec ce contact')),
+      );
+      return;
+    }
     if (widget.isGroup) {
       await _initiateGroupCall(isVideo: isVideo);
       return;

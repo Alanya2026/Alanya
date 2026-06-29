@@ -17,6 +17,7 @@ class ProfileAvatar extends StatelessWidget {
   final int? conversationId;
   final double size;
   final double borderRadius;
+  final bool hidePhoto;
 
   const ProfileAvatar({
     super.key,
@@ -28,13 +29,14 @@ class ProfileAvatar extends StatelessWidget {
     this.conversationId,
     this.size = AppSizes.avatarLg,
     this.borderRadius = AppRadius.sm,
+    this.hidePhoto = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return AppAvatar(
-      imageUrl: imageUrl,
-      localPath: localPath,
+      imageUrl: hidePhoto ? null : imageUrl,
+      localPath: hidePhoto ? null : localPath,
       name: name,
       isGroup: isGroup,
       size: size,
@@ -46,8 +48,8 @@ class ProfileAvatar extends StatelessWidget {
           context: context,
           barrierDismissible: true,
           builder: (_) => ProfileImageModal(
-            imageUrl: imageUrl,
-            localPath: localPath,
+            imageUrl: hidePhoto ? null : imageUrl,
+            localPath: hidePhoto ? null : localPath,
             name: name,
             userId: userId,
             isGroup: isGroup,
