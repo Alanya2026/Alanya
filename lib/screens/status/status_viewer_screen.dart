@@ -59,6 +59,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   final TextEditingController _replyController = TextEditingController();
   final FocusNode _replyFocus = FocusNode();
   bool _sendingReply = false;
+  bool _advancing = false;
 
   List<Statut> get _currentGroup => widget.contactGroups[_contactIndex];
   Statut get _current => _currentGroup[_itemIndex];
@@ -218,28 +219,66 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   }
 
   void _next() {
+    if (_advancing) return;
+
     if (_itemIndex < _currentGroup.length - 1) {
       setState(() => _itemIndex++);
       _loadCurrent();
-    } else if (_contactIndex < widget.contactGroups.length - 1) {
-      _pageCtrl.nextPage(
-        duration: AppDurations.normal,
-        curve: Curves.easeOut,
-      );
-    } else {
-      Navigator.pop(context);
+      return;
     }
+
+    if (_contactIndex < widget.contactGroups.length - 1) {
+      _advancing = true;
+      final nextContact = _contactIndex + 1;
+      setState(() {
+        _contactIndex = nextContact;
+        _itemIndex = 0;
+      });
+      _loadCurrent();
+      _pageCtrl
+          .animateToPage(
+            nextContact,
+            duration: AppDurations.normal,
+            curve: Curves.easeOut,
+          )
+          .whenComplete(() {
+            if (mounted) _advancing = false;
+          });
+      return;
+    }
+
+    if (!mounted) return;
+    _advancing = true;
+    Navigator.pop(context);
   }
 
   void _prev() {
+    if (_advancing) return;
+
     if (_itemIndex > 0) {
       setState(() => _itemIndex--);
       _loadCurrent();
-    } else if (_contactIndex > 0) {
-      _pageCtrl.previousPage(
-        duration: AppDurations.normal,
-        curve: Curves.easeOut,
-      );
+      return;
+    }
+
+    if (_contactIndex > 0) {
+      _advancing = true;
+      final prevContact = _contactIndex - 1;
+      final lastItem = widget.contactGroups[prevContact].length - 1;
+      setState(() {
+        _contactIndex = prevContact;
+        _itemIndex = lastItem < 0 ? 0 : lastItem;
+      });
+      _loadCurrent();
+      _pageCtrl
+          .animateToPage(
+            prevContact,
+            duration: AppDurations.normal,
+            curve: Curves.easeOut,
+          )
+          .whenComplete(() {
+            if (mounted) _advancing = false;
+          });
     }
   }
 
@@ -686,10 +725,7 @@ class _ProgressBars extends StatelessWidget {
   }
 }
 
-ImageProvider? _previewImage(Statut s) {
-  if (s.type == 1 && hasValidAvatarUrl(s.mediaUrl)) {
-    return NetworkImage(s.mediaUrl!);
-  }
+ImageProvider? _profileImage(Statut s) {
   return hasValidAvatarUrl(s.avatarUrl) ? NetworkImage(s.avatarUrl!) : null;
 }
 
@@ -719,8 +755,8 @@ class _Header extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: AppColors.immersiveSurface,
-            backgroundImage: _previewImage(statut),
-            child: _previewImage(statut) == null
+            backgroundImage: _profileImage(statut),
+            child: _profileImage(statut) == null
                 ? Text(
                     (statut.nom != null && statut.nom!.isNotEmpty)
                         ? statut.nom![0].toUpperCase()
@@ -835,8 +871,8 @@ class _AudioContent extends StatelessWidget {
           CircleAvatar(
             radius: 60,
             backgroundColor: Colors.white24,
-            backgroundImage: _previewImage(statut),
-            child: _previewImage(statut) == null
+            backgroundImage: _profileImage(statut),
+            child: _profileImage(statut) == null
                 ? const Icon(Icons.person, size: 60, color: Colors.white)
                 : null,
           ),
