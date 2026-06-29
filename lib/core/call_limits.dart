@@ -1,7 +1,7 @@
 /// Limites de participants pour appels de groupe et réunions.
 abstract final class CallLimits {
   static const int maxVideoParticipants = 4;
-  static const int maxAudioParticipants = 8;
+  static const int maxAudioParticipants = 6;
 
   /// Nombre total max (initiateur/organisateur inclus).
   static int maxParticipants({required bool isVideo}) =>

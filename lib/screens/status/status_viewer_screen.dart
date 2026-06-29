@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +7,11 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import '../../core/services/media_cache_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_log.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
@@ -47,6 +50,11 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   VideoPlayerController? _videoCtrl;
   ChewieController? _chewieCtrl;
   AudioPlayer? _audioPlayer;
+  StreamSubscription<PlayerState>? _audioStateSub;
+  StreamSubscription<Duration>? _audioPositionSub;
+  VoidCallback? _videoTickListener;
+  int _loadSeq = 0;
+  final MediaCacheService _mediaCache = MediaCacheService();
 
   final TextEditingController _replyController = TextEditingController();
   final FocusNode _replyFocus = FocusNode();
@@ -84,14 +92,35 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
 
   void _disposeMedia() {
     _chewieCtrl?.dispose();
+    if (_videoTickListener != null) {
+      _videoCtrl?.removeListener(_videoTickListener!);
+    }
     _videoCtrl?.dispose();
+    _audioStateSub?.cancel();
+    _audioPositionSub?.cancel();
     _audioPlayer?.dispose();
     _videoCtrl = null;
     _chewieCtrl = null;
     _audioPlayer = null;
+    _videoTickListener = null;
+    _audioStateSub = null;
+    _audioPositionSub = null;
+  }
+
+  /// Télécharge le média via HTTP (cert pinning) puis lit depuis le disque.
+  /// video_player / just_audio utilisent les stacks natives qui ignorent
+  /// HttpOverrides — un URL réseau direct échoue avec le cert auto-signé.
+  Future<String?> _resolveMediaPath(String url) async {
+    try {
+      return await _mediaCache.ensureCached(url);
+    } catch (e, st) {
+      AppLog.w('StatusViewer', 'Cache média statut échoué', e, st);
+      return null;
+    }
   }
 
   Future<void> _loadCurrent() async {
+    final seq = ++_loadSeq;
     _disposeMedia();
     _progress.stop();
     _progress.value = 0;
@@ -101,43 +130,81 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       context.read<StatusProvider>().markViewed(s.id);
     }
     Duration totalDuration = _textImageDuration;
+    var syncProgressFromMedia = false;
+
     if (s.type == 2 && s.mediaUrl != null) {
-      final v = VideoPlayerController.networkUrl(Uri.parse(s.mediaUrl!));
-      try {
-        await v.initialize();
-        _videoCtrl = v;
-        _chewieCtrl = ChewieController(
-          videoPlayerController: v,
-          autoPlay: true,
-          looping: false,
-          showControls: false,
-        );
-        totalDuration = v.value.duration;
-        v.addListener(_onVideoTick);
-      } catch (_) {
-        totalDuration = _textImageDuration;
+      final path = await _resolveMediaPath(s.mediaUrl!);
+      if (!mounted || seq != _loadSeq) return;
+      if (path != null) {
+        final v = VideoPlayerController.file(File(path));
+        try {
+          await v.initialize();
+          if (!mounted || seq != _loadSeq) {
+            await v.dispose();
+            return;
+          }
+          _videoCtrl = v;
+          _chewieCtrl = ChewieController(
+            videoPlayerController: v,
+            autoPlay: true,
+            looping: false,
+            showControls: false,
+          );
+          final dur = v.value.duration;
+          if (dur.inMilliseconds > 0) {
+            totalDuration = dur;
+            syncProgressFromMedia = true;
+            _videoTickListener = _onVideoTick;
+            v.addListener(_videoTickListener!);
+          }
+        } catch (e, st) {
+          AppLog.w('StatusViewer', 'Lecture vidéo statut échouée', e, st);
+          await v.dispose();
+        }
       }
     } else if (s.type == 3 && s.mediaUrl != null) {
-      final p = AudioPlayer();
-      try {
-        await p.setUrl(s.mediaUrl!);
-        await p.play();
-        _audioPlayer = p;
-        totalDuration = p.duration ??
-            Duration(
-                milliseconds: s.mediaDurationMs ??
-                    _textImageDuration.inMilliseconds);
-        p.playerStateStream.listen((st) {
-          if (st.processingState == ProcessingState.completed) _next();
-        });
-      } catch (_) {
-        totalDuration = _textImageDuration;
+      final path = await _resolveMediaPath(s.mediaUrl!);
+      if (!mounted || seq != _loadSeq) return;
+      if (path != null) {
+        final p = AudioPlayer();
+        try {
+          await p.setFilePath(path);
+          if (!mounted || seq != _loadSeq) {
+            await p.dispose();
+            return;
+          }
+          await p.play();
+          _audioPlayer = p;
+          totalDuration = p.duration ??
+              Duration(
+                  milliseconds: s.mediaDurationMs ??
+                      _textImageDuration.inMilliseconds);
+          if (totalDuration.inMilliseconds > 0) {
+            syncProgressFromMedia = true;
+          }
+          _audioStateSub = p.playerStateStream.listen((st) {
+            if (st.processingState == ProcessingState.completed) _next();
+          });
+          _audioPositionSub = p.positionStream.listen((pos) {
+            final dur = p.duration ?? totalDuration;
+            if (dur.inMilliseconds <= 0) return;
+            _progress.value =
+                (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0);
+          });
+        } catch (e, st) {
+          AppLog.w('StatusViewer', 'Lecture audio statut échouée', e, st);
+          await p.dispose();
+        }
       }
     }
-    if (!mounted) return;
+
+    if (!mounted || seq != _loadSeq) return;
     setState(() {});
     _progress.duration = totalDuration;
-    if (!_paused) _progress.forward();
+    // Texte / image : timer fixe. Vidéo / audio : barre pilotée par le lecteur.
+    if (!syncProgressFromMedia && !_paused) {
+      _progress.forward();
+    }
   }
 
   void _onVideoTick() {
@@ -189,12 +256,14 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
 
   void _setPaused(bool paused) {
     setState(() => _paused = paused);
+    final s = _current;
+    final mediaDriven = s.type == 2 || s.type == 3;
     if (paused) {
       _progress.stop();
       _videoCtrl?.pause();
       _audioPlayer?.pause();
     } else {
-      _progress.forward();
+      if (!mediaDriven) _progress.forward();
       _videoCtrl?.play();
       _audioPlayer?.play();
     }

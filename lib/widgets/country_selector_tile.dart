@@ -8,7 +8,7 @@ import 'country_picker_sheet.dart';
 
 enum CountrySelectorStyle { formField, settingsRow }
 
-/// Sélecteur de pays réutilisable (inscription, paramètres).
+/// Sélecteur de pays réutilisable (inscription, compte).
 class CountrySelectorTile extends StatefulWidget {
   const CountrySelectorTile({
     super.key,

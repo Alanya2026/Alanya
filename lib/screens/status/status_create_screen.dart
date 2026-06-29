@@ -1,16 +1,21 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/utils/app_log.dart';
+import 'package:video_player/video_player.dart';
+
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_log.dart';
 import '../../providers/status_provider.dart';
+import '../../widgets/common/common.dart';
 
 enum _StatusType { text, photo, video, audio }
 
@@ -22,7 +27,9 @@ class StatusCreateScreen extends StatefulWidget {
 }
 
 class _StatusCreateScreenState extends State<StatusCreateScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  static const Color _textStatusForeground = Colors.white;
+
   static const List<Color> _palette = [
     Color(0xFFE53935),
     Color(0xFF3949AB),
@@ -36,7 +43,6 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     Color(0xFF6D4C41),
   ];
 
-  late final TabController _tabController;
   _StatusType _type = _StatusType.text;
   final _textCtrl = TextEditingController();
   final _captionCtrl = TextEditingController();
@@ -51,33 +57,28 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   int? _audioDurationMs;
   String? _audioName;
 
+  late final TabController _tabController;
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulseScale;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      final next = _StatusType.values[_tabController.index];
-      if (next == _type) return;
-      if (_isRecording) {
-        _recordTimer?.cancel();
-        _recorder.stop();
-      }
-      setState(() {
-        _type = next;
-        _mediaFile = null;
-        _captionCtrl.clear();
-        _isRecording = false;
-        _recordSeconds = 0;
-        _audioDurationMs = null;
-        _audioName = null;
-      });
-    });
+    _tabController.addListener(_onTabChanged);
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _pulseScale = Tween<double>(begin: 1, end: 1.08).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _pulseCtrl.dispose();
     _textCtrl.dispose();
     _captionCtrl.dispose();
     _recordTimer?.cancel();
@@ -97,6 +98,35 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     }
   }
 
+  bool get _isTextMode => _type == _StatusType.text;
+
+  Color _onBackground(Color background) =>
+      background.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    _applyType(_StatusType.values[_tabController.index]);
+  }
+
+  void _applyType(_StatusType next, {bool haptic = true}) {
+    if (next == _type) return;
+    if (haptic) HapticFeedback.selectionClick();
+    if (_isRecording) {
+      _recordTimer?.cancel();
+      _recorder.stop();
+      _pulseCtrl.stop();
+    }
+    setState(() {
+      _type = next;
+      _mediaFile = null;
+      _captionCtrl.clear();
+      _isRecording = false;
+      _recordSeconds = 0;
+      _audioDurationMs = null;
+      _audioName = null;
+    });
+  }
+
   // ── Actions médias ───────────────────────────────────────────────
 
   Future<void> _pickMedia(ImageSource source, {bool video = false}) async {
@@ -104,11 +134,15 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     final file = video
         ? await picker.pickVideo(source: source)
         : await picker.pickImage(
-            source: source, imageQuality: 80, maxWidth: 1920);
+            source: source,
+            imageQuality: 80,
+            maxWidth: 1920,
+          );
     if (file != null) setState(() => _mediaFile = File(file.path));
   }
 
-  // ── Audio : enregistrement vocal ─────────────────────────────────
+  // ── Audio ────────────────────────────────────────────────────────
+
   Future<void> _startRecording() async {
     if (!await _recorder.hasPermission()) {
       if (mounted) {
@@ -118,12 +152,16 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       }
       return;
     }
+    HapticFeedback.mediumImpact();
     final dir = await getTemporaryDirectory();
     final path =
         '${dir.path}/status_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc),
-        path: path);
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
     if (!mounted) return;
+    _pulseCtrl.repeat(reverse: true);
     setState(() {
       _isRecording = true;
       _recordSeconds = 0;
@@ -138,9 +176,12 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 
   Future<void> _stopRecording({required bool keep}) async {
     _recordTimer?.cancel();
+    _pulseCtrl.stop();
+    _pulseCtrl.reset();
     final path = await _recorder.stop();
     final seconds = _recordSeconds;
     if (!mounted) return;
+    HapticFeedback.lightImpact();
     if (keep && path != null && seconds >= 1) {
       setState(() {
         _isRecording = false;
@@ -152,7 +193,9 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       if (path != null) {
         try {
           File(path).deleteSync();
-        } catch (_) { /* fichier temporaire déjà absent — ignoré */ }
+        } catch (_) {
+          /* fichier temporaire déjà absent — ignoré */
+        }
       }
       setState(() {
         _isRecording = false;
@@ -161,7 +204,6 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     }
   }
 
-  // ── Audio : import d'un fichier audio uniquement ─────────────────
   Future<void> _pickAudioFile() async {
     final res = await FilePicker.platform.pickFiles(type: FileType.audio);
     final path = res?.files.single.path;
@@ -180,73 +222,57 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     return '$m:$s';
   }
 
-  // ── Color picker (bottom sheet) ──────────────────────────────────
+  // ── Color picker ─────────────────────────────────────────────────
 
   Future<void> _openColorPicker() async {
-    final picked = await showModalBottomSheet<Color>(
+    final onSurface = context.colors.onSurface;
+    final picked = await showAppBottomSheet<Color>(
       context: context,
-      backgroundColor: context.colors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.outlineStrong,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              AppSpacing.vGapLg,
-              const Text(
-                'Couleur de fond',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-              AppSpacing.vGapLg,
-              Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: [
-                  for (final color in _palette)
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context, color),
-                      child: Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: _bgColor.toARGB32() == color.toARGB32()
-                                ? Colors.black
-                                : Colors.transparent,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: color.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+      builder: (ctx) => AppBottomSheet(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.xxl,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Couleur de fond', style: ctx.text.titleMedium),
+            AppSpacing.vGapLg,
+            Wrap(
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.md,
+              children: [
+                for (final color in _palette)
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx, color),
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _bgColor.toARGB32() == color.toARGB32()
+                              ? onSurface
+                              : Colors.transparent,
+                          width: 3,
                         ),
-                        child: _bgColor.toARGB32() == color.toARGB32()
-                            ? const Icon(Icons.check, color: Colors.white)
-                            : null,
+                        boxShadow: AppShadows.subtle,
                       ),
+                      child: _bgColor.toARGB32() == color.toARGB32()
+                          ? Icon(
+                              Icons.check,
+                              color: _onBackground(color),
+                            )
+                          : null,
                     ),
-                ],
-              ),
-            ],
-          ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -257,6 +283,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 
   Future<void> _publish() async {
     if (!_canPublish) return;
+    HapticFeedback.lightImpact();
     setState(() => _publishing = true);
     final provider = context.read<StatusProvider>();
     try {
@@ -269,13 +296,22 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           );
         case _StatusType.photo:
           await provider.createMedia(
-              file: _mediaFile!, type: 1, caption: _captionCtrl.text.trim());
+            file: _mediaFile!,
+            type: 1,
+            caption: _captionCtrl.text.trim(),
+          );
         case _StatusType.video:
           await provider.createMedia(
-              file: _mediaFile!, type: 2, caption: _captionCtrl.text.trim());
+            file: _mediaFile!,
+            type: 2,
+            caption: _captionCtrl.text.trim(),
+          );
         case _StatusType.audio:
           await provider.createMedia(
-              file: _mediaFile!, type: 3, mediaDurationMs: _audioDurationMs);
+            file: _mediaFile!,
+            type: 3,
+            mediaDurationMs: _audioDurationMs,
+          );
       }
       if (mounted) Navigator.pop(context);
     } catch (e, st) {
@@ -283,7 +319,9 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       if (mounted) {
         setState(() => _publishing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de publier le statut, réessayez')),
+          const SnackBar(
+            content: Text('Impossible de publier le statut, réessayez'),
+          ),
         );
       }
     }
@@ -293,90 +331,71 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isText = _isTextMode;
+
     return Scaffold(
+      backgroundColor: context.colors.surface,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('Nouveau statut'),
-        centerTitle: true,
+        title: Text('Nouveau statut', style: context.text.titleLarge),
         actions: [
-          IconButton(
-            icon: Icon(
-              Icons.send_rounded,
-              color: _canPublish
-                  ? context.colors.primary
-                  : context.colors.outline,
+          if (isText)
+            IconButton(
+              icon: const Icon(Icons.palette_rounded),
+              tooltip: 'Couleur de fond',
+              onPressed: _openColorPicker,
             ),
-            onPressed: _canPublish ? _publish : null,
+          if (_mediaFile != null &&
+              (_type == _StatusType.photo || _type == _StatusType.video))
+            IconButton(
+              icon: const Icon(Icons.swap_horiz_rounded),
+              tooltip: 'Changer le média',
+              onPressed: () => _pickMedia(
+                ImageSource.gallery,
+                video: _type == _StatusType.video,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.md),
+            child: FilledButton.tonal(
+              onPressed: _canPublish && !_publishing ? _publish : null,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              ),
+              child: _publishing
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: context.colors.primary,
+                      ),
+                    )
+                  : const Text('Publier'),
+            ),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(64),
-          child: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Icons.text_fields, size: 22), text: 'Texte'),
-              Tab(icon: Icon(Icons.photo, size: 22), text: 'Photo'),
-              Tab(icon: Icon(Icons.videocam, size: 22), text: 'Vidéo'),
-              Tab(icon: Icon(Icons.mic, size: 22), text: 'Audio'),
-            ],
-          ),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorSize: TabBarIndicatorSize.label,
+          tabs: const [
+            Tab(text: 'Texte'),
+            Tab(text: 'Photo'),
+            Tab(text: 'Vidéo'),
+            Tab(text: 'Audio'),
+          ],
         ),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(child: _buildCanvas()),
-          Positioned(
-            left: AppSpacing.lg,
-            bottom: AppSpacing.lg + MediaQuery.of(context).padding.bottom,
-            child: _buildLeftAction(),
-          ),
-          Positioned(
-            right: AppSpacing.lg,
-            bottom: 18 + MediaQuery.of(context).padding.bottom,
-            child: _PublishPill(
-              color: _type == _StatusType.text
-                  ? _bgColor
-                  : context.colors.primary,
-              enabled: _canPublish,
-              loading: _publishing,
-              onTap: _publish,
-            ),
-          ),
-        ],
+      body: AnimatedSwitcher(
+        duration: AppDurations.fast,
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: KeyedSubtree(
+          key: ValueKey(_type),
+          child: _buildCanvas(),
+        ),
       ),
     );
-  }
-
-  Widget _buildLeftAction() {
-    switch (_type) {
-      case _StatusType.text:
-        return _CircleAction(
-          icon: Icons.palette_rounded,
-          color: context.colors.primary,
-          onTap: _openColorPicker,
-        );
-      case _StatusType.photo:
-        return _CircleAction(
-          icon: Icons.photo_library_rounded,
-          color: context.colors.primary,
-          onTap: () => _pickMedia(ImageSource.gallery),
-        );
-      case _StatusType.video:
-        return _CircleAction(
-          icon: Icons.video_library_rounded,
-          color: context.colors.primary,
-          onTap: () => _pickMedia(ImageSource.gallery, video: true),
-        );
-      case _StatusType.audio:
-        return _CircleAction(
-          icon: Icons.audio_file_rounded,
-          color: context.colors.primary,
-          onTap: _pickAudioFile,
-        );
-    }
   }
 
   // ── Canvas par mode ──────────────────────────────────────────────
@@ -386,38 +405,50 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       case _StatusType.text:
         return _buildTextCanvas();
       case _StatusType.photo:
-        return _buildPhotoCanvas(isVideo: false);
+        return _buildMediaCanvas(isVideo: false);
       case _StatusType.video:
-        return _buildPhotoCanvas(isVideo: true);
+        return _buildMediaCanvas(isVideo: true);
       case _StatusType.audio:
         return _buildAudioCanvas();
     }
   }
 
   Widget _buildTextCanvas() {
-    return Container(
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return ColoredBox(
       color: _bgColor,
-      padding: const EdgeInsets.fromLTRB(28, 24, 28, 100),
-      child: Center(
-        child: TextField(
-          controller: _textCtrl,
-          onChanged: (_) => setState(() {}),
-          maxLines: null,
-          textAlign: TextAlign.center,
-          cursorColor: Colors.white,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w600,
-            height: 1.3,
-          ),
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            hintText: 'Tapez votre statut…',
-            hintStyle: TextStyle(
-              color: Colors.white.withValues(alpha: 0.55),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xxl,
+          AppSpacing.lg,
+          AppSpacing.xxl,
+          AppSpacing.lg + bottom,
+        ),
+        child: Center(
+          child: TextField(
+            controller: _textCtrl,
+            onChanged: (_) => setState(() {}),
+            maxLines: null,
+            textAlign: TextAlign.center,
+            cursorColor: _textStatusForeground,
+            style: const TextStyle(
+              color: _textStatusForeground,
               fontSize: 28,
               fontWeight: FontWeight.w600,
+              height: 1.3,
+            ),
+            decoration: InputDecoration(
+              filled: false,
+              fillColor: Colors.transparent,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              hintText: 'Tapez votre statut…',
+              hintStyle: TextStyle(
+                color: _textStatusForeground.withValues(alpha: 0.55),
+                fontSize: 28,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -425,146 +456,169 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     );
   }
 
-  Widget _buildPhotoCanvas({required bool isVideo}) {
+  Widget _buildMediaCanvas({required bool isVideo}) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+
     if (_mediaFile != null) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.file(_mediaFile!, fit: BoxFit.cover),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 140,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.35),
-                    ],
-                  ),
+      return ColoredBox(
+        color: context.semantic.surfaceMuted,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg + bottom,
+            ),
+            child: AspectRatio(
+              aspectRatio: 9 / 16,
+              child: ClipRRect(
+                borderRadius: AppRadius.brMd,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (isVideo)
+                      _LocalVideoPreview(
+                        key: ValueKey(_mediaFile!.path),
+                        file: _mediaFile!,
+                      )
+                    else
+                      Image.file(_mediaFile!, fit: BoxFit.cover),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.55),
+                            ],
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.md,
+                            AppSpacing.xxl,
+                            AppSpacing.md,
+                            AppSpacing.md,
+                          ),
+                          child: TextField(
+                            controller: _captionCtrl,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                            ),
+                            cursorColor: Colors.white,
+                            minLines: 1,
+                            maxLines: 3,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              hintText: 'Ajouter une description…',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isVideo)
+                      const Positioned(
+                        top: AppSpacing.md,
+                        right: AppSpacing.md,
+                        child: StatusChip(
+                          label: 'Vidéo',
+                          tone: StatusChipTone.brand,
+                          icon: Icons.movie_outlined,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
           ),
-          if (isVideo)
-            const Positioned(
-              top: AppSpacing.lg,
-              right: AppSpacing.lg,
-              child: _Chip(icon: Icons.movie, label: 'Vidéo'),
-            ),
-          Positioned(
-            left: AppSpacing.lg,
-            right: AppSpacing.lg,
-            bottom: 84 + MediaQuery.of(context).padding.bottom,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.45),
-                borderRadius: AppRadius.brPill,
-              ),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: TextField(
-                controller: _captionCtrl,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-                cursorColor: Colors.white,
-                minLines: 1,
-                maxLines: 3,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Ajouter une description…',
-                  hintStyle:
-                      TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       );
     }
-    return Container(
-      color: AppColors.surfaceMuted,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: const BoxDecoration(
-                color: AppColors.brandContainer,
-                shape: BoxShape.circle,
+
+    return ColoredBox(
+      color: context.semantic.surfaceMuted,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottom),
+        child: EmptyState(
+          icon: isVideo ? CupertinoIcons.videocam : CupertinoIcons.photo,
+          title: isVideo ? 'Ajouter une vidéo' : 'Ajouter une photo',
+          message: 'Depuis la galerie ou l\'appareil photo',
+          action: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton.icon(
+                onPressed: () => _pickMedia(ImageSource.gallery, video: isVideo),
+                icon: const Icon(Icons.photo_library_outlined, size: AppIconSize.sm),
+                label: const Text('Galerie'),
               ),
-              child: Icon(
-                isVideo ? Icons.videocam_rounded : Icons.add_a_photo_rounded,
-                size: 44,
-                color: AppColors.brandPrimary,
+              OutlinedButton.icon(
+                onPressed: () => _pickMedia(ImageSource.camera, video: isVideo),
+                icon: Icon(
+                  isVideo ? Icons.videocam_outlined : Icons.camera_alt_outlined,
+                  size: AppIconSize.sm,
+                ),
+                label: Text(isVideo ? 'Caméra' : 'Appareil'),
               ),
-            ),
-            AppSpacing.vGapXl,
-            Text(
-              isVideo ? 'Ajouter une vidéo' : 'Ajouter une photo',
-              style: context.text.titleMedium,
-            ),
-            AppSpacing.vGapXl,
-            Wrap(
-              spacing: AppSpacing.md,
-              children: [
-                _ChoiceButton(
-                  icon: Icons.photo_library_outlined,
-                  label: 'Galerie',
-                  onTap: () =>
-                      _pickMedia(ImageSource.gallery, video: isVideo),
-                ),
-                _ChoiceButton(
-                  icon: Icons.camera_alt_outlined,
-                  label: isVideo ? 'Caméra' : 'Appareil',
-                  onTap: () =>
-                      _pickMedia(ImageSource.camera, video: isVideo),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildAudioCanvas() {
+    final bottom = MediaQuery.paddingOf(context).bottom;
     final hasFile = _mediaFile != null;
+    final colors = context.colors;
+    final sem = context.semantic;
+
     final Color circleColor = _isRecording
-        ? AppColors.error
-        : (hasFile ? AppColors.brandPrimary : AppColors.brandContainer);
+        ? colors.error
+        : (hasFile ? colors.primary : sem.brandContainer);
+    final Color iconColor = (_isRecording || hasFile)
+        ? colors.onPrimary
+        : sem.onBrandContainer;
     final IconData circleIcon = _isRecording
         ? Icons.graphic_eq_rounded
         : (hasFile ? Icons.audiotrack_rounded : Icons.mic_rounded);
 
-    return Container(
-      color: AppColors.surfaceMuted,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: circleColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  circleIcon,
-                  size: 44,
-                  color: (_isRecording || hasFile)
-                      ? Colors.white
-                      : AppColors.brandPrimary,
+    return ColoredBox(
+      color: context.semantic.surfaceMuted,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottom),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+              ScaleTransition(
+                scale: _isRecording ? _pulseScale : const AlwaysStoppedAnimation(1),
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
+                    boxShadow: _isRecording ? AppShadows.medium : null,
+                  ),
+                  child: Icon(circleIcon, size: 44, color: iconColor),
                 ),
               ),
               AppSpacing.vGapXl,
@@ -583,43 +637,49 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                   child: Text(
                     _formatDuration((_audioDurationMs! / 1000).round()),
                     style: context.text.bodyMedium?.copyWith(
-                        color: context.colors.onSurfaceVariant),
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
                 ),
               AppSpacing.vGapXl,
               if (_isRecording)
                 Wrap(
+                  alignment: WrapAlignment.center,
                   spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.sm,
                   children: [
-                    _ChoiceButton(
-                      icon: Icons.delete_outline,
-                      label: 'Annuler',
-                      onTap: () => _stopRecording(keep: false),
+                    OutlinedButton.icon(
+                      onPressed: () => _stopRecording(keep: false),
+                      icon: const Icon(Icons.delete_outline, size: AppIconSize.sm),
+                      label: const Text('Annuler'),
                     ),
-                    _ChoiceButton(
-                      icon: Icons.check_rounded,
-                      label: 'Terminer',
-                      onTap: () => _stopRecording(keep: true),
+                    FilledButton.icon(
+                      onPressed: () => _stopRecording(keep: true),
+                      icon: const Icon(Icons.check_rounded, size: AppIconSize.sm),
+                      label: const Text('Terminer'),
                     ),
                   ],
                 )
               else
                 Wrap(
+                  alignment: WrapAlignment.center,
                   spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.sm,
                   children: [
-                    _ChoiceButton(
-                      icon: Icons.mic_rounded,
-                      label: hasFile ? 'Réenregistrer' : 'Enregistrer',
-                      onTap: _startRecording,
+                    FilledButton.icon(
+                      onPressed: _startRecording,
+                      icon: const Icon(Icons.mic_rounded, size: AppIconSize.sm),
+                      label: Text(hasFile ? 'Réenregistrer' : 'Enregistrer'),
                     ),
-                    _ChoiceButton(
-                      icon: Icons.upload_file_rounded,
-                      label: 'Importer',
-                      onTap: _pickAudioFile,
+                    OutlinedButton.icon(
+                      onPressed: _pickAudioFile,
+                      icon: const Icon(Icons.upload_file_rounded, size: AppIconSize.sm),
+                      label: const Text('Importer'),
                     ),
                   ],
                 ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -627,164 +687,127 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   }
 }
 
-// ─── Sous-composants ──────────────────────────────────────────────
+/// Aperçu d'une vidéo locale — `Image.file` ne peut pas décoder un fichier vidéo.
+class _LocalVideoPreview extends StatefulWidget {
+  const _LocalVideoPreview({super.key, required this.file});
 
-class _CircleAction extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
+  final File file;
 
-  const _CircleAction({
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
+  @override
+  State<_LocalVideoPreview> createState() => _LocalVideoPreviewState();
+}
+
+class _LocalVideoPreviewState extends State<_LocalVideoPreview> {
+  VideoPlayerController? _controller;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    final controller = VideoPlayerController.file(widget.file);
+    _controller = controller;
+    try {
+      await controller.initialize();
+      if (!mounted) return;
+      controller.addListener(_onVideoUpdate);
+      await controller.setLooping(true);
+      await controller.setVolume(1);
+      setState(() {});
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+      await controller.dispose();
+      _controller = null;
+    }
+  }
+
+  void _onVideoUpdate() {
+    if (mounted) setState(() {});
+  }
+
+  void _togglePlayback() {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    HapticFeedback.lightImpact();
+    if (controller.value.isPlaying) {
+      controller.pause();
+    } else {
+      controller.play();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onVideoUpdate);
+    _controller?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_failed) {
+      return ColoredBox(
+        color: Colors.black,
+        child: Center(
+          child: Icon(
+            Icons.videocam_off_outlined,
+            size: 48,
+            color: Colors.white.withValues(alpha: 0.7),
+          ),
+        ),
+      );
+    }
+
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return const ColoredBox(
+        color: Colors.black,
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white70,
+          ),
+        ),
+      );
+    }
+
+    final playing = controller.value.isPlaying;
+
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(icon, color: Colors.white, size: AppIconSize.md),
-      ),
-    );
-  }
-}
-
-class _PublishPill extends StatelessWidget {
-  final Color color;
-  final bool enabled;
-  final bool loading;
-  final VoidCallback onTap;
-
-  const _PublishPill({
-    required this.color,
-    required this.enabled,
-    required this.loading,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const fg = Colors.white;
-    final bg = enabled ? color : color.withValues(alpha: 0.45);
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
-        duration: AppDurations.fast,
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: AppRadius.brPill,
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.35),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (loading)
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(fg),
-                ),
-              )
-            else
-              const Icon(Icons.send_rounded, color: fg, size: AppIconSize.sm),
-            AppSpacing.hGapSm,
-            Text(
-              loading ? 'Envoi…' : 'Publier',
-              style: const TextStyle(
-                color: fg,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ChoiceButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ChoiceButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: AppIconSize.sm),
-      label: Text(label),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: context.colors.surface,
-        foregroundColor: context.colors.primary,
-        elevation: 0,
-        side: BorderSide(color: context.colors.primary),
-        shape: const RoundedRectangleBorder(borderRadius: AppRadius.brSm),
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _Chip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm + 2, vertical: AppSpacing.sm - 2),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: AppRadius.brPill,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      onTap: _togglePlayback,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        fit: StackFit.expand,
+        alignment: Alignment.center,
         children: [
-          Icon(icon, size: 14, color: Colors.white),
-          AppSpacing.hGapXs,
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          FittedBox(
+            fit: BoxFit.cover,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              width: controller.value.size.width,
+              height: controller.value.size.height,
+              child: VideoPlayer(controller),
+            ),
+          ),
+          IgnorePointer(
+            child: AnimatedSwitcher(
+              duration: AppDurations.fast,
+              child: Icon(
+                key: ValueKey(playing),
+                playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 36,
+                shadows: const [
+                  Shadow(
+                    offset: Offset(0, 1),
+                    blurRadius: 6,
+                    color: Color(0x99000000),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

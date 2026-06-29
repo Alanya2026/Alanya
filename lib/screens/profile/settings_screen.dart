@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/services/countries_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -9,7 +8,6 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
-import '../../widgets/country_selector_tile.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,41 +19,11 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   User? _user;
   bool _isLoading = true;
-  List<Pays> _countries = const [];
-  Pays? _selectedCountry;
-  bool _loadingCountries = true;
-  bool _savingCountry = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
-    _loadCountries();
-  }
-
-  Future<void> _loadCountries() async {
-    try {
-      final api = context.read<TalkyApiClient>();
-      final repo = CountriesRepository(api: api);
-      final countries = await repo.fetchCountries();
-      if (!mounted) return;
-      setState(() {
-        _countries = countries;
-        _loadingCountries = false;
-        _syncSelectedCountry();
-      });
-    } catch (_) {
-      if (mounted) setState(() => _loadingCountries = false);
-    }
-  }
-
-  void _syncSelectedCountry() {
-    final user = _user;
-    if (user == null || _countries.isEmpty) return;
-    final repo = CountriesRepository(
-      api: context.read<TalkyApiClient>(),
-    );
-    _selectedCountry = repo.findById(user.idPays, countries: _countries);
   }
 
   Future<void> _loadUserData() async {
@@ -75,31 +43,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _user = User.fromJson(data);
         _isLoading = false;
-        _syncSelectedCountry();
       });
     } catch (_) {
       if (mounted && _user == null) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _changeCountry(Pays country) async {
-    if (_user?.idPays == country.idPays) return;
-    setState(() => _savingCountry = true);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await context.read<AuthProvider>().updateCountry(country.idPays);
-      if (!mounted) return;
-      setState(() {
-        _selectedCountry = country;
-        _user = context.read<AuthProvider>().currentUser;
-        _savingCountry = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _savingCountry = false);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Impossible de mettre à jour le pays')),
-      );
     }
   }
 
@@ -184,26 +130,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
                       ),
-                      AppSpacing.vGapMd,
-                      if (_loadingCountries)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                          child: Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        )
-                      else if (_countries.isNotEmpty)
-                        CountrySelectorTile(
-                          countries: _countries,
-                          selected: _selectedCountry,
-                          style: CountrySelectorStyle.settingsRow,
-                          enabled: !_savingCountry,
-                          onChanged: _changeCountry,
-                        ),
                     ],
                   ),
           ),
