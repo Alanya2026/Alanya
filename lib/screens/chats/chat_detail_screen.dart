@@ -15,6 +15,7 @@ import '../../core/db/app_database.dart';
 import '../../core/call_limits.dart';
 import '../../core/db/chat_dao.dart' show decodeParticipants;
 import '../../core/services/call_service.dart';
+import '../../core/utils/forward_message.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -28,6 +29,7 @@ import '../../widgets/typing_indicator.dart';
 import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
+import 'forward_message_screen.dart';
 import 'media_viewer_screen.dart';
 import 'voice_message_bubble.dart';
 

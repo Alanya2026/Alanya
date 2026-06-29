@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../core/db/app_database.dart';
 import '../core/db/chat_dao.dart';
 import '../core/services/chat_repository.dart';
+import '../core/utils/forward_message.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
  
@@ -154,6 +155,18 @@ class ChatProvider extends ChangeNotifier {
   Future<void> refreshConversations() async {
     await repository.syncConversations();
     await _seedPresenceFromCache();
+  }
+
+  Future<ForwardResult> forwardMessage({
+    required LocalMessage source,
+    required List<int> targetConversationIDs,
+    String? caption,
+  }) {
+    return repository.forwardMessage(
+      source: source,
+      targetConversationIDs: targetConversationIDs,
+      caption: caption,
+    );
   }
 
   Future<void> _seedPresenceFromCache() async {

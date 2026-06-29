@@ -44,6 +44,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 children: [
                   if (msg.isStatusReply != 0)
                     _buildStatusReplyChip(isMe),
+                  if (msg.isForwarded)
+                    _buildForwardedChip(isMe),
                   if (msg.replyToContent != null &&
                       msg.replyToContent!.isNotEmpty &&
                       msg.replyToID != null &&
@@ -223,6 +225,28 @@ extension _ChatBubbles on _ChatDetailScreenState {
           const SizedBox(width: AppSpacing.xs),
           Text(
             'Réponse à un statut',
+            style: context.text.labelSmall?.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildForwardedChip(bool isMe) {
+    final fg = _bubbleMuted(isMe);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.forward, size: 12, color: fg),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Transféré',
             style: context.text.labelSmall?.copyWith(
               color: fg,
               fontWeight: FontWeight.w600,

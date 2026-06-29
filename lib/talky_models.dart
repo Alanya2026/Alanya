@@ -123,6 +123,7 @@ class Message {
   final bool isDeleted;
   final int? deletedForID;
   final int isStatusReply;
+  final bool isForwarded;
   // Jointure users
   final String? senderNom;
   final String? senderPseudo;
@@ -148,6 +149,7 @@ class Message {
     required this.isDeleted,
     this.deletedForID,
     required this.isStatusReply,
+    this.isForwarded = false,
     this.senderNom,
     this.senderPseudo,
     this.senderAvatar,
@@ -177,6 +179,7 @@ class Message {
                 ? null
                 : int.tryParse(json['deletedForID'].toString())),
         isStatusReply: json['isStatusReply'] ?? 0,
+        isForwarded: json['isForwarded'] == 1 || json['isForwarded'] == true,
         senderNom: json['sender_nom'],
         senderPseudo: json['sender_pseudo'],
         senderAvatar: json['sender_avatar'],

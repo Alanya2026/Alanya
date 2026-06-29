@@ -1055,6 +1055,21 @@ class $LocalMessagesTable extends LocalMessages
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _isForwardedMeta = const VerificationMeta(
+    'isForwarded',
+  );
+  @override
+  late final GeneratedColumn<bool> isForwarded = GeneratedColumn<bool>(
+    'is_forwarded',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_forwarded" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _senderNomMeta = const VerificationMeta(
     'senderNom',
   );
@@ -1151,6 +1166,7 @@ class $LocalMessagesTable extends LocalMessages
     isDeleted,
     deletedForID,
     isStatusReply,
+    isForwarded,
     senderNom,
     senderPseudo,
     senderAvatar,
@@ -1334,6 +1350,15 @@ class $LocalMessagesTable extends LocalMessages
         ),
       );
     }
+    if (data.containsKey('is_forwarded')) {
+      context.handle(
+        _isForwardedMeta,
+        isForwarded.isAcceptableOrUnknown(
+          data['is_forwarded']!,
+          _isForwardedMeta,
+        ),
+      );
+    }
     if (data.containsKey('sender_nom')) {
       context.handle(
         _senderNomMeta,
@@ -1479,6 +1504,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.int,
         data['${effectivePrefix}is_status_reply'],
       )!,
+      isForwarded: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_forwarded'],
+      )!,
       senderNom: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sender_nom'],
@@ -1547,6 +1576,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   /// alanyaID de l'utilisateur pour qui le message est masqué (suppression "pour moi").
   final int? deletedForID;
   final int isStatusReply;
+  final bool isForwarded;
   final String? senderNom;
   final String? senderPseudo;
   final String? senderAvatar;
@@ -1582,6 +1612,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     required this.isDeleted,
     this.deletedForID,
     required this.isStatusReply,
+    required this.isForwarded,
     this.senderNom,
     this.senderPseudo,
     this.senderAvatar,
@@ -1638,6 +1669,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       map['deleted_for_i_d'] = Variable<int>(deletedForID);
     }
     map['is_status_reply'] = Variable<int>(isStatusReply);
+    map['is_forwarded'] = Variable<bool>(isForwarded);
     if (!nullToAbsent || senderNom != null) {
       map['sender_nom'] = Variable<String>(senderNom);
     }
@@ -1703,6 +1735,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ? const Value.absent()
           : Value(deletedForID),
       isStatusReply: Value(isStatusReply),
+      isForwarded: Value(isForwarded),
       senderNom: senderNom == null && nullToAbsent
           ? const Value.absent()
           : Value(senderNom),
@@ -1750,6 +1783,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       deletedForID: serializer.fromJson<int?>(json['deletedForID']),
       isStatusReply: serializer.fromJson<int>(json['isStatusReply']),
+      isForwarded: serializer.fromJson<bool>(json['isForwarded']),
       senderNom: serializer.fromJson<String?>(json['senderNom']),
       senderPseudo: serializer.fromJson<String?>(json['senderPseudo']),
       senderAvatar: serializer.fromJson<String?>(json['senderAvatar']),
@@ -1784,6 +1818,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'deletedForID': serializer.toJson<int?>(deletedForID),
       'isStatusReply': serializer.toJson<int>(isStatusReply),
+      'isForwarded': serializer.toJson<bool>(isForwarded),
       'senderNom': serializer.toJson<String?>(senderNom),
       'senderPseudo': serializer.toJson<String?>(senderPseudo),
       'senderAvatar': serializer.toJson<String?>(senderAvatar),
@@ -1816,6 +1851,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     bool? isDeleted,
     Value<int?> deletedForID = const Value.absent(),
     int? isStatusReply,
+    bool? isForwarded,
     Value<String?> senderNom = const Value.absent(),
     Value<String?> senderPseudo = const Value.absent(),
     Value<String?> senderAvatar = const Value.absent(),
@@ -1853,6 +1889,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     isDeleted: isDeleted ?? this.isDeleted,
     deletedForID: deletedForID.present ? deletedForID.value : this.deletedForID,
     isStatusReply: isStatusReply ?? this.isStatusReply,
+    isForwarded: isForwarded ?? this.isForwarded,
     senderNom: senderNom.present ? senderNom.value : this.senderNom,
     senderPseudo: senderPseudo.present ? senderPseudo.value : this.senderPseudo,
     senderAvatar: senderAvatar.present ? senderAvatar.value : this.senderAvatar,
@@ -1902,6 +1939,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       isStatusReply: data.isStatusReply.present
           ? data.isStatusReply.value
           : this.isStatusReply,
+      isForwarded: data.isForwarded.present
+          ? data.isForwarded.value
+          : this.isForwarded,
       senderNom: data.senderNom.present ? data.senderNom.value : this.senderNom,
       senderPseudo: data.senderPseudo.present
           ? data.senderPseudo.value
@@ -1946,6 +1986,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedForID: $deletedForID, ')
           ..write('isStatusReply: $isStatusReply, ')
+          ..write('isForwarded: $isForwarded, ')
           ..write('senderNom: $senderNom, ')
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
@@ -1980,6 +2021,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     isDeleted,
     deletedForID,
     isStatusReply,
+    isForwarded,
     senderNom,
     senderPseudo,
     senderAvatar,
@@ -2013,6 +2055,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.isDeleted == this.isDeleted &&
           other.deletedForID == this.deletedForID &&
           other.isStatusReply == this.isStatusReply &&
+          other.isForwarded == this.isForwarded &&
           other.senderNom == this.senderNom &&
           other.senderPseudo == this.senderPseudo &&
           other.senderAvatar == this.senderAvatar &&
@@ -2044,6 +2087,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<bool> isDeleted;
   final Value<int?> deletedForID;
   final Value<int> isStatusReply;
+  final Value<bool> isForwarded;
   final Value<String?> senderNom;
   final Value<String?> senderPseudo;
   final Value<String?> senderAvatar;
@@ -2074,6 +2118,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.isDeleted = const Value.absent(),
     this.deletedForID = const Value.absent(),
     this.isStatusReply = const Value.absent(),
+    this.isForwarded = const Value.absent(),
     this.senderNom = const Value.absent(),
     this.senderPseudo = const Value.absent(),
     this.senderAvatar = const Value.absent(),
@@ -2105,6 +2150,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.isDeleted = const Value.absent(),
     this.deletedForID = const Value.absent(),
     this.isStatusReply = const Value.absent(),
+    this.isForwarded = const Value.absent(),
     this.senderNom = const Value.absent(),
     this.senderPseudo = const Value.absent(),
     this.senderAvatar = const Value.absent(),
@@ -2139,6 +2185,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<bool>? isDeleted,
     Expression<int>? deletedForID,
     Expression<int>? isStatusReply,
+    Expression<bool>? isForwarded,
     Expression<String>? senderNom,
     Expression<String>? senderPseudo,
     Expression<String>? senderAvatar,
@@ -2170,6 +2217,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (deletedForID != null) 'deleted_for_i_d': deletedForID,
       if (isStatusReply != null) 'is_status_reply': isStatusReply,
+      if (isForwarded != null) 'is_forwarded': isForwarded,
       if (senderNom != null) 'sender_nom': senderNom,
       if (senderPseudo != null) 'sender_pseudo': senderPseudo,
       if (senderAvatar != null) 'sender_avatar': senderAvatar,
@@ -2203,6 +2251,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<bool>? isDeleted,
     Value<int?>? deletedForID,
     Value<int>? isStatusReply,
+    Value<bool>? isForwarded,
     Value<String?>? senderNom,
     Value<String?>? senderPseudo,
     Value<String?>? senderAvatar,
@@ -2234,6 +2283,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       isDeleted: isDeleted ?? this.isDeleted,
       deletedForID: deletedForID ?? this.deletedForID,
       isStatusReply: isStatusReply ?? this.isStatusReply,
+      isForwarded: isForwarded ?? this.isForwarded,
       senderNom: senderNom ?? this.senderNom,
       senderPseudo: senderPseudo ?? this.senderPseudo,
       senderAvatar: senderAvatar ?? this.senderAvatar,
@@ -2313,6 +2363,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (isStatusReply.present) {
       map['is_status_reply'] = Variable<int>(isStatusReply.value);
     }
+    if (isForwarded.present) {
+      map['is_forwarded'] = Variable<bool>(isForwarded.value);
+    }
     if (senderNom.present) {
       map['sender_nom'] = Variable<String>(senderNom.value);
     }
@@ -2362,6 +2415,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedForID: $deletedForID, ')
           ..write('isStatusReply: $isStatusReply, ')
+          ..write('isForwarded: $isForwarded, ')
           ..write('senderNom: $senderNom, ')
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
@@ -5519,6 +5573,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<bool> isDeleted,
       Value<int?> deletedForID,
       Value<int> isStatusReply,
+      Value<bool> isForwarded,
       Value<String?> senderNom,
       Value<String?> senderPseudo,
       Value<String?> senderAvatar,
@@ -5551,6 +5606,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<bool> isDeleted,
       Value<int?> deletedForID,
       Value<int> isStatusReply,
+      Value<bool> isForwarded,
       Value<String?> senderNom,
       Value<String?> senderPseudo,
       Value<String?> senderAvatar,
@@ -5676,6 +5732,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<int> get isStatusReply => $composableBuilder(
     column: $table.isStatusReply,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isForwarded => $composableBuilder(
+    column: $table.isForwarded,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5829,6 +5890,11 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isForwarded => $composableBuilder(
+    column: $table.isForwarded,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get senderNom => $composableBuilder(
     column: $table.senderNom,
     builder: (column) => ColumnOrderings(column),
@@ -5951,6 +6017,11 @@ class $$LocalMessagesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isForwarded => $composableBuilder(
+    column: $table.isForwarded,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get senderNom =>
       $composableBuilder(column: $table.senderNom, builder: (column) => column);
 
@@ -6033,6 +6104,7 @@ class $$LocalMessagesTableTableManager
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int?> deletedForID = const Value.absent(),
                 Value<int> isStatusReply = const Value.absent(),
+                Value<bool> isForwarded = const Value.absent(),
                 Value<String?> senderNom = const Value.absent(),
                 Value<String?> senderPseudo = const Value.absent(),
                 Value<String?> senderAvatar = const Value.absent(),
@@ -6063,6 +6135,7 @@ class $$LocalMessagesTableTableManager
                 isDeleted: isDeleted,
                 deletedForID: deletedForID,
                 isStatusReply: isStatusReply,
+                isForwarded: isForwarded,
                 senderNom: senderNom,
                 senderPseudo: senderPseudo,
                 senderAvatar: senderAvatar,
@@ -6095,6 +6168,7 @@ class $$LocalMessagesTableTableManager
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int?> deletedForID = const Value.absent(),
                 Value<int> isStatusReply = const Value.absent(),
+                Value<bool> isForwarded = const Value.absent(),
                 Value<String?> senderNom = const Value.absent(),
                 Value<String?> senderPseudo = const Value.absent(),
                 Value<String?> senderAvatar = const Value.absent(),
@@ -6125,6 +6199,7 @@ class $$LocalMessagesTableTableManager
                 isDeleted: isDeleted,
                 deletedForID: deletedForID,
                 isStatusReply: isStatusReply,
+                isForwarded: isForwarded,
                 senderNom: senderNom,
                 senderPseudo: senderPseudo,
                 senderAvatar: senderAvatar,

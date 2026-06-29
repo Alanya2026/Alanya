@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
+import '../utils/forward_message.dart';
 import 'media_cache_service.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';  
@@ -166,6 +167,7 @@ class ChatRepository {
     int? replyToID,
     String? replyToContent,
     int isStatusReply = 0,
+    bool isForwarded = false,
   }) async {
     if (_myId == 0) {
       debugPrint('[ChatRepo] sendText ignoré : utilisateur non lié (myId=0)');
@@ -185,6 +187,7 @@ class ChatRepository {
       replyToID: Value(replyToID),
       replyToContent: Value(replyToContent),
       isStatusReply: Value(isStatusReply),
+      isForwarded: Value(isForwarded),
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(conversationID, content, 0, now,
@@ -198,6 +201,7 @@ class ChatRepository {
       replyToID: replyToID,
       replyToContent: replyToContent,
       isStatusReply: isStatusReply,
+      isForwarded: isForwarded,
     );
   }
 
@@ -229,6 +233,7 @@ class ChatRepository {
     int? mediaDuration,
     String? localMediaPath,
     String? content,
+    bool isForwarded = false,
   }) async {
     final clientId = _newClientId();
     final now = DateTime.now().toUtc();
@@ -245,6 +250,7 @@ class ChatRepository {
       mediaName: Value(mediaName),
       mediaDuration: Value(mediaDuration),
       localMediaPath: Value(localMediaPath),
+      isForwarded: Value(isForwarded),
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
@@ -259,6 +265,7 @@ class ChatRepository {
       mediaUrl: mediaUrl,
       mediaName: mediaName,
       mediaDuration: mediaDuration,
+      isForwarded: isForwarded,
     );
   }
 
@@ -269,6 +276,7 @@ class ChatRepository {
     String? mediaName,
     int? mediaDuration,
     String? content,
+    bool isForwarded = false,
   }) async {
     if (_myId == 0) {
       debugPrint('[ChatRepo] sendMediaFile ignoré : utilisateur non lié (myId=0)');
@@ -290,6 +298,7 @@ class ChatRepository {
       mediaDuration: Value(mediaDuration),
       localMediaPath: Value(file.path),
       pendingUploadPath: Value(file.path),
+      isForwarded: Value(isForwarded),
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
@@ -316,6 +325,7 @@ class ChatRepository {
         mediaUrl: url,
         mediaName: name,
         mediaDuration: mediaDuration,
+        isForwarded: isForwarded,
       );
     } catch (e) {
       debugPrint('[ChatRepo] upload média échoué: $e');
@@ -328,6 +338,99 @@ class ChatRepository {
         await _dao.markFailed(clientId);
       }
     }
+  }
+
+  /// Transfère un message vers une ou plusieurs conversations.
+  Future<ForwardResult> forwardMessage({
+    required LocalMessage source,
+    required List<int> targetConversationIDs,
+    String? caption,
+  }) async {
+    if (_myId == 0) {
+      return const ForwardResult(
+        succeeded: 0,
+        failed: 0,
+        errors: ['Utilisateur non connecté'],
+      );
+    }
+    if (!canForwardMessage(source)) {
+      return const ForwardResult(
+        succeeded: 0,
+        failed: 1,
+        errors: ['Ce message ne peut pas être transféré'],
+      );
+    }
+    if (targetConversationIDs.isEmpty) {
+      return const ForwardResult(succeeded: 0, failed: 0);
+    }
+
+    var succeeded = 0;
+    var failed = 0;
+    final errors = <String>[];
+
+    for (final convId in targetConversationIDs) {
+      try {
+        await _forwardToConversation(
+          source: source,
+          conversationID: convId,
+          caption: caption,
+        );
+        succeeded++;
+      } catch (e) {
+        failed++;
+        errors.add(e.toString());
+        debugPrint('[ChatRepo] forward vers $convId échoué: $e');
+      }
+    }
+
+    return ForwardResult(succeeded: succeeded, failed: failed, errors: errors);
+  }
+
+  Future<void> _forwardToConversation({
+    required LocalMessage source,
+    required int conversationID,
+    String? caption,
+  }) async {
+    final effectiveCaption = resolveForwardCaption(source, caption);
+
+    if (source.type == 0) {
+      await sendText(
+        conversationID: conversationID,
+        content: source.content!.trim(),
+        isForwarded: true,
+      );
+      return;
+    }
+
+    final url = source.mediaUrl;
+    if (url != null && url.isNotEmpty) {
+      await sendMedia(
+        conversationID: conversationID,
+        type: source.type,
+        mediaUrl: url,
+        mediaName: source.mediaName,
+        mediaDuration: source.mediaDuration,
+        localMediaPath: source.localMediaPath,
+        content: effectiveCaption,
+        isForwarded: true,
+      );
+      return;
+    }
+
+    final file = localMediaFileForForward(source);
+    if (file == null) {
+      throw StateError('Média indisponible pour le transfert');
+    }
+
+    await sendMediaFile(
+      conversationID: conversationID,
+      type: source.type,
+      file: file,
+      mediaName: source.mediaName,
+      mediaDuration: source.mediaDuration,
+      content: effectiveCaption,
+      isForwarded: true,
+    );
   }
 
   bool _isTransientNetworkError(Object e) {
@@ -377,6 +480,7 @@ class ChatRepository {
             mediaDuration: m.mediaDuration,
             replyToID: m.replyToID,
             replyToContent: m.replyToContent,
+            isForwarded: m.isForwarded,
           );
         } catch (e) {
           debugPrint('[ChatRepo] flush upload échoué pour ${m.clientId}: $e');
@@ -396,6 +500,7 @@ class ChatRepository {
           mediaDuration: m.mediaDuration,
           replyToID: m.replyToID,
           replyToContent: m.replyToContent,
+          isForwarded: m.isForwarded,
         );
       }
     }
@@ -443,6 +548,7 @@ class ChatRepository {
             mediaDuration: m.mediaDuration,
             replyToID: m.replyToID,
             replyToContent: m.replyToContent,
+            isForwarded: m.isForwarded,
           );
         } catch (e) {
           debugPrint('[ChatRepo] retry upload échoué pour ${m.clientId}: $e');
@@ -463,6 +569,7 @@ class ChatRepository {
           mediaDuration: m.mediaDuration,
           replyToID: m.replyToID,
           replyToContent: m.replyToContent,
+          isForwarded: m.isForwarded,
         );
       }
     }
@@ -762,6 +869,7 @@ class ChatRepository {
     int? replyToID,
     String? replyToContent,
     int isStatusReply = 0,
+    bool isForwarded = false,
   }) {
     // Garde stricte : tant que le socket n'est pas authentifié, le serveur
     // ignore l'emit silencieusement. On laisse la ligne `syncPending=true` ;
@@ -781,6 +889,7 @@ class ChatRepository {
       if (replyToID != null) 'replyToID': replyToID,
       if (replyToContent != null) 'replyToContent': replyToContent,
       if (isStatusReply != 0) 'isStatusReply': isStatusReply,
+      if (isForwarded) 'isForwarded': 1,
     });
     // Marque la ligne comme « tout juste émise » → backoff outbox.
     _dao.touchEmitted(clientId);
@@ -859,6 +968,7 @@ class ChatRepository {
       isDeleted: Value(j['isDeleted'] == 1 || j['isDeleted'] == true),
       deletedForID: Value(j['deletedForID'] == null ? null : _toInt(j['deletedForID'])),
       isStatusReply: Value(_toInt(j['isStatusReply'])),
+      isForwarded: Value(j['isForwarded'] == 1 || j['isForwarded'] == true),
       senderNom: Value(j['sender_nom']?.toString()),
       senderPseudo: Value(j['sender_pseudo']?.toString()),
       senderAvatar: Value(j['sender_avatar']?.toString()),

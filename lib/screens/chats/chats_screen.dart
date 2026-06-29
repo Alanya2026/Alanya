@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
-import '../../core/db/chat_dao.dart';
 import '../../core/services/local_hidden_store.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/conversation_display.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
@@ -121,7 +121,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 if (_search.isNotEmpty) {
                   convs = convs
                       .where((c) =>
-                          _displayName(c, myId).toLowerCase().contains(_search))
+                          conversationDisplayName(c, myId).toLowerCase().contains(_search))
                       .toList();
                 }
                 // Appliquer le filtre (chips). Le chip « Archivés » est seul à
@@ -192,10 +192,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   Widget _buildTile(
       BuildContext context, ChatProvider chat, LocalConversation conv, int myId) {
-    final other = _otherParticipant(conv, myId);
-    final displayName = _displayName(conv, myId);
-    final displayAvatar = conv.isGroup ? conv.groupPhoto : other?['avatar_url'] as String?;
-    final otherId = other?['alanyaID'] as int?;
+    final other = otherParticipant(conv, myId);
+    final displayName = conversationDisplayName(conv, myId);
+    final displayAvatar = conversationDisplayAvatar(conv, myId);
+    final otherId = conversationOtherUserId(conv, myId);
 
     // Présence : event temps réel prioritaire, sinon valeur du cache.
     final cachedOnline = other?['is_online'] == 1 || other?['is_online'] == true;
@@ -330,28 +330,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
         );
       },
     );
-  }
-
-  Map<String, dynamic>? _otherParticipant(LocalConversation conv, int myId) {
-    final parts = decodeParticipants(conv.participantsJson);
-    for (final p in parts) {
-      // Conversion explicite : le JSON peut sérialiser alanyaID en string.
-      final id = _toInt(p['alanyaID']);
-      if (myId != 0 && id != 0 && id != myId) return p;
-    }
-    return null;
-  }
-
-  String _displayName(LocalConversation conv, int myId) {
-    if (conv.isGroup) return conv.groupName ?? 'Groupe';
-    final other = _otherParticipant(conv, myId);
-    return (other?['nom'] as String?) ?? 'Inconnu';
-  }
-
-  static int _toInt(dynamic v) {
-    if (v is int) return v;
-    if (v is num) return v.toInt();
-    return int.tryParse(v?.toString() ?? '') ?? 0;
   }
 
   // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec.
@@ -492,7 +470,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 AppSpacing.lg,
                 AppSpacing.xs,
               ),
-              child: Text(_displayName(conv, myId), style: context.text.titleMedium),
+              child: Text(conversationDisplayName(conv, myId), style: context.text.titleMedium),
             ),
             ListTile(
               leading: Icon(conv.isPinned ? Icons.push_pin_outlined : Icons.push_pin),

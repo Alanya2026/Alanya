@@ -34,7 +34,6 @@ extension _ChatActions on _ChatDetailScreenState {
     return DateTime.now().toUtc().difference(sent) <= _messageEditWindow;
   }
 
-  // ── Menu contextuel sur un message (appui long) ────────────────────
   void _showMessageMenu(LocalMessage msg, bool isMe) {
     final isText = msg.type == 0;
     final primary = context.colors.primary;
@@ -67,6 +66,15 @@ extension _ChatActions on _ChatDetailScreenState {
                 _inputFocus.requestFocus();
               },
             ),
+            if (canForwardMessage(msg))
+              ListTile(
+                leading: Icon(Icons.forward, color: primary),
+                title: const Text('Transférer'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _openForwardPicker(msg);
+                },
+              ),
             if (isText && msg.content != null)
               ListTile(
                 leading: Icon(Icons.copy, color: primary),
@@ -104,6 +112,26 @@ extension _ChatActions on _ChatDetailScreenState {
             ),
             AppSpacing.vGapSm,
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openForwardPicker(LocalMessage msg) {
+    if (!canForwardMessage(msg)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ce message ne peut pas être transféré pour le moment'),
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ForwardMessageScreen(
+          message: msg,
+          excludeConversationId: widget.conversationId,
         ),
       ),
     );

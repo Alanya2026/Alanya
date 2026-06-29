@@ -67,6 +67,7 @@ class LocalMessages extends Table {
   /// alanyaID de l'utilisateur pour qui le message est masqué (suppression "pour moi").
   IntColumn get deletedForID => integer().nullable()();
   IntColumn get isStatusReply => integer().withDefault(const Constant(0))();
+  BoolColumn get isForwarded => boolean().withDefault(const Constant(false))();
 
   TextColumn get senderNom => text().nullable()();
   TextColumn get senderPseudo => text().nullable()();
@@ -184,7 +185,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -204,6 +205,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.addColumn(localMessages, localMessages.retryCount);
+          }
+          if (from < 5) {
+            await m.addColumn(localMessages, localMessages.isForwarded);
           }
         },
       );

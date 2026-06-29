@@ -1,0 +1,45 @@
+import '../db/app_database.dart';
+import '../db/chat_dao.dart';
+
+int conversationParticipantId(dynamic v) {
+  if (v is int) return v;
+  if (v is num) return v.toInt();
+  return int.tryParse(v?.toString() ?? '') ?? 0;
+}
+
+Map<String, dynamic>? otherParticipant(LocalConversation conv, int myId) {
+  final parts = decodeParticipants(conv.participantsJson);
+  for (final p in parts) {
+    final id = conversationParticipantId(p['alanyaID']);
+    if (myId != 0 && id != 0 && id != myId) return p;
+  }
+  return null;
+}
+
+String conversationDisplayName(LocalConversation conv, int myId) {
+  if (conv.isGroup) return conv.groupName ?? 'Groupe';
+  final other = otherParticipant(conv, myId);
+  return (other?['nom'] as String?) ?? 'Inconnu';
+}
+
+String? conversationDisplayAvatar(LocalConversation conv, int myId) {
+  if (conv.isGroup) {
+    return conv.groupPhoto?.isNotEmpty == true ? conv.groupPhoto : null;
+  }
+  final other = otherParticipant(conv, myId);
+  final avatar = other?['avatar_url']?.toString();
+  return avatar != null && avatar.isNotEmpty ? avatar : null;
+}
+
+int? conversationOtherUserId(LocalConversation conv, int myId) {
+  final other = otherParticipant(conv, myId);
+  if (other == null) return null;
+  final id = conversationParticipantId(other['alanyaID']);
+  return id == 0 ? null : id;
+}
+
+bool conversationMatchesSearch(LocalConversation conv, int myId, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return true;
+  return conversationDisplayName(conv, myId).toLowerCase().contains(q);
+}
