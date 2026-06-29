@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/services/local_cache_repository.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_dimens.dart';
 import '../core/theme/app_theme.dart';
@@ -29,10 +30,12 @@ class _AddContactSheetState extends State<AddContactSheet> {
   bool _isLoading = false;
   String _currentQuery = '';
   final Set<int> _adding = {};
+  late Set<int> _existingIds;
 
   @override
   void initState() {
     super.initState();
+    _existingIds = Set<int>.from(widget.existingIds);
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -80,8 +83,14 @@ class _AddContactSheetState extends State<AddContactSheet> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       await apiClient.addContact(user.alanyaID);
       if (!mounted) return;
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      await cache.upsertKnownUser(user, preferred: true);
+      if (!mounted) return;
       widget.onAdded(user);
-      setState(() => _adding.remove(user.alanyaID));
+      setState(() {
+        _adding.remove(user.alanyaID);
+        _existingIds.add(user.alanyaID);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -102,7 +111,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
   }
 
   bool _isAlreadyContact(User user) =>
-      widget.existingIds.contains(user.alanyaID);
+      _existingIds.contains(user.alanyaID);
 
   @override
   Widget build(BuildContext context) {
