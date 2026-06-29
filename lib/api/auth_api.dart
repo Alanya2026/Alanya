@@ -110,6 +110,7 @@ extension AuthApi on TalkyApiClient {
     String? fcmToken,
     String? deviceId,
     bool? isOnline,
+    int? idPays,
   }) async {
     final data = await _handleRequest(
       () => _client.put(
@@ -122,6 +123,7 @@ extension AuthApi on TalkyApiClient {
           if (fcmToken != null) 'fcm_token': fcmToken,
           if (deviceId != null) 'device_ID': deviceId,
           if (isOnline != null) 'is_online': isOnline ? 1 : 0,
+          if (idPays != null) 'idPays': idPays,
         }),
       ),
     );

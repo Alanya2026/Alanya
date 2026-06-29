@@ -125,6 +125,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String nom,
     required String pseudo,
+    required int idPays,
   }) async {
     _setLoading(true);
     _clearError();
@@ -135,6 +136,7 @@ class AuthProvider extends ChangeNotifier {
         password: password,
         nom: nom,
         pseudo: pseudo,
+        idPays: idPays,
       );
 
       await _storage.saveTokens(
@@ -167,6 +169,12 @@ class AuthProvider extends ChangeNotifier {
     }
     await _refreshCurrentUser();
     return url;
+  }
+
+  /// Met à jour le pays de l'utilisateur connecté.
+  Future<void> updateCountry(int idPays) async {
+    await _apiClient.updateMe(idPays: idPays);
+    await _refreshCurrentUser();
   }
 
   /// Supprime la photo de profil (remet la valeur sentinelle backend).

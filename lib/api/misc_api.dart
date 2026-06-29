@@ -52,10 +52,15 @@ extension MiscApi on TalkyApiClient {
 
   // ── PAYS ──────────────────────────────────────────────────────────
 
+  /// Liste des pays — endpoint public, utilisable sans token (inscription).
   Future<List<dynamic>> getPays() async {
-    final data = await _handleRequest(
-      () => _client.get(Uri.parse('${TalkyApiClient.baseUrl}/pays'), headers: _headers),
-    );
+    final response = await _client
+        .get(
+          Uri.parse('${TalkyApiClient.baseUrl}/pays'),
+          headers: const {'Content-Type': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 15));
+    final data = _parseResponse(response);
     return data is List ? data : [];
   }
 

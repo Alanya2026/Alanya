@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_colors.dart';
 import '../core/theme/app_dimens.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/country_flag.dart';
@@ -67,7 +66,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.outlineStrong,
+                  color: context.colors.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
