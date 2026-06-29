@@ -174,6 +174,29 @@ class AdminProvider extends ChangeNotifier {
     return User.fromJson(Map<String, dynamic>.from(data));
   }
 
+  Future<User> createUser(Map<String, dynamic> body) async {
+    final data = await _api.adminCreateUser(body);
+    await loadUsers(search: _searchQuery, page: _page, limit: _limit);
+    return User.fromJson(Map<String, dynamic>.from(data));
+  }
+
+  Future<void> updateUserPhone(int userId, String alanyaPhone) async {
+    await _api.adminUpdateUserPhone(userId, alanyaPhone);
+  }
+
+  Future<List<Map<String, dynamic>>> loadReservedPhones() async {
+    final list = await _api.adminGetReservedPhones();
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<void> addReservedPhone(String phone, String label) async {
+    await _api.adminAddReservedPhone(phone, label);
+  }
+
+  Future<void> removeReservedPhone(String phone) async {
+    await _api.adminRemoveReservedPhone(phone);
+  }
+
   static bool isAdmin(User? user) => (user?.typeCompte ?? 0) >= 1;
   static bool isSuperAdmin(User? user) => (user?.typeCompte ?? 0) >= 2;
 }

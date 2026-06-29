@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import 'admin_user_detail_screen.dart';
+import 'admin_create_user_screen.dart';
+import 'admin_reserved_phones_screen.dart';
 
 enum _UserFilter { all, online, banned, admin }
 
@@ -86,6 +89,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           onPressed: () => Navigator.maybePop(context),
         ),
         actions: [
+          PopupMenuButton<String>(
+            onSelected: (v) async {
+              if (v == 'create') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminCreateUserScreen(),
+                  ),
+                );
+                if (mounted) _refresh();
+              } else if (v == 'reserved' &&
+                  AdminProvider.isSuperAdmin(
+                      context.read<AuthProvider>().currentUser)) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminReservedPhonesScreen(),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(value: 'create', child: Text('Créer un utilisateur')),
+              if (AdminProvider.isSuperAdmin(
+                  context.read<AuthProvider>().currentUser))
+                const PopupMenuItem(
+                  value: 'reserved',
+                  child: Text('Numéros réservés'),
+                ),
+            ],
+          ),
           IconButton(
             tooltip: 'Actualiser',
             onPressed: provider.isLoadingUsers || provider.isLoadingStats
@@ -578,7 +612,7 @@ class _UserTile extends StatelessWidget {
                   Text(
                     user.pseudo.isNotEmpty
                         ? '@${user.pseudo}'
-                        : user.alanyaPhone,
+                        : AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone),
                     style: context.text.bodySmall?.copyWith(
                         color: context.colors.onSurfaceVariant),
                     overflow: TextOverflow.ellipsis,

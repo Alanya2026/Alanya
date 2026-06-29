@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../providers/admin_provider.dart';
@@ -10,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/alanya_phone_field.dart';
 
 class AdminUserDetailScreen extends StatefulWidget {
   final int userId;
@@ -167,7 +169,9 @@ class _ProfileCard extends StatelessWidget {
           Divider(color: context.colors.outline, height: 1),
           AppSpacing.vGapSm,
           _InfoRow(label: 'ID', value: '${user.alanyaID}'),
-          _InfoRow(label: 'Téléphone', value: user.alanyaPhone),
+          _InfoRow(
+              label: 'Téléphone',
+              value: AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone)),
           _InfoRow(label: 'Email', value: user.email),
           if ((user.paysLibelle ?? '').isNotEmpty)
             _InfoRow(label: 'Pays', value: user.paysLibelle!),
@@ -511,6 +515,45 @@ class _ActionsCard extends StatelessWidget {
     await onChanged();
   }
 
+  Future<void> _changePhone(BuildContext context) async {
+    final ctrl = TextEditingController(
+      text: AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone),
+    );
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Changer le numéro'),
+        content: AlanyaPhoneField(controller: ctrl),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) {
+      ctrl.dispose();
+      return;
+    }
+    final canonical = AlanyaPhoneField.canonicalFrom(ctrl);
+    ctrl.dispose();
+    final err = AlanyaPhoneFormatter.validate(canonical);
+    if (err != null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    await context.read<AdminProvider>().updateUserPhone(user.alanyaID, canonical);
+    await onChanged();
+  }
+
   Future<void> _toggleAdmin(BuildContext context) async {
     final provider = context.read<AdminProvider>();
     final newType = user.typeCompte >= 1 ? 0 : 1;
@@ -578,6 +621,13 @@ class _ActionsCard extends StatelessWidget {
             onTap: () => _toggleBan(context),
           ),
           if (isSuper) ...[
+            _ActionRow(
+              icon: CupertinoIcons.phone_fill,
+              label: 'Changer le numéro',
+              iconColor: context.colors.primary,
+              iconBg: context.colors.primaryContainer,
+              onTap: () => _changePhone(context),
+            ),
             _ActionRow(
               icon: user.typeCompte >= 1
                   ? CupertinoIcons.shield_slash_fill

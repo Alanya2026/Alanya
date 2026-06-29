@@ -97,4 +97,56 @@ extension AdminApi on TalkyApiClient {
       () => _client.delete(Uri.parse('${TalkyApiClient.baseUrl}/admin/users/$userId'), headers: _headers),
     );
   }
+
+  Future<Map<String, dynamic>> adminCreateUser(Map<String, dynamic> body) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/admin/users'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<void> adminUpdateUserPhone(int userId, String alanyaPhone) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/admin/users/$userId/phone'),
+        headers: _headers,
+        body: jsonEncode({'alanyaPhone': alanyaPhone}),
+      ),
+    );
+  }
+
+  Future<List<dynamic>> adminGetReservedPhones() async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/admin/reserved-alanya-phones'),
+        headers: _headers,
+      ),
+    );
+    return data is List ? data : [];
+  }
+
+  Future<void> adminAddReservedPhone(String phone, String label) async {
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/admin/reserved-alanya-phones'),
+        headers: _headers,
+        body: jsonEncode({'phone': phone, 'label': label}),
+      ),
+    );
+  }
+
+  Future<void> adminRemoveReservedPhone(String phone) async {
+    await _handleRequest(
+      () => _client.delete(
+        Uri.parse(
+          '${TalkyApiClient.baseUrl}/admin/reserved-alanya-phones/${Uri.encodeComponent(phone)}',
+        ),
+        headers: _headers,
+      ),
+    );
+  }
 }
