@@ -15,6 +15,7 @@ import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/utils/country_utils.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/alanya_phone_field.dart';
 import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
@@ -420,8 +421,8 @@ class _Header extends StatelessWidget {
               Icon(Icons.phone_iphone,
                   size: AppIconSize.sm, color: context.colors.primary),
               AppSpacing.hGapXs,
-              Text(
-                'AlanyaPhone ${user.alanyaPhone}',
+              AlanyaPhoneText(
+                user.alanyaPhone,
                 style: context.text.bodyMedium?.copyWith(
                   color: context.colors.primary,
                   fontWeight: FontWeight.w500,

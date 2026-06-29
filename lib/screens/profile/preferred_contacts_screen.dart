@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../chats/contact_detail_screen.dart';
@@ -139,7 +140,7 @@ class _ContactTile extends StatelessWidget {
                               color: context.colors.onSurfaceVariant),
                         ),
                       Text(
-                        user.alanyaPhone,
+                        AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone),
                         style: context.text.bodySmall?.copyWith(
                             color: context.colors.onSurfaceVariant),
                       ),

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
@@ -175,7 +176,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                           children: [
                             Text(member.nom,
                                 style: context.text.titleSmall),
-                            Text(member.alanyaPhone,
+                            Text(
+                                AlanyaPhoneFormatter.formatDisplay(
+                                    member.alanyaPhone),
                                 style: context.text.bodySmall?.copyWith(
                                     color:
                                         context.colors.onSurfaceVariant)),

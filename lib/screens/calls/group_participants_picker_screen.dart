@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/call_limits.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
@@ -121,7 +122,7 @@ class _GroupParticipantsPickerScreenState
             ),
             subtitle: user.alanyaPhone.isNotEmpty
                 ? Text(
-                    user.alanyaPhone,
+                    AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone),
                     style: context.text.bodySmall
                         ?.copyWith(color: context.colors.onSurfaceVariant),
                   )

@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/alanya_phone_field.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -120,11 +121,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   style: context.text.labelSmall?.copyWith(
                                       color: context.colors.onSurfaceVariant),
                                 ),
-                                Text(
-                                  _user?.alanyaPhone ?? 'Non défini',
-                                  style: context.text.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w500),
-                                ),
+                                (_user?.alanyaPhone ?? '').isEmpty
+                                    ? Text(
+                                        'Non défini',
+                                        style: context.text.bodyMedium
+                                            ?.copyWith(
+                                                fontWeight: FontWeight.w500),
+                                      )
+                                    : AlanyaPhoneText(
+                                        _user!.alanyaPhone,
+                                        style: context.text.bodyMedium
+                                            ?.copyWith(
+                                                fontWeight: FontWeight.w500),
+                                      ),
                               ],
                             ),
                           ],

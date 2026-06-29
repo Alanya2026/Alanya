@@ -12,6 +12,8 @@ import '../../core/utils/country_utils.dart';
 import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/add_contact_sheet.dart';
+import '../../widgets/alanya_phone_field.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../chats/contact_detail_screen.dart';
@@ -527,8 +529,8 @@ class _ProfileHeader extends StatelessWidget {
                       size: AppIconSize.sm,
                       color: context.colors.primary),
                   AppSpacing.hGapXs,
-                  Text(
-                    'AlanyaPhone $phone',
+                  AlanyaPhoneText(
+                    phone,
                     style: context.text.bodyMedium?.copyWith(
                       color: context.colors.primary,
                       fontWeight: FontWeight.w500,
@@ -657,7 +659,7 @@ class _ContactChip extends StatelessWidget {
             ),
             AppSpacing.vGapXs,
             Text(
-              user.alanyaPhone,
+              AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone),
               style: context.text.labelSmall
                   ?.copyWith(color: context.colors.onSurfaceVariant),
               textAlign: TextAlign.center,

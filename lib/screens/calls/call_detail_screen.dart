@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/alanya_phone_field.dart';
 import '../../core/utils/country_utils.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
@@ -162,8 +163,8 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                     Icon(Icons.phone_iphone,
                         size: AppIconSize.sm, color: context.colors.primary),
                     AppSpacing.hGapXs,
-                    Text(
-                      'AlanyaPhone $_phone',
+                    AlanyaPhoneText(
+                      _phone,
                       style: context.text.bodyMedium
                           ?.copyWith(color: context.colors.primary),
                     ),

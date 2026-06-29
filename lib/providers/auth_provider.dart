@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
 import '../core/utils/app_log.dart';
+import '../core/utils/alanya_phone_formatter.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
 
@@ -96,7 +97,7 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await _apiClient.login(
-        alanyaPhone: alanyaPhone,
+        alanyaPhone: AlanyaPhoneFormatter.normalize(alanyaPhone),
         password: password,
       );
 

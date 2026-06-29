@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../widgets/alanya_phone_field.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -22,8 +24,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final canonical = AlanyaPhoneField.canonicalFrom(_alanyaPhoneController);
+    final validationError = AlanyaPhoneFormatter.validate(canonical);
+    if (validationError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(validationError)),
+      );
+      return;
+    }
     await authProvider.login(
-      alanyaPhone: _alanyaPhoneController.text.trim(),
+      alanyaPhone: canonical,
       password: _passwordController.text,
     );
 
@@ -84,13 +94,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ?.copyWith(color: context.colors.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpacing.xxxl + 16),
-              TextField(
+              AlanyaPhoneField(
                 controller: _alanyaPhoneController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  hintText: 'Téléphone Alanya ex : 340364',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
               ),
               AppSpacing.vGapLg,
               TextField(

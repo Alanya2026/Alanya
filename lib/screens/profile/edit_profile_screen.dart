@@ -7,6 +7,7 @@ import '../../core/services/countries_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -358,7 +359,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       prefixIcon: Icon(Icons.phone_outlined),
                     ),
                     controller: TextEditingController(
-                        text: _user?.alanyaPhone ?? ''),
+                        text: AlanyaPhoneFormatter.formatDisplay(
+                            _user?.alanyaPhone ?? '')),
                   ),
                   AppSpacing.vGapXxl,
                   if (_loadingCountries)

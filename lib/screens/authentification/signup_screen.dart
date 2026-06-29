@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/countries_repository.dart';
+import '../../widgets/alanya_phone_field.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -115,13 +116,13 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             ),
             AppSpacing.vGapSm,
-            Text(
+            AlanyaPhoneText(
               alanyaPhone,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 8,
+                letterSpacing: 4,
                 color: AppColors.brandPrimary,
               ),
             ),
