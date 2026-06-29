@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/user_search.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
@@ -21,6 +25,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
   List<User> _filteredUsers = [];
   final Set<int> _selected = {};
   bool _isLoading = false;
+  String _currentQuery = '';
 
   @override
   void initState() {
@@ -36,32 +41,70 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
   }
 
   Future<void> _loadContacts() async {
-    setState(() => _isLoading = true);
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getContacts();
+    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+    final local = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    if (local.isEmpty) {
+      setState(() => _isLoading = true);
+    } else {
       setState(() {
-        _contacts = data
-            .map((json) => User.fromJson(json as Map<String, dynamic>))
-            .toList();
+        _contacts = local.map(localUserToUser).toList();
         _filteredUsers = _contacts;
-        _isLoading = false;
       });
-    } catch (e) {
-      setState(() => _isLoading = false);
     }
+
+    unawaited(_refreshPreferredFromServer(cache));
+  }
+
+  Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
+    await cache.syncPreferredContacts();
+    final updated = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    setState(() {
+      _contacts = updated.map(localUserToUser).toList();
+      final query = _searchController.text.trim();
+      if (query.isEmpty) {
+        _filteredUsers = _contacts;
+      } else if (query.isNotEmpty) {
+        _filteredUsers = filterUsersBySearch(_contacts, query);
+      }
+      _isLoading = false;
+    });
   }
 
   void _onSearchChanged() {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
       setState(() => _filteredUsers = _contacts);
-    } else {
-      _searchAllUsers(query);
+      return;
+    }
+
+    _currentQuery = query;
+    final localMatches = filterUsersBySearch(_contacts, query);
+    setState(() {
+      _filteredUsers = localMatches;
+      _isLoading = false;
+    });
+
+    if (localMatches.isEmpty) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (_currentQuery == _searchController.text.trim() && mounted) {
+          _searchRemote(query);
+        }
+      });
     }
   }
 
-  Future<void> _searchAllUsers(String query) async {
+  Future<void> _searchRemote(String query) async {
+    final localMatches = filterUsersBySearch(_contacts, query);
+    if (localMatches.isNotEmpty) {
+      if (mounted) {
+        setState(() => _filteredUsers = localMatches);
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.searchUsers(query);
@@ -70,10 +113,11 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
           _filteredUsers = data
               .map((json) => User.fromJson(json as Map<String, dynamic>))
               .toList();
+          _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() {});
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -88,8 +132,12 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
   }
 
   void _goToCreate() {
+    final byId = {
+      for (final u in _contacts) u.alanyaID: u,
+      for (final u in _filteredUsers) u.alanyaID: u,
+    };
     final selectedUsers =
-        _contacts.where((u) => _selected.contains(u.alanyaID)).toList();
+        _selected.map((id) => byId[id]).whereType<User>().toList();
     Navigator.push(
       context,
       MaterialPageRoute(

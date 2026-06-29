@@ -1,12 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
+import '../../core/utils/user_search.dart';
+import '../../widgets/alanya_phone_field.dart';
 import '../../widgets/common/common.dart';
 
 class KeypadScreen extends StatefulWidget {
@@ -17,7 +23,7 @@ class KeypadScreen extends StatefulWidget {
 }
 
 class _KeypadScreenState extends State<KeypadScreen> {
-  String _phoneNumber = '';
+  String _phoneDigits = '';
   User? _foundUser;
   bool _isSearching = false;
 
@@ -37,31 +43,39 @@ class _KeypadScreenState extends State<KeypadScreen> {
 
   Future<void> _loadContacts() async {
     try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getContacts();
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      final local = await cache.getPreferredContactsOnce();
       if (!mounted) return;
       setState(() {
-        _preferredContacts = (data as List?)
-                ?.map((json) => User.fromJson(json as Map<String, dynamic>))
-                .toList() ??
-            [];
+        _preferredContacts = local.map(localUserToUser).toList();
       });
+      unawaited(_refreshPreferredFromServer(cache));
     } catch (_) {
       // Silencieux : la recherche serveur reste disponible.
     }
   }
 
+  Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
+    await cache.syncPreferredContacts();
+    final updated = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    setState(() {
+      _preferredContacts = updated.map(localUserToUser).toList();
+    });
+  }
+
   Set<int> get _preferredIds =>
       _preferredContacts.map((u) => u.alanyaID).toSet();
 
-  String _digitsOnly(String s) => s.replaceAll(RegExp(r'[^0-9]'), '');
+  String get _phoneDisplay =>
+      AlanyaPhoneFormatter.formatLiveInput(_phoneDigits);
 
-  /// Contacts préférés dont le numéro contient les chiffres tapés.
+  /// Contacts préférés — correspondance exacte si longueur valide.
   List<User> get _matchedPreferred {
-    final digits = _digitsOnly(_phoneNumber);
-    if (digits.isEmpty) return [];
+    if (_phoneDigits.isEmpty) return [];
+    if (AlanyaPhoneFormatter.validate(_phoneDigits) != null) return [];
     return _preferredContacts
-        .where((u) => _digitsOnly(u.alanyaPhone).contains(digits))
+        .where((u) => u.alanyaPhone == _phoneDigits)
         .toList();
   }
 
@@ -74,18 +88,18 @@ class _KeypadScreenState extends State<KeypadScreen> {
   // ── Saisie ───────────────────────────────────────────────────────────
 
   void _onKeyPress(String value) {
-    if (_phoneNumber.length >= 15) return;
+    if (_phoneDigits.length >= 8) return;
     setState(() {
-      _phoneNumber += value;
+      _phoneDigits += value;
       _foundUser = null;
     });
     _onQueryChanged();
   }
 
   void _onDelete() {
-    if (_phoneNumber.isEmpty) return;
+    if (_phoneDigits.isEmpty) return;
     setState(() {
-      _phoneNumber = _phoneNumber.substring(0, _phoneNumber.length - 1);
+      _phoneDigits = _phoneDigits.substring(0, _phoneDigits.length - 1);
       _foundUser = null;
     });
     _onQueryChanged();
@@ -93,24 +107,27 @@ class _KeypadScreenState extends State<KeypadScreen> {
 
   void _clearAll() {
     setState(() {
-      _phoneNumber = '';
+      _phoneDigits = '';
       _foundUser = null;
       _serverResults = [];
     });
   }
 
   void _onQueryChanged() {
-    final query = _phoneNumber.trim();
-    _currentQuery = query;
-    if (query.isEmpty) {
+    _currentQuery = _phoneDigits;
+    if (_phoneDigits.isEmpty) {
       setState(() => _serverResults = []);
       return;
     }
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (_currentQuery == _phoneNumber.trim() && mounted) {
-        _searchServer(query);
-      }
-    });
+    if (AlanyaPhoneFormatter.validate(_phoneDigits) == null) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (_currentQuery == _phoneDigits && mounted) {
+          _searchServer(_phoneDigits);
+        }
+      });
+    } else {
+      setState(() => _serverResults = []);
+    }
   }
 
   Future<void> _searchServer(String query) async {
@@ -132,7 +149,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
 
   void _selectContact(User user) {
     setState(() {
-      _phoneNumber = user.alanyaPhone;
+      _phoneDigits = user.alanyaPhone;
       _foundUser = user;
       _serverResults = [];
     });
@@ -141,12 +158,22 @@ class _KeypadScreenState extends State<KeypadScreen> {
   // ── Appels ───────────────────────────────────────────────────────────
 
   Future<void> _searchUser() async {
-    if (_phoneNumber.isEmpty) return;
+    if (_phoneDigits.isEmpty) return;
+    if (AlanyaPhoneFormatter.validate(_phoneDigits) != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Numéro invalide : 3, 4 ou 8 chiffres requis'),
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() => _isSearching = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final userData = await apiClient.getUserByPhone(_phoneNumber);
+      final userData = await apiClient.getUserByPhone(_phoneDigits);
       setState(() {
         _foundUser = userData.isNotEmpty
             ? User.fromJson(userData[0] as Map<String, dynamic>)
@@ -167,7 +194,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
   }
 
   void _showCallTypeSheet() {
-    if (_foundUser == null && _phoneNumber.trim().isEmpty) {
+    if (_foundUser == null && _phoneDigits.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Entrez un numéro ou choisissez un contact'),
@@ -252,7 +279,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
   /// Ajoute le numéro tapé (ou le contact sélectionné) aux contacts préférés.
   Future<void> _addCurrentNumber() async {
     if (_addingContact) return;
-    final phone = _phoneNumber.trim();
+    final phone = _phoneDigits;
     if (_foundUser == null && phone.isEmpty) {
       _showSnack('Entrez un numéro à ajouter');
       return;
@@ -350,7 +377,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
   }
 
   Widget _buildSuggestions() {
-    if (_phoneNumber.isEmpty) return const SizedBox.shrink();
+    if (_phoneDigits.isEmpty) return const SizedBox.shrink();
 
     final preferred = _matchedPreferred;
     final others = _otherResults;
@@ -421,7 +448,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
         style: context.text.titleSmall,
       ),
       subtitle: Text(
-        '@${user.pseudo} • ${user.alanyaPhone}',
+        '@${user.pseudo} • ${AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone)}',
         style: context.text.bodySmall
             ?.copyWith(color: context.colors.onSurfaceVariant),
       ),
@@ -447,7 +474,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Text(
-                        _phoneNumber,
+                        _phoneDisplay,
                         style: context.text.headlineLarge?.copyWith(
                           fontSize: 40,
                           fontWeight: FontWeight.w400,
@@ -460,7 +487,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
             ),
             SizedBox(
               width: 48,
-              child: _phoneNumber.isEmpty
+              child: _phoneDigits.isEmpty
                   ? null
                   : GestureDetector(
                       onLongPress: _clearAll,

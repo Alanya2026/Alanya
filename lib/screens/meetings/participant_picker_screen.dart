@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/call_limits.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/user_search.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
@@ -40,6 +44,7 @@ class _ParticipantPickerScreenState
   final _scrollController = ScrollController();
 
   late final List<User> _selected;
+  List<User> _allContacts = [];
   List<User> _results = [];
   bool _isLoading = false;
   bool _showingContacts = true;
@@ -62,41 +67,83 @@ class _ParticipantPickerScreenState
   }
 
   Future<void> _loadContacts() async {
-    setState(() => _isLoading = true);
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getContacts();
-      if (!mounted) return;
+    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+    final local = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    if (local.isNotEmpty) {
       setState(() {
-        _results = data
-            .map((e) =>
-                e is User ? e : User.fromJson(e as Map<String, dynamic>))
+        _allContacts = local
+            .map(localUserToUser)
             .where((u) => !widget.excludeIds.contains(u.alanyaID))
             .toList();
-        _isLoading = false;
+        _results = _allContacts;
         _showingContacts = true;
       });
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } else {
+      setState(() => _isLoading = true);
     }
+
+    unawaited(_refreshPreferredFromServer(cache));
+  }
+
+  Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
+    await cache.syncPreferredContacts();
+    final updated = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    setState(() {
+      _allContacts = updated
+          .map(localUserToUser)
+          .where((u) => !widget.excludeIds.contains(u.alanyaID))
+          .toList();
+      _isLoading = false;
+      final query = _searchController.text.trim();
+      if (query.isEmpty) {
+        _results = _allContacts;
+        _showingContacts = true;
+      } else if (query.isNotEmpty) {
+        _results = filterUsersBySearch(_allContacts, query);
+        _showingContacts = false;
+      }
+    });
   }
 
   void _onSearchChanged() {
     final query = _searchController.text.trim();
-    if (query.length >= 2) {
-      _currentQuery = query;
-      Future.delayed(const Duration(milliseconds: 400), () {
-        if (_currentQuery == _searchController.text.trim() && mounted) {
-          _searchUsers(query);
-        }
-      });
-    } else if (query.isEmpty) {
+    if (query.isEmpty) {
       setState(() => _showingContacts = true);
       _loadContacts();
+      return;
+    }
+
+    _currentQuery = query;
+    final localMatches = filterUsersBySearch(_allContacts, query);
+    setState(() {
+      _results = localMatches;
+      _showingContacts = false;
+      _isLoading = false;
+    });
+
+    if (localMatches.isEmpty) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (_currentQuery == _searchController.text.trim() && mounted) {
+          _searchUsersRemote(query);
+        }
+      });
     }
   }
 
-  Future<void> _searchUsers(String query) async {
+  Future<void> _searchUsersRemote(String query) async {
+    final localMatches = filterUsersBySearch(_allContacts, query);
+    if (localMatches.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _results = localMatches;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _showingContacts = false;

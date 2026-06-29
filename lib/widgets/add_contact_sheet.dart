@@ -7,7 +7,9 @@ import '../core/theme/app_dimens.dart';
 import '../core/theme/app_theme.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
+import '../core/utils/alanya_phone_formatter.dart';
 import '../core/utils/app_log.dart';
+import '../core/utils/user_search.dart';
 import 'common/common.dart';
 
 class AddContactSheet extends StatefulWidget {
@@ -27,6 +29,7 @@ class AddContactSheet extends StatefulWidget {
 class _AddContactSheetState extends State<AddContactSheet> {
   final _searchController = TextEditingController();
   List<User> _results = [];
+  List<User> _preferredContacts = [];
   bool _isLoading = false;
   String _currentQuery = '';
   final Set<int> _adding = {};
@@ -37,6 +40,19 @@ class _AddContactSheetState extends State<AddContactSheet> {
     super.initState();
     _existingIds = Set<int>.from(widget.existingIds);
     _searchController.addListener(_onSearchChanged);
+    _loadPreferredFromCache();
+  }
+
+  Future<void> _loadPreferredFromCache() async {
+    try {
+      final cache =
+          Provider.of<LocalCacheRepository>(context, listen: false);
+      final local = await cache.getPreferredContactsOnce();
+      if (!mounted) return;
+      setState(() {
+        _preferredContacts = local.map(localUserToUser).toList();
+      });
+    } catch (_) {}
   }
 
   @override
@@ -47,19 +63,42 @@ class _AddContactSheetState extends State<AddContactSheet> {
 
   void _onSearchChanged() {
     final query = _searchController.text.trim();
-    if (query.length >= 2) {
-      _currentQuery = query;
+    if (query.isEmpty) {
+      setState(() {
+        _results = [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    _currentQuery = query;
+    final localMatches = filterUsersBySearch(_preferredContacts, query);
+    setState(() {
+      _results = localMatches;
+      _isLoading = false;
+    });
+
+    if (localMatches.isEmpty) {
       Future.delayed(const Duration(milliseconds: 400), () {
         if (_currentQuery == _searchController.text.trim() && mounted) {
-          _search(query);
+          _searchRemote(query);
         }
       });
-    } else {
-      setState(() => _results = []);
     }
   }
 
-  Future<void> _search(String query) async {
+  Future<void> _searchRemote(String query) async {
+    final localMatches = filterUsersBySearch(_preferredContacts, query);
+    if (localMatches.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _results = localMatches;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
@@ -162,11 +201,11 @@ class _AddContactSheetState extends State<AddContactSheet> {
                   ? const LoadingState()
                   : _results.isEmpty
                       ? EmptyState(
-                          icon: _searchController.text.length < 2
+                          icon: _searchController.text.trim().isEmpty
                               ? CupertinoIcons.search
                               : Icons.person_search,
-                          title: _searchController.text.length < 2
-                              ? 'Tapez au moins 2 caractères'
+                          title: _searchController.text.trim().isEmpty
+                              ? 'Rechercher un contact'
                               : 'Aucun résultat',
                         )
                       : ListView.builder(
@@ -231,7 +270,7 @@ class AddContactItem extends StatelessWidget {
                   ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
           Text(
-            user.alanyaPhone,
+            AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone),
             style: context.text.labelSmall
                 ?.copyWith(color: context.colors.onSurfaceVariant),
           ),

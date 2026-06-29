@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/user_search.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -24,6 +28,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
   List<User> _contacts = [];
   List<User> _filteredUsers = [];
   bool _isLoading = false;
+  String _currentQuery = '';
 
   @override
   void initState() {
@@ -39,32 +44,70 @@ class _NewChatScreenState extends State<NewChatScreen> {
   }
 
   Future<void> _loadContacts() async {
-    setState(() => _isLoading = true);
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getContacts();
+    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+    final local = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    if (local.isEmpty) {
+      setState(() => _isLoading = true);
+    } else {
       setState(() {
-        _contacts = data
-            .map((json) => User.fromJson(json as Map<String, dynamic>))
-            .toList();
+        _contacts = local.map(localUserToUser).toList();
         _filteredUsers = _contacts;
-        _isLoading = false;
       });
-    } catch (e) {
-      setState(() => _isLoading = false);
     }
+
+    unawaited(_refreshPreferredFromServer(cache));
+  }
+
+  Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
+    await cache.syncPreferredContacts();
+    final updated = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    setState(() {
+      _contacts = updated.map(localUserToUser).toList();
+      final query = _searchController.text.trim();
+      if (query.isEmpty) {
+        _filteredUsers = _contacts;
+      } else if (query.isNotEmpty) {
+        _filteredUsers = filterUsersBySearch(_contacts, query);
+      }
+      _isLoading = false;
+    });
   }
 
   void _onSearchChanged() {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
       setState(() => _filteredUsers = _contacts);
-    } else {
-      _searchAllUsers(query);
+      return;
+    }
+
+    _currentQuery = query;
+    final localMatches = filterUsersBySearch(_contacts, query);
+    setState(() {
+      _filteredUsers = localMatches;
+      _isLoading = false;
+    });
+
+    if (localMatches.isEmpty) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (_currentQuery == _searchController.text.trim() && mounted) {
+          _searchRemote(query);
+        }
+      });
     }
   }
 
-  Future<void> _searchAllUsers(String query) async {
+  Future<void> _searchRemote(String query) async {
+    final localMatches = filterUsersBySearch(_contacts, query);
+    if (localMatches.isNotEmpty) {
+      if (mounted) {
+        setState(() => _filteredUsers = localMatches);
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.searchUsers(query);
@@ -73,10 +116,11 @@ class _NewChatScreenState extends State<NewChatScreen> {
           _filteredUsers = data
               .map((json) => User.fromJson(json as Map<String, dynamic>))
               .toList();
+          _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() {});
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

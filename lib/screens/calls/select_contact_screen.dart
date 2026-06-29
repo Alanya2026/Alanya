@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/call_limits.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
+import '../../core/utils/user_search.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
@@ -38,38 +43,73 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   }
 
   Future<void> _loadContacts() async {
-    setState(() => _isLoading = true);
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getContacts();
+    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+    final local = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    if (local.isEmpty) {
+      setState(() => _isLoading = true);
+    } else {
       setState(() {
-        _allContacts = (data as List?)
-                ?.map((json) => User.fromJson(json as Map<String, dynamic>))
-                .toList() ??
-            [];
+        _allContacts = local.map(localUserToUser).toList();
         _filteredContacts = _allContacts;
-        _isLoading = false;
       });
-    } catch (e) {
-      setState(() => _isLoading = false);
     }
+
+    unawaited(_refreshPreferredFromServer(cache));
+  }
+
+  Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
+    await cache.syncPreferredContacts();
+    if (!mounted) return;
+    final updated = await cache.getPreferredContactsOnce();
+    if (!mounted) return;
+    setState(() {
+      _allContacts = updated.map(localUserToUser).toList();
+      final query = _searchController.text.trim();
+      if (query.isEmpty) {
+        _filteredContacts = _allContacts;
+      } else if (query.isNotEmpty) {
+        _filteredContacts = filterUsersBySearch(_allContacts, query);
+      }
+      _isLoading = false;
+    });
   }
 
   void _onSearchChanged() {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
       setState(() => _filteredContacts = _allContacts);
-    } else if (query.length >= 2) {
-      _currentQuery = query;
+      return;
+    }
+
+    _currentQuery = query;
+    final localMatches = filterUsersBySearch(_allContacts, query);
+    setState(() {
+      _filteredContacts = localMatches;
+      _isLoading = false;
+    });
+
+    if (localMatches.isEmpty) {
       Future.delayed(const Duration(milliseconds: 500), () {
-        if (_currentQuery == _searchController.text && mounted) {
-          _searchUsers(query);
+        if (_currentQuery == _searchController.text.trim() && mounted) {
+          _searchUsersRemote(query);
         }
       });
     }
   }
 
-  Future<void> _searchUsers(String query) async {
+  Future<void> _searchUsersRemote(String query) async {
+    final localMatches = filterUsersBySearch(_allContacts, query);
+    if (localMatches.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _filteredContacts = localMatches;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
@@ -350,7 +390,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
         style: context.text.titleSmall,
       ),
       subtitle: Text(
-        '@${user.pseudo} • ${user.alanyaPhone}',
+        '@${user.pseudo} • ${AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone)}',
         style: context.text.bodySmall
             ?.copyWith(color: context.colors.onSurfaceVariant),
       ),
