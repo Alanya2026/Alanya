@@ -258,6 +258,12 @@ class PushService {
       return;
     }
 
+    if (type == 'message') {
+      _dispatchNotificationAction(
+        NotificationAction.fromMap(data, fromTap: false),
+      );
+    }
+
     if (!kIsWeb) {
       final title =
           (data['title'] ?? message.notification?.title ?? '').toString();

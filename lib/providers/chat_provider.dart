@@ -30,6 +30,9 @@ class ChatProvider extends ChangeNotifier {
   bool _bound = false;
   Timer? _refreshDebounce;
 
+  /// Hook optionnel après reconnexion socket (ex. refresh statuts).
+  Future<void> Function()? onSocketReadyHook;
+
   ChatProvider({required TalkyApiClient api, AppDatabase? database}) : _api = api {
     repository = ChatRepository(api: _api, database: database);
   }
@@ -135,6 +138,7 @@ class ChatProvider extends ChangeNotifier {
       await refreshConversations();
       await repository.resyncActiveConversation();
       repository.rejoinActiveRoom();
+      await onSocketReadyHook?.call();
     } catch (e) {
       debugPrint('[ChatProvider] _onSocketReady: $e');
     }

@@ -119,6 +119,7 @@ class TalkyApiClient {
     if (response.statusCode == 200) {
       _accessToken  = data['accessToken'];
       _refreshToken = data['refreshToken'];
+      reauthSocketIfConnected();
     } else {
       throw TalkyException(data['error'] ?? 'Refresh échoué', response.statusCode);
     }

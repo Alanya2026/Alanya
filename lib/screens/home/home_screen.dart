@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/realtime_sync_service.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/notification_navigation.dart';
 import '../../core/services/push_service.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/chat_provider.dart';
 import '../chats/chats_screen.dart';
 import '../calls/calls_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
@@ -25,12 +24,13 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _incomingCallShown = false;
   late final PageController _pageController;
 
   StreamSubscription<NotificationAction>? _notifActionSub;
+  Timer? _resumeSyncDebounce;
 
   static const int _tabCalls = 1;
   static const int _tabStatuses = 2;
@@ -47,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pageController = PageController(initialPage: 0);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -64,22 +65,35 @@ class _HomeScreenState extends State<HomeScreen> {
       // Cold start : action reçue avant abonnement au stream
       final pending = PushService.consumePendingAction();
       if (pending != null) _onNotificationAction(pending);
-
-      final myId =
-          Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID;
-      if (myId != null && myId != 0) {
-        Provider.of<ChatProvider>(context, listen: false).bind(myId);
-      }
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _resumeSyncDebounce?.cancel();
     _pageController.dispose();
     Provider.of<CallService>(context, listen: false)
         .removeListener(_onCallStatusChanged);
     _notifActionSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _scheduleResumeCatchUp();
+    }
+  }
+
+  void _scheduleResumeCatchUp() {
+    _resumeSyncDebounce?.cancel();
+    _resumeSyncDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      unawaited(
+        Provider.of<RealtimeSyncService>(context, listen: false).catchUp(),
+      );
+    });
   }
 
   // ── Appels entrants ─────────────────────────────────────────────────
@@ -114,6 +128,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final type = action.type;
     if (type == 'message') {
+      final convId = int.tryParse(action.data['conversationId'] ?? '') ?? 0;
+      unawaited(
+        Provider.of<RealtimeSyncService>(context, listen: false).catchUp(
+          conversationId: convId > 0 ? convId : null,
+        ),
+      );
       if (action.fromTap) {
         NotificationNavigation.openConversation(context, action.data);
       }

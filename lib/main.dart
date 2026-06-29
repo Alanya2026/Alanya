@@ -21,6 +21,7 @@ import 'core/services/callkit_service.dart';
 import 'core/services/local_cache_repository.dart';
 import 'core/services/local_hidden_store.dart';
 import 'core/services/meeting_service.dart';
+import 'core/services/realtime_sync_service.dart';
 import 'core/services/push_service.dart';
 import 'firebase_options.dart';
 import 'screens/authentification/login_screen.dart';
@@ -97,6 +98,12 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminProvider(api: apiClient)),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider(api: apiClient)),
         ChangeNotifierProvider(create: (_) => LocalHiddenStore()..load()),
+        Provider<RealtimeSyncService>(
+          create: (ctx) => RealtimeSyncService(
+            chat: ctx.read<ChatProvider>(),
+            status: ctx.read<StatusProvider>(),
+          ),
+        ),
       ],
       child: Consumer<ThemeController>(
         builder: (_, tc, __) => MaterialApp(
@@ -124,6 +131,8 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   AuthProvider? _authProvider;
   int? _boundUserId;
+  VoidCallback? _onBackOnline;
+  ConnectivityProvider? _connectivityForListener;
 
   @override
   void initState() {
@@ -137,7 +146,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void dispose() {
     _authProvider?.removeListener(_onAuthChanged);
+    if (_onBackOnline != null && _connectivityForListener != null) {
+      _connectivityForListener!.removeBackOnlineListener(_onBackOnline!);
+    }
     super.dispose();
+  }
+
+  void _removeBackOnlineListener() {
+    if (_onBackOnline != null && _connectivityForListener != null) {
+      _connectivityForListener!.removeBackOnlineListener(_onBackOnline!);
+      _onBackOnline = null;
+      _connectivityForListener = null;
+    }
   }
 
   /// Bootstrap initial : restaure la session puis lie les providers et services
@@ -228,8 +248,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
     if (myId == null) {
       if (_boundUserId != null) {
         debugPrint('[AuthWrapper] Logout détecté → unbind providers');
+        _removeBackOnlineListener();
         try {
           Provider.of<ChatProvider>(context, listen: false).unbind();
+          Provider.of<ChatProvider>(context, listen: false).onSocketReadyHook = null;
         } catch (e) {
           debugPrint('[AuthWrapper] ChatProvider.unbind échoué: $e');
         }
@@ -262,6 +284,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final statusProvider = Provider.of<StatusProvider>(context, listen: false);
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final syncService = Provider.of<RealtimeSyncService>(context, listen: false);
 
     try {
       await chatProvider.bind(myId);
@@ -272,18 +296,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         cache.syncMeetings();
         cache.purgeExpiredStatuses();
       }
-      if (mounted) {
-        final connectivity =
-            Provider.of<ConnectivityProvider>(context, listen: false);
-        final cache =
-            Provider.of<LocalCacheRepository>(context, listen: false);
-        connectivity.addBackOnlineListener(() {
-          debugPrint('[AuthWrapper] Réseau revenu → refresh caches secondaires');
-          cache.syncPreferredContacts();
-          cache.syncCalls(myId: myId);
-          cache.syncMeetings();
-        });
-      }
     } catch (e) {
       debugPrint('[AuthWrapper] ChatProvider.bind échoué: $e');
     }
@@ -292,6 +304,28 @@ class _AuthWrapperState extends State<AuthWrapper> {
       await statusProvider.bind(myId);
     } catch (e) {
       debugPrint('[AuthWrapper] StatusProvider.bind échoué: $e');
+    }
+
+    chatProvider.onSocketReadyHook = syncService.refreshStatuses;
+
+    if (mounted) {
+      _removeBackOnlineListener();
+      final connectivity =
+          Provider.of<ConnectivityProvider>(context, listen: false);
+      final cache =
+          Provider.of<LocalCacheRepository>(context, listen: false);
+      _connectivityForListener = connectivity;
+      _onBackOnline = () {
+        debugPrint('[AuthWrapper] Réseau revenu → catch-up + caches');
+        if (!apiClient.isSocketConnected) {
+          apiClient.connectSocket();
+        }
+        unawaited(syncService.catchUp());
+        cache.syncPreferredContacts();
+        cache.syncCalls(myId: myId);
+        cache.syncMeetings();
+      };
+      connectivity.addBackOnlineListener(_onBackOnline!);
     }
 
     try {

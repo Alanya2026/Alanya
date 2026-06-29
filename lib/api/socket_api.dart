@@ -23,6 +23,10 @@ extension SocketApi on TalkyApiClient {
     _socket!.on(SocketEvents.authVerified, (data) {
       debugPrint('[Socket] Authentifié: ${data['alanyaID']}');
       _isSocketAuthVerified = true;
+      final external = _socketListeners[SocketEvents.authVerified];
+      if (external == null || external.isEmpty) {
+        debugPrint('[Socket] ⚠ auth:verified sans listeners externes enregistrés');
+      }
       // Signaler présence en ligne
       _socket!.emit(SocketEvents.presenceOnline, {'userID': data['alanyaID']});
     });
@@ -59,6 +63,15 @@ extension SocketApi on TalkyApiClient {
     });
 
     _socket!.connect();
+  }
+
+  /// Ré-authentifie le socket après renouvellement du token JWT.
+  void reauthSocketIfConnected() {
+    if (_socket?.connected == true && _accessToken != null) {
+      debugPrint('[Socket] Re-auth après refresh token');
+      _isSocketAuthVerified = false;
+      _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
+    }
   }
 
   void disconnectSocket() {
