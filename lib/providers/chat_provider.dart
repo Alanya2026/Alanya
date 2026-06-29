@@ -157,10 +157,21 @@ class ChatProvider extends ChangeNotifier {
     for (final c in convs) {
       for (final p in decodeParticipants(c.participantsJson)) {
         final uid = _toInt(p['alanyaID']);
-        if (uid == 0 || _presence.containsKey(uid)) continue;
+        if (uid == 0) continue;
+        final cachedOnline = p['is_online'] == 1 || p['is_online'] == true;
+        final lastSeenRaw = p['last_seen'];
+        final lastSeen = lastSeenRaw != null
+            ? DateTime.tryParse(lastSeenRaw.toString())
+            : null;
+        // Présence masquée côté serveur (ex. utilisateur qui m'a bloqué).
+        if (!cachedOnline && lastSeenRaw == null) {
+          _presence[uid] = const PresenceInfo(online: false, lastSeen: null);
+          continue;
+        }
+        if (_presence.containsKey(uid)) continue;
         _presence[uid] = PresenceInfo(
-          online: p['is_online'] == 1 || p['is_online'] == true,
-          lastSeen: DateTime.tryParse(p['last_seen']?.toString() ?? ''),
+          online: cachedOnline,
+          lastSeen: lastSeen,
         );
       }
     }

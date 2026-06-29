@@ -112,7 +112,9 @@ extension _ChatInput on _ChatDetailScreenState {
   }
 
   Widget _buildInputBar() {
-    if (_inputBlocked) return _buildBlockedInputBar();
+    if (_inputBlocked) {
+      return const SafeArea(top: false, child: SizedBox.shrink());
+    }
     // Conteneur transparent : les bulles défilent en dessous pour donner
     // l'effet « flottant » WhatsApp. Le SafeArea pose la marge système.
     return SafeArea(
@@ -120,37 +122,6 @@ extension _ChatInput on _ChatDetailScreenState {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(AppSpacing.sm, 6, AppSpacing.sm, AppSpacing.sm),
         child: _isRecording ? _buildRecordingBar() : _buildComposeBar(),
-      ),
-    );
-  }
-
-  Widget _buildBlockedInputBar() {
-    final colors = context.colors;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.sm, 6, AppSpacing.sm, AppSpacing.sm,
-        ),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md + 2,
-          ),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest,
-            borderRadius: AppRadius.brPill,
-            boxShadow: AppShadows.medium,
-          ),
-          child: Text(
-            'Vous avez bloqué cet utilisateur',
-            textAlign: TextAlign.center,
-            style: context.text.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-          ),
-        ),
       ),
     );
   }

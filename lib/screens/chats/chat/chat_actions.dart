@@ -548,6 +548,7 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   String _presenceLabel() {
+    if (_blockedByThem) return '';
     final uid = widget.userId;
     if (uid == null) return '';
     return _chat.presenceLabel(uid);

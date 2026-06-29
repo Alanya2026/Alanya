@@ -198,8 +198,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
     final otherId = other?['alanyaID'] as int?;
 
     // Présence : event temps réel prioritaire, sinon valeur du cache.
-    final live = otherId != null ? chat.presenceOf(otherId) : null;
-    final isOnline = live?.online ?? (other?['is_online'] == 1 || other?['is_online'] == true);
+    final cachedOnline = other?['is_online'] == 1 || other?['is_online'] == true;
+    final presenceHidden = !conv.isGroup &&
+        other != null &&
+        !cachedOnline &&
+        other['last_seen'] == null;
+    final live = otherId != null && !presenceHidden ? chat.presenceOf(otherId) : null;
+    final isOnline =
+        !presenceHidden && (live?.online ?? cachedOnline);
 
     final colors = context.colors;
     final hasUnread = conv.unreadCount > 0;
