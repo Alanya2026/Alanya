@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
@@ -36,6 +38,15 @@ final GlobalKey<NavigatorState> navigatorKey = appNavigatorKey;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[Main] ======== Application démarrée ========');
+
+  // Photo Picker Android (grille + cases à cocher pour pickMultiImage / pickMultiVideo).
+  // Sans ça, le plugin retombe sur l'ancien sélecteur fichiers (souvent identique
+  // au picker une seule vidéo, multi via appui long — peu visible).
+  final imagePickerImpl = ImagePickerPlatform.instance;
+  if (imagePickerImpl is ImagePickerAndroid) {
+    imagePickerImpl.useAndroidPhotoPicker = true;
+    debugPrint('[Main] Android Photo Picker activé');
+  }
 
   // Capture centralisée des erreurs non interceptées (UI + asynchrones).
   // Sans ça, une exception dans un build/callback partait dans le vide.

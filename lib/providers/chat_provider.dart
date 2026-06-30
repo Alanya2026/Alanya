@@ -169,6 +169,16 @@ class ChatProvider extends ChangeNotifier {
     );
   }
 
+  Future<ForwardResult> forwardAlbum({
+    required List<LocalMessage> sourceItems,
+    required List<int> targetConversationIDs,
+  }) {
+    return repository.forwardAlbum(
+      sourceItems: sourceItems,
+      targetConversationIDs: targetConversationIDs,
+    );
+  }
+
   Future<void> _seedPresenceFromCache() async {
     final convs = await repository.dao.watchConversations().first;
     for (final c in convs) {

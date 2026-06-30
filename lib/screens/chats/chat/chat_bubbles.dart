@@ -70,7 +70,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     )
                   else ...[
                     if (msg.type != 0) _buildMedia(msg, isMe),
-                    if (msg.content != null && msg.content!.isNotEmpty)
+                    if (msg.content != null &&
+                        msg.content!.isNotEmpty &&
+                        !isAlbumMarkerContent(msg.content))
                       Padding(
                         padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
                         child: Text(
@@ -354,6 +356,277 @@ extension _ChatBubbles on _ChatDetailScreenState {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAlbumBubble(List<LocalMessage> items, bool isMe) {
+    final sorted = List<LocalMessage>.from(items)
+      ..sort((a, b) {
+        final ma = parseAlbumMarker(a.content);
+        final mb = parseAlbumMarker(b.content);
+        return (ma?.index ?? 0).compareTo(mb?.index ?? 0);
+      });
+    final first = sorted.first;
+    final last = sorted.last;
+    final anyDeleted = sorted.any((m) => m.isDeleted);
+    final worstStatus = sorted.map((m) => m.status).reduce((a, b) => a > b ? a : b);
+
+    return Column(
+      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        if (widget.isGroup && !isMe)
+          Padding(
+            padding: const EdgeInsets.only(left: AppSpacing.lg, bottom: AppSpacing.xs),
+            child: Text(
+              first.senderNom ?? first.senderPseudo ?? 'Unknown',
+              style: context.text.labelSmall?.copyWith(color: context.colors.primary),
+            ),
+          ),
+        Align(
+          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+          child: GestureDetector(
+            onLongPress: () => _showAlbumMenu(sorted, isMe),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.sm,
+              ),
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              decoration: BoxDecoration(
+                color: isMe ? context.colors.primary : context.colors.surface,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(AppRadius.lg),
+                  topRight: const Radius.circular(AppRadius.lg),
+                  bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
+                  bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
+                ),
+                boxShadow: AppShadows.subtle,
+              ),
+              child: Column(
+                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (first.isForwarded) _buildForwardedChip(isMe),
+                  if (anyDeleted)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.block, size: 14, color: _bubbleMuted(isMe)),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          'Ce message a été supprimé',
+                          style: context.text.bodyMedium?.copyWith(
+                            color: _bubbleMuted(isMe),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    _buildAlbumGrid(sorted, isMe),
+                  const SizedBox(height: AppSpacing.xs),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatTime(last.sendAt),
+                        style: context.text.labelSmall?.copyWith(
+                          color: _bubbleMuted(isMe),
+                          fontSize: 10,
+                        ),
+                      ),
+                      if (isMe && !anyDeleted) ...[
+                        const SizedBox(width: 4),
+                        _statusIcon(
+                          worstStatus,
+                          deliveredAt: last.deliveredAt,
+                          readAt: last.readAt,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAlbumGrid(List<LocalMessage> items, bool isMe) {
+    final count = items.length;
+    const gap = 2.0;
+    const cellSize = 110.0;
+    final gridWidth = count >= 2 ? cellSize * 2 + gap : cellSize;
+
+    if (count == 2) {
+      return SizedBox(
+        width: gridWidth,
+        height: cellSize,
+        child: Row(
+          children: [
+            Expanded(child: _albumCell(items[0], isMe, 0, items)),
+            const SizedBox(width: gap),
+            Expanded(child: _albumCell(items[1], isMe, 1, items)),
+          ],
+        ),
+      );
+    }
+
+    if (count == 3) {
+      return SizedBox(
+        width: gridWidth,
+        height: cellSize * 2 + gap,
+        child: Column(
+          children: [
+            SizedBox(
+              height: cellSize,
+              child: Row(
+                children: [
+                  Expanded(child: _albumCell(items[0], isMe, 0, items)),
+                  const SizedBox(width: gap),
+                  Expanded(child: _albumCell(items[1], isMe, 1, items)),
+                ],
+              ),
+            ),
+            const SizedBox(height: gap),
+            SizedBox(
+              height: cellSize,
+              child: _albumCell(items[2], isMe, 2, items),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 4+ : grille 2×2, overlay +N sur la 4e si > 4
+    final displayCount = count > 4 ? 4 : count;
+    return SizedBox(
+      width: gridWidth,
+      height: cellSize * 2 + gap,
+      child: Column(
+        children: [
+          SizedBox(
+            height: cellSize,
+            child: Row(
+              children: [
+                Expanded(child: _albumCell(items[0], isMe, 0, items)),
+                const SizedBox(width: gap),
+                Expanded(child: _albumCell(items[1], isMe, 1, items)),
+              ],
+            ),
+          ),
+          const SizedBox(height: gap),
+          SizedBox(
+            height: cellSize,
+            child: Row(
+              children: [
+                Expanded(
+                  child: displayCount > 2
+                      ? _albumCell(items[2], isMe, 2, items)
+                      : const SizedBox.shrink(),
+                ),
+                const SizedBox(width: gap),
+                Expanded(
+                  child: displayCount > 3
+                      ? _albumCell(
+                          items[3],
+                          isMe,
+                          3,
+                          items,
+                          overlayExtra: count > 4 ? count - 4 : null,
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _albumCell(
+    LocalMessage msg,
+    bool isMe,
+    int index,
+    List<LocalMessage> all, {
+    int? overlayExtra,
+  }) {
+    final uploading = msg.status == 0;
+    final isVideo = msg.type == 2;
+
+    return GestureDetector(
+      onTap: () => _openAlbumViewer(all, initialIndex: index),
+      child: ClipRRect(
+        borderRadius: AppRadius.brSm,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (isVideo)
+              Container(
+                color: AppColors.immersiveBackground,
+                child: _hasLocal(msg)
+                    ? null
+                    : (msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: msg.mediaUrl!,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) =>
+                                Container(color: AppColors.immersiveBackground),
+                          )
+                        : null),
+              )
+            else
+              _hasLocal(msg)
+                  ? Image.file(File(msg.localMediaPath!), fit: BoxFit.cover)
+                  : CachedNetworkImage(
+                      imageUrl: msg.mediaUrl ?? '',
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(color: context.semantic.surfaceMuted),
+                      errorWidget: (_, __, ___) => Icon(
+                        Icons.broken_image,
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+            if (isVideo)
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withAlpha(50),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.play_arrow, color: AppColors.white, size: 24),
+                ),
+              ),
+            if (uploading)
+              Container(
+                color: Colors.black26,
+                alignment: Alignment.center,
+                child: const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white),
+                ),
+              ),
+            if (overlayExtra != null && overlayExtra > 0)
+              Container(
+                color: Colors.black54,
+                alignment: Alignment.center,
+                child: Text(
+                  '+$overlayExtra',
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

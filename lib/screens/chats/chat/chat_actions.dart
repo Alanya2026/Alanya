@@ -25,6 +25,10 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   String _previewOf(LocalMessage m) {
+    if (isAlbumMarkerContent(m.content)) {
+      final marker = parseAlbumMarker(m.content);
+      if (marker != null) return 'Album · ${marker.total} médias';
+    }
     if (m.content != null && m.content!.isNotEmpty) return m.content!;
     return _mediaLabel(m.type);
   }
@@ -137,6 +141,79 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  void _openForwardAlbumPicker(List<LocalMessage> items) {
+    if (!canForwardAlbum(items)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cet album ne peut pas être transféré pour le moment'),
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ForwardMessageScreen(
+          albumItems: items,
+          excludeConversationId: widget.conversationId,
+        ),
+      ),
+    );
+  }
+
+  void _showAlbumMenu(List<LocalMessage> items, bool isMe) {
+    final primary = context.colors.primary;
+    final error = context.colors.error;
+    final muted = context.colors.onSurfaceVariant;
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (canForwardAlbum(items))
+              ListTile(
+                leading: Icon(Icons.forward, color: primary),
+                title: Text('Transférer l\'album (${items.length})'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _openForwardAlbumPicker(items);
+                },
+              ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: muted),
+              title: const Text('Supprimer pour moi'),
+              onTap: () {
+                Navigator.pop(context);
+                for (final msg in items) {
+                  if (msg.msgID != 0) {
+                    _chat.repository.deleteMessage(msg.msgID, forAll: false);
+                  }
+                }
+              },
+            ),
+            if (isMe)
+              ListTile(
+                leading: Icon(Icons.delete_forever, color: error),
+                title: const Text('Supprimer pour tout le monde'),
+                onTap: () {
+                  Navigator.pop(context);
+                  for (final msg in items) {
+                    if (msg.msgID != 0) {
+                      _chat.repository.deleteMessage(msg.msgID, forAll: true);
+                    }
+                  }
+                },
+              ),
+            AppSpacing.vGapSm,
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showEditDialog(LocalMessage msg) {
     if (!_canEditMessage(msg)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -208,8 +285,54 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _pickImageFromGallery() async {
-    final x = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (x != null) _sendMediaFile(File(x.path), type: 1);
+    final picked = await _picker.pickMultiImage(
+      imageQuality: 80,
+      limit: ChatRepository.maxAlbumItems,
+    );
+    if (picked.isEmpty) return;
+
+    if (picked.length > ChatRepository.maxAlbumItems) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Maximum ${ChatRepository.maxAlbumItems} photos. '
+              'Seules les ${ChatRepository.maxAlbumItems} premières seront envoyées.',
+            ),
+          ),
+        );
+      }
+    }
+
+    final limited = picked.take(ChatRepository.maxAlbumItems).toList();
+    if (limited.length == 1) {
+      _sendMediaFile(File(limited.first.path), type: 1);
+      return;
+    }
+
+    final items = limited
+        .map((x) => AlbumSendItem(file: File(x.path), type: 1))
+        .toList();
+
+    if (widget.conversationId == null || _myId == null) return;
+    _chat.repository.sendMediaAlbum(
+      conversationID: widget.conversationId!,
+      items: items,
+    );
+    _scrollToBottom();
+  }
+
+  Future<int?> _readVideoDuration(File file) async {
+    final ctrl = VideoPlayerController.file(file);
+    try {
+      await ctrl.initialize();
+      return ctrl.value.duration.inSeconds;
+    } catch (e) {
+      debugPrint('[ChatDetail] durée vidéo non lue ($e)');
+      return null;
+    } finally {
+      await ctrl.dispose();
+    }
   }
 
   Future<void> _pickImageFromCamera() async {
@@ -218,23 +341,61 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _pickVideo() async {
-    final x = await _picker.pickVideo(source: ImageSource.gallery);
-    if (x == null) return;
-    final file = File(x.path);
-    // Extraction de la durée pour peupler `mediaDuration` (sinon les vidéos
-    // arrivent côté serveur sans length → impossible d'afficher 00:23 dans
-    // la liste des médias d'une conv ou dans la bulle).
-    int? durSec;
-    final ctrl = VideoPlayerController.file(file);
-    try {
-      await ctrl.initialize();
-      durSec = ctrl.value.duration.inSeconds;
-    } catch (e) {
-      debugPrint('[ChatDetail] _pickVideo: durée non lue ($e)');
-    } finally {
-      await ctrl.dispose();
+    final picked = await _picker.pickMultiVideo(
+      limit: ChatRepository.maxAlbumItems,
+    );
+    if (picked.isEmpty) return;
+
+    if (picked.length > ChatRepository.maxAlbumItems && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Maximum ${ChatRepository.maxAlbumItems} vidéos. '
+            'Seules les ${ChatRepository.maxAlbumItems} premières seront envoyées.',
+          ),
+        ),
+      );
     }
-    _sendMediaFile(file, type: 2, duration: durSec);
+
+    final limited = picked.take(ChatRepository.maxAlbumItems).toList();
+    final valid = <XFile>[];
+    for (final x in limited) {
+      final file = File(x.path);
+      final size = file.existsSync() ? file.lengthSync() : 0;
+      if (size > _maxMediaBytes) {
+        if (mounted) {
+          final mb = (size / (1024 * 1024)).toStringAsFixed(1);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Vidéo ignorée ($mb Mo). Limite : 50 Mo.'),
+            backgroundColor: AppColors.error,
+          ));
+        }
+        continue;
+      }
+      valid.add(x);
+    }
+    if (valid.isEmpty) return;
+
+    if (valid.length == 1) {
+      final file = File(valid.first.path);
+      final durSec = await _readVideoDuration(file);
+      _sendMediaFile(file, type: 2, duration: durSec);
+      return;
+    }
+
+    final items = <AlbumSendItem>[];
+    for (final x in valid) {
+      final file = File(x.path);
+      final durSec = await _readVideoDuration(file);
+      items.add(AlbumSendItem(file: file, type: 2, duration: durSec));
+    }
+
+    if (widget.conversationId == null || _myId == null) return;
+    _chat.repository.sendMediaAlbum(
+      conversationID: widget.conversationId!,
+      items: items,
+    );
+    _scrollToBottom();
   }
 
   Future<void> _pickFile() async {
@@ -586,31 +747,50 @@ extension _ChatActions on _ChatDetailScreenState {
       msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
 
   Future<void> _openViewer(LocalMessage msg, {required bool isVideo}) async {
-    String? localPath =
-        (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
-            ? msg.localMediaPath
-            : null;
+    await _openAlbumViewer([msg], initialIndex: 0);
+  }
 
-    // Vidéo : télécharger en local d'abord (lecture fichier = plus fiable que
-    // le streaming, et fonctionne ensuite hors-ligne).
-    if (isVideo && localPath == null && msg.mediaUrl != null) {
-      _showLoading();
-      localPath = await _chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
-      if (localPath != null && msg.msgID != 0) {
-        await _chat.repository.dao.setLocalMediaPath(msg.msgID, localPath);
+  Future<void> _openAlbumViewer(
+    List<LocalMessage> items, {
+    required int initialIndex,
+  }) async {
+    final prepared = <MediaViewerItem>[];
+    for (final msg in items) {
+      String? localPath =
+          (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
+              ? msg.localMediaPath
+              : null;
+
+      final isVideo = msg.type == 2;
+      if (isVideo && localPath == null && msg.mediaUrl != null) {
+        if (prepared.isEmpty && initialIndex == items.indexOf(msg)) {
+          _showLoading();
+        }
+        localPath = await _chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
+        if (localPath != null && msg.msgID != 0) {
+          await _chat.repository.dao.setLocalMediaPath(msg.msgID, localPath);
+        }
+        if (mounted && prepared.isEmpty && initialIndex == items.indexOf(msg)) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
       }
-      if (mounted) Navigator.of(context, rootNavigator: true).pop(); // ferme le loader
+
+      prepared.add(MediaViewerItem(
+        isVideo: isVideo,
+        localPath: localPath,
+        networkUrl: msg.mediaUrl,
+        title: msg.mediaName,
+      ));
     }
+
     if (!mounted) return;
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MediaViewerScreen(
-          isVideo: isVideo,
-          localPath: localPath,
-          networkUrl: msg.mediaUrl,
-          title: msg.mediaName,
+          items: prepared,
+          initialIndex: initialIndex.clamp(0, prepared.length - 1),
         ),
       ),
     );

@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +10,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/forward_message.dart';
+import '../../core/utils/media_album.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
@@ -17,12 +21,16 @@ import 'new_chat_screen.dart';
 class ForwardMessageScreen extends StatefulWidget {
   const ForwardMessageScreen({
     super.key,
-    required this.message,
+    this.message,
+    this.albumItems,
     this.excludeConversationId,
-  });
+  }) : assert(message != null || (albumItems != null && albumItems.length >= 2));
 
-  final LocalMessage message;
+  final LocalMessage? message;
+  final List<LocalMessage>? albumItems;
   final int? excludeConversationId;
+
+  bool get isAlbum => albumItems != null && albumItems!.length >= 2;
 
   @override
   State<ForwardMessageScreen> createState() => _ForwardMessageScreenState();
@@ -46,11 +54,20 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
     setState(() => _sending = true);
 
     final caption = _captionController.text.trim();
-    final result = await chat.forwardMessage(
-      source: widget.message,
-      targetConversationIDs: _selectedIds.toList(),
-      caption: caption.isEmpty ? null : caption,
-    );
+    final ForwardResult result;
+
+    if (widget.isAlbum) {
+      result = await chat.forwardAlbum(
+        sourceItems: widget.albumItems!,
+        targetConversationIDs: _selectedIds.toList(),
+      );
+    } else {
+      result = await chat.forwardMessage(
+        source: widget.message!,
+        targetConversationIDs: _selectedIds.toList(),
+        caption: caption.isEmpty ? null : caption,
+      );
+    }
 
     if (!mounted) return;
     setState(() => _sending = false);
@@ -61,8 +78,10 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
         SnackBar(
           content: Text(
             result.succeeded == 1
-                ? 'Message transféré'
-                : 'Message transféré vers ${result.succeeded} discussions',
+                ? (widget.isAlbum ? 'Album transféré' : 'Message transféré')
+                : widget.isAlbum
+                    ? 'Album transféré vers ${result.succeeded} discussions'
+                    : 'Message transféré vers ${result.succeeded} discussions',
           ),
           backgroundColor: AppColors.success,
         ),
@@ -79,8 +98,12 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
       Navigator.pop(context, true);
     } else {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Impossible de transférer le message'),
+        SnackBar(
+          content: Text(
+            widget.isAlbum
+                ? 'Impossible de transférer l\'album'
+                : 'Impossible de transférer le message',
+          ),
           backgroundColor: AppColors.error,
         ),
       );
@@ -136,6 +159,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
     );
     final chat = context.watch<ChatProvider>();
     final query = _searchController.text;
+    final showCaption = !widget.isAlbum && (widget.message?.type ?? 0) != 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -165,7 +189,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildPreview(context),
-              if (widget.message.type != 0)
+              if (showCaption)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -285,8 +309,13 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
   }
 
   Widget _buildPreview(BuildContext context) {
-    final preview = previewTextForForward(widget.message);
-    final isMedia = widget.message.type != 0;
+    if (widget.isAlbum) {
+      return _buildAlbumPreview(context, widget.albumItems!);
+    }
+
+    final msg = widget.message!;
+    final preview = previewTextForForward(msg);
+    final isMedia = msg.type != 0;
 
     return Container(
       margin: const EdgeInsets.all(AppSpacing.lg),
@@ -301,7 +330,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
         children: [
           if (isMedia) ...[
             Icon(
-              _previewIcon(widget.message.type),
+              _previewIcon(msg.type),
               color: context.colors.primary,
               size: AppIconSize.md,
             ),
@@ -329,6 +358,77 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAlbumPreview(BuildContext context, List<LocalMessage> items) {
+    final sorted = List<LocalMessage>.from(items)
+      ..sort((a, b) {
+        final ma = parseAlbumMarker(a.content);
+        final mb = parseAlbumMarker(b.content);
+        return (ma?.index ?? 0).compareTo(mb?.index ?? 0);
+      });
+    final preview = previewTextForForwardAlbum(sorted);
+    final thumbs = sorted.take(4).toList();
+
+    return Container(
+      margin: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: context.semantic.surfaceMuted,
+        borderRadius: AppRadius.brMd,
+        border: Border.all(color: context.colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Album à transférer',
+            style: context.text.labelSmall?.copyWith(
+              color: context.colors.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          AppSpacing.vGapSm,
+          SizedBox(
+            height: 72,
+            child: Row(
+              children: [
+                for (var i = 0; i < thumbs.length; i++) ...[
+                  if (i > 0) AppSpacing.hGapXs,
+                  Expanded(child: _albumThumb(thumbs[i])),
+                ],
+              ],
+            ),
+          ),
+          AppSpacing.vGapSm,
+          Text(preview, style: context.text.bodyMedium),
+        ],
+      ),
+    );
+  }
+
+  Widget _albumThumb(LocalMessage msg) {
+    final hasLocal = msg.localMediaPath != null &&
+        File(msg.localMediaPath!).existsSync();
+    return ClipRRect(
+      borderRadius: AppRadius.brSm,
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: hasLocal
+            ? Image.file(File(msg.localMediaPath!), fit: BoxFit.cover)
+            : CachedNetworkImage(
+                imageUrl: msg.mediaUrl ?? '',
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => Container(
+                  color: AppColors.surfaceMuted,
+                  child: Icon(
+                    msg.type == 2 ? Icons.videocam : Icons.image,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
       ),
     );
   }

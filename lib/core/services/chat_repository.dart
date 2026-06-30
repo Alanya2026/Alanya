@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import '../utils/forward_message.dart';
+import '../utils/media_album.dart';
 import 'media_cache_service.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';  
@@ -209,6 +210,12 @@ class ChatRepository {
   /// s'il existe, sinon on retombe sur l'emoji + libellé de type. Évite que
   /// l'aperçu de conv affiche un nom de fichier brut (`IMG_2026.jpg`).
   static String _previewForMedia(int type, String? content, String? mediaName) {
+    if (isAlbumMarkerContent(content)) {
+      final marker = parseAlbumMarker(content);
+      if (marker != null) {
+        return marker.total == 1 ? '📷 Photo' : '📷 ${marker.total} photos';
+      }
+    }
     if (content != null && content.trim().isNotEmpty) return content;
     switch (type) {
       case 1:
@@ -337,6 +344,239 @@ class ChatRepository {
       } else {
         await _dao.markFailed(clientId);
       }
+    }
+  }
+
+  /// Élément d'un album multi-médias (photo ou vidéo).
+  static const int maxAlbumItems = 30;
+
+  /// Envoie plusieurs photos/vidéos regroupées en album (marqueur dans `content`).
+  Future<void> sendMediaAlbum({
+    required int conversationID,
+    required List<AlbumSendItem> items,
+    bool isForwarded = false,
+  }) async {
+    if (_myId == 0) {
+      debugPrint('[ChatRepo] sendMediaAlbum ignoré : utilisateur non lié (myId=0)');
+      return;
+    }
+    if (items.isEmpty) return;
+    if (items.length == 1) {
+      final item = items.first;
+      await sendMediaFile(
+        conversationID: conversationID,
+        type: item.type,
+        file: item.file,
+        mediaName: item.mediaName,
+        mediaDuration: item.duration,
+        isForwarded: isForwarded,
+      );
+      return;
+    }
+
+    final albumId = newAlbumId();
+    final total = items.length;
+    final now = DateTime.now().toUtc();
+    final preview = previewLabelForAlbumTypes(items.map((e) => e.type).toList());
+
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      final marker = encodeAlbumMarker(
+        albumId: albumId,
+        index: i,
+        total: total,
+      );
+      await _sendAlbumItem(
+        conversationID: conversationID,
+        type: item.type,
+        file: item.file,
+        mediaName: item.mediaName,
+        mediaDuration: item.duration,
+        content: marker,
+        isForwarded: isForwarded,
+        bumpSummary: i == items.length - 1,
+        summaryPreview: preview,
+        summaryType: item.type,
+        summaryAt: now,
+      );
+    }
+  }
+
+  Future<void> _sendAlbumItem({
+    required int conversationID,
+    required int type,
+    required File file,
+    String? mediaName,
+    int? mediaDuration,
+    required String content,
+    bool isForwarded = false,
+    required bool bumpSummary,
+    required String summaryPreview,
+    required int summaryType,
+    required DateTime summaryAt,
+  }) async {
+    final clientId = _newClientId();
+    final name = mediaName ?? file.path.split('/').last;
+
+    await _dao.upsertMessage(LocalMessagesCompanion.insert(
+      clientId: clientId,
+      conversationID: conversationID,
+      senderID: _myId,
+      sendAt: summaryAt,
+      content: Value(content),
+      type: Value(type),
+      status: const Value(0),
+      mediaName: Value(name),
+      mediaDuration: Value(mediaDuration),
+      localMediaPath: Value(file.path),
+      pendingUploadPath: Value(file.path),
+      isForwarded: Value(isForwarded),
+      syncPending: const Value(true),
+    ));
+
+    if (bumpSummary) {
+      _bumpConversationSummary(
+        conversationID,
+        summaryPreview,
+        summaryType,
+        summaryAt,
+        senderID: _myId,
+        status: 0,
+      );
+    }
+
+    try {
+      final res = await _api.uploadMedia(file);
+      final url = res['url'] as String?;
+      if (url == null) throw Exception('upload sans url');
+
+      await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))
+          .write(LocalMessagesCompanion(
+        mediaUrl: Value(url),
+        pendingUploadPath: const Value(null),
+        status: const Value(1),
+      ));
+
+      _emitSend(
+        clientId: clientId,
+        conversationID: conversationID,
+        content: content,
+        type: type,
+        mediaUrl: url,
+        mediaName: name,
+        mediaDuration: mediaDuration,
+        isForwarded: isForwarded,
+      );
+    } catch (e) {
+      debugPrint('[ChatRepo] upload album item échoué: $e');
+      if (_isTransientNetworkError(e)) {
+        debugPrint('[ChatRepo] upload différé — pending intact pour rejeu');
+      } else {
+        await _dao.markFailed(clientId);
+      }
+    }
+  }
+
+  /// Transfère un album complet vers une ou plusieurs conversations.
+  Future<ForwardResult> forwardAlbum({
+    required List<LocalMessage> sourceItems,
+    required List<int> targetConversationIDs,
+  }) async {
+    if (_myId == 0) {
+      return const ForwardResult(
+        succeeded: 0,
+        failed: 0,
+        errors: ['Utilisateur non connecté'],
+      );
+    }
+    if (!canForwardAlbum(sourceItems)) {
+      return const ForwardResult(
+        succeeded: 0,
+        failed: 1,
+        errors: ['Cet album ne peut pas être transféré'],
+      );
+    }
+    if (targetConversationIDs.isEmpty) {
+      return const ForwardResult(succeeded: 0, failed: 0);
+    }
+
+    var succeeded = 0;
+    var failed = 0;
+    final errors = <String>[];
+
+    for (final convId in targetConversationIDs) {
+      try {
+        await _forwardAlbumToConversation(
+          sourceItems: sourceItems,
+          conversationID: convId,
+        );
+        succeeded++;
+      } catch (e) {
+        failed++;
+        errors.add(e.toString());
+        debugPrint('[ChatRepo] forward album vers $convId échoué: $e');
+      }
+    }
+
+    return ForwardResult(succeeded: succeeded, failed: failed, errors: errors);
+  }
+
+  Future<void> _forwardAlbumToConversation({
+    required List<LocalMessage> sourceItems,
+    required int conversationID,
+  }) async {
+    final sorted = List<LocalMessage>.from(sourceItems)
+      ..sort((a, b) {
+        final ma = parseAlbumMarker(a.content);
+        final mb = parseAlbumMarker(b.content);
+        return (ma?.index ?? 0).compareTo(mb?.index ?? 0);
+      });
+
+    if (sorted.length == 1) {
+      await _forwardToConversation(source: sorted.first, conversationID: conversationID);
+      return;
+    }
+
+    final freshAlbumId = newAlbumId();
+    final total = sorted.length;
+
+    for (var i = 0; i < sorted.length; i++) {
+      final source = sorted[i];
+      final marker = reencodeAlbumMarkerForForward(
+        newAlbumId: freshAlbumId,
+        index: i,
+        total: total,
+      );
+
+      final url = source.mediaUrl;
+      if (url != null && url.isNotEmpty) {
+        await sendMedia(
+          conversationID: conversationID,
+          type: source.type,
+          mediaUrl: url,
+          mediaName: source.mediaName,
+          mediaDuration: source.mediaDuration,
+          localMediaPath: source.localMediaPath,
+          content: marker,
+          isForwarded: true,
+        );
+        continue;
+      }
+
+      final file = localMediaFileForForward(source);
+      if (file == null) {
+        throw StateError('Média indisponible pour le transfert');
+      }
+
+      await sendMediaFile(
+        conversationID: conversationID,
+        type: source.type,
+        file: file,
+        mediaName: source.mediaName,
+        mediaDuration: source.mediaDuration,
+        content: marker,
+        isForwarded: true,
+      );
     }
   }
 

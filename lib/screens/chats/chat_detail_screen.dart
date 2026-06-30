@@ -15,7 +15,9 @@ import '../../core/db/app_database.dart';
 import '../../core/call_limits.dart';
 import '../../core/db/chat_dao.dart' show decodeParticipants;
 import '../../core/services/call_service.dart';
+import '../../core/services/chat_repository.dart';
 import '../../core/utils/forward_message.dart';
+import '../../core/utils/media_album.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -350,16 +352,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           _firstLoad = false;
                         });
                       }
+                      final displayItems = groupMessagesForDisplay(messages);
                       return ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(AppSpacing.lg),
-                        itemCount: messages.length + 1,
+                        itemCount: displayItems.length + 1,
                         itemBuilder: (context, index) {
-                          if (index == messages.length) {
+                          if (index == displayItems.length) {
                             return TypingBubbleSlot(visible: partnerTyping);
                           }
-                          final msg = messages[index];
-                          final prev = index > 0 ? messages[index - 1] : null;
+                          final item = displayItems[index];
+                          final msg = switch (item) {
+                            ChatListSingle(:final message) => message,
+                            ChatListAlbum(:final messages) => messages.last,
+                          };
+                          final prev = index > 0
+                              ? switch (displayItems[index - 1]) {
+                                  ChatListSingle(:final message) => message,
+                                  ChatListAlbum(:final messages) => messages.last,
+                                }
+                              : null;
                           final showDate = prev == null ||
                               !_sameDay(prev.sendAt.toLocal(), msg.sendAt.toLocal());
                           if (msg.msgID == _pendingScrollMsgId) {
@@ -371,7 +383,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
                             children: [
                               if (showDate) _buildDateSeparator(msg.sendAt.toLocal()),
-                              _buildMessageBubble(msg, msg.senderID == _myId),
+                              switch (item) {
+                                ChatListSingle(:final message) =>
+                                  _buildMessageBubble(message, message.senderID == _myId),
+                                ChatListAlbum(:final messages) =>
+                                  _buildAlbumBubble(messages, messages.first.senderID == _myId),
+                              },
                             ],
                           );
                         },
