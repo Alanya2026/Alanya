@@ -50,6 +50,10 @@ class ChatRepository {
       _dao.watchConversation(conversationID);
   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
       _dao.watchMessages(conversationID, _myId);
+
+  /// Flux des messages épinglés d'une conversation (pour la bannière).
+  Stream<List<LocalMessage>> watchPinnedMessages(int conversationID) =>
+      _dao.watchPinnedMessages(conversationID, _myId);
  
   /// Handler `auth:verified`. Méthode (et non lambda stockée) pour garder
   /// une référence stable utilisable par `removeSocketListener` au logout.
@@ -80,6 +84,7 @@ class ChatRepository {
     _api.onSocketEvent(SocketEvents.messageSent, _onMessageSent);
     _api.onSocketEvent(SocketEvents.messageUpdated, _onMessageUpdated);
     _api.onSocketEvent(SocketEvents.messageDeleted, _onMessageDeleted);
+    _api.onSocketEvent(SocketEvents.messagePinned, _onMessagePinned);
     _api.onSocketEvent(SocketEvents.messageStatus, _onMessageStatus);
     _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
     _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
@@ -96,6 +101,7 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.messageSent, _onMessageSent);
     _api.removeSocketListener(SocketEvents.messageUpdated, _onMessageUpdated);
     _api.removeSocketListener(SocketEvents.messageDeleted, _onMessageDeleted);
+    _api.removeSocketListener(SocketEvents.messagePinned, _onMessagePinned);
     _api.removeSocketListener(SocketEvents.messageStatus, _onMessageStatus);
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
@@ -845,6 +851,27 @@ class ChatRepository {
     if (convID != 0) _dao.bumpConvLastStatusIfMine(convID, _myId, status);
   }
 
+  /// (Dés)épingle un message. Optimistic : on écrit localement d'abord pour un
+  /// retour instantané, puis on confirme côté serveur (rollback en cas d'échec).
+  Future<void> setMessagePinned(int msgID, bool pinned) async {
+    if (msgID == 0) return;
+    await _dao.setMessagePinnedByServerId(msgID, pinned);
+    try {
+      await _api.pinMessage(msgID, pinned);
+    } catch (e) {
+      await _dao.setMessagePinnedByServerId(msgID, !pinned);
+      rethrow;
+    }
+  }
+
+  void _onMessagePinned(dynamic data) {
+    if (data is! Map) return;
+    final id = _toInt(data['msgID']);
+    if (id == 0) return;
+    final pinned = data['isPinned'] == 1 || data['isPinned'] == true;
+    _dao.setMessagePinnedByServerId(id, pinned);
+  }
+
   void _onMessageUpdated(dynamic data) {
     if (data is! Map) return;
     final id = _toInt(data['msgID']);
@@ -969,6 +996,7 @@ class ChatRepository {
       deletedForID: Value(j['deletedForID'] == null ? null : _toInt(j['deletedForID'])),
       isStatusReply: Value(_toInt(j['isStatusReply'])),
       isForwarded: Value(j['isForwarded'] == 1 || j['isForwarded'] == true),
+      isPinned: Value(j['isPinned'] == 1 || j['isPinned'] == true),
       senderNom: Value(j['sender_nom']?.toString()),
       senderPseudo: Value(j['sender_pseudo']?.toString()),
       senderAvatar: Value(j['sender_avatar']?.toString()),

@@ -168,4 +168,16 @@ extension ChatApi on TalkyApiClient {
       ),
     );
   }
+
+  /// (Dés)épingle un message. Le backend diffuse `message:pinned` aux
+  /// participants connectés à la conversation.
+  Future<void> pinMessage(int msgID, bool pinned) async {
+    await _handleRequest(
+      () => _client.patch(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/$msgID/pin'),
+        headers: _headers,
+        body: jsonEncode({'isPinned': pinned ? 1 : 0}),
+      ),
+    );
+  }
 }

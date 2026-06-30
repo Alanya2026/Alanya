@@ -69,6 +69,9 @@ class LocalMessages extends Table {
   IntColumn get isStatusReply => integer().withDefault(const Constant(0))();
   BoolColumn get isForwarded => boolean().withDefault(const Constant(false))();
 
+  /// Message épinglé dans la conversation (visible de tous les participants).
+  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
+
   TextColumn get senderNom => text().nullable()();
   TextColumn get senderPseudo => text().nullable()();
   TextColumn get senderAvatar => text().nullable()();
@@ -185,7 +188,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -208,6 +211,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await m.addColumn(localMessages, localMessages.isForwarded);
+          }
+          if (from < 6) {
+            await m.addColumn(localMessages, localMessages.isPinned);
           }
         },
       );

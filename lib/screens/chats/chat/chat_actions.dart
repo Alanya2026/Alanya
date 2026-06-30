@@ -25,7 +25,7 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   String _previewOf(LocalMessage m) {
-    if (m.content != null && m.content!.isNotEmpty) return m.content!;
+    if (m.content != null && m.content!.isNotEmpty) return stripMarkers(m.content!);
     return _mediaLabel(m.type);
   }
 
@@ -73,6 +73,18 @@ extension _ChatActions on _ChatDetailScreenState {
                 onTap: () {
                   Navigator.pop(context);
                   _openForwardPicker(msg);
+                },
+              ),
+            if (msg.msgID != 0 && !msg.isDeleted)
+              ListTile(
+                leading: Icon(
+                  msg.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  color: primary,
+                ),
+                title: Text(msg.isPinned ? 'Détacher' : 'Épingler'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _togglePin(msg);
                 },
               ),
             if (isText && msg.content != null)
@@ -135,6 +147,18 @@ extension _ChatActions on _ChatDetailScreenState {
         ),
       ),
     );
+  }
+
+  Future<void> _togglePin(LocalMessage msg) async {
+    if (msg.msgID == 0) return;
+    try {
+      await _chat.repository.setMessagePinned(msg.msgID, !msg.isPinned);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Action impossible, réessayez')),
+      );
+    }
   }
 
   void _showEditDialog(LocalMessage msg) {
