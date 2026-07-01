@@ -274,6 +274,21 @@ class ChatDao {
     await db.delete(db.localConversations).go();
   }
 
+  /// Supprime les conversations (et leurs messages) absentes de [keepIds].
+  /// Appelé après un sync serveur réussi pour retirer les entrées obsolètes.
+  Future<void> deleteConversationsNotIn(Set<int> keepIds) async {
+    if (keepIds.isEmpty) {
+      await clearAll();
+      return;
+    }
+    await (db.delete(db.localMessages)
+          ..where((m) => m.conversationID.isNotIn(keepIds)))
+        .go();
+    await (db.delete(db.localConversations)
+          ..where((c) => c.conversID.isNotIn(keepIds)))
+        .go();
+  }
+
  
   /// Purge agressive : ne supprime que les optimistes vraiment fantômes
   /// (msgID=0 ET senderID=0 ET plus dans l'outbox). On évite de jeter des

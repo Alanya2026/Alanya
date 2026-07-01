@@ -112,6 +112,15 @@ class ChatRepository {
     _myId = 0;
   }
 
+  /// Efface conversations, messages et cache média (logout / changement de compte).
+  Future<void> clearLocalSession() async {
+    _activeConversationID = 0;
+    _pendingReads.clear();
+    _pendingReadsRetry.clear();
+    await _dao.clearAll();
+    await _mediaCache.clearAll();
+  }
+
   void _onConversationCreated(dynamic data) {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
@@ -125,7 +134,9 @@ class ChatRepository {
           .whereType<Map<String, dynamic>>()
           .map((j) => _convToCompanion(Conversation.fromJson(j), j))
           .toList();
+      final serverIds = companions.map((c) => c.conversID.value).toSet();
       await _dao.upsertConversations(companions);
+      await _dao.deleteConversationsNotIn(serverIds);
     } catch (e) {
       debugPrint('[ChatRepo] syncConversations échouée: $e');
     }

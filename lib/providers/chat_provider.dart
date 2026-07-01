@@ -130,6 +130,12 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Efface le cache local des discussions (logout / changement de compte).
+  Future<void> clearLocalSession() async {
+    await repository.clearLocalSession();
+    notifyListeners();
+  }
+
   Future<void> _onSocketReady(dynamic _) async {
     try {
       // Ordre critique : on flush l'outbox + accusés de lecture AVANT de

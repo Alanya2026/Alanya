@@ -208,6 +208,14 @@ class LocalCacheRepository {
         .go();
   }
 
+  /// Vide les caches secondaires (contacts, appels, meetings, statuts).
+  Future<void> clearSession() async {
+    await _db.delete(_db.localStatuses).go();
+    await _db.delete(_db.localMeetings).go();
+    await _db.delete(_db.localCalls).go();
+    await _db.delete(_db.localUsers).go();
+  }
+
   // ── Helpers de conversion ───────────────────────────────────────────
 
   LocalUsersCompanion _userToCompanion(

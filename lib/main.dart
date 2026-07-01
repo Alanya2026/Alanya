@@ -271,6 +271,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         } catch (e) {
           debugPrint('[AuthWrapper] StatusProvider.unbind échoué: $e');
         }
+        await _clearLocalSession();
         _boundUserId = null;
       }
       return;
@@ -287,11 +288,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
       } catch (e) {
         debugPrint('[AuthWrapper] unbind avant switch user: $e');
       }
+      await _clearLocalSession();
+      if (!mounted) return;
     }
 
     _boundUserId = myId;
     debugPrint('[AuthWrapper] Bind providers pour userID=$myId');
 
+    if (!mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final statusProvider = Provider.of<StatusProvider>(context, listen: false);
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
@@ -343,6 +347,36 @@ class _AuthWrapperState extends State<AuthWrapper> {
       await adminProvider.loadStats();
     } catch (e) {
       debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e');
+    }
+  }
+
+  /// Efface toutes les données locales liées à la session utilisateur.
+  Future<void> _clearLocalSession() async {
+    if (!mounted) return;
+    debugPrint('[AuthWrapper] Vidage cache local session');
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+    final hidden = Provider.of<LocalHiddenStore>(context, listen: false);
+    final status = Provider.of<StatusProvider>(context, listen: false);
+    try {
+      await chat.clearLocalSession();
+    } catch (e) {
+      debugPrint('[AuthWrapper] clearLocalSession chat échoué: $e');
+    }
+    try {
+      await cache.clearSession();
+    } catch (e) {
+      debugPrint('[AuthWrapper] clearSession cache échoué: $e');
+    }
+    try {
+      await hidden.clearAll();
+    } catch (e) {
+      debugPrint('[AuthWrapper] LocalHiddenStore.clearAll échoué: $e');
+    }
+    try {
+      await status.clearSessionPreferences();
+    } catch (e) {
+      debugPrint('[AuthWrapper] clearSessionPreferences statuts échoué: $e');
     }
   }
 
