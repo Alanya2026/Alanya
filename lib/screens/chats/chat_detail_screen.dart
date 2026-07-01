@@ -18,6 +18,7 @@ import '../../core/services/call_service.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
+import '../../core/utils/rich_text_parser.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -64,7 +65,7 @@ class ChatDetailScreen extends StatefulWidget {
 }
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
-  final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _messageController = RichTextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   late final TalkyApiClient _apiClient;
@@ -72,6 +73,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   int? _myId;
   bool _hasText = false;
   bool _showEmoji = false;
+  bool _showFormatBar = false;
   LocalMessage? _replyTo;
   final FocusNode _inputFocus = FocusNode();
   Timer? _typingTimer;
@@ -324,6 +326,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ),
       body: Column(
         children: [
+          _buildPinnedBanner(),
           Expanded(
             child: convId == null
                 ? const EmptyState(
@@ -398,6 +401,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
           if (_replyTo != null) _buildReplyBanner(),
           if (_inputBlocked) _buildBlockedBanner(),
+          if (_showFormatBar && !_inputBlocked) _buildFormatBar(),
           _buildInputBar(),
           if (_showEmoji) _buildEmojiPicker(),
         ],

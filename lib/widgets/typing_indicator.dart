@@ -139,7 +139,7 @@ class _TypingBubbleSlotState extends State<TypingBubbleSlot>
 
     return SizeTransition(
       sizeFactor: _fade,
-      alignment: Alignment.topCenter,
+      axisAlignment: -1.0,
       child: FadeTransition(
         opacity: _fade,
         child: SlideTransition(

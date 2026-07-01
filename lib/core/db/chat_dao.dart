@@ -247,6 +247,28 @@ class ChatDao {
         .write(LocalMessagesCompanion(localMediaPath: Value(path)));
   }
 
+  /// (Dés)épingle un message identifié par son msgID serveur.
+  Future<void> setMessagePinnedByServerId(int msgID, bool pinned) {
+    return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
+        .write(LocalMessagesCompanion(isPinned: Value(pinned)));
+  }
+
+  /// Flux réactif des messages épinglés d'une conversation (récents d'abord),
+  /// pour alimenter la bannière « Message épinglé ». Exclut les messages
+  /// supprimés et ceux masqués « pour moi ».
+  Stream<List<LocalMessage>> watchPinnedMessages(int conversationID, int myId) {
+    return (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversationID) &
+              m.isPinned.equals(true) &
+              m.isDeleted.equals(false) &
+              (m.deletedForID.isNull() | m.deletedForID.equals(myId).not()))
+          ..orderBy([
+            (m) => OrderingTerm(expression: m.sendAt, mode: OrderingMode.desc),
+          ]))
+        .watch();
+  }
+
   Future<void> clearAll() async {
     await db.delete(db.localMessages).go();
     await db.delete(db.localConversations).go();

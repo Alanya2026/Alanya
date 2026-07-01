@@ -75,9 +75,14 @@ extension _ChatBubbles on _ChatDetailScreenState {
                         !isAlbumMarkerContent(msg.content))
                       Padding(
                         padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
-                        child: Text(
-                          msg.content!,
-                          style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)),
+                        child: Text.rich(
+                          TextSpan(
+                            children: parseRichSpans(
+                              msg.content!,
+                              (context.text.bodyLarge ?? const TextStyle())
+                                  .copyWith(color: _bubbleText(isMe)),
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -107,6 +112,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
                             ),
                           ),
                         ),
+                      ],
+                      if (msg.isPinned && !msg.isDeleted) ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.push_pin, size: 11, color: _bubbleMuted(isMe)),
                       ],
                       if (isMe && !msg.isDeleted) ...[
                         const SizedBox(width: 4),

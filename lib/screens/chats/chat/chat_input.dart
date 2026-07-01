@@ -80,6 +80,142 @@ extension _ChatInput on _ChatDetailScreenState {
     );
   }
 
+  /// Bannière en haut du chat listant le message épinglé le plus récent.
+  /// Tap → défile jusqu'au message. Bouton croix → détache.
+  Widget _buildPinnedBanner() {
+    final convId = widget.conversationId;
+    if (convId == null) return const SizedBox.shrink();
+    final colors = context.colors;
+    return StreamBuilder<List<LocalMessage>>(
+      stream: _chat.repository.watchPinnedMessages(convId),
+      builder: (context, snap) {
+        final pinned = snap.data ?? const <LocalMessage>[];
+        if (pinned.isEmpty) return const SizedBox.shrink();
+        final msg = pinned.first;
+        return Material(
+          color: context.semantic.brandContainer,
+          child: InkWell(
+            onTap: () => _scrollToReply(msg.msgID),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                border: Border(left: BorderSide(color: colors.primary, width: 3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.push_pin, size: 16, color: colors.primary),
+                  AppSpacing.hGapSm,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          pinned.length > 1
+                              ? 'Messages épinglés (${pinned.length})'
+                              : 'Message épinglé',
+                          style: context.text.labelSmall?.copyWith(
+                            color: colors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          _previewOf(msg),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.close_rounded, size: 18, color: colors.onSurfaceVariant),
+                    onPressed: () => _togglePin(msg),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Mise en forme du texte (marqueurs inline) ──────────────────────
+  // Bascule l'affichage de la barre de formatage (B, I, U, S, manuscrit).
+  void _toggleFormatBar() {
+    rebuild(() => _showFormatBar = !_showFormatBar);
+    if (_showFormatBar) _inputFocus.requestFocus();
+  }
+
+  /// Barre de boutons de mise en forme, posée au-dessus de la capsule.
+  Widget _buildFormatBar() {
+    final colors = context.colors;
+    Widget btn(IconData icon, String marker, String tip) => Tooltip(
+          message: tip,
+          child: IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: Icon(icon, size: AppIconSize.sm + 2, color: colors.onSurfaceVariant),
+            onPressed: () => _applyFormat(marker),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, 0, AppSpacing.sm, 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: AppRadius.brPill,
+          boxShadow: AppShadows.subtle,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            btn(Icons.format_bold, '*', 'Gras'),
+            btn(Icons.format_italic, '_', 'Italique'),
+            btn(Icons.format_underlined, '=', 'Souligné'),
+            btn(Icons.strikethrough_s, '~', 'Barré'),
+            btn(Icons.gesture, '#', 'Manuscrit'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Applique un marqueur à la sélection courante. Si rien n'est sélectionné,
+  /// insère une paire de marqueurs et place le curseur au milieu pour que
+  /// l'utilisateur tape directement le texte stylé.
+  void _applyFormat(String marker) {
+    final text = _messageController.text;
+    final sel = _messageController.selection;
+
+    String newText;
+    int caret;
+    if (!sel.isValid) {
+      newText = '$text$marker$marker';
+      caret = newText.length - marker.length;
+    } else if (sel.isCollapsed) {
+      final pos = sel.start;
+      newText = text.replaceRange(pos, pos, '$marker$marker');
+      caret = pos + marker.length;
+    } else {
+      final selected = text.substring(sel.start, sel.end);
+      newText = text.replaceRange(sel.start, sel.end, '$marker$selected$marker');
+      caret = sel.end + marker.length * 2;
+    }
+
+    _messageController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: caret),
+    );
+    if (!_hasText) rebuild(() => _hasText = true);
+    _inputFocus.requestFocus();
+  }
+
   /// Sous-titre groupe : liste des noms des autres participants, séparés
   /// par des virgules. L'`overflow: ellipsis` du `Text` rajoute '…'
   /// automatiquement quand la ligne dépasse la largeur disponible.
@@ -178,6 +314,16 @@ extension _ChatInput on _ChatDetailScreenState {
                       contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
                     ),
                   ),
+                ),
+                IconButton(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2),
+                  constraints: const BoxConstraints(),
+                  icon: Icon(
+                    Icons.text_format,
+                    color: _showFormatBar ? colors.primary : colors.onSurfaceVariant,
+                    size: AppIconSize.md,
+                  ),
+                  onPressed: _toggleFormatBar,
                 ),
                 IconButton(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2),

@@ -124,6 +124,7 @@ class Message {
   final int? deletedForID;
   final int isStatusReply;
   final bool isForwarded;
+  final bool isPinned;
   // Jointure users
   final String? senderNom;
   final String? senderPseudo;
@@ -150,6 +151,7 @@ class Message {
     this.deletedForID,
     required this.isStatusReply,
     this.isForwarded = false,
+    this.isPinned = false,
     this.senderNom,
     this.senderPseudo,
     this.senderAvatar,
@@ -180,6 +182,7 @@ class Message {
                 : int.tryParse(json['deletedForID'].toString())),
         isStatusReply: json['isStatusReply'] ?? 0,
         isForwarded: json['isForwarded'] == 1 || json['isForwarded'] == true,
+        isPinned: json['isPinned'] == 1 || json['isPinned'] == true,
         senderNom: json['sender_nom'],
         senderPseudo: json['sender_pseudo'],
         senderAvatar: json['sender_avatar'],
@@ -661,6 +664,7 @@ class SocketEvents {
   static const messageSent       = 'message:sent';
   static const messageUpdated    = 'message:updated';
   static const messageDeleted    = 'message:deleted';
+  static const messagePinned     = 'message:pinned';
   static const messageDelivered  = 'message:delivered';
   static const messageRead       = 'message:read';
   static const messageStatus     = 'message:status';

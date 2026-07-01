@@ -1070,6 +1070,21 @@ class $LocalMessagesTable extends LocalMessages
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isPinnedMeta = const VerificationMeta(
+    'isPinned',
+  );
+  @override
+  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
+    'is_pinned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_pinned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _senderNomMeta = const VerificationMeta(
     'senderNom',
   );
@@ -1167,6 +1182,7 @@ class $LocalMessagesTable extends LocalMessages
     deletedForID,
     isStatusReply,
     isForwarded,
+    isPinned,
     senderNom,
     senderPseudo,
     senderAvatar,
@@ -1359,6 +1375,12 @@ class $LocalMessagesTable extends LocalMessages
         ),
       );
     }
+    if (data.containsKey('is_pinned')) {
+      context.handle(
+        _isPinnedMeta,
+        isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
+      );
+    }
     if (data.containsKey('sender_nom')) {
       context.handle(
         _senderNomMeta,
@@ -1508,6 +1530,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.bool,
         data['${effectivePrefix}is_forwarded'],
       )!,
+      isPinned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_pinned'],
+      )!,
       senderNom: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sender_nom'],
@@ -1577,6 +1603,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   final int? deletedForID;
   final int isStatusReply;
   final bool isForwarded;
+
+  /// Message épinglé dans la conversation (visible de tous les participants).
+  final bool isPinned;
   final String? senderNom;
   final String? senderPseudo;
   final String? senderAvatar;
@@ -1613,6 +1642,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     this.deletedForID,
     required this.isStatusReply,
     required this.isForwarded,
+    required this.isPinned,
     this.senderNom,
     this.senderPseudo,
     this.senderAvatar,
@@ -1670,6 +1700,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     }
     map['is_status_reply'] = Variable<int>(isStatusReply);
     map['is_forwarded'] = Variable<bool>(isForwarded);
+    map['is_pinned'] = Variable<bool>(isPinned);
     if (!nullToAbsent || senderNom != null) {
       map['sender_nom'] = Variable<String>(senderNom);
     }
@@ -1736,6 +1767,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           : Value(deletedForID),
       isStatusReply: Value(isStatusReply),
       isForwarded: Value(isForwarded),
+      isPinned: Value(isPinned),
       senderNom: senderNom == null && nullToAbsent
           ? const Value.absent()
           : Value(senderNom),
@@ -1784,6 +1816,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       deletedForID: serializer.fromJson<int?>(json['deletedForID']),
       isStatusReply: serializer.fromJson<int>(json['isStatusReply']),
       isForwarded: serializer.fromJson<bool>(json['isForwarded']),
+      isPinned: serializer.fromJson<bool>(json['isPinned']),
       senderNom: serializer.fromJson<String?>(json['senderNom']),
       senderPseudo: serializer.fromJson<String?>(json['senderPseudo']),
       senderAvatar: serializer.fromJson<String?>(json['senderAvatar']),
@@ -1819,6 +1852,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'deletedForID': serializer.toJson<int?>(deletedForID),
       'isStatusReply': serializer.toJson<int>(isStatusReply),
       'isForwarded': serializer.toJson<bool>(isForwarded),
+      'isPinned': serializer.toJson<bool>(isPinned),
       'senderNom': serializer.toJson<String?>(senderNom),
       'senderPseudo': serializer.toJson<String?>(senderPseudo),
       'senderAvatar': serializer.toJson<String?>(senderAvatar),
@@ -1852,6 +1886,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     Value<int?> deletedForID = const Value.absent(),
     int? isStatusReply,
     bool? isForwarded,
+    bool? isPinned,
     Value<String?> senderNom = const Value.absent(),
     Value<String?> senderPseudo = const Value.absent(),
     Value<String?> senderAvatar = const Value.absent(),
@@ -1890,6 +1925,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     deletedForID: deletedForID.present ? deletedForID.value : this.deletedForID,
     isStatusReply: isStatusReply ?? this.isStatusReply,
     isForwarded: isForwarded ?? this.isForwarded,
+    isPinned: isPinned ?? this.isPinned,
     senderNom: senderNom.present ? senderNom.value : this.senderNom,
     senderPseudo: senderPseudo.present ? senderPseudo.value : this.senderPseudo,
     senderAvatar: senderAvatar.present ? senderAvatar.value : this.senderAvatar,
@@ -1942,6 +1978,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       isForwarded: data.isForwarded.present
           ? data.isForwarded.value
           : this.isForwarded,
+      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
       senderNom: data.senderNom.present ? data.senderNom.value : this.senderNom,
       senderPseudo: data.senderPseudo.present
           ? data.senderPseudo.value
@@ -1987,6 +2024,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('deletedForID: $deletedForID, ')
           ..write('isStatusReply: $isStatusReply, ')
           ..write('isForwarded: $isForwarded, ')
+          ..write('isPinned: $isPinned, ')
           ..write('senderNom: $senderNom, ')
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
@@ -2022,6 +2060,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     deletedForID,
     isStatusReply,
     isForwarded,
+    isPinned,
     senderNom,
     senderPseudo,
     senderAvatar,
@@ -2056,6 +2095,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.deletedForID == this.deletedForID &&
           other.isStatusReply == this.isStatusReply &&
           other.isForwarded == this.isForwarded &&
+          other.isPinned == this.isPinned &&
           other.senderNom == this.senderNom &&
           other.senderPseudo == this.senderPseudo &&
           other.senderAvatar == this.senderAvatar &&
@@ -2088,6 +2128,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<int?> deletedForID;
   final Value<int> isStatusReply;
   final Value<bool> isForwarded;
+  final Value<bool> isPinned;
   final Value<String?> senderNom;
   final Value<String?> senderPseudo;
   final Value<String?> senderAvatar;
@@ -2119,6 +2160,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.deletedForID = const Value.absent(),
     this.isStatusReply = const Value.absent(),
     this.isForwarded = const Value.absent(),
+    this.isPinned = const Value.absent(),
     this.senderNom = const Value.absent(),
     this.senderPseudo = const Value.absent(),
     this.senderAvatar = const Value.absent(),
@@ -2151,6 +2193,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.deletedForID = const Value.absent(),
     this.isStatusReply = const Value.absent(),
     this.isForwarded = const Value.absent(),
+    this.isPinned = const Value.absent(),
     this.senderNom = const Value.absent(),
     this.senderPseudo = const Value.absent(),
     this.senderAvatar = const Value.absent(),
@@ -2186,6 +2229,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<int>? deletedForID,
     Expression<int>? isStatusReply,
     Expression<bool>? isForwarded,
+    Expression<bool>? isPinned,
     Expression<String>? senderNom,
     Expression<String>? senderPseudo,
     Expression<String>? senderAvatar,
@@ -2218,6 +2262,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (deletedForID != null) 'deleted_for_i_d': deletedForID,
       if (isStatusReply != null) 'is_status_reply': isStatusReply,
       if (isForwarded != null) 'is_forwarded': isForwarded,
+      if (isPinned != null) 'is_pinned': isPinned,
       if (senderNom != null) 'sender_nom': senderNom,
       if (senderPseudo != null) 'sender_pseudo': senderPseudo,
       if (senderAvatar != null) 'sender_avatar': senderAvatar,
@@ -2252,6 +2297,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<int?>? deletedForID,
     Value<int>? isStatusReply,
     Value<bool>? isForwarded,
+    Value<bool>? isPinned,
     Value<String?>? senderNom,
     Value<String?>? senderPseudo,
     Value<String?>? senderAvatar,
@@ -2284,6 +2330,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       deletedForID: deletedForID ?? this.deletedForID,
       isStatusReply: isStatusReply ?? this.isStatusReply,
       isForwarded: isForwarded ?? this.isForwarded,
+      isPinned: isPinned ?? this.isPinned,
       senderNom: senderNom ?? this.senderNom,
       senderPseudo: senderPseudo ?? this.senderPseudo,
       senderAvatar: senderAvatar ?? this.senderAvatar,
@@ -2366,6 +2413,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (isForwarded.present) {
       map['is_forwarded'] = Variable<bool>(isForwarded.value);
     }
+    if (isPinned.present) {
+      map['is_pinned'] = Variable<bool>(isPinned.value);
+    }
     if (senderNom.present) {
       map['sender_nom'] = Variable<String>(senderNom.value);
     }
@@ -2416,6 +2466,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('deletedForID: $deletedForID, ')
           ..write('isStatusReply: $isStatusReply, ')
           ..write('isForwarded: $isForwarded, ')
+          ..write('isPinned: $isPinned, ')
           ..write('senderNom: $senderNom, ')
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
@@ -5574,6 +5625,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<int?> deletedForID,
       Value<int> isStatusReply,
       Value<bool> isForwarded,
+      Value<bool> isPinned,
       Value<String?> senderNom,
       Value<String?> senderPseudo,
       Value<String?> senderAvatar,
@@ -5607,6 +5659,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<int?> deletedForID,
       Value<int> isStatusReply,
       Value<bool> isForwarded,
+      Value<bool> isPinned,
       Value<String?> senderNom,
       Value<String?> senderPseudo,
       Value<String?> senderAvatar,
@@ -5737,6 +5790,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<bool> get isForwarded => $composableBuilder(
     column: $table.isForwarded,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5895,6 +5953,11 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get senderNom => $composableBuilder(
     column: $table.senderNom,
     builder: (column) => ColumnOrderings(column),
@@ -6022,6 +6085,9 @@ class $$LocalMessagesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isPinned =>
+      $composableBuilder(column: $table.isPinned, builder: (column) => column);
+
   GeneratedColumn<String> get senderNom =>
       $composableBuilder(column: $table.senderNom, builder: (column) => column);
 
@@ -6105,6 +6171,7 @@ class $$LocalMessagesTableTableManager
                 Value<int?> deletedForID = const Value.absent(),
                 Value<int> isStatusReply = const Value.absent(),
                 Value<bool> isForwarded = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
                 Value<String?> senderNom = const Value.absent(),
                 Value<String?> senderPseudo = const Value.absent(),
                 Value<String?> senderAvatar = const Value.absent(),
@@ -6136,6 +6203,7 @@ class $$LocalMessagesTableTableManager
                 deletedForID: deletedForID,
                 isStatusReply: isStatusReply,
                 isForwarded: isForwarded,
+                isPinned: isPinned,
                 senderNom: senderNom,
                 senderPseudo: senderPseudo,
                 senderAvatar: senderAvatar,
@@ -6169,6 +6237,7 @@ class $$LocalMessagesTableTableManager
                 Value<int?> deletedForID = const Value.absent(),
                 Value<int> isStatusReply = const Value.absent(),
                 Value<bool> isForwarded = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
                 Value<String?> senderNom = const Value.absent(),
                 Value<String?> senderPseudo = const Value.absent(),
                 Value<String?> senderAvatar = const Value.absent(),
@@ -6200,6 +6269,7 @@ class $$LocalMessagesTableTableManager
                 deletedForID: deletedForID,
                 isStatusReply: isStatusReply,
                 isForwarded: isForwarded,
+                isPinned: isPinned,
                 senderNom: senderNom,
                 senderPseudo: senderPseudo,
                 senderAvatar: senderAvatar,
