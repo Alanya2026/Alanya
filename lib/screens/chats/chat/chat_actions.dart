@@ -194,17 +194,38 @@ extension _ChatActions on _ChatDetailScreenState {
   // ── Médias ─────────────────────────────────────────────────────────
   void _showAttachSheet() {
     final sem = context.semantic;
+    _pendingViewOnce = false;
     showAppBottomSheet(
       context: context,
-      builder: (_) => AppBottomSheet(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _attachOption(Icons.photo_library, 'Galerie', sem.info, _pickImageFromGallery),
-            _attachOption(Icons.camera_alt, 'Caméra', context.colors.primary, _pickImageFromCamera),
-            _attachOption(Icons.videocam, 'Vidéo', context.colors.error, _pickVideo),
-            _attachOption(Icons.insert_drive_file, 'Fichier', sem.warning, _pickFile),
-          ],
+      builder: (_) => StatefulBuilder(
+        builder: (context, setSheet) => AppBottomSheet(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                value: _pendingViewOnce,
+                onChanged: (v) => setSheet(() => _pendingViewOnce = v),
+                secondary: Icon(
+                  _pendingViewOnce ? Icons.timer : Icons.timer_outlined,
+                  color: context.colors.primary,
+                ),
+                title: const Text('Vue unique'),
+                subtitle: const Text('Ouvrable une seule fois, puis inaccessible'),
+                contentPadding: EdgeInsets.zero,
+              ),
+              const Divider(height: 1),
+              AppSpacing.vGapSm,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _attachOption(Icons.photo_library, 'Galerie', sem.info, _pickImageFromGallery),
+                  _attachOption(Icons.camera_alt, 'Caméra', context.colors.primary, _pickImageFromCamera),
+                  _attachOption(Icons.videocam, 'Vidéo', context.colors.error, _pickVideo),
+                  _attachOption(Icons.insert_drive_file, 'Fichier', sem.warning, _pickFile),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -232,16 +253,19 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _pickImageFromGallery() async {
+    final viewOnce = _pendingViewOnce;
     final x = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (x != null) _sendMediaFile(File(x.path), type: 1);
+    if (x != null) _sendMediaFile(File(x.path), type: 1, viewOnce: viewOnce);
   }
 
   Future<void> _pickImageFromCamera() async {
+    final viewOnce = _pendingViewOnce;
     final x = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-    if (x != null) _sendMediaFile(File(x.path), type: 1);
+    if (x != null) _sendMediaFile(File(x.path), type: 1, viewOnce: viewOnce);
   }
 
   Future<void> _pickVideo() async {
+    final viewOnce = _pendingViewOnce;
     final x = await _picker.pickVideo(source: ImageSource.gallery);
     if (x == null) return;
     final file = File(x.path);
@@ -258,7 +282,7 @@ extension _ChatActions on _ChatDetailScreenState {
     } finally {
       await ctrl.dispose();
     }
-    _sendMediaFile(file, type: 2, duration: durSec);
+    _sendMediaFile(file, type: 2, duration: durSec, viewOnce: viewOnce);
   }
 
   Future<void> _pickFile() async {
@@ -267,7 +291,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (path != null) _sendMediaFile(File(path), type: 4, name: res!.files.single.name);
   }
 
-  void _sendMediaFile(File file, {required int type, String? name, int? duration}) {
+  void _sendMediaFile(File file, {required int type, String? name, int? duration, bool viewOnce = false}) {
     if (widget.conversationId == null || _myId == null) return;
 
     final size = file.existsSync() ? file.lengthSync() : 0;
@@ -286,6 +310,7 @@ extension _ChatActions on _ChatDetailScreenState {
       file: file,
       mediaName: name,
       mediaDuration: duration,
+      isViewOnce: viewOnce,
     );
     _scrollToBottom();
   }
@@ -300,6 +325,7 @@ extension _ChatActions on _ChatDetailScreenState {
     rebuild(() {
       _isRecording = true;
       _recordSeconds = 0;
+      _voiceViewOnce = false;
     });
     _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) rebuild(() => _recordSeconds++);
@@ -313,7 +339,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (mounted) rebuild(() => _isRecording = false);
 
     if (send && path != null && seconds >= 1) {
-      _sendMediaFile(File(path), type: 3, name: 'Message vocal', duration: seconds);
+      _sendMediaFile(File(path), type: 3, name: 'Message vocal', duration: seconds, viewOnce: _voiceViewOnce);
     } else if (path != null) {
       // Annulé ou trop court → supprimer le fichier temporaire.
       try {
@@ -638,6 +664,56 @@ extension _ChatActions on _ChatDetailScreenState {
         ),
       ),
     );
+  }
+
+  /// Ouvre un média à vue unique. Le média n'est jamais mis en cache : on
+  /// l'affiche en flux depuis le réseau, puis on le « consomme » à la fermeture
+  /// de la visionneuse (marque vu + efface toute trace locale ; le serveur
+  /// supprime le fichier une fois que tous les destinataires ont vu).
+  Future<void> _openViewOnce(LocalMessage msg) async {
+    if (msg.viewedAt != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ce média a déjà été ouvert')),
+      );
+      return;
+    }
+    if (msg.senderID == _myId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Média à vue unique — visible une seule fois par le destinataire')),
+      );
+      return;
+    }
+    if (msg.mediaUrl == null || msg.mediaUrl!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ce média n\'est plus disponible')),
+      );
+      return;
+    }
+
+    // Bloque les captures d'écran (Android FLAG_SECURE + iOS) le temps de
+    // l'affichage. Best-effort : n'empêche jamais l'ouverture en cas d'échec.
+    try {
+      await ScreenProtector.preventScreenshotOn();
+    } catch (_) {/* non supporté sur la plateforme — ignoré */}
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MediaViewerScreen(
+          isVideo: msg.type == 2,
+          localPath: null, // jamais de fichier local pour un média vue unique
+          networkUrl: msg.mediaUrl,
+          title: null,
+        ),
+      ),
+    );
+
+    try {
+      await ScreenProtector.preventScreenshotOff();
+    } catch (_) {/* ignoré */}
+
+    // Consommé à la fermeture : marque vu localement + notifie le serveur.
+    await _chat.repository.markViewed(msg.msgID);
   }
 
   void _showLoading() {

@@ -85,6 +85,7 @@ class ChatRepository {
     _api.onSocketEvent(SocketEvents.messageUpdated, _onMessageUpdated);
     _api.onSocketEvent(SocketEvents.messageDeleted, _onMessageDeleted);
     _api.onSocketEvent(SocketEvents.messagePinned, _onMessagePinned);
+    _api.onSocketEvent(SocketEvents.messageViewed, _onMessageViewed);
     _api.onSocketEvent(SocketEvents.messageStatus, _onMessageStatus);
     _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
     _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
@@ -102,6 +103,7 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.messageUpdated, _onMessageUpdated);
     _api.removeSocketListener(SocketEvents.messageDeleted, _onMessageDeleted);
     _api.removeSocketListener(SocketEvents.messagePinned, _onMessagePinned);
+    _api.removeSocketListener(SocketEvents.messageViewed, _onMessageViewed);
     _api.removeSocketListener(SocketEvents.messageStatus, _onMessageStatus);
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
@@ -240,6 +242,7 @@ class ChatRepository {
     String? localMediaPath,
     String? content,
     bool isForwarded = false,
+    bool isViewOnce = false,
   }) async {
     final clientId = _newClientId();
     final now = DateTime.now().toUtc();
@@ -257,6 +260,7 @@ class ChatRepository {
       mediaDuration: Value(mediaDuration),
       localMediaPath: Value(localMediaPath),
       isForwarded: Value(isForwarded),
+      isViewOnce: Value(isViewOnce),
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
@@ -272,6 +276,7 @@ class ChatRepository {
       mediaName: mediaName,
       mediaDuration: mediaDuration,
       isForwarded: isForwarded,
+      isViewOnce: isViewOnce,
     );
   }
 
@@ -283,6 +288,7 @@ class ChatRepository {
     int? mediaDuration,
     String? content,
     bool isForwarded = false,
+    bool isViewOnce = false,
   }) async {
     if (_myId == 0) {
       debugPrint('[ChatRepo] sendMediaFile ignoré : utilisateur non lié (myId=0)');
@@ -305,6 +311,7 @@ class ChatRepository {
       localMediaPath: Value(file.path),
       pendingUploadPath: Value(file.path),
       isForwarded: Value(isForwarded),
+      isViewOnce: Value(isViewOnce),
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
@@ -332,6 +339,7 @@ class ChatRepository {
         mediaName: name,
         mediaDuration: mediaDuration,
         isForwarded: isForwarded,
+        isViewOnce: isViewOnce,
       );
     } catch (e) {
       debugPrint('[ChatRepo] upload média échoué: $e');
@@ -487,6 +495,7 @@ class ChatRepository {
             replyToID: m.replyToID,
             replyToContent: m.replyToContent,
             isForwarded: m.isForwarded,
+            isViewOnce: m.isViewOnce,
           );
         } catch (e) {
           debugPrint('[ChatRepo] flush upload échoué pour ${m.clientId}: $e');
@@ -507,6 +516,7 @@ class ChatRepository {
           replyToID: m.replyToID,
           replyToContent: m.replyToContent,
           isForwarded: m.isForwarded,
+            isViewOnce: m.isViewOnce,
         );
       }
     }
@@ -555,6 +565,7 @@ class ChatRepository {
             replyToID: m.replyToID,
             replyToContent: m.replyToContent,
             isForwarded: m.isForwarded,
+            isViewOnce: m.isViewOnce,
           );
         } catch (e) {
           debugPrint('[ChatRepo] retry upload échoué pour ${m.clientId}: $e');
@@ -576,6 +587,7 @@ class ChatRepository {
           replyToID: m.replyToID,
           replyToContent: m.replyToContent,
           isForwarded: m.isForwarded,
+            isViewOnce: m.isViewOnce,
         );
       }
     }
@@ -761,7 +773,9 @@ class ChatRepository {
     // Préfetch média (images/audio toujours, fichiers < 5 Mo) pour rendre
     // l'historique consultable offline. On ne déclenche que pour les messages
     // réellement nouveaux afin d'éviter de recharger l'identique à chaque sync.
-    if (prefetchMedia && wasNew) {
+    // Exception : un média à vue unique ne doit JAMAIS être mis en cache local.
+    final isViewOnce = json['isViewOnce'] == 1 || json['isViewOnce'] == true;
+    if (prefetchMedia && wasNew && !isViewOnce) {
       final mtype = _toInt(json['type']);
       final mediaUrl = json['mediaUrl']?.toString();
       if (mediaUrl != null && mediaUrl.isNotEmpty) {
@@ -810,7 +824,8 @@ class ChatRepository {
     final mtype = _toInt(json['type']);
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
-    if (mediaUrl != null && msgID != 0) {
+    final isViewOnce = json['isViewOnce'] == 1 || json['isViewOnce'] == true;
+    if (mediaUrl != null && msgID != 0 && !isViewOnce) {
       if (mtype == 1 || mtype == 3) {
         // Images, audio : auto-cache toujours.
         _cacheMedia(msgID, mediaUrl);
@@ -872,6 +887,24 @@ class ChatRepository {
     _dao.setMessagePinnedByServerId(id, pinned);
   }
 
+  /// Signale au serveur qu'un média à vue unique a été consulté, puis marque
+  /// le message consommé localement (efface toute trace ré-ouvrable).
+  Future<void> markViewed(int msgID) async {
+    if (msgID == 0) return;
+    await _dao.markViewedByServerId(msgID);
+    try {
+      await _api.markViewed(msgID);
+    } catch (e) {
+      debugPrint('[ChatRepo] markViewed échouée: $e');
+    }
+  }
+
+  void _onMessageViewed(dynamic data) {
+    if (data is! Map) return;
+    final id = _toInt(data['msgID']);
+    if (id != 0) _dao.markViewedByServerId(id);
+  }
+
   void _onMessageUpdated(dynamic data) {
     if (data is! Map) return;
     final id = _toInt(data['msgID']);
@@ -897,6 +930,7 @@ class ChatRepository {
     String? replyToContent,
     int isStatusReply = 0,
     bool isForwarded = false,
+    bool isViewOnce = false,
   }) {
     // Garde stricte : tant que le socket n'est pas authentifié, le serveur
     // ignore l'emit silencieusement. On laisse la ligne `syncPending=true` ;
@@ -917,6 +951,7 @@ class ChatRepository {
       if (replyToContent != null) 'replyToContent': replyToContent,
       if (isStatusReply != 0) 'isStatusReply': isStatusReply,
       if (isForwarded) 'isForwarded': 1,
+      if (isViewOnce) 'isViewOnce': 1,
     });
     // Marque la ligne comme « tout juste émise » → backoff outbox.
     _dao.touchEmitted(clientId);
@@ -997,6 +1032,12 @@ class ChatRepository {
       isStatusReply: Value(_toInt(j['isStatusReply'])),
       isForwarded: Value(j['isForwarded'] == 1 || j['isForwarded'] == true),
       isPinned: Value(j['isPinned'] == 1 || j['isPinned'] == true),
+      isViewOnce: Value(j['isViewOnce'] == 1 || j['isViewOnce'] == true),
+      viewedAt: Value(
+        (j['isViewOnce'] == 1 || j['isViewOnce'] == true) && _toInt(j['viewedByMe']) > 0
+            ? DateTime.now()
+            : null,
+      ),
       senderNom: Value(j['sender_nom']?.toString()),
       senderPseudo: Value(j['sender_pseudo']?.toString()),
       senderAvatar: Value(j['sender_avatar']?.toString()),

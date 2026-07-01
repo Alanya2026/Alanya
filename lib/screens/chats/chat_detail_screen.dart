@@ -17,6 +17,7 @@ import '../../core/db/chat_dao.dart' show decodeParticipants;
 import '../../core/services/call_service.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/rich_text_parser.dart';
+import 'package:screen_protector/screen_protector.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -72,6 +73,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _hasText = false;
   bool _showEmoji = false;
   bool _showFormatBar = false;
+  bool _pendingViewOnce = false;
+  bool _voiceViewOnce = false;
+  int _pinnedIndex = 0;
   LocalMessage? _replyTo;
   final FocusNode _inputFocus = FocusNode();
   Timer? _typingTimer;

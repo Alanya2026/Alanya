@@ -247,6 +247,18 @@ class ChatDao {
         .write(LocalMessagesCompanion(localMediaPath: Value(path)));
   }
 
+  /// Marque un média vue unique comme consommé : pose `viewedAt` et efface
+  /// toute trace exploitable (URL réseau + chemin local) pour empêcher toute
+  /// ré-ouverture.
+  Future<void> markViewedByServerId(int msgID) {
+    return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
+        .write(LocalMessagesCompanion(
+      viewedAt: Value(DateTime.now()),
+      mediaUrl: const Value(null),
+      localMediaPath: const Value(null),
+    ));
+  }
+
   /// (Dés)épingle un message identifié par son msgID serveur.
   Future<void> setMessagePinnedByServerId(int msgID, bool pinned) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))

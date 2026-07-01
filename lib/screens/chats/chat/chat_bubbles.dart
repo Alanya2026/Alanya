@@ -269,6 +269,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   // ── Rendu média selon le type ──────────────────────────────────────
   Widget _buildMedia(LocalMessage msg, bool isMe) {
+    if (msg.isViewOnce) return _buildViewOnceMedia(msg, isMe);
     switch (msg.type) {
       case 1:
         return _buildImageMedia(msg);
@@ -287,6 +288,63 @@ extension _ChatBubbles on _ChatDetailScreenState {
         return Text(_mediaLabel(msg.type),
             style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));
     }
+  }
+
+  /// Bulle d'un média à vue unique : jamais l'aperçu réel.
+  /// - Destinataire non ouvert → pastille tappable qui lance l'ouverture unique.
+  /// - Déjà ouvert (par moi, ou signalé « vu ») → « Ouvert », non tappable.
+  /// - Expéditeur → libellé « Vue unique », non ré-ouvrable.
+  Widget _buildViewOnceMedia(LocalMessage msg, bool isMe) {
+    final opened = msg.viewedAt != null;
+    final uploading = msg.status == 0;
+    final color = _bubbleText(isMe);
+
+    final String label;
+    final IconData icon;
+    if (uploading) {
+      label = 'Envoi…';
+      icon = Icons.timer_outlined;
+    } else if (opened) {
+      label = 'Ouvert';
+      icon = Icons.visibility_off_outlined;
+    } else {
+      final kind = msg.type == 1
+          ? 'Photo'
+          : msg.type == 2
+              ? 'Vidéo'
+              : msg.type == 3
+                  ? 'Audio'
+                  : 'Média';
+      label = isMe ? '$kind · Vue unique' : '$kind · Appuyer pour voir';
+      icon = Icons.timer;
+    }
+
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20, color: color.withAlpha(opened ? 140 : 255)),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: Text(
+            label,
+            style: context.text.bodyLarge?.copyWith(
+              color: color.withAlpha(opened ? 140 : 255),
+              fontStyle: opened ? FontStyle.italic : FontStyle.normal,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+
+    // Tappable uniquement pour le destinataire, pas encore ouvert, non en envoi.
+    if (opened || isMe || uploading) return content;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openViewOnce(msg),
+      child: content,
+    );
   }
 
   Widget _buildImageMedia(LocalMessage msg) {

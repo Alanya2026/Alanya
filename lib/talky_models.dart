@@ -125,6 +125,7 @@ class Message {
   final int isStatusReply;
   final bool isForwarded;
   final bool isPinned;
+  final bool isViewOnce;
   // Jointure users
   final String? senderNom;
   final String? senderPseudo;
@@ -152,6 +153,7 @@ class Message {
     required this.isStatusReply,
     this.isForwarded = false,
     this.isPinned = false,
+    this.isViewOnce = false,
     this.senderNom,
     this.senderPseudo,
     this.senderAvatar,
@@ -183,6 +185,7 @@ class Message {
         isStatusReply: json['isStatusReply'] ?? 0,
         isForwarded: json['isForwarded'] == 1 || json['isForwarded'] == true,
         isPinned: json['isPinned'] == 1 || json['isPinned'] == true,
+        isViewOnce: json['isViewOnce'] == 1 || json['isViewOnce'] == true,
         senderNom: json['sender_nom'],
         senderPseudo: json['sender_pseudo'],
         senderAvatar: json['sender_avatar'],
@@ -665,6 +668,7 @@ class SocketEvents {
   static const messageUpdated    = 'message:updated';
   static const messageDeleted    = 'message:deleted';
   static const messagePinned     = 'message:pinned';
+  static const messageViewed     = 'message:viewed';
   static const messageDelivered  = 'message:delivered';
   static const messageRead       = 'message:read';
   static const messageStatus     = 'message:status';

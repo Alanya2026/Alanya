@@ -180,4 +180,16 @@ extension ChatApi on TalkyApiClient {
       ),
     );
   }
+
+  /// Signale qu'un média à vue unique a été consulté. Le backend enregistre la
+  /// vue, supprime le fichier si tous les destinataires ont vu, et diffuse
+  /// `message:viewed`.
+  Future<void> markViewed(int msgID) async {
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/$msgID/view'),
+        headers: _headers,
+      ),
+    );
+  }
 }
