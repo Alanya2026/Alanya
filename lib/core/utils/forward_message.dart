@@ -20,6 +20,8 @@ class ForwardResult {
 /// Indique si un message peut être transféré.
 bool canForwardMessage(LocalMessage message) {
   if (message.isDeleted) return false;
+  // Un média à vue unique ne peut jamais être transféré.
+  if (message.isViewOnce) return false;
 
   if (message.type == 0) {
     return message.content != null && message.content!.trim().isNotEmpty;

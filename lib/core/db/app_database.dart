@@ -72,6 +72,13 @@ class LocalMessages extends Table {
   /// Message épinglé dans la conversation (visible de tous les participants).
   BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
 
+  /// Média à vue unique (« view once »).
+  BoolColumn get isViewOnce => boolean().withDefault(const Constant(false))();
+
+  /// Instant où CE média vue unique a été consommé (ouvert par moi, ou signalé
+  /// « vu » via socket). Non nul ⇒ le média n'est plus ré-ouvrable.
+  DateTimeColumn get viewedAt => dateTime().nullable()();
+
   TextColumn get senderNom => text().nullable()();
   TextColumn get senderPseudo => text().nullable()();
   TextColumn get senderAvatar => text().nullable()();
@@ -188,7 +195,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -214,6 +221,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 6) {
             await m.addColumn(localMessages, localMessages.isPinned);
+          }
+          if (from < 7) {
+            await m.addColumn(localMessages, localMessages.isViewOnce);
+            await m.addColumn(localMessages, localMessages.viewedAt);
           }
         },
       );

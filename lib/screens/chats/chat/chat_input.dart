@@ -82,6 +82,9 @@ extension _ChatInput on _ChatDetailScreenState {
 
   /// Bannière en haut du chat listant le message épinglé le plus récent.
   /// Tap → défile jusqu'au message. Bouton croix → détache.
+  /// Barre compacte des messages épinglés (façon Telegram) : une seule ligne,
+  /// un compteur « i/N », un appui qui défile vers l'épingle courante puis passe
+  /// à la suivante.
   Widget _buildPinnedBanner() {
     final convId = widget.conversationId;
     if (convId == null) return const SizedBox.shrink();
@@ -91,50 +94,58 @@ extension _ChatInput on _ChatDetailScreenState {
       builder: (context, snap) {
         final pinned = snap.data ?? const <LocalMessage>[];
         if (pinned.isEmpty) return const SizedBox.shrink();
-        final msg = pinned.first;
+
+        // Ordre chronologique stable pour un défilement cohérent.
+        final list = [...pinned]..sort((a, b) => a.sendAt.compareTo(b.sendAt));
+        final idx = _pinnedIndex % list.length;
+        final msg = list[idx];
+
         return Material(
           color: context.semantic.brandContainer,
           child: InkWell(
-            onTap: () => _scrollToReply(msg.msgID),
+            onTap: () {
+              _scrollToReply(msg.msgID);
+              if (list.length > 1) {
+                rebuild(() => _pinnedIndex = (idx + 1) % list.length);
+              }
+            },
+            onLongPress: list.length > 1 ? () => _showPinnedList(convId) : null,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
-              ),
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               decoration: BoxDecoration(
                 border: Border(left: BorderSide(color: colors.primary, width: 3)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.push_pin, size: 16, color: colors.primary),
+                  Icon(Icons.push_pin, size: 15, color: colors.primary),
                   AppSpacing.hGapSm,
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          pinned.length > 1
-                              ? 'Messages épinglés (${pinned.length})'
-                              : 'Message épinglé',
-                          style: context.text.labelSmall?.copyWith(
-                            color: colors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          _previewOf(msg),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.text.bodySmall,
-                        ),
-                      ],
+                    child: Text(
+                      _previewOf(msg),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.bodySmall,
                     ),
                   ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(Icons.close_rounded, size: 18, color: colors.onSurfaceVariant),
-                    onPressed: () => _togglePin(msg),
+                  if (list.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                      child: Text(
+                        '${idx + 1}/${list.length}',
+                        style: context.text.labelSmall?.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  InkWell(
+                    onTap: () => _togglePin(msg),
+                    borderRadius: AppRadius.brPill,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(Icons.push_pin_outlined, size: 17, color: colors.onSurfaceVariant),
+                    ),
                   ),
                 ],
               ),
@@ -142,6 +153,55 @@ extension _ChatInput on _ChatDetailScreenState {
           ),
         );
       },
+    );
+  }
+
+  /// Feuille listant tous les messages épinglés : défiler vers l'un, ou en
+  /// retirer un précis. Réactive : se met à jour en direct et se ferme à vide.
+  void _showPinnedList(int convId) {
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        child: StreamBuilder<List<LocalMessage>>(
+          stream: _chat.repository.watchPinnedMessages(convId),
+          builder: (context, snap) {
+            final pinned = snap.data ?? const <LocalMessage>[];
+            if (pinned.isEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (Navigator.canPop(context)) Navigator.pop(context);
+              });
+              return const SizedBox.shrink();
+            }
+            final list = [...pinned]..sort((a, b) => a.sendAt.compareTo(b.sendAt));
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text('Messages épinglés (${list.length})',
+                      style: context.text.titleSmall),
+                ),
+                ...list.map((m) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.push_pin, size: 18, color: context.colors.primary),
+                      title: Text(_previewOf(m),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      trailing: IconButton(
+                        icon: Icon(Icons.close_rounded,
+                            size: 20, color: context.colors.onSurfaceVariant),
+                        onPressed: () => _togglePin(m),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _scrollToReply(m.msgID);
+                      },
+                    )),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -379,9 +439,25 @@ extension _ChatInput on _ChatDetailScreenState {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    'Enregistrement…',
-                    style: context.text.bodySmall?.copyWith(color: colors.error),
+                    _voiceViewOnce ? 'Vocal · vue unique' : 'Enregistrement…',
+                    style: context.text.bodySmall?.copyWith(
+                      color: _voiceViewOnce ? colors.primary : colors.error,
+                    ),
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Tooltip(
+                  message: 'Vue unique',
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      _voiceViewOnce ? Icons.timer : Icons.timer_outlined,
+                      color: _voiceViewOnce ? colors.primary : colors.onSurfaceVariant,
+                      size: AppIconSize.md,
+                    ),
+                    onPressed: () => rebuild(() => _voiceViewOnce = !_voiceViewOnce),
                   ),
                 ),
               ],
