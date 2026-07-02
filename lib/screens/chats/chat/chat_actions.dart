@@ -279,19 +279,22 @@ extension _ChatActions on _ChatDetailScreenState {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SwitchListTile(
-                value: _pendingViewOnce,
-                onChanged: (v) => setSheet(() => _pendingViewOnce = v),
-                secondary: Icon(
-                  _pendingViewOnce ? Icons.timer : Icons.timer_outlined,
-                  color: context.colors.primary,
+              // Vue unique : réservée aux discussions 1-1 (pas les groupes).
+              if (!widget.isGroup) ...[
+                SwitchListTile(
+                  value: _pendingViewOnce,
+                  onChanged: (v) => setSheet(() => _pendingViewOnce = v),
+                  secondary: Icon(
+                    _pendingViewOnce ? Icons.timer : Icons.timer_outlined,
+                    color: context.colors.primary,
+                  ),
+                  title: const Text('Vue unique'),
+                  subtitle: const Text('Ouvrable une seule fois, puis inaccessible'),
+                  contentPadding: EdgeInsets.zero,
                 ),
-                title: const Text('Vue unique'),
-                subtitle: const Text('Ouvrable une seule fois, puis inaccessible'),
-                contentPadding: EdgeInsets.zero,
-              ),
-              const Divider(height: 1),
-              AppSpacing.vGapSm,
+                const Divider(height: 1),
+                AppSpacing.vGapSm,
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -901,11 +904,9 @@ extension _ChatActions on _ChatDetailScreenState {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MediaViewerScreen(
-          isVideo: msg.type == 2,
-          localPath: null, // jamais de fichier local pour un média vue unique
-          networkUrl: msg.mediaUrl,
-          title: null,
+        builder: (_) => ViewOnceViewerScreen(
+          type: msg.type,
+          mediaUrl: msg.mediaUrl!,
         ),
       ),
     );

@@ -446,20 +446,21 @@ extension _ChatInput on _ChatDetailScreenState {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Tooltip(
-                  message: 'Vue unique',
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      _voiceViewOnce ? Icons.timer : Icons.timer_outlined,
-                      color: _voiceViewOnce ? colors.primary : colors.onSurfaceVariant,
-                      size: AppIconSize.md,
+                if (!widget.isGroup)
+                  Tooltip(
+                    message: 'Vue unique',
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        _voiceViewOnce ? Icons.timer : Icons.timer_outlined,
+                        color: _voiceViewOnce ? colors.primary : colors.onSurfaceVariant,
+                        size: AppIconSize.md,
+                      ),
+                      onPressed: () => rebuild(() => _voiceViewOnce = !_voiceViewOnce),
                     ),
-                    onPressed: () => rebuild(() => _voiceViewOnce = !_voiceViewOnce),
                   ),
-                ),
               ],
             ),
           ),
