@@ -1033,11 +1033,12 @@ class ChatRepository {
       isForwarded: Value(j['isForwarded'] == 1 || j['isForwarded'] == true),
       isPinned: Value(j['isPinned'] == 1 || j['isPinned'] == true),
       isViewOnce: Value(j['isViewOnce'] == 1 || j['isViewOnce'] == true),
-      viewedAt: Value(
-        (j['isViewOnce'] == 1 || j['isViewOnce'] == true) && _toInt(j['viewedByMe']) > 0
-            ? DateTime.now()
-            : null,
-      ),
+      // On ne pose viewedAt QUE si le serveur confirme la vue. Sinon on laisse
+      // la colonne intacte (Value.absent) : un média déjà ouvert localement le
+      // reste, même si une resync arrive avant que le serveur ait persisté /view.
+      viewedAt: (j['isViewOnce'] == 1 || j['isViewOnce'] == true) && _toInt(j['viewedByMe']) > 0
+          ? Value(DateTime.now())
+          : const Value.absent(),
       senderNom: Value(j['sender_nom']?.toString()),
       senderPseudo: Value(j['sender_pseudo']?.toString()),
       senderAvatar: Value(j['sender_avatar']?.toString()),

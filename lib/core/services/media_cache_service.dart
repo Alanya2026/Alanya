@@ -34,6 +34,29 @@ class MediaCacheService {
     return file.existsSync() ? file.path : null;
   }
 
+  /// Télécharge un média vers un fichier TEMPORAIRE (hors du cache persistant)
+  /// et renvoie son chemin. Utilisé pour les médias à vue unique : on lit
+  /// depuis ce fichier local (les lecteurs natifs vidéo/audio ignorent le
+  /// cert pinning et échouent sur une URL réseau directe), puis l'appelant
+  /// supprime le fichier immédiatement après visionnage.
+  Future<String?> downloadToTemp(String url) async {
+    try {
+      final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
+      if (res.statusCode != 200) return null;
+      final tmp = await getTemporaryDirectory();
+      final path = p.join(
+        tmp.path,
+        'vo_${DateTime.now().microsecondsSinceEpoch}_${_fileName(url)}',
+      );
+      final file = File(path);
+      await file.writeAsBytes(res.bodyBytes);
+      return file.path;
+    } catch (e) {
+      debugPrint('[MediaCache] downloadToTemp échoué $url: $e');
+      return null;
+    }
+  }
+
   /// Télécharge le média s'il n'est pas déjà en cache et renvoie le chemin local.
   /// Si [maxBytes] est fourni, vérifie d'abord la taille via HEAD et abandonne
   /// si trop gros (utile pour ne pas auto-cacher des fichiers énormes).
