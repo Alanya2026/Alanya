@@ -821,36 +821,28 @@ extension _ChatActions on _ChatDetailScreenState {
     List<LocalMessage> items, {
     required int initialIndex,
   }) async {
-    final prepared = <MediaViewerItem>[];
-    for (final msg in items) {
-      String? localPath =
-          (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
-              ? msg.localMediaPath
-              : null;
-
-      final isVideo = msg.type == 2;
-      if (isVideo && localPath == null && msg.mediaUrl != null) {
-        if (prepared.isEmpty && initialIndex == items.indexOf(msg)) {
-          _showLoading();
-        }
-        localPath = await _chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
-        if (localPath != null && msg.msgID != 0) {
-          await _chat.repository.dao.setLocalMediaPath(msg.msgID, localPath);
-        }
-        if (mounted && prepared.isEmpty && initialIndex == items.indexOf(msg)) {
+    var loaderShown = false;
+    final prepared = await buildMediaViewerItems(
+      items,
+      _chat.repository,
+      loadingForIndex: initialIndex,
+      onLoadingVideo: () {
+        if (!mounted || loaderShown) return;
+        loaderShown = true;
+        _showLoading();
+      },
+      onLoadingDone: () {
+        if (mounted && loaderShown) {
           Navigator.of(context, rootNavigator: true).pop();
+          loaderShown = false;
         }
-      }
-
-      prepared.add(MediaViewerItem(
-        isVideo: isVideo,
-        localPath: localPath,
-        networkUrl: msg.mediaUrl,
-        title: msg.mediaName,
-      ));
-    }
+      },
+    );
 
     if (!mounted) return;
+    if (loaderShown) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
 
     Navigator.push(
       context,
@@ -858,6 +850,19 @@ extension _ChatActions on _ChatDetailScreenState {
         builder: (_) => MediaViewerScreen(
           items: prepared,
           initialIndex: initialIndex.clamp(0, prepared.length - 1),
+        ),
+      ),
+    );
+  }
+
+  void _openAlbumMediaList(List<LocalMessage> items, {required int initialIndex}) {
+    final sorted = sortAlbumMessages(items);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AlbumMediaListScreen(
+          messages: sorted,
+          initialIndex: initialIndex.clamp(0, sorted.length - 1),
         ),
       ),
     );

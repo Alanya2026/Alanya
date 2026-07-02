@@ -18,6 +18,7 @@ import '../../core/services/call_service.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
+import '../../core/utils/media_viewer_items.dart';
 import '../../core/utils/rich_text_parser.dart';
 import 'package:screen_protector/screen_protector.dart';
 import '../../core/theme/app_colors.dart';
@@ -34,6 +35,7 @@ import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
 import 'forward_message_screen.dart';
+import 'album_media_list_screen.dart';
 import 'media_viewer_screen.dart';
 import 'voice_message_bubble.dart';
 

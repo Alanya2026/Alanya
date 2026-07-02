@@ -197,6 +197,16 @@ String reencodeAlbumMarkerForForward({
   );
 }
 
+/// Trie les messages d'un album par index du marqueur.
+List<LocalMessage> sortAlbumMessages(List<LocalMessage> messages) {
+  return List<LocalMessage>.from(messages)
+    ..sort((a, b) {
+      final ma = parseAlbumMarker(a.content);
+      final mb = parseAlbumMarker(b.content);
+      return (ma?.index ?? 0).compareTo(mb?.index ?? 0);
+    });
+}
+
 /// Extrait tous les messages d'un album à partir d'un message membre.
 List<LocalMessage> collectAlbumMessages(
   LocalMessage anchor,

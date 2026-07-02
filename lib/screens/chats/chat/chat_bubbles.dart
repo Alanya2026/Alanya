@@ -626,7 +626,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final isVideo = msg.type == 2;
 
     return GestureDetector(
-      onTap: () => _openAlbumViewer(all, initialIndex: index),
+      onTap: () => _openAlbumMediaList(all, initialIndex: index),
       child: ClipRRect(
         borderRadius: AppRadius.brSm,
         child: Stack(
