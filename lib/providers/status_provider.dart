@@ -128,6 +128,21 @@ class StatusProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Efface les préférences locales liées aux statuts (logout / changement de compte).
+  Future<void> clearSessionPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_seenKey);
+      for (final key in prefs.getKeys()) {
+        if (key.startsWith('status_views_')) {
+          await prefs.remove(key);
+        }
+      }
+    } catch (e, st) {
+      AppLog.w('StatusProvider', 'clearSessionPreferences échoué', e, st);
+    }
+  }
+
   @override
   void dispose() {
     unbind();

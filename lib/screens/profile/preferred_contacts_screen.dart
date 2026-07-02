@@ -4,11 +4,12 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
+import '../../core/utils/user_search.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../chats/contact_detail_screen.dart';
 
-class PreferredContactsScreen extends StatelessWidget {
+class PreferredContactsScreen extends StatefulWidget {
   const PreferredContactsScreen({
     super.key,
     required this.contacts,
@@ -21,7 +22,45 @@ class PreferredContactsScreen extends StatelessWidget {
   final VoidCallback onAddContact;
 
   @override
+  State<PreferredContactsScreen> createState() =>
+      _PreferredContactsScreenState();
+}
+
+class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  late List<User> _filteredContacts;
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredContacts = widget.contacts;
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text.trim();
+    setState(() {
+      _filteredContacts = query.isEmpty
+          ? widget.contacts
+          : filterUsersBySearch(widget.contacts, query);
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final hasQuery = _searchController.text.trim().isNotEmpty;
+
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
@@ -35,7 +74,7 @@ class PreferredContactsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton.icon(
-            onPressed: onAddContact,
+            onPressed: widget.onAddContact,
             icon: Icon(Icons.add, size: AppIconSize.sm,
                 color: context.colors.primary),
             label: Text(
@@ -47,21 +86,49 @@ class PreferredContactsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: contacts.isEmpty
-          ? EmptyState(
-              icon: CupertinoIcons.person_2,
-              title: 'Aucun contact préféré',
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
-              itemCount: contacts.length,
-              itemBuilder: (context, index) {
-                final user = contacts[index];
-                return _ContactTile(
-                    user: user, onLongPress: () => onLongPress(user));
-              },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
+            child: AppSearchField(
+              controller: _searchController,
+              hintText: 'Rechercher par nom, pseudo ou téléphone…',
+              onChanged: (_) {},
+              onClear: _clearSearch,
             ),
+          ),
+          Expanded(
+            child: widget.contacts.isEmpty
+                ? const EmptyState(
+                    icon: CupertinoIcons.person_2,
+                    title: 'Aucun contact préféré',
+                  )
+                : _filteredContacts.isEmpty
+                    ? EmptyState(
+                        icon: hasQuery
+                            ? Icons.person_search
+                            : CupertinoIcons.person_2,
+                        title: hasQuery
+                            ? 'Aucun résultat'
+                            : 'Aucun contact préféré',
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xl,
+                            vertical: AppSpacing.lg),
+                        itemCount: _filteredContacts.length,
+                        itemBuilder: (context, index) {
+                          final user = _filteredContacts[index];
+                          return _ContactTile(
+                            user: user,
+                            onLongPress: () => widget.onLongPress(user),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
     );
   }
 }

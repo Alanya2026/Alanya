@@ -120,6 +120,25 @@ class MediaCacheService {
     }
   }
 
+  /// Vide entièrement le cache média (logout / changement de compte).
+  Future<void> clearAll() async {
+    try {
+      final dir = await _cacheDir();
+      if (!dir.existsSync()) return;
+      for (final entity in dir.listSync(followLinks: false)) {
+        if (entity is! File) continue;
+        try {
+          entity.deleteSync();
+        } catch (e, st) {
+          AppLog.w('MediaCache', 'Suppression fichier cache échouée', e, st);
+        }
+      }
+      debugPrint('[MediaCache] cache vidé');
+    } catch (e) {
+      debugPrint('[MediaCache] clearAll échoué: $e');
+    }
+  }
+
   /// Évince les fichiers les plus anciens (par `accessed` puis `modified`)
   /// si le cache dépasse [kMaxCacheBytes], jusqu'à redescendre à
   /// [kTargetCacheBytes]. Idempotent et best-effort (erreurs ignorées).

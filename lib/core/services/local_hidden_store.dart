@@ -97,4 +97,18 @@ class LocalHiddenStore extends ChangeNotifier {
     notifyListeners();
     await _persistCalls();
   }
+
+  /// Réinitialise les masquages locaux (logout / changement de compte).
+  Future<void> clearAll() async {
+    _hiddenConvAt.clear();
+    _hiddenCalls.clear();
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kConvKey);
+      await prefs.remove(_kCallsKey);
+    } catch (e) {
+      debugPrint('[LocalHiddenStore] clearAll error: $e');
+    }
+  }
 }

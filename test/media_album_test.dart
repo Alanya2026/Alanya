@@ -1,0 +1,181 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:talky_flutter/core/db/app_database.dart';
+import 'package:talky_flutter/core/utils/forward_message.dart';
+import 'package:talky_flutter/core/utils/media_album.dart';
+
+LocalMessage _mediaMsg({
+  required String clientId,
+  String? content,
+  int type = 1,
+  int senderID = 1,
+  String? mediaUrl,
+}) {
+  return LocalMessage(
+    clientId: clientId,
+    msgID: clientId.hashCode,
+    conversationID: 1,
+    senderID: senderID,
+    sendAt: DateTime.utc(2026, 1, 1, 12, 0),
+    content: content,
+    type: type,
+    status: 1,
+    mediaUrl: mediaUrl ?? 'https://example.com/$clientId.jpg',
+    isEdited: false,
+    isDeleted: false,
+    isStatusReply: 0,
+    isForwarded: false,
+    syncPending: false,
+    retryCount: 0,
+  );
+}
+
+void main() {
+  group('encodeAlbumMarker / parseAlbumMarker', () {
+    test('round-trip', () {
+      const id = 'alb_test_123';
+      final encoded = encodeAlbumMarker(albumId: id, index: 2, total: 5);
+      expect(encoded, '__talky_album__|alb_test_123|2|5');
+
+      final parsed = parseAlbumMarker(encoded);
+      expect(parsed, isNotNull);
+      expect(parsed!.albumId, id);
+      expect(parsed.index, 2);
+      expect(parsed.total, 5);
+    });
+
+    test('returns null for normal caption', () {
+      expect(parseAlbumMarker('Bonjour'), isNull);
+      expect(parseAlbumMarker(null), isNull);
+    });
+
+    test('returns null for invalid marker', () {
+      expect(parseAlbumMarker('__talky_album__|id|x|5'), isNull);
+      expect(parseAlbumMarker('__talky_album__|id|0|1'), isNull);
+    });
+  });
+
+  group('groupMessagesForDisplay', () {
+    test('single messages stay single', () {
+      final msgs = [
+        _mediaMsg(clientId: 'a', content: 'hello', type: 0),
+        _mediaMsg(clientId: 'b', content: null, type: 1),
+      ];
+      final items = groupMessagesForDisplay(msgs);
+      expect(items.length, 2);
+      expect(items[0], isA<ChatListSingle>());
+      expect(items[1], isA<ChatListSingle>());
+    });
+
+    test('groups 2+ album items with same albumId', () {
+      const id = 'alb_group';
+      final msgs = [
+        _mediaMsg(
+          clientId: 'a',
+          content: encodeAlbumMarker(albumId: id, index: 0, total: 3),
+        ),
+        _mediaMsg(
+          clientId: 'b',
+          content: encodeAlbumMarker(albumId: id, index: 1, total: 3),
+        ),
+        _mediaMsg(
+          clientId: 'c',
+          content: encodeAlbumMarker(albumId: id, index: 2, total: 3),
+        ),
+      ];
+      final items = groupMessagesForDisplay(msgs);
+      expect(items.length, 1);
+      expect(items.first, isA<ChatListAlbum>());
+      expect((items.first as ChatListAlbum).messages.length, 3);
+    });
+
+    test('does not group different albumIds', () {
+      final msgs = [
+        _mediaMsg(
+          clientId: 'a',
+          content: encodeAlbumMarker(albumId: 'alb1', index: 0, total: 2),
+        ),
+        _mediaMsg(
+          clientId: 'b',
+          content: encodeAlbumMarker(albumId: 'alb2', index: 0, total: 2),
+        ),
+      ];
+      final items = groupMessagesForDisplay(msgs);
+      expect(items.length, 2);
+    });
+
+    test('single album marker falls back to single bubble', () {
+      final msgs = [
+        _mediaMsg(
+          clientId: 'a',
+          content: encodeAlbumMarker(albumId: 'alb1', index: 0, total: 2),
+        ),
+      ];
+      final items = groupMessagesForDisplay(msgs);
+      expect(items.length, 1);
+      expect(items.first, isA<ChatListSingle>());
+    });
+  });
+
+  group('albumPreviewLabel', () {
+    test('photos only', () {
+      expect(
+        albumPreviewLabel(photoCount: 3, videoCount: 0),
+        '📷 3 photos',
+      );
+    });
+
+    test('mixed media', () {
+      expect(
+        albumPreviewLabel(photoCount: 2, videoCount: 1),
+        '📷 2 photos, 🎥 Vidéo',
+      );
+    });
+  });
+
+  group('forward album helpers', () {
+    test('canForwardAlbum requires all items forwardable', () {
+      final items = [
+        _mediaMsg(
+          clientId: 'a',
+          content: encodeAlbumMarker(albumId: 'x', index: 0, total: 2),
+        ),
+        _mediaMsg(
+          clientId: 'b',
+          content: encodeAlbumMarker(albumId: 'x', index: 1, total: 2),
+        ),
+      ];
+      expect(canForwardAlbum(items), isTrue);
+    });
+
+    test('previewTextForForwardAlbum', () {
+      final items = [
+        _mediaMsg(
+          clientId: 'a',
+          content: encodeAlbumMarker(albumId: 'x', index: 0, total: 2),
+          type: 1,
+        ),
+        _mediaMsg(
+          clientId: 'b',
+          content: encodeAlbumMarker(albumId: 'x', index: 1, total: 2),
+          type: 2,
+        ),
+      ];
+      expect(
+        previewTextForForwardAlbum(items),
+        '📷 Photo, 🎥 Vidéo',
+      );
+    });
+
+    test('reencodeAlbumMarkerForForward', () {
+      final marker = reencodeAlbumMarkerForForward(
+        newAlbumId: 'new_id',
+        index: 1,
+        total: 4,
+      );
+      final parsed = parseAlbumMarker(marker);
+      expect(parsed!.albumId, 'new_id');
+      expect(parsed.index, 1);
+      expect(parsed.total, 4);
+    });
+  });
+}

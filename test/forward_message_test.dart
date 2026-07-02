@@ -90,5 +90,27 @@ void main() {
         'Photo',
       );
     });
+
+    test('album marker affiche libellé album', () {
+      expect(
+        previewTextForForward(_msg(
+          type: 1,
+          content: '__talky_album__|alb1|0|4',
+          mediaUrl: 'https://cdn/x.jpg',
+        )),
+        'Album · 4 médias',
+      );
+    });
+  });
+
+  group('resolveForwardCaption album', () {
+    test('ignore album marker content', () {
+      final source = _msg(
+        type: 1,
+        content: '__talky_album__|alb1|0|3',
+        mediaUrl: 'https://cdn/x.jpg',
+      );
+      expect(resolveForwardCaption(source, null), isNull);
+    });
   });
 }

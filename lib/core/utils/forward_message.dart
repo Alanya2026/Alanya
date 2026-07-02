@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../db/app_database.dart';
+import 'media_album.dart';
 
 class ForwardResult {
   const ForwardResult({
@@ -32,6 +33,12 @@ bool canForwardMessage(LocalMessage message) {
   return _localMediaPath(message) != null;
 }
 
+/// Indique si un album complet peut être transféré.
+bool canForwardAlbum(List<LocalMessage> items) {
+  if (items.isEmpty) return false;
+  return items.every(canForwardMessage);
+}
+
 String? _localMediaPath(LocalMessage message) {
   for (final path in [message.pendingUploadPath, message.localMediaPath]) {
     if (path != null && path.isNotEmpty && File(path).existsSync()) {
@@ -46,6 +53,7 @@ String? resolveForwardCaption(LocalMessage source, String? userCaption) {
   final trimmed = userCaption?.trim();
   if (trimmed != null && trimmed.isNotEmpty) return trimmed;
   if (source.type == 0) return null;
+  if (isAlbumMarkerContent(source.content)) return null;
   final original = source.content?.trim();
   if (original != null && original.isNotEmpty) return original;
   return null;
@@ -73,11 +81,22 @@ String previewTextForForward(LocalMessage message) {
         ? message.content!.trim()
         : 'Message vide';
   }
+  if (isAlbumMarkerContent(message.content)) {
+    final marker = parseAlbumMarker(message.content);
+    if (marker != null) {
+      return 'Album · ${marker.total} médias';
+    }
+  }
   final caption = message.content?.trim();
   if (caption != null && caption.isNotEmpty) {
     return '${mediaLabelForType(message.type, mediaName: message.mediaName)} · $caption';
   }
   return mediaLabelForType(message.type, mediaName: message.mediaName);
+}
+
+String previewTextForForwardAlbum(List<LocalMessage> items) {
+  if (items.isEmpty) return 'Album vide';
+  return previewLabelForAlbumMessages(items);
 }
 
 File? localMediaFileForForward(LocalMessage message) {
