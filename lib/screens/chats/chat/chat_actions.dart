@@ -126,6 +126,85 @@ extension _ChatActions on _ChatDetailScreenState {
                 if (msg.msgID != 0) _chat.repository.deleteMessage(msg.msgID, forAll: false);
               },
             ),
+            if (msg.msgID != 0)
+              ListTile(
+                leading: Icon(Icons.info_outline, color: primary),
+                title: const Text('Infos'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showMessageInfo(msg);
+                },
+              ),
+            AppSpacing.vGapSm,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Feuille « Détails du message » : horodatages d'envoi (clic + serveur),
+  /// de remise et de lecture, plus le fuseau horaire pour mes propres messages.
+  void _showMessageInfo(LocalMessage msg) {
+    final isMe = msg.senderID == _myId;
+
+    String fmt(DateTime? d) {
+      if (d == null) return '—';
+      final l = d.toLocal();
+      String two(int n) => n.toString().padLeft(2, '0');
+      return '${two(l.day)}/${two(l.month)}/${l.year} à '
+          '${two(l.hour)}:${two(l.minute)}:${two(l.second)}';
+    }
+
+    String tzLabel() {
+      final now = DateTime.now();
+      final off = now.timeZoneOffset;
+      final sign = off.isNegative ? '-' : '+';
+      final h = off.inHours.abs().toString().padLeft(2, '0');
+      final m = (off.inMinutes.abs() % 60).toString().padLeft(2, '0');
+      return '${now.timeZoneName} (UTC$sign$h:$m)';
+    }
+
+    Widget line(IconData icon, String label, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 18, color: context.colors.onSurfaceVariant),
+              AppSpacing.hGapSm,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: context.text.labelSmall
+                            ?.copyWith(color: context.colors.onSurfaceVariant)),
+                    Text(value, style: context.text.bodyMedium),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Text('Détails du message', style: context.text.titleSmall),
+            ),
+            // Heure du clic : connue uniquement pour mes propres messages.
+            if (isMe && msg.clickSentAt != null)
+              line(Icons.touch_app_outlined, 'Envoyé (appui sur envoyer)',
+                  fmt(msg.clickSentAt)),
+            line(Icons.send_outlined, 'Envoyé à', fmt(msg.sendAt)),
+            line(Icons.visibility_outlined, 'Lu',
+                msg.readAt != null ? fmt(msg.readAt) : 'Non lu'),
+            if (isMe) line(Icons.public, 'Fuseau horaire', tzLabel()),
             AppSpacing.vGapSm,
           ],
         ),
@@ -950,6 +1029,21 @@ extension _ChatActions on _ChatDetailScreenState {
           const SnackBar(content: Text('Impossible de télécharger le fichier'), backgroundColor: AppColors.error),
         );
       }
+      return;
+    }
+
+    // PDF → visionneuse intégrée (lue depuis le fichier local déjà téléchargé).
+    if (_isPdf(msg)) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PdfViewerScreen(
+            path: path!,
+            title: msg.mediaName ?? 'Document PDF',
+          ),
+        ),
+      );
       return;
     }
 

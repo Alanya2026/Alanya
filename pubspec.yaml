@@ -72,6 +72,8 @@ dependencies:
   record: ^5.1.2                      # Enregistrement messages vocaux
   emoji_picker_flutter: ^3.1.0        # Sélecteur d'émojis
   open_filex: ^4.5.0                  # Ouvrir un fichier (PDF, doc…) avec l'app système
+  url_launcher: ^6.3.0                 # Ouverture des liens cliquables dans le navigateur
+  pdfx: ^2.6.0                         # Aperçu et visionneuse PDF intégrée
 
   # ── Connectivité (offline detection au niveau OS) ────────────────
   connectivity_plus: ^6.1.0

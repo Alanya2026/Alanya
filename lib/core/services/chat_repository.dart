@@ -201,6 +201,7 @@ class ChatRepository {
       conversationID: conversationID,
       senderID: _myId,
       sendAt: now,
+      clickSentAt: Value(now),
       content: Value(content),
       type: const Value(0),
       status: const Value(0),
@@ -270,6 +271,7 @@ class ChatRepository {
       conversationID: conversationID,
       senderID: _myId,
       sendAt: now,
+      clickSentAt: Value(now),
       content: Value(content),
       type: Value(type),
       status: const Value(0),
@@ -321,6 +323,7 @@ class ChatRepository {
       conversationID: conversationID,
       senderID: _myId,
       sendAt: now,
+      clickSentAt: Value(now),
       content: Value(content),
       type: Value(type),
       status: const Value(0),
@@ -448,6 +451,7 @@ class ChatRepository {
       conversationID: conversationID,
       senderID: _myId,
       sendAt: summaryAt,
+      clickSentAt: Value(summaryAt),
       content: Value(content),
       type: Value(type),
       status: const Value(0),
@@ -976,6 +980,7 @@ class ChatRepository {
     bool wasNew = false;
     await _db.transaction(() async {
       String? carriedLocalPath;
+      DateTime? carriedClickSentAt;
 
       // Création d'un prédicat optimiste plus strict pour éviter d'associer
       // par erreur un message d'un autre utilisateur ayant le même contenu.
@@ -1008,6 +1013,7 @@ class ChatRepository {
 
       for (final m in candidates) {
         carriedLocalPath ??= m.localMediaPath;
+        carriedClickSentAt ??= m.clickSentAt;
         await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
       }
 
@@ -1015,6 +1021,9 @@ class ChatRepository {
       var companion = _msgJsonToCompanion(json).copyWith(clientId: Value(srvKey));
       if (carriedLocalPath != null) {
         companion = companion.copyWith(localMediaPath: Value(carriedLocalPath));
+      }
+      if (carriedClickSentAt != null) {
+        companion = companion.copyWith(clickSentAt: Value(carriedClickSentAt));
       }
 
       debugPrint('[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
@@ -1269,6 +1278,9 @@ class ChatRepository {
       type: Value(_toInt(j['type'])),
       status: Value(_toInt(j['status'], fallback: 1)),
       sendAt: Value(_parseDate(j['sendAt']) ?? DateTime.now()),
+      // clickSentAt n'existe que localement (heure du clic de l'expéditeur) :
+      // on ne le renseigne jamais depuis le serveur, et on ne l'écrase pas.
+      clickSentAt: const Value.absent(),
       deliveredAt: Value(_parseDate(j['deliveredAt'])),
       readAt: Value(_parseDate(j['readAt'])),
       mediaUrl: Value(j['mediaUrl']?.toString()),

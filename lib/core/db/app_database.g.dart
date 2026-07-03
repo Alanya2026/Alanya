@@ -1111,6 +1111,17 @@ class $LocalMessagesTable extends LocalMessages
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _clickSentAtMeta = const VerificationMeta(
+    'clickSentAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> clickSentAt = GeneratedColumn<DateTime>(
+    'click_sent_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _senderNomMeta = const VerificationMeta(
     'senderNom',
   );
@@ -1211,6 +1222,7 @@ class $LocalMessagesTable extends LocalMessages
     isPinned,
     isViewOnce,
     viewedAt,
+    clickSentAt,
     senderNom,
     senderPseudo,
     senderAvatar,
@@ -1424,6 +1436,15 @@ class $LocalMessagesTable extends LocalMessages
         viewedAt.isAcceptableOrUnknown(data['viewed_at']!, _viewedAtMeta),
       );
     }
+    if (data.containsKey('click_sent_at')) {
+      context.handle(
+        _clickSentAtMeta,
+        clickSentAt.isAcceptableOrUnknown(
+          data['click_sent_at']!,
+          _clickSentAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('sender_nom')) {
       context.handle(
         _senderNomMeta,
@@ -1585,6 +1606,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.dateTime,
         data['${effectivePrefix}viewed_at'],
       ),
+      clickSentAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}click_sent_at'],
+      ),
       senderNom: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sender_nom'],
@@ -1664,6 +1689,12 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   /// Instant où CE média vue unique a été consommé (ouvert par moi, ou signalé
   /// « vu » via socket). Non nul ⇒ le média n'est plus ré-ouvrable.
   final DateTime? viewedAt;
+
+  /// Heure locale à laquelle l'expéditeur a appuyé sur « envoyer » (heure du
+  /// clic). Distincte de `sendAt`, qui devient l'horodatage serveur (départ
+  /// effectif) une fois le message confirmé. Renseignée seulement pour mes
+  /// propres messages ; préservée à travers les resynchronisations.
+  final DateTime? clickSentAt;
   final String? senderNom;
   final String? senderPseudo;
   final String? senderAvatar;
@@ -1703,6 +1734,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     required this.isPinned,
     required this.isViewOnce,
     this.viewedAt,
+    this.clickSentAt,
     this.senderNom,
     this.senderPseudo,
     this.senderAvatar,
@@ -1764,6 +1796,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     map['is_view_once'] = Variable<bool>(isViewOnce);
     if (!nullToAbsent || viewedAt != null) {
       map['viewed_at'] = Variable<DateTime>(viewedAt);
+    }
+    if (!nullToAbsent || clickSentAt != null) {
+      map['click_sent_at'] = Variable<DateTime>(clickSentAt);
     }
     if (!nullToAbsent || senderNom != null) {
       map['sender_nom'] = Variable<String>(senderNom);
@@ -1836,6 +1871,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       viewedAt: viewedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(viewedAt),
+      clickSentAt: clickSentAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clickSentAt),
       senderNom: senderNom == null && nullToAbsent
           ? const Value.absent()
           : Value(senderNom),
@@ -1887,6 +1925,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       isPinned: serializer.fromJson<bool>(json['isPinned']),
       isViewOnce: serializer.fromJson<bool>(json['isViewOnce']),
       viewedAt: serializer.fromJson<DateTime?>(json['viewedAt']),
+      clickSentAt: serializer.fromJson<DateTime?>(json['clickSentAt']),
       senderNom: serializer.fromJson<String?>(json['senderNom']),
       senderPseudo: serializer.fromJson<String?>(json['senderPseudo']),
       senderAvatar: serializer.fromJson<String?>(json['senderAvatar']),
@@ -1925,6 +1964,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'isPinned': serializer.toJson<bool>(isPinned),
       'isViewOnce': serializer.toJson<bool>(isViewOnce),
       'viewedAt': serializer.toJson<DateTime?>(viewedAt),
+      'clickSentAt': serializer.toJson<DateTime?>(clickSentAt),
       'senderNom': serializer.toJson<String?>(senderNom),
       'senderPseudo': serializer.toJson<String?>(senderPseudo),
       'senderAvatar': serializer.toJson<String?>(senderAvatar),
@@ -1961,6 +2001,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     bool? isPinned,
     bool? isViewOnce,
     Value<DateTime?> viewedAt = const Value.absent(),
+    Value<DateTime?> clickSentAt = const Value.absent(),
     Value<String?> senderNom = const Value.absent(),
     Value<String?> senderPseudo = const Value.absent(),
     Value<String?> senderAvatar = const Value.absent(),
@@ -2002,6 +2043,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     isPinned: isPinned ?? this.isPinned,
     isViewOnce: isViewOnce ?? this.isViewOnce,
     viewedAt: viewedAt.present ? viewedAt.value : this.viewedAt,
+    clickSentAt: clickSentAt.present ? clickSentAt.value : this.clickSentAt,
     senderNom: senderNom.present ? senderNom.value : this.senderNom,
     senderPseudo: senderPseudo.present ? senderPseudo.value : this.senderPseudo,
     senderAvatar: senderAvatar.present ? senderAvatar.value : this.senderAvatar,
@@ -2059,6 +2101,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ? data.isViewOnce.value
           : this.isViewOnce,
       viewedAt: data.viewedAt.present ? data.viewedAt.value : this.viewedAt,
+      clickSentAt: data.clickSentAt.present
+          ? data.clickSentAt.value
+          : this.clickSentAt,
       senderNom: data.senderNom.present ? data.senderNom.value : this.senderNom,
       senderPseudo: data.senderPseudo.present
           ? data.senderPseudo.value
@@ -2107,6 +2152,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('isPinned: $isPinned, ')
           ..write('isViewOnce: $isViewOnce, ')
           ..write('viewedAt: $viewedAt, ')
+          ..write('clickSentAt: $clickSentAt, ')
           ..write('senderNom: $senderNom, ')
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
@@ -2145,6 +2191,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     isPinned,
     isViewOnce,
     viewedAt,
+    clickSentAt,
     senderNom,
     senderPseudo,
     senderAvatar,
@@ -2182,6 +2229,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.isPinned == this.isPinned &&
           other.isViewOnce == this.isViewOnce &&
           other.viewedAt == this.viewedAt &&
+          other.clickSentAt == this.clickSentAt &&
           other.senderNom == this.senderNom &&
           other.senderPseudo == this.senderPseudo &&
           other.senderAvatar == this.senderAvatar &&
@@ -2217,6 +2265,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<bool> isPinned;
   final Value<bool> isViewOnce;
   final Value<DateTime?> viewedAt;
+  final Value<DateTime?> clickSentAt;
   final Value<String?> senderNom;
   final Value<String?> senderPseudo;
   final Value<String?> senderAvatar;
@@ -2251,6 +2300,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.isPinned = const Value.absent(),
     this.isViewOnce = const Value.absent(),
     this.viewedAt = const Value.absent(),
+    this.clickSentAt = const Value.absent(),
     this.senderNom = const Value.absent(),
     this.senderPseudo = const Value.absent(),
     this.senderAvatar = const Value.absent(),
@@ -2286,6 +2336,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.isPinned = const Value.absent(),
     this.isViewOnce = const Value.absent(),
     this.viewedAt = const Value.absent(),
+    this.clickSentAt = const Value.absent(),
     this.senderNom = const Value.absent(),
     this.senderPseudo = const Value.absent(),
     this.senderAvatar = const Value.absent(),
@@ -2324,6 +2375,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<bool>? isPinned,
     Expression<bool>? isViewOnce,
     Expression<DateTime>? viewedAt,
+    Expression<DateTime>? clickSentAt,
     Expression<String>? senderNom,
     Expression<String>? senderPseudo,
     Expression<String>? senderAvatar,
@@ -2359,6 +2411,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (isPinned != null) 'is_pinned': isPinned,
       if (isViewOnce != null) 'is_view_once': isViewOnce,
       if (viewedAt != null) 'viewed_at': viewedAt,
+      if (clickSentAt != null) 'click_sent_at': clickSentAt,
       if (senderNom != null) 'sender_nom': senderNom,
       if (senderPseudo != null) 'sender_pseudo': senderPseudo,
       if (senderAvatar != null) 'sender_avatar': senderAvatar,
@@ -2396,6 +2449,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<bool>? isPinned,
     Value<bool>? isViewOnce,
     Value<DateTime?>? viewedAt,
+    Value<DateTime?>? clickSentAt,
     Value<String?>? senderNom,
     Value<String?>? senderPseudo,
     Value<String?>? senderAvatar,
@@ -2431,6 +2485,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       isPinned: isPinned ?? this.isPinned,
       isViewOnce: isViewOnce ?? this.isViewOnce,
       viewedAt: viewedAt ?? this.viewedAt,
+      clickSentAt: clickSentAt ?? this.clickSentAt,
       senderNom: senderNom ?? this.senderNom,
       senderPseudo: senderPseudo ?? this.senderPseudo,
       senderAvatar: senderAvatar ?? this.senderAvatar,
@@ -2522,6 +2577,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (viewedAt.present) {
       map['viewed_at'] = Variable<DateTime>(viewedAt.value);
     }
+    if (clickSentAt.present) {
+      map['click_sent_at'] = Variable<DateTime>(clickSentAt.value);
+    }
     if (senderNom.present) {
       map['sender_nom'] = Variable<String>(senderNom.value);
     }
@@ -2575,6 +2633,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('isPinned: $isPinned, ')
           ..write('isViewOnce: $isViewOnce, ')
           ..write('viewedAt: $viewedAt, ')
+          ..write('clickSentAt: $clickSentAt, ')
           ..write('senderNom: $senderNom, ')
           ..write('senderPseudo: $senderPseudo, ')
           ..write('senderAvatar: $senderAvatar, ')
@@ -5736,6 +5795,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<bool> isPinned,
       Value<bool> isViewOnce,
       Value<DateTime?> viewedAt,
+      Value<DateTime?> clickSentAt,
       Value<String?> senderNom,
       Value<String?> senderPseudo,
       Value<String?> senderAvatar,
@@ -5772,6 +5832,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<bool> isPinned,
       Value<bool> isViewOnce,
       Value<DateTime?> viewedAt,
+      Value<DateTime?> clickSentAt,
       Value<String?> senderNom,
       Value<String?> senderPseudo,
       Value<String?> senderAvatar,
@@ -5917,6 +5978,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<DateTime> get viewedAt => $composableBuilder(
     column: $table.viewedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get clickSentAt => $composableBuilder(
+    column: $table.clickSentAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6090,6 +6156,11 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get clickSentAt => $composableBuilder(
+    column: $table.clickSentAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get senderNom => $composableBuilder(
     column: $table.senderNom,
     builder: (column) => ColumnOrderings(column),
@@ -6228,6 +6299,11 @@ class $$LocalMessagesTableAnnotationComposer
   GeneratedColumn<DateTime> get viewedAt =>
       $composableBuilder(column: $table.viewedAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get clickSentAt => $composableBuilder(
+    column: $table.clickSentAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get senderNom =>
       $composableBuilder(column: $table.senderNom, builder: (column) => column);
 
@@ -6314,6 +6390,7 @@ class $$LocalMessagesTableTableManager
                 Value<bool> isPinned = const Value.absent(),
                 Value<bool> isViewOnce = const Value.absent(),
                 Value<DateTime?> viewedAt = const Value.absent(),
+                Value<DateTime?> clickSentAt = const Value.absent(),
                 Value<String?> senderNom = const Value.absent(),
                 Value<String?> senderPseudo = const Value.absent(),
                 Value<String?> senderAvatar = const Value.absent(),
@@ -6348,6 +6425,7 @@ class $$LocalMessagesTableTableManager
                 isPinned: isPinned,
                 isViewOnce: isViewOnce,
                 viewedAt: viewedAt,
+                clickSentAt: clickSentAt,
                 senderNom: senderNom,
                 senderPseudo: senderPseudo,
                 senderAvatar: senderAvatar,
@@ -6384,6 +6462,7 @@ class $$LocalMessagesTableTableManager
                 Value<bool> isPinned = const Value.absent(),
                 Value<bool> isViewOnce = const Value.absent(),
                 Value<DateTime?> viewedAt = const Value.absent(),
+                Value<DateTime?> clickSentAt = const Value.absent(),
                 Value<String?> senderNom = const Value.absent(),
                 Value<String?> senderPseudo = const Value.absent(),
                 Value<String?> senderAvatar = const Value.absent(),
@@ -6418,6 +6497,7 @@ class $$LocalMessagesTableTableManager
                 isPinned: isPinned,
                 isViewOnce: isViewOnce,
                 viewedAt: viewedAt,
+                clickSentAt: clickSentAt,
                 senderNom: senderNom,
                 senderPseudo: senderPseudo,
                 senderAvatar: senderAvatar,

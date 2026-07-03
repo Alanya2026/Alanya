@@ -17,8 +17,77 @@
 // et un marqueur présent dans une URL (ex. les `_` d'un lien) peut être interprété
 // comme de la mise en forme. C'est le même compromis que WhatsApp.
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+/// Détecte les URLs (http, https, ou commençant par www.).
+final RegExp _urlRegExp = RegExp(
+  r'((?:https?://|www\.)[^\s]+)',
+  caseSensitive: false,
+);
+
+/// Ouvre une URL dans le navigateur externe. Ajoute https:// si absent (www.…).
+/// On n'utilise pas `canLaunchUrl` (qui peut renvoyer false à tort sur
+/// Android 11+) : on tente directement l'ouverture, avec un repli.
+Future<void> _openUrl(String raw) async {
+  var url = raw;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://$url';
+  }
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
+  try {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    // Repli : laisser le système décider du mode d'ouverture.
+    try {
+      await launchUrl(uri);
+    } catch (_) {/* pas d'app pour ouvrir — ignoré */}
+  }
+}
+
+/// Retire la ponctuation finale qui ne fait généralement pas partie de l'URL
+/// (ex. « visite https://exemple.com. » → l'URL s'arrête avant le point).
+String _trimUrlTail(String url) {
+  const tail = '.,;:!?)]}\'"';
+  var end = url.length;
+  while (end > 0 && tail.contains(url[end - 1])) {
+    end--;
+  }
+  return url.substring(0, end);
+}
+
+/// Découpe [text] en segments : texte normal + liens tappables (bleu souligné).
+void _appendWithLinks(
+    List<InlineSpan> out, String text, TextStyle style, Color linkColor) {
+  int last = 0;
+  for (final match in _urlRegExp.allMatches(text)) {
+    if (match.start > last) {
+      out.add(TextSpan(text: text.substring(last, match.start), style: style));
+    }
+    final raw = match.group(0)!;
+    final url = _trimUrlTail(raw);
+    out.add(TextSpan(
+      text: url,
+      style: style.copyWith(
+        color: linkColor,
+        decoration: TextDecoration.underline,
+        decorationColor: linkColor,
+      ),
+      recognizer: TapGestureRecognizer()..onTap = () => _openUrl(url),
+    ));
+    // Ponctuation finale rattachée au texte normal.
+    if (url.length < raw.length) {
+      out.add(TextSpan(text: raw.substring(url.length), style: style));
+    }
+    last = match.end;
+  }
+  if (last < text.length) {
+    out.add(TextSpan(text: text.substring(last), style: style));
+  }
+}
 
 /// Caractères de marquage et la transformation de style associée.
 /// Chaque fonction reçoit le style courant et renvoie le style enrichi,
@@ -42,18 +111,20 @@ TextDecoration _addDecoration(TextStyle s, TextDecoration add) {
 }
 
 /// Transforme [text] en liste de spans stylés à partir du style de base [base].
+/// Les URLs y sont rendues tappables (couleur [linkColor], soulignées).
 /// À utiliser dans un `Text.rich(TextSpan(children: parseRichSpans(...)))`.
-List<InlineSpan> parseRichSpans(String text, TextStyle base) {
-  return _parse(text, base);
+List<InlineSpan> parseRichSpans(String text, TextStyle base, {Color? linkColor}) {
+  return _parse(text, base, linkColor ?? const Color(0xFF1B6EF3));
 }
 
-List<InlineSpan> _parse(String text, TextStyle style) {
+List<InlineSpan> _parse(String text, TextStyle style, Color linkColor) {
   final spans = <InlineSpan>[];
   final buffer = StringBuffer();
 
   void flush() {
     if (buffer.isNotEmpty) {
-      spans.add(TextSpan(text: buffer.toString(), style: style));
+      // Au lieu d'un simple TextSpan, on détecte les liens dans ce segment.
+      _appendWithLinks(spans, buffer.toString(), style, linkColor);
       buffer.clear();
     }
   }
@@ -68,7 +139,7 @@ List<InlineSpan> _parse(String text, TextStyle style) {
         flush();
         final inner = text.substring(i + 1, close);
         // Analyse récursive → les marqueurs internes se combinent au style courant.
-        spans.addAll(_parse(inner, transform(style)));
+        spans.addAll(_parse(inner, transform(style), linkColor));
         i = close + 1;
         continue;
       }

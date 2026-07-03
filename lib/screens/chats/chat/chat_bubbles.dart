@@ -81,6 +81,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
                               msg.content!,
                               (context.text.bodyLarge ?? const TextStyle())
                                   .copyWith(color: _bubbleText(isMe)),
+                              linkColor: isMe
+                                  ? context.colors.onPrimary
+                                  : context.colors.primary,
                             ),
                           ),
                         ),
@@ -402,24 +405,51 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
+  bool _isPdf(LocalMessage msg) {
+    final name = (msg.mediaName ?? '').toLowerCase();
+    if (name.endsWith('.pdf')) return true;
+    final url = (msg.mediaUrl ?? '').toLowerCase();
+    return url.split('?').first.endsWith('.pdf');
+  }
+
   Widget _buildFileMedia(LocalMessage msg, bool isMe) {
+    final isPdf = _isPdf(msg);
     final color = isMe ? context.colors.onPrimary : context.colors.primary;
+    final iconColor = (isPdf && msg.status != 0) ? const Color(0xFFE5252A) : color;
     return GestureDetector(
       onTap: msg.status == 0 ? null : () => _openFile(msg),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(msg.status == 0 ? Icons.upload_file : Icons.insert_drive_file, color: color),
+          Icon(
+            msg.status == 0
+                ? Icons.upload_file
+                : (isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file),
+            color: iconColor,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
-            child: Text(
-              msg.mediaName ?? 'Fichier',
-              style: context.text.bodyLarge?.copyWith(
-                color: _bubbleText(isMe),
-                decoration: TextDecoration.underline,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  msg.mediaName ?? 'Fichier',
+                  style: context.text.bodyLarge?.copyWith(
+                    color: _bubbleText(isMe),
+                    decoration: TextDecoration.underline,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (isPdf && msg.status != 0)
+                  Text(
+                    'PDF · appuyer pour ouvrir',
+                    style: context.text.labelSmall?.copyWith(
+                      color: _bubbleText(isMe).withAlpha(170),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],

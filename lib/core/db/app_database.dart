@@ -79,6 +79,12 @@ class LocalMessages extends Table {
   /// « vu » via socket). Non nul ⇒ le média n'est plus ré-ouvrable.
   DateTimeColumn get viewedAt => dateTime().nullable()();
 
+  /// Heure locale à laquelle l'expéditeur a appuyé sur « envoyer » (heure du
+  /// clic). Distincte de `sendAt`, qui devient l'horodatage serveur (départ
+  /// effectif) une fois le message confirmé. Renseignée seulement pour mes
+  /// propres messages ; préservée à travers les resynchronisations.
+  DateTimeColumn get clickSentAt => dateTime().nullable()();
+
   TextColumn get senderNom => text().nullable()();
   TextColumn get senderPseudo => text().nullable()();
   TextColumn get senderAvatar => text().nullable()();
@@ -195,7 +201,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -225,6 +231,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 7) {
             await m.addColumn(localMessages, localMessages.isViewOnce);
             await m.addColumn(localMessages, localMessages.viewedAt);
+          }
+          if (from < 8) {
+            await m.addColumn(localMessages, localMessages.clickSentAt);
           }
         },
       );
