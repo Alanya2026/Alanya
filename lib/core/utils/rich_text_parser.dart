@@ -31,6 +31,10 @@ final RegExp _urlRegExp = RegExp(
 /// Ouvre une URL dans le navigateur externe. Ajoute https:// si absent (www.…).
 /// On n'utilise pas `canLaunchUrl` (qui peut renvoyer false à tort sur
 /// Android 11+) : on tente directement l'ouverture, avec un repli.
+///
+/// Exposée publiquement (via [openUrl]) afin de pouvoir être réutilisée
+/// ailleurs que dans le rendu des bulles de discussion — par ex. l'onglet
+/// « Liens » des détails d'une conversation.
 Future<void> _openUrl(String raw) async {
   var url = raw;
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -57,6 +61,19 @@ String _trimUrlTail(String url) {
     end--;
   }
   return url.substring(0, end);
+}
+
+/// Ouvre [raw] dans le navigateur externe (ajoute https:// si besoin).
+/// Wrapper public de [_openUrl], à utiliser partout où un lien doit être
+/// rendu tappable (bulles de discussion, onglet « Liens », etc.).
+Future<void> openUrl(String raw) => _openUrl(raw);
+
+/// Renvoie la première URL trouvée dans [text] (nettoyée de sa ponctuation
+/// de fin), ou `null` si aucune URL n'y figure.
+String? extractFirstUrl(String text) {
+  final match = _urlRegExp.firstMatch(text);
+  if (match == null) return null;
+  return _trimUrlTail(match.group(0)!);
 }
 
 /// Découpe [text] en segments : texte normal + liens tappables (bleu souligné).

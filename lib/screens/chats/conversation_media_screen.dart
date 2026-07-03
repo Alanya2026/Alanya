@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/db/app_database.dart';
+import '../../core/utils/rich_text_parser.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/common/common.dart';
 import 'media_viewer_screen.dart';
@@ -295,6 +296,9 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   }
 
   Widget _buildLinkTile(LocalMessage msg) {
+    // Le contenu du message peut contenir du texte autour de l'URL
+    // (« regarde ça : https://exemple.com ») : on n'ouvre que l'URL elle-même.
+    final url = extractFirstUrl(msg.content ?? '');
     return Container(
       decoration: BoxDecoration(
         color: context.colors.surface,
@@ -313,7 +317,10 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           child: const Icon(CupertinoIcons.link, color: AppColors.info, size: 22),
         ),
         title: Text(msg.content ?? 'Lien',
-            style: context.text.titleSmall,
+            style: context.text.titleSmall?.copyWith(
+              color: url != null ? AppColors.info : null,
+              decoration: url != null ? TextDecoration.underline : null,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis),
         subtitle: Text(
@@ -323,6 +330,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
         ),
         trailing: Icon(Icons.chevron_right,
             color: context.colors.outlineVariant),
+        onTap: url != null ? () => openUrl(url) : null,
       ),
     );
   }
