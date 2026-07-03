@@ -88,6 +88,19 @@ extension _ChatBubbles on _ChatDetailScreenState {
                           ),
                         ),
                       ),
+                    // Carte d'aperçu du premier lien du message (si le site
+                    // expose des métadonnées Open Graph).
+                    if (msg.content != null &&
+                        msg.content!.isNotEmpty &&
+                        !isAlbumMarkerContent(msg.content) &&
+                        firstUrlIn(msg.content!) != null)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 260),
+                        child: LinkPreviewCard(
+                          url: firstUrlIn(msg.content!)!,
+                          isMe: isMe,
+                        ),
+                      ),
                   ],
                   const SizedBox(height: AppSpacing.xs),
                   Row(
@@ -416,44 +429,81 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final isPdf = _isPdf(msg);
     final color = isMe ? context.colors.onPrimary : context.colors.primary;
     final iconColor = (isPdf && msg.status != 0) ? const Color(0xFFE5252A) : color;
+
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          msg.status == 0
+              ? Icons.upload_file
+              : (isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file),
+          color: iconColor,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                msg.mediaName ?? 'Fichier',
+                style: context.text.bodyLarge?.copyWith(
+                  color: _bubbleText(isMe),
+                  decoration: TextDecoration.underline,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (isPdf && msg.status != 0)
+                Text(
+                  'PDF · appuyer pour ouvrir',
+                  style: context.text.labelSmall?.copyWith(
+                    color: _bubbleText(isMe).withAlpha(170),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return GestureDetector(
       onTap: msg.status == 0 ? null : () => _openFile(msg),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            msg.status == 0
-                ? Icons.upload_file
-                : (isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file),
-            color: iconColor,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: (isPdf && msg.status != 0)
+          ? Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  msg.mediaName ?? 'Fichier',
-                  style: context.text.bodyLarge?.copyWith(
-                    color: _bubbleText(isMe),
-                    decoration: TextDecoration.underline,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (isPdf && msg.status != 0)
-                  Text(
-                    'PDF · appuyer pour ouvrir',
-                    style: context.text.labelSmall?.copyWith(
-                      color: _bubbleText(isMe).withAlpha(170),
-                    ),
-                  ),
+                _buildPdfThumbnail(msg),
+                row,
               ],
+            )
+          : row,
+    );
+  }
+
+  /// Vignette de la première page du PDF (si générable), au-dessus de la carte.
+  /// Tant qu'elle n'est pas prête (ou en cas d'échec), rien ne s'affiche.
+  Widget _buildPdfThumbnail(LocalMessage msg) {
+    return FutureBuilder<Uint8List?>(
+      future: PdfThumbnailService.forMessage(
+        localPath: msg.localMediaPath,
+        url: msg.mediaUrl,
+      ),
+      builder: (context, snap) {
+        final bytes = snap.data;
+        if (bytes == null) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: ClipRRect(
+            borderRadius: AppRadius.brSm,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240, maxHeight: 300),
+              child: Image.memory(bytes, fit: BoxFit.cover),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -76,6 +76,17 @@ String? extractFirstUrl(String text) {
   return _trimUrlTail(match.group(0)!);
 }
 
+/// Comme [extractFirstUrl], mais renvoie une URL **normalisée** (préfixée de
+/// https:// si le schéma est absent). Pratique quand l'URL doit être
+/// directement téléchargée — par ex. la carte d'aperçu de lien, qui interroge
+/// la page pour ses métadonnées Open Graph.
+String? firstUrlIn(String text) {
+  final raw = extractFirstUrl(text);
+  if (raw == null) return null;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  return 'https://$raw';
+}
+
 /// Découpe [text] en segments : texte normal + liens tappables (bleu souligné).
 void _appendWithLinks(
     List<InlineSpan> out, String text, TextStyle style, Color linkColor) {

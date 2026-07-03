@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
@@ -23,6 +24,8 @@ import '../../core/utils/rich_text_parser.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'view_once_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
+import 'chat/link_preview_card.dart';
+import '../../core/services/pdf_thumbnail_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';

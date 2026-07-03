@@ -73,6 +73,7 @@ dependencies:
   emoji_picker_flutter: ^3.1.0        # Sélecteur d'émojis
   open_filex: ^4.5.0                  # Ouvrir un fichier (PDF, doc…) avec l'app système
   url_launcher: ^6.3.0                 # Ouverture des liens cliquables dans le navigateur
+  html: ^0.15.4                        # Parsing des métadonnées Open Graph (aperçu de liens)
   pdfx: ^2.6.0                         # Aperçu et visionneuse PDF intégrée
 
   # ── Connectivité (offline detection au niveau OS) ────────────────
