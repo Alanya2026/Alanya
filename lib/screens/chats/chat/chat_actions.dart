@@ -112,7 +112,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (isMe && !msg.isDeleted)
               ListTile(
                 leading: Icon(Icons.delete_forever, color: error),
-                title: const Text('Supprimer pour tout le monde'),
+                title: const Text('Supprimer pour tous'),
                 onTap: () {
                   Navigator.pop(context);
                   if (msg.msgID != 0) _chat.repository.deleteMessage(msg.msgID, forAll: true);
@@ -288,7 +288,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (isMe)
               ListTile(
                 leading: Icon(Icons.delete_forever, color: error),
-                title: const Text('Supprimer pour tout le monde'),
+                title: const Text('Supprimer pour tous'),
                 onTap: () {
                   Navigator.pop(context);
                   for (final msg in items) {
