@@ -12,11 +12,19 @@ class AlbumMarker {
     required this.albumId,
     required this.index,
     required this.total,
+    this.photoCount,
+    this.videoCount,
   });
 
   final String albumId;
   final int index;
   final int total;
+
+  /// Nombre de photos dans l'album (absent sur les marqueurs legacy).
+  final int? photoCount;
+
+  /// Nombre de vidéos dans l'album (absent sur les marqueurs legacy).
+  final int? videoCount;
 }
 
 /// Item d'affichage dans la liste de messages (message seul ou album).
@@ -41,15 +49,18 @@ class ChatListAlbum extends ChatListItem {
 
 /// Encode le marqueur album dans `content`.
 ///
-/// Légende optionnelle (premier item uniquement) : après un saut de ligne,
-/// pour ne pas casser le parsing du header `|`.
+/// Format : `__talky_album__|id|index|total|photos|videos`
+/// Légende optionnelle (premier item uniquement) : après un saut de ligne.
 String encodeAlbumMarker({
   required String albumId,
   required int index,
   required int total,
+  int photoCount = 0,
+  int videoCount = 0,
   String? caption,
 }) {
-  final base = '$albumMarkerPrefix|$albumId|$index|$total';
+  final base =
+      '$albumMarkerPrefix|$albumId|$index|$total|$photoCount|$videoCount';
   final trimmed = caption?.trim();
   if (trimmed != null && trimmed.isNotEmpty && index == 0) {
     return '$base\n$trimmed';
@@ -58,17 +69,33 @@ String encodeAlbumMarker({
 }
 
 /// Décode le marqueur album depuis `content`, ou `null` si absent.
+///
+/// Accepte le format legacy (`|id|index|total`) et le format avec comptes
+/// photos/vidéos (`|id|index|total|photos|videos`).
 AlbumMarker? parseAlbumMarker(String? content) {
   if (content == null || !content.startsWith(albumMarkerPrefix)) return null;
   final header = content.split('\n').first;
   final parts = header.split('|');
-  if (parts.length != 4) return null;
+  if (parts.length != 4 && parts.length != 6) return null;
   final index = int.tryParse(parts[2]);
   final total = int.tryParse(parts[3]);
   if (parts[1].isEmpty || index == null || total == null || total < 2) {
     return null;
   }
-  return AlbumMarker(albumId: parts[1], index: index, total: total);
+  int? photoCount;
+  int? videoCount;
+  if (parts.length == 6) {
+    photoCount = int.tryParse(parts[4]);
+    videoCount = int.tryParse(parts[5]);
+    if (photoCount == null || videoCount == null) return null;
+  }
+  return AlbumMarker(
+    albumId: parts[1],
+    index: index,
+    total: total,
+    photoCount: photoCount,
+    videoCount: videoCount,
+  );
 }
 
 bool isAlbumMarkerContent(String? content) => parseAlbumMarker(content) != null;
@@ -92,6 +119,8 @@ String? albumCaptionFromMessages(List<LocalMessage> messages) {
 }
 
 /// Libellé d'aperçu pour la liste des conversations.
+///
+/// Ex. `📷 5 photos`, `🎥 3 vidéos`, `📷 5 photos, 🎥 Vidéo`.
 String albumPreviewLabel({
   required int photoCount,
   required int videoCount,
@@ -105,6 +134,28 @@ String albumPreviewLabel({
   }
   if (parts.isEmpty) return '📷 Album';
   return parts.join(', ');
+}
+
+/// Aperçu conversation à partir d'un marqueur album (jamais la légende).
+String previewLabelForAlbumMarker(AlbumMarker marker) {
+  final photos = marker.photoCount;
+  final videos = marker.videoCount;
+  if (photos != null && videos != null) {
+    return albumPreviewLabel(photoCount: photos, videoCount: videos);
+  }
+  // Legacy sans comptes : total affiché comme photos.
+  return marker.total == 1 ? '📷 Photo' : '📷 ${marker.total} photos';
+}
+
+/// Normalise un aperçu de conversation : marqueur album → décompte photos/vidéos.
+///
+/// À utiliser à l'affichage et à l'écriture de `lastMessage`, car le serveur
+/// peut encore stocker le marqueur brut (`__talky_album__|…`).
+String normalizeConversationPreview(String? text) {
+  if (text == null || text.isEmpty) return text ?? '';
+  final marker = parseAlbumMarker(text);
+  if (marker != null) return previewLabelForAlbumMarker(marker);
+  return text;
 }
 
 /// Fichier à envoyer dans un album.
@@ -125,7 +176,7 @@ class AlbumSendItem {
 String newAlbumId() =>
     'alb_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(999999)}';
 
-String previewLabelForAlbumTypes(List<int> types) {
+({int photos, int videos}) countAlbumMediaTypesFromTypes(List<int> types) {
   var photos = 0;
   var videos = 0;
   for (final t in types) {
@@ -135,21 +186,20 @@ String previewLabelForAlbumTypes(List<int> types) {
       videos++;
     }
   }
-  return albumPreviewLabel(photoCount: photos, videoCount: videos);
+  return (photos: photos, videos: videos);
+}
+
+String previewLabelForAlbumTypes(List<int> types) {
+  final counts = countAlbumMediaTypesFromTypes(types);
+  return albumPreviewLabel(
+    photoCount: counts.photos,
+    videoCount: counts.videos,
+  );
 }
 
 /// Compte photos/vidéos dans une liste de messages album.
 ({int photos, int videos}) countAlbumMediaTypes(List<LocalMessage> messages) {
-  var photos = 0;
-  var videos = 0;
-  for (final m in messages) {
-    if (m.type == 1) {
-      photos++;
-    } else if (m.type == 2) {
-      videos++;
-    }
-  }
-  return (photos: photos, videos: videos);
+  return countAlbumMediaTypesFromTypes(messages.map((m) => m.type).toList());
 }
 
 String previewLabelForAlbumMessages(List<LocalMessage> messages) {
@@ -217,12 +267,16 @@ String reencodeAlbumMarkerForForward({
   required String newAlbumId,
   required int index,
   required int total,
+  int photoCount = 0,
+  int videoCount = 0,
   String? caption,
 }) {
   return encodeAlbumMarker(
     albumId: newAlbumId,
     index: index,
     total: total,
+    photoCount: photoCount,
+    videoCount: videoCount,
     caption: caption,
   );
 }

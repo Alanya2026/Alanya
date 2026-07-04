@@ -81,13 +81,9 @@ String previewTextForForward(LocalMessage message) {
         ? message.content!.trim()
         : 'Message vide';
   }
+  // Item d'album transféré seul : libellé du média, pas de l'album entier.
   if (isAlbumMarkerContent(message.content)) {
-    final albumCaption = albumCaptionFromContent(message.content);
-    if (albumCaption != null) return albumCaption;
-    final marker = parseAlbumMarker(message.content);
-    if (marker != null) {
-      return 'Album · ${marker.total} médias';
-    }
+    return mediaLabelForType(message.type, mediaName: message.mediaName);
   }
   final caption = message.content?.trim();
   if (caption != null && caption.isNotEmpty) {

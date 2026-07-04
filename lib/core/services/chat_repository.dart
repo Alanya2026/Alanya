@@ -238,14 +238,9 @@ class ChatRepository {
     bool isViewOnce = false,
   }) {
     if (!isViewOnce) {
-      if (isAlbumMarkerContent(content)) {
-        final caption = albumCaptionFromContent(content);
-        if (caption != null) return caption;
-        final marker = parseAlbumMarker(content);
-        if (marker != null) {
-          return marker.total == 1 ? '📷 Photo' : '📷 ${marker.total} photos';
-        }
-      }
+      // Album : toujours le décompte photos/vidéos, jamais la légende.
+      final marker = parseAlbumMarker(content);
+      if (marker != null) return previewLabelForAlbumMarker(marker);
       if (content != null && content.trim().isNotEmpty) return content;
     }
     switch (type) {
@@ -431,8 +426,9 @@ class ChatRepository {
     final albumId = newAlbumId();
     final total = items.length;
     final now = DateTime.now().toUtc();
-    final preview = effectiveCaption ??
-        previewLabelForAlbumTypes(items.map((e) => e.type).toList());
+    final types = items.map((e) => e.type).toList();
+    final preview = previewLabelForAlbumTypes(types);
+    final counts = countAlbumMediaTypesFromTypes(types);
 
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
@@ -440,6 +436,8 @@ class ChatRepository {
         albumId: albumId,
         index: i,
         total: total,
+        photoCount: counts.photos,
+        videoCount: counts.videos,
         caption: effectiveCaption,
       );
       await _sendAlbumItem(
@@ -597,6 +595,7 @@ class ChatRepository {
     final freshAlbumId = newAlbumId();
     final total = sorted.length;
     final albumCaption = albumCaptionFromMessages(sorted);
+    final counts = countAlbumMediaTypes(sorted);
 
     for (var i = 0; i < sorted.length; i++) {
       final source = sorted[i];
@@ -604,6 +603,8 @@ class ChatRepository {
         newAlbumId: freshAlbumId,
         index: i,
         total: total,
+        photoCount: counts.photos,
+        videoCount: counts.videos,
         caption: albumCaption,
       );
 
@@ -1258,9 +1259,12 @@ class ChatRepository {
     int? senderID,
     int? status,
   }) async {
+    final normalized = normalizeConversationPreview(preview);
     final companion = LocalConversationsCompanion(
       conversID: Value(conversID),
-      lastMessage: Value(preview.length > 200 ? preview.substring(0, 200) : preview),
+      lastMessage: Value(
+        normalized.length > 200 ? normalized.substring(0, 200) : normalized,
+      ),
       lastMessageAt: Value(at),
       lastMessageType: Value(type),
       lastMessageSenderID:
@@ -1287,7 +1291,11 @@ class ChatRepository {
       isGroup: Value(c.isGroup),
       groupName: Value(c.groupName),
       groupPhoto: Value(c.groupPhoto),
-      lastMessage: Value(c.lastMessage),
+      lastMessage: Value(
+        c.lastMessage == null
+            ? null
+            : normalizeConversationPreview(c.lastMessage),
+      ),
       lastMessageAt: Value(_parseDate(c.lastMessageAt)),
       lastMessageSenderID: Value(c.lastMessageSenderID),
       lastMessageType: Value(c.lastMessageType),

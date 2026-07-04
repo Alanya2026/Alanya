@@ -743,6 +743,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
     return GestureDetector(
       onTap: () => _openAlbumMediaList(all, initialIndex: index),
+      onLongPress: () => _showMessageMenu(msg, isMe),
       child: ClipRRect(
         borderRadius: AppRadius.brSm,
         child: Stack(

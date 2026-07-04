@@ -8,9 +8,12 @@ import '../../core/db/app_database.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
 import '../../core/utils/media_viewer_items.dart';
 import '../../providers/chat_provider.dart';
+import '../../widgets/common/common.dart';
+import 'forward_message_screen.dart';
 import 'media_viewer_screen.dart';
 
 /// Liste verticale des médias d'un album (étape avant la visionneuse plein écran).
@@ -19,10 +22,12 @@ class AlbumMediaListScreen extends StatefulWidget {
     super.key,
     required this.messages,
     this.initialIndex = 0,
+    this.excludeConversationId,
   });
 
   final List<LocalMessage> messages;
   final int initialIndex;
+  final int? excludeConversationId;
 
   static const double itemHeight = 240;
   static const double itemSpacing = AppSpacing.sm;
@@ -104,6 +109,63 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
     }
   }
 
+  void _showItemMenu(LocalMessage msg) {
+    final primary = context.colors.primary;
+    final canForward = canForwardMessage(msg);
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (canForward)
+              ListTile(
+                leading: Icon(Icons.forward, color: primary),
+                title: const Text('Transférer'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _openForwardPicker(msg);
+                },
+              )
+            else
+              ListTile(
+                leading: Icon(
+                  Icons.forward,
+                  color: context.colors.onSurfaceVariant,
+                ),
+                title: const Text('Transfert indisponible'),
+                subtitle: const Text('Le média n\'est pas encore prêt'),
+                enabled: false,
+              ),
+            AppSpacing.vGapSm,
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openForwardPicker(LocalMessage msg) {
+    if (!canForwardMessage(msg)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ce média ne peut pas être transféré pour le moment'),
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ForwardMessageScreen(
+          message: msg,
+          excludeConversationId: widget.excludeConversationId,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = previewLabelForAlbumMessages(widget.messages);
@@ -125,6 +187,7 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
             message: msg,
             index: index,
             onTap: () => _openViewer(index),
+            onLongPress: () => _showItemMenu(msg),
           );
         },
       ),
@@ -137,11 +200,13 @@ class _AlbumListTile extends StatelessWidget {
     required this.message,
     required this.index,
     required this.onTap,
+    required this.onLongPress,
   });
 
   final LocalMessage message;
   final int index;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +219,7 @@ class _AlbumListTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: AppRadius.brMd,
         child: ClipRRect(
           borderRadius: AppRadius.brMd,

@@ -27,12 +27,8 @@ extension _ChatActions on _ChatDetailScreenState {
   String _previewOf(LocalMessage m) {
     // Vue unique : ne jamais exposer la légende hors de la visionneuse.
     if (m.isViewOnce) return _mediaLabel(m.type);
-    if (isAlbumMarkerContent(m.content)) {
-      final caption = albumCaptionFromContent(m.content);
-      if (caption != null) return caption;
-      final marker = parseAlbumMarker(m.content);
-      if (marker != null) return 'Album · ${marker.total} médias';
-    }
+    // Item d'album : aperçu du média seul (pas du groupe).
+    if (isAlbumMarkerContent(m.content)) return _mediaLabel(m.type);
     if (m.content != null && m.content!.isNotEmpty) return stripMarkers(m.content!);
     return _mediaLabel(m.type);
   }
@@ -981,6 +977,7 @@ extension _ChatActions on _ChatDetailScreenState {
         builder: (_) => AlbumMediaListScreen(
           messages: sorted,
           initialIndex: initialIndex.clamp(0, sorted.length - 1),
+          excludeConversationId: widget.conversationId,
         ),
       ),
     );
