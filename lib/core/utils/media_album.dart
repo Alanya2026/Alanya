@@ -40,18 +40,28 @@ class ChatListAlbum extends ChatListItem {
 }
 
 /// Encode le marqueur album dans `content`.
+///
+/// Légende optionnelle (premier item uniquement) : après un saut de ligne,
+/// pour ne pas casser le parsing du header `|`.
 String encodeAlbumMarker({
   required String albumId,
   required int index,
   required int total,
+  String? caption,
 }) {
-  return '$albumMarkerPrefix|$albumId|$index|$total';
+  final base = '$albumMarkerPrefix|$albumId|$index|$total';
+  final trimmed = caption?.trim();
+  if (trimmed != null && trimmed.isNotEmpty && index == 0) {
+    return '$base\n$trimmed';
+  }
+  return base;
 }
 
 /// Décode le marqueur album depuis `content`, ou `null` si absent.
 AlbumMarker? parseAlbumMarker(String? content) {
   if (content == null || !content.startsWith(albumMarkerPrefix)) return null;
-  final parts = content.split('|');
+  final header = content.split('\n').first;
+  final parts = header.split('|');
   if (parts.length != 4) return null;
   final index = int.tryParse(parts[2]);
   final total = int.tryParse(parts[3]);
@@ -62,6 +72,24 @@ AlbumMarker? parseAlbumMarker(String? content) {
 }
 
 bool isAlbumMarkerContent(String? content) => parseAlbumMarker(content) != null;
+
+/// Légende utilisateur attachée à un marqueur album (si présente).
+String? albumCaptionFromContent(String? content) {
+  if (content == null || !content.startsWith(albumMarkerPrefix)) return null;
+  final nl = content.indexOf('\n');
+  if (nl < 0 || nl + 1 >= content.length) return null;
+  final caption = content.substring(nl + 1).trim();
+  return caption.isEmpty ? null : caption;
+}
+
+/// Première légende trouvée parmi les messages d'un album.
+String? albumCaptionFromMessages(List<LocalMessage> messages) {
+  for (final m in messages) {
+    final caption = albumCaptionFromContent(m.content);
+    if (caption != null) return caption;
+  }
+  return null;
+}
 
 /// Libellé d'aperçu pour la liste des conversations.
 String albumPreviewLabel({
@@ -189,11 +217,13 @@ String reencodeAlbumMarkerForForward({
   required String newAlbumId,
   required int index,
   required int total,
+  String? caption,
 }) {
   return encodeAlbumMarker(
     albumId: newAlbumId,
     index: index,
     total: total,
+    caption: caption,
   );
 }
 

@@ -26,6 +26,8 @@ extension _ChatActions on _ChatDetailScreenState {
 
   String _previewOf(LocalMessage m) {
     if (isAlbumMarkerContent(m.content)) {
+      final caption = albumCaptionFromContent(m.content);
+      if (caption != null) return caption;
       final marker = parseAlbumMarker(m.content);
       if (marker != null) return 'Album · ${marker.total} médias';
     }
@@ -416,7 +418,12 @@ extension _ChatActions on _ChatDetailScreenState {
 
     if (viewOnce) {
       final x = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-      if (x != null) _sendMediaFile(File(x.path), type: 1, viewOnce: true);
+      if (x != null) {
+        await _composeAndSendMedia(
+          [AlbumSendItem(file: File(x.path), type: 1)],
+          viewOnce: true,
+        );
+      }
       return;
     }
 
@@ -439,22 +446,12 @@ extension _ChatActions on _ChatDetailScreenState {
       }
     }
 
-    final limited = picked.take(ChatRepository.maxAlbumItems).toList();
-    if (limited.length == 1) {
-      _sendMediaFile(File(limited.first.path), type: 1);
-      return;
-    }
-
-    final items = limited
+    final items = picked
+        .take(ChatRepository.maxAlbumItems)
         .map((x) => AlbumSendItem(file: File(x.path), type: 1))
         .toList();
 
-    if (widget.conversationId == null || _myId == null) return;
-    _chat.repository.sendMediaAlbum(
-      conversationID: widget.conversationId!,
-      items: items,
-    );
-    _scrollToBottom();
+    await _composeAndSendMedia(items);
   }
 
   Future<int?> _readVideoDuration(File file) async {
@@ -473,7 +470,12 @@ extension _ChatActions on _ChatDetailScreenState {
   Future<void> _pickImageFromCamera() async {
     final viewOnce = _pendingViewOnce;
     final x = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-    if (x != null) _sendMediaFile(File(x.path), type: 1, viewOnce: viewOnce);
+    if (x != null) {
+      await _composeAndSendMedia(
+        [AlbumSendItem(file: File(x.path), type: 1)],
+        viewOnce: viewOnce,
+      );
+    }
   }
 
   Future<void> _pickVideo() async {
@@ -484,7 +486,10 @@ extension _ChatActions on _ChatDetailScreenState {
       if (x == null) return;
       final file = File(x.path);
       final durSec = await _readVideoDuration(file);
-      _sendMediaFile(file, type: 2, duration: durSec, viewOnce: true);
+      await _composeAndSendMedia(
+        [AlbumSendItem(file: file, type: 2, duration: durSec)],
+        viewOnce: true,
+      );
       return;
     }
 
@@ -505,7 +510,7 @@ extension _ChatActions on _ChatDetailScreenState {
     }
 
     final limited = picked.take(ChatRepository.maxAlbumItems).toList();
-    final valid = <XFile>[];
+    final items = <AlbumSendItem>[];
     for (final x in limited) {
       final file = File(x.path);
       final size = file.existsSync() ? file.lengthSync() : 0;
@@ -519,28 +524,49 @@ extension _ChatActions on _ChatDetailScreenState {
         }
         continue;
       }
-      valid.add(x);
-    }
-    if (valid.isEmpty) return;
-
-    if (valid.length == 1) {
-      final file = File(valid.first.path);
-      final durSec = await _readVideoDuration(file);
-      _sendMediaFile(file, type: 2, duration: durSec);
-      return;
-    }
-
-    final items = <AlbumSendItem>[];
-    for (final x in valid) {
-      final file = File(x.path);
       final durSec = await _readVideoDuration(file);
       items.add(AlbumSendItem(file: file, type: 2, duration: durSec));
     }
+    if (items.isEmpty) return;
 
+    await _composeAndSendMedia(items);
+  }
+
+  /// Ouvre l'aperçu avec légende, puis envoie le(s) média(s).
+  Future<void> _composeAndSendMedia(
+    List<AlbumSendItem> items, {
+    bool viewOnce = false,
+  }) async {
+    if (items.isEmpty || widget.conversationId == null || _myId == null) return;
+    if (!mounted) return;
+
+    final result = await Navigator.push<MediaSendResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MediaSendScreen(items: items, isViewOnce: viewOnce),
+        fullscreenDialog: true,
+      ),
+    );
+    if (result == null || !mounted) return;
     if (widget.conversationId == null || _myId == null) return;
+
+    if (items.length == 1) {
+      final item = items.first;
+      _sendMediaFile(
+        item.file,
+        type: item.type,
+        name: item.mediaName,
+        duration: item.duration,
+        viewOnce: viewOnce,
+        content: result.caption,
+      );
+      return;
+    }
+
     _chat.repository.sendMediaAlbum(
       conversationID: widget.conversationId!,
       items: items,
+      content: result.caption,
     );
     _scrollToBottom();
   }
@@ -551,7 +577,14 @@ extension _ChatActions on _ChatDetailScreenState {
     if (path != null) _sendMediaFile(File(path), type: 4, name: res!.files.single.name);
   }
 
-  void _sendMediaFile(File file, {required int type, String? name, int? duration, bool viewOnce = false}) {
+  void _sendMediaFile(
+    File file, {
+    required int type,
+    String? name,
+    int? duration,
+    bool viewOnce = false,
+    String? content,
+  }) {
     if (widget.conversationId == null || _myId == null) return;
 
     final size = file.existsSync() ? file.lengthSync() : 0;
@@ -570,6 +603,7 @@ extension _ChatActions on _ChatDetailScreenState {
       file: file,
       mediaName: name,
       mediaDuration: duration,
+      content: content,
       isViewOnce: viewOnce,
     );
     _scrollToBottom();

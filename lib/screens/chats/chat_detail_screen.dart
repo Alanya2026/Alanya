@@ -41,6 +41,7 @@ import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
 import 'forward_message_screen.dart';
 import 'album_media_list_screen.dart';
+import 'media_send_screen.dart';
 import 'media_viewer_screen.dart';
 import 'voice_message_bubble.dart';
 

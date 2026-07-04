@@ -231,6 +231,8 @@ class ChatRepository {
   /// l'aperçu de conv affiche un nom de fichier brut (`IMG_2026.jpg`).
   static String _previewForMedia(int type, String? content, String? mediaName) {
     if (isAlbumMarkerContent(content)) {
+      final caption = albumCaptionFromContent(content);
+      if (caption != null) return caption;
       final marker = parseAlbumMarker(content);
       if (marker != null) {
         return marker.total == 1 ? '📷 Photo' : '📷 ${marker.total} photos';
@@ -379,9 +381,12 @@ class ChatRepository {
   static const int maxAlbumItems = 30;
 
   /// Envoie plusieurs photos/vidéos regroupées en album (marqueur dans `content`).
+  ///
+  /// [content] est la légende optionnelle (stockée sur le premier item).
   Future<void> sendMediaAlbum({
     required int conversationID,
     required List<AlbumSendItem> items,
+    String? content,
     bool isForwarded = false,
   }) async {
     if (_myId == 0) {
@@ -389,6 +394,9 @@ class ChatRepository {
       return;
     }
     if (items.isEmpty) return;
+    final caption = content?.trim();
+    final effectiveCaption =
+        caption != null && caption.isNotEmpty ? caption : null;
     if (items.length == 1) {
       final item = items.first;
       await sendMediaFile(
@@ -397,6 +405,7 @@ class ChatRepository {
         file: item.file,
         mediaName: item.mediaName,
         mediaDuration: item.duration,
+        content: effectiveCaption,
         isForwarded: isForwarded,
       );
       return;
@@ -405,7 +414,8 @@ class ChatRepository {
     final albumId = newAlbumId();
     final total = items.length;
     final now = DateTime.now().toUtc();
-    final preview = previewLabelForAlbumTypes(items.map((e) => e.type).toList());
+    final preview = effectiveCaption ??
+        previewLabelForAlbumTypes(items.map((e) => e.type).toList());
 
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
@@ -413,6 +423,7 @@ class ChatRepository {
         albumId: albumId,
         index: i,
         total: total,
+        caption: effectiveCaption,
       );
       await _sendAlbumItem(
         conversationID: conversationID,
@@ -568,6 +579,7 @@ class ChatRepository {
 
     final freshAlbumId = newAlbumId();
     final total = sorted.length;
+    final albumCaption = albumCaptionFromMessages(sorted);
 
     for (var i = 0; i < sorted.length; i++) {
       final source = sorted[i];
@@ -575,6 +587,7 @@ class ChatRepository {
         newAlbumId: freshAlbumId,
         index: i,
         total: total,
+        caption: albumCaption,
       );
 
       final url = source.mediaUrl;

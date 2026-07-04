@@ -70,15 +70,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     )
                   else ...[
                     if (msg.type != 0) _buildMedia(msg, isMe),
-                    if (msg.content != null &&
-                        msg.content!.isNotEmpty &&
-                        !isAlbumMarkerContent(msg.content))
+                    if (_captionText(msg) case final caption?)
                       Padding(
                         padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
                         child: Text.rich(
                           TextSpan(
                             children: parseRichSpans(
-                              msg.content!,
+                              caption,
                               (context.text.bodyLarge ?? const TextStyle())
                                   .copyWith(color: _bubbleText(isMe)),
                               linkColor: isMe
@@ -90,14 +88,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       ),
                     // Carte d'aperçu du premier lien du message (si le site
                     // expose des métadonnées Open Graph).
-                    if (msg.content != null &&
-                        msg.content!.isNotEmpty &&
-                        !isAlbumMarkerContent(msg.content) &&
-                        firstUrlIn(msg.content!) != null)
+                    if (_captionText(msg) case final caption?
+                        when firstUrlIn(caption) != null)
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 260),
                         child: LinkPreviewCard(
-                          url: firstUrlIn(msg.content!)!,
+                          url: firstUrlIn(caption)!,
                           isMe: isMe,
                         ),
                       ),
@@ -283,6 +279,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
         ],
       ),
     );
+  }
+
+  /// Texte affiché sous un média : légende utilisateur, hors marqueur album.
+  String? _captionText(LocalMessage msg) {
+    final content = msg.content;
+    if (content == null || content.isEmpty) return null;
+    if (isAlbumMarkerContent(content)) {
+      return albumCaptionFromContent(content);
+    }
+    return content;
   }
 
   // ── Rendu média selon le type ──────────────────────────────────────
@@ -570,8 +576,35 @@ extension _ChatBubbles on _ChatDetailScreenState {
                         ),
                       ],
                     )
-                  else
+                  else ...[
                     _buildAlbumGrid(sorted, isMe),
+                    if (albumCaptionFromMessages(sorted) case final caption?)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.sm,
+                          AppSpacing.sm,
+                          AppSpacing.sm,
+                          0,
+                        ),
+                        child: Align(
+                          alignment: isMe
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Text.rich(
+                            TextSpan(
+                              children: parseRichSpans(
+                                caption,
+                                (context.text.bodyLarge ?? const TextStyle())
+                                    .copyWith(color: _bubbleText(isMe)),
+                                linkColor: isMe
+                                    ? context.colors.onPrimary
+                                    : context.colors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                   const SizedBox(height: AppSpacing.xs),
                   Row(
                     mainAxisSize: MainAxisSize.min,

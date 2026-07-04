@@ -26,6 +26,8 @@ LocalMessage _msg({
     localMediaPath: localMediaPath,
     isEdited: false,
     isDeleted: isDeleted,
+    isPinned: false,
+    isViewOnce: false,
     isStatusReply: 0,
     isForwarded: false,
     syncPending: false,

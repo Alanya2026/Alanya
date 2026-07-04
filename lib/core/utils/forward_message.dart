@@ -82,6 +82,8 @@ String previewTextForForward(LocalMessage message) {
         : 'Message vide';
   }
   if (isAlbumMarkerContent(message.content)) {
+    final albumCaption = albumCaptionFromContent(message.content);
+    if (albumCaption != null) return albumCaption;
     final marker = parseAlbumMarker(message.content);
     if (marker != null) {
       return 'Album · ${marker.total} médias';
@@ -96,6 +98,8 @@ String previewTextForForward(LocalMessage message) {
 
 String previewTextForForwardAlbum(List<LocalMessage> items) {
   if (items.isEmpty) return 'Album vide';
+  final caption = albumCaptionFromMessages(items);
+  if (caption != null) return caption;
   return previewLabelForAlbumMessages(items);
 }
 

@@ -37,7 +37,10 @@ class AlanyaPhoneFormatter {
     if (digits.isEmpty) return '';
     if (digits.length <= 3) return digits;
     if (digits.length <= 4) return _groupDigits(digits, const [2, 2]);
-    return _groupDigits(digits.substring(0, 8), const [2, 2, 2, 2]);
+    // Longueurs intermédiaires 5–7 (et 8) : ne pas appeler substring(0, 8)
+    // si la chaîne est plus courte — RangeError et écran gris sur le pavé.
+    final limited = digits.length > 8 ? digits.substring(0, 8) : digits;
+    return _groupDigits(limited, const [2, 2, 2, 2]);
   }
 
   static String _groupDigits(String digits, List<int> groups) {

@@ -22,6 +22,8 @@ LocalMessage _mediaMsg({
     mediaUrl: mediaUrl ?? 'https://example.com/$clientId.jpg',
     isEdited: false,
     isDeleted: false,
+    isPinned: false,
+    isViewOnce: false,
     isStatusReply: 0,
     isForwarded: false,
     syncPending: false,
@@ -51,6 +53,28 @@ void main() {
     test('returns null for invalid marker', () {
       expect(parseAlbumMarker('__talky_album__|id|x|5'), isNull);
       expect(parseAlbumMarker('__talky_album__|id|0|1'), isNull);
+    });
+
+    test('round-trip with caption on first item', () {
+      const id = 'alb_cap';
+      final withCaption = encodeAlbumMarker(
+        albumId: id,
+        index: 0,
+        total: 3,
+        caption: '  Coucou  ',
+      );
+      expect(withCaption, '__talky_album__|alb_cap|0|3\nCoucou');
+      expect(parseAlbumMarker(withCaption)!.albumId, id);
+      expect(albumCaptionFromContent(withCaption), 'Coucou');
+
+      final other = encodeAlbumMarker(
+        albumId: id,
+        index: 1,
+        total: 3,
+        caption: 'ignorée',
+      );
+      expect(other, '__talky_album__|alb_cap|1|3');
+      expect(albumCaptionFromContent(other), isNull);
     });
   });
 
