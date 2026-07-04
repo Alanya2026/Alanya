@@ -229,23 +229,32 @@ class ChatRepository {
   /// Aperçu canonique pour les messages média : on respecte le `content` saisi
   /// s'il existe, sinon on retombe sur l'emoji + libellé de type. Évite que
   /// l'aperçu de conv affiche un nom de fichier brut (`IMG_2026.jpg`).
-  static String _previewForMedia(int type, String? content, String? mediaName) {
-    if (isAlbumMarkerContent(content)) {
-      final caption = albumCaptionFromContent(content);
-      if (caption != null) return caption;
-      final marker = parseAlbumMarker(content);
-      if (marker != null) {
-        return marker.total == 1 ? '📷 Photo' : '📷 ${marker.total} photos';
+  ///
+  /// Pour une vue unique, la légende reste réservée à la visionneuse.
+  static String _previewForMedia(
+    int type,
+    String? content,
+    String? mediaName, {
+    bool isViewOnce = false,
+  }) {
+    if (!isViewOnce) {
+      if (isAlbumMarkerContent(content)) {
+        final caption = albumCaptionFromContent(content);
+        if (caption != null) return caption;
+        final marker = parseAlbumMarker(content);
+        if (marker != null) {
+          return marker.total == 1 ? '📷 Photo' : '📷 ${marker.total} photos';
+        }
       }
+      if (content != null && content.trim().isNotEmpty) return content;
     }
-    if (content != null && content.trim().isNotEmpty) return content;
     switch (type) {
       case 1:
-        return '📷 Photo';
+        return isViewOnce ? '📷 Photo · Vue unique' : '📷 Photo';
       case 2:
-        return '🎥 Vidéo';
+        return isViewOnce ? '🎥 Vidéo · Vue unique' : '🎥 Vidéo';
       case 3:
-        return '🎵 Audio';
+        return isViewOnce ? '🎵 Audio · Vue unique' : '🎵 Audio';
       case 4:
         return mediaName?.isNotEmpty == true ? '📎 $mediaName' : '📎 Fichier';
       default:
@@ -286,8 +295,12 @@ class ChatRepository {
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
-        conversationID, _previewForMedia(type, content, mediaName), type, now,
-        senderID: _myId, status: 0);
+        conversationID,
+        _previewForMedia(type, content, mediaName, isViewOnce: isViewOnce),
+        type,
+        now,
+        senderID: _myId,
+        status: 0);
 
     _emitSend(
       clientId: clientId,
@@ -338,8 +351,12 @@ class ChatRepository {
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
-        conversationID, _previewForMedia(type, content, name), type, now,
-        senderID: _myId, status: 0);
+        conversationID,
+        _previewForMedia(type, content, name, isViewOnce: isViewOnce),
+        type,
+        now,
+        senderID: _myId,
+        status: 0);
 
     try {
       final res = await _api.uploadMedia(file);
@@ -1071,10 +1088,13 @@ class ChatRepository {
 
     final convID = _toInt(json['conversationID']);
     final type = _toInt(json['type']);
+    final isViewOnce =
+        json['isViewOnce'] == 1 || json['isViewOnce'] == true;
     final preview = _previewForMedia(
       type,
       json['content']?.toString(),
       json['mediaName']?.toString(),
+      isViewOnce: isViewOnce,
     );
     final at = _parseDate(json['sendAt']) ?? DateTime.now().toUtc();
     final isActive = convID != 0 && convID == _activeConversationID;
@@ -1097,7 +1117,6 @@ class ChatRepository {
     final mtype = _toInt(json['type']);
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
-    final isViewOnce = json['isViewOnce'] == 1 || json['isViewOnce'] == true;
     if (mediaUrl != null && msgID != 0 && !isViewOnce) {
       if (mtype == 1 || mtype == 3) {
         // Images, audio : auto-cache toujours.

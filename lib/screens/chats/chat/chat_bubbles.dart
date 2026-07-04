@@ -70,33 +70,36 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     )
                   else ...[
                     if (msg.type != 0) _buildMedia(msg, isMe),
-                    if (_captionText(msg) case final caption?)
-                      Padding(
-                        padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
-                        child: Text.rich(
-                          TextSpan(
-                            children: parseRichSpans(
-                              caption,
-                              (context.text.bodyLarge ?? const TextStyle())
-                                  .copyWith(color: _bubbleText(isMe)),
-                              linkColor: isMe
-                                  ? context.colors.onPrimary
-                                  : context.colors.primary,
+                    // Vue unique : la légende n'apparaît que dans la visionneuse.
+                    if (!msg.isViewOnce) ...[
+                      if (_captionText(msg) case final caption?)
+                        Padding(
+                          padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
+                          child: Text.rich(
+                            TextSpan(
+                              children: parseRichSpans(
+                                caption,
+                                (context.text.bodyLarge ?? const TextStyle())
+                                    .copyWith(color: _bubbleText(isMe)),
+                                linkColor: isMe
+                                    ? context.colors.onPrimary
+                                    : context.colors.primary,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    // Carte d'aperçu du premier lien du message (si le site
-                    // expose des métadonnées Open Graph).
-                    if (_captionText(msg) case final caption?
-                        when firstUrlIn(caption) != null)
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 260),
-                        child: LinkPreviewCard(
-                          url: firstUrlIn(caption)!,
-                          isMe: isMe,
+                      // Carte d'aperçu du premier lien du message (si le site
+                      // expose des métadonnées Open Graph).
+                      if (_captionText(msg) case final caption?
+                          when firstUrlIn(caption) != null)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 260),
+                          child: LinkPreviewCard(
+                            url: firstUrlIn(caption)!,
+                            isMe: isMe,
+                          ),
                         ),
-                      ),
+                    ],
                   ],
                   const SizedBox(height: AppSpacing.xs),
                   Row(

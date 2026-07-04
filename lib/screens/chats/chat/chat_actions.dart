@@ -25,6 +25,8 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   String _previewOf(LocalMessage m) {
+    // Vue unique : ne jamais exposer la légende hors de la visionneuse.
+    if (m.isViewOnce) return _mediaLabel(m.type);
     if (isAlbumMarkerContent(m.content)) {
       final caption = albumCaptionFromContent(m.content);
       if (caption != null) return caption;
@@ -1014,12 +1016,14 @@ extension _ChatActions on _ChatDetailScreenState {
       await ScreenProtector.preventScreenshotOn();
     } catch (_) {/* non supporté sur la plateforme — ignoré */}
 
+    final caption = msg.content?.trim();
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ViewOnceViewerScreen(
           type: msg.type,
           mediaUrl: msg.mediaUrl!,
+          caption: caption != null && caption.isNotEmpty ? caption : null,
         ),
       ),
     );

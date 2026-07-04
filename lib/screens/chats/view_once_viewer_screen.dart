@@ -5,6 +5,9 @@ import 'package:just_audio/just_audio.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/services/media_cache_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/utils/rich_text_parser.dart';
 
 /// Visionneuse plein écran pour un média à VUE UNIQUE (image, vidéo, audio).
 ///
@@ -12,14 +15,18 @@ import '../../core/theme/app_colors.dart';
 /// fichier temporaire (via le client HTTP de l'app, qui gère le cert pinning —
 /// les lecteurs natifs échoueraient sur une URL réseau directe), lu depuis ce
 /// fichier, puis le fichier est supprimé à la fermeture de l'écran.
+///
+/// La légende éventuelle n'est affichée qu'ici, jamais dans la bulle de chat.
 class ViewOnceViewerScreen extends StatefulWidget {
   final int type; // 1=image, 2=vidéo, 3=audio
   final String mediaUrl;
+  final String? caption;
 
   const ViewOnceViewerScreen({
     super.key,
     required this.type,
     required this.mediaUrl,
+    this.caption,
   });
 
   @override
@@ -100,6 +107,9 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final caption = widget.caption?.trim();
+    final hasCaption = caption != null && caption.isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.black,
       appBar: AppBar(
@@ -108,7 +118,54 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
         title: const Text('Vue unique',
             style: TextStyle(color: AppColors.white, fontSize: 16)),
       ),
-      body: Center(child: _buildBody()),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(child: _buildBody()),
+          if (hasCaption && !_loading && !_error)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.72),
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.xxl,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
+                    child: Text.rich(
+                      TextSpan(
+                        children: parseRichSpans(
+                          caption,
+                          (context.text.bodyLarge ?? const TextStyle()).copyWith(
+                            color: AppColors.white,
+                            height: 1.35,
+                          ),
+                          linkColor: context.colors.primary,
+                        ),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
