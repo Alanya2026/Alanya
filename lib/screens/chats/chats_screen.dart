@@ -5,6 +5,7 @@ import '../../core/services/local_hidden_store.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/conversation_display.dart';
+import '../../core/utils/media_album.dart';
 import '../../core/utils/rich_text_parser.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -280,7 +281,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   Expanded(
                     child: Text(
                       conv.lastMessage != null
-                          ? stripMarkers(conv.lastMessage!)
+                          ? stripMarkers(
+                              normalizeConversationPreview(conv.lastMessage!),
+                            )
                           : 'Aucun message',
                       style: context.text.bodyMedium?.copyWith(
                         color: hasUnread ? colors.onSurface : colors.onSurfaceVariant,

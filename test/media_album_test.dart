@@ -22,6 +22,8 @@ LocalMessage _mediaMsg({
     mediaUrl: mediaUrl ?? 'https://example.com/$clientId.jpg',
     isEdited: false,
     isDeleted: false,
+    isPinned: false,
+    isViewOnce: false,
     isStatusReply: 0,
     isForwarded: false,
     syncPending: false,
@@ -33,14 +35,31 @@ void main() {
   group('encodeAlbumMarker / parseAlbumMarker', () {
     test('round-trip', () {
       const id = 'alb_test_123';
-      final encoded = encodeAlbumMarker(albumId: id, index: 2, total: 5);
-      expect(encoded, '__talky_album__|alb_test_123|2|5');
+      final encoded = encodeAlbumMarker(
+        albumId: id,
+        index: 2,
+        total: 5,
+        photoCount: 4,
+        videoCount: 1,
+      );
+      expect(encoded, '__talky_album__|alb_test_123|2|5|4|1');
 
       final parsed = parseAlbumMarker(encoded);
       expect(parsed, isNotNull);
       expect(parsed!.albumId, id);
       expect(parsed.index, 2);
       expect(parsed.total, 5);
+      expect(parsed.photoCount, 4);
+      expect(parsed.videoCount, 1);
+    });
+
+    test('legacy format without counts still parses', () {
+      final parsed = parseAlbumMarker('__talky_album__|alb1|0|3');
+      expect(parsed, isNotNull);
+      expect(parsed!.total, 3);
+      expect(parsed.photoCount, isNull);
+      expect(parsed.videoCount, isNull);
+      expect(previewLabelForAlbumMarker(parsed), '📷 3 photos');
     });
 
     test('returns null for normal caption', () {
@@ -51,6 +70,36 @@ void main() {
     test('returns null for invalid marker', () {
       expect(parseAlbumMarker('__talky_album__|id|x|5'), isNull);
       expect(parseAlbumMarker('__talky_album__|id|0|1'), isNull);
+    });
+
+    test('round-trip with caption on first item', () {
+      const id = 'alb_cap';
+      final withCaption = encodeAlbumMarker(
+        albumId: id,
+        index: 0,
+        total: 3,
+        photoCount: 2,
+        videoCount: 1,
+        caption: '  Coucou  ',
+      );
+      expect(withCaption, '__talky_album__|alb_cap|0|3|2|1\nCoucou');
+      expect(parseAlbumMarker(withCaption)!.albumId, id);
+      expect(albumCaptionFromContent(withCaption), 'Coucou');
+      expect(
+        previewLabelForAlbumMarker(parseAlbumMarker(withCaption)!),
+        '📷 2 photos, 🎥 Vidéo',
+      );
+
+      final other = encodeAlbumMarker(
+        albumId: id,
+        index: 1,
+        total: 3,
+        photoCount: 2,
+        videoCount: 1,
+        caption: 'ignorée',
+      );
+      expect(other, '__talky_album__|alb_cap|1|3|2|1');
+      expect(albumCaptionFromContent(other), isNull);
     });
   });
 
@@ -116,18 +165,43 @@ void main() {
     });
   });
 
+  group('normalizeConversationPreview', () {
+    test('remplace le marqueur album par le décompte', () {
+      expect(
+        normalizeConversationPreview('__talky_album__|alb1|0|5|4|1'),
+        '📷 4 photos, 🎥 Vidéo',
+      );
+      expect(
+        normalizeConversationPreview('__talky_album__|alb1|2|3'),
+        '📷 3 photos',
+      );
+    });
+
+    test('laisse le texte normal intact', () {
+      expect(normalizeConversationPreview('Bonjour'), 'Bonjour');
+      expect(normalizeConversationPreview(null), '');
+    });
+  });
+
   group('albumPreviewLabel', () {
     test('photos only', () {
       expect(
-        albumPreviewLabel(photoCount: 3, videoCount: 0),
-        '📷 3 photos',
+        albumPreviewLabel(photoCount: 5, videoCount: 0),
+        '📷 5 photos',
+      );
+    });
+
+    test('videos only', () {
+      expect(
+        albumPreviewLabel(photoCount: 0, videoCount: 3),
+        '🎥 3 vidéos',
       );
     });
 
     test('mixed media', () {
       expect(
-        albumPreviewLabel(photoCount: 2, videoCount: 1),
-        '📷 2 photos, 🎥 Vidéo',
+        albumPreviewLabel(photoCount: 5, videoCount: 1),
+        '📷 5 photos, 🎥 Vidéo',
       );
     });
   });

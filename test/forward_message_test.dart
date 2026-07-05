@@ -26,6 +26,8 @@ LocalMessage _msg({
     localMediaPath: localMediaPath,
     isEdited: false,
     isDeleted: isDeleted,
+    isPinned: false,
+    isViewOnce: false,
     isStatusReply: 0,
     isForwarded: false,
     syncPending: false,
@@ -91,14 +93,22 @@ void main() {
       );
     });
 
-    test('album marker affiche libellé album', () {
+    test('item d\'album seul affiche le type de média', () {
       expect(
         previewTextForForward(_msg(
           type: 1,
           content: '__talky_album__|alb1|0|4',
           mediaUrl: 'https://cdn/x.jpg',
         )),
-        'Album · 4 médias',
+        'Photo',
+      );
+      expect(
+        previewTextForForward(_msg(
+          type: 2,
+          content: '__talky_album__|alb1|1|4',
+          mediaUrl: 'https://cdn/x.mp4',
+        )),
+        'Vidéo',
       );
     });
   });
@@ -111,6 +121,15 @@ void main() {
         mediaUrl: 'https://cdn/x.jpg',
       );
       expect(resolveForwardCaption(source, null), isNull);
+    });
+
+    test('item d\'album reste transférable individuellement', () {
+      final source = _msg(
+        type: 1,
+        content: '__talky_album__|alb1|2|5',
+        mediaUrl: 'https://cdn/x.jpg',
+      );
+      expect(canForwardMessage(source), isTrue);
     });
   });
 }

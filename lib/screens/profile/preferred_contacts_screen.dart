@@ -94,6 +94,8 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
             child: AppSearchField(
               controller: _searchController,
               hintText: 'Rechercher par nom, pseudo ou téléphone…',
+              fillColor: context.colors.surface,
+              borderColor: context.colors.outline,
               onChanged: (_) {},
               onClear: _clearSearch,
             ),

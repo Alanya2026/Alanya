@@ -81,11 +81,9 @@ String previewTextForForward(LocalMessage message) {
         ? message.content!.trim()
         : 'Message vide';
   }
+  // Item d'album transféré seul : libellé du média, pas de l'album entier.
   if (isAlbumMarkerContent(message.content)) {
-    final marker = parseAlbumMarker(message.content);
-    if (marker != null) {
-      return 'Album · ${marker.total} médias';
-    }
+    return mediaLabelForType(message.type, mediaName: message.mediaName);
   }
   final caption = message.content?.trim();
   if (caption != null && caption.isNotEmpty) {
@@ -96,6 +94,8 @@ String previewTextForForward(LocalMessage message) {
 
 String previewTextForForwardAlbum(List<LocalMessage> items) {
   if (items.isEmpty) return 'Album vide';
+  final caption = albumCaptionFromMessages(items);
+  if (caption != null) return caption;
   return previewLabelForAlbumMessages(items);
 }
 

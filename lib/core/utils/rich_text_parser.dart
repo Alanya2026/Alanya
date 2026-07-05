@@ -126,8 +126,10 @@ final Map<String, TextStyle Function(TextStyle)> _markers = {
   '~': (s) => s.copyWith(decoration: _addDecoration(s, TextDecoration.lineThrough)),
   '=': (s) => s.copyWith(decoration: _addDecoration(s, TextDecoration.underline)),
   // Manuscrit : police d'écriture chargée via google_fonts. On conserve la
-  // couleur, la taille et les décorations héritées en passant `textStyle`.
-  '#': (s) => GoogleFonts.caveat(textStyle: s).copyWith(fontSize: (s.fontSize ?? 16) * 1.25),
+  // couleur et les décorations héritées en passant `textStyle`. Caveat a une
+  // hauteur d'œil plus faible que le sans-serif : on grossit pour aligner
+  // visuellement le corps du message.
+  '#': (s) => GoogleFonts.caveat(textStyle: s).copyWith(fontSize: (s.fontSize ?? 16) * 1.5),
 };
 
 /// Combine une nouvelle décoration avec celle déjà présente (barré + souligné).

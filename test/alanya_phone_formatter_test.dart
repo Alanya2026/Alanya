@@ -18,7 +18,11 @@ void main() {
       expect(AlanyaPhoneFormatter.formatLiveInput('1'), '1');
       expect(AlanyaPhoneFormatter.formatLiveInput('123'), '123');
       expect(AlanyaPhoneFormatter.formatLiveInput('1234'), '12 34');
+      expect(AlanyaPhoneFormatter.formatLiveInput('12345'), '12 34 5');
+      expect(AlanyaPhoneFormatter.formatLiveInput('123456'), '12 34 56');
+      expect(AlanyaPhoneFormatter.formatLiveInput('1234567'), '12 34 56 7');
       expect(AlanyaPhoneFormatter.formatLiveInput('12345678'), '12 34 56 78');
+      expect(AlanyaPhoneFormatter.formatLiveInput('123456789'), '12 34 56 78');
     });
 
     test('validate lengths', () {

@@ -8,6 +8,9 @@ import '../../../core/theme/app_theme.dart';
 /// Carte d'aperçu affichée sous un message contenant un lien : vignette,
 /// titre, description et domaine. Se dessine uniquement si le site expose des
 /// métadonnées Open Graph exploitables ; sinon elle ne rend rien.
+///
+/// Style carte plate (type WhatsApp) : fond léger, contour discret, sans
+/// bande d'accent latérale.
 class LinkPreviewCard extends StatefulWidget {
   final String url;
   final bool isMe;
@@ -19,7 +22,8 @@ class LinkPreviewCard extends StatefulWidget {
 }
 
 class _LinkPreviewCardState extends State<LinkPreviewCard> {
-  late final Future<LinkPreviewData?> _future = LinkPreviewService.fetch(widget.url);
+  late final Future<LinkPreviewData?> _future =
+      LinkPreviewService.fetch(widget.url);
 
   Future<void> _open() async {
     final uri = Uri.tryParse(widget.url);
@@ -41,23 +45,21 @@ class _LinkPreviewCardState extends State<LinkPreviewCard> {
         final colors = context.colors;
         final onBubble = widget.isMe ? colors.onPrimary : colors.onSurface;
         final bg = widget.isMe
-            ? colors.onPrimary.withAlpha(30)
-            : colors.surfaceContainerHighest.withAlpha(120);
+            ? colors.onPrimary.withAlpha(32)
+            : colors.surfaceContainerHighest.withAlpha(140);
+        final borderColor = widget.isMe
+            ? colors.onPrimary.withAlpha(40)
+            : colors.outlineVariant.withAlpha(160);
 
         return Padding(
-          padding: const EdgeInsets.only(top: 6),
+          padding: const EdgeInsets.only(top: AppSpacing.sm),
           child: GestureDetector(
             onTap: _open,
             child: Container(
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: AppRadius.brMd,
-                border: Border(
-                  left: BorderSide(
-                    color: widget.isMe ? colors.onPrimary : colors.primary,
-                    width: 3,
-                  ),
-                ),
+                border: Border.all(color: borderColor, width: 1),
               ),
               clipBehavior: Clip.antiAlias,
               child: Column(
@@ -68,24 +70,33 @@ class _LinkPreviewCardState extends State<LinkPreviewCard> {
                     CachedNetworkImage(
                       imageUrl: data.imageUrl!,
                       width: double.infinity,
-                      height: 140,
+                      height: 120,
                       fit: BoxFit.cover,
                       errorWidget: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   Padding(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          data.domain,
+                          data.domain.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: context.text.labelSmall?.copyWith(
-                            color: onBubble.withAlpha(160),
+                            color: onBubble.withAlpha(150),
+                            letterSpacing: 0.4,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         if (data.title != null) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: AppSpacing.xs),
                           Text(
                             data.title!,
                             maxLines: 2,
@@ -93,17 +104,19 @@ class _LinkPreviewCardState extends State<LinkPreviewCard> {
                             style: context.text.bodyMedium?.copyWith(
                               color: onBubble,
                               fontWeight: FontWeight.w600,
+                              height: 1.25,
                             ),
                           ),
                         ],
                         if (data.description != null) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: AppSpacing.xs),
                           Text(
                             data.description!,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: context.text.bodySmall?.copyWith(
-                              color: onBubble.withAlpha(190),
+                              color: onBubble.withAlpha(180),
+                              height: 1.3,
                             ),
                           ),
                         ],

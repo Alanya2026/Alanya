@@ -277,11 +277,7 @@ class AddContactItem extends StatelessWidget {
         ],
       ),
       trailing: alreadyContact
-          ? Chip(
-              label: const Text('Déjà ajouté', style: TextStyle(fontSize: 12)),
-              backgroundColor: AppColors.surfaceMuted,
-              padding: EdgeInsets.zero,
-            )
+          ? const StatusChip(label: 'Ajouté')
           : isAdding
               ? SizedBox(
                   width: 24,

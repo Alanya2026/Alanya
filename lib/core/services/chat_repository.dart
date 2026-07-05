@@ -229,21 +229,27 @@ class ChatRepository {
   /// Aperçu canonique pour les messages média : on respecte le `content` saisi
   /// s'il existe, sinon on retombe sur l'emoji + libellé de type. Évite que
   /// l'aperçu de conv affiche un nom de fichier brut (`IMG_2026.jpg`).
-  static String _previewForMedia(int type, String? content, String? mediaName) {
-    if (isAlbumMarkerContent(content)) {
+  ///
+  /// Pour une vue unique, la légende reste réservée à la visionneuse.
+  static String _previewForMedia(
+    int type,
+    String? content,
+    String? mediaName, {
+    bool isViewOnce = false,
+  }) {
+    if (!isViewOnce) {
+      // Album : toujours le décompte photos/vidéos, jamais la légende.
       final marker = parseAlbumMarker(content);
-      if (marker != null) {
-        return marker.total == 1 ? '📷 Photo' : '📷 ${marker.total} photos';
-      }
+      if (marker != null) return previewLabelForAlbumMarker(marker);
+      if (content != null && content.trim().isNotEmpty) return content;
     }
-    if (content != null && content.trim().isNotEmpty) return content;
     switch (type) {
       case 1:
-        return '📷 Photo';
+        return isViewOnce ? '📷 Photo · Vue unique' : '📷 Photo';
       case 2:
-        return '🎥 Vidéo';
+        return isViewOnce ? '🎥 Vidéo · Vue unique' : '🎥 Vidéo';
       case 3:
-        return '🎵 Audio';
+        return isViewOnce ? '🎵 Audio · Vue unique' : '🎵 Audio';
       case 4:
         return mediaName?.isNotEmpty == true ? '📎 $mediaName' : '📎 Fichier';
       default:
@@ -284,8 +290,12 @@ class ChatRepository {
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
-        conversationID, _previewForMedia(type, content, mediaName), type, now,
-        senderID: _myId, status: 0);
+        conversationID,
+        _previewForMedia(type, content, mediaName, isViewOnce: isViewOnce),
+        type,
+        now,
+        senderID: _myId,
+        status: 0);
 
     _emitSend(
       clientId: clientId,
@@ -336,8 +346,12 @@ class ChatRepository {
       syncPending: const Value(true),
     ));
     _bumpConversationSummary(
-        conversationID, _previewForMedia(type, content, name), type, now,
-        senderID: _myId, status: 0);
+        conversationID,
+        _previewForMedia(type, content, name, isViewOnce: isViewOnce),
+        type,
+        now,
+        senderID: _myId,
+        status: 0);
 
     try {
       final res = await _api.uploadMedia(file);
@@ -379,9 +393,12 @@ class ChatRepository {
   static const int maxAlbumItems = 30;
 
   /// Envoie plusieurs photos/vidéos regroupées en album (marqueur dans `content`).
+  ///
+  /// [content] est la légende optionnelle (stockée sur le premier item).
   Future<void> sendMediaAlbum({
     required int conversationID,
     required List<AlbumSendItem> items,
+    String? content,
     bool isForwarded = false,
   }) async {
     if (_myId == 0) {
@@ -389,6 +406,9 @@ class ChatRepository {
       return;
     }
     if (items.isEmpty) return;
+    final caption = content?.trim();
+    final effectiveCaption =
+        caption != null && caption.isNotEmpty ? caption : null;
     if (items.length == 1) {
       final item = items.first;
       await sendMediaFile(
@@ -397,6 +417,7 @@ class ChatRepository {
         file: item.file,
         mediaName: item.mediaName,
         mediaDuration: item.duration,
+        content: effectiveCaption,
         isForwarded: isForwarded,
       );
       return;
@@ -405,7 +426,9 @@ class ChatRepository {
     final albumId = newAlbumId();
     final total = items.length;
     final now = DateTime.now().toUtc();
-    final preview = previewLabelForAlbumTypes(items.map((e) => e.type).toList());
+    final types = items.map((e) => e.type).toList();
+    final preview = previewLabelForAlbumTypes(types);
+    final counts = countAlbumMediaTypesFromTypes(types);
 
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
@@ -413,6 +436,9 @@ class ChatRepository {
         albumId: albumId,
         index: i,
         total: total,
+        photoCount: counts.photos,
+        videoCount: counts.videos,
+        caption: effectiveCaption,
       );
       await _sendAlbumItem(
         conversationID: conversationID,
@@ -568,6 +594,8 @@ class ChatRepository {
 
     final freshAlbumId = newAlbumId();
     final total = sorted.length;
+    final albumCaption = albumCaptionFromMessages(sorted);
+    final counts = countAlbumMediaTypes(sorted);
 
     for (var i = 0; i < sorted.length; i++) {
       final source = sorted[i];
@@ -575,6 +603,9 @@ class ChatRepository {
         newAlbumId: freshAlbumId,
         index: i,
         total: total,
+        photoCount: counts.photos,
+        videoCount: counts.videos,
+        caption: albumCaption,
       );
 
       final url = source.mediaUrl;
@@ -1058,10 +1089,13 @@ class ChatRepository {
 
     final convID = _toInt(json['conversationID']);
     final type = _toInt(json['type']);
+    final isViewOnce =
+        json['isViewOnce'] == 1 || json['isViewOnce'] == true;
     final preview = _previewForMedia(
       type,
       json['content']?.toString(),
       json['mediaName']?.toString(),
+      isViewOnce: isViewOnce,
     );
     final at = _parseDate(json['sendAt']) ?? DateTime.now().toUtc();
     final isActive = convID != 0 && convID == _activeConversationID;
@@ -1084,7 +1118,6 @@ class ChatRepository {
     final mtype = _toInt(json['type']);
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
-    final isViewOnce = json['isViewOnce'] == 1 || json['isViewOnce'] == true;
     if (mediaUrl != null && msgID != 0 && !isViewOnce) {
       if (mtype == 1 || mtype == 3) {
         // Images, audio : auto-cache toujours.
@@ -1226,9 +1259,12 @@ class ChatRepository {
     int? senderID,
     int? status,
   }) async {
+    final normalized = normalizeConversationPreview(preview);
     final companion = LocalConversationsCompanion(
       conversID: Value(conversID),
-      lastMessage: Value(preview.length > 200 ? preview.substring(0, 200) : preview),
+      lastMessage: Value(
+        normalized.length > 200 ? normalized.substring(0, 200) : normalized,
+      ),
       lastMessageAt: Value(at),
       lastMessageType: Value(type),
       lastMessageSenderID:
@@ -1255,7 +1291,11 @@ class ChatRepository {
       isGroup: Value(c.isGroup),
       groupName: Value(c.groupName),
       groupPhoto: Value(c.groupPhoto),
-      lastMessage: Value(c.lastMessage),
+      lastMessage: Value(
+        c.lastMessage == null
+            ? null
+            : normalizeConversationPreview(c.lastMessage),
+      ),
       lastMessageAt: Value(_parseDate(c.lastMessageAt)),
       lastMessageSenderID: Value(c.lastMessageSenderID),
       lastMessageType: Value(c.lastMessageType),
