@@ -199,7 +199,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
   /// Bulle d'appel alignée selon la direction, tappable pour rappeler.
   Widget _buildCallBubble(LocalCall call) {
     final outgoing = call.idCaller == _myId;
-    final missed = call.status == 2 || call.status == 3; // rejeté / manqué
+    final missed = call.status != 1; // tout ce qui n'est pas "répondu" (0 = sans réponse, 2 = rejeté)
     final isVideo = call.type == 1;
     final colors = context.colors;
 
@@ -229,7 +229,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           borderRadius: AppRadius.brLg,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: () => _initiateCall(isVideo: isVideo),
+            onTap: () => _showCallBackOptions(call),
             child: Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md, vertical: AppSpacing.sm),

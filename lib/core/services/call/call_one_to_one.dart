@@ -12,7 +12,11 @@ extension CallOneToOne on CallService {
     String? targetUserName,
     String? targetUserPhoto,
   }) async {
-    if (_status != CallStatus.idle) return;
+    if (_status != CallStatus.idle) {
+      _errorMessage = 'Un appel est déjà en cours';
+      notify();
+      return;
+    }
     _errorMessage = null;
     _status = CallStatus.outgoing;
     _remoteUserId = targetUserId;
