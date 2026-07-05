@@ -26,6 +26,7 @@ import 'view_once_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
 import 'chat/link_preview_card.dart';
 import '../../core/services/pdf_thumbnail_service.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -351,59 +352,87 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
                         return const LoadingState();
                       }
-                      if (messages.isEmpty && !partnerTyping) {
-                        return const EmptyState(
-                          icon: Icons.waving_hand_outlined,
-                          title: 'Aucun message',
-                          message: 'Dites bonjour pour démarrer la conversation !',
-                        );
-                      }
-                      // Auto-scroll au 1er chargement, si déjà en bas, ou quand
-                      // l'indicateur de frappe apparaît.
-                      if (!_suppressAutoScroll && (_firstLoad || _atBottom)) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _scrollToBottom();
-                          _firstLoad = false;
-                        });
-                      }
-                      final displayItems = groupMessagesForDisplay(messages);
-                      return ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        itemCount: displayItems.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == displayItems.length) {
-                            return TypingBubbleSlot(visible: partnerTyping);
+                      // Journal d'appels : discussions 1-1 uniquement.
+                      final callsStream = (!widget.isGroup && widget.userId != null)
+                          ? context.read<LocalCacheRepository>().watchCalls()
+                          : Stream<List<LocalCall>>.value(const []);
+                      return StreamBuilder<List<LocalCall>>(
+                        stream: callsStream,
+                        builder: (context, callSnap) {
+                          final calls = (callSnap.data ?? const <LocalCall>[])
+                              .where((c) =>
+                                  (c.idCaller == _myId && c.idReceiver == widget.userId) ||
+                                  (c.idCaller == widget.userId && c.idReceiver == _myId))
+                              .toList();
+
+                          if (messages.isEmpty && calls.isEmpty && !partnerTyping) {
+                            return const EmptyState(
+                              icon: Icons.waving_hand_outlined,
+                              title: 'Aucun message',
+                              message: 'Dites bonjour pour démarrer la conversation !',
+                            );
                           }
-                          final item = displayItems[index];
-                          final msg = switch (item) {
-                            ChatListSingle(:final message) => message,
-                            ChatListAlbum(:final messages) => messages.last,
-                          };
-                          final prev = index > 0
-                              ? switch (displayItems[index - 1]) {
-                                  ChatListSingle(:final message) => message,
-                                  ChatListAlbum(:final messages) => messages.last,
-                                }
-                              : null;
-                          final showDate = prev == null ||
-                              !_sameDay(prev.sendAt.toLocal(), msg.sendAt.toLocal());
-                          if (msg.msgID == _pendingScrollMsgId) {
+                          // Auto-scroll au 1er chargement, si déjà en bas, ou quand
+                          // l'indicateur de frappe apparaît.
+                          if (!_suppressAutoScroll && (_firstLoad || _atBottom)) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              _tryRevealMessage(msg.msgID);
+                              _scrollToBottom();
+                              _firstLoad = false;
                             });
                           }
-                          return Column(
-                            key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
-                            children: [
-                              if (showDate) _buildDateSeparator(msg.sendAt.toLocal()),
-                              switch (item) {
-                                ChatListSingle(:final message) =>
-                                  _buildMessageBubble(message, message.senderID == _myId),
-                                ChatListAlbum(:final messages) =>
-                                  _buildAlbumBubble(messages, messages.first.senderID == _myId),
-                              },
-                            ],
+                          // Fil unifié : messages/albums + appels, triés par date.
+                          final feed = <Object>[
+                            ...groupMessagesForDisplay(messages),
+                            ...calls,
+                          ]..sort((a, b) => _feedTime(a).compareTo(_feedTime(b)));
+
+                          return ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            itemCount: feed.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == feed.length) {
+                                return TypingBubbleSlot(visible: partnerTyping);
+                              }
+                              final item = feed[index];
+                              final itemTime = _feedTime(item);
+                              final prevTime = index > 0 ? _feedTime(feed[index - 1]) : null;
+                              final showDate = prevTime == null ||
+                                  !_sameDay(prevTime.toLocal(), itemTime.toLocal());
+
+                              // Entrée d'appel (journal type WhatsApp).
+                              if (item is LocalCall) {
+                                return Column(
+                                  children: [
+                                    if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                    _buildCallBubble(item),
+                                  ],
+                                );
+                              }
+
+                              final chatItem = item as ChatListItem;
+                              final msg = switch (chatItem) {
+                                ChatListSingle(:final message) => message,
+                                ChatListAlbum(:final messages) => messages.last,
+                              };
+                              if (msg.msgID == _pendingScrollMsgId) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  _tryRevealMessage(msg.msgID);
+                                });
+                              }
+                              return Column(
+                                key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
+                                children: [
+                                  if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                  switch (chatItem) {
+                                    ChatListSingle(:final message) =>
+                                      _buildMessageBubble(message, message.senderID == _myId),
+                                    ChatListAlbum(:final messages) =>
+                                      _buildAlbumBubble(messages, messages.first.senderID == _myId),
+                                  },
+                                ],
+                              );
+                            },
                           );
                         },
                       );

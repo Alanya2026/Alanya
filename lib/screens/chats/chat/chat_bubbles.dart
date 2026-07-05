@@ -179,6 +179,88 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
+  // ── Journal d'appels intégré au fil (style WhatsApp, 1-1) ─────────────
+  /// Date de tri d'un élément du fil (message, album ou appel).
+  DateTime _feedTime(Object item) {
+    if (item is LocalCall) return item.createdAt;
+    if (item is ChatListSingle) return item.message.sendAt;
+    if (item is ChatListAlbum) return item.messages.first.sendAt;
+    return DateTime.now();
+  }
+
+  String _fmtCallDuration(int? seconds) {
+    final s = seconds ?? 0;
+    final h = s ~/ 3600;
+    final m = (s % 3600) ~/ 60;
+    final sec = s % 60;
+    two(int n) => n.toString().padLeft(2, '0');
+    return h > 0 ? '$h:${two(m)}:${two(sec)}' : '$m:${two(sec)}';
+  }
+
+  /// Bulle d'appel alignée selon la direction, tappable pour rappeler.
+  Widget _buildCallBubble(LocalCall call) {
+    final outgoing = call.idCaller == _myId;
+    final missed = call.status == 2 || call.status == 3; // rejeté / manqué
+    final isVideo = call.type == 1;
+    final colors = context.colors;
+
+    final dirIcon = missed
+        ? (outgoing ? Icons.call_missed_outgoing : Icons.call_missed)
+        : (outgoing ? Icons.call_made : Icons.call_received);
+    final dirColor = missed ? colors.error : context.semantic.success;
+
+    final kind = isVideo ? 'Appel vidéo' : 'Appel vocal';
+    final label = missed
+        ? '$kind manqué'
+        : (outgoing ? '$kind sortant' : '$kind entrant');
+
+    final t = call.createdAt.toLocal();
+    two(int n) => n.toString().padLeft(2, '0');
+    final time = '${two(t.hour)}:${two(t.minute)}';
+    final meta = (!missed && (call.duration ?? 0) > 0)
+        ? '$time · ${_fmtCallDuration(call.duration)}'
+        : time;
+
+    return Align(
+      alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Material(
+          color: context.semantic.surfaceMuted,
+          borderRadius: AppRadius.brLg,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => _initiateCall(isVideo: isVideo),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(dirIcon, size: 20, color: dirColor),
+                  const SizedBox(width: AppSpacing.sm),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(label, style: context.text.bodyMedium),
+                      Text(meta,
+                          style: context.text.labelSmall
+                              ?.copyWith(color: colors.onSurfaceVariant)),
+                    ],
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+                      size: 20, color: colors.primary),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildReplyQuote(String content, bool isMe, {required int replyToID}) {
     final accent = isMe ? context.colors.onPrimary : context.colors.primary;
     return Material(
