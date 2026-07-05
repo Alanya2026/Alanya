@@ -1,54 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
+
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_controller.dart';
-import '../../providers/auth_provider.dart';
-import '../../talky_api_client.dart';
-import '../../talky_models.dart';
-import '../../widgets/common/common.dart';
-import '../../widgets/alanya_phone_field.dart';
+import 'privacy_screen.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  User? _user;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    final cached =
-        Provider.of<AuthProvider>(context, listen: false).currentUser;
-    if (cached != null && mounted) {
-      setState(() {
-        _user = cached;
-        _isLoading = false;
-      });
-    }
-
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getMe();
-      if (!mounted) return;
-      setState(() {
-        _user = User.fromJson(data);
-        _isLoading = false;
-      });
-    } catch (_) {
-      if (mounted && _user == null) setState(() => _isLoading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,220 +23,116 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         children: [
           AppSpacing.vGapLg,
-          // User Info Section
-          Container(
-            color: context.colors.surface,
-            padding: AppSpacing.card,
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          AppAvatar(
-                            imageUrl: _user?.avatarUrl,
-                            name: _user?.nom ?? 'U',
-                            size: AppSizes.avatarSm,
-                          ),
-                          AppSpacing.hGapLg,
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _user?.nom ?? 'User',
-                                  style: context.text.titleLarge,
-                                ),
-                                AppSpacing.vGapXs,
-                                Text(
-                                  '@${_user?.pseudo ?? 'pseudo'}',
-                                  style: context.text.bodyMedium?.copyWith(
-                                      color: context.colors.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      AppSpacing.vGapLg,
-                      Container(
-                        padding: AppSpacing.card,
-                        decoration: BoxDecoration(
-                          color: context.semantic.surfaceMuted,
-                          borderRadius: AppRadius.brSm,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.phone,
-                                color: context.colors.primary,
-                                size: AppIconSize.sm),
-                            AppSpacing.hGapMd,
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Téléphone Alanya',
-                                  style: context.text.labelSmall?.copyWith(
-                                      color: context.colors.onSurfaceVariant),
-                                ),
-                                (_user?.alanyaPhone ?? '').isEmpty
-                                    ? Text(
-                                        'Non défini',
-                                        style: context.text.bodyMedium
-                                            ?.copyWith(
-                                                fontWeight: FontWeight.w500),
-                                      )
-                                    : AlanyaPhoneText(
-                                        _user!.alanyaPhone,
-                                        style: context.text.bodyMedium
-                                            ?.copyWith(
-                                                fontWeight: FontWeight.w500),
-                                      ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+          _SettingsGroup(
+            title: 'Apparence',
+            child: Padding(
+              padding: AppSpacing.card,
+              child: Consumer<ThemeController>(
+                builder: (_, tc, __) => SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  style: SegmentedButton.styleFrom(
+                    minimumSize: const Size(0, AppSizes.buttonHeight),
                   ),
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.wb_sunny_outlined),
+                      label: Text('Clair'),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.nights_stay_outlined),
+                      label: Text('Sombre'),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto_outlined),
+                      label: Text('Système'),
+                    ),
+                  ],
+                  selected: {tc.mode},
+                  onSelectionChanged: (s) => tc.setMode(s.first),
+                ),
+              ),
+            ),
           ),
           AppSpacing.vGapXxl,
-          _buildThemeGroup(),
-          AppSpacing.vGapXxl,
-          _buildSettingsGroup(
-            title: 'Général',
-            items: [
-              _buildSettingsItem(Icons.chat, 'Discussions',
-                  'Thème, fonds d\'écran, historique des discussions'),
-              _buildSettingsItem(Icons.notifications, 'Notifications',
-                  'Sonneries de message, groupe et appel'),
-              _buildSettingsItem(Icons.data_usage, 'Stockage et données',
-                  'Utilisation du réseau, téléchargement auto'),
-            ],
-          ),
-          AppSpacing.vGapXxl,
-          _buildSettingsGroup(
-            title: 'Compte',
-            items: [
-              _buildSettingsItem(Icons.security, 'Sécurité',
-                  'Vérification en deux étapes'),
-              _buildSettingsItem(Icons.lock, 'Confidentialité',
-                  'Bloquer les contacts, messages éphémères'),
-              _buildSettingsItem(Icons.delete_outline, 'Supprimer le compte',
-                  '',
-                  isDestructive: true),
-            ],
+          _SettingsGroup(
+            title: 'Confidentialité',
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.sm,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: context.semantic.surfaceMuted,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lock_outline,
+                  color: context.colors.onSurfaceVariant,
+                  size: AppIconSize.md,
+                ),
+              ),
+              title: Text(
+                'Confidentialité',
+                style: context.text.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                'Contacts bloqués',
+                style: context.text.bodySmall?.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: context.colors.outlineVariant,
+              ),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildThemeGroup() {
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
-          child: Text(
-            'Apparence',
-            style: context.text.labelMedium?.copyWith(
-                color: context.colors.primary, fontWeight: FontWeight.bold),
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.sm,
           ),
-        ),
-        Container(
-          color: context.colors.surface,
-          padding: AppSpacing.card,
-          child: Consumer<ThemeController>(
-            builder: (_, tc, __) => SegmentedButton<ThemeMode>(
-              showSelectedIcon: false,
-              style: SegmentedButton.styleFrom(
-                minimumSize: const Size(0, AppSizes.buttonHeight),
-              ),
-              segments: const [
-                ButtonSegment(
-                  value: ThemeMode.light,
-                  icon: Icon(Icons.wb_sunny_outlined),
-                  label: Text('Clair'),
-                ),
-                ButtonSegment(
-                  value: ThemeMode.dark,
-                  icon: Icon(Icons.nights_stay_outlined),
-                  label: Text('Sombre'),
-                ),
-                ButtonSegment(
-                  value: ThemeMode.system,
-                  icon: Icon(Icons.brightness_auto_outlined),
-                  label: Text('Système'),
-                ),
-              ],
-              selected: {tc.mode},
-              onSelectionChanged: (s) => tc.setMode(s.first),
+          child: Text(
+            title,
+            style: context.text.labelMedium?.copyWith(
+              color: context.colors.primary,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildSettingsGroup(
-      {required String title, required List<Widget> items}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
-          child: Text(
-            title,
-            style: context.text.labelMedium
-                ?.copyWith(color: context.colors.primary, fontWeight: FontWeight.bold),
-          ),
-        ),
         Container(
           color: context.colors.surface,
-          child: Column(children: items),
+          child: child,
         ),
       ],
-    );
-  }
-
-  Widget _buildSettingsItem(IconData icon, String title, String subtitle,
-      {bool isDestructive = false}) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
-      leading: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: isDestructive ? AppColors.errorContainer : context.semantic.surfaceMuted,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: isDestructive
-              ? context.colors.error
-              : context.colors.onSurfaceVariant,
-          size: AppIconSize.md,
-        ),
-      ),
-      title: Text(
-        title,
-        style: context.text.bodyLarge?.copyWith(
-          fontWeight: FontWeight.w500,
-          color: isDestructive ? context.colors.error : context.colors.onSurface,
-        ),
-      ),
-      subtitle: subtitle.isNotEmpty
-          ? Text(
-              subtitle,
-              style: context.text.bodySmall
-                  ?.copyWith(color: context.colors.onSurfaceVariant),
-            )
-          : null,
-      onTap: () {},
     );
   }
 }

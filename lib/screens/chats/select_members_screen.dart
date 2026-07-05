@@ -57,8 +57,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
   }
 
   Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
-    await cache.syncPreferredContacts();
-    final updated = await cache.getPreferredContactsOnce();
+    final updated = await cache.syncAndGetPreferredContacts();
     if (!mounted) return;
     setState(() {
       _contacts = updated.map(localUserToUser).toList();

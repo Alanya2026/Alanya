@@ -22,6 +22,7 @@ class CallSessionGuard with WidgetsBindingObserver {
 
   MediaStream? Function()? _getLocalStream;
   bool Function()? _isVideoOn;
+  bool Function()? _isMuted;
 
   bool get isActive => _refCount > 0;
 
@@ -34,6 +35,7 @@ class CallSessionGuard with WidgetsBindingObserver {
     bool startCallKit = true,
     MediaStream? Function()? getLocalStream,
     bool Function()? isVideoOn,
+    bool Function()? isMuted,
   }) async {
     if (kIsWeb) return;
 
@@ -47,6 +49,7 @@ class CallSessionGuard with WidgetsBindingObserver {
     _callId = callId;
     _getLocalStream = getLocalStream;
     _isVideoOn = isVideoOn;
+    _isMuted = isMuted;
     _videoPausedByLifecycle = false;
 
     WidgetsBinding.instance.addObserver(this);
@@ -95,6 +98,7 @@ class CallSessionGuard with WidgetsBindingObserver {
     _callId = null;
     _getLocalStream = null;
     _isVideoOn = null;
+    _isMuted = null;
     _videoPausedByLifecycle = false;
 
     debugPrint('[CallSessionGuard] Session relâchée');
@@ -122,6 +126,7 @@ class CallSessionGuard with WidgetsBindingObserver {
   }
 
   void _ensureAudioTrackActive() {
+    if (_isMuted != null && _isMuted!()) return;
     final stream = _getLocalStream?.call();
     if (stream == null) return;
     final tracks = stream.getAudioTracks();

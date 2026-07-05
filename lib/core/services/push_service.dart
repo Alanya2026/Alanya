@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../firebase_options.dart';
 import '../../talky_api_client.dart';
 import 'callkit_service.dart';
+import 'chat_repository.dart';
+import 'local_notification_helper.dart';
 import 'notification_navigation.dart';
 import 'ringtone_service.dart';
 
@@ -13,19 +17,6 @@ const String _kDefaultFirebaseVapidKey =
 const String _kFirebaseVapidKey = String.fromEnvironment(
   'FIREBASE_VAPID_KEY',
   defaultValue: _kDefaultFirebaseVapidKey,
-);
-
-// Canaux Android dédiés
-const _kChannelMessages = AndroidNotificationChannel(
-  'talky_messages',
-  'Messages',
-  importance: Importance.high,
-);
-const _kChannelMeetings = AndroidNotificationChannel(
-  'talky_meetings',
-  'Réunions',
-  description: 'Invitations et rappels de réunion',
-  importance: Importance.max,
 );
 
 /// Données d'une notification meeting diffusées sur [PushService.meetingNotifications].
@@ -71,47 +62,31 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
-/// Affiche une notification locale avec payload pour le tap.
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
   if (kIsWeb) return;
-  final data = message.data;
+  final data = Map<String, dynamic>.from(message.data);
   final type = data['type']?.toString();
   final title = (data['title'] ?? message.notification?.title ?? '').toString();
   final body = (data['body'] ?? message.notification?.body ?? '').toString();
   if (title.isEmpty && body.isEmpty) return;
 
-  final isMeeting = type == 'meeting_invite' || type == 'meeting_reminder';
-  final channelId = isMeeting ? 'talky_meetings' : 'talky_messages';
-  final channelName = isMeeting ? 'Réunions' : 'Messages';
-  final payload = encodeNotificationPayload(Map<String, dynamic>.from(data));
+  await LocalNotificationHelper.ensureInitialized();
 
-  final plugin = FlutterLocalNotificationsPlugin();
-  const initSettings = InitializationSettings(
-    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-  );
-  await plugin.initialize(initSettings);
-
-  final androidPlugin = plugin.resolvePlatformSpecificImplementation<
-      AndroidFlutterLocalNotificationsPlugin>();
-  await androidPlugin?.createNotificationChannel(
-    AndroidNotificationChannel(channelId, channelName, importance: Importance.high),
-  );
-
-  await plugin.show(
-    DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    title,
-    body,
-    NotificationDetails(
-      android: AndroidNotificationDetails(
-        channelId,
-        channelName,
-        importance: Importance.high,
-        priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
-      ),
-    ),
-    payload: payload,
-  );
+  if (type == 'message') {
+    await LocalNotificationHelper.showMessageNotification(
+      data,
+      title: title.isNotEmpty ? title : null,
+      body: body.isNotEmpty ? body : null,
+    );
+  } else if (type == 'meeting_invite' || type == 'meeting_reminder') {
+    await LocalNotificationHelper.showMeetingNotification(data);
+  } else {
+    await LocalNotificationHelper.showGenericNotification(
+      data,
+      title: title.isNotEmpty ? title : null,
+      body: body.isNotEmpty ? body : null,
+    );
+  }
 }
 
 class PushService {
@@ -124,8 +99,6 @@ class PushService {
   final GlobalKey<NavigatorState>? _navKey;
 
   final FirebaseMessaging _fm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _local =
-      FlutterLocalNotificationsPlugin();
 
   StreamSubscription<RemoteMessage>? _onMessageSub;
   StreamSubscription<RemoteMessage>? _onMessageOpenedSub;
@@ -141,7 +114,6 @@ class PushService {
   static Stream<NotificationAction> get notificationActions =>
       _actionCtrl.stream;
 
-  /// Consomme l'action en attente (cold start avant abonnement au stream).
   static NotificationAction? consumePendingAction() {
     final action = _pendingAction;
     _pendingAction = null;
@@ -152,6 +124,10 @@ class PushService {
       StreamController.broadcast();
   static Stream<MeetingNotifData> get meetingNotifications =>
       _meetingCtrl.stream;
+
+  /// Vérifie si une conversation est actuellement ouverte (lecture SharedPreferences).
+  static Future<bool> isConversationActive(int conversationId) =>
+      LocalNotificationHelper.shouldSuppressMessage(conversationId);
 
   static Future<PushService> init(
     TalkyApiClient apiClient, {
@@ -176,21 +152,12 @@ class PushService {
     }
 
     if (!kIsWeb) {
-      const initSettings = InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      );
-      await _local.initialize(
-        initSettings,
-        onDidReceiveNotificationResponse: _onLocalNotifTap,
+      await LocalNotificationHelper.ensureInitialized(
+        onTap: _onLocalNotifTap,
       );
 
-      final plugin = _local.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      await plugin?.createNotificationChannel(_kChannelMessages);
-      await plugin?.createNotificationChannel(_kChannelMeetings);
-
-      // Cold start via tap sur notif locale
-      final launchDetails = await _local.getNotificationAppLaunchDetails();
+      final launchDetails =
+          await LocalNotificationHelper.plugin.getNotificationAppLaunchDetails();
       if (launchDetails?.didNotificationLaunchApp == true) {
         final payload = launchDetails!.notificationResponse?.payload;
         final action = decodeNotificationPayload(payload);
@@ -221,7 +188,6 @@ class PushService {
     _onMessageOpenedSub =
         FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedApp);
 
-    // Cold start via tap sur notif FCM
     final initial = await _fm.getInitialMessage();
     if (initial != null) {
       debugPrint('[Push] cold start via FCM: type=${initial.data['type']}');
@@ -246,7 +212,7 @@ class PushService {
     if (type == 'call_ended') return;
 
     if (type == 'meeting_invite' || type == 'meeting_reminder') {
-      await _showLocalNotif(data);
+      await LocalNotificationHelper.showMeetingNotification(data);
       _dispatchNotificationAction(
         NotificationAction.fromMap(data, fromTap: false),
       );
@@ -254,7 +220,7 @@ class PushService {
     }
 
     if (type == 'call' || type == 'group_call') {
-      debugPrint('[Push] ℹ️ Appel géré via CallKit (pas de notif locale)');
+      debugPrint('[Push] Appel géré via CallKit (pas de notif locale)');
       return;
     }
 
@@ -262,6 +228,25 @@ class PushService {
       _dispatchNotificationAction(
         NotificationAction.fromMap(data, fromTap: false),
       );
+
+      final convId =
+          int.tryParse(data['conversationId']?.toString() ?? '') ?? 0;
+      if (convId > 0 && await isConversationActive(convId)) {
+        return;
+      }
+
+      final title =
+          (data['title'] ?? message.notification?.title ?? '').toString();
+      final body =
+          (data['body'] ?? message.notification?.body ?? '').toString();
+      if (title.isNotEmpty || body.isNotEmpty) {
+        await LocalNotificationHelper.showMessageNotification(
+          data,
+          title: title.isNotEmpty ? title : null,
+          body: body.isNotEmpty ? body : null,
+        );
+      }
+      return;
     }
 
     if (!kIsWeb) {
@@ -270,7 +255,11 @@ class PushService {
       final body =
           (data['body'] ?? message.notification?.body ?? '').toString();
       if (title.isNotEmpty || body.isNotEmpty) {
-        await _showLocalNotif(data, title: title, body: body);
+        await LocalNotificationHelper.showGenericNotification(
+          data,
+          title: title.isNotEmpty ? title : null,
+          body: body.isNotEmpty ? body : null,
+        );
       }
     }
   }
@@ -282,45 +271,11 @@ class PushService {
     _dispatchNotificationAction(NotificationAction.fromMap(data));
   }
 
-  void _onLocalNotifTap(NotificationResponse response) {
+  static void _onLocalNotifTap(NotificationResponse response) {
     final action = decodeNotificationPayload(response.payload);
     if (action == null) return;
     debugPrint('[Push] tap notif locale: type=${action.type}');
-    _dispatchNotificationAction(action);
-  }
-
-  Future<void> _showLocalNotif(
-    Map<String, dynamic> data, {
-    String? title,
-    String? body,
-  }) async {
-    if (kIsWeb) return;
-
-    final type = data['type']?.toString() ?? '';
-    final notifTitle = title ?? data['title']?.toString() ?? 'Talky';
-    final notifBody = body ?? data['body']?.toString() ?? '';
-    final isMeeting = type == 'meeting_invite' || type == 'meeting_reminder';
-    final payload = encodeNotificationPayload(data);
-
-    await _local.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      notifTitle,
-      notifBody,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          isMeeting ? 'talky_meetings' : 'talky_messages',
-          isMeeting ? 'Réunions' : 'Messages',
-          importance: isMeeting ? Importance.max : Importance.high,
-          priority: Priority.high,
-          color: isMeeting ? const Color(0xFF3F51B5) : null,
-          icon: '@mipmap/ic_launcher',
-          styleInformation: notifBody.isNotEmpty
-              ? BigTextStyleInformation(notifBody)
-              : null,
-        ),
-      ),
-      payload: payload,
-    );
+    _instance?._dispatchNotificationAction(action);
   }
 
   void _dispatchNotificationAction(NotificationAction action) {

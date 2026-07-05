@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,9 +11,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/country_utils.dart';
+import '../../core/utils/user_search.dart';
 import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/add_contact_sheet.dart';
 import '../../widgets/alanya_phone_field.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/db/app_database.dart';
@@ -31,113 +33,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  User? _user;
-  List<User> _contacts = [];
-  bool _isLoading = true;
-  bool _loadingContacts = false;
-
   @override
   void initState() {
     super.initState();
-    _loadUser();
-    _loadContacts();
+    unawaited(context.read<AuthProvider>().refreshProfile());
+    unawaited(context.read<LocalCacheRepository>().syncPreferredContacts());
   }
-
-  Future<void> _loadUser() async {
-    final cached =
-        Provider.of<AuthProvider>(context, listen: false).currentUser;
-    if (cached != null && mounted) {
-      setState(() {
-        _user = cached;
-        _isLoading = false;
-      });
-    }
-
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getMe();
-      if (!mounted) return;
-      final user = User.fromJson(data);
-      final full = await apiClient
-          .getUserById(user.alanyaID)
-          .catchError((_) => <String, dynamic>{});
-      if (!mounted) return;
-      final paysLibelle =
-          full['pays_libelle'] as String? ?? user.paysLibelle;
-      setState(() {
-        _user = User(
-          alanyaID: user.alanyaID,
-          nom: user.nom,
-          pseudo: user.pseudo,
-          alanyaPhone:
-              full['alanyaPhone'] as String? ?? user.alanyaPhone,
-          email: user.email,
-          idPays: user.idPays,
-          avatarUrl: user.avatarUrl,
-          typeCompte: user.typeCompte,
-          isOnline: user.isOnline,
-          lastSeen: user.lastSeen,
-          paysLibelle: paysLibelle,
-        );
-        _isLoading = false;
-      });
-    } catch (_) {
-      if (mounted && _user == null) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _loadContacts() async {
-    try {
-      final cache =
-          Provider.of<LocalCacheRepository>(context, listen: false);
-      final local = await cache.watchPreferredContacts().first;
-      if (!mounted) return;
-      if (local.isNotEmpty) {
-        setState(() {
-          _contacts = local.map(_localToUser).toList();
-          _loadingContacts = false;
-        });
-      } else {
-        setState(() => _loadingContacts = true);
-      }
-    } catch (e, st) {
-      AppLog.e('ProfileScreen', 'Chargement contacts (cache) échoué', e, st);
-    }
-
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getContacts();
-      if (!mounted) return;
-      setState(() {
-        _contacts = data
-            .map((e) =>
-                e is User ? e : User.fromJson(e as Map<String, dynamic>))
-            .toList();
-        _loadingContacts = false;
-      });
-      if (mounted) {
-        final cache =
-            Provider.of<LocalCacheRepository>(context, listen: false);
-        cache.syncPreferredContacts();
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loadingContacts = false);
-    }
-  }
-
-  User _localToUser(LocalUser u) => User(
-        alanyaID: u.alanyaID,
-        nom: u.nom,
-        pseudo: u.pseudo,
-        alanyaPhone: u.alanyaPhone,
-        email: u.email,
-        idPays: u.idPays,
-        avatarUrl: u.avatarUrl,
-        typeCompte: u.typeCompte,
-        isOnline: u.isOnline,
-        lastSeen: u.lastSeen?.toIso8601String() ?? '',
-        paysLibelle: u.paysLibelle,
-      );
 
   Future<void> _logout() async {
     final authProvider =
@@ -156,8 +57,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       await apiClient.removeContact(user.alanyaID);
       if (!mounted) return;
-      setState(
-          () => _contacts.removeWhere((u) => u.alanyaID == user.alanyaID));
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      await cache.upsertKnownUser(user, preferred: false);
     } catch (e, st) {
       AppLog.e('ProfileScreen', 'Suppression contact préféré échouée', e, st);
       if (!mounted) return;
@@ -167,15 +68,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _openAddContact() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => AddContactSheet(
-        existingIds: _contacts.map((u) => u.alanyaID).toSet(),
-        onAdded: (user) => setState(() => _contacts.add(user)),
-      ),
+  void _openPreferredContacts() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PreferredContactsScreen()),
     );
   }
 
@@ -220,6 +116,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.currentUser;
+    final isLoading = user == null && !auth.isInitialized;
+    final cache = context.read<LocalCacheRepository>();
+
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
@@ -231,81 +132,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             AppSpacing.vGapXl,
             _ProfileHeader(
-              user: _user,
-              isLoading: _isLoading,
-              onEdited: _loadUser,
+              user: user,
+              isLoading: isLoading,
             ),
             AppSpacing.vGapXl,
 
-            // Section contacts préférés
-            Padding(
-              padding: AppSpacing.screenH,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Contacts préférés',
-                    style: context.text.titleMedium,
-                  ),
-                  if (_contacts.length > 4)
-                    GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PreferredContactsScreen(
-                            contacts: _contacts,
-                            onLongPress: _showContactOptions,
-                            onAddContact: _openAddContact,
-                          ),
-                        ),
-                      ),
+            StreamBuilder<List<LocalUser>>(
+              stream: cache.watchPreferredContacts(),
+              builder: (context, snapshot) {
+                final contacts =
+                    (snapshot.data ?? []).map(localUserToUser).toList();
+                final loadingContacts =
+                    snapshot.connectionState == ConnectionState.waiting &&
+                        contacts.isEmpty;
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: AppSpacing.screenH,
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '+${_contacts.length - 4}',
-                            style: context.text.labelMedium?.copyWith(
-                              color: context.colors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            'Contacts préférés',
+                            style: context.text.titleMedium,
                           ),
-                          Icon(Icons.chevron_right,
-                              size: AppIconSize.sm,
-                              color: context.colors.primary),
+                          if (contacts.length > 4)
+                            GestureDetector(
+                              onTap: _openPreferredContacts,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '+${contacts.length - 4}',
+                                    style: context.text.labelMedium?.copyWith(
+                                      color: context.colors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Icon(Icons.chevron_right,
+                                      size: AppIconSize.sm,
+                                      color: context.colors.primary),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                ],
-              ),
-            ),
-            AppSpacing.vGapMd,
-
-            _loadingContacts
-                ? Padding(
-                    padding: AppSpacing.card,
-                    child: const CircularProgressIndicator(),
-                  )
-                : _contacts.isEmpty
-                    ? _EmptyContacts(
-                        onAdd: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PreferredContactsScreen(
-                              contacts: _contacts,
-                              onLongPress: _showContactOptions,
-                              onAddContact: _openAddContact,
-                            ),
-                          ),
-                        ),
+                    AppSpacing.vGapMd,
+                    if (loadingContacts)
+                      Padding(
+                        padding: AppSpacing.card,
+                        child: const CircularProgressIndicator(),
                       )
-                    : _ContactGrid(
-                        contacts: _contacts,
+                    else if (contacts.isEmpty)
+                      _EmptyContacts(onAdd: _openPreferredContacts)
+                    else
+                      _ContactGrid(
+                        contacts: contacts,
                         onLongPress: _showContactOptions,
                       ),
+                  ],
+                );
+              },
+            ),
 
             AppSpacing.vGapXl,
 
-            // Menu paramètres
             Container(
               margin: AppSpacing.screenH,
               decoration: BoxDecoration(
@@ -315,33 +208,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  _buildMenuItem(CupertinoIcons.person, 'Compte',
-                      () async {
-                    await Navigator.push(
+                  _buildMenuItem(CupertinoIcons.person, 'Compte', () {
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const EditProfileScreen()),
                     );
-                    if (mounted) _loadUser();
                   }),
                   const Divider(height: 1),
-                  _buildMenuItem(
-                      CupertinoIcons.chat_bubble, 'Discussions', () {}),
-                  const Divider(height: 1),
-                  _buildMenuItem(
-                      CupertinoIcons.bell, 'Notifications', () {}),
-                  const Divider(height: 1),
-                  _buildMenuItem(CupertinoIcons.settings, 'Paramètres',
-                      () {
+                  _buildMenuItem(CupertinoIcons.settings, 'Paramètres', () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const SettingsScreen()),
                     );
                   }),
-                  if (!_isLoading &&
-                      _user != null &&
-                      _user!.typeCompte >= 1) ...[
+                  if (!isLoading &&
+                      user != null &&
+                      user.typeCompte >= 1) ...[
                     const Divider(height: 1),
                     _buildMenuItem(Icons.admin_panel_settings,
                         'Tableau de bord Admin', () {
@@ -359,7 +243,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             AppSpacing.vGapXl,
 
-            // Déconnexion
             Container(
               margin: AppSpacing.screenH,
               decoration: BoxDecoration(
@@ -426,12 +309,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class _ProfileHeader extends StatelessWidget {
   final User? user;
   final bool isLoading;
-  final VoidCallback? onEdited;
 
   const _ProfileHeader({
     required this.user,
     required this.isLoading,
-    this.onEdited,
   });
 
   @override
@@ -476,13 +357,12 @@ class _ProfileHeader extends StatelessWidget {
                 bottom: 0,
                 right: 0,
                 child: GestureDetector(
-                  onTap: () async {
-                    await Navigator.push(
+                  onTap: () {
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const EditProfileScreen()),
                     );
-                    onEdited?.call();
                   },
                   child: Container(
                     padding: const EdgeInsets.all(AppSpacing.sm - 2),
@@ -731,7 +611,6 @@ class _RoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Couleurs spécifiques aux badges admin — pas de token car design intentionnel.
     final (label, icon, fg, bg) = typeCompte >= 2
         ? ('Super Admin', Icons.shield, const Color(0xFF6B3CD2),
             const Color(0xFFEDE3FC))

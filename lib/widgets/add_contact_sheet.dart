@@ -125,11 +125,14 @@ class _AddContactSheetState extends State<AddContactSheet> {
       final cache = Provider.of<LocalCacheRepository>(context, listen: false);
       await cache.upsertKnownUser(user, preferred: true);
       if (!mounted) return;
-      widget.onAdded(user);
+      final updated = await cache.getPreferredContactsOnce();
+      if (!mounted) return;
       setState(() {
+        _preferredContacts = updated.map(localUserToUser).toList();
         _adding.remove(user.alanyaID);
         _existingIds.add(user.alanyaID);
       });
+      widget.onAdded(user);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

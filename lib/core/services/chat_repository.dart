@@ -8,6 +8,7 @@ import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import '../utils/forward_message.dart';
 import '../utils/media_album.dart';
+import 'local_notification_helper.dart';
 import 'media_cache_service.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';  
@@ -30,10 +31,16 @@ class ChatRepository {
   /// Retry tracker pour les lectures hors-ligne (conversationID -> retryCount)
   final Map<int, int> _pendingReadsRetry = {};
 
-  void setActiveConversation(int conversationID) =>
-      _activeConversationID = conversationID;
+  void setActiveConversation(int conversationID) {
+    _activeConversationID = conversationID;
+    LocalNotificationHelper.setActiveConversationId(conversationID);
+  }
+
   void clearActiveConversation(int conversationID) {
-    if (_activeConversationID == conversationID) _activeConversationID = 0;
+    if (_activeConversationID == conversationID) {
+      _activeConversationID = 0;
+      LocalNotificationHelper.setActiveConversationId(null);
+    }
   }
 
   ChatRepository._(this._api, this._db) : _dao = ChatDao(_db);
@@ -109,6 +116,7 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
     _activeConversationID = 0;
+    LocalNotificationHelper.setActiveConversationId(null);
     _pendingReads.clear();
     _pendingReadsRetry.clear();
     _myId = 0;
@@ -117,6 +125,7 @@ class ChatRepository {
   /// Efface conversations, messages et cache média (logout / changement de compte).
   Future<void> clearLocalSession() async {
     _activeConversationID = 0;
+    LocalNotificationHelper.setActiveConversationId(null);
     _pendingReads.clear();
     _pendingReadsRetry.clear();
     await _dao.clearAll();
@@ -940,6 +949,7 @@ class ChatRepository {
 
   Future<void> markAsRead(int conversationID) async {
     await _dao.markConversationReadAtomic(conversationID, _myId);
+    await LocalNotificationHelper.cancelConversation(conversationID);
     if (_api.isSocketReady) {
       try {
         _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': conversationID});
@@ -1240,7 +1250,7 @@ class ChatRepository {
       if (mediaUrl != null) 'mediaUrl': mediaUrl,
       if (mediaName != null) 'mediaName': mediaName,
       if (mediaDuration != null) 'mediaDuration': mediaDuration,
-      if (replyToID != null) 'replyToID': replyToID,
+      if (replyToID != null && replyToID > 0) 'replyToID': replyToID,
       if (replyToContent != null) 'replyToContent': replyToContent,
       if (isStatusReply != 0) 'isStatusReply': isStatusReply,
       if (isForwarded) 'isForwarded': 1,

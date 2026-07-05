@@ -59,9 +59,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   }
 
   Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
-    await cache.syncPreferredContacts();
-    if (!mounted) return;
-    final updated = await cache.getPreferredContactsOnce();
+    final updated = await cache.syncAndGetPreferredContacts();
     if (!mounted) return;
     setState(() {
       _allContacts = updated.map(localUserToUser).toList();
@@ -176,18 +174,23 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   // ── Appels ─────────────────────────────────────────────────────────
 
   Future<void> _initiateCall(User user, bool isVideo) async {
-    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final me = auth.currentUser;
+    if (me == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil non disponible, réessayez')),
+      );
+      return;
+    }
     final callService = Provider.of<CallService>(context, listen: false);
-    final userData = await apiClient.getMe();
-    final myId = userData['alanyaID'] ?? 0;
-    final myPhoto = userData['avatar_url'];
 
     if (!mounted) return;
     await callService.initiateCall(
       targetUserId: user.alanyaID,
-      myId: myId,
-      myName: userData['nom'] ?? userData['pseudo'] ?? '',
-      myPhoto: myPhoto,
+      myId: me.alanyaID,
+      myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+      myPhoto: me.avatarUrl,
       targetUserName: user.nom,
       targetUserPhoto: user.avatarUrl,
       isVideo: isVideo,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/services/call_service.dart';
@@ -56,8 +57,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
   }
 
   Future<void> _refreshPreferredFromServer(LocalCacheRepository cache) async {
-    await cache.syncPreferredContacts();
-    final updated = await cache.getPreferredContactsOnce();
+    final updated = await cache.syncAndGetPreferredContacts();
     if (!mounted) return;
     setState(() {
       _preferredContacts = updated.map(localUserToUser).toList();
@@ -246,16 +246,22 @@ class _KeypadScreenState extends State<KeypadScreen> {
       if (_foundUser == null) return;
     }
 
-    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-    final userData = await apiClient.getMe();
-    final myId = userData['alanyaID'] ?? 0;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final me = auth.currentUser;
+    if (me == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil non disponible, réessayez')),
+      );
+      return;
+    }
 
     final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
       targetUserId: _foundUser!.alanyaID,
-      myId: myId,
-      myName: userData['nom'] ?? userData['pseudo'] ?? '',
-      myPhoto: userData['avatar_url'],
+      myId: me.alanyaID,
+      myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+      myPhoto: me.avatarUrl,
       targetUserName: _foundUser!.nom,
       targetUserPhoto: _foundUser!.avatarUrl,
       isVideo: isVideo,

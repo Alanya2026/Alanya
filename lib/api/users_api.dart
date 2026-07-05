@@ -48,6 +48,13 @@ extension UsersApi on TalkyApiClient {
     );
   }
 
+  Future<List<dynamic>> getBlockedUsers() async {
+    final data = await _handleRequest(
+      () => _client.get(Uri.parse('${TalkyApiClient.baseUrl}/users/blocked'), headers: _headers),
+    );
+    return data is List ? data : [];
+  }
+
   // ── CONTACTS PRÉFÉRÉS ─────────────────────────────────────────────
 
   Future<List<dynamic>> getContacts() async {

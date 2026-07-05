@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -38,7 +39,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _hydrateFromAuth();
+    unawaited(context.read<AuthProvider>().refreshProfile().then((_) {
+      if (!mounted) return;
+      _hydrateFromAuth();
+      if (_user == null) setState(() => _isLoading = false);
+    }));
     _loadCountries();
   }
 
@@ -86,32 +92,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  Future<void> _loadUser() async {
-    final cached =
-        Provider.of<AuthProvider>(context, listen: false).currentUser;
-    if (cached != null && mounted) {
-      setState(() {
-        _user = cached;
-        _nameController.text = cached.nom;
-        _pseudoController.text = cached.pseudo;
-        _isLoading = false;
-      });
-    }
-
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final data = await apiClient.getMe();
-      if (!mounted) return;
-      setState(() {
-        _user = User.fromJson(data);
-        _nameController.text = _user?.nom ?? '';
-        _pseudoController.text = _user?.pseudo ?? '';
-        _isLoading = false;
-        _syncSelectedCountry();
-      });
-    } catch (_) {
-      if (mounted && _user == null) setState(() => _isLoading = false);
-    }
+  void _hydrateFromAuth() {
+    final cached = context.read<AuthProvider>().currentUser;
+    if (cached == null) return;
+    setState(() {
+      _user = cached;
+      _nameController.text = cached.nom;
+      _pseudoController.text = cached.pseudo;
+      _isLoading = false;
+      _syncSelectedCountry();
+    });
   }
 
   // ── Photo de profil ─────────────────────────────────────────────────
@@ -280,8 +270,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _saving = true);
     try {
-      final api = Provider.of<TalkyApiClient>(context, listen: false);
-      await api.updateMe(
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await auth.updateProfile(
         nom: nomChanged ? nom : null,
         pseudo: pseudoChanged ? pseudo : null,
       );
