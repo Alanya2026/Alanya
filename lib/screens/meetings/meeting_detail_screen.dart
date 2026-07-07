@@ -76,24 +76,17 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     }
 
     try {
-      final results = await Future.wait([
-        api.getMeeting(widget.meetingId),
-        api.getMe(),
-      ]);
+      final meeting = Meeting.fromJson(
+        await api.getMeeting(widget.meetingId),
+      );
 
       if (!mounted) return;
-      final meeting = Meeting.fromJson(results[0]);
-      final freshMe = results[1];
-      final freshId = (freshMe['alanyaID'] as num?)?.toInt() ?? myId;
-      final freshName = freshMe['nom'] as String? ??
-          freshMe['pseudo'] as String? ??
-          myName;
 
       setState(() {
         _meeting = meeting;
-        _myId = freshId;
-        _myName = freshName;
-        _isOrganiser = meeting.idOrganiser == freshId;
+        _myId = myId;
+        _myName = myName;
+        _isOrganiser = meeting.idOrganiser == myId;
         _isLoading = false;
       });
     } catch (e) {

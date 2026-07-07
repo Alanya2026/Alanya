@@ -71,18 +71,25 @@ class NotificationNavigation {
     final myId = context.read<AuthProvider>().currentUser?.alanyaID ?? 0;
     final fallbackName = data['title'] ?? 'Discussion';
     final fallbackUserId = int.tryParse(data['callerId'] ?? '');
+    final isGroupFromPayload =
+        data['isGroup'] == '1' || data['isGroup'] == 'true';
+    final groupNameFromPayload = data['groupName'] ?? '';
 
     var conv = await _findConversation(chat, conversationId);
     if (conv == null) {
       if (!context.mounted) return;
+      final displayName = isGroupFromPayload &&
+              groupNameFromPayload.isNotEmpty
+          ? groupNameFromPayload
+          : fallbackName;
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => ChatDetailScreen(
-            userName: fallbackName,
+            userName: displayName,
             conversationId: conversationId,
             userId: fallbackUserId,
-            isGroup: false,
+            isGroup: isGroupFromPayload,
           ),
         ),
       );

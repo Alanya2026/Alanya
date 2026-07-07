@@ -62,6 +62,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.24       # Binaire SQLite embarqué (Android/iOS)
   path_provider: ^2.1.4               # Dossier documents app (DB + cache médias)
   path: ^1.9.0
+  crypto: ^3.0.6
 
   # ── Chat : médias (images, vidéos, fichiers) ──────────────────────
   image_picker: ^1.1.2                # Galerie / caméra (photos & vidéos)
@@ -70,6 +71,7 @@ dependencies:
   video_player: ^2.9.2                # Lecture vidéo inline
   chewie: ^1.8.5                      # Contrôles vidéo prêts à l'emploi
   record: ^5.1.2                      # Enregistrement messages vocaux
+  audio_waveforms: ^2.0.2             # Waveform réelle des messages vocaux
   emoji_picker_flutter: ^3.1.0        # Sélecteur d'émojis
   open_filex: ^4.5.0                  # Ouvrir un fichier (PDF, doc…) avec l'app système
   url_launcher: ^6.3.0                 # Ouverture des liens cliquables dans le navigateur
@@ -102,6 +104,31 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/alanyalogo.png
+  web:
+    generate: true
+    image_path: assets/images/alanyalogo.png
+    background_color: "#FFFFFF"
+    theme_color: "#3F51B5"
+  windows:
+    generate: true
+    image_path: assets/images/alanyalogo.png
+  macos:
+    generate: true
+    image_path: assets/images/alanyalogo.png
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/images/alanyalogo_splash.png
+  android_12:
+    color: "#FFFFFF"
+    image: assets/images/alanyalogo_splash.png
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -118,6 +145,7 @@ flutter:
   assets:
     - assets/sounds/
     - assets/server_cert.pem   # Certificat backend épinglé (cert pinning)
+    - assets/images/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

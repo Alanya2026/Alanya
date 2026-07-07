@@ -11,7 +11,7 @@ extension _ChatActions on _ChatDetailScreenState {
     _chat.repository.sendText(
       conversationID: widget.conversationId!,
       content: text,
-      replyToID: _replyTo?.msgID,
+      replyToID: _replyTo != null && _replyTo!.msgID > 0 ? _replyTo!.msgID : null,
       replyToContent: _replyTo == null ? null : _previewOf(_replyTo!),
     );
 
@@ -872,15 +872,22 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
     if (widget.userId == null) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final me = auth.currentUser;
+    if (me == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil non disponible, réessayez')),
+      );
+      return;
+    }
     final callService = Provider.of<CallService>(context, listen: false);
-    final userData = await _apiClient.getMe();
     if (!mounted) return;
-    final myId = userData['alanyaID'] ?? 0;
     await callService.initiateCall(
       targetUserId: widget.userId!,
-      myId: myId,
-      myName: userData['nom'] ?? userData['pseudo'] ?? '',
-      myPhoto: userData['avatar_url'],
+      myId: me.alanyaID,
+      myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+      myPhoto: me.avatarUrl,
       targetUserName: widget.userName,
       isVideo: isVideo,
     );

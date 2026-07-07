@@ -26,6 +26,7 @@ extension CallSession on CallService {
       startCallKit: startCallKit,
       getLocalStream: () => _webrtc.localStream,
       isVideoOn: () => _isVideoOn,
+      isMuted: () => _isMuted,
     );
   }
 

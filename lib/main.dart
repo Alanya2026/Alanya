@@ -24,6 +24,8 @@ import 'core/services/local_cache_repository.dart';
 import 'core/services/local_hidden_store.dart';
 import 'core/services/meeting_service.dart';
 import 'core/services/realtime_sync_service.dart';
+import 'core/services/voice_message_coordinator.dart';
+import 'core/services/voice_playback_service.dart';
 import 'core/services/push_service.dart';
 import 'firebase_options.dart';
 import 'screens/authentification/login_screen.dart';
@@ -109,6 +111,12 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminProvider(api: apiClient)),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider(api: apiClient)),
         ChangeNotifierProvider(create: (_) => LocalHiddenStore()..load()),
+        ChangeNotifierProvider(create: (_) => VoicePlaybackService()),
+        ChangeNotifierProvider(
+          create: (ctx) => VoiceMessageCoordinator(
+            repository: ctx.read<ChatProvider>().repository,
+          ),
+        ),
         Provider<RealtimeSyncService>(
           create: (ctx) => RealtimeSyncService(
             chat: ctx.read<ChatProvider>(),

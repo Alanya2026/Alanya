@@ -141,7 +141,7 @@ extension ChatApi on TalkyApiClient {
           if (mediaUrl != null) 'mediaUrl': mediaUrl,
           if (mediaName != null) 'mediaName': mediaName,
           if (mediaDuration != null) 'mediaDuration': mediaDuration,
-          if (replyToID != null) 'replyToID': replyToID,
+          if (replyToID != null && replyToID > 0) 'replyToID': replyToID,
           if (replyToContent != null) 'replyToContent': replyToContent,
         }),
       ),

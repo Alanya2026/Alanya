@@ -1,25 +1,22 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
+import '../../core/utils/app_log.dart';
 import '../../core/utils/user_search.dart';
+import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/add_contact_sheet.dart';
 import '../../widgets/common/common.dart';
 import '../chats/contact_detail_screen.dart';
 
 class PreferredContactsScreen extends StatefulWidget {
-  const PreferredContactsScreen({
-    super.key,
-    required this.contacts,
-    required this.onLongPress,
-    required this.onAddContact,
-  });
-
-  final List<User> contacts;
-  final void Function(User) onLongPress;
-  final VoidCallback onAddContact;
+  const PreferredContactsScreen({super.key});
 
   @override
   State<PreferredContactsScreen> createState() =>
@@ -28,12 +25,11 @@ class PreferredContactsScreen extends StatefulWidget {
 
 class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
   final TextEditingController _searchController = TextEditingController();
-  late List<User> _filteredContacts;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _filteredContacts = widget.contacts;
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -45,21 +41,87 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
   }
 
   void _onSearchChanged() {
-    final query = _searchController.text.trim();
-    setState(() {
-      _filteredContacts = query.isEmpty
-          ? widget.contacts
-          : filterUsersBySearch(widget.contacts, query);
-    });
+    setState(() => _searchQuery = _searchController.text.trim());
   }
 
   void _clearSearch() {
     _searchController.clear();
   }
 
+  void _openAddContact(Set<int> existingIds) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddContactSheet(
+        existingIds: existingIds,
+        onAdded: (_) {},
+      ),
+    );
+  }
+
+  Future<void> _removeContact(User user) async {
+    try {
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      await apiClient.removeContact(user.alanyaID);
+      if (!mounted) return;
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      await cache.upsertKnownUser(user, preferred: false);
+    } catch (e, st) {
+      AppLog.e('PreferredContacts', 'Suppression contact préféré échouée', e, st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de retirer ce contact, réessayez'),
+        ),
+      );
+    }
+  }
+
+  void _showRemoveOptions(User user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.colors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSpacing.vGapSm,
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.outlineStrong,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            AppSpacing.vGapLg,
+            ListTile(
+              leading: Icon(
+                Icons.person_remove_outlined,
+                color: context.colors.error,
+              ),
+              title: Text(
+                'Retirer ${user.nom.isNotEmpty ? user.nom : user.pseudo} des contacts préférés',
+                style: TextStyle(color: context.colors.error),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _removeContact(user);
+              },
+            ),
+            AppSpacing.vGapSm,
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasQuery = _searchController.text.trim().isNotEmpty;
+    final cache = context.read<LocalCacheRepository>();
+    final hasQuery = _searchQuery.isNotEmpty;
 
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
@@ -72,79 +134,106 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          TextButton.icon(
-            onPressed: widget.onAddContact,
-            icon: Icon(Icons.add, size: AppIconSize.sm,
-                color: context.colors.primary),
-            label: Text(
-              'Ajouter',
-              style: TextStyle(
-                  color: context.colors.primary,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
-            child: AppSearchField(
-              controller: _searchController,
-              hintText: 'Rechercher par nom, pseudo ou téléphone…',
-              fillColor: context.colors.surface,
-              borderColor: context.colors.outline,
-              onChanged: (_) {},
-              onClear: _clearSearch,
-            ),
-          ),
-          Expanded(
-            child: widget.contacts.isEmpty
-                ? const EmptyState(
-                    icon: CupertinoIcons.person_2,
-                    title: 'Aucun contact préféré',
-                  )
-                : _filteredContacts.isEmpty
-                    ? EmptyState(
-                        icon: hasQuery
-                            ? Icons.person_search
-                            : CupertinoIcons.person_2,
-                        title: hasQuery
-                            ? 'Aucun résultat'
-                            : 'Aucun contact préféré',
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.xl,
-                            vertical: AppSpacing.lg),
-                        itemCount: _filteredContacts.length,
-                        itemBuilder: (context, index) {
-                          final user = _filteredContacts[index];
-                          return _ContactTile(
-                            user: user,
-                            onLongPress: () => widget.onLongPress(user),
-                          );
-                        },
+      body: StreamBuilder<List<LocalUser>>(
+        stream: cache.watchPreferredContacts(),
+        builder: (context, snapshot) {
+          final contacts =
+              (snapshot.data ?? []).map(localUserToUser).toList();
+          final filteredContacts = hasQuery
+              ? filterUsersBySearch(contacts, _searchQuery)
+              : contacts;
+          final existingIds = contacts.map((u) => u.alanyaID).toSet();
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AppSearchField(
+                        controller: _searchController,
+                        hintText: 'Rechercher par nom, pseudo ou téléphone…',
+                        fillColor: context.colors.surface,
+                        borderColor: context.colors.outline,
+                        onChanged: (_) {},
+                        onClear: _clearSearch,
                       ),
-          ),
-        ],
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _openAddContact(existingIds),
+                      icon: Icon(
+                        Icons.add,
+                        size: AppIconSize.sm,
+                        color: context.colors.primary,
+                      ),
+                      label: Text(
+                        'Ajouter',
+                        style: TextStyle(
+                          color: context.colors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: contacts.isEmpty
+                    ? EmptyState(
+                        icon: CupertinoIcons.person_2,
+                        title: 'Aucun contact préféré',
+                        action: FilledButton.icon(
+                          onPressed: () => _openAddContact(existingIds),
+                          icon: const Icon(Icons.add, size: AppIconSize.sm),
+                          label: const Text('Ajouter'),
+                        ),
+                      )
+                    : filteredContacts.isEmpty
+                        ? EmptyState(
+                            icon: hasQuery
+                                ? Icons.person_search
+                                : CupertinoIcons.person_2,
+                            title: hasQuery
+                                ? 'Aucun résultat'
+                                : 'Aucun contact préféré',
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xl,
+                              vertical: AppSpacing.lg,
+                            ),
+                            itemCount: filteredContacts.length,
+                            itemBuilder: (context, index) {
+                              final user = filteredContacts[index];
+                              return _ContactTile(
+                                user: user,
+                                onRemove: () => _showRemoveOptions(user),
+                              );
+                            },
+                          ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 class _ContactTile extends StatelessWidget {
-  const _ContactTile({required this.user, required this.onLongPress});
+  const _ContactTile({required this.user, required this.onRemove});
 
   final User user;
-  final VoidCallback onLongPress;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    final displayName =
-        user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -167,15 +256,16 @@ class _ContactTile extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Row(
               children: [
                 Stack(
                   children: [
                     AppAvatar(
-                      imageUrl: user.avatarUrl.isNotEmpty
-                          ? user.avatarUrl
-                          : null,
+                      imageUrl:
+                          user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
                       name: displayName,
                       size: AppSizes.avatarMd,
                     ),
@@ -190,7 +280,9 @@ class _ContactTile extends StatelessWidget {
                             color: AppColors.online,
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: context.colors.surface, width: 1.5),
+                              color: context.colors.surface,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
@@ -206,27 +298,31 @@ class _ContactTile extends StatelessWidget {
                         Text(
                           '@${user.pseudo}',
                           style: context.text.bodySmall?.copyWith(
-                              color: context.colors.onSurfaceVariant),
+                            color: context.colors.onSurfaceVariant,
+                          ),
                         ),
                       Text(
                         AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone),
                         style: context.text.bodySmall?.copyWith(
-                            color: context.colors.onSurfaceVariant),
+                          color: context.colors.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 GestureDetector(
-                  onTap: onLongPress,
+                  onTap: onRemove,
                   child: Container(
                     padding: const EdgeInsets.all(AppSpacing.sm - 2),
                     decoration: BoxDecoration(
                       color: AppColors.errorContainer,
                       borderRadius: AppRadius.brSm,
                     ),
-                    child: Icon(Icons.person_remove_outlined,
-                        color: context.colors.error,
-                        size: AppIconSize.sm),
+                    child: Icon(
+                      Icons.person_remove_outlined,
+                      color: context.colors.error,
+                      size: AppIconSize.sm,
+                    ),
                   ),
                 ),
               ],

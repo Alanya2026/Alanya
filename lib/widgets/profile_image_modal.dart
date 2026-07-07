@@ -7,6 +7,7 @@ import '../core/theme/app_dimens.dart';
 import '../core/theme/app_theme.dart';
 import '../core/services/call_service.dart';
 import '../core/utils/app_log.dart';
+import '../providers/auth_provider.dart';
 import '../talky_api_client.dart';
 import '../screens/chats/fullscreen_profile_image_viewer.dart';
 import '../screens/chats/contact_detail_screen.dart';
@@ -276,16 +277,21 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
   Future<void> _initiateCall({required bool isVideo}) async {
     if (widget.isGroup) return;
     try {
-      final userData = await _apiClient.getMe();
-      final myId = userData['alanyaID'] ?? 0;
-      final myPhoto = userData['avatar_url'];
+      final me = context.read<AuthProvider>().currentUser;
+      if (me == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil non disponible, réessayez')),
+        );
+        return;
+      }
       if (!mounted) return;
 
       await _callService.initiateCall(
         targetUserId: widget.userId,
-        myId: myId,
-        myName: userData['nom'] ?? userData['pseudo'] ?? '',
-        myPhoto: myPhoto,
+        myId: me.alanyaID,
+        myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+        myPhoto: me.avatarUrl,
         targetUserName: widget.name,
         targetUserPhoto: widget.imageUrl,
         isVideo: isVideo,

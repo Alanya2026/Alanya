@@ -48,10 +48,18 @@ messaging.onBackgroundMessage((payload) => {
   }
 
   // Message standard, statut, invitation meeting…
+  const isMeeting = type === 'meeting_invite' || type === 'meeting_reminder';
+  let tag;
+  if (data.conversationId) {
+    tag = 'conv-' + data.conversationId;
+  } else if (isMeeting && data.meetingId) {
+    tag = 'meeting-' + data.meetingId;
+  }
+
   self.registration.showNotification(baseTitle, {
     body: baseBody,
     icon: '/icons/Icon-192.png',
-    tag: data.conversationId ? 'conv-' + data.conversationId : undefined,
+    tag,
     data,
   });
 });

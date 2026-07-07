@@ -254,8 +254,12 @@ extension CallOneToOne on CallService {
     _callEndedByUs = true;
     debugPrint('[CallService] 📞 endCall() - Appel terminé par nous');
     if (_remoteUserId != null) {
+      final mode = _status == CallStatus.connected
+          ? await _webrtc.detectConnectionMode()
+          : null;
       _apiClient.sendSocketEvent(SocketEvents.endCall, {
         'targetUserId': _remoteUserId.toString(),
+        if (mode != null) 'mode': mode,
       });
     }
     await _terminateCall();
@@ -288,6 +292,7 @@ extension CallOneToOne on CallService {
     _isVideoOn = true;
     _isSpeakerOn = false;
     _isRemoteMuted = false;
+    _isRemoteVideoOn = true;
     _durationTimer?.cancel();
     _callEndedByUs = false;
   }

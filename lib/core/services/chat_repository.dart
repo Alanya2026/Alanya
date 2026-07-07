@@ -8,7 +8,9 @@ import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import '../utils/forward_message.dart';
 import '../utils/media_album.dart';
+import 'local_notification_helper.dart';
 import 'media_cache_service.dart';
+import 'voice_asset_resolver.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';  
 class ChatRepository {
@@ -30,10 +32,27 @@ class ChatRepository {
   /// Retry tracker pour les lectures hors-ligne (conversationID -> retryCount)
   final Map<int, int> _pendingReadsRetry = {};
 
-  void setActiveConversation(int conversationID) =>
-      _activeConversationID = conversationID;
+  void setActiveConversation(int conversationID) {
+    _activeConversationID = conversationID;
+    LocalNotificationHelper.setActiveConversationId(conversationID);
+  }
+
   void clearActiveConversation(int conversationID) {
-    if (_activeConversationID == conversationID) _activeConversationID = 0;
+    if (_activeConversationID == conversationID) {
+      _activeConversationID = 0;
+      LocalNotificationHelper.setActiveConversationId(null);
+    }
+  }
+
+  /// Synchronise la suppression push avec le cycle de vie de l'app.
+  /// En arrière-plan, on ne bloque plus les notifs même si le chat est encore
+  /// sur la pile de navigation.
+  void syncPushSuppressionForLifecycle(bool appInForeground) {
+    if (!appInForeground || _activeConversationID == 0) {
+      LocalNotificationHelper.setActiveConversationId(null);
+    } else {
+      LocalNotificationHelper.setActiveConversationId(_activeConversationID);
+    }
   }
 
   ChatRepository._(this._api, this._db) : _dao = ChatDao(_db);
@@ -109,6 +128,7 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
     _activeConversationID = 0;
+    LocalNotificationHelper.setActiveConversationId(null);
     _pendingReads.clear();
     _pendingReadsRetry.clear();
     _myId = 0;
@@ -117,6 +137,7 @@ class ChatRepository {
   /// Efface conversations, messages et cache média (logout / changement de compte).
   Future<void> clearLocalSession() async {
     _activeConversationID = 0;
+    LocalNotificationHelper.setActiveConversationId(null);
     _pendingReads.clear();
     _pendingReadsRetry.clear();
     await _dao.clearAll();
@@ -940,6 +961,7 @@ class ChatRepository {
 
   Future<void> markAsRead(int conversationID) async {
     await _dao.markConversationReadAtomic(conversationID, _myId);
+    await LocalNotificationHelper.cancelConversation(conversationID);
     if (_api.isSocketReady) {
       try {
         _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': conversationID});
@@ -1070,7 +1092,7 @@ class ChatRepository {
       final mtype = _toInt(json['type']);
       final mediaUrl = json['mediaUrl']?.toString();
       if (mediaUrl != null && mediaUrl.isNotEmpty) {
-        if (mtype == 1 || mtype == 3) {
+        if (mtype == 1) {
           _cacheMedia(msgID, mediaUrl);
         } else if (mtype == 4) {
           _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
@@ -1119,8 +1141,8 @@ class ChatRepository {
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
     if (mediaUrl != null && msgID != 0 && !isViewOnce) {
-      if (mtype == 1 || mtype == 3) {
-        // Images, audio : auto-cache toujours.
+      if (mtype == 1) {
+        // Images : auto-cache. Audio (3) : téléchargement manuel dans le chat.
         _cacheMedia(msgID, mediaUrl);
       } else if (mtype == 4) {
         // Fichiers : auto-cache si < 5 MB (sinon coût data trop élevé,
@@ -1134,6 +1156,55 @@ class ChatRepository {
   Future<void> _cacheMedia(int msgID, String url, {int? maxBytes}) async {
     final path = await _mediaCache.ensureCached(url, maxBytes: maxBytes);
     if (path != null) await _dao.setLocalMediaPath(msgID, path);
+  }
+
+  /// Lie un fichier déjà présent dans le cache disque au message (legacy auto-cache).
+  Future<String?> adoptCachedVoicePath({
+    required int msgID,
+    required String mediaUrl,
+  }) async {
+    final resolved = await VoiceAssetResolver(
+      mediaCache: _mediaCache,
+      dao: _dao,
+    ).resolve(
+      serverMsgId: msgID,
+      isMe: false,
+      mediaUrl: mediaUrl,
+    );
+    return resolved?.path;
+  }
+
+  /// Réconcilie les chemins locaux des messages vocaux d'une conversation.
+  Future<void> reconcileVoiceLocalPaths(int conversationId) async {
+    final messages = await _dao.getVoiceMessages(conversationId);
+    final resolver = VoiceAssetResolver(mediaCache: _mediaCache, dao: _dao);
+    for (final m in messages) {
+      if (m.msgID == 0) continue;
+      final isMe = m.senderID == _myId;
+      await resolver.resolve(
+        serverMsgId: m.msgID,
+        isMe: isMe,
+        dbPath: m.localMediaPath,
+        pendingPath: isMe ? m.pendingUploadPath : null,
+        mediaUrl: m.mediaUrl,
+      );
+    }
+  }
+
+  /// Téléchargement manuel d'un message vocal reçu, avec progression.
+  Future<String?> downloadVoiceMessage({
+    required int msgID,
+    required String mediaUrl,
+    void Function(double? progress)? onProgress,
+  }) async {
+    if (msgID == 0) return null;
+    final path = await _mediaCache.downloadWithProgress(
+      mediaUrl,
+      onProgress: onProgress,
+      maxBytes: 15 * 1024 * 1024,
+    );
+    if (path != null) await _dao.setLocalMediaPath(msgID, path);
+    return path;
   }
 
   void _onMessageStatus(dynamic data) {
@@ -1240,7 +1311,7 @@ class ChatRepository {
       if (mediaUrl != null) 'mediaUrl': mediaUrl,
       if (mediaName != null) 'mediaName': mediaName,
       if (mediaDuration != null) 'mediaDuration': mediaDuration,
-      if (replyToID != null) 'replyToID': replyToID,
+      if (replyToID != null && replyToID > 0) 'replyToID': replyToID,
       if (replyToContent != null) 'replyToContent': replyToContent,
       if (isStatusReply != 0) 'isStatusReply': isStatusReply,
       if (isForwarded) 'isForwarded': 1,

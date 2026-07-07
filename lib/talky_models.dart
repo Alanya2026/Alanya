@@ -711,6 +711,8 @@ class SocketEvents {
   // Mute state (Flutter ↔ Backend ↔ Flutter)
   static const callMuteState      = 'call:mute_state';
   static const groupMuteState     = 'group:mute_state';
+  static const callVideoState     = 'call:video_state';
+  static const groupVideoState    = 'group:video_state';
   static const meetingMuteState   = 'meeting:mute_state';
 
   // Meetings (Flutter → Backend)

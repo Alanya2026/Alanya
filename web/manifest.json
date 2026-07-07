@@ -1,11 +1,11 @@
 {
-    "name": "Talky",
-    "short_name": "Talky",
+    "name": "Alanya",
+    "short_name": "Alanya",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#1A237E",
-    "theme_color": "#1A237E",
-    "description": "Messagerie, appels et meetings — Talky.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#3F51B5",
+    "description": "Messagerie, appels et meetings — Alanya.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
