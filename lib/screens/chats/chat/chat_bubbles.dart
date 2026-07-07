@@ -197,8 +197,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
   }
 
   /// Bulle d'appel alignée selon la direction, tappable pour rappeler.
+  /// Reprend exactement le style visuel des bulles de message (couleur
+  /// selon expéditeur, coins arrondis avec "queue", ombre) pour que le
+  /// journal d'appels s'intègre au fil comme un message classique.
   Widget _buildCallBubble(LocalCall call) {
     final outgoing = call.idCaller == _myId;
+    final isMe = outgoing;
     final missed = call.status != 1; // tout ce qui n'est pas "répondu" (0 = sans réponse, 2 = rejeté)
     final isVideo = call.type == 1;
     final colors = context.colors;
@@ -221,39 +225,46 @@ extension _ChatBubbles on _ChatDetailScreenState {
         : time;
 
     return Align(
-      alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Material(
-          color: context.semantic.surfaceMuted,
-          borderRadius: AppRadius.brLg,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => _showCallBackOptions(call),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              child: Row(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: GestureDetector(
+        onTap: () => _showCallBackOptions(call),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          constraints:
+              BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+          decoration: BoxDecoration(
+            color: isMe ? colors.primary : colors.surface,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(AppRadius.lg),
+              topRight: const Radius.circular(AppRadius.lg),
+              bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
+              bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
+            ),
+            boxShadow: AppShadows.subtle,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(dirIcon, size: 20, color: missed ? dirColor : _bubbleText(isMe)),
+              const SizedBox(width: AppSpacing.sm),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(dirIcon, size: 20, color: dirColor),
-                  const SizedBox(width: AppSpacing.sm),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(label, style: context.text.bodyMedium),
-                      Text(meta,
-                          style: context.text.labelSmall
-                              ?.copyWith(color: colors.onSurfaceVariant)),
-                    ],
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded,
-                      size: 20, color: colors.primary),
+                  Text(label,
+                      style: context.text.bodyMedium
+                          ?.copyWith(color: _bubbleText(isMe))),
+                  Text(meta,
+                      style: context.text.labelSmall
+                          ?.copyWith(color: _bubbleMuted(isMe), fontSize: 10)),
                 ],
               ),
-            ),
+              const SizedBox(width: AppSpacing.md),
+              Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+                  size: 20, color: _bubbleText(isMe)),
+            ],
           ),
         ),
       ),
