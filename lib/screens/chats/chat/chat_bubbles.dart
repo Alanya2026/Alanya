@@ -178,6 +178,185 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
+  // ── Journal d'appels intégré au fil (style WhatsApp, 1-1) ─────────────
+  /// Date de tri d'un élément du fil (message, album ou appel).
+  DateTime _feedTime(Object item) {
+    if (item is LocalCall) return item.createdAt;
+    if (item is ChatListSingle) return item.message.sendAt;
+    if (item is ChatListAlbum) return item.messages.first.sendAt;
+    return DateTime.now();
+  }
+
+  String _fmtCallDuration(int? seconds) {
+    final s = seconds ?? 0;
+    final h = s ~/ 3600;
+    final m = (s % 3600) ~/ 60;
+    final sec = s % 60;
+    two(int n) => n.toString().padLeft(2, '0');
+    return h > 0 ? '$h:${two(m)}:${two(sec)}' : '$m:${two(sec)}';
+  }
+
+  /// Bulle d'appel alignée selon la direction, tappable pour rappeler.
+  /// Reprend exactement le style visuel des bulles de message (couleur
+  /// selon expéditeur, coins arrondis avec "queue", ombre) pour que le
+  /// journal d'appels s'intègre au fil comme un message classique.
+  Widget _buildCallBubble(LocalCall call) {
+    final outgoing = call.idCaller == _myId;
+    final status = call.status;
+    final answered = status == 1;
+    final missed = status == 0;
+    final rejected = status == 2;
+    final isMe = outgoing;
+    final missed = call.status != 1; // tout ce qui n'est pas "répondu" (0 = sans réponse, 2 = rejeté)
+    final isVideo = call.type == 1;
+    final colors = context.colors;
+    final titleColor = outgoing ? colors.onPrimaryContainer : colors.onSurface;
+    final metaColor = outgoing
+        ? colors.onPrimaryContainer.withAlpha(170)
+        : colors.onSurfaceVariant;
+    final bubbleColor = outgoing
+        ? colors.primaryContainer.withAlpha(190)
+        : context.semantic.surfaceMuted;
+
+    final dirIcon = !answered
+        ? (outgoing ? Icons.call_missed_outgoing : Icons.call_missed)
+        : (outgoing ? Icons.call_made : Icons.call_received);
+    final dirColor = answered ? context.semantic.success : colors.error;
+
+    final kind = isVideo ? 'Appel vidéo' : 'Appel vocal';
+    final direction = outgoing ? 'sortant' : 'entrant';
+    final statusLabel = answered
+        ? 'Répondu'
+        : (missed ? 'Sans réponse' : (rejected ? 'Rejeté' : 'Manqué'));
+    final label = '$kind $direction';
+
+    final t = call.createdAt.toLocal();
+    two(int n) => n.toString().padLeft(2, '0');
+    final time = '${two(t.hour)}:${two(t.minute)}';
+    final meta = (answered && (call.duration ?? 0) > 0)
+        ? '$time · ${_fmtCallDuration(call.duration)}'
+        : time;
+
+    return Align(
+      alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3.5),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.78,
+          ),
+          child: Material(
+            color: bubbleColor,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(AppRadius.lg),
+              topRight: const Radius.circular(AppRadius.lg),
+              bottomLeft: outgoing ? const Radius.circular(AppRadius.lg) : Radius.zero,
+              bottomRight: outgoing ? Radius.zero : const Radius.circular(AppRadius.lg),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => _showCallBackOptions(call),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: colors.surface.withAlpha(190),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+                        size: 18,
+                        color: colors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.bodyMedium
+                                ?.copyWith(color: titleColor, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(dirIcon, size: 16, color: dirColor),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '$statusLabel · $meta',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.text.labelSmall?.copyWith(color: metaColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: GestureDetector(
+        onTap: () => _showCallBackOptions(call),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          constraints:
+              BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+          decoration: BoxDecoration(
+            color: isMe ? colors.primary : colors.surface,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(AppRadius.lg),
+              topRight: const Radius.circular(AppRadius.lg),
+              bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
+              bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
+            ),
+            boxShadow: AppShadows.subtle,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(dirIcon, size: 20, color: missed ? dirColor : _bubbleText(isMe)),
+              const SizedBox(width: AppSpacing.sm),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label,
+                      style: context.text.bodyMedium
+                          ?.copyWith(color: _bubbleText(isMe))),
+                  Text(meta,
+                      style: context.text.labelSmall
+                          ?.copyWith(color: _bubbleMuted(isMe), fontSize: 10)),
+                ],
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+                  size: 20, color: _bubbleText(isMe)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildReplyQuote(String content, bool isMe, {required int replyToID}) {
     final accent = isMe ? context.colors.onPrimary : context.colors.primary;
     return Material(

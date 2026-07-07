@@ -807,6 +807,59 @@ extension _ChatActions on _ChatDetailScreenState {
     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
+  /// Propose de rappeler suite à un tap sur une entrée du journal d'appels.
+  /// Affiche une option correspondant au type de l'appel du log (vocal ou
+  /// vidéo), avec la possibilité de basculer vers l'autre type avant de
+  /// lancer l'appel.
+  void _showCallBackOptions(LocalCall call) {
+    final callWasVideo = call.type == 1;
+    final name = widget.userName;
+    final primary = context.colors.primary;
+
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+              child: Text(
+                'Rappeler $name',
+                style: context.text.titleSmall,
+              ),
+            ),
+            ListTile(
+              leading: Icon(
+                callWasVideo ? Icons.videocam_rounded : Icons.call_rounded,
+                color: primary,
+              ),
+              title: Text(callWasVideo ? 'Appel vidéo' : 'Appel vocal'),
+              onTap: () {
+                Navigator.pop(context);
+                _initiateCall(isVideo: callWasVideo);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                callWasVideo ? Icons.call_rounded : Icons.videocam_rounded,
+                color: context.colors.onSurfaceVariant,
+              ),
+              title: Text(callWasVideo ? 'Appel vocal' : 'Appel vidéo'),
+              onTap: () {
+                Navigator.pop(context);
+                _initiateCall(isVideo: !callWasVideo);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _initiateCall({required bool isVideo}) async {
     if (_callsDisabled) {
       ScaffoldMessenger.of(context).showSnackBar(
