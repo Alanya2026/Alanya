@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
+import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
@@ -43,7 +44,8 @@ class _MeetsScreenState extends State<MeetsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadCurrentUser();
+    final me = context.read<AuthProvider>().currentUser;
+    _myId = me?.alanyaID ?? 0;
     _loadMeetings();
     _meetingNotifSub =
         PushService.meetingNotifications.listen((_) => _loadMeetings());
@@ -72,24 +74,6 @@ class _MeetsScreenState extends State<MeetsScreen>
     return list
         .where((m) => m.objet.toLowerCase().contains(_search))
         .toList();
-  }
-
-  Future<void> _loadCurrentUser() async {
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final userData = await apiClient.getMe();
-      if (!mounted) return;
-      final nom = userData['nom'] as String? ?? '';
-      final pseudo = userData['pseudo'] as String? ?? '';
-      final name = nom.isNotEmpty ? nom : pseudo;
-      setState(() {
-        _myId = (userData['alanyaID'] as num?)?.toInt() ?? 0;
-      });
-      // ignore: unused_local_variable
-      final _ = name;
-    } catch (e, st) {
-      AppLog.e('MeetsScreen', 'Chargement profil (getMe) échoué', e, st);
-    }
   }
 
   Future<void> _loadMeetings() async {
@@ -171,7 +155,10 @@ class _MeetsScreenState extends State<MeetsScreen>
   }
 
   Future<void> _createNewMeeting() async {
-    if (_myId == 0) await _loadCurrentUser();
+    if (_myId == 0) {
+      final me = context.read<AuthProvider>().currentUser;
+      if (me != null) setState(() => _myId = me.alanyaID);
+    }
     if (!mounted) return;
 
     final participants = await Navigator.push<List<User>>(

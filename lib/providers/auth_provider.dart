@@ -168,30 +168,41 @@ class AuthProvider extends ChangeNotifier {
     if (url == null || url.isEmpty) {
       throw TalkyException('Réponse upload invalide', 0);
     }
-    await _refreshCurrentUser();
+    await refreshProfile();
     return url;
   }
 
   /// Met à jour le pays de l'utilisateur connecté.
   Future<void> updateCountry(int idPays) async {
     await _apiClient.updateMe(idPays: idPays);
-    await _refreshCurrentUser();
+    await refreshProfile();
+  }
+
+  /// Met à jour le nom et/ou le pseudo de l'utilisateur connecté.
+  Future<void> updateProfile({String? nom, String? pseudo}) async {
+    await _apiClient.updateMe(nom: nom, pseudo: pseudo);
+    await refreshProfile();
   }
 
   /// Supprime la photo de profil (remet la valeur sentinelle backend).
   Future<void> removeAvatar() async {
     await _apiClient.updateMe(avatarUrl: 'NON DEFINI');
-    await _refreshCurrentUser();
+    await refreshProfile();
   }
 
-  Future<void> _refreshCurrentUser() async {
+  /// Rafraîchit le profil depuis le réseau et persiste en cache.
+  /// En cas d'erreur transitoire, conserve le user en mémoire.
+  Future<void> refreshProfile() async {
     try {
       final data = await _apiClient.getMe();
       _currentUser = User.fromJson(data);
       await _storage.saveUser(_currentUser!);
       notifyListeners();
+    } on TalkyException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) rethrow;
+      debugPrint('[AuthProvider] refreshProfile offline, on garde le cache: ${e.message}');
     } catch (e) {
-      debugPrint('[AuthProvider] _refreshCurrentUser error: $e');
+      debugPrint('[AuthProvider] refreshProfile error: $e');
       rethrow;
     }
   }

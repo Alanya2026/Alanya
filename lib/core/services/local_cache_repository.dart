@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -42,6 +43,24 @@ class LocalCacheRepository {
           ..where((u) => u.isPreferredContact.equals(true))
           ..orderBy([(u) => OrderingTerm(expression: u.nom)]))
         .get();
+  }
+
+  /// Retourne le cache immédiatement. Si [syncInBackground] est vrai,
+  /// lance [syncPreferredContacts] sans bloquer l'appelant.
+  Future<List<LocalUser>> loadPreferredContacts({
+    bool syncInBackground = true,
+  }) async {
+    final local = await getPreferredContactsOnce();
+    if (syncInBackground) {
+      unawaited(syncPreferredContacts());
+    }
+    return local;
+  }
+
+  /// Synchronise depuis l'API puis retourne la liste à jour.
+  Future<List<LocalUser>> syncAndGetPreferredContacts() async {
+    await syncPreferredContacts();
+    return getPreferredContactsOnce();
   }
 
   /// Rafraîchit la liste des contacts préférés depuis l'API et met à jour

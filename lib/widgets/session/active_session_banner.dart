@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/navigation/app_navigator.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/meeting_service.dart';
+import '../../core/services/voice_playback_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../screens/chats/chat_detail_screen.dart';
 
 /// Hauteur du bandeau compact (hors status bar / encoche).
 const double kActiveSessionTopBarHeight = 44.0;
@@ -22,11 +25,15 @@ class ActiveSessionChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<CallService, MeetingService>(
-      builder: (context, callService, meetingService, _) {
-        final visible = _isBannerVisible(callService, meetingService);
+    return Consumer3<CallService, MeetingService, VoicePlaybackService>(
+      builder: (context, callService, meetingService, voiceService, _) {
+        final topVisible = _isTopBannerVisible(
+          callService,
+          meetingService,
+          voiceService,
+        );
         final mq = MediaQuery.of(context);
-        final topInset = visible ? kActiveSessionTopBarHeight : 0.0;
+        final topInset = topVisible ? kActiveSessionTopBarHeight : 0.0;
 
         return Stack(
           children: [
@@ -55,12 +62,20 @@ class ActiveSessionChrome extends StatelessWidget {
   }
 }
 
+bool _isTopBannerVisible(
+  CallService call,
+  MeetingService meeting,
+  VoicePlaybackService voice,
+) {
+  return _isBannerVisible(call, meeting) || voice.showMiniPlayer;
+}
+
 bool _isBannerVisible(CallService call, MeetingService meeting) {
   return call.shouldShowCallBanner ||
       (!call.isCallActive && meeting.shouldShowMeetingBanner);
 }
 
-/// Bandeau compact en haut (style iOS / Google Meet).
+/// Bandeau compact en haut (style iOS / Google Meet) : appel, réunion ou vocal.
 class ActiveSessionBannerHost extends StatefulWidget {
   const ActiveSessionBannerHost({super.key});
 
@@ -73,6 +88,7 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
     with SingleTickerProviderStateMixin {
   bool _wasCallBannerVisible = false;
   bool _wasMeetingBannerVisible = false;
+  bool _wasVoiceBannerVisible = false;
   late final AnimationController _slideCtrl;
   late final Animation<Offset> _slideAnim;
 
@@ -101,13 +117,18 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
   void _onSessionEnded({
     required bool callEnded,
     required bool meetingEnded,
+    required bool voiceEnded,
     required bool wasMinimized,
   }) {
     if (!wasMinimized || !mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
 
-    final message = callEnded ? 'Appel terminé' : 'Réunion terminée';
+    final message = callEnded
+        ? 'Appel terminé'
+        : meetingEnded
+            ? 'Réunion terminée'
+            : 'Message vocal terminé';
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
@@ -119,14 +140,46 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
     );
   }
 
+  void _openVoiceChat(VoicePlaybackService service) {
+    final ctx = service.chatContext;
+    if (ctx == null) return;
+    final nav = appNavigatorKey.currentState;
+    if (nav == null) return;
+    nav.push(
+      MaterialPageRoute(
+        builder: (_) => ChatDetailScreen(
+          userName: ctx.title,
+          conversationId: ctx.conversationId,
+          userId: ctx.userId,
+          isGroup: ctx.isGroup,
+          avatarUrl: ctx.avatarUrl,
+        ),
+      ),
+    );
+  }
+
+  String _fmtVoiceDuration(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  String _voiceDetail(VoicePlaybackService service) {
+    if (service.isPlaying) {
+      return '${_fmtVoiceDuration(service.position)} · Message vocal · Toucher pour revenir';
+    }
+    return 'En pause · Message vocal · Toucher pour revenir';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer2<CallService, MeetingService>(
-      builder: (context, callService, meetingService, _) {
+    return Consumer3<CallService, MeetingService, VoicePlaybackService>(
+      builder: (context, callService, meetingService, voiceService, _) {
         final showCall = callService.shouldShowCallBanner;
         final showMeeting =
             !callService.isCallActive && meetingService.shouldShowMeetingBanner;
-        final visible = showCall || showMeeting;
+        final showVoice = !showCall && !showMeeting && voiceService.showMiniPlayer;
+        final visible = showCall || showMeeting || showVoice;
 
         if (_wasCallBannerVisible &&
             !showCall &&
@@ -135,6 +188,7 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
             _onSessionEnded(
               callEnded: true,
               meetingEnded: false,
+              voiceEnded: false,
               wasMinimized: true,
             );
           });
@@ -146,12 +200,26 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
             _onSessionEnded(
               callEnded: false,
               meetingEnded: true,
+              voiceEnded: false,
+              wasMinimized: true,
+            );
+          });
+        }
+        if (_wasVoiceBannerVisible &&
+            !showVoice &&
+            !voiceService.hasActivePlayback) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _onSessionEnded(
+              callEnded: false,
+              meetingEnded: false,
+              voiceEnded: true,
               wasMinimized: true,
             );
           });
         }
         _wasCallBannerVisible = showCall;
         _wasMeetingBannerVisible = showMeeting;
+        _wasVoiceBannerVisible = showVoice;
 
         if (visible) {
           SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
@@ -168,35 +236,55 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
           return const SizedBox.shrink();
         }
 
+        final Widget bar;
+        if (showCall) {
+          bar = _SessionTopBar(
+            label: _callLabel(callService),
+            detail: _callDetail(callService),
+            isConnected: callService.status == CallStatus.connected,
+            isMuted: callService.isMuted,
+            accent: AppColors.success,
+            onExpand: () => callService.navigateToCallUi(),
+            onHangUp: () async {
+              if (callService.groupRoomId != null) {
+                await callService.leaveGroupCall();
+              } else {
+                await callService.endCall();
+              }
+            },
+          );
+        } else if (showMeeting) {
+          bar = _SessionTopBar(
+            label: meetingService.currentMeeting?.objet ?? 'Réunion',
+            detail:
+                '${meetingService.formattedDuration} · Toucher pour revenir',
+            isConnected: meetingService.status == MeetingStatus.connected,
+            isMuted: meetingService.isMuted,
+            accent: AppColors.brandPrimaryStrong,
+            onExpand: () => meetingService.navigateToMeetingUi(),
+            onHangUp: () => meetingService.leaveMeeting(),
+          );
+        } else {
+          final title = voiceService.chatContext?.title ?? 'Message vocal';
+          bar = _SessionTopBar(
+            label: title,
+            detail: _voiceDetail(voiceService),
+            isConnected: voiceService.isPlaying,
+            isMuted: false,
+            accent: AppColors.brandPrimaryStrong,
+            onExpand: () => _openVoiceChat(voiceService),
+            onHangUp: voiceService.stop,
+            leadingAction: _VoicePlayPauseButton(
+              isPlaying: voiceService.isPlaying,
+              onPressed: voiceService.togglePlayback,
+            ),
+            hangUpIcon: CupertinoIcons.xmark,
+          );
+        }
+
         return SlideTransition(
           position: _slideAnim,
-          child: showCall
-              ? _SessionTopBar(
-                  label: _callLabel(callService),
-                  detail: _callDetail(callService),
-                  isConnected: callService.status == CallStatus.connected,
-                  isMuted: callService.isMuted,
-                  accent: AppColors.success,
-                  onExpand: () => callService.navigateToCallUi(),
-                  onHangUp: () async {
-                    if (callService.groupRoomId != null) {
-                      await callService.leaveGroupCall();
-                    } else {
-                      await callService.endCall();
-                    }
-                  },
-                )
-              : _SessionTopBar(
-                  label: meetingService.currentMeeting?.objet ?? 'Réunion',
-                  detail:
-                      '${meetingService.formattedDuration} · Toucher pour revenir',
-                  isConnected:
-                      meetingService.status == MeetingStatus.connected,
-                  isMuted: meetingService.isMuted,
-                  accent: AppColors.brandPrimaryStrong,
-                  onExpand: () => meetingService.navigateToMeetingUi(),
-                  onHangUp: () => meetingService.leaveMeeting(),
-                ),
+          child: bar,
         );
       },
     );
@@ -230,6 +318,8 @@ class _SessionTopBar extends StatelessWidget {
     required this.accent,
     required this.onExpand,
     required this.onHangUp,
+    this.leadingAction,
+    this.hangUpIcon = CupertinoIcons.phone_down_fill,
   });
 
   final String label;
@@ -239,6 +329,8 @@ class _SessionTopBar extends StatelessWidget {
   final Color accent;
   final VoidCallback onExpand;
   final VoidCallback onHangUp;
+  final Widget? leadingAction;
+  final IconData hangUpIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -286,6 +378,7 @@ class _SessionTopBar extends StatelessWidget {
                   ),
                 ),
               ),
+              if (leadingAction != null) leadingAction!,
               if (isMuted)
                 Padding(
                   padding: const EdgeInsets.only(right: AppSpacing.xs),
@@ -295,9 +388,46 @@ class _SessionTopBar extends StatelessWidget {
                     color: AppColors.white.withValues(alpha: 0.85),
                   ),
                 ),
-              _HangUpButton(onPressed: onHangUp),
+              _HangUpButton(
+                onPressed: onHangUp,
+                icon: hangUpIcon,
+              ),
               AppSpacing.hGapMd,
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VoicePlayPauseButton extends StatelessWidget {
+  const _VoicePlayPauseButton({
+    required this.isPlaying,
+    required this.onPressed,
+  });
+
+  final bool isPlaying;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.xs),
+      child: Material(
+        color: AppColors.white.withValues(alpha: 0.18),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: Icon(
+              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              color: AppColors.white,
+              size: 20,
+            ),
           ),
         ),
       ),
@@ -371,9 +501,13 @@ class _LiveDotState extends State<_LiveDot>
 }
 
 class _HangUpButton extends StatelessWidget {
-  const _HangUpButton({required this.onPressed});
+  const _HangUpButton({
+    required this.onPressed,
+    this.icon = CupertinoIcons.phone_down_fill,
+  });
 
   final VoidCallback onPressed;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -383,13 +517,13 @@ class _HangUpButton extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
-        child: const SizedBox(
+        child: SizedBox(
           width: 36,
           height: 36,
           child: Icon(
-            CupertinoIcons.phone_down_fill,
+            icon,
             color: AppColors.white,
-            size: 18,
+            size: icon == CupertinoIcons.xmark ? 16 : 18,
           ),
         ),
       ),
@@ -401,5 +535,11 @@ class _HangUpButton extends StatelessWidget {
 bool isActiveSessionBannerVisible(BuildContext context) {
   final call = context.read<CallService>();
   final meeting = context.read<MeetingService>();
-  return _isBannerVisible(call, meeting);
+  final voice = context.read<VoicePlaybackService>();
+  return _isTopBannerVisible(call, meeting, voice);
+}
+
+/// @deprecated Utiliser [isActiveSessionBannerVisible].
+bool isVoiceMiniPlayerVisible(BuildContext context) {
+  return context.read<VoicePlaybackService>().showMiniPlayer;
 }

@@ -386,10 +386,25 @@ extension _ChatBubbles on _ChatDetailScreenState {
         return _buildVideoMedia(msg);
       case 3:
         return VoiceMessageBubble(
+          messageId: msg.clientId,
+          serverMsgId: msg.msgID,
+          isMe: isMe,
           localPath: msg.localMediaPath,
+          pendingPath: isMe ? msg.pendingUploadPath : null,
           networkUrl: msg.mediaUrl,
           durationSeconds: msg.mediaDuration ?? 0,
-          isMe: isMe,
+          foregroundColor: isMe
+              ? context.colors.onPrimary
+              : context.colors.primary,
+          chatContext: widget.conversationId != null
+              ? VoiceChatContext(
+                  conversationId: widget.conversationId!,
+                  title: widget.userName,
+                  userId: widget.userId,
+                  isGroup: widget.isGroup,
+                  avatarUrl: widget.avatarUrl,
+                )
+              : null,
         );
       case 4:
         return _buildFileMedia(msg, isMe);

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/chat_provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/realtime_sync_service.dart';
@@ -83,6 +84,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _scheduleResumeCatchUp();
+      Provider.of<ChatProvider>(context, listen: false)
+          .repository
+          .syncPushSuppressionForLifecycle(true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      Provider.of<ChatProvider>(context, listen: false)
+          .repository
+          .syncPushSuppressionForLifecycle(false);
     }
   }
 

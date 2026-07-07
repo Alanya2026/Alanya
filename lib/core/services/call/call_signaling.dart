@@ -243,6 +243,14 @@ extension CallSignaling on CallService {
       notify();
     });
 
+    // État caméra 1-à-1 : l'autre participant a coupé/activé sa caméra
+    _apiClient.onSocketEvent(SocketEvents.callVideoState, (data) {
+      if (data is! Map) return;
+      _isRemoteVideoOn = data['isVideoOn'] != false;
+      debugPrint('[CallService] 📹 Remote video state: $_isRemoteVideoOn');
+      notify();
+    });
+
     // Mute state groupe : un participant a coupé/activé son micro
     _apiClient.onSocketEvent(SocketEvents.groupMuteState, (data) {
       if (data is! Map) return;
@@ -252,6 +260,19 @@ extension CallSignaling on CallService {
       debugPrint('[CallService] 🎙 Group mute state: userId=$userId isMuted=$isMuted');
       if (_groupRoster.containsKey(userId)) {
         _groupRoster[userId]!.isMuted = isMuted;
+        notify();
+      }
+    });
+
+    // État caméra groupe : un participant a coupé/activé sa caméra
+    _apiClient.onSocketEvent(SocketEvents.groupVideoState, (data) {
+      if (data is! Map) return;
+      final userId = data['userId']?.toString();
+      final isVideoOn = data['isVideoOn'] != false;
+      if (userId == null) return;
+      debugPrint('[CallService] 📹 Group video state: userId=$userId isVideoOn=$isVideoOn');
+      if (_groupRoster.containsKey(userId)) {
+        _groupRoster[userId]!.isVideoOn = isVideoOn;
         notify();
       }
     });

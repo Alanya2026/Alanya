@@ -19,6 +19,7 @@ import '../../providers/status_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'status_views_screen.dart';
+import 'status_audio_view.dart';
 
 class StatusViewerScreen extends StatefulWidget {
   final List<List<Statut>> contactGroups;
@@ -50,8 +51,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   VideoPlayerController? _videoCtrl;
   ChewieController? _chewieCtrl;
   AudioPlayer? _audioPlayer;
+  String? _audioPath;
   StreamSubscription<PlayerState>? _audioStateSub;
-  StreamSubscription<Duration>? _audioPositionSub;
   VoidCallback? _videoTickListener;
   int _loadSeq = 0;
   final MediaCacheService _mediaCache = MediaCacheService();
@@ -98,14 +99,13 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     }
     _videoCtrl?.dispose();
     _audioStateSub?.cancel();
-    _audioPositionSub?.cancel();
     _audioPlayer?.dispose();
     _videoCtrl = null;
     _chewieCtrl = null;
     _audioPlayer = null;
+    _audioPath = null;
     _videoTickListener = null;
     _audioStateSub = null;
-    _audioPositionSub = null;
   }
 
   /// Télécharge le média via HTTP (cert pinning) puis lit depuis le disque.
@@ -176,6 +176,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           }
           await p.play();
           _audioPlayer = p;
+          _audioPath = path;
           totalDuration = p.duration ??
               Duration(
                   milliseconds: s.mediaDurationMs ??
@@ -185,12 +186,6 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           }
           _audioStateSub = p.playerStateStream.listen((st) {
             if (st.processingState == ProcessingState.completed) _next();
-          });
-          _audioPositionSub = p.positionStream.listen((pos) {
-            final dur = p.duration ?? totalDuration;
-            if (dur.inMilliseconds <= 0) return;
-            _progress.value =
-                (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0);
           });
         } catch (e, st) {
           AppLog.w('StatusViewer', 'Lecture audio statut échouée', e, st);
@@ -661,7 +656,19 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         }
         return const Center(child: CircularProgressIndicator());
       case 3:
-        return _AudioContent(statut: s);
+        if (_audioPlayer != null && _audioPath != null) {
+          return StatusAudioView(
+            player: _audioPlayer!,
+            audioPath: _audioPath!,
+            totalDuration: _audioPlayer!.duration ??
+                Duration(milliseconds: s.mediaDurationMs ?? 5000),
+            displayName: s.nom ?? s.pseudo ?? '',
+            avatarUrl: s.avatarUrl,
+            paused: _paused,
+            onProgress: (v) => _progress.value = v,
+          );
+        }
+        return const Center(child: CircularProgressIndicator());
       default:
         return const SizedBox.shrink();
     }
@@ -849,50 +856,6 @@ class _Footer extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _AudioContent extends StatelessWidget {
-  final Statut statut;
-
-  const _AudioContent({required this.statut});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.brandPrimaryDark,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(AppSpacing.xxl),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 60,
-            backgroundColor: Colors.white24,
-            backgroundImage: _profileImage(statut),
-            child: _profileImage(statut) == null
-                ? const Icon(Icons.person, size: 60, color: Colors.white)
-                : null,
-          ),
-          AppSpacing.vGapXxl,
-          const Icon(Icons.audiotrack, color: Colors.white, size: 36),
-          AppSpacing.vGapSm,
-          Text(
-            statut.nom ?? '',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          AppSpacing.hGapSm,
-          Text(
-            'Message vocal en cours...',
-            style: TextStyle(color: Colors.white.withAlpha(180)),
-          ),
-        ],
       ),
     );
   }

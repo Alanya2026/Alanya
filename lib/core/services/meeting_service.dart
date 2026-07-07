@@ -418,6 +418,7 @@ class MeetingService extends ChangeNotifier {
         isVideo: isVideo,
         getLocalStream: () => _localStream,
         isVideoOn: () => !_isVideoOff,
+        isMuted: () => _isMuted,
       );
       await CallSessionGuard.instance.markConnected();
     }

@@ -487,4 +487,41 @@ class WebRTCService {
       debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
     }
   }
+
+  /// Détecte le mode de connexion ICE établi : 0 = relay/TURN, 1 = P2P (host/srflx).
+  Future<int?> detectConnectionMode() async {
+    final pc = _peerConnection;
+    if (pc == null) return null;
+
+    try {
+      final reports = await pc.getStats();
+      String? localCandidateId;
+
+      for (final r in reports) {
+        if (r.type != 'candidate-pair') continue;
+        final values = r.values;
+        final state = values['state']?.toString();
+        final nominated = values['nominated'];
+        if (state == 'succeeded' || nominated == true) {
+          localCandidateId = values['localCandidateId']?.toString();
+          break;
+        }
+      }
+
+      if (localCandidateId == null) return null;
+
+      for (final r in reports) {
+        if (r.type != 'local-candidate' || r.id != localCandidateId) continue;
+        final candidateType = r.values['candidateType']?.toString();
+        if (candidateType == 'relay') return 0;
+        if (candidateType == 'host' || candidateType == 'srflx') return 1;
+        return null;
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('[WebRTC] detectConnectionMode failed: $e');
+      return null;
+    }
+  }
 }

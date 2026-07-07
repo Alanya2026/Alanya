@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
-import '../../talky_api_client.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/services/meeting_service.dart';
 import 'ongoing_meet_screen.dart';
 
@@ -38,17 +38,21 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
     setState(() => _isJoining = true);
 
     try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final userData = await apiClient.getMe();
-      final myId = userData['alanyaID'] ?? 0;
-      final myName = userData['nom'] ?? userData['pseudo'] ?? '';
+      final me = context.read<AuthProvider>().currentUser;
+      if (me == null) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil non disponible, réessayez')),
+        );
+        return;
+      }
 
       final meetingService =
           Provider.of<MeetingService>(context, listen: false);
       await meetingService.joinByRoom(
         roomCode: _codeController.text.trim(),
-        myId: myId,
-        myName: myName,
+        myId: me.alanyaID,
+        myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
       );
 
       if (context.mounted) {

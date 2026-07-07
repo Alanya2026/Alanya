@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/services/call_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/calls/draggable_video_pip.dart';
 import '../../widgets/calls/speaking_indicator_border.dart';
 
 /// Écran d'appel en cours (1-à-1, audio ou vidéo).
@@ -27,6 +29,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
   bool _renderersReady = false;
   bool _closing = false;
+  bool _localIsMainView = false;
+  Offset? _pipOffset;
+  bool _controlsVisible = true;
 
   @override
   void initState() {
@@ -152,6 +157,114 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     super.dispose();
   }
 
+  void _toggleControls() {
+    setState(() => _controlsVisible = !_controlsVisible);
+  }
+
+  void _toggleSwap() {
+    setState(() => _localIsMainView = !_localIsMainView);
+  }
+
+  void _onPipPositionChanged(Offset offset) {
+    setState(() => _pipOffset = offset);
+  }
+
+  bool _hasRemoteVideo(CallService cs, bool isGroup) {
+    return !isGroup &&
+        cs.isVideo &&
+        cs.isRemoteVideoOn &&
+        _remoteRenderer.srcObject != null;
+  }
+
+  bool _hasLocalVideo(CallService cs) {
+    return cs.isVideoOn && _localRenderer.srcObject != null;
+  }
+
+  Widget? _buildPipChild(
+    CallService cs,
+    bool isGroup, {
+    required String localName,
+    required String? localPhoto,
+  }) {
+    if (!cs.isVideo || !_renderersReady) return null;
+
+    if (isGroup) {
+      if (_hasLocalVideo(cs)) {
+        return _PipVideo(renderer: _localRenderer, mirror: true);
+      }
+      return _PipAvatar(name: localName, photoUrl: localPhoto);
+    }
+
+    if (_localIsMainView) {
+      if (_hasRemoteVideo(cs, false)) {
+        return _PipVideo(renderer: _remoteRenderer);
+      }
+      return _PipAvatar(
+        name: cs.remoteUserName ?? 'Inconnu',
+        photoUrl: cs.remoteUserPhoto,
+      );
+    }
+
+    if (_hasLocalVideo(cs)) {
+      return _PipVideo(renderer: _localRenderer, mirror: true);
+    }
+    return _PipAvatar(name: localName, photoUrl: localPhoto);
+  }
+
+  Widget _buildMainLayer(
+    CallService cs,
+    bool isGroup,
+    bool hasRemoteVideo, {
+    required String localName,
+    required String? localPhoto,
+  }) {
+    if (isGroup) {
+      return _GroupGrid(
+        streams: cs.groupRemoteStreams,
+        roster: cs.groupRoster,
+        activeSpeakers: cs.activeSpeakers,
+      );
+    }
+
+    if (!cs.isVideo) {
+      return _AudioBackdrop(
+        name: cs.remoteUserName ?? 'Inconnu',
+        photoUrl: cs.remoteUserPhoto,
+        isSpeaking: cs.isUserSpeaking(cs.remoteUserId?.toString() ?? ''),
+        isRemoteMuted: cs.isRemoteMuted,
+      );
+    }
+
+    if (_localIsMainView) {
+      if (_hasLocalVideo(cs)) {
+        return RTCVideoView(
+          _localRenderer,
+          mirror: true,
+          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+        );
+      }
+      return _AudioBackdrop(
+        name: localName,
+        photoUrl: localPhoto,
+        isSpeaking: cs.amISpeaking,
+      );
+    }
+
+    if (hasRemoteVideo) {
+      return RTCVideoView(
+        _remoteRenderer,
+        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+      );
+    }
+
+    return _AudioBackdrop(
+      name: cs.remoteUserName ?? 'Inconnu',
+      photoUrl: cs.remoteUserPhoto,
+      isSpeaking: cs.isUserSpeaking(cs.remoteUserId?.toString() ?? ''),
+      isRemoteMuted: cs.isRemoteMuted,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -161,79 +274,119 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
       builder: (_, cs, __) {
         final isVideo = cs.isVideo;
         final isGroup = cs.groupRoomId != null;
-        final hasRemoteVideo =
-            !isGroup && isVideo && _remoteRenderer.srcObject != null;
+        final hasRemoteVideo = _hasRemoteVideo(cs, isGroup);
+        final localUser = context.watch<AuthProvider>().currentUser;
+        final localName = localUser?.nom ?? 'Moi';
+        final localPhoto = localUser?.avatarUrl;
+        final pipChild = _buildPipChild(
+          cs,
+          isGroup,
+          localName: localName,
+          localPhoto: localPhoto,
+        );
+
         return Scaffold(
           backgroundColor: AppColors.black,
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Background : grille groupe / remote vidéo plein écran / avatar
-              if (isGroup)
-                _GroupGrid(
-                  streams: cs.groupRemoteStreams,
-                  roster: cs.groupRoster,
-                  activeSpeakers: cs.activeSpeakers,
-                )
-              else if (hasRemoteVideo)
-                RTCVideoView(
-                  _remoteRenderer,
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                )
-              else
-                _AudioBackdrop(
-                  name: cs.remoteUserName ?? 'Inconnu',
-                  photoUrl: cs.remoteUserPhoto,
-                  isSpeaking: cs.isUserSpeaking(
-                      cs.remoteUserId?.toString() ?? ''),
-                  isRemoteMuted: cs.isRemoteMuted,
-                ),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final screenSize =
+                  Size(constraints.maxWidth, constraints.maxHeight);
+              final safeArea = MediaQuery.paddingOf(context);
+              final pipBounds = computePipBounds(
+                screenSize: screenSize,
+                safeArea: safeArea,
+                controlsVisible: _controlsVisible,
+              );
 
-              // Local video PiP (vidéo uniquement)
-              if (isVideo && _renderersReady && _localRenderer.srcObject != null)
-                Positioned(
-                  right: AppSpacing.lg,
-                  top: MediaQuery.of(context).padding.top + AppSpacing.md,
-                  child: _LocalPiP(renderer: _localRenderer),
-                ),
+              final reclamped = reclampPipOffset(_pipOffset, pipBounds);
+              if (reclamped != _pipOffset) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && reclamped != _pipOffset) {
+                    setState(() => _pipOffset = reclamped);
+                  }
+                });
+              }
 
-              // Top bar : nom + statut + chronomètre
-              Positioned(
-                left: 0,
-                right: 0,
-                top: MediaQuery.of(context).padding.top,
-                child: _TopBar(
-                  name: isGroup
-                      ? 'Appel groupé'
-                      : (cs.remoteUserName ?? 'Appel'),
-                  status: isGroup
-                      ? '${cs.groupRemoteStreams.length + 1} participants'
-                      : _statusLabel(cs),
-                  duration: cs.status == CallStatus.connected
-                      ? cs.formattedDuration
-                      : null,
-                  onMinimize: _minimize,
-                ),
-              ),
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildMainLayer(
+                    cs,
+                    isGroup,
+                    hasRemoteVideo,
+                    localName: localName,
+                    localPhoto: localPhoto,
+                  ),
 
-              // Bottom controls
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _BottomControls(
-                  isVideo: isVideo,
-                  isMuted: cs.isMuted,
-                  isVideoOn: cs.isVideoOn,
-                  isSpeakerOn: cs.isSpeakerOn,
-                  onMute: () => cs.toggleMute(),
-                  onSpeaker: () => cs.toggleSpeaker(),
-                  onCamera: () => cs.toggleCamera(),
-                  onSwitchCam: () => cs.switchCamera(),
-                  onHangUp: _hangUp,
-                ),
-              ),
-            ],
+                  if (isVideo)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: _toggleControls,
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+
+                  if (pipChild != null)
+                    DraggableVideoPiP(
+                      bounds: pipBounds,
+                      position: _pipOffset,
+                      onPositionChanged: _onPipPositionChanged,
+                      onTap: isGroup ? null : _toggleSwap,
+                      child: pipChild,
+                    ),
+
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: MediaQuery.of(context).padding.top,
+                    child: IgnorePointer(
+                      ignoring: !_controlsVisible,
+                      child: AnimatedOpacity(
+                        opacity: _controlsVisible ? 1 : 0,
+                        duration: AppDurations.normal,
+                        child: _TopBar(
+                          name: isGroup
+                              ? 'Appel groupé'
+                              : (cs.remoteUserName ?? 'Appel'),
+                          status: isGroup
+                              ? '${cs.groupRemoteStreams.length + 1} participants'
+                              : _statusLabel(cs),
+                          duration: cs.status == CallStatus.connected
+                              ? cs.formattedDuration
+                              : null,
+                          onMinimize: _minimize,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      ignoring: !_controlsVisible,
+                      child: AnimatedOpacity(
+                        opacity: _controlsVisible ? 1 : 0,
+                        duration: AppDurations.normal,
+                        child: _BottomControls(
+                          isVideo: isVideo,
+                          isMuted: cs.isMuted,
+                          isVideoOn: cs.isVideoOn,
+                          isSpeakerOn: cs.isSpeakerOn,
+                          onMute: () => cs.toggleMute(),
+                          onSpeaker: () => cs.toggleSpeaker(),
+                          onCamera: () => cs.toggleCamera(),
+                          onSwitchCam: () => cs.switchCamera(),
+                          onHangUp: _hangUp,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         );
       },
@@ -339,27 +492,56 @@ class _AudioBackdrop extends StatelessWidget {
   }
 }
 
-class _LocalPiP extends StatelessWidget {
-  const _LocalPiP({required this.renderer});
+class _PipVideo extends StatelessWidget {
+  const _PipVideo({required this.renderer, this.mirror = false});
 
   final RTCVideoRenderer renderer;
+  final bool mirror;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 110,
-      height: 160,
-      decoration: const BoxDecoration(
-        borderRadius: AppRadius.brSm,
-        boxShadow: [
-          BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 4)),
-        ],
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: RTCVideoView(
-        renderer,
-        mirror: true,
-        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+    return RTCVideoView(
+      renderer,
+      mirror: mirror,
+      objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+    );
+  }
+}
+
+class _PipAvatar extends StatelessWidget {
+  const _PipAvatar({required this.name, this.photoUrl});
+
+  final String name;
+  final String? photoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = photoUrl;
+    final hasPhoto = url != null &&
+        url.isNotEmpty &&
+        url.toUpperCase() != 'NON DEFINI' &&
+        (url.startsWith('http://') || url.startsWith('https://'));
+    final initial =
+        name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
+
+    return ColoredBox(
+      color: AppColors.brandPrimaryDark,
+      child: Center(
+        child: CircleAvatar(
+          radius: 36,
+          backgroundColor: AppColors.brandPrimary,
+          backgroundImage: hasPhoto ? NetworkImage(url) : null,
+          child: hasPhoto
+              ? null
+              : Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -588,8 +770,10 @@ class _GroupGrid extends StatelessWidget {
             userId: e.key,
             stream: e.value,
             name: info?.name ?? 'Participant',
+            photoUrl: info?.photo,
             isSpeaking: activeSpeakers.contains(e.key),
             isMuted: info?.isMuted ?? false,
+            isVideoOn: info?.isVideoOn ?? true,
           );
         },
       ),
@@ -604,14 +788,18 @@ class _RemoteTile extends StatefulWidget {
     required this.stream,
     required this.name,
     required this.isSpeaking,
+    this.photoUrl,
     this.isMuted = false,
+    this.isVideoOn = true,
   });
 
   final String userId;
   final MediaStream stream;
   final String name;
+  final String? photoUrl;
   final bool isSpeaking;
   final bool isMuted;
+  final bool isVideoOn;
 
   @override
   State<_RemoteTile> createState() => _RemoteTileState();
@@ -654,6 +842,14 @@ class _RemoteTileState extends State<_RemoteTile> {
     final initial = widget.name.isNotEmpty
         ? widget.name.substring(0, 1).toUpperCase()
         : '?';
+    final url = widget.photoUrl;
+    final hasPhoto = url != null &&
+        url.isNotEmpty &&
+        url.toUpperCase() != 'NON DEFINI' &&
+        (url.startsWith('http://') || url.startsWith('https://'));
+    final showAvatar = !widget.isVideoOn ||
+        (_ready && _renderer.videoWidth == 0);
+
     return SpeakingIndicatorBorder(
       isSpeaking: widget.isSpeaking,
       borderRadius: AppRadius.brMd,
@@ -663,25 +859,27 @@ class _RemoteTileState extends State<_RemoteTile> {
         fit: StackFit.expand,
         children: [
           Container(color: AppColors.immersiveSurface),
-          if (_ready)
+          if (_ready && widget.isVideoOn)
             RTCVideoView(
               _renderer,
               objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
             ),
-          // Avatar fallback (visible si pas de track vidéo)
-          if (_ready && _renderer.videoWidth == 0)
+          if (showAvatar)
             Center(
               child: CircleAvatar(
                 radius: 36,
                 backgroundColor: AppColors.brandPrimary,
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                backgroundImage: hasPhoto ? NetworkImage(url) : null,
+                child: hasPhoto
+                    ? null
+                    : Text(
+                        initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           Positioned(

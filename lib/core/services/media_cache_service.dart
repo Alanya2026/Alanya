@@ -57,6 +57,86 @@ class MediaCacheService {
     }
   }
 
+  /// Télécharge le média avec progression (0.0–1.0) ou `null` si taille inconnue.
+  Future<String?> downloadWithProgress(
+    String url, {
+    void Function(double? progress)? onProgress,
+    int? maxBytes,
+  }) async {
+    try {
+      final dir = await _cacheDir();
+      final file = File(p.join(dir.path, _fileName(url)));
+      if (file.existsSync() && file.lengthSync() > 0) {
+        onProgress?.call(1.0);
+        try {
+          file.setLastAccessedSync(DateTime.now());
+        } catch (e, st) {
+          AppLog.w('MediaCache', 'Touch LRU (setLastAccessed) échoué', e, st);
+        }
+        return file.path;
+      }
+
+      final uri = Uri.parse(url);
+      final client = http.Client();
+      try {
+        if (maxBytes != null) {
+          try {
+            final head =
+                await client.head(uri).timeout(const Duration(seconds: 5));
+            final len = int.tryParse(head.headers['content-length'] ?? '');
+            if (len != null && len > maxBytes) {
+              debugPrint('[MediaCache] skip $url : taille $len > $maxBytes');
+              return null;
+            }
+          } catch (_) {}
+        }
+
+        final request = http.Request('GET', uri);
+        final streamed = await client
+            .send(request)
+            .timeout(const Duration(seconds: 60));
+        if (streamed.statusCode != 200) return null;
+
+        final int? total = streamed.contentLength;
+        final hasKnownSize = total != null && total > 0;
+        if (hasKnownSize) {
+          onProgress?.call(0.0);
+        } else {
+          onProgress?.call(null);
+        }
+
+        final tmp = File('${file.path}.part');
+        final sink = tmp.openWrite();
+        var received = 0;
+        await for (final chunk in streamed.stream) {
+          sink.add(chunk);
+          received += chunk.length;
+          if (hasKnownSize) {
+            onProgress?.call((received / total).clamp(0.0, 1.0));
+          }
+        }
+        await sink.close();
+
+        if (hasKnownSize && received < total) return null;
+        if (maxBytes != null && received > maxBytes) {
+          await tmp.delete();
+          return null;
+        }
+
+        if (file.existsSync()) await file.delete();
+        await tmp.rename(file.path);
+        onProgress?.call(1.0);
+        unawaited(evictIfNeeded());
+        return file.path;
+      } finally {
+        client.close();
+      }
+    } catch (e) {
+      debugPrint('[MediaCache] downloadWithProgress échoué $url: $e');
+      return null;
+    }
+  }
+
   /// Télécharge le média s'il n'est pas déjà en cache et renvoie le chemin local.
   /// Si [maxBytes] est fourni, vérifie d'abord la taille via HEAD et abandonne
   /// si trop gros (utile pour ne pas auto-cacher des fichiers énormes).
