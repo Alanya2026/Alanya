@@ -199,59 +199,113 @@ extension _ChatBubbles on _ChatDetailScreenState {
   /// Bulle d'appel alignée selon la direction, tappable pour rappeler.
   Widget _buildCallBubble(LocalCall call) {
     final outgoing = call.idCaller == _myId;
-    final missed = call.status != 1; // tout ce qui n'est pas "répondu" (0 = sans réponse, 2 = rejeté)
+    final status = call.status;
+    final answered = status == 1;
+    final missed = status == 0;
+    final rejected = status == 2;
     final isVideo = call.type == 1;
     final colors = context.colors;
+    final titleColor = outgoing ? colors.onPrimaryContainer : colors.onSurface;
+    final metaColor = outgoing
+        ? colors.onPrimaryContainer.withAlpha(170)
+        : colors.onSurfaceVariant;
+    final bubbleColor = outgoing
+        ? colors.primaryContainer.withAlpha(190)
+        : context.semantic.surfaceMuted;
 
-    final dirIcon = missed
+    final dirIcon = !answered
         ? (outgoing ? Icons.call_missed_outgoing : Icons.call_missed)
         : (outgoing ? Icons.call_made : Icons.call_received);
-    final dirColor = missed ? colors.error : context.semantic.success;
+    final dirColor = answered ? context.semantic.success : colors.error;
 
     final kind = isVideo ? 'Appel vidéo' : 'Appel vocal';
-    final label = missed
-        ? '$kind manqué'
-        : (outgoing ? '$kind sortant' : '$kind entrant');
+    final direction = outgoing ? 'sortant' : 'entrant';
+    final statusLabel = answered
+        ? 'Répondu'
+        : (missed ? 'Sans réponse' : (rejected ? 'Rejeté' : 'Manqué'));
+    final label = '$kind $direction';
 
     final t = call.createdAt.toLocal();
     two(int n) => n.toString().padLeft(2, '0');
     final time = '${two(t.hour)}:${two(t.minute)}';
-    final meta = (!missed && (call.duration ?? 0) > 0)
+    final meta = (answered && (call.duration ?? 0) > 0)
         ? '$time · ${_fmtCallDuration(call.duration)}'
         : time;
 
     return Align(
       alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Material(
-          color: context.semantic.surfaceMuted,
-          borderRadius: AppRadius.brLg,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => _showCallBackOptions(call),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(dirIcon, size: 20, color: dirColor),
-                  const SizedBox(width: AppSpacing.sm),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(label, style: context.text.bodyMedium),
-                      Text(meta,
-                          style: context.text.labelSmall
-                              ?.copyWith(color: colors.onSurfaceVariant)),
-                    ],
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Icon(isVideo ? Icons.videocam_rounded : Icons.call_rounded,
-                      size: 20, color: colors.primary),
-                ],
+        padding: const EdgeInsets.symmetric(vertical: 3.5),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.78,
+          ),
+          child: Material(
+            color: bubbleColor,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(AppRadius.lg),
+              topRight: const Radius.circular(AppRadius.lg),
+              bottomLeft: outgoing ? const Radius.circular(AppRadius.lg) : Radius.zero,
+              bottomRight: outgoing ? Radius.zero : const Radius.circular(AppRadius.lg),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => _showCallBackOptions(call),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: colors.surface.withAlpha(190),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+                        size: 18,
+                        color: colors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.bodyMedium
+                                ?.copyWith(color: titleColor, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(dirIcon, size: 16, color: dirColor),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '$statusLabel · $meta',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.text.labelSmall?.copyWith(color: metaColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
