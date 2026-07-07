@@ -134,6 +134,8 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
 
   // ── Mode multi-select ──────────────────────────────────────────────
 
+  // Conservé pour réactivation des appels de groupe.
+  // ignore: unused_element
   void _enterSelectMode(User user) {
     setState(() {
       _selecting = true;
@@ -209,6 +211,8 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     await callService.navigateToCallUi(context);
   }
 
+  // Conservé pour réactivation des appels de groupe.
+  // ignore: unused_element
   Future<void> _initiateGroupCall(bool isVideo) async {
     if (_selectedIds.isEmpty) return;
 
@@ -354,7 +358,8 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _selecting ? _buildSelectionBar() : null,
+      // Barre d'appel de groupe (sélection multiple) — masquée temporairement.
+      // bottomNavigationBar: _selecting ? _buildSelectionBar() : null,
     );
   }
 
@@ -417,10 +422,13 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
               ],
             ),
       onTap: _selecting ? () => _toggleSelection(user) : null,
-      onLongPress: _selecting ? null : () => _enterSelectMode(user),
+      // Sélection multiple (appel de groupe) — masquée temporairement.
+      // onLongPress: _selecting ? null : () => _enterSelectMode(user),
     );
   }
 
+  // Conservé pour réactivation des appels de groupe.
+  // ignore: unused_element
   Widget _buildSelectionBar() {
     final disabled = _selectedIds.isEmpty;
     return SafeArea(

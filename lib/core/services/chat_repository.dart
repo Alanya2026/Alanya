@@ -43,6 +43,17 @@ class ChatRepository {
     }
   }
 
+  /// Synchronise la suppression push avec le cycle de vie de l'app.
+  /// En arrière-plan, on ne bloque plus les notifs même si le chat est encore
+  /// sur la pile de navigation.
+  void syncPushSuppressionForLifecycle(bool appInForeground) {
+    if (!appInForeground || _activeConversationID == 0) {
+      LocalNotificationHelper.setActiveConversationId(null);
+    } else {
+      LocalNotificationHelper.setActiveConversationId(_activeConversationID);
+    }
+  }
+
   ChatRepository._(this._api, this._db) : _dao = ChatDao(_db);
 
   MediaCacheService get mediaCache => _mediaCache; 

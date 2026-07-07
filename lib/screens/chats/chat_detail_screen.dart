@@ -321,7 +321,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ),
         actions: [
-          if (!_callsDisabled) ...[
+          // Appels 1-1 uniquement — boutons groupe masqués temporairement.
+          if (!_callsDisabled && !widget.isGroup) ...[
             IconButton(
               icon: const Icon(Icons.videocam_rounded),
               color: context.colors.primary,

@@ -25,6 +25,18 @@ extension CallControls on CallService {
   Future<void> toggleCamera() async {
     await _webrtc.toggleCamera();
     _isVideoOn = !_isVideoOn;
+    final isGroup = _groupRoomId != null;
+    if (isGroup) {
+      _apiClient.sendSocketEvent(SocketEvents.groupVideoState, {
+        'roomId': _groupRoomId,
+        'isVideoOn': _isVideoOn,
+      });
+    } else if (_remoteUserId != null) {
+      _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
+        'toUserId': _remoteUserId,
+        'isVideoOn': _isVideoOn,
+      });
+    }
     notify();
   }
 

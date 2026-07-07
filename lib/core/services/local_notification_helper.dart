@@ -88,6 +88,7 @@ class LocalNotificationHelper {
     Map<String, dynamic> data, {
     String? title,
     String? body,
+    bool suppressIfActive = true,
   }) async {
     if (kIsWeb) return;
     await ensureInitialized();
@@ -96,7 +97,7 @@ class LocalNotificationHelper {
         int.tryParse(data['conversationId']?.toString() ?? '') ?? 0;
     if (conversationId == 0) return;
 
-    if (await shouldSuppressMessage(conversationId)) return;
+    if (suppressIfActive && await shouldSuppressMessage(conversationId)) return;
 
     final senderName = title ?? data['title']?.toString() ?? 'Talky';
     final messageBody = body ?? bodyFromPayload(data);
@@ -128,31 +129,61 @@ class LocalNotificationHelper {
         : senderName;
     final displayBody = isGroup ? '$senderName: $messageBody' : messageBody;
 
-    await _plugin.show(
-      conversationId,
-      displayTitle,
-      displayBody,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _kChannelMessages.id,
-          _kChannelMessages.name,
-          channelDescription: _kChannelMessages.description,
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-          groupKey: groupKey,
-          styleInformation: style,
-        ),
-        iOS: DarwinNotificationDetails(
-          threadIdentifier: threadId,
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-          subtitle: isGroup ? senderName : null,
-        ),
-      ),
-      payload: payload,
+    final androidDetails = AndroidNotificationDetails(
+      _kChannelMessages.id,
+      _kChannelMessages.name,
+      channelDescription: _kChannelMessages.description,
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+      groupKey: groupKey,
+      styleInformation: style,
     );
+
+    try {
+      await _plugin.show(
+        conversationId,
+        displayTitle,
+        displayBody,
+        NotificationDetails(
+          android: androidDetails,
+          iOS: DarwinNotificationDetails(
+            threadIdentifier: threadId,
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+            subtitle: isGroup ? senderName : null,
+          ),
+        ),
+        payload: payload,
+      );
+    } catch (e) {
+      // MessagingStyle peut échouer sur certains appareils en background.
+      await _plugin.show(
+        conversationId,
+        displayTitle,
+        displayBody,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _kChannelMessages.id,
+            _kChannelMessages.name,
+            channelDescription: _kChannelMessages.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+            groupKey: groupKey,
+            styleInformation: BigTextStyleInformation(displayBody),
+          ),
+          iOS: DarwinNotificationDetails(
+            threadIdentifier: threadId,
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: payload,
+      );
+    }
 
     await _updateSummaryNotification();
   }
@@ -336,15 +367,17 @@ class LocalNotificationHelper {
   }) {
     final styleMessages = messages.map((m) {
       final ts = DateTime.tryParse(m['ts'] ?? '') ?? DateTime.now();
+      final sender = (m['sender'] ?? '').trim();
       return Message(
         m['body'] ?? '',
         ts,
-        Person(name: m['sender'] ?? ''),
+        Person(name: sender.isNotEmpty ? sender : 'Talky'),
       );
     }).toList();
 
+    final personName = latestSender.trim().isNotEmpty ? latestSender : 'Talky';
     return MessagingStyleInformation(
-      Person(name: latestSender),
+      Person(name: personName),
       conversationTitle: isGroup && groupName.isNotEmpty ? groupName : null,
       groupConversation: isGroup,
       messages: styleMessages,

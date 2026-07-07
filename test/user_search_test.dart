@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:talky/core/utils/user_search.dart';
-import 'package:talky/talky_models.dart';
+import 'package:talky_flutter/core/utils/user_search.dart';
+import 'package:talky_flutter/talky_models.dart';
 
 void main() {
   final alice = User(

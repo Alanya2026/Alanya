@@ -92,6 +92,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
+  // Conservé pour réactivation des appels de groupe.
+  // ignore: unused_element
   Future<void> _startGroupCall(bool isVideo) async {
     if (_group == null) return;
     final auth = context.read<AuthProvider>();
@@ -251,20 +253,21 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         backgroundColor: context.semantic.surfaceMuted,
         centerTitle: true,
         title: const Text('Infos du groupe'),
-        actions: _group == null
-            ? null
-            : [
-                IconButton(
-                  icon: const Icon(Icons.videocam_outlined),
-                  tooltip: 'Appel vidéo',
-                  onPressed: () => _startGroupCall(true),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.call_outlined),
-                  tooltip: 'Appel vocal',
-                  onPressed: () => _startGroupCall(false),
-                ),
-              ],
+        // Appels de groupe audio/vidéo — masqués temporairement, à remettre plus tard.
+        // actions: _group == null
+        //     ? null
+        //     : [
+        //         IconButton(
+        //           icon: const Icon(Icons.videocam_outlined),
+        //           tooltip: 'Appel vidéo',
+        //           onPressed: () => _startGroupCall(true),
+        //         ),
+        //         IconButton(
+        //           icon: const Icon(Icons.call_outlined),
+        //           tooltip: 'Appel vocal',
+        //           onPressed: () => _startGroupCall(false),
+        //         ),
+        //       ],
       ),
       body: _isLoading
           ? const LoadingState()

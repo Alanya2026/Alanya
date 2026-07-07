@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -7,7 +8,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../firebase_options.dart';
 import '../../talky_api_client.dart';
 import 'callkit_service.dart';
-import 'chat_repository.dart';
 import 'local_notification_helper.dart';
 import 'notification_navigation.dart';
 import 'ringtone_service.dart';
@@ -37,28 +37,42 @@ class MeetingNotifData {
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  final data = message.data;
-  final type = data['type']?.toString();
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Déjà initialisé dans cet isolate ou erreur transitoire.
+    debugPrint('[Push] background Firebase init: $e');
+  }
 
-  if (type == 'call' || type == 'group_call') {
-    if (!kIsWeb) {
-      await CallKitService.instance.showIncoming(
-        callId: (data['callId'] ?? data['roomId'] ?? '').toString(),
-        callerId: (data['callerId'] ?? '').toString(),
-        callerName: (data['callerName'] ?? data['title'] ?? 'Appel').toString(),
-        callerPhoto: data['photo']?.toString(),
-        isVideo: data['isVideo'] == 'true',
-        roomId: data['roomId']?.toString(),
-        silent: true,
-      );
+  try {
+    final data = message.data;
+    final type = data['type']?.toString();
+
+    if (type == 'call' || type == 'group_call') {
+      if (!kIsWeb) {
+        await CallKitService.instance.showIncoming(
+          callId: (data['callId'] ?? data['roomId'] ?? '').toString(),
+          callerId: (data['callerId'] ?? '').toString(),
+          callerName: (data['callerName'] ?? data['title'] ?? 'Appel').toString(),
+          callerPhoto: data['photo']?.toString(),
+          isVideo: data['isVideo'] == 'true',
+          roomId: data['roomId']?.toString(),
+          silent: true,
+        );
+      }
+    } else if (type == 'call_ended') {
+      if (!kIsWeb) {
+        await CallKitService.instance.endAll();
+        await RingtoneService.stopAll();
+      }
+    } else {
+      await _showBackgroundNotification(message);
     }
-  } else if (type == 'call_ended') {
-    if (!kIsWeb) {
-      await CallKitService.instance.endAll();
-      await RingtoneService.stopAll();
-    }
-  } else {
-    await _showBackgroundNotification(message);
+  } catch (e, st) {
+    debugPrint('[Push] background handler error: $e\n$st');
   }
 }
 
@@ -70,6 +84,16 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
   final body = (data['body'] ?? message.notification?.body ?? '').toString();
   if (title.isEmpty && body.isEmpty) return;
 
+  // iOS : l'alerte APNS (configurée côté backend) affiche déjà la notif
+  // quand l'app est fermée — éviter le doublon avec une notif locale.
+  final iosHandledByApns = !kIsWeb &&
+      Platform.isIOS &&
+      (type == 'message' ||
+          type == 'meeting_invite' ||
+          type == 'meeting_reminder' ||
+          type == 'status_view');
+  if (iosHandledByApns) return;
+
   await LocalNotificationHelper.ensureInitialized();
 
   if (type == 'message') {
@@ -77,6 +101,7 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
       data,
       title: title.isNotEmpty ? title : null,
       body: body.isNotEmpty ? body : null,
+      suppressIfActive: false,
     );
   } else if (type == 'meeting_invite' || type == 'meeting_reminder') {
     await LocalNotificationHelper.showMeetingNotification(data);
