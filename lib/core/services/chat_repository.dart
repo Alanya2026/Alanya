@@ -10,6 +10,7 @@ import '../utils/forward_message.dart';
 import '../utils/media_album.dart';
 import 'local_notification_helper.dart';
 import 'media_cache_service.dart';
+import 'voice_asset_resolver.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';  
 class ChatRepository {
@@ -1091,7 +1092,7 @@ class ChatRepository {
       final mtype = _toInt(json['type']);
       final mediaUrl = json['mediaUrl']?.toString();
       if (mediaUrl != null && mediaUrl.isNotEmpty) {
-        if (mtype == 1 || mtype == 3) {
+        if (mtype == 1) {
           _cacheMedia(msgID, mediaUrl);
         } else if (mtype == 4) {
           _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
@@ -1140,8 +1141,8 @@ class ChatRepository {
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
     if (mediaUrl != null && msgID != 0 && !isViewOnce) {
-      if (mtype == 1 || mtype == 3) {
-        // Images, audio : auto-cache toujours.
+      if (mtype == 1) {
+        // Images : auto-cache. Audio (3) : téléchargement manuel dans le chat.
         _cacheMedia(msgID, mediaUrl);
       } else if (mtype == 4) {
         // Fichiers : auto-cache si < 5 MB (sinon coût data trop élevé,
@@ -1155,6 +1156,55 @@ class ChatRepository {
   Future<void> _cacheMedia(int msgID, String url, {int? maxBytes}) async {
     final path = await _mediaCache.ensureCached(url, maxBytes: maxBytes);
     if (path != null) await _dao.setLocalMediaPath(msgID, path);
+  }
+
+  /// Lie un fichier déjà présent dans le cache disque au message (legacy auto-cache).
+  Future<String?> adoptCachedVoicePath({
+    required int msgID,
+    required String mediaUrl,
+  }) async {
+    final resolved = await VoiceAssetResolver(
+      mediaCache: _mediaCache,
+      dao: _dao,
+    ).resolve(
+      serverMsgId: msgID,
+      isMe: false,
+      mediaUrl: mediaUrl,
+    );
+    return resolved?.path;
+  }
+
+  /// Réconcilie les chemins locaux des messages vocaux d'une conversation.
+  Future<void> reconcileVoiceLocalPaths(int conversationId) async {
+    final messages = await _dao.getVoiceMessages(conversationId);
+    final resolver = VoiceAssetResolver(mediaCache: _mediaCache, dao: _dao);
+    for (final m in messages) {
+      if (m.msgID == 0) continue;
+      final isMe = m.senderID == _myId;
+      await resolver.resolve(
+        serverMsgId: m.msgID,
+        isMe: isMe,
+        dbPath: m.localMediaPath,
+        pendingPath: isMe ? m.pendingUploadPath : null,
+        mediaUrl: m.mediaUrl,
+      );
+    }
+  }
+
+  /// Téléchargement manuel d'un message vocal reçu, avec progression.
+  Future<String?> downloadVoiceMessage({
+    required int msgID,
+    required String mediaUrl,
+    void Function(double? progress)? onProgress,
+  }) async {
+    if (msgID == 0) return null;
+    final path = await _mediaCache.downloadWithProgress(
+      mediaUrl,
+      onProgress: onProgress,
+      maxBytes: 15 * 1024 * 1024,
+    );
+    if (path != null) await _dao.setLocalMediaPath(msgID, path);
+    return path;
   }
 
   void _onMessageStatus(dynamic data) {

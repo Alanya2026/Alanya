@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/app_logo.dart';
 import '../../widgets/country_selector_tile.dart';
 import '../home/home_screen.dart';
 
@@ -174,21 +175,7 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AppSpacing.vGapXxl,
-              Center(
-                child: Container(
-                  height: 100,
-                  width: 100,
-                  decoration: const BoxDecoration(
-                    color: AppColors.brandContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.chat_bubble_rounded,
-                    size: 50,
-                    color: AppColors.brandPrimary,
-                  ),
-                ),
-              ),
+              const Center(child: AppLogo(size: 120)),
               AppSpacing.vGapXxl,
               Text(
                 'Créer un compte',

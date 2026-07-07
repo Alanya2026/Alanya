@@ -17,6 +17,9 @@ import '../../core/call_limits.dart';
 import '../../core/db/chat_dao.dart' show decodeParticipants;
 import '../../core/services/call_service.dart';
 import '../../core/services/chat_repository.dart';
+import '../../core/services/voice_chat_context.dart';
+import '../../core/services/voice_playback_service.dart';
+import '../../core/services/voice_message_coordinator.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
 import '../../core/utils/media_viewer_items.dart';
@@ -143,12 +146,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final convId = widget.conversationId;
     if (convId == null) return;
 
+    final voice = context.read<VoicePlaybackService>();
+    voice
+      ..setChatContext(VoiceChatContext(
+        conversationId: convId,
+        title: widget.userName,
+        userId: widget.userId,
+        isGroup: widget.isGroup,
+        avatarUrl: widget.avatarUrl,
+      ))
+      ..enterChat(convId);
+
     if (!widget.isGroup && widget.userId != null) {
       await _loadBlockStatus();
     }
 
     // 1. Synchronise l'historique depuis le serveur (l'UI affiche déjà le cache).
     _chat.repository.syncMessages(convId);
+
+    // Réconcilie les chemins locaux des vocaux (legacy cache disque, DB stale).
+    unawaited(_chat.repository.reconcileVoiceLocalPaths(convId).then((_) {
+      if (mounted) {
+        context.read<VoiceMessageCoordinator>().invalidateAll();
+      }
+    }));
 
     // 2. Rejoint la room temps réel + marque comme lu. On signale aussi la
     //    conversation active : tout message reçu pendant qu'elle est ouverte
@@ -208,6 +229,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _recordTimer?.cancel();
     _highlightTimer?.cancel();
     _recorder.dispose();
+    context.read<VoicePlaybackService>().leaveChat();
     final convId = widget.conversationId;
     if (convId != null) _chat.repository.clearActiveConversation(convId);
     _stopTyping();

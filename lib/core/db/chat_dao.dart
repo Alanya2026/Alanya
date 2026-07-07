@@ -247,6 +247,19 @@ class ChatDao {
         .write(LocalMessagesCompanion(localMediaPath: Value(path)));
   }
 
+  Future<void> clearLocalMediaPath(int msgID) {
+    return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
+        .write(const LocalMessagesCompanion(localMediaPath: Value(null)));
+  }
+
+  /// Messages vocaux (type 3) d'une conversation, pour réconciliation des chemins locaux.
+  Future<List<LocalMessage>> getVoiceMessages(int conversationID) {
+    return (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversationID) & m.type.equals(3)))
+        .get();
+  }
+
   /// Marque un média vue unique comme consommé : pose `viewedAt` et efface
   /// toute trace exploitable (URL réseau + chemin local) pour empêcher toute
   /// ré-ouverture.
