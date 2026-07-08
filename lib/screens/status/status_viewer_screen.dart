@@ -52,6 +52,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   ChewieController? _chewieCtrl;
   AudioPlayer? _audioPlayer;
   String? _audioPath;
+  bool _audioPreparing = false;
   StreamSubscription<PlayerState>? _audioStateSub;
   VoidCallback? _videoTickListener;
   int _loadSeq = 0;
@@ -104,6 +105,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     _chewieCtrl = null;
     _audioPlayer = null;
     _audioPath = null;
+    _audioPreparing = false;
     _videoTickListener = null;
     _audioStateSub = null;
   }
@@ -164,6 +166,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         }
       }
     } else if (s.type == 3 && s.mediaUrl != null) {
+      if (mounted) setState(() => _audioPreparing = true);
       final path = await _resolveMediaPath(s.mediaUrl!);
       if (!mounted || seq != _loadSeq) return;
       if (path != null) {
@@ -174,9 +177,6 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
             await p.dispose();
             return;
           }
-          await p.play();
-          _audioPlayer = p;
-          _audioPath = path;
           totalDuration = p.duration ??
               Duration(
                   milliseconds: s.mediaDurationMs ??
@@ -187,10 +187,19 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           _audioStateSub = p.playerStateStream.listen((st) {
             if (st.processingState == ProcessingState.completed) _next();
           });
+          _audioPlayer = p;
+          _audioPath = path;
+          _audioPreparing = false;
+          if (!mounted || seq != _loadSeq) return;
+          setState(() {});
+          await p.play();
         } catch (e, st) {
           AppLog.w('StatusViewer', 'Lecture audio statut échouée', e, st);
+          _audioPreparing = false;
           await p.dispose();
         }
+      } else {
+        _audioPreparing = false;
       }
     }
 
@@ -656,19 +665,23 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         }
         return const Center(child: CircularProgressIndicator());
       case 3:
-        if (_audioPlayer != null && _audioPath != null) {
-          return StatusAudioView(
-            player: _audioPlayer!,
-            audioPath: _audioPath!,
-            totalDuration: _audioPlayer!.duration ??
-                Duration(milliseconds: s.mediaDurationMs ?? 5000),
-            displayName: s.nom ?? s.pseudo ?? '',
-            avatarUrl: s.avatarUrl,
-            paused: _paused,
-            onProgress: (v) => _progress.value = v,
+        if (s.mediaUrl == null) {
+          return const Center(
+            child: Icon(Icons.audiotrack, color: Colors.white54, size: 64),
           );
         }
-        return const Center(child: CircularProgressIndicator());
+        return StatusAudioView(
+          player: _audioPlayer,
+          isPreparing: _audioPreparing,
+          audioPath: _audioPath,
+          fallbackKey: s.mediaUrl!,
+          totalDuration: _audioPlayer?.duration ??
+              Duration(milliseconds: s.mediaDurationMs ?? 5000),
+          displayName: s.nom ?? s.pseudo ?? '',
+          avatarUrl: s.avatarUrl,
+          paused: _paused,
+          onProgress: (v) => _progress.value = v,
+        );
       default:
         return const SizedBox.shrink();
     }

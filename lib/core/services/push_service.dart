@@ -229,6 +229,21 @@ class PushService {
     }
   }
 
+  /// Ré-enregistre le token FCM après login (init peut avoir eu lieu avant auth).
+  static Future<void> syncTokenWithBackend() async {
+    final svc = _instance;
+    if (svc == null) return;
+    try {
+      final token = svc._token ?? await svc._fm.getToken();
+      if (token != null) {
+        svc._token = token;
+        await svc._safeUpdateToken(token);
+      }
+    } catch (e) {
+      debugPrint('[Push] syncTokenWithBackend failed: $e');
+    }
+  }
+
   void _handleForeground(RemoteMessage message) async {
     final data = message.data;
     final type = data['type']?.toString();

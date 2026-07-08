@@ -184,9 +184,40 @@ class AdminProvider extends ChangeNotifier {
     await _api.adminUpdateUserPhone(userId, alanyaPhone);
   }
 
-  Future<List<Map<String, dynamic>>> loadReservedPhones() async {
-    final list = await _api.adminGetReservedPhones();
-    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  Future<({List<Map<String, dynamic>> items, int total, int page, int limit})>
+      loadReservedPhones({
+    int page = 1,
+    int limit = 20,
+    String? q,
+    String? available,
+  }) async {
+    final data = await _api.adminGetReservedPhones(
+      page: page,
+      limit: limit,
+      q: q,
+      available: available,
+    );
+    final rawItems = data['items'];
+    final items = rawItems is List
+        ? rawItems
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList()
+        : <Map<String, dynamic>>[];
+    return (
+      items: items,
+      total: _readInt(data['total']) ?? items.length,
+      page: _readInt(data['page']) ?? page,
+      limit: _readInt(data['limit']) ?? limit,
+    );
+  }
+
+  static int? _readInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   Future<void> addReservedPhone(String phone, String label) async {

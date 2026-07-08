@@ -303,6 +303,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _boundUserId = myId;
     debugPrint('[AuthWrapper] Bind providers pour userID=$myId');
 
+    unawaited(PushService.syncTokenWithBackend());
+
     if (!mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final statusProvider = Provider.of<StatusProvider>(context, listen: false);

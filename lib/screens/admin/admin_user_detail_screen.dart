@@ -591,10 +591,12 @@ class _ActionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Changement de rôle et suppression : réservés au super-admin
-    // (le backend renvoie 403 sinon) → masqués pour les admins simples.
+    // Changement de numéro : admins et super-admins.
+    // Changement de rôle et suppression : réservés au super-admin.
     final isSuper =
         AdminProvider.isSuperAdmin(context.watch<AuthProvider>().currentUser);
+    final isAdmin =
+        AdminProvider.isAdmin(context.watch<AuthProvider>().currentUser);
     return _Card(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xl, AppSpacing.xl, AppSpacing.md, AppSpacing.sm),
@@ -620,7 +622,7 @@ class _ActionsCard extends StatelessWidget {
                 user.exclus ? AppColors.success : AppColors.error,
             onTap: () => _toggleBan(context),
           ),
-          if (isSuper) ...[
+          if (isAdmin) ...[
             _ActionRow(
               icon: CupertinoIcons.phone_fill,
               label: 'Changer le numéro',
@@ -628,6 +630,8 @@ class _ActionsCard extends StatelessWidget {
               iconBg: context.colors.primaryContainer,
               onTap: () => _changePhone(context),
             ),
+          ],
+          if (isSuper) ...[
             _ActionRow(
               icon: user.typeCompte >= 1
                   ? CupertinoIcons.shield_slash_fill

@@ -68,15 +68,18 @@ class TalkyApiClient {
 
   // ── HTTP HELPER ───────────────────────────────────────────────────
 
-  Future<dynamic> _handleRequest(Future<http.Response> Function() request) async {
+  Future<dynamic> _handleRequest(
+    Future<http.Response> Function() request, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
     try {
-      final response = await request().timeout(const Duration(seconds: 15));
+      final response = await request().timeout(timeout);
 
       if (response.statusCode == 401) {
         if (_refreshToken != null) {
           try {
             await _refreshAccessToken();
-            final retried = await request().timeout(const Duration(seconds: 15));
+            final retried = await request().timeout(timeout);
             return _parseResponse(retried);
           } catch (_) {
             throw TalkyException('Session expirée', 401);

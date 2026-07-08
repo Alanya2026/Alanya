@@ -119,14 +119,37 @@ extension AdminApi on TalkyApiClient {
     );
   }
 
-  Future<List<dynamic>> adminGetReservedPhones() async {
+  Future<Map<String, dynamic>> adminGetReservedPhones({
+    int page = 1,
+    int limit = 20,
+    String? q,
+    String? available,
+  }) async {
+    final qParams = <String, String>{
+      'page': '$page',
+      'limit': '$limit',
+      if (q != null && q.isNotEmpty) 'q': q,
+      if (available != null && available.isNotEmpty) 'available': available,
+    };
+    final uri = Uri.parse('${TalkyApiClient.baseUrl}/admin/reserved-alanya-phones')
+        .replace(queryParameters: qParams);
     final data = await _handleRequest(
-      () => _client.get(
-        Uri.parse('${TalkyApiClient.baseUrl}/admin/reserved-alanya-phones'),
-        headers: _headers,
-      ),
+      () => _client.get(uri, headers: _headers),
+      timeout: const Duration(seconds: 60),
     );
-    return data is List ? data : [];
+    if (data is List) {
+      final all = data;
+      final start = (page - 1) * limit;
+      final end = (start + limit).clamp(0, all.length);
+      final slice = start < all.length ? all.sublist(start, end) : <dynamic>[];
+      return {
+        'items': slice,
+        'total': all.length,
+        'page': page,
+        'limit': limit,
+      };
+    }
+    return Map<String, dynamic>.from(data as Map);
   }
 
   Future<void> adminAddReservedPhone(String phone, String label) async {

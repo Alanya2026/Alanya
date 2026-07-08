@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/alanya_phone_field.dart';
+import '../../widgets/common/app_skeleton.dart';
 import '../../widgets/country_selector_tile.dart';
 
 class AdminCreateUserScreen extends StatefulWidget {
@@ -27,6 +29,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _reservedSearchCtrl = TextEditingController();
 
   List<Pays> _countries = const [];
   List<Map<String, dynamic>> _reservedPhones = const [];
@@ -35,34 +38,24 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
   bool _loadingCountries = true;
   bool _loadingReserved = false;
   bool _manualPhone = false;
-  int _generateLength = 8;
   String _avatarGender = 'male';
   int _typeCompte = 0;
   bool _saving = false;
+  Timer? _reservedSearchDebounce;
 
   bool get _isSuper =>
       AdminProvider.isSuperAdmin(context.read<AuthProvider>().currentUser);
 
-  List<Map<String, dynamic>> get _availableReservedPhones => _reservedPhones
-      .where((item) {
-        final isUsed =
-            item['is_used'] == true ||
-            item['isUsed'] == true ||
-            item['is_used'] == 1 ||
-            item['isUsed'] == 1;
-        return !isUsed;
-      })
-      .toList();
+  bool get _isAdmin =>
+      AdminProvider.isAdmin(context.read<AuthProvider>().currentUser);
+
+  List<Map<String, dynamic>> get _availableReservedPhones => _reservedPhones;
 
   @override
   void initState() {
     super.initState();
     _selectedReservedPhone = widget.initialReservedPhone;
     _loadCountries();
-    if (AdminProvider.isSuperAdmin(
-        Provider.of<AuthProvider>(context, listen: false).currentUser)) {
-      _loadReservedPhones();
-    }
   }
 
   Future<void> _loadCountries() async {
@@ -83,26 +76,41 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
     }
   }
 
-  Future<void> _loadReservedPhones() async {
+  Future<void> _loadReservedPhones({String? q}) async {
+    if (!AdminProvider.isAdmin(
+        Provider.of<AuthProvider>(context, listen: false).currentUser)) {
+      return;
+    }
     setState(() => _loadingReserved = true);
     try {
-      final list = await context.read<AdminProvider>().loadReservedPhones();
+      final result = await context.read<AdminProvider>().loadReservedPhones(
+            page: 1,
+            limit: 20,
+            q: q,
+            available: '1',
+          );
       if (!mounted) return;
-      setState(() {
-        _reservedPhones = list;
-        if (_selectedReservedPhone != null &&
-            !_availableReservedPhones.any((item) {
-              final phone = (item['phone_canonical'] ?? item['phoneCanonical'] ?? '') as String;
-              return phone == _selectedReservedPhone;
-            })) {
-          _selectedReservedPhone = null;
-        }
-      });
+      setState(() => _reservedPhones = result.items);
+    } on TalkyException catch (e) {
+      if (!mounted) return;
+      _show(e.message);
     } catch (_) {
       // Liste optionnelle — ignorée si indisponible.
     } finally {
       if (mounted) setState(() => _loadingReserved = false);
     }
+  }
+
+  void _onReservedSearchChanged(String value) {
+    _reservedSearchDebounce?.cancel();
+    _reservedSearchDebounce = Timer(const Duration(milliseconds: 300), () {
+      final q = value.trim();
+      if (q.isEmpty) {
+        if (mounted) setState(() => _reservedPhones = const []);
+        return;
+      }
+      _loadReservedPhones(q: q);
+    });
   }
 
   String _reservedLabel(Map<String, dynamic> item) {
@@ -117,11 +125,13 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
 
   @override
   void dispose() {
+    _reservedSearchDebounce?.cancel();
     _nomCtrl.dispose();
     _pseudoCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _phoneCtrl.dispose();
+    _reservedSearchCtrl.dispose();
     super.dispose();
   }
 
@@ -164,8 +174,6 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
         return;
       }
       body['alanyaPhone'] = canonical;
-    } else {
-      body['generateLength'] = _generateLength;
     }
     if (_isSuper) body['type_compte'] = _typeCompte;
 
@@ -233,30 +241,50 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
             ],
           ),
           AppSpacing.vGapLg,
-          if (_isSuper) ...[
-            if (_loadingReserved)
-              const LinearProgressIndicator()
-            else if (_availableReservedPhones.isNotEmpty)
-              DropdownButtonFormField<String?>(
-                value: _selectedReservedPhone,
+          if (_isAdmin) ...[
+            if (_selectedReservedPhone != null) ...[
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Numéro réservé'),
+                subtitle: Text(
+                  AlanyaPhoneFormatter.formatDisplay(_selectedReservedPhone!),
+                ),
+                trailing: TextButton(
+                  onPressed: () => setState(() => _selectedReservedPhone = null),
+                  child: const Text('Effacer'),
+                ),
+              ),
+            ] else ...[
+              TextField(
+                controller: _reservedSearchCtrl,
                 decoration: const InputDecoration(
                   labelText: 'Numéro réservé (optionnel)',
+                  hintText: 'Rechercher un numéro libre…',
                 ),
-                items: [
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Aucun — auto-générer ou saisie manuelle'),
-                  ),
-                  ..._availableReservedPhones.map((item) {
-                    final canonical = _reservedCanonical(item);
-                    return DropdownMenuItem<String?>(
-                      value: canonical,
-                      child: Text(_reservedLabel(item)),
-                    );
-                  }),
-                ],
-                onChanged: (v) => setState(() => _selectedReservedPhone = v),
+                onChanged: _onReservedSearchChanged,
               ),
+              if (_loadingReserved)
+                const ReservedPhoneSearchSkeleton(count: 4)
+              else if (_availableReservedPhones.isNotEmpty)
+                ..._availableReservedPhones.map((item) {
+                  final canonical = _reservedCanonical(item);
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_reservedLabel(item)),
+                    onTap: () {
+                      setState(() {
+                        _selectedReservedPhone = canonical;
+                        _reservedPhones = const [];
+                        _reservedSearchCtrl.clear();
+                      });
+                    },
+                  );
+                }),
+              if (!_loadingReserved &&
+                  _reservedSearchCtrl.text.trim().isNotEmpty &&
+                  _availableReservedPhones.isEmpty)
+                const Text('Aucun numéro libre trouvé'),
+            ],
             AppSpacing.vGapMd,
           ],
           Opacity(
@@ -275,15 +303,11 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                   if (_manualPhone)
                     AlanyaPhoneField(controller: _phoneCtrl)
                   else
-                    DropdownButtonFormField<int>(
-                      value: _generateLength,
-                      decoration: const InputDecoration(labelText: 'Générer'),
-                      items: [
-                        if (_isSuper) const DropdownMenuItem(value: 3, child: Text('3 chiffres')),
-                        const DropdownMenuItem(value: 4, child: Text('4 chiffres')),
-                        const DropdownMenuItem(value: 8, child: Text('8 chiffres')),
-                      ],
-                      onChanged: (v) => setState(() => _generateLength = v ?? 8),
+                    Text(
+                      '8 chiffres (génération automatique, hors numéros réservés)',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                 ],
               ),
