@@ -1015,7 +1015,8 @@ class ChatRepository {
   }
 
 
-  Future<void> _upsertServerMsg(
+  /// Upsert un message serveur et renvoie `true` s'il était nouveau en local.
+  Future<bool> _upsertServerMsg(
     Map<String, dynamic> json, {
     bool prefetchMedia = false,
   }) async {
@@ -1023,7 +1024,7 @@ class ChatRepository {
     final convID = _toInt(json['conversationID']);
     if (msgID == 0) {
       await _dao.upsertMessage(_msgJsonToCompanion(json));
-      return;
+      return true;
     }
 
     final srvKey = 'srv_$msgID';
@@ -1099,6 +1100,7 @@ class ChatRepository {
         }
       }
     }
+    return wasNew;
   }
 
   Future<void> _onMessageReceived(dynamic data) async {
@@ -1106,7 +1108,10 @@ class ChatRepository {
     final json = Map<String, dynamic>.from(data);
     final senderID0 = _toInt(json['senderID']);
 
-    await _upsertServerMsg(json);
+    final isNew = await _upsertServerMsg(json);
+    // Si le même événement est reçu plusieurs fois, on évite de regonfler
+    // unread/accusés/notifications. Le message est déjà à jour via l'upsert.
+    if (!isNew) return;
     if (senderID0 == _myId) return;
 
     final convID = _toInt(json['conversationID']);
