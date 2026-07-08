@@ -184,8 +184,13 @@ class AdminProvider extends ChangeNotifier {
     await _api.adminUpdateUserPhone(userId, alanyaPhone);
   }
 
-  Future<({List<Map<String, dynamic>> items, int total, int page, int limit})>
-      loadReservedPhones({
+  Future<({
+    List<Map<String, dynamic>> items,
+    int total,
+    int page,
+    int limit,
+    Map<String, dynamic>? patternSuggestion,
+  })> loadReservedPhones({
     int page = 1,
     int limit = 20,
     String? q,
@@ -204,12 +209,20 @@ class AdminProvider extends ChangeNotifier {
             .map((e) => Map<String, dynamic>.from(e))
             .toList()
         : <Map<String, dynamic>>[];
+    final rawPattern = data['pattern_suggestion'];
     return (
       items: items,
       total: _readInt(data['total']) ?? items.length,
       page: _readInt(data['page']) ?? page,
       limit: _readInt(data['limit']) ?? limit,
+      patternSuggestion: rawPattern is Map
+          ? Map<String, dynamic>.from(rawPattern)
+          : null,
     );
+  }
+
+  Future<Map<String, dynamic>> checkAssignablePhone(String phone) async {
+    return _api.adminCheckAssignablePhone(phone);
   }
 
   static int? _readInt(dynamic value) {

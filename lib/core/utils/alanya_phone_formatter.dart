@@ -22,6 +22,37 @@ class AlanyaPhoneFormatter {
     return null;
   }
 
+  /// Forme XXYYZZTT (ex. 11223344).
+  static bool isXxyyzztt(String canonical) {
+    return canonical.length == 8 &&
+        RegExp(r'^\d{8}$').hasMatch(canonical) &&
+        canonical[0] == canonical[1] &&
+        canonical[2] == canonical[3] &&
+        canonical[4] == canonical[5] &&
+        canonical[6] == canonical[7];
+  }
+
+  /// Patterns réservés : 3 ch., 4 ch., ou 8 ch. XXYYZZTT.
+  static bool isPatternReserved(String canonical) {
+    if (canonical.isEmpty || !RegExp(r'^\d+$').hasMatch(canonical)) {
+      return false;
+    }
+    final len = canonical.length;
+    if (len == 3 || len == 4) return true;
+    if (len == 8) return isXxyyzztt(canonical);
+    return false;
+  }
+
+  static String? validateReservedCandidate(String canonical) {
+    final err = validate(canonical);
+    if (err != null) return err;
+    if (!isPatternReserved(canonical)) {
+      return 'Réservation limitée aux numéros 3 ou 4 chiffres, '
+          'ou 8 chiffres au format XXYYZZTT (ex. 11 22 33 44)';
+    }
+    return null;
+  }
+
   static String formatDisplay(String? canonical) {
     final digits = normalize(canonical);
     if (digits.isEmpty) return '';
@@ -60,4 +91,11 @@ class AlanyaPhoneFormatter {
 
   static bool isNumericQuery(String q) =>
       RegExp(r'^\d+$').hasMatch(normalize(q));
+
+  static bool isCompletePhone(String canonical) => validate(canonical) == null;
+
+  static bool isAssignableQuery(String q) {
+    final digits = normalize(q);
+    return digits.isNotEmpty && isCompletePhone(digits);
+  }
 }

@@ -152,6 +152,15 @@ extension AdminApi on TalkyApiClient {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<Map<String, dynamic>> adminCheckAssignablePhone(String phone) async {
+    final uri = Uri.parse('${TalkyApiClient.baseUrl}/admin/alanya-phones/check-assignable')
+        .replace(queryParameters: {'phone': phone});
+    final data = await _handleRequest(
+      () => _client.get(uri, headers: _headers),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<void> adminAddReservedPhone(String phone, String label) async {
     await _handleRequest(
       () => _client.post(

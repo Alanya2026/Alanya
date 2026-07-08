@@ -108,7 +108,7 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
 
   Future<void> _add() async {
     final canonical = AlanyaPhoneField.canonicalFrom(_phoneCtrl);
-    final err = AlanyaPhoneFormatter.validate(canonical);
+    final err = AlanyaPhoneFormatter.validateReservedCandidate(canonical);
     if (err != null || _labelCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(err ?? 'Libellé requis')),
@@ -182,7 +182,21 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
                       children: [
                         AlanyaPhoneField(
                           controller: _phoneCtrl,
-                          decoration: const InputDecoration(labelText: 'Numéro'),
+                          decoration: const InputDecoration(
+                            labelText: 'Numéro',
+                            hintText: '3 / 4 ch. ou XXYYZZTT',
+                          ),
+                        ),
+                        AppSpacing.vGapSm,
+                        Text(
+                          'Uniquement 3 ou 4 chiffres, ou 8 chiffres XXYYZZTT '
+                          '(ex. 11 22 33 44). Ces formes sont exclus de '
+                          "l'inscription automatique.",
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
                         ),
                         AppSpacing.vGapMd,
                         TextField(
