@@ -149,7 +149,7 @@ class VoiceMessageCoordinator extends ChangeNotifier {
     VoiceMessageRef ref, {
     void Function(double? progress)? onProgress,
   }) async {
-    if (ref.isMe || ref.serverMsgId == 0) return;
+    if (ref.serverMsgId == 0) return;
     final url = ref.mediaUrl;
     if (url == null || url.isEmpty) return;
 

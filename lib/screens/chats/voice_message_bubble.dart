@@ -81,7 +81,6 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   }
 
   bool get _canDownload =>
-      !widget.isMe &&
       widget.serverMsgId != 0 &&
       widget.networkUrl != null &&
       widget.networkUrl!.isNotEmpty;
@@ -210,8 +209,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           onPressed: () {
             coordinator.invalidate(widget.messageId);
             if (_canDownload &&
-                snap.localPath == null &&
-                widget.localPath == null) {
+                snap.localPath == null) {
               _onDownload(coordinator);
             } else {
               _sync();
