@@ -93,6 +93,9 @@ class CallService extends ChangeNotifier {
   String? _autoAnswerCallerId;
   final Map<String, DateTime> _recentIncomingCallIds = {};
 
+  /// Hook optionnel après fin d'appel local (ex. resync historique).
+  Future<void> Function()? onCallTerminatedHook;
+
   // UI minimisée (bannière flottante active).
   bool _isCallUiMinimized = false;
   bool _isCallUiRouteOpen = false;

@@ -31,6 +31,7 @@ import 'firebase_options.dart';
 import 'screens/authentification/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'talky_api_client.dart';
+import 'talky_models.dart';
 import 'widgets/session/active_session_banner.dart';
 
 /// Clé globale exposée à PushService pour naviguer depuis les notifications.
@@ -152,6 +153,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   int? _boundUserId;
   VoidCallback? _onBackOnline;
   ConnectivityProvider? _connectivityForListener;
+  void Function(dynamic)? _onCallLogUpdated;
 
   @override
   void initState() {
@@ -165,6 +167,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void dispose() {
     _authProvider?.removeListener(_onAuthChanged);
+    _clearCallLogBindings();
     if (_onBackOnline != null && _connectivityForListener != null) {
       _connectivityForListener!.removeBackOnlineListener(_onBackOnline!);
     }
@@ -176,6 +179,43 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _connectivityForListener!.removeBackOnlineListener(_onBackOnline!);
       _onBackOnline = null;
       _connectivityForListener = null;
+    }
+  }
+
+  void _removeCallLogListener() {
+    if (_onCallLogUpdated == null) return;
+    try {
+      Provider.of<TalkyApiClient>(context, listen: false)
+          .removeSocketListener(SocketEvents.callLogUpdated, _onCallLogUpdated!);
+    } catch (e) {
+      debugPrint('[AuthWrapper] removeCallLogListener échoué: $e');
+    }
+    _onCallLogUpdated = null;
+  }
+
+  void _bindCallLogListener(int myId) {
+    _removeCallLogListener();
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+    final callService = Provider.of<CallService>(context, listen: false);
+    Future<void> syncCalls() async {
+      if (!mounted) return;
+      await cache.syncCalls(myId: myId);
+    }
+    _onCallLogUpdated = (_) {
+      debugPrint('[AuthWrapper] call_log_updated → syncCalls');
+      unawaited(syncCalls());
+    };
+    apiClient.onSocketEvent(SocketEvents.callLogUpdated, _onCallLogUpdated!);
+    callService.onCallTerminatedHook = syncCalls;
+  }
+
+  void _clearCallLogBindings() {
+    _removeCallLogListener();
+    try {
+      Provider.of<CallService>(context, listen: false).onCallTerminatedHook = null;
+    } catch (e) {
+      debugPrint('[AuthWrapper] clearCallLogBindings échoué: $e');
     }
   }
 
@@ -273,6 +313,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       if (_boundUserId != null) {
         debugPrint('[AuthWrapper] Logout détecté → unbind providers');
         _removeBackOnlineListener();
+        _clearCallLogBindings();
         try {
           Provider.of<ChatProvider>(context, listen: false).unbind();
           Provider.of<ChatProvider>(context, listen: false).onSocketReadyHook = null;
@@ -295,6 +336,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // Changement d'utilisateur : on libère l'ancien bind avant le neuf.
     if (_boundUserId != null && _boundUserId != myId) {
+      _clearCallLogBindings();
       try {
         Provider.of<ChatProvider>(context, listen: false).unbind();
         Provider.of<StatusProvider>(context, listen: false).unbind();
@@ -325,6 +367,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         cache.syncCalls(myId: myId);
         cache.syncMeetings();
         cache.purgeExpiredStatuses();
+        _bindCallLogListener(myId);
       }
     } catch (e) {
       debugPrint('[AuthWrapper] ChatProvider.bind échoué: $e');

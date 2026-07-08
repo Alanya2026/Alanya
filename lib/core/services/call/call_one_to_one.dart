@@ -278,6 +278,11 @@ extension CallOneToOne on CallService {
     _status = CallStatus.idle;
     await Future.microtask(() {});
     notify();
+    try {
+      await onCallTerminatedHook?.call();
+    } catch (e) {
+      debugPrint('[CallService] onCallTerminatedHook échoué: $e');
+    }
   }
 
   void _resetCallState() {

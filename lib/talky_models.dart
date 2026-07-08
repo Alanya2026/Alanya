@@ -691,6 +691,7 @@ class SocketEvents {
   static const callRejected  = 'call_rejected';
   static const callEnded     = 'call_ended';
   static const callFailed    = 'call_failed';
+  static const callLogUpdated = 'call_log_updated';
 
   // Appels groupe (Flutter → Backend)
   static const createGroupCall    = 'create_group_call';
