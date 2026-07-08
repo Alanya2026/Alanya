@@ -8,6 +8,7 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'call/speaking_detector.dart';
 import 'call_session_guard.dart';
+import 'callkit_service.dart';
 import '../navigation/app_navigator.dart';
 
 enum MeetingStatus { idle, joining, connected, ended }
@@ -685,8 +686,17 @@ class MeetingService extends ChangeNotifier {
   // CLEANUP
   Future<void> _cleanup() async {
     speakingDetector.stop();
+    final meetingCallId = _currentMeeting != null ? 'meeting_${_currentMeeting!.idMeeting}' : null;
     if (!kIsWeb) {
       await CallSessionGuard.instance.release();
+      if (meetingCallId != null) {
+        try {
+          await CallKitService.instance.endCall(meetingCallId);
+          debugPrint('[MeetingService] CallKit meeting fermé: $meetingCallId');
+        } catch (e) {
+          debugPrint('[MeetingService] endCall meeting error: $e');
+        }
+      }
     }
     for (final pc in _peerConnections.values) {
       await pc.close();

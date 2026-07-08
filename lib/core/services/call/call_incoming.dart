@@ -45,9 +45,23 @@ extension CallIncoming on CallService {
   }) {
     // Un appel est déjà en cours de traitement → ne pas écraser l'état.
     if (_status != CallStatus.idle) return;
+    if (callId.startsWith('meeting_')) {
+      debugPrint('[CallService] 🛡 ignore incoming CallKit meeting callId=$callId');
+      return;
+    }
+    final isGroupCall = roomId != null && roomId.isNotEmpty;
+    final parsedCallerId = int.tryParse(callerId);
+    if (!isGroupCall && parsedCallerId == null) {
+      debugPrint('[CallService] 🛡 ignore incoming CallKit invalide: callerId=$callerId');
+      return;
+    }
+    if (callerName.trim().isEmpty && parsedCallerId == null) {
+      debugPrint('[CallService] 🛡 ignore incoming CallKit sans identité exploitable');
+      return;
+    }
     debugPrint('[CallService] 📲 prepareIncomingFromCallKit callId=$callId caller=$callerId');
 
-    _remoteUserId = int.tryParse(callerId);
+    _remoteUserId = parsedCallerId;
     _remoteUserName = callerName;
     _remoteUserPhoto = callerPhoto;
     _isVideo = isVideo;

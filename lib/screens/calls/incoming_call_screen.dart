@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -148,70 +150,76 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : 'Inconnu';
         final initial = name.substring(0, 1).toUpperCase();
 
-        return Scaffold(
-          body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.brandPrimaryDark, AppColors.black],
+        return PopScope(
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) return;
+            unawaited(_reject());
+          },
+          child: Scaffold(
+            body: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppColors.brandPrimaryDark, AppColors.black],
+                ),
               ),
-            ),
-            child: SafeArea(
-              child: Column(
-                children: [
-                  AppSpacing.vGapXxl,
-                  Text(
-                    isGroup
-                        ? (isVideo ? 'Appel groupé vidéo entrant' : 'Appel groupé entrant')
-                        : (isVideo ? 'Appel vidéo entrant' : 'Appel vocal entrant'),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      letterSpacing: 1.2,
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    AppSpacing.vGapXxl,
+                    Text(
+                      isGroup
+                          ? (isVideo ? 'Appel groupé vidéo entrant' : 'Appel groupé entrant')
+                          : (isVideo ? 'Appel vidéo entrant' : 'Appel vocal entrant'),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  _AvatarPulse(animation: _pulse, initial: initial, photoUrl: caller?.avatarUrl),
-                  AppSpacing.vGapXxl,
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w600,
+                    const Spacer(),
+                    _AvatarPulse(animation: _pulse, initial: initial, photoUrl: caller?.avatarUrl),
+                    AppSpacing.vGapXxl,
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  AppSpacing.vGapSm,
-                  const Text(
-                    'Talky',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
-                  ),
-                  const Spacer(flex: 2),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _CallActionButton(
-                          icon: CupertinoIcons.phone_down_fill,
-                          label: 'Refuser',
-                          color: AppColors.error,
-                          onTap: _reject,
-                        ),
-                        _CallActionButton(
-                          icon: isVideo
-                              ? CupertinoIcons.video_camera_solid
-                              : CupertinoIcons.phone_fill,
-                          label: 'Accepter',
-                          color: AppColors.success,
-                          onTap: _accept,
-                        ),
-                      ],
+                    AppSpacing.vGapSm,
+                    const Text(
+                      'Talky',
+                      style: TextStyle(color: Colors.white54, fontSize: 14),
                     ),
-                  ),
-                ],
+                    const Spacer(flex: 2),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _CallActionButton(
+                            icon: CupertinoIcons.phone_down_fill,
+                            label: 'Refuser',
+                            color: AppColors.error,
+                            onTap: _reject,
+                          ),
+                          _CallActionButton(
+                            icon: isVideo
+                                ? CupertinoIcons.video_camera_solid
+                                : CupertinoIcons.phone_fill,
+                            label: 'Accepter',
+                            color: AppColors.success,
+                            onTap: _accept,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../screens/calls/ongoing_call_screen.dart';
 import '../../core/call_limits.dart';
@@ -13,6 +14,7 @@ import 'ringtone_service.dart';
 import 'webrtc_service.dart';
 import 'call/speaking_detector.dart'; // détection locale du locuteur actif
 import '../navigation/app_navigator.dart';
+import 'meeting_service.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -89,6 +91,7 @@ class CallService extends ChangeNotifier {
   // Auto-réponse (CallKit pré-accepté)
   bool _autoAnswerOnNextIncoming = false;
   String? _autoAnswerCallerId;
+  final Map<String, DateTime> _recentIncomingCallIds = {};
 
   // UI minimisée (bannière flottante active).
   bool _isCallUiMinimized = false;
@@ -190,6 +193,25 @@ class CallService extends ChangeNotifier {
     } catch (e) {
       debugPrint('[CallService] ** Erreur init ringtone: $e');
     }
+  }
+
+  bool _isMeetingActive() {
+    final context = appNavigatorKey.currentContext;
+    if (context == null) return false;
+    try {
+      return context.read<MeetingService>().isMeetingActive;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _alreadyHandledIncomingCallId(String? callId) {
+    if (callId == null || callId.isEmpty) return false;
+    final now = DateTime.now();
+    _recentIncomingCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 90);
+    if (_recentIncomingCallIds.containsKey(callId)) return true;
+    _recentIncomingCallIds[callId] = now;
+    return false;
   }
 
   @override

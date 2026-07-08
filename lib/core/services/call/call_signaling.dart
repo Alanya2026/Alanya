@@ -12,13 +12,39 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] ** Données invalides pour incoming_call');
         return;
       }
-      final incomingCallerId = data['callerId'].toString();
+      if (_status != CallStatus.idle) {
+        debugPrint('[CallService] 🛡 incoming_call ignoré: status=$_status');
+        return;
+      }
+      if (_isMeetingActive()) {
+        debugPrint('[CallService] 🛡 incoming_call ignoré: réunion active');
+        return;
+      }
+      final incomingCallerId = data['callerId']?.toString() ?? '';
+      if (incomingCallerId.isEmpty) {
+        debugPrint('[CallService] 🛡 incoming_call ignoré: callerId absent');
+        return;
+      }
+      final incomingCallId = data['callId']?.toString();
+      if (_alreadyHandledIncomingCallId(incomingCallId)) {
+        debugPrint('[CallService] 🛡 incoming_call dupliqué ignoré: callId=$incomingCallId');
+        return;
+      }
+      final offer = data['offer'];
+      if (offer is! Map || offer['sdp'] == null) {
+        debugPrint('[CallService] 🛡 incoming_call ignoré: offer absente/invalide');
+        return;
+      }
       _remoteUserId = int.tryParse(incomingCallerId);
+      if (_remoteUserId == null) {
+        debugPrint('[CallService] 🛡 incoming_call ignoré: callerId non numérique');
+        return;
+      }
       _remoteUserName = data['callerName'] as String?;
       _remoteUserPhoto = data['callerPhoto'] as String?;
       _isVideo = data['isVideo'] == true;
-      _pendingOffer = data['offer'] as Map<String, dynamic>?;
-      _currentCallId = data['callId']?.toString();
+      _pendingOffer = Map<String, dynamic>.from(offer);
+      _currentCallId = incomingCallId;
       _status = CallStatus.incoming;
       debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
@@ -115,6 +141,14 @@ extension CallSignaling on CallService {
     // Invitation à un appel de groupe
     _apiClient.onSocketEvent(SocketEvents.groupCallInvite, (data) {
       if (data is! Map) return;
+      if (_status != CallStatus.idle) {
+        debugPrint('[CallService] 🛡 group_call_invite ignoré: status=$_status');
+        return;
+      }
+      if (_isMeetingActive()) {
+        debugPrint('[CallService] 🛡 group_call_invite ignoré: réunion active');
+        return;
+      }
       _remoteUserId = int.tryParse(data['callerId'].toString());
       _remoteUserName = data['callerName'] as String?;
       _remoteUserPhoto = data['callerPhoto'] as String?;

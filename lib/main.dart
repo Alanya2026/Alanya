@@ -233,15 +233,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
         // peut-être encore actif → afficher l'écran d'appel entrant qui sonne.
         final active = await CallKitService.instance.getActiveCall();
         if (active != null && mounted) {
-          debugPrint('[AuthWrapper]  Appel CallKit actif trouvé → écran d\'appel entrant');
-          Provider.of<CallService>(context, listen: false).prepareIncomingFromCallKit(
-            callId:      active['callId'] as String,
-            callerId:    active['callerId'] as String,
-            callerName:  active['callerName'] as String,
-            callerPhoto: active['callerPhoto'] as String?,
-            isVideo:     active['isVideo'] as bool,
-            roomId:      active['roomId'] as String?,
-          );
+          final callId = active['callId'] as String? ?? '';
+          if (callId.startsWith('meeting_')) {
+            debugPrint('[AuthWrapper] ℹ CallKit réunion ignoré au cold start: $callId');
+          } else {
+            debugPrint('[AuthWrapper]  Appel CallKit actif trouvé → écran d\'appel entrant');
+            Provider.of<CallService>(context, listen: false).prepareIncomingFromCallKit(
+              callId:      callId,
+              callerId:    active['callerId'] as String,
+              callerName:  active['callerName'] as String,
+              callerPhoto: active['callerPhoto'] as String?,
+              isVideo:     active['isVideo'] as bool,
+              roomId:      active['roomId'] as String?,
+            );
+          }
         }
       }
     } catch (e) {

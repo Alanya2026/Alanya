@@ -94,6 +94,16 @@ class CallSessionGuard with WidgetsBindingObserver {
 
     await AudioHelper.releaseCallAudio();
 
+    final callId = _callId;
+    if (callId != null && callId.isNotEmpty) {
+      try {
+        await CallKitService.instance.endCall(callId);
+        debugPrint('[CallSessionGuard] CallKit fermé callId=$callId');
+      } catch (e) {
+        debugPrint('[CallSessionGuard] endCall error: $e');
+      }
+    }
+
     _mode = null;
     _callId = null;
     _getLocalStream = null;
