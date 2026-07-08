@@ -136,13 +136,16 @@ extension CallOneToOne on CallService {
 
     await _ringtone.stop();
     _errorMessage = null;
+    if (!_apiClient.isSocketConnected) {
+      _apiClient.connectSocket();
+    }
     int retries = 0;
-    while (!_apiClient.isSocketConnected && retries < 20) {
+    while (!_apiClient.isSocketReady && retries < 50) {
       await Future.delayed(const Duration(milliseconds: 100));
       retries++;
     }
-    if (!_apiClient.isSocketConnected) {
-      debugPrint('[CallService] ** Socket not connected après 2s');
+    if (!_apiClient.isSocketReady) {
+      debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
       _errorMessage = 'Socket non connecté';
       _status = CallStatus.idle;
       notify();

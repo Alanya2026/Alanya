@@ -12,6 +12,10 @@ extension CallIncoming on CallService {
   }) async {
     debugPrint('[CallService] 📲 acceptIncomingCallFromPush callId=$callId caller=$callerId');
 
+    if (!_apiClient.isSocketConnected) {
+      _apiClient.connectSocket();
+    }
+
     _remoteUserId = int.tryParse(callerId);
     _remoteUserName = callerName;
     _remoteUserPhoto = callerPhoto;

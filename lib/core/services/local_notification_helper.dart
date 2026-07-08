@@ -21,9 +21,7 @@ const _kChannelMeetings = AndroidNotificationChannel(
 );
 
 const String kPushActiveConvKey = 'push_active_conv_id';
-const String kNotifActiveConvsKey = 'notif_active_conv_ids';
 const int kMeetingNotifOffset = 1000000000;
-const int kSummaryNotifId = 0;
 const int kMaxBufferedMessages = 7;
 
 /// Helper partagé foreground / background pour les notifications locales.
@@ -53,6 +51,11 @@ class LocalNotificationHelper {
         AndroidFlutterLocalNotificationsPlugin>();
     await android?.createNotificationChannel(_kChannelMessages);
     await android?.createNotificationChannel(_kChannelMeetings);
+
+    // Ancienne notif résumé « X conversations » (id 0) — ne plus utiliser.
+    await _plugin.cancel(0);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('notif_active_conv_ids');
 
     _initialized = true;
   }
@@ -111,10 +114,8 @@ class LocalNotificationHelper {
       sender: senderName,
       body: messageBody,
     );
-    await _trackActiveConversation(conversationId);
 
     final payload = encodeNotificationPayload(data);
-    final groupKey = 'talky_conv_$conversationId';
     final threadId = 'conv_$conversationId';
 
     final style = _buildMessagingStyle(
@@ -136,7 +137,6 @@ class LocalNotificationHelper {
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
-      groupKey: groupKey,
       styleInformation: style,
     );
 
@@ -171,7 +171,6 @@ class LocalNotificationHelper {
             importance: Importance.high,
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',
-            groupKey: groupKey,
             styleInformation: BigTextStyleInformation(displayBody),
           ),
           iOS: DarwinNotificationDetails(
@@ -184,8 +183,6 @@ class LocalNotificationHelper {
         payload: payload,
       );
     }
-
-    await _updateSummaryNotification();
   }
 
   // ── Affichage réunions ───────────────────────────────────────────────
@@ -288,8 +285,6 @@ class LocalNotificationHelper {
     await _plugin.cancel(conversationId);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_bufferKey(conversationId));
-    await _untrackActiveConversation(conversationId);
-    await _updateSummaryNotification();
   }
 
   static Future<void> cancelMeeting(int meetingId) async {
@@ -384,67 +379,4 @@ class LocalNotificationHelper {
     );
   }
 
-  static Future<void> _trackActiveConversation(int conversationId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = await _loadActiveConversationIds(prefs);
-    if (!ids.contains(conversationId)) {
-      ids.add(conversationId);
-      await prefs.setStringList(
-        kNotifActiveConvsKey,
-        ids.map((e) => e.toString()).toList(),
-      );
-    }
-  }
-
-  static Future<void> _untrackActiveConversation(int conversationId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = await _loadActiveConversationIds(prefs);
-    ids.remove(conversationId);
-    if (ids.isEmpty) {
-      await prefs.remove(kNotifActiveConvsKey);
-    } else {
-      await prefs.setStringList(
-        kNotifActiveConvsKey,
-        ids.map((e) => e.toString()).toList(),
-      );
-    }
-  }
-
-  static Future<List<int>> _loadActiveConversationIds(
-    SharedPreferences prefs,
-  ) async {
-    final raw = prefs.getStringList(kNotifActiveConvsKey) ?? [];
-    return raw.map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toList();
-  }
-
-  static Future<void> _updateSummaryNotification() async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = await _loadActiveConversationIds(prefs);
-    if (ids.length < 2) {
-      await _plugin.cancel(kSummaryNotifId);
-      return;
-    }
-
-    await _plugin.show(
-      kSummaryNotifId,
-      'Alanya',
-      '${ids.length} conversations',
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'talky_messages',
-          'Messages',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-          groupKey: 'talky_messages',
-          setAsGroupSummary: true,
-        ),
-        iOS: DarwinNotificationDetails(
-          threadIdentifier: 'talky_summary',
-          presentAlert: true,
-          presentBadge: true,
-        ),
-      ),
-    );
-  }
 }

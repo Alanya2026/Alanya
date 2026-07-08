@@ -12,7 +12,14 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] ** Données invalides pour incoming_call');
         return;
       }
-      if (_status != CallStatus.idle) {
+      final incomingCallerId = data['callerId']?.toString() ?? '';
+      // Cold start via CallKit : l'utilisateur a déjà tapé « Accepter » avant que
+      // l'offre WebRTC arrive — on attend l'offer avec status=incoming.
+      final waitingForOffer = _status == CallStatus.incoming && _pendingOffer == null;
+      final callerMatches = incomingCallerId.isNotEmpty &&
+          (incomingCallerId == _remoteUserId?.toString() ||
+              (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId));
+      if (_status != CallStatus.idle && !(waitingForOffer && callerMatches)) {
         debugPrint('[CallService] 🛡 incoming_call ignoré: status=$_status');
         return;
       }
@@ -20,7 +27,6 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] 🛡 incoming_call ignoré: réunion active');
         return;
       }
-      final incomingCallerId = data['callerId']?.toString() ?? '';
       if (incomingCallerId.isEmpty) {
         debugPrint('[CallService] 🛡 incoming_call ignoré: callerId absent');
         return;
