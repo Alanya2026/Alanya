@@ -660,15 +660,12 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
   }
 
   Future<void> _scrollToReply(int replyToID) async {
@@ -755,14 +752,18 @@ extension _ChatActions on _ChatDetailScreenState {
   double _estimateScrollOffset(int index, List<LocalMessage> messages) {
     const dateH = 42.0;
     var offset = AppSpacing.lg.toDouble();
-    for (var i = 0; i < index; i++) {
-      final prev = i > 0 ? messages[i - 1] : null;
-      if (prev == null ||
-          !_sameDay(prev.sendAt.toLocal(), messages[i].sendAt.toLocal())) {
-        offset += dateH;
+    final feedIndex = messages.length - 1 - index;
+    for (var i = 0; i <= feedIndex; i++) {
+      final msgIdx = messages.length - 1 - i;
+      final m = messages[msgIdx];
+      if (i < messages.length - 1) {
+        final olderAbove = messages[messages.length - 2 - i];
+        if (!_sameDay(olderAbove.sendAt.toLocal(), m.sendAt.toLocal())) {
+          offset += dateH;
+        }
       }
-      if (widget.isGroup && messages[i].senderID != _myId) offset += 22;
-      offset += _estimateBubbleHeight(messages[i]);
+      if (widget.isGroup && m.senderID != _myId) offset += 22;
+      offset += _estimateBubbleHeight(m);
     }
     return offset;
   }

@@ -96,7 +96,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   bool _loadingOlder = false;
   bool _atBottom = true;
-  bool _firstLoad = true;
   bool _suppressAutoScroll = false;
   int? _highlightMsgId;
   int? _pendingScrollMsgId;
@@ -130,10 +129,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   void _onScroll() {
     final pos = _scrollController.position;
-    _atBottom = pos.pixels >= pos.maxScrollExtent - 150;
+    // reverse: true → offset 0 = bas (messages récents).
+    _atBottom = pos.pixels <= 150;
 
-    // Près du haut → charger une page d'anciens messages.
-    if (pos.pixels <= 80 && !_loadingOlder) {
+    // Près du haut visuel → charger une page d'anciens messages.
+    if (pos.pixels >= pos.maxScrollExtent - 80 && !_loadingOlder) {
       final convId = widget.conversationId;
       if (convId == null) return;
       _loadingOlder = true;
@@ -396,12 +396,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                               message: 'Dites bonjour pour démarrer la conversation !',
                             );
                           }
-                          // Auto-scroll au 1er chargement, si déjà en bas, ou quand
-                          // l'indicateur de frappe apparaît.
-                          if (!_suppressAutoScroll && (_firstLoad || _atBottom)) {
+                          // Auto-scroll si déjà en bas (nouveau message, frappe…).
+                          if (!_suppressAutoScroll && _atBottom) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               _scrollToBottom();
-                              _firstLoad = false;
                             });
                           }
                           // Fil unifié : messages/albums + appels, triés par date.
@@ -409,20 +407,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             ...groupMessagesForDisplay(messages),
                             ...calls,
                           ]..sort((a, b) => _feedTime(a).compareTo(_feedTime(b)));
+                          // reverse: true → index 0 en bas ; on inverse pour afficher
+                          // les récents près de la zone de saisie.
+                          final reversedFeed = feed.reversed.toList();
 
                           return ListView.builder(
                             controller: _scrollController,
+                            reverse: true,
                             padding: const EdgeInsets.all(AppSpacing.lg),
-                            itemCount: feed.length + 1,
+                            itemCount: reversedFeed.length + 1,
                             itemBuilder: (context, index) {
-                              if (index == feed.length) {
+                              if (index == 0) {
                                 return TypingBubbleSlot(visible: partnerTyping);
                               }
-                              final item = feed[index];
+                              final feedIndex = index - 1;
+                              final item = reversedFeed[feedIndex];
                               final itemTime = _feedTime(item);
-                              final prevTime = index > 0 ? _feedTime(feed[index - 1]) : null;
-                              final showDate = prevTime == null ||
-                                  !_sameDay(prevTime.toLocal(), itemTime.toLocal());
+                              final olderTime = feedIndex < reversedFeed.length - 1
+                                  ? _feedTime(reversedFeed[feedIndex + 1])
+                                  : null;
+                              final showDate = olderTime == null ||
+                                  !_sameDay(olderTime.toLocal(), itemTime.toLocal());
 
                               // Entrée d'appel (journal type WhatsApp).
                               if (item is LocalCall) {
