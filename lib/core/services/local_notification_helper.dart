@@ -99,7 +99,7 @@ class LocalNotificationHelper {
 
     if (suppressIfActive && await shouldSuppressMessage(conversationId)) return;
 
-    final senderName = title ?? data['title']?.toString() ?? 'Talky';
+    final senderName = title ?? data['title']?.toString() ?? 'Alanya';
     final messageBody = body ?? bodyFromPayload(data);
     if (messageBody.isEmpty && senderName.isEmpty) return;
 
@@ -247,7 +247,7 @@ class LocalNotificationHelper {
     if (kIsWeb) return;
     await ensureInitialized();
 
-    final notifTitle = title ?? data['title']?.toString() ?? 'Talky';
+    final notifTitle = title ?? data['title']?.toString() ?? 'Alanya';
     final notifBody = body ?? data['body']?.toString() ?? '';
     if (notifTitle.isEmpty && notifBody.isEmpty) return;
 
@@ -371,11 +371,11 @@ class LocalNotificationHelper {
       return Message(
         m['body'] ?? '',
         ts,
-        Person(name: sender.isNotEmpty ? sender : 'Talky'),
+        Person(name: sender.isNotEmpty ? sender : 'Alanya'),
       );
     }).toList();
 
-    final personName = latestSender.trim().isNotEmpty ? latestSender : 'Talky';
+    final personName = latestSender.trim().isNotEmpty ? latestSender : 'Alanya';
     return MessagingStyleInformation(
       Person(name: personName),
       conversationTitle: isGroup && groupName.isNotEmpty ? groupName : null,
@@ -427,7 +427,7 @@ class LocalNotificationHelper {
 
     await _plugin.show(
       kSummaryNotifId,
-      'Talky',
+      'Alanya',
       '${ids.length} conversations',
       const NotificationDetails(
         android: AndroidNotificationDetails(
