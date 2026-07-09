@@ -175,6 +175,34 @@ class ChatProvider extends ChangeNotifier {
     );
   }
 
+  Future<ForwardResult> forwardMessages({
+    required List<LocalMessage> sources,
+    required List<int> targetConversationIDs,
+    String? caption,
+  }) {
+    return repository.forwardMessages(
+      sources: sources,
+      targetConversationIDs: targetConversationIDs,
+      caption: caption,
+    );
+  }
+
+  Future<void> deleteMessages(List<int> msgIDs, {bool forAll = false}) {
+    return repository.deleteMessages(msgIDs, forAll: forAll);
+  }
+
+  Future<void> setConversationsPinned(List<int> conversIDs, bool pinned) {
+    return repository.setConversationsPinned(conversIDs, pinned);
+  }
+
+  Future<void> setConversationsArchived(List<int> conversIDs, bool archived) {
+    return repository.setConversationsArchived(conversIDs, archived);
+  }
+
+  Future<void> deleteConversations(List<int> conversIDs) {
+    return repository.deleteConversations(conversIDs);
+  }
+
   Future<ForwardResult> forwardAlbum({
     required List<LocalMessage> sourceItems,
     required List<int> targetConversationIDs,

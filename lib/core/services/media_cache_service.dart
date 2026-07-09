@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../utils/app_log.dart';
+import '../utils/backend_url.dart';
 
 //  Télécharge et conserve les médias reçus dans le dossier de l'app pour
 //  une consultation hors-ligne. Évince les plus vieux fichiers (LRU) quand
@@ -29,8 +30,9 @@ class MediaCacheService {
 
   /// Chemin local si déjà en cache, sinon null (sans télécharger).
   Future<String?> cachedPathFor(String url) async {
+    final resolved = _resolvedUrl(url);
     final dir = await _cacheDir();
-    final file = File(p.join(dir.path, _fileName(url)));
+    final file = File(p.join(dir.path, _fileName(resolved)));
     return file.existsSync() ? file.path : null;
   }
 
@@ -40,19 +42,20 @@ class MediaCacheService {
   /// cert pinning et échouent sur une URL réseau directe), puis l'appelant
   /// supprime le fichier immédiatement après visionnage.
   Future<String?> downloadToTemp(String url) async {
+    final resolved = _resolvedUrl(url);
     try {
-      final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
+      final res = await http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
       if (res.statusCode != 200) return null;
       final tmp = await getTemporaryDirectory();
       final path = p.join(
         tmp.path,
-        'vo_${DateTime.now().microsecondsSinceEpoch}_${_fileName(url)}',
+        'vo_${DateTime.now().microsecondsSinceEpoch}_${_fileName(resolved)}',
       );
       final file = File(path);
       await file.writeAsBytes(res.bodyBytes);
       return file.path;
     } catch (e) {
-      debugPrint('[MediaCache] downloadToTemp échoué $url: $e');
+      debugPrint('[MediaCache] downloadToTemp échoué $resolved: $e');
       return null;
     }
   }
@@ -63,9 +66,10 @@ class MediaCacheService {
     void Function(double? progress)? onProgress,
     int? maxBytes,
   }) async {
+    final resolved = _resolvedUrl(url);
     try {
       final dir = await _cacheDir();
-      final file = File(p.join(dir.path, _fileName(url)));
+      final file = File(p.join(dir.path, _fileName(resolved)));
       if (file.existsSync() && file.lengthSync() > 0) {
         onProgress?.call(1.0);
         try {
@@ -76,7 +80,7 @@ class MediaCacheService {
         return file.path;
       }
 
-      final uri = Uri.parse(url);
+      final uri = Uri.parse(resolved);
       final client = http.Client();
       try {
         if (maxBytes != null) {
@@ -85,7 +89,7 @@ class MediaCacheService {
                 await client.head(uri).timeout(const Duration(seconds: 5));
             final len = int.tryParse(head.headers['content-length'] ?? '');
             if (len != null && len > maxBytes) {
-              debugPrint('[MediaCache] skip $url : taille $len > $maxBytes');
+              debugPrint('[MediaCache] skip $resolved : taille $len > $maxBytes');
               return null;
             }
           } catch (_) {}
@@ -132,7 +136,7 @@ class MediaCacheService {
         client.close();
       }
     } catch (e) {
-      debugPrint('[MediaCache] downloadWithProgress échoué $url: $e');
+      debugPrint('[MediaCache] downloadWithProgress échoué $resolved: $e');
       return null;
     }
   }
@@ -141,9 +145,10 @@ class MediaCacheService {
   /// Si [maxBytes] est fourni, vérifie d'abord la taille via HEAD et abandonne
   /// si trop gros (utile pour ne pas auto-cacher des fichiers énormes).
   Future<String?> ensureCached(String url, {int? maxBytes}) async {
+    final resolved = _resolvedUrl(url);
     try {
       final dir = await _cacheDir();
-      final file = File(p.join(dir.path, _fileName(url)));
+      final file = File(p.join(dir.path, _fileName(resolved)));
       if (file.existsSync() && file.lengthSync() > 0) {
         // Touch pour LRU
         try {
@@ -156,10 +161,10 @@ class MediaCacheService {
 
       if (maxBytes != null) {
         try {
-          final head = await http.head(Uri.parse(url)).timeout(const Duration(seconds: 5));
+          final head = await http.head(Uri.parse(resolved)).timeout(const Duration(seconds: 5));
           final len = int.tryParse(head.headers['content-length'] ?? '');
           if (len != null && len > maxBytes) {
-            debugPrint('[MediaCache] skip $url : taille $len > $maxBytes');
+            debugPrint('[MediaCache] skip $resolved : taille $len > $maxBytes');
             return null;
           }
         } catch (_) {
@@ -167,14 +172,14 @@ class MediaCacheService {
         }
       }
 
-      final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
+      final res = await http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
       if (res.statusCode != 200) return null;
       await file.writeAsBytes(res.bodyBytes);
       // Éviction post-write : non-bloquante pour le caller.
       unawaited(evictIfNeeded());
       return file.path;
     } catch (e) {
-      debugPrint('[MediaCache] échec cache $url: $e');
+      debugPrint('[MediaCache] échec cache $resolved: $e');
       return null;
     }
   }
@@ -266,6 +271,8 @@ class MediaCacheService {
       debugPrint('[MediaCache] evictIfNeeded échoué: $e');
     }
   }
+
+  String _resolvedUrl(String url) => normalizeBackendUrl(url) ?? url;
 
   String _fileName(String url) {
     final uri = Uri.tryParse(url);

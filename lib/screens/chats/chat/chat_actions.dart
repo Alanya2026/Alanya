@@ -3,6 +3,180 @@
 part of '../chat_detail_screen.dart';
 
 extension _ChatActions on _ChatDetailScreenState {
+  bool _isSelectableMessage(LocalMessage msg) => msg.msgID > 0 && !msg.isDeleted;
+
+  List<LocalMessage> _albumSiblings(LocalMessage msg) {
+    final marker = parseAlbumMarker(msg.content);
+    if (marker == null) return [msg];
+    return _currentMessages
+        .where((m) => parseAlbumMarker(m.content)?.albumId == marker.albumId)
+        .toList();
+  }
+
+  bool _isMessageSelected(LocalMessage msg) {
+    final siblings = _albumSiblings(msg);
+    if (siblings.length > 1) {
+      return siblings.every((m) => _selectedMsgIDs.contains(m.msgID));
+    }
+    return _selectedMsgIDs.contains(msg.msgID);
+  }
+
+  List<LocalMessage> _resolveSelectedMessages() {
+    return _currentMessages
+        .where((m) => _selectedMsgIDs.contains(m.msgID))
+        .toList()
+      ..sort((a, b) => a.sendAt.compareTo(b.sendAt));
+  }
+
+  void _enterSelectionMode(LocalMessage seed) {
+    if (!_isSelectableMessage(seed)) return;
+    final ids = _albumSiblings(seed)
+        .map((m) => m.msgID)
+        .where((id) => id > 0)
+        .toSet();
+    if (ids.isEmpty) return;
+    rebuild(() {
+      _selectionMode = true;
+      _selectedMsgIDs
+        ..clear()
+        ..addAll(ids);
+    });
+  }
+
+  void _enterSelectionModeAlbum(List<LocalMessage> items) {
+    final ids = items
+        .where(_isSelectableMessage)
+        .map((m) => m.msgID)
+        .toSet();
+    if (ids.isEmpty) return;
+    rebuild(() {
+      _selectionMode = true;
+      _selectedMsgIDs
+        ..clear()
+        ..addAll(ids);
+    });
+  }
+
+  void _exitSelectionMode() {
+    rebuild(() {
+      _selectionMode = false;
+      _selectedMsgIDs.clear();
+    });
+  }
+
+  void _toggleSelection(LocalMessage msg) {
+    if (!_selectionMode || !_isSelectableMessage(msg)) return;
+    final ids = _albumSiblings(msg)
+        .map((m) => m.msgID)
+        .where((id) => id > 0)
+        .toList();
+    final allSelected = ids.every(_selectedMsgIDs.contains);
+
+    if (allSelected) {
+      rebuild(() {
+        _selectedMsgIDs.removeAll(ids);
+        if (_selectedMsgIDs.isEmpty) _selectionMode = false;
+      });
+      return;
+    }
+
+    final newIds = ids.where((id) => !_selectedMsgIDs.contains(id)).toList();
+    if (_selectedMsgIDs.length + newIds.length > _maxSelectionCount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Maximum $_maxSelectionCount messages')),
+      );
+      return;
+    }
+
+    rebuild(() => _selectedMsgIDs.addAll(newIds));
+  }
+
+  Future<void> _deleteSelected({required bool forAll}) async {
+    final ids = _selectedMsgIDs.toList();
+    if (ids.isEmpty) return;
+    await _chat.repository.deleteMessages(ids, forAll: forAll);
+    if (!mounted) return;
+    _exitSelectionMode();
+  }
+
+  void _showDeleteSelectedMenu() {
+    final selected = _resolveSelectedMessages();
+    if (selected.isEmpty) return;
+    final canDeleteForAll =
+        selected.every((m) => m.senderID == _myId);
+    final muted = context.colors.onSurfaceVariant;
+    final error = context.colors.error;
+
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: muted),
+              title: const Text('Supprimer pour moi'),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteSelected(forAll: false);
+              },
+            ),
+            if (canDeleteForAll)
+              ListTile(
+                leading: Icon(Icons.delete_forever, color: error),
+                title: const Text('Supprimer pour tous'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteSelected(forAll: true);
+                },
+              ),
+            AppSpacing.vGapSm,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _forwardSelected() async {
+    final selected = _resolveSelectedMessages();
+    if (selected.isEmpty) return;
+    if (!selected.every(canForwardMessage)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Un ou plusieurs messages ne peuvent pas être transférés'),
+        ),
+      );
+      return;
+    }
+
+    final bool? ok;
+    if (selected.length == 1) {
+      ok = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ForwardMessageScreen(
+            message: selected.first,
+            excludeConversationId: widget.conversationId,
+          ),
+        ),
+      );
+    } else {
+      ok = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ForwardMessageScreen(
+            messages: selected,
+            excludeConversationId: widget.conversationId,
+          ),
+        ),
+      );
+    }
+
+    if (ok == true && mounted) _exitSelectionMode();
+  }
+
   void _sendMessage() {
     if (_inputBlocked) return;
     final text = _messageController.text.trim();
@@ -51,6 +225,15 @@ extension _ChatActions on _ChatDetailScreenState {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_isSelectableMessage(msg))
+              ListTile(
+                leading: Icon(Icons.check_circle_outline, color: primary),
+                title: const Text('Sélectionner'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _enterSelectionMode(msg);
+                },
+              ),
             // Si le message est en échec d'envoi, on propose en priorité le retry.
             if (isMe && msg.status == 4)
               ListTile(
@@ -264,6 +447,14 @@ extension _ChatActions on _ChatDetailScreenState {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            ListTile(
+              leading: Icon(Icons.check_circle_outline, color: primary),
+              title: Text('Sélectionner (${items.length})'),
+              onTap: () {
+                Navigator.pop(context);
+                _enterSelectionModeAlbum(items);
+              },
+            ),
             if (canForwardAlbum(items))
               ListTile(
                 leading: Icon(Icons.forward, color: primary),
@@ -278,10 +469,12 @@ extension _ChatActions on _ChatDetailScreenState {
               title: const Text('Supprimer pour moi'),
               onTap: () {
                 Navigator.pop(context);
-                for (final msg in items) {
-                  if (msg.msgID != 0) {
-                    _chat.repository.deleteMessage(msg.msgID, forAll: false);
-                  }
+                final ids = items
+                    .map((m) => m.msgID)
+                    .where((id) => id > 0)
+                    .toList();
+                if (ids.isNotEmpty) {
+                  _chat.repository.deleteMessages(ids, forAll: false);
                 }
               },
             ),
@@ -291,10 +484,12 @@ extension _ChatActions on _ChatDetailScreenState {
                 title: const Text('Supprimer pour tous'),
                 onTap: () {
                   Navigator.pop(context);
-                  for (final msg in items) {
-                    if (msg.msgID != 0) {
-                      _chat.repository.deleteMessage(msg.msgID, forAll: true);
-                    }
+                  final ids = items
+                      .map((m) => m.msgID)
+                      .where((id) => id > 0)
+                      .toList();
+                  if (ids.isNotEmpty) {
+                    _chat.repository.deleteMessages(ids, forAll: true);
                   }
                 },
               ),
@@ -996,6 +1191,10 @@ extension _ChatActions on _ChatDetailScreenState {
     List<LocalMessage> items, {
     required int initialIndex,
   }) async {
+    if (_selectionMode && items.isNotEmpty) {
+      _toggleSelection(items[initialIndex.clamp(0, items.length - 1)]);
+      return;
+    }
     var loaderShown = false;
     final prepared = await buildMediaViewerItems(
       items,
@@ -1032,6 +1231,10 @@ extension _ChatActions on _ChatDetailScreenState {
 
   void _openAlbumMediaList(List<LocalMessage> items, {required int initialIndex}) {
     final sorted = sortAlbumMessages(items);
+    if (_selectionMode && sorted.isNotEmpty) {
+      _toggleSelection(sorted[initialIndex.clamp(0, sorted.length - 1)]);
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1049,6 +1252,10 @@ extension _ChatActions on _ChatDetailScreenState {
   /// de la visionneuse (marque vu + efface toute trace locale ; le serveur
   /// supprime le fichier une fois que tous les destinataires ont vu).
   Future<void> _openViewOnce(LocalMessage msg) async {
+    if (_selectionMode) {
+      _toggleSelection(msg);
+      return;
+    }
     if (msg.viewedAt != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ce média a déjà été ouvert')),
@@ -1104,6 +1311,10 @@ extension _ChatActions on _ChatDetailScreenState {
 
   // Télécharge si besoin puis ouvre le fichier avec l'app système (PDF, doc…).
   Future<void> _openFile(LocalMessage msg) async {
+    if (_selectionMode) {
+      _toggleSelection(msg);
+      return;
+    }
     String? path =
         (msg.localMediaPath != null && File(msg.localMediaPath!).existsSync())
             ? msg.localMediaPath

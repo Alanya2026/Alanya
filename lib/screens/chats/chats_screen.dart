@@ -32,6 +32,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
   String _filter = 'all'; // 'all', 'discussions', 'groups', 'unread', 'archived'
   bool _searchOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
+  bool _selectionMode = false;
+  final Set<int> _selectedConversationIDs = {};
+  List<LocalConversation> _latestConversations = const [];
 
   @override
   void initState() {
@@ -56,6 +59,40 @@ class _ChatsScreenState extends State<ChatsScreen> {
     });
   }
 
+  void _enterSelectionMode(LocalConversation conv) {
+    setState(() {
+      _selectionMode = true;
+      _selectedConversationIDs
+        ..clear()
+        ..add(conv.conversID);
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _selectionMode = false;
+      _selectedConversationIDs.clear();
+    });
+  }
+
+  void _toggleConversationSelection(LocalConversation conv) {
+    setState(() {
+      if (_selectedConversationIDs.contains(conv.conversID)) {
+        _selectedConversationIDs.remove(conv.conversID);
+        if (_selectedConversationIDs.isEmpty) _selectionMode = false;
+      } else {
+        _selectedConversationIDs.add(conv.conversID);
+      }
+    });
+  }
+
+  List<LocalConversation> _selectedConversations() {
+    if (_selectedConversationIDs.isEmpty) return const [];
+    return _latestConversations
+        .where((c) => _selectedConversationIDs.contains(c.conversID))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = Provider.of<ChatProvider>(context);
@@ -71,14 +108,80 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Discussions', style: context.text.headlineLarge),
+        leading: _selectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              )
+            : null,
+        title: Text(
+          _selectionMode
+              ? '${_selectedConversationIDs.length} sélectionnée${_selectedConversationIDs.length > 1 ? 's' : ''}'
+              : 'Discussions',
+          style: _selectionMode
+              ? context.text.titleLarge?.copyWith(fontWeight: FontWeight.w600)
+              : context.text.headlineLarge,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
-          IconButton(
-            icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded),
-            tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
-            onPressed: _toggleSearch,
-          ),
-          IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
+          if (_selectionMode) ...[
+            Builder(
+              builder: (_) {
+                final selected = _selectedConversations();
+                final hasSelection = selected.isNotEmpty;
+                final pinnedCount = selected.where((c) => c.isPinned).length;
+                final archivedCount = selected.where((c) => c.isArchived).length;
+                final mixedPinned =
+                    hasSelection && pinnedCount > 0 && pinnedCount < selected.length;
+                final mixedArchived = hasSelection &&
+                    archivedCount > 0 &&
+                    archivedCount < selected.length;
+                final hasConflict = mixedPinned || mixedArchived;
+                final allPinned = hasSelection && pinnedCount == selected.length;
+
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!hasConflict) ...[
+                      if (_filter == 'archived')
+                        IconButton(
+                          tooltip: 'Désarchiver',
+                          icon: const Icon(Icons.unarchive_outlined),
+                          onPressed: () => _applyBatchArchive(false),
+                        )
+                      else ...[
+                        IconButton(
+                          tooltip: allPinned ? 'Désépingler' : 'Épingler',
+                          icon: Icon(
+                            allPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                          ),
+                          onPressed: () => _applyBatchPin(!allPinned),
+                        ),
+                        IconButton(
+                          tooltip: 'Archiver',
+                          icon: const Icon(Icons.archive_outlined),
+                          onPressed: () => _applyBatchArchive(true),
+                        ),
+                      ],
+                    ],
+                    IconButton(
+                      tooltip: 'Supprimer',
+                      icon: Icon(Icons.delete_outline, color: context.colors.error),
+                      onPressed: _applyBatchDelete,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ] else ...[
+            IconButton(
+              icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded),
+              tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
+              onPressed: _toggleSearch,
+            ),
+            IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
+          ],
         ],
       ),
       body: Column(
@@ -115,6 +218,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
               stream: chat.watchConversations(),
               builder: (context, snapshot) {
                 final all = snapshot.data ?? const [];
+                _latestConversations = all;
                 // Toujours masquer les conversations supprimées localement
                 // (jusqu'à ce qu'un nouveau message les fasse réapparaître).
                 var convs = all
@@ -164,6 +268,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       ),
       floatingActionButton: Consumer<ConnectivityProvider>(
         builder: (context, conn, _) {
+          if (_selectionMode) return const SizedBox.shrink();
           final online = conn.isOnline;
           return FloatingActionButton(
             onPressed: online
@@ -220,7 +325,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
       ),
-      onLongPress: () => _showConversationActions(context, conv, myId),
+      selected: _selectedConversationIDs.contains(conv.conversID),
+      selectedTileColor: context.colors.primary.withValues(alpha: 0.08),
+      onLongPress: () {
+        if (_selectionMode) {
+          _toggleConversationSelection(conv);
+          return;
+        }
+        _enterSelectionMode(conv);
+      },
       leading: Stack(
         children: [
           ProfileAvatar(
@@ -322,6 +435,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
         ],
       ),
       onTap: () {
+        if (_selectionMode) {
+          _toggleConversationSelection(conv);
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -451,72 +568,74 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
   }
 
-  // ── Actions sur tuile (long press) ─────────────────────────────────
+  Future<void> _applyBatchPin(bool pinned) async {
+    if (_selectedConversationIDs.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final convs = await context.read<ChatProvider>().watchConversations().first;
+    final selected = convs
+        .where((c) => _selectedConversationIDs.contains(c.conversID))
+        .toList();
+    if (selected.isEmpty) return;
+    if (pinned && selected.every((c) => c.isPinned)) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Les discussions sélectionnées sont déjà épinglées')),
+      );
+      return;
+    }
+    try {
+      await context
+          .read<ChatProvider>()
+          .setConversationsPinned(_selectedConversationIDs.toList(), pinned);
+      if (!mounted) return;
+      _exitSelectionMode();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
+    }
+  }
 
-  Future<void> _showConversationActions(
-    BuildContext context,
-    LocalConversation conv,
-    int myId,
-  ) async {
-    final repo = context.read<ChatProvider>().repository;
-    final hidden = context.read<LocalHiddenStore>();
-    final error = context.colors.error;
-    await showAppBottomSheet<void>(
-      context: context,
-      builder: (sheetCtx) => AppBottomSheet(
-        padding: EdgeInsets.zero,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.sm,
-                AppSpacing.lg,
-                AppSpacing.xs,
-              ),
-              child: Text(conversationDisplayName(conv, myId), style: context.text.titleMedium),
-            ),
-            ListTile(
-              leading: Icon(conv.isPinned ? Icons.push_pin_outlined : Icons.push_pin),
-              title: Text(conv.isPinned ? 'Désépingler' : 'Épingler'),
-              onTap: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                Navigator.pop(sheetCtx);
-                try {
-                  await repo.setConversationPinned(conv.conversID, !conv.isPinned);
-                } catch (e) {
-                  messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
-                }
-              },
-            ),
-            ListTile(
-              leading: Icon(conv.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined),
-              title: Text(conv.isArchived ? 'Désarchiver' : 'Archiver'),
-              onTap: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                Navigator.pop(sheetCtx);
-                try {
-                  await repo.setConversationArchived(conv.conversID, !conv.isArchived);
-                } catch (e) {
-                  messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
-                }
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outline, color: error),
-              title: Text('Supprimer', style: TextStyle(color: error)),
-              onTap: () async {
-                Navigator.pop(sheetCtx);
-                await hidden.hideConversation(conv.conversID);
-              },
-            ),
-            AppSpacing.vGapSm,
-          ],
-        ),
-      ),
-    );
+  Future<void> _applyBatchArchive(bool archived) async {
+    if (_selectedConversationIDs.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final convs = await context.read<ChatProvider>().watchConversations().first;
+    final selected = convs
+        .where((c) => _selectedConversationIDs.contains(c.conversID))
+        .toList();
+    if (selected.isEmpty) return;
+    if (archived && selected.every((c) => c.isArchived)) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Les discussions sélectionnées sont déjà archivées')),
+      );
+      return;
+    }
+    if (!archived && selected.every((c) => !c.isArchived)) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Les discussions sélectionnées ne sont pas archivées')),
+      );
+      return;
+    }
+    try {
+      await context
+          .read<ChatProvider>()
+          .setConversationsArchived(_selectedConversationIDs.toList(), archived);
+      if (!mounted) return;
+      _exitSelectionMode();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
+    }
+  }
+
+  Future<void> _applyBatchDelete() async {
+    if (_selectedConversationIDs.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context
+          .read<ChatProvider>()
+          .deleteConversations(_selectedConversationIDs.toList());
+      if (!mounted) return;
+      _exitSelectionMode();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
+    }
   }
 }
 

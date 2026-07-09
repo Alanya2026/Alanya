@@ -1,6 +1,8 @@
 // talky_models.dart — aligné avec la DB Alanya réelle
 // Champs mappés exactement sur les colonnes MySQL
 
+import 'core/utils/backend_url.dart';
+
 // ── USER ─────────────────────────────────────────────────────────────
 
 class User {
@@ -46,7 +48,7 @@ class User {
         alanyaPhone: json['alanyaPhone'] ?? '',
         email: json['email'] ?? '',
         idPays: json['idPays'] ?? 10,
-        avatarUrl: json['avatar_url'] ?? '',
+        avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()) ?? '',
         typeCompte: json['type_compte'] ?? 0,
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
         lastSeen: json['last_seen'] ?? '',
@@ -169,7 +171,7 @@ class Message {
         sendAt: json['sendAt'] ?? '',
         deliveredAt: json['deliveredAt'],
         readAt: json['readAt'],
-        mediaUrl: json['mediaUrl'],
+        mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
         mediaName: json['mediaName'],
         mediaDuration: json['mediaDuration'],
         replyToID: json['replyToID'],
@@ -188,7 +190,7 @@ class Message {
         isViewOnce: json['isViewOnce'] == 1 || json['isViewOnce'] == true,
         senderNom: json['sender_nom'],
         senderPseudo: json['sender_pseudo'],
-        senderAvatar: json['sender_avatar'],
+        senderAvatar: normalizeBackendUrl(json['sender_avatar']?.toString()),
       );
 
   // Texte affiché dans le résumé de conversation
@@ -246,7 +248,7 @@ class Conversation {
         conversID: json['conversID'] ?? 0,
         isGroup: json['isGroup'] == 1 || json['isGroup'] == true,
         groupName: json['GroupName'],
-        groupPhoto: json['groupPhoto'],
+        groupPhoto: normalizeBackendUrl(json['groupPhoto']?.toString()),
         lastMessage: json['lastMessage'],
         lastMessageAt: json['lastMessageAt'],
         lastMessageSenderID: json['lastMessageSenderID'],
@@ -410,7 +412,7 @@ class Meeting {
         reminderSent: json['reminder_sent'] == 1 || json['reminder_sent'] == true,
         organiserNom: json['organiser_nom'],
         organiserPseudo: json['organiser_pseudo'],
-        organiserAvatar: json['organiser_avatar'],
+        organiserAvatar: normalizeBackendUrl(json['organiser_avatar']?.toString()),
         participants: (json['participants'] as List?)
                 ?.map((e) => MeetingParticipant.fromJson(e as Map<String, dynamic>))
                 .toList() ??
@@ -462,7 +464,7 @@ class MeetingParticipant {
         duree: json['duree'] ?? 0,
         nom: json['nom'],
         pseudo: json['pseudo'],
-        avatarUrl: json['avatar_url'],
+        avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
       );
 }
@@ -514,7 +516,7 @@ class Statut {
         alanyaID: json['alanyaID'] ?? 0,
         type: json['type'] ?? 0,
         text: json['text'],
-        mediaUrl: json['mediaUrl'],
+        mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
         mediaDurationMs: json['mediaDurationMs'],
         backgroundColor: json['backgroundColor'],
         createdAt: json['createdAt'] ?? '',
@@ -525,7 +527,7 @@ class Statut {
         seenByMe: json['seenByMe'] == 1 || json['seenByMe'] == true,
         nom: json['nom'],
         pseudo: json['pseudo'],
-        avatarUrl: json['avatar_url'],
+        avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
       );
 
@@ -587,7 +589,7 @@ class StatutView {
         alanyaID: json['alanyaID'] ?? 0,
         nom: json['nom'] ?? '',
         pseudo: json['pseudo'] ?? '',
-        avatarUrl: json['avatar_url'],
+        avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
         seenAt: json['seenAt'] ?? '',
         liked: json['liked'] == 1 || json['liked'] == true,
         likedAt: json['likedAt'],
@@ -638,7 +640,7 @@ class PreferredContact {
         nom: json['nom'] ?? '',
         pseudo: json['pseudo'] ?? '',
         alanyaPhone: json['alanyaPhone'] ?? '',
-        avatarUrl: json['avatar_url'],
+        avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
         lastSeen: json['last_seen'],
       );
@@ -667,6 +669,7 @@ class SocketEvents {
   static const messageSent       = 'message:sent';
   static const messageUpdated    = 'message:updated';
   static const messageDeleted    = 'message:deleted';
+  static const messagesDeleted   = 'messages:deleted';
   static const messagePinned     = 'message:pinned';
   static const messageViewed     = 'message:viewed';
   static const messageDelivered  = 'message:delivered';

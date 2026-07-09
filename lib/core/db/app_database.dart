@@ -201,7 +201,35 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
+
+  static const _legacyHttps = 'https://158.220.107.211';
+  static const _httpHost = 'http://158.220.107.211';
+
+  Future<void> _migrateLegacyHttpsUrls(GeneratedDatabase db) async {
+    Future<void> fixColumn(String table, String column) async {
+      await db.customStatement(
+        "UPDATE $table SET $column = REPLACE($column, '$_legacyHttps', '$_httpHost') "
+        "WHERE $column LIKE '$_legacyHttps%'",
+      );
+    }
+
+    await fixColumn('local_messages', 'media_url');
+    await fixColumn('local_messages', 'sender_avatar');
+    await fixColumn('local_conversations', 'group_photo');
+    await fixColumn('local_users', 'avatar_url');
+    await fixColumn('local_calls', 'other_avatar');
+    await fixColumn('local_statuses', 'media_url');
+    await fixColumn('local_statuses', 'author_avatar');
+    await db.customStatement(
+      "UPDATE local_conversations SET participants_json = REPLACE(participants_json, '$_legacyHttps', '$_httpHost') "
+      "WHERE participants_json LIKE '%$_legacyHttps%'",
+    );
+    await db.customStatement(
+      "UPDATE local_meetings SET participants_json = REPLACE(participants_json, '$_legacyHttps', '$_httpHost') "
+      "WHERE participants_json LIKE '%$_legacyHttps%'",
+    );
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -234,6 +262,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 8) {
             await m.addColumn(localMessages, localMessages.clickSentAt);
+          }
+          if (from < 9) {
+            await _migrateLegacyHttpsUrls(m.database);
           }
         },
       );

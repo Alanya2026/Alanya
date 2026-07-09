@@ -42,6 +42,13 @@ class ChatDao {
     await (db.delete(db.localMessages)..where((m) => m.conversationID.equals(conversID))).go();
   }
 
+  Future<void> deleteConversations(List<int> conversIDs) async {
+    if (conversIDs.isEmpty) return;
+    if (conversIDs.length == 1) return deleteConversation(conversIDs.first);
+    await (db.delete(db.localConversations)..where((c) => c.conversID.isIn(conversIDs))).go();
+    await (db.delete(db.localMessages)..where((m) => m.conversationID.isIn(conversIDs))).go();
+  }
+
   Future<void> setUnread(int conversID, int count) {
     return (db.update(db.localConversations)..where((c) => c.conversID.equals(conversID)))
         .write(LocalConversationsCompanion(unreadCount: Value(count)));
@@ -52,8 +59,22 @@ class ChatDao {
         .write(LocalConversationsCompanion(isPinned: Value(pinned)));
   }
 
+  Future<void> setPinnedMany(List<int> conversIDs, bool pinned) {
+    if (conversIDs.isEmpty) return Future.value();
+    if (conversIDs.length == 1) return setPinned(conversIDs.first, pinned);
+    return (db.update(db.localConversations)..where((c) => c.conversID.isIn(conversIDs)))
+        .write(LocalConversationsCompanion(isPinned: Value(pinned)));
+  }
+
   Future<void> setArchived(int conversID, bool archived) {
     return (db.update(db.localConversations)..where((c) => c.conversID.equals(conversID)))
+        .write(LocalConversationsCompanion(isArchived: Value(archived)));
+  }
+
+  Future<void> setArchivedMany(List<int> conversIDs, bool archived) {
+    if (conversIDs.isEmpty) return Future.value();
+    if (conversIDs.length == 1) return setArchived(conversIDs.first, archived);
+    return (db.update(db.localConversations)..where((c) => c.conversID.isIn(conversIDs)))
         .write(LocalConversationsCompanion(isArchived: Value(archived)));
   }
 
@@ -238,8 +259,40 @@ class ChatDao {
   }
 
   Future<void> softDeleteByServerId(int msgID) {
-    return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
-        .write(const LocalMessagesCompanion(isDeleted: Value(true)));
+    return softDeleteManyByServerId([msgID]);
+  }
+
+  Future<void> softDeleteManyByServerId(List<int> msgIDs) {
+    if (msgIDs.isEmpty) return Future.value();
+    if (msgIDs.length == 1) {
+      return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgIDs.first)))
+          .write(const LocalMessagesCompanion(isDeleted: Value(true)));
+    }
+    return db.batch((batch) {
+      for (final id in msgIDs) {
+        batch.update(
+          db.localMessages,
+          const LocalMessagesCompanion(isDeleted: Value(true)),
+          where: (m) => m.msgID.equals(id),
+        );
+      }
+    });
+  }
+
+  Future<void> softDeleteManyForUser(List<int> msgIDs, int userId) {
+    if (msgIDs.isEmpty) return Future.value();
+    if (msgIDs.length == 1) {
+      return softDeleteForUser(msgIDs.first, userId);
+    }
+    return db.batch((batch) {
+      for (final id in msgIDs) {
+        batch.update(
+          db.localMessages,
+          LocalMessagesCompanion(deletedForID: Value(userId)),
+          where: (m) => m.msgID.equals(id),
+        );
+      }
+    });
   }
 
   Future<void> setLocalMediaPath(int msgID, String path) {

@@ -33,6 +33,13 @@ bool canForwardMessage(LocalMessage message) {
   return _localMediaPath(message) != null;
 }
 
+/// Indique si le transfert peut être délégué au batch serveur (médias déjà hébergés).
+bool canBatchForwardOnServer(List<LocalMessage> sources) {
+  return sources.every(
+    (m) => m.msgID > 0 && (m.type == 0 || (m.mediaUrl?.isNotEmpty ?? false)),
+  );
+}
+
 /// Indique si un album complet peut être transféré.
 bool canForwardAlbum(List<LocalMessage> items) {
   if (items.isEmpty) return false;

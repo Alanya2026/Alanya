@@ -2,7 +2,100 @@
 part of '../chat_detail_screen.dart';
 
 extension _ChatBubbles on _ChatDetailScreenState {
+  BoxDecoration _bubbleDecoration({
+    required bool isMe,
+    required bool selected,
+    required BorderRadius borderRadius,
+    required Color baseColor,
+    bool highlighted = false,
+  }) {
+    final bg = baseColor;
+
+    Border? border;
+    if (_selectionMode) {
+      border = Border.all(
+        color: selected
+            ? (isMe ? context.colors.onPrimary : context.colors.primary)
+            : context.colors.outline.withValues(alpha: 0.65),
+        width: selected ? 2.5 : 1,
+      );
+    } else if (highlighted) {
+      border = Border.all(
+        color: isMe ? context.colors.onPrimary : context.colors.primary,
+        width: 2,
+      );
+    }
+
+    return BoxDecoration(
+      color: bg,
+      borderRadius: borderRadius,
+      border: border,
+      boxShadow: AppShadows.subtle,
+    );
+  }
+
+  Widget _selectionCheckbox(bool selected) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.md,
+        left: AppSpacing.xs,
+        right: AppSpacing.xs,
+      ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? context.colors.primary : Colors.transparent,
+          border: Border.all(
+            color: selected
+                ? context.colors.primary
+                : context.colors.outline,
+            width: 2,
+          ),
+        ),
+        child: selected
+            ? const Icon(Icons.check, size: 16, color: Colors.white)
+            : null,
+      ),
+    );
+  }
+
+  Widget _wrapSelectableBubble({
+    required Widget bubble,
+    required bool isMe,
+    required bool selected,
+    required bool selectable,
+    required VoidCallback? onLongPress,
+    required VoidCallback? onTap,
+  }) {
+    if (!_selectionMode) {
+      return GestureDetector(
+        onLongPress: onLongPress,
+        child: bubble,
+      );
+    }
+
+    return GestureDetector(
+      onTap: selectable ? onTap : null,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isMe && selectable) _selectionCheckbox(selected),
+          Flexible(child: bubble),
+          if (isMe && selectable) _selectionCheckbox(selected),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(LocalMessage msg, bool isMe) {
+    final selected = _isMessageSelected(msg);
+    final selectable = _isSelectableMessage(msg);
     return Column(
       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
@@ -17,27 +110,27 @@ extension _ChatBubbles on _ChatDetailScreenState {
           ),
         Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: GestureDetector(
+          child: _wrapSelectableBubble(
+            isMe: isMe,
+            selected: selected,
+            selectable: selectable,
             onLongPress: () => _showMessageMenu(msg, isMe),
-            child: Container(
+            onTap: () => _toggleSelection(msg),
+            bubble: Container(
               margin: const EdgeInsets.only(bottom: AppSpacing.md),
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-              decoration: BoxDecoration(
-                color: isMe ? context.colors.primary : context.colors.surface,
+              decoration: _bubbleDecoration(
+                isMe: isMe,
+                selected: selected,
+                highlighted: _highlightMsgId == msg.msgID,
+                baseColor: isMe ? context.colors.primary : context.colors.surface,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(AppRadius.lg),
                   topRight: const Radius.circular(AppRadius.lg),
                   bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
                   bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
                 ),
-                border: _highlightMsgId == msg.msgID
-                    ? Border.all(
-                        color: isMe ? context.colors.onPrimary : context.colors.primary,
-                        width: 2,
-                      )
-                    : null,
-                boxShadow: AppShadows.subtle,
               ),
               child: Column(
                 crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -679,8 +772,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
       });
     final first = sorted.first;
     final last = sorted.last;
+    final selected = _isMessageSelected(first);
+    final selectable = sorted.any(_isSelectableMessage);
     final anyDeleted = sorted.any((m) => m.isDeleted);
     final worstStatus = sorted.map((m) => m.status).reduce((a, b) => a > b ? a : b);
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(AppRadius.lg),
+      topRight: const Radius.circular(AppRadius.lg),
+      bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
+      bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
+    );
 
     return Column(
       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -695,24 +796,24 @@ extension _ChatBubbles on _ChatDetailScreenState {
           ),
         Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: GestureDetector(
+          child: _wrapSelectableBubble(
+            isMe: isMe,
+            selected: selected,
+            selectable: selectable,
             onLongPress: () => _showAlbumMenu(sorted, isMe),
-            child: Container(
+            onTap: () => _toggleSelection(sorted.first),
+            bubble: Container(
               margin: const EdgeInsets.only(bottom: AppSpacing.md),
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.sm,
                 vertical: AppSpacing.sm,
               ),
               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-              decoration: BoxDecoration(
-                color: isMe ? context.colors.primary : context.colors.surface,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(AppRadius.lg),
-                  topRight: const Radius.circular(AppRadius.lg),
-                  bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
-                  bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
-                ),
-                boxShadow: AppShadows.subtle,
+              decoration: _bubbleDecoration(
+                isMe: isMe,
+                selected: selected,
+                baseColor: isMe ? context.colors.primary : context.colors.surface,
+                borderRadius: borderRadius,
               ),
               child: Column(
                 crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,

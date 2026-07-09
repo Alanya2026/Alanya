@@ -22,15 +22,26 @@ class ForwardMessageScreen extends StatefulWidget {
   const ForwardMessageScreen({
     super.key,
     this.message,
+    this.messages,
     this.albumItems,
     this.excludeConversationId,
-  }) : assert(message != null || (albumItems != null && albumItems.length >= 2));
+  }) : assert(
+          message != null ||
+              (messages != null && messages.length >= 2) ||
+              (albumItems != null && albumItems.length >= 2),
+        );
 
   final LocalMessage? message;
+  final List<LocalMessage>? messages;
   final List<LocalMessage>? albumItems;
   final int? excludeConversationId;
 
-  bool get isAlbum => albumItems != null && albumItems!.length >= 2;
+  /// Transfert explicite depuis le menu « Transférer l'album ».
+  bool get isExplicitAlbumForward =>
+      albumItems != null && albumItems!.length >= 2;
+
+  bool get isMultiMessage =>
+      messages != null && messages!.length >= 2;
 
   @override
   State<ForwardMessageScreen> createState() => _ForwardMessageScreenState();
@@ -56,9 +67,14 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
     final caption = _captionController.text.trim();
     final ForwardResult result;
 
-    if (widget.isAlbum) {
+    if (widget.isExplicitAlbumForward) {
       result = await chat.forwardAlbum(
         sourceItems: widget.albumItems!,
+        targetConversationIDs: _selectedIds.toList(),
+      );
+    } else if (widget.isMultiMessage) {
+      result = await chat.forwardMessages(
+        sources: widget.messages!,
         targetConversationIDs: _selectedIds.toList(),
       );
     } else {
@@ -74,14 +90,17 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
 
     final messenger = ScaffoldMessenger.of(context);
     if (result.hasSuccess && result.failed == 0) {
+      final label = widget.isExplicitAlbumForward
+          ? 'Album'
+          : widget.isMultiMessage
+              ? '${widget.messages!.length} messages'
+              : 'Message';
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             result.succeeded == 1
-                ? (widget.isAlbum ? 'Album transféré' : 'Message transféré')
-                : widget.isAlbum
-                    ? 'Album transféré vers ${result.succeeded} discussions'
-                    : 'Message transféré vers ${result.succeeded} discussions',
+                ? '$label transféré'
+                : '$label transféré vers ${result.succeeded} discussions',
           ),
           backgroundColor: AppColors.success,
         ),
@@ -100,9 +119,11 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            widget.isAlbum
+            widget.isExplicitAlbumForward
                 ? 'Impossible de transférer l\'album'
-                : 'Impossible de transférer le message',
+                : widget.isMultiMessage
+                    ? 'Impossible de transférer les messages'
+                    : 'Impossible de transférer le message',
           ),
           backgroundColor: AppColors.error,
         ),
@@ -159,7 +180,9 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
     );
     final chat = context.watch<ChatProvider>();
     final query = _searchController.text;
-    final showCaption = !widget.isAlbum && (widget.message?.type ?? 0) != 0;
+    final showCaption = !widget.isExplicitAlbumForward &&
+        !widget.isMultiMessage &&
+        (widget.message?.type ?? 0) != 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -309,8 +332,11 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
   }
 
   Widget _buildPreview(BuildContext context) {
-    if (widget.isAlbum) {
+    if (widget.isExplicitAlbumForward) {
       return _buildAlbumPreview(context, widget.albumItems!);
+    }
+    if (widget.isMultiMessage) {
+      return _buildMultiMessagePreview(context, widget.messages!);
     }
 
     final msg = widget.message!;
@@ -357,6 +383,65 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMultiMessagePreview(BuildContext context, List<LocalMessage> items) {
+    final sorted = List<LocalMessage>.from(items)
+      ..sort((a, b) => a.sendAt.compareTo(b.sendAt));
+
+    return Container(
+      margin: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: context.semantic.surfaceMuted,
+        borderRadius: AppRadius.brMd,
+        border: Border.all(color: context.colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${sorted.length} message${sorted.length > 1 ? 's' : ''}',
+            style: context.text.labelSmall?.copyWith(
+              color: context.colors.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          AppSpacing.vGapSm,
+          for (final msg in sorted.take(4)) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (msg.type != 0) ...[
+                  Icon(
+                    _previewIcon(msg.type),
+                    size: AppIconSize.sm,
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                  AppSpacing.hGapSm,
+                ],
+                Expanded(
+                  child: Text(
+                    previewTextForForward(msg),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+            AppSpacing.vGapSm,
+          ],
+          if (sorted.length > 4)
+            Text(
+              '… et ${sorted.length - 4} autre${sorted.length - 4 > 1 ? 's' : ''}',
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
         ],
       ),
     );

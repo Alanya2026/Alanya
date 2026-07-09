@@ -84,6 +84,20 @@ extension ChatApi on TalkyApiClient {
     );
   }
 
+  Future<void> deleteConversations(List<int> conversationIDs) async {
+    if (conversationIDs.isEmpty) return;
+    if (conversationIDs.length == 1) {
+      return deleteConversation(conversationIDs.first);
+    }
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/batch-delete'),
+        headers: _headers,
+        body: jsonEncode({'conversationIDs': conversationIDs}),
+      ),
+    );
+  }
+
   /// Met à jour les flags par-utilisateur d'une conversation (épinglage,
   /// archivage). Le backend les stocke dans conv_participants.
   Future<void> updateConversation(
@@ -98,6 +112,32 @@ extension ChatApi on TalkyApiClient {
     await _handleRequest(
       () => _client.put(
         Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
+  Future<void> updateConversationsBatch(
+    List<int> conversationIDs, {
+    bool? isPinned,
+    bool? isArchived,
+  }) async {
+    if (conversationIDs.isEmpty) return;
+    if (conversationIDs.length == 1) {
+      return updateConversation(
+        conversationIDs.first,
+        isPinned: isPinned,
+        isArchived: isArchived,
+      );
+    }
+    final body = <String, dynamic>{'conversationIDs': conversationIDs};
+    if (isPinned != null) body['isPinned'] = isPinned ? 1 : 0;
+    if (isArchived != null) body['isArchived'] = isArchived ? 1 : 0;
+    if (body.length == 1) return;
+    await _handleRequest(
+      () => _client.patch(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/batch'),
         headers: _headers,
         body: jsonEncode(body),
       ),
@@ -161,12 +201,48 @@ extension ChatApi on TalkyApiClient {
   }
 
   Future<void> deleteMessage(int msgID, {bool forAll = false}) async {
+    await deleteMessages([msgID], forAll: forAll);
+  }
+
+  Future<void> deleteMessages(List<int> msgIDs, {bool forAll = false}) async {
+    if (msgIDs.isEmpty) return;
+    if (msgIDs.length == 1) {
+      await _handleRequest(
+        () => _client.delete(
+          Uri.parse(
+            '${TalkyApiClient.baseUrl}/messages/${msgIDs.first}${forAll ? '?all=true' : ''}',
+          ),
+          headers: _headers,
+        ),
+      );
+      return;
+    }
     await _handleRequest(
-      () => _client.delete(
-        Uri.parse('${TalkyApiClient.baseUrl}/messages/$msgID${forAll ? '?all=true' : ''}'),
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/batch-delete'),
         headers: _headers,
+        body: jsonEncode({'msgIDs': msgIDs, 'all': forAll}),
       ),
     );
+  }
+
+  Future<Map<String, dynamic>> batchForward({
+    required List<int> sourceMsgIDs,
+    required List<int> targetConversationIDs,
+    String? caption,
+  }) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/batch-forward'),
+        headers: _headers,
+        body: jsonEncode({
+          'sourceMsgIDs': sourceMsgIDs,
+          'targetConversationIDs': targetConversationIDs,
+          if (caption != null && caption.isNotEmpty) 'caption': caption,
+        }),
+      ),
+    );
+    return data as Map<String, dynamic>;
   }
 
   /// (Dés)épingle un message. Le backend diffuse `message:pinned` aux

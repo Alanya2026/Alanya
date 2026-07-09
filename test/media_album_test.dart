@@ -252,4 +252,41 @@ void main() {
       expect(parsed.total, 4);
     });
   });
+
+  group('isCompleteAlbumSelection', () {
+    test('false for unrelated messages', () {
+      final items = [
+        _mediaMsg(clientId: 'a', content: 'hello', type: 0),
+        _mediaMsg(clientId: 'b', content: 'world', type: 0),
+      ];
+      expect(isCompleteAlbumSelection(items), isFalse);
+    });
+
+    test('false for partial album', () {
+      const id = 'alb_partial';
+      final items = [
+        _mediaMsg(
+          clientId: 'a',
+          content: encodeAlbumMarker(albumId: id, index: 0, total: 3),
+        ),
+        _mediaMsg(
+          clientId: 'b',
+          content: encodeAlbumMarker(albumId: id, index: 1, total: 3),
+        ),
+      ];
+      expect(isCompleteAlbumSelection(items), isFalse);
+    });
+
+    test('true for complete album', () {
+      const id = 'alb_full';
+      final items = [
+        for (var i = 0; i < 3; i++)
+          _mediaMsg(
+            clientId: 'm$i',
+            content: encodeAlbumMarker(albumId: id, index: i, total: 3),
+          ),
+      ];
+      expect(isCompleteAlbumSelection(items), isTrue);
+    });
+  });
 }

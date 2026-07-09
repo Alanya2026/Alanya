@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import '../utils/forward_message.dart';
+import '../utils/backend_url.dart';
 import '../utils/media_album.dart';
 import 'local_notification_helper.dart';
 import 'media_cache_service.dart';
@@ -104,6 +105,7 @@ class ChatRepository {
     _api.onSocketEvent(SocketEvents.messageSent, _onMessageSent);
     _api.onSocketEvent(SocketEvents.messageUpdated, _onMessageUpdated);
     _api.onSocketEvent(SocketEvents.messageDeleted, _onMessageDeleted);
+    _api.onSocketEvent(SocketEvents.messagesDeleted, _onMessagesDeleted);
     _api.onSocketEvent(SocketEvents.messagePinned, _onMessagePinned);
     _api.onSocketEvent(SocketEvents.messageViewed, _onMessageViewed);
     _api.onSocketEvent(SocketEvents.messageStatus, _onMessageStatus);
@@ -122,6 +124,7 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.messageSent, _onMessageSent);
     _api.removeSocketListener(SocketEvents.messageUpdated, _onMessageUpdated);
     _api.removeSocketListener(SocketEvents.messageDeleted, _onMessageDeleted);
+    _api.removeSocketListener(SocketEvents.messagesDeleted, _onMessagesDeleted);
     _api.removeSocketListener(SocketEvents.messagePinned, _onMessagePinned);
     _api.removeSocketListener(SocketEvents.messageViewed, _onMessageViewed);
     _api.removeSocketListener(SocketEvents.messageStatus, _onMessageStatus);
@@ -576,6 +579,23 @@ class ChatRepository {
       return const ForwardResult(succeeded: 0, failed: 0);
     }
 
+    if (canBatchForwardOnServer(sourceItems)) {
+      try {
+        final sorted = _sortAlbumItems(sourceItems);
+        final sourceMsgIDs = sorted.map((m) => m.msgID).toList();
+        await _api.batchForward(
+          sourceMsgIDs: sourceMsgIDs,
+          targetConversationIDs: targetConversationIDs,
+        );
+        return ForwardResult(
+          succeeded: targetConversationIDs.length,
+          failed: 0,
+        );
+      } catch (e) {
+        debugPrint('[ChatRepo] batch forward album échoué, fallback client: $e');
+      }
+    }
+
     var succeeded = 0;
     var failed = 0;
     final errors = <String>[];
@@ -597,16 +617,21 @@ class ChatRepository {
     return ForwardResult(succeeded: succeeded, failed: failed, errors: errors);
   }
 
-  Future<void> _forwardAlbumToConversation({
-    required List<LocalMessage> sourceItems,
-    required int conversationID,
-  }) async {
+  List<LocalMessage> _sortAlbumItems(List<LocalMessage> sourceItems) {
     final sorted = List<LocalMessage>.from(sourceItems)
       ..sort((a, b) {
         final ma = parseAlbumMarker(a.content);
         final mb = parseAlbumMarker(b.content);
         return (ma?.index ?? 0).compareTo(mb?.index ?? 0);
       });
+    return sorted;
+  }
+
+  Future<void> _forwardAlbumToConversation({
+    required List<LocalMessage> sourceItems,
+    required int conversationID,
+  }) async {
+    final sorted = _sortAlbumItems(sourceItems);
 
     if (sorted.length == 1) {
       await _forwardToConversation(source: sorted.first, conversationID: conversationID);
@@ -667,6 +692,19 @@ class ChatRepository {
     required List<int> targetConversationIDs,
     String? caption,
   }) async {
+    return forwardMessages(
+      sources: [source],
+      targetConversationIDs: targetConversationIDs,
+      caption: caption,
+    );
+  }
+
+  /// Transfère plusieurs messages vers une ou plusieurs conversations.
+  Future<ForwardResult> forwardMessages({
+    required List<LocalMessage> sources,
+    required List<int> targetConversationIDs,
+    String? caption,
+  }) async {
     if (_myId == 0) {
       return const ForwardResult(
         succeeded: 0,
@@ -674,15 +712,39 @@ class ChatRepository {
         errors: ['Utilisateur non connecté'],
       );
     }
-    if (!canForwardMessage(source)) {
+    if (sources.isEmpty || targetConversationIDs.isEmpty) {
+      return const ForwardResult(succeeded: 0, failed: 0);
+    }
+    if (!sources.every(canForwardMessage)) {
       return const ForwardResult(
         succeeded: 0,
         failed: 1,
-        errors: ['Ce message ne peut pas être transféré'],
+        errors: ['Un ou plusieurs messages ne peuvent pas être transférés'],
       );
     }
-    if (targetConversationIDs.isEmpty) {
-      return const ForwardResult(succeeded: 0, failed: 0);
+
+    if (sources.length >= 2 && isCompleteAlbumSelection(sources)) {
+      return forwardAlbum(
+        sourceItems: sources,
+        targetConversationIDs: targetConversationIDs,
+      );
+    }
+
+    if (canBatchForwardOnServer(sources)) {
+      try {
+        final sourceMsgIDs = _sortForwardSources(sources).map((m) => m.msgID).toList();
+        await _api.batchForward(
+          sourceMsgIDs: sourceMsgIDs,
+          targetConversationIDs: targetConversationIDs,
+          caption: caption,
+        );
+        return ForwardResult(
+          succeeded: targetConversationIDs.length,
+          failed: 0,
+        );
+      } catch (e) {
+        debugPrint('[ChatRepo] batch forward échoué, fallback client: $e');
+      }
     }
 
     var succeeded = 0;
@@ -691,11 +753,14 @@ class ChatRepository {
 
     for (final convId in targetConversationIDs) {
       try {
-        await _forwardToConversation(
-          source: source,
-          conversationID: convId,
-          caption: caption,
-        );
+        for (var i = 0; i < sources.length; i++) {
+          final source = sources[i];
+          await _forwardToConversation(
+            source: source,
+            conversationID: convId,
+            caption: i == 0 ? caption : null,
+          );
+        }
         succeeded++;
       } catch (e) {
         failed++;
@@ -705,6 +770,12 @@ class ChatRepository {
     }
 
     return ForwardResult(succeeded: succeeded, failed: failed, errors: errors);
+  }
+
+  List<LocalMessage> _sortForwardSources(List<LocalMessage> sources) {
+    final sorted = List<LocalMessage>.from(sources)
+      ..sort((a, b) => a.sendAt.compareTo(b.sendAt));
+    return sorted;
   }
 
   Future<void> _forwardToConversation({
@@ -910,21 +981,24 @@ class ChatRepository {
     }
   }
 
-  /// Supprime un message :
-  ///  - [forAll]=true : soft delete partagé (`isDeleted=1`), le bubble devient
-  ///    « Ce message a été supprimé » côté tous les participants.
-  ///  - [forAll]=false : suppression locale uniquement, on pose `deletedForID`
-  ///    sur l'utilisateur courant pour le masquer pour lui seul.
+  /// Supprime un ou plusieurs messages (délègue au batch si nécessaire).
   Future<void> deleteMessage(int msgID, {bool forAll = false}) async {
+    await deleteMessages([msgID], forAll: forAll);
+  }
+
+  Future<void> deleteMessages(List<int> msgIDs, {bool forAll = false}) async {
+    final ids = msgIDs.where((id) => id > 0).toSet().toList();
+    if (ids.isEmpty) return;
+
     if (forAll) {
-      await _dao.softDeleteByServerId(msgID);
+      await _dao.softDeleteManyByServerId(ids);
     } else {
-      await _dao.softDeleteForUser(msgID, _myId);
+      await _dao.softDeleteManyForUser(ids, _myId);
     }
     try {
-      await _api.deleteMessage(msgID, forAll: forAll);
+      await _api.deleteMessages(ids, forAll: forAll);
     } catch (e) {
-      debugPrint('[ChatRepo] deleteMessage échouée: $e');
+      debugPrint('[ChatRepo] deleteMessages échouée: $e');
     }
   }
 
@@ -949,12 +1023,51 @@ class ChatRepository {
     }
   }
 
+  Future<void> setConversationsPinned(List<int> conversIDs, bool pinned) async {
+    final ids = conversIDs.where((id) => id > 0).toSet().toList();
+    if (ids.isEmpty) return;
+    await _dao.setPinnedMany(ids, pinned);
+    try {
+      await _api.updateConversationsBatch(ids, isPinned: pinned);
+    } catch (e) {
+      debugPrint('[ChatRepo] setConversationsPinned échouée: $e');
+      await syncConversations();
+      rethrow;
+    }
+  }
+
   Future<void> setConversationArchived(int conversID, bool archived) async {
     await _dao.setArchived(conversID, archived);
     try {
       await _api.updateConversation(conversID, isArchived: archived);
     } catch (e) {
       await _dao.setArchived(conversID, !archived);
+      rethrow;
+    }
+  }
+
+  Future<void> setConversationsArchived(List<int> conversIDs, bool archived) async {
+    final ids = conversIDs.where((id) => id > 0).toSet().toList();
+    if (ids.isEmpty) return;
+    await _dao.setArchivedMany(ids, archived);
+    try {
+      await _api.updateConversationsBatch(ids, isArchived: archived);
+    } catch (e) {
+      debugPrint('[ChatRepo] setConversationsArchived échouée: $e');
+      await syncConversations();
+      rethrow;
+    }
+  }
+
+  Future<void> deleteConversations(List<int> conversIDs) async {
+    final ids = conversIDs.where((id) => id > 0).toSet().toList();
+    if (ids.isEmpty) return;
+    await _dao.deleteConversations(ids);
+    try {
+      await _api.deleteConversations(ids);
+    } catch (e) {
+      debugPrint('[ChatRepo] deleteConversations échouée: $e');
+      await syncConversations();
       rethrow;
     }
   }
@@ -1284,7 +1397,29 @@ class ChatRepository {
   void _onMessageDeleted(dynamic data) {
     if (data is! Map) return;
     final id = _toInt(data['msgID']);
-    if (id != 0) _dao.softDeleteByServerId(id);
+    if (id == 0) return;
+    final all = data['all'] == true;
+    final deletedForID = _toInt(data['deletedForID']);
+    if (all) {
+      _dao.softDeleteByServerId(id);
+    } else if (deletedForID == _myId) {
+      _dao.softDeleteForUser(id, _myId);
+    }
+  }
+
+  void _onMessagesDeleted(dynamic data) {
+    if (data is! Map) return;
+    final rawIds = data['msgIDs'];
+    if (rawIds is! List || rawIds.isEmpty) return;
+    final ids = rawIds.map(_toInt).where((id) => id > 0).toList();
+    if (ids.isEmpty) return;
+    final all = data['all'] == true;
+    final deletedForID = _toInt(data['deletedForID']);
+    if (all) {
+      _dao.softDeleteManyByServerId(ids);
+    } else if (deletedForID == _myId) {
+      _dao.softDeleteManyForUser(ids, _myId);
+    }
   }
 
   void _emitSend({
@@ -1399,7 +1534,7 @@ class ChatRepository {
       clickSentAt: const Value.absent(),
       deliveredAt: Value(_parseDate(j['deliveredAt'])),
       readAt: Value(_parseDate(j['readAt'])),
-      mediaUrl: Value(j['mediaUrl']?.toString()),
+      mediaUrl: Value(normalizeBackendUrl(j['mediaUrl']?.toString())),
       mediaName: Value(j['mediaName']?.toString()),
       mediaDuration: Value(j['mediaDuration'] == null ? null : _toInt(j['mediaDuration'])),
       replyToID: Value(j['replyToID'] == null ? null : _toInt(j['replyToID'])),
@@ -1420,7 +1555,7 @@ class ChatRepository {
           : const Value.absent(),
       senderNom: Value(j['sender_nom']?.toString()),
       senderPseudo: Value(j['sender_pseudo']?.toString()),
-      senderAvatar: Value(j['sender_avatar']?.toString()),
+      senderAvatar: Value(normalizeBackendUrl(j['sender_avatar']?.toString())),
       syncPending: const Value(false),
       lastEmittedAt: const Value(null),
     );

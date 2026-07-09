@@ -57,6 +57,7 @@ part 'chat/chat_input.dart';    // barre de saisie, emoji, bandeau réponse
 // Limite alignée sur multer (50 Mo) côté backend.
 const int _maxMediaBytes = 50 * 1024 * 1024;
 const Duration _messageEditWindow = Duration(minutes: 30);
+const int _maxSelectionCount = 50;
 
 class ChatDetailScreen extends StatefulWidget {
   final String userName;
@@ -112,6 +113,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   bool _isBlocked = false;
   bool _blockedByThem = false;
+
+  bool _selectionMode = false;
+  final Set<int> _selectedMsgIDs = {};
+  List<LocalMessage> _currentMessages = const [];
 
   /// Pont public vers `setState()` (lui-même `@protected`), afin que les
   /// extensions de cette librairie puissent déclencher un rebuild.
@@ -250,116 +255,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           convId,
           partnerUserId: widget.isGroup ? null : widget.userId,
         );
-    return Scaffold(
+    return PopScope(
+      canPop: !_selectionMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _selectionMode) _exitSelectionMode();
+      },
+      child: Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
-      appBar: AppBar(
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: InkWell(
-          onTap: widget.isGroup
-              ? (widget.conversationId != null
-                  ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => GroupDetailScreen(
-                            conversationId: widget.conversationId!,
-                            groupName: widget.userName,
-                            groupAvatar: widget.avatarUrl,
-                          ),
-                        ),
-                      )
-                  : null)
-              : (widget.userId != null
-                  ? () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ContactDetailScreen(
-                            userId: widget.userId!,
-                            conversationId: widget.conversationId,
-                            initialName: widget.userName,
-                            initialAvatar: widget.avatarUrl ?? '',
-                          ),
-                        ),
-                      );
-                      if (mounted) _loadBlockStatus();
-                    }
-                  : null),
-          child: Row(
-            children: [
-              ProfileAvatar(
-                imageUrl: widget.avatarUrl,
-                name: widget.userName,
-                userId: widget.userId ?? 0,
-                isGroup: widget.isGroup,
-                conversationId: widget.conversationId,
-                hidePhoto: !widget.isGroup && _blockedByThem,
-                size: 40,
-                borderRadius: 20,
-              ),
-              AppSpacing.hGapMd,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.userName,
-                      style: context.text.titleMedium,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Builder(builder: (_) {
-                      // Groupes : on n'affiche jamais une présence (ça n'a pas
-                      // de sens pour N membres). On liste les noms des autres
-                      // participants avec ellipsis automatique si ça déborde.
-                      if (widget.isGroup) {
-                        if (partnerTyping) {
-                          return Text(
-                            'En train d\'écrire…',
-                            style: context.text.bodySmall?.copyWith(
-                              color: context.colors.primary,
-                            ),
-                          );
-                        }
-                        return _buildGroupMembersLine();
-                      }
-                      final label = partnerTyping ? 'en train d\'écrire…' : _presenceLabel();
-                      if (label.isEmpty) return const SizedBox.shrink();
-                      final online = !partnerTyping && label == 'En ligne';
-                      return Text(
-                        label,
-                        style: context.text.bodySmall?.copyWith(
-                          color: partnerTyping
-                              ? context.colors.primary
-                              : (online ? context.semantic.online : context.colors.onSurfaceVariant),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          // Appels 1-1 uniquement — boutons groupe masqués temporairement.
-          if (!_callsDisabled && !widget.isGroup) ...[
-            IconButton(
-              icon: const Icon(Icons.videocam_rounded),
-              color: context.colors.primary,
-              onPressed: () => _initiateCall(isVideo: true),
-            ),
-            IconButton(
-              icon: const Icon(Icons.call_rounded),
-              color: context.colors.primary,
-              onPressed: () => _initiateCall(isVideo: false),
-            ),
-            AppSpacing.hGapSm,
-          ],
-        ],
-      ),
+      appBar: _selectionMode ? _buildSelectionAppBar() : _buildChatAppBar(partnerTyping),
       body: Column(
         children: [
           _buildPinnedBanner(),
@@ -373,6 +276,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     stream: _chat.watchMessages(convId),
                     builder: (context, snapshot) {
                       final messages = snapshot.data ?? const [];
+                      _currentMessages = messages;
                       if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
                         return const LoadingState();
                       }
@@ -468,13 +372,154 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     },
                   ),
           ),
-          if (_replyTo != null) _buildReplyBanner(),
-          if (_inputBlocked) _buildBlockedBanner(),
-          if (_showFormatBar && !_inputBlocked) _buildFormatBar(),
-          _buildInputBar(),
-          if (_showEmoji) _buildEmojiPicker(),
+          if (!_selectionMode && _replyTo != null) _buildReplyBanner(),
+          if (!_selectionMode && _inputBlocked) _buildBlockedBanner(),
+          if (!_selectionMode && _showFormatBar && !_inputBlocked) _buildFormatBar(),
+          if (!_selectionMode) _buildInputBar(),
+          if (!_selectionMode && _showEmoji) _buildEmojiPicker(),
         ],
       ),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildChatAppBar(bool partnerTyping) {
+    return AppBar(
+      titleSpacing: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: InkWell(
+        onTap: widget.isGroup
+            ? (widget.conversationId != null
+                ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GroupDetailScreen(
+                          conversationId: widget.conversationId!,
+                          groupName: widget.userName,
+                          groupAvatar: widget.avatarUrl,
+                        ),
+                      ),
+                    )
+                : null)
+            : (widget.userId != null
+                ? () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ContactDetailScreen(
+                          userId: widget.userId!,
+                          conversationId: widget.conversationId,
+                          initialName: widget.userName,
+                          initialAvatar: widget.avatarUrl ?? '',
+                        ),
+                      ),
+                    );
+                    if (mounted) _loadBlockStatus();
+                  }
+                : null),
+        child: Row(
+          children: [
+            ProfileAvatar(
+              imageUrl: widget.avatarUrl,
+              name: widget.userName,
+              userId: widget.userId ?? 0,
+              isGroup: widget.isGroup,
+              conversationId: widget.conversationId,
+              hidePhoto: !widget.isGroup && _blockedByThem,
+              size: 40,
+              borderRadius: 20,
+            ),
+            AppSpacing.hGapMd,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.userName,
+                    style: context.text.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Builder(builder: (_) {
+                    if (widget.isGroup) {
+                      if (partnerTyping) {
+                        return Text(
+                          'En train d\'écrire…',
+                          style: context.text.bodySmall?.copyWith(
+                            color: context.colors.primary,
+                          ),
+                        );
+                      }
+                      return _buildGroupMembersLine();
+                    }
+                    final label =
+                        partnerTyping ? 'en train d\'écrire…' : _presenceLabel();
+                    if (label.isEmpty) return const SizedBox.shrink();
+                    final online = !partnerTyping && label == 'En ligne';
+                    return Text(
+                      label,
+                      style: context.text.bodySmall?.copyWith(
+                        color: partnerTyping
+                            ? context.colors.primary
+                            : (online
+                                ? context.semantic.online
+                                : context.colors.onSurfaceVariant),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        if (!_callsDisabled && !widget.isGroup) ...[
+          IconButton(
+            icon: const Icon(Icons.videocam_rounded),
+            color: context.colors.primary,
+            onPressed: () => _initiateCall(isVideo: true),
+          ),
+          IconButton(
+            icon: const Icon(Icons.call_rounded),
+            color: context.colors.primary,
+            onPressed: () => _initiateCall(isVideo: false),
+          ),
+          AppSpacing.hGapSm,
+        ],
+      ],
+    );
+  }
+
+  PreferredSizeWidget _buildSelectionAppBar() {
+    final count = _selectedMsgIDs.length;
+    final selected = _resolveSelectedMessages();
+    final canForward =
+        selected.isNotEmpty && selected.every(canForwardMessage);
+    final canDelete = selected.isNotEmpty;
+
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        onPressed: _exitSelectionMode,
+      ),
+      title: Text('$count sélectionné${count > 1 ? 's' : ''}'),
+      actions: [
+        if (canForward)
+          IconButton(
+            icon: const Icon(Icons.forward),
+            tooltip: 'Transférer',
+            onPressed: _forwardSelected,
+          ),
+        if (canDelete)
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Supprimer',
+            onPressed: _showDeleteSelectedMenu,
+          ),
+      ],
     );
   }
 }

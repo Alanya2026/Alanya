@@ -210,6 +210,35 @@ String previewLabelForAlbumMessages(List<LocalMessage> messages) {
   );
 }
 
+/// True si [items] forment un album complet (même albumId, tous les indices présents).
+bool isCompleteAlbumSelection(List<LocalMessage> items) {
+  if (items.length < 2) return false;
+
+  final firstMarker = parseAlbumMarker(items.first.content);
+  if (firstMarker == null) return false;
+
+  final albumId = firstMarker.albumId;
+  final total = firstMarker.total;
+  final senderID = items.first.senderID;
+  final indices = <int>{};
+
+  for (final item in items) {
+    if (item.type != 1 && item.type != 2) return false;
+    if (item.senderID != senderID) return false;
+    final marker = parseAlbumMarker(item.content);
+    if (marker == null || marker.albumId != albumId || marker.total != total) {
+      return false;
+    }
+    indices.add(marker.index);
+  }
+
+  if (indices.length != items.length || items.length != total) return false;
+  for (var i = 0; i < total; i++) {
+    if (!indices.contains(i)) return false;
+  }
+  return true;
+}
+
 /// Regroupe les messages consécutifs partageant le même albumId.
 List<ChatListItem> groupMessagesForDisplay(List<LocalMessage> messages) {
   if (messages.isEmpty) return const [];
