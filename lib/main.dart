@@ -157,6 +157,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   VoidCallback? _onBackOnline;
   ConnectivityProvider? _connectivityForListener;
   void Function(dynamic)? _onCallLogUpdated;
+  Timer? _callSyncFallbackTimer;
 
   @override
   void initState() {
@@ -196,25 +197,46 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _onCallLogUpdated = null;
   }
 
+  void _cancelCallSyncFallback() {
+    _callSyncFallbackTimer?.cancel();
+    _callSyncFallbackTimer = null;
+  }
+
+  void _scheduleCallSyncFallback(LocalCacheRepository cache, int myId) {
+    _cancelCallSyncFallback();
+    _callSyncFallbackTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      unawaited(cache.syncCalls(myId: myId));
+    });
+  }
+
   void _bindCallLogListener(int myId) {
     _removeCallLogListener();
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final cache = Provider.of<LocalCacheRepository>(context, listen: false);
     final callService = Provider.of<CallService>(context, listen: false);
-    Future<void> syncCalls() async {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+
+    _onCallLogUpdated = (data) async {
+      debugPrint('[AuthWrapper] call_log_updated → upsertCallFromPayload');
+      await cache.upsertCallFromPayload(
+        data,
+        myId: myId,
+        onMissingConversation: () => chatProvider.refreshConversations(),
+      );
       if (!mounted) return;
-      await cache.syncCalls(myId: myId);
-    }
-    _onCallLogUpdated = (_) {
-      debugPrint('[AuthWrapper] call_log_updated → syncCalls');
-      unawaited(syncCalls());
+      _scheduleCallSyncFallback(cache, myId);
     };
     apiClient.onSocketEvent(SocketEvents.callLogUpdated, _onCallLogUpdated!);
-    callService.onCallTerminatedHook = syncCalls;
+    callService.onCallTerminatedHook = () async {
+      if (!mounted) return;
+      _scheduleCallSyncFallback(cache, myId);
+    };
   }
 
   void _clearCallLogBindings() {
     _removeCallLogListener();
+    _cancelCallSyncFallback();
     try {
       Provider.of<CallService>(context, listen: false).onCallTerminatedHook = null;
     } catch (e) {
@@ -272,23 +294,37 @@ class _AuthWrapperState extends State<AuthWrapper> {
         debugPrint('[AuthWrapper] !! Action dispatchée');
       } else {
         debugPrint('[AuthWrapper] ℹ Aucune action pending au démarrage');
-        // Pas d'action explicite (corps de notif tapé) mais un appel CallKit est
-        // peut-être encore actif → afficher l'écran d'appel entrant qui sonne.
+        // Repli cold start : l'événement CallKit est souvent perdu avant que Flutter
+        // soit prêt. activeCalls() conserve isAccepted côté natif.
         final active = await CallKitService.instance.getActiveCall();
         if (active != null && mounted) {
           final callId = active['callId'] as String? ?? '';
           if (callId.startsWith('meeting_')) {
             debugPrint('[AuthWrapper] ℹ CallKit réunion ignoré au cold start: $callId');
           } else {
-            debugPrint('[AuthWrapper]  Appel CallKit actif trouvé → écran d\'appel entrant');
-            Provider.of<CallService>(context, listen: false).prepareIncomingFromCallKit(
-              callId:      callId,
-              callerId:    active['callerId'] as String,
-              callerName:  active['callerName'] as String,
-              callerPhoto: active['callerPhoto'] as String?,
-              isVideo:     active['isVideo'] as bool,
-              roomId:      active['roomId'] as String?,
-            );
+            final callService = Provider.of<CallService>(context, listen: false);
+            final isAccepted = active['isAccepted'] == true;
+            if (isAccepted) {
+              debugPrint('[AuthWrapper]  Appel CallKit déjà accepté → auto-réponse');
+              unawaited(callService.acceptIncomingCallFromPush(
+                callId:      callId,
+                callerId:    active['callerId'] as String,
+                callerName:  active['callerName'] as String,
+                callerPhoto: active['callerPhoto'] as String?,
+                isVideo:     active['isVideo'] as bool,
+                roomId:      active['roomId'] as String?,
+              ));
+            } else {
+              debugPrint('[AuthWrapper]  Appel CallKit actif → écran d\'appel entrant');
+              callService.prepareIncomingFromCallKit(
+                callId:      callId,
+                callerId:    active['callerId'] as String,
+                callerName:  active['callerName'] as String,
+                callerPhoto: active['callerPhoto'] as String?,
+                isVideo:     active['isVideo'] as bool,
+                roomId:      active['roomId'] as String?,
+              );
+            }
           }
         }
       }
