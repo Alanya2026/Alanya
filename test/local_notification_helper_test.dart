@@ -28,4 +28,46 @@ void main() {
       );
     });
   });
+
+  group('LocalNotificationHelper.bufferedDisplayBody', () {
+    test('joins 1-1 messages with newlines', () {
+      final buffer = [
+        {'sender': 'Alice', 'body': 'Salut'},
+        {'sender': 'Alice', 'body': 'Ça va ?'},
+        {'sender': 'Alice', 'body': 'Tu es là ?'},
+      ];
+      expect(
+        LocalNotificationHelper.bufferedDisplayBody(buffer, isGroup: false),
+        'Salut\nÇa va ?\nTu es là ?',
+      );
+    });
+
+    test('formats group messages as sender: body', () {
+      final buffer = [
+        {'sender': 'Alice', 'body': 'Hello'},
+        {'sender': 'Bob', 'body': 'Hi'},
+      ];
+      expect(
+        LocalNotificationHelper.bufferedDisplayBody(buffer, isGroup: true),
+        'Alice: Hello\nBob: Hi',
+      );
+    });
+
+    test('returns empty string for empty buffer', () {
+      expect(
+        LocalNotificationHelper.bufferedDisplayBody([], isGroup: false),
+        '',
+      );
+    });
+
+    test('keeps single message', () {
+      final buffer = [
+        {'sender': 'Alice', 'body': 'Un seul'},
+      ];
+      expect(
+        LocalNotificationHelper.bufferedDisplayBody(buffer, isGroup: false),
+        'Un seul',
+      );
+    });
+  });
 }

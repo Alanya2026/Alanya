@@ -21,6 +21,7 @@ const _kChannelMeetings = AndroidNotificationChannel(
 );
 
 const String kPushActiveConvKey = 'push_active_conv_id';
+const String kConvTagPrefix = 'conv_';
 const int kMeetingNotifOffset = 1000000000;
 const int kMaxBufferedMessages = 7;
 
@@ -129,15 +130,14 @@ class LocalNotificationHelper {
         ? groupName
         : senderName;
     final displayBody = isGroup ? '$senderName: $messageBody' : messageBody;
+    final fallbackBody = bufferedDisplayBody(buffer, isGroup: isGroup);
 
-    final androidDetails = AndroidNotificationDetails(
-      _kChannelMessages.id,
-      _kChannelMessages.name,
-      channelDescription: _kChannelMessages.description,
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-      styleInformation: style,
+    final iosDetails = DarwinNotificationDetails(
+      threadIdentifier: threadId,
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      subtitle: isGroup ? senderName : null,
     );
 
     try {
@@ -146,14 +146,8 @@ class LocalNotificationHelper {
         displayTitle,
         displayBody,
         NotificationDetails(
-          android: androidDetails,
-          iOS: DarwinNotificationDetails(
-            threadIdentifier: threadId,
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-            subtitle: isGroup ? senderName : null,
-          ),
+          android: _androidMessageDetails(conversationId, style),
+          iOS: iosDetails,
         ),
         payload: payload,
       );
@@ -164,21 +158,11 @@ class LocalNotificationHelper {
         displayTitle,
         displayBody,
         NotificationDetails(
-          android: AndroidNotificationDetails(
-            _kChannelMessages.id,
-            _kChannelMessages.name,
-            channelDescription: _kChannelMessages.description,
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
-            styleInformation: BigTextStyleInformation(displayBody),
+          android: _androidMessageDetails(
+            conversationId,
+            BigTextStyleInformation(fallbackBody),
           ),
-          iOS: DarwinNotificationDetails(
-            threadIdentifier: threadId,
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
+          iOS: iosDetails,
         ),
         payload: payload,
       );
@@ -282,7 +266,7 @@ class LocalNotificationHelper {
 
   static Future<void> cancelConversation(int conversationId) async {
     if (kIsWeb || conversationId == 0) return;
-    await _plugin.cancel(conversationId);
+    await _plugin.cancel(conversationId, tag: _convTag(conversationId));
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_bufferKey(conversationId));
   }
@@ -293,6 +277,23 @@ class LocalNotificationHelper {
   }
 
   // ── Corps de notif ───────────────────────────────────────────────────
+
+  /// Corps multi-lignes pour le fallback Android quand [MessagingStyle] échoue.
+  static String bufferedDisplayBody(
+    List<Map<String, String>> buffer, {
+    required bool isGroup,
+  }) {
+    if (buffer.isEmpty) return '';
+
+    final lines = buffer.map((m) {
+      final body = m['body'] ?? '';
+      if (!isGroup) return body;
+      final sender = (m['sender'] ?? '').trim();
+      return sender.isNotEmpty ? '$sender: $body' : body;
+    }).where((line) => line.isNotEmpty);
+
+    return lines.join('\n');
+  }
 
   static String bodyFromPayload(Map<String, dynamic> data) {
     final raw = data['body']?.toString();
@@ -317,6 +318,25 @@ class LocalNotificationHelper {
   }
 
   // ── Internals ────────────────────────────────────────────────────────
+
+  static String _convTag(int conversationId) =>
+      '$kConvTagPrefix$conversationId';
+
+  static AndroidNotificationDetails _androidMessageDetails(
+    int conversationId,
+    StyleInformation styleInformation,
+  ) {
+    return AndroidNotificationDetails(
+      _kChannelMessages.id,
+      _kChannelMessages.name,
+      channelDescription: _kChannelMessages.description,
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+      tag: _convTag(conversationId),
+      styleInformation: styleInformation,
+    );
+  }
 
   static String _bufferKey(int conversationId) => 'notif_msgs_$conversationId';
 
