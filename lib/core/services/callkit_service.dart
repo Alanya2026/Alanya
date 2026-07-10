@@ -201,8 +201,9 @@ class CallKitService {
   }
 
   /// Métadonnées du 1er appel CallKit encore actif (entrant non décliné/terminé).
-  /// Sert au démarrage à froid quand l'utilisateur a tapé le corps de la notif
-  /// (aucun event accept/decline n'est émis) : permet d'afficher l'écran d'appel.
+  /// Sert au démarrage à froid quand l'événement accept/decline est perdu :
+  /// - [isAccepted] true → bouton « Accepter » tapé avant le boot Flutter
+  /// - [isAccepted] false → corps de notif tapé, afficher l'écran d'appel entrant
   /// Retourne null si aucun appel actif.
   Future<Map<String, dynamic>?> getActiveCall() async {
     if (kIsWeb) return null;
@@ -219,6 +220,7 @@ class CallKitService {
           'callerPhoto': extra['callerPhoto']?.toString(),
           'isVideo':     extra['isVideo'] == true || extra['isVideo'] == 'true',
           'roomId':      extra['roomId']?.toString(),
+          'isAccepted':  c['isAccepted'] == true || c['isAccepted'] == 'true',
         };
       }
     } catch (e) {
