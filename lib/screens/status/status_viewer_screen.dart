@@ -434,29 +434,55 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     return Stack(
       children: [
         Positioned.fill(child: _buildContent(s)),
+        // Statut audio : zones latérales seulement, pour ne pas bloquer
+        // play/pause et la waveform au centre.
         Positioned.fill(
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: _prev,
-                  onLongPressStart: (_) => _setPaused(true),
-                  onLongPressEnd: (_) => _setPaused(false),
+          child: s.type == 3
+              ? Row(
+                  children: [
+                    SizedBox(
+                      width: 72,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: _prev,
+                        onLongPressStart: (_) => _setPaused(true),
+                        onLongPressEnd: (_) => _setPaused(false),
+                      ),
+                    ),
+                    const Expanded(child: SizedBox.expand()),
+                    SizedBox(
+                      width: 72,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: _next,
+                        onLongPressStart: (_) => _setPaused(true),
+                        onLongPressEnd: (_) => _setPaused(false),
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: _prev,
+                        onLongPressStart: (_) => _setPaused(true),
+                        onLongPressEnd: (_) => _setPaused(false),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 7,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: _next,
+                        onLongPressStart: (_) => _setPaused(true),
+                        onLongPressEnd: (_) => _setPaused(false),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Expanded(
-                flex: 7,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: _next,
-                  onLongPressStart: (_) => _setPaused(true),
-                  onLongPressEnd: (_) => _setPaused(false),
-                ),
-              ),
-            ],
-          ),
         ),
         Positioned(
           top: 0,
