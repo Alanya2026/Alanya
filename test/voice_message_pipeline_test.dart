@@ -208,5 +208,56 @@ void main() {
       expect(snap.phase, VoiceUiPhase.needsDownload);
       expect(snap.localPath, isNull);
     });
+
+    test('invalidateAll puis ensureReady retourne ready', () async {
+      final file = File(p.join(tmp.path, 'cached.m4a'))..writeAsStringSync('audio');
+      final ref = VoiceMessageRef(
+        clientId: 'srv_3',
+        serverMsgId: 3,
+        isMe: true,
+        pendingPath: file.path,
+        durationSeconds: 6,
+      );
+
+      final snap = await coordinator.ensureReady(ref);
+      expect(snap.phase, VoiceUiPhase.ready);
+
+      coordinator.invalidateAll();
+      expect(coordinator.snapshotFor('srv_3'), isNull);
+
+      final restored = await coordinator.ensureReady(ref);
+      expect(restored.phase, VoiceUiPhase.ready);
+      expect(restored.localPath, file.path);
+    });
+
+    test('cache ready survit à un changement de dbPath seul', () async {
+      final file = File(p.join(tmp.path, 'dbpath.m4a'))..writeAsStringSync('audio');
+      final refWithoutDb = VoiceMessageRef(
+        clientId: 'srv_4',
+        serverMsgId: 4,
+        isMe: true,
+        pendingPath: file.path,
+        durationSeconds: 8,
+      );
+
+      final snap = await coordinator.ensureReady(refWithoutDb);
+      expect(snap.phase, VoiceUiPhase.ready);
+      expect(snap.ref.dbPath, isNull);
+
+      final refWithDb = VoiceMessageRef(
+        clientId: 'srv_4',
+        serverMsgId: 4,
+        isMe: true,
+        dbPath: file.path,
+        pendingPath: file.path,
+        durationSeconds: 8,
+      );
+
+      final restored = await coordinator.ensureReady(refWithDb);
+      expect(restored.phase, VoiceUiPhase.ready);
+      expect(restored.localPath, file.path);
+      expect(restored.ref, refWithDb);
+      expect(restored.waveform, equals(snap.waveform));
+    });
   });
 }

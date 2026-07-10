@@ -19,7 +19,6 @@ import '../../core/services/call_service.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
-import '../../core/services/voice_message_coordinator.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
 import '../../core/utils/media_viewer_items.dart';
@@ -171,11 +170,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _chat.repository.syncMessages(convId);
 
     // Réconcilie les chemins locaux des vocaux (legacy cache disque, DB stale).
-    unawaited(_chat.repository.reconcileVoiceLocalPaths(convId).then((_) {
-      if (mounted) {
-        context.read<VoiceMessageCoordinator>().invalidateAll();
-      }
-    }));
+    unawaited(_chat.repository.reconcileVoiceLocalPaths(convId));
 
     // 2. Rejoint la room temps réel + marque comme lu. On signale aussi la
     //    conversation active : tout message reçu pendant qu'elle est ouverte

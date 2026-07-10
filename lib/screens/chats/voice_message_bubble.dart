@@ -37,6 +37,8 @@ class VoiceMessageBubble extends StatefulWidget {
 }
 
 class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
+  bool _syncScheduled = false;
+
   VoiceMessageRef get _ref => VoiceMessageRef(
         clientId: widget.messageId,
         serverMsgId: widget.serverMsgId,
@@ -69,7 +71,14 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   void _sync() {
     if (!mounted) return;
+    _syncScheduled = false;
     context.read<VoiceMessageCoordinator>().ensureReady(_ref);
+  }
+
+  void _scheduleSyncIfNeeded() {
+    if (_syncScheduled || !mounted) return;
+    _syncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
   }
 
   Duration get _fallbackDuration => Duration(seconds: widget.durationSeconds);
@@ -240,7 +249,11 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   Widget build(BuildContext context) {
     return Consumer2<VoiceMessageCoordinator, VoicePlaybackService>(
       builder: (context, coordinator, service, _) {
-        final snap = coordinator.snapshotFor(widget.messageId) ??
+        final existing = coordinator.snapshotFor(widget.messageId);
+        if (existing == null) {
+          _scheduleSyncIfNeeded();
+        }
+        final snap = existing ??
             VoiceMessageSnapshot(phase: VoiceUiPhase.resolving, ref: _ref);
 
         final isActive = service.isActive(widget.messageId);

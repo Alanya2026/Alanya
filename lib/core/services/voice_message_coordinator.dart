@@ -77,6 +77,7 @@ class VoiceMessageSnapshot {
 
   VoiceMessageSnapshot copyWith({
     VoiceUiPhase? phase,
+    VoiceMessageRef? ref,
     String? localPath,
     List<double>? waveform,
     double? downloadProgress,
@@ -86,7 +87,7 @@ class VoiceMessageSnapshot {
   }) {
     return VoiceMessageSnapshot(
       phase: phase ?? this.phase,
-      ref: ref,
+      ref: ref ?? this.ref,
       localPath: localPath ?? this.localPath,
       waveform: waveform ?? this.waveform,
       downloadProgress:
@@ -130,11 +131,14 @@ class VoiceMessageCoordinator extends ChangeNotifier {
     final cached = _snapshots[ref.clientId];
     if (cached != null &&
         cached.phase == VoiceUiPhase.ready &&
-        cached.ref == ref &&
+        cached.ref.clientId == ref.clientId &&
         cached.localPath != null &&
         File(cached.localPath!).existsSync() &&
         cached.waveform != null) {
-      return Future.value(cached);
+      if (cached.ref != ref) {
+        _setSnapshot(cached.copyWith(ref: ref));
+      }
+      return Future.value(_snapshots[ref.clientId]!);
     }
 
     final pending = _inFlight[ref.clientId];
