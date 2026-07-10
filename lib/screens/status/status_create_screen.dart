@@ -15,6 +15,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../providers/status_provider.dart';
+import '../../talky_api_client.dart';
 import '../../widgets/common/common.dart';
 
 enum _StatusType { text, photo, video, audio }
@@ -318,9 +319,14 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       AppLog.e('StatusCreate', 'Publication du statut échouée', e, st);
       if (mounted) {
         setState(() => _publishing = false);
+        final detail = e is TalkyException ? e.message : e.toString();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible de publier le statut, réessayez'),
+          SnackBar(
+            content: Text(
+              detail.isNotEmpty
+                  ? 'Impossible de publier le statut : $detail'
+                  : 'Impossible de publier le statut, réessayez',
+            ),
           ),
         );
       }
