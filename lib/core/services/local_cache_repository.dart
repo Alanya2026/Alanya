@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
 import '../db/app_database.dart';
+import '../utils/media_album.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'media_cache_service.dart';
@@ -121,6 +122,38 @@ class LocalCacheRepository {
         .watch();
   }
 
+  /// Écrit immédiatement un appel finalisé reçu via socket `call_log_updated`.
+  Future<void> upsertCallFromPayload(
+    dynamic data, {
+    required int myId,
+    Future<void> Function()? onMissingConversation,
+  }) async {
+    try {
+      if (data is! Map) return;
+      final callRaw = data['call'];
+      if (callRaw is! Map) return;
+
+      final call = Call.fromJson(Map<String, dynamic>.from(callRaw));
+      if (call.idCall == 0) return;
+
+      await _upsertCall(call, myId: myId);
+
+      final conversID = _toInt(data['conversationID']);
+      if (conversID == 0) return;
+
+      final exists = await (_db.select(_db.localConversations)
+            ..where((c) => c.conversID.equals(conversID)))
+          .getSingleOrNull();
+      if (exists != null) {
+        await _bumpConversationForCall(conversID: conversID, call: call);
+      } else if (onMissingConversation != null) {
+        await onMissingConversation();
+      }
+    } catch (e) {
+      debugPrint('[LocalCacheRepo] upsertCallFromPayload échouée: $e');
+    }
+  }
+
   Future<void> syncCalls({required int myId}) async {
     try {
       final raw = await _api.getCallHistory();
@@ -128,23 +161,7 @@ class LocalCacheRepository {
       await _db.batch((b) {
         for (final r in raw.whereType<Map<String, dynamic>>()) {
           final c = Call.fromJson(r);
-          if (c.idCall == 0) continue;
-          // Snapshot du correspondant : on doit prendre celui qui n'est PAS
-          // l'utilisateur courant — sinon les appels sortants stockent mon
-          // propre nom/avatar et l'UI offline les affiche à la place du contact.
-          final other = (c.idCaller == myId) ? c.receiver : c.caller;
-          b.insert(
-            _db.localCalls,
-            _callToCompanion(c, other),
-            onConflict: DoUpdate((_) => _callToCompanion(c, other)),
-          );
-          if (other != null) {
-            b.insert(
-              _db.localUsers,
-              _userToCompanion(other, cachedAt: now),
-              onConflict: DoUpdate((_) => _userToCompanion(other, cachedAt: now)),
-            );
-          }
+          _insertCallIntoBatch(b, c, myId: myId, now: now);
         }
       });
     } catch (e) {
@@ -260,6 +277,59 @@ class LocalCacheRepository {
     );
   }
 
+  Future<void> _upsertCall(Call c, {required int myId}) async {
+    if (c.idCall == 0) return;
+    final now = DateTime.now();
+    await _db.batch((b) {
+      _insertCallIntoBatch(b, c, myId: myId, now: now);
+    });
+  }
+
+  void _insertCallIntoBatch(
+    Batch b,
+    Call c, {
+    required int myId,
+    required DateTime now,
+  }) {
+    if (c.idCall == 0) return;
+    // Snapshot du correspondant : on doit prendre celui qui n'est PAS
+    // l'utilisateur courant — sinon les appels sortants stockent mon
+    // propre nom/avatar et l'UI offline les affiche à la place du contact.
+    final other = (c.idCaller == myId) ? c.receiver : c.caller;
+    b.insert(
+      _db.localCalls,
+      _callToCompanion(c, other),
+      onConflict: DoUpdate((_) => _callToCompanion(c, other)),
+    );
+    if (other != null) {
+      b.insert(
+        _db.localUsers,
+        _userToCompanion(other, cachedAt: now),
+        onConflict: DoUpdate((_) => _userToCompanion(other, cachedAt: now)),
+      );
+    }
+  }
+
+  Future<void> _bumpConversationForCall({
+    required int conversID,
+    required Call call,
+  }) async {
+    final preview = call.isVideo ? '📹 Appel vidéo' : '📞 Appel vocal';
+    final type = call.isVideo ? 6 : 5;
+    final at = _parseDate(call.createdAt) ?? DateTime.now();
+    final normalized = normalizeConversationPreview(preview);
+    final companion = LocalConversationsCompanion(
+      conversID: Value(conversID),
+      lastMessage: Value(
+        normalized.length > 200 ? normalized.substring(0, 200) : normalized,
+      ),
+      lastMessageAt: Value(at),
+      lastMessageType: Value(type),
+      lastMessageSenderID: Value(call.idCaller),
+    );
+    await _db.into(_db.localConversations).insertOnConflictUpdate(companion);
+  }
+
   LocalCallsCompanion _callToCompanion(Call c, User? other) {
     return LocalCallsCompanion(
       idCall: Value(c.idCall),
@@ -302,5 +372,11 @@ class LocalCacheRepository {
     if (v == null) return null;
     if (v is DateTime) return v;
     return DateTime.tryParse(v.toString());
+  }
+
+  static int _toInt(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '') ?? 0;
   }
 }
