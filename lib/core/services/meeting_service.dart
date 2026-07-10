@@ -48,12 +48,19 @@ class MeetingService extends ChangeNotifier {
   // États mute des participants distants (userId → isMuted)
   final Map<String, bool> _remoteMutedStates = {};
 
+  // ID local pendant la réunion + attente confirmation room_joined
+  String? _myId;
+  Completer<void>? _roomJoinCompleter;
+
   // Timer de durée
   Timer? _durationTimer;
   int _meetingDuration = 0;
 
   // Messages in-meeting
   final List<ChatMessage> _chatMessages = [];
+
+  // Noms des participants connectés (alanyaID → nom affiché).
+  final Map<String, String> _participantRoster = {};
 
   // UI minimisée (bannière flottante active).
   bool _isMeetingUiMinimized = false;
@@ -73,6 +80,19 @@ class MeetingService extends ChangeNotifier {
   bool isParticipantMuted(String userId) => _remoteMutedStates[userId] ?? false;
   int get meetingDuration => _meetingDuration;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+  Map<String, String> get participantRoster => Map.unmodifiable(_participantRoster);
+
+  /// Résout le nom affiché d'un participant (liste API + roster temps réel).
+  String participantDisplayName(String userId) {
+    final participant = _currentMeeting?.participants
+        .where((p) => p.participantID.toString() == userId)
+        .firstOrNull;
+    final fromList = participant?.nom ?? participant?.pseudo;
+    if (fromList != null && fromList.isNotEmpty) return fromList;
+    final fromRoster = _participantRoster[userId];
+    if (fromRoster != null && fromRoster.isNotEmpty) return fromRoster;
+    return 'User $userId';
+  }
 
   Set<String> get activeSpeakers => speakingDetector.activeSpeakers;
   bool get amISpeaking => speakingDetector.amISpeaking;
@@ -137,16 +157,44 @@ class MeetingService extends ChangeNotifier {
 
 
   void _setupSocketListeners() {
-    // Confirmation que la room a été rejointe
+    // Confirmation que la room a été rejointe (inclut snapshot muteStates)
     _apiClient.onSocketEvent(SocketEvents.meetingRoomJoined, (data) {
       debugPrint('[MeetingService] Room rejointe: $data');
+      if (data is Map) {
+        _applyMuteStatesSnapshot(data['muteStates']);
+        notifyListeners();
+      }
+      if (_roomJoinCompleter != null && !_roomJoinCompleter!.isCompleted) {
+        _roomJoinCompleter!.complete();
+      }
     });
 
-    // Un nouveau participant vient de rejoindre → initier l'échange WebRTC
+    // Un nouveau participant vient de rejoindre → enrichir le roster + WebRTC
     _apiClient.onSocketEvent(SocketEvents.meetingUserJoined, (data) async {
-      if (data is! Map) return; 
+      if (data is! Map) return;
       final userId = data['userID']?.toString();
-      if (userId == null || _peerConnections.containsKey(userId)) return; 
+      if (userId == null) return;
+
+      var changed = false;
+      final displayName = data['userName']?.toString() ??
+          data['nom']?.toString() ??
+          data['pseudo']?.toString();
+      if (displayName != null && displayName.isNotEmpty) {
+        _participantRoster[userId] = displayName;
+        changed = true;
+      }
+
+      if (data.containsKey('isMuted')) {
+        _applyRemoteMuteState(userId, data['isMuted'] == true);
+        changed = true;
+      }
+
+      if (changed) notifyListeners();
+
+      // Informer le nouvel arrivant de notre état mute actuel
+      _broadcastMuteState();
+
+      if (_peerConnections.containsKey(userId)) return;
       await _createPeerAndOffer(userId);
     });
 
@@ -154,7 +202,10 @@ class MeetingService extends ChangeNotifier {
     _apiClient.onSocketEvent(SocketEvents.meetingUserLeft, (data) {
       if (data is! Map) return;
       final userId = data['userID']?.toString();
-      if (userId != null) _removePeer(userId);
+      if (userId != null) {
+        _participantRoster.remove(userId);
+        _removePeer(userId);
+      }
     });
 
     // Réunion terminée par l'organisateur
@@ -229,8 +280,41 @@ class MeetingService extends ChangeNotifier {
       final isMuted = data['isMuted'] == true;
       if (userId == null) return;
       debugPrint('[MeetingService] 🎙 Mute state: userId=$userId isMuted=$isMuted');
-      _remoteMutedStates[userId] = isMuted;
+      _applyRemoteMuteState(userId, isMuted);
       notifyListeners();
+    });
+  }
+
+  void _applyRemoteMuteState(String userId, bool isMuted) {
+    _remoteMutedStates[userId] = isMuted;
+    speakingDetector.setSpeakerMuted(userId, isMuted);
+  }
+
+  void _applyMuteStatesSnapshot(dynamic muteStates) {
+    if (muteStates is! Map) return;
+    muteStates.forEach((key, value) {
+      _applyRemoteMuteState(key.toString(), value == true);
+    });
+  }
+
+  void _syncLocalMediaFromTracks() {
+    if (_localStream == null) return;
+    final audioTracks = _localStream!.getAudioTracks();
+    if (audioTracks.isNotEmpty) {
+      _isMuted = !audioTracks.first.enabled;
+      speakingDetector.setSpeakerMuted(SpeakingDetector.localKey, _isMuted);
+    }
+    final videoTracks = _localStream!.getVideoTracks();
+    if (videoTracks.isNotEmpty) {
+      _isVideoOff = !videoTracks.first.enabled;
+    }
+  }
+
+  void _broadcastMuteState() {
+    if (_currentMeeting == null) return;
+    _apiClient.sendSocketEvent(SocketEvents.meetingMuteState, {
+      'meetingId': _currentMeeting!.idMeeting,
+      'isMuted': _isMuted,
     });
   }
 
@@ -255,11 +339,55 @@ class MeetingService extends ChangeNotifier {
         .toList();
   }
 
+  /// Recharge les détails de la réunion en cours (participants avec noms).
+  Future<void> refreshCurrentMeeting() async {
+    final id = _currentMeeting?.idMeeting;
+    if (id == null) return;
+    await _reloadCurrentMeeting(id);
+  }
+
+  /// Invite des participants puis rafraîchit la liste locale.
+  Future<void> inviteParticipants(List<int> participantIds) async {
+    final id = _currentMeeting?.idMeeting;
+    if (id == null || participantIds.isEmpty) return;
+    await _apiClient.inviteParticipants(id, participantIds);
+    await _reloadCurrentMeeting(id);
+  }
+
+  Future<void> _reloadCurrentMeeting(int idMeeting) async {
+    try {
+      final data = await _apiClient.getMeeting(idMeeting);
+      _currentMeeting = Meeting.fromJson(data);
+      _seedRosterFromMeeting();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[MeetingService] Erreur reload meeting: $e');
+    }
+  }
+
+  void _seedRosterFromMeeting() {
+    final meeting = _currentMeeting;
+    if (meeting == null) return;
+
+    final organiserName = meeting.organiserNom ?? meeting.organiserPseudo;
+    if (organiserName != null && organiserName.isNotEmpty) {
+      _participantRoster[meeting.idOrganiser.toString()] = organiserName;
+    }
+
+    for (final p in meeting.participants) {
+      final name = p.nom ?? p.pseudo;
+      if (name != null && name.isNotEmpty) {
+        _participantRoster[p.participantID.toString()] = name;
+      }
+    }
+  }
+
   Future<void> createAndJoin({
     required String objet,
     required String startTime, 
     required String room,
     required int myId,
+    required String myName,
     int duree = 60,
     int typeMedia = 0,
   }) async {
@@ -275,8 +403,10 @@ class MeetingService extends ChangeNotifier {
         typeMedia: typeMedia,
       );
       _currentMeeting = Meeting.fromJson(data);
+      _seedRosterFromMeeting();
       await _apiClient.joinMeetingHttp(_currentMeeting!.idMeeting);
-      await _joinRoom(myId: myId);
+      await _reloadCurrentMeeting(_currentMeeting!.idMeeting);
+      await _joinRoom(myId: myId, myName: myName);
     } catch (e) {
       debugPrint('[MeetingService] Erreur createAndJoin: $e');
       _status = MeetingStatus.ended;
@@ -355,12 +485,13 @@ class MeetingService extends ChangeNotifier {
       // Récupérer les détails de la réunion
       final data = await _apiClient.getMeeting(idMeeting);
       _currentMeeting = Meeting.fromJson(data);
+      _seedRosterFromMeeting();
 
       // Rejoindre en DB
       await _apiClient.joinMeetingHttp(idMeeting);
 
       // Rejoindre la room socket
-      await _joinRoom(myId: myId);
+      await _joinRoom(myId: myId, myName: myName);
     } catch (e) {
       debugPrint('[MeetingService] Erreur joinMeeting: $e');
       _status = MeetingStatus.ended;
@@ -383,9 +514,10 @@ class MeetingService extends ChangeNotifier {
       // encore participant (contrairement à getMeetings qui filtre).
       final data = await _apiClient.getMeetingByRoom(roomCode);
       _currentMeeting = Meeting.fromJson(data);
+      _seedRosterFromMeeting();
 
       await _apiClient.joinMeetingHttp(_currentMeeting!.idMeeting);
-      await _joinRoom(myId: myId);
+      await _joinRoom(myId: myId, myName: myName);
     } catch (e) {
       debugPrint('[MeetingService] Erreur joinByRoom: $e');
       _status = MeetingStatus.ended;
@@ -394,16 +526,35 @@ class MeetingService extends ChangeNotifier {
     }
   }
 
-  Future<void> _joinRoom({required int myId}) async {
+  Future<void> _joinRoom({required int myId, required String myName}) async {
     if (_localStream == null) {
       await _initLocalStream();
     }
 
-    // !! Champs corrects : meetingID et userID (pas meetingId/userId)
+    _myId = myId.toString();
+    _syncLocalMediaFromTracks();
+
+    if (myName.isNotEmpty) {
+      _participantRoster[_myId!] = myName;
+    }
+
+    _roomJoinCompleter = Completer<void>();
     _apiClient.sendSocketEvent(SocketEvents.meetingJoinRoom, {
       'meetingID': _currentMeeting!.idMeeting,
       'userID': myId,
+      'userName': myName,
+      'isMuted': _isMuted,
     });
+
+    try {
+      await _roomJoinCompleter!.future.timeout(const Duration(seconds: 10));
+    } catch (_) {
+      debugPrint('[MeetingService] Timeout attente room_joined');
+    } finally {
+      _roomJoinCompleter = null;
+    }
+
+    _broadcastMuteState();
 
     _status = MeetingStatus.connected;
     _startDurationTimer();
@@ -640,12 +791,10 @@ class MeetingService extends ChangeNotifier {
       final track = _localStream!.getAudioTracks().first;
       track.enabled = !track.enabled;
       _isMuted = !track.enabled;
+      speakingDetector.setSpeakerMuted(SpeakingDetector.localKey, _isMuted);
       // Notifier les autres participants
       if (_currentMeeting != null) {
-        _apiClient.sendSocketEvent(SocketEvents.meetingMuteState, {
-          'meetingId': _currentMeeting!.idMeeting,
-          'isMuted': _isMuted,
-        });
+        _broadcastMuteState();
       }
       notifyListeners();
     }
@@ -711,6 +860,9 @@ class MeetingService extends ChangeNotifier {
     _durationTimer?.cancel();
     _meetingDuration = 0;
     _currentMeeting = null;
+    _participantRoster.clear();
+    _myId = null;
+    _roomJoinCompleter = null;
     _isMuted = false;
     _isVideoOff = false;
     _remoteMutedStates.clear();

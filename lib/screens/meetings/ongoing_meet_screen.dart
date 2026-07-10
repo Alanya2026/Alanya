@@ -260,14 +260,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                   mirror: true,
                                 ),
                                 ..._remoteRenderers.entries.map((entry) {
-                                  final participant = meeting?.participants
-                                      .where((p) =>
-                                          p.participantID.toString() ==
-                                          entry.key)
-                                      .firstOrNull;
-                                  final label = participant?.nom ??
-                                      participant?.pseudo ??
-                                      'User ${entry.key}';
+                                  final label = meetingService
+                                      .participantDisplayName(entry.key);
                                   return _buildVideoTile(
                                     label: label,
                                     renderer: entry.value,
@@ -404,7 +398,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     bool mirror = false,
   }) {
     return SpeakingIndicatorBorder(
-      isSpeaking: isSpeaking,
+      isSpeaking: isSpeaking && !isMuted,
       borderRadius: AppRadius.brMd,
       child: Container(
       decoration: const BoxDecoration(
@@ -762,16 +756,9 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                       itemBuilder: (_, i) {
                         final msg = svc.chatMessages[i];
                         final isMe = msg.userId == myId.toString();
-                        final meeting = svc.currentMeeting;
-                        final participant = meeting?.participants
-                            .where((p) =>
-                                p.participantID.toString() == msg.userId)
-                            .firstOrNull;
                         final senderName = isMe
                             ? 'Vous'
-                            : (participant?.nom ??
-                                participant?.pseudo ??
-                                'User ${msg.userId}');
+                            : svc.participantDisplayName(msg.userId);
                         return Padding(
                           padding: const EdgeInsets.only(
                               bottom: AppSpacing.sm),

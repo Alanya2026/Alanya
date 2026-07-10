@@ -7,7 +7,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../providers/auth_provider.dart';
-import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
@@ -172,21 +171,25 @@ class _MeetsScreenState extends State<MeetsScreen>
 
     final meetingService =
         Provider.of<MeetingService>(context, listen: false);
-    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final now = DateTime.now();
 
     try {
+      final me = context.read<AuthProvider>().currentUser;
+      final myName = me != null
+          ? (me.nom.isNotEmpty ? me.nom : me.pseudo)
+          : '';
+
       await meetingService.createAndJoin(
         objet: 'Réunion ${now.toString().substring(0, 16)}',
         startTime: now.toUtc().toIso8601String(),
         room: 'mtg-${now.millisecondsSinceEpoch}',
         myId: _myId,
+        myName: myName,
       );
 
-      final meetingId = meetingService.currentMeeting?.idMeeting;
-      if (participants.isNotEmpty && meetingId != null) {
+      if (participants.isNotEmpty) {
         final ids = participants.map((u) => u.alanyaID).toList();
-        await apiClient.inviteParticipants(meetingId, ids);
+        await meetingService.inviteParticipants(ids);
       }
 
       if (!mounted) return;

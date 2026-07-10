@@ -6,6 +6,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/services/local_cache_repository.dart';
+import '../../core/services/meeting_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -144,7 +145,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
 
     try {
       final api = Provider.of<TalkyApiClient>(context, listen: false);
+      final meetingService =
+          Provider.of<MeetingService>(context, listen: false);
       await api.inviteParticipants(meeting.idMeeting, newIds);
+      if (meetingService.currentMeeting?.idMeeting == meeting.idMeeting) {
+        await meetingService.refreshCurrentMeeting();
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
