@@ -247,6 +247,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
         name: localName,
         photoUrl: localPhoto,
         isSpeaking: cs.amISpeaking,
+        isMuted: cs.isMuted,
       );
     }
 
@@ -416,12 +417,14 @@ class _AudioBackdrop extends StatelessWidget {
     required this.name,
     required this.photoUrl,
     this.isSpeaking = false,
+    this.isMuted = false,
     this.isRemoteMuted = false,
   });
 
   final String name;
   final String? photoUrl;
   final bool isSpeaking;
+  final bool isMuted;
   final bool isRemoteMuted;
 
   @override
@@ -445,7 +448,7 @@ class _AudioBackdrop extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           SpeakingIndicatorBorder(
-            isSpeaking: isSpeaking,
+            isSpeaking: isSpeaking && !isMuted && !isRemoteMuted,
             shape: BoxShape.circle,
             borderWidth: 4,
             child: CircleAvatar(
@@ -851,7 +854,7 @@ class _RemoteTileState extends State<_RemoteTile> {
         (_ready && _renderer.videoWidth == 0);
 
     return SpeakingIndicatorBorder(
-      isSpeaking: widget.isSpeaking,
+      isSpeaking: widget.isSpeaking && !widget.isMuted,
       borderRadius: AppRadius.brMd,
       child: ClipRRect(
         borderRadius: AppRadius.brMd,

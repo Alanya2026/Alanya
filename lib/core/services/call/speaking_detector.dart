@@ -50,6 +50,7 @@ class SpeakingDetector extends ChangeNotifier {
 
   Timer? _timer;
   final Set<String> _activeSpeakers = {};
+  final Set<String> _mutedIds = {};
   final Map<String, int> _aboveStreak = {};
   final Map<String, int> _belowStreak = {};
 
@@ -103,7 +104,25 @@ class SpeakingDetector extends ChangeNotifier {
     }
   }
 
+  /// Force l'extinction de l'indicateur pour [id] tant que le micro est
+  /// coupé. Appelé à la réception d'un événement mute (socket) ou au toggle
+  /// local, pour éviter que les stats WebRTC résiduelles maintiennent le glow.
+  void setSpeakerMuted(String id, bool muted) {
+    if (muted) {
+      _mutedIds.add(id);
+      if (_activeSpeakers.remove(id)) {
+        _aboveStreak.remove(id);
+        _belowStreak.remove(id);
+        notifyListeners();
+      }
+    } else {
+      _mutedIds.remove(id);
+    }
+  }
+
   void _registerSample(String id, double level) {
+    if (_mutedIds.contains(id)) return;
+
     final aboveThreshold = level >= threshold;
     if (aboveThreshold) {
       _aboveStreak[id] = (_aboveStreak[id] ?? 0) + 1;
@@ -133,6 +152,7 @@ class SpeakingDetector extends ChangeNotifier {
     }
     _aboveStreak.clear();
     _belowStreak.clear();
+    _mutedIds.clear();
   }
 
   @override

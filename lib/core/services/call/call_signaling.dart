@@ -280,6 +280,10 @@ extension CallSignaling on CallService {
       if (data is! Map) return;
       _isRemoteMuted = data['isMuted'] == true;
       debugPrint('[CallService] 🎙 Remote mute state: $_isRemoteMuted');
+      final remoteId = _remoteUserId?.toString();
+      if (remoteId != null) {
+        speakingDetector.setSpeakerMuted(remoteId, _isRemoteMuted);
+      }
       notify();
     });
 
@@ -300,6 +304,7 @@ extension CallSignaling on CallService {
       debugPrint('[CallService] 🎙 Group mute state: userId=$userId isMuted=$isMuted');
       if (_groupRoster.containsKey(userId)) {
         _groupRoster[userId]!.isMuted = isMuted;
+        speakingDetector.setSpeakerMuted(userId, isMuted);
         notify();
       }
     });
