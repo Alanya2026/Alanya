@@ -1,12 +1,9 @@
 import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
-import '../../providers/chat_provider.dart';
-import '../../widgets/common/app_badge.dart';
 
 /// Espace réservé en bas du body pour que les contenus scrollables
 /// puissent dépasser jusqu'au-dessus de la nav flottante (le scroll
@@ -109,14 +106,10 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _IconWithBadge(
-              icon: isSelected ? activeIcons[index] : icons[index],
+            Icon(
+              isSelected ? activeIcons[index] : icons[index],
               color: isSelected ? colors.primary : colors.onSurfaceVariant,
-              // Badge orange "outbox" uniquement sur l'onglet Chats.
-              badgeStream: index == 0
-                  ? context.select<ChatProvider, Stream<int>>(
-                      (c) => c.pendingMessagesCount())
-                  : null,
+              size: AppIconSize.sm + 2,
             ),
             const SizedBox(height: 2),
             Text(
@@ -129,47 +122,6 @@ class _NavItem extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _IconWithBadge extends StatelessWidget {
-  const _IconWithBadge({
-    required this.icon,
-    required this.color,
-    this.badgeStream,
-  });
-
-  final IconData icon;
-  final Color color;
-  final Stream<int>? badgeStream;
-
-  @override
-  Widget build(BuildContext context) {
-    final base = Icon(icon, color: color, size: AppIconSize.sm + 2);
-    if (badgeStream == null) return base;
-    return StreamBuilder<int>(
-      stream: badgeStream,
-      builder: (context, snap) {
-        final count = snap.data ?? 0;
-        if (count <= 0) return base;
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            base,
-            Positioned(
-              right: -8,
-              top: -6,
-              child: CountBadge(
-                count: count,
-                color: context.semantic.warning,
-                textColor: context.semantic.onWarning,
-                borderColor: context.semantic.navGlassBadgeBorder,
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

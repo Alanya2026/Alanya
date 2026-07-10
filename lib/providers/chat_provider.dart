@@ -73,16 +73,6 @@ class ChatProvider extends ChangeNotifier {
   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
       repository.watchMessages(conversationID);
 
-  /// Outbox réactif (compteur pour le badge sur l'onglet Discussions).
-  Stream<int> pendingMessagesCount() async* {
-    yield (await repository.dao.pendingMessages()).length;
-    await for (final _ in repository.watchConversations()) {
-      // Le badge se rafraîchit indirectement quand la liste de conv change
-      // (envoi, ack, échec). Coût négligeable.
-      yield (await repository.dao.pendingMessages()).length;
-    }
-  }
- 
   Future<void> bind(int myId) async {
     await repository.bind(myId);
     if (!_bound) {
