@@ -21,6 +21,7 @@ import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
+import '../../core/utils/media_staging.dart';
 import '../../core/utils/media_viewer_items.dart';
 import '../../core/utils/rich_text_parser.dart';
 import 'package:screen_protector/screen_protector.dart';
@@ -83,6 +84,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   late final TalkyApiClient _apiClient;
   late final ChatProvider _chat;
+  int? _convId;
+  Future<int?>? _ensureConversationInFlight;
   int? _myId;
   bool _hasText = false;
   bool _showEmoji = false;
@@ -138,7 +141,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     // Près du haut visuel → charger une page d'anciens messages.
     if (pos.pixels >= pos.maxScrollExtent - 80 && !_loadingOlder) {
-      final convId = widget.conversationId;
+      final convId = _convId;
       if (convId == null) return;
       _loadingOlder = true;
       _chat.repository.loadOlderMessages(convId).whenComplete(() {
@@ -148,9 +151,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _init() async {
-    final convId = widget.conversationId;
-    if (convId == null) return;
+    _convId = widget.conversationId;
 
+    if (!widget.isGroup && widget.userId != null) {
+      await _loadBlockStatus();
+    }
+
+    final convId = _convId;
+    if (convId != null) {
+      await _attachToConversation(convId);
+    }
+  }
+
+  Future<void> _attachToConversation(int convId) async {
     final voice = context.read<VoicePlaybackService>();
     voice
       ..setChatContext(VoiceChatContext(
@@ -162,22 +175,61 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ))
       ..enterChat(convId);
 
-    if (!widget.isGroup && widget.userId != null) {
-      await _loadBlockStatus();
-    }
-
-    // 1. Synchronise l'historique depuis le serveur (l'UI affiche déjà le cache).
+    // Synchronise l'historique depuis le serveur (l'UI affiche déjà le cache).
     _chat.repository.syncMessages(convId);
 
     // Réconcilie les chemins locaux des vocaux (legacy cache disque, DB stale).
     unawaited(_chat.repository.reconcileVoiceLocalPaths(convId));
 
-    // 2. Rejoint la room temps réel + marque comme lu. On signale aussi la
-    //    conversation active : tout message reçu pendant qu'elle est ouverte
-    //    sera marqué lu en direct (pas de badge non-lu fantôme).
+    // Rejoint la room temps réel + marque comme lu. On signale aussi la
+    // conversation active : tout message reçu pendant qu'elle est ouverte
+    // sera marqué lu en direct (pas de badge non-lu fantôme).
     _apiClient.sendSocketEvent(SocketEvents.joinConversation, {'conversationID': convId});
     _chat.repository.setActiveConversation(convId);
     _chat.repository.markAsRead(convId);
+  }
+
+  Future<int?> _ensureConversation() async {
+    if (_convId != null) return _convId;
+    if (widget.isGroup || widget.userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible d\'ouvrir la discussion')),
+        );
+      }
+      return null;
+    }
+
+    _ensureConversationInFlight ??= _createConversation();
+    try {
+      return await _ensureConversationInFlight!;
+    } finally {
+      _ensureConversationInFlight = null;
+    }
+  }
+
+  Future<int?> _createConversation() async {
+    try {
+      final result =
+          await _apiClient.createConversation(participantID: widget.userId!);
+      final conversationId = result['conversID'] as int?;
+      if (conversationId == null || !mounted) return null;
+
+      setState(() => _convId = conversationId);
+      await _chat.refreshConversations();
+      if (!mounted) return conversationId;
+      await _attachToConversation(conversationId);
+      return conversationId;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur lors de la création de la discussion'),
+          ),
+        );
+      }
+      return null;
+    }
   }
 
   Future<void> _loadBlockStatus() async {
@@ -231,7 +283,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _highlightTimer?.cancel();
     _recorder.dispose();
     context.read<VoicePlaybackService>().leaveChat();
-    final convId = widget.conversationId;
+    final convId = _convId;
     if (convId != null) _chat.repository.clearActiveConversation(convId);
     _stopTyping();
     _messageController.dispose();
@@ -244,7 +296,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget build(BuildContext context) {
     // Rebuild sur changement de présence / typing (header + bulle).
     final chat = Provider.of<ChatProvider>(context);
-    final convId = widget.conversationId;
+    final convId = _convId;
     final partnerTyping = convId != null &&
         chat.isPartnerTyping(
           convId,
@@ -263,10 +315,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           _buildPinnedBanner(),
           Expanded(
             child: convId == null
-                ? const EmptyState(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    title: 'Conversation introuvable',
-                  )
+                ? (widget.userId != null && !widget.isGroup
+                    ? const EmptyState(
+                        icon: Icons.waving_hand_outlined,
+                        title: 'Aucun message',
+                        message:
+                            'Dites bonjour pour démarrer la conversation !',
+                      )
+                    : const EmptyState(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        title: 'Conversation introuvable',
+                      ))
                 : StreamBuilder<List<LocalMessage>>(
                     stream: _chat.watchMessages(convId),
                     builder: (context, snapshot) {
@@ -387,12 +446,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ),
       title: InkWell(
         onTap: widget.isGroup
-            ? (widget.conversationId != null
+            ? (_convId != null
                 ? () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => GroupDetailScreen(
-                          conversationId: widget.conversationId!,
+                          conversationId: _convId!,
                           groupName: widget.userName,
                           groupAvatar: widget.avatarUrl,
                         ),
@@ -406,7 +465,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       MaterialPageRoute(
                         builder: (_) => ContactDetailScreen(
                           userId: widget.userId!,
-                          conversationId: widget.conversationId,
+                          conversationId: _convId,
                           initialName: widget.userName,
                           initialAvatar: widget.avatarUrl ?? '',
                         ),
@@ -422,7 +481,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               name: widget.userName,
               userId: widget.userId ?? 0,
               isGroup: widget.isGroup,
-              conversationId: widget.conversationId,
+              conversationId: _convId,
               hidePhoto: !widget.isGroup && _blockedByThem,
               size: 40,
               borderRadius: 20,

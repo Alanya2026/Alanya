@@ -8,7 +8,6 @@ import '../core/theme/app_theme.dart';
 import '../core/services/call_service.dart';
 import '../core/utils/app_log.dart';
 import '../providers/auth_provider.dart';
-import '../talky_api_client.dart';
 import '../screens/chats/fullscreen_profile_image_viewer.dart';
 import '../screens/chats/contact_detail_screen.dart';
 import '../screens/chats/group_detail_screen.dart';
@@ -38,13 +37,11 @@ class ProfileImageModal extends StatefulWidget {
 }
 
 class _ProfileImageModalState extends State<ProfileImageModal> {
-  late TalkyApiClient _apiClient;
   late CallService _callService;
 
   @override
   void initState() {
     super.initState();
-    _apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     _callService = Provider.of<CallService>(context, listen: false);
   }
 
@@ -246,32 +243,19 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
 
   Future<void> _openChat() async {
     if (widget.isGroup) return;
-    try {
-      final result =
-          await _apiClient.createConversation(participantID: widget.userId);
-      final conversationId = result['conversID'] as int?;
-      if (conversationId != null && mounted) {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatDetailScreen(
-              userName: widget.name,
-              conversationId: conversationId,
-              userId: widget.userId,
-              isGroup: false,
-              avatarUrl: widget.imageUrl,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur lors de l\'ouverture du chat')),
-        );
-      }
-    }
+    if (!mounted) return;
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatDetailScreen(
+          userName: widget.name,
+          userId: widget.userId,
+          isGroup: false,
+          avatarUrl: widget.imageUrl,
+        ),
+      ),
+    );
   }
 
   Future<void> _initiateCall({required bool isVideo}) async {

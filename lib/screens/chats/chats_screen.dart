@@ -10,7 +10,6 @@ import '../../core/utils/rich_text_parser.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connectivity_provider.dart';
-import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
@@ -473,38 +472,18 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
   }
 
-  Future<void> _openChatWithUser(User user) async {
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      final result = await apiClient.createConversation(participantID: user.alanyaID);
-      final conversationId = result['conversID'] as int?;
-
-      if (conversationId != null && mounted) {
-        // La conv vient d'être créée côté serveur : on relit la liste pour
-        // qu'elle apparaisse aussitôt dans le `StreamBuilder` au retour.
-        await chatProvider.refreshConversations();
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatDetailScreen(
-              userName: user.nom.isNotEmpty ? user.nom : user.pseudo,
-              conversationId: conversationId,
-              userId: user.alanyaID,
-              isGroup: false,
-              avatarUrl: user.avatarUrl,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur lors de l\'ouverture de la discussion')),
-        );
-      }
-    }
+  void _openChatWithUser(User user) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatDetailScreen(
+          userName: user.nom.isNotEmpty ? user.nom : user.pseudo,
+          userId: user.alanyaID,
+          isGroup: false,
+          avatarUrl: user.avatarUrl,
+        ),
+      ),
+    );
   }
 
   String _formatTime(DateTime? date) {

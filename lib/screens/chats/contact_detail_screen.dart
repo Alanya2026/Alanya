@@ -139,18 +139,13 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
 
   Future<void> _openChat() async {
     if (_contact == null) return;
-    final convId = widget.conversationId ??
-        (await _api
-                .createConversation(participantID: widget.userId)
-                .catchError((_) => <String, dynamic>{}))['conversID']
-            as int?;
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => ChatDetailScreen(
           userName: _contact!.nom,
-          conversationId: convId,
+          conversationId: widget.conversationId,
           userId: widget.userId,
           avatarUrl: _contact!.avatarUrl,
         ),

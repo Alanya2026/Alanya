@@ -158,7 +158,7 @@ extension _ChatActions on _ChatDetailScreenState {
         MaterialPageRoute(
           builder: (_) => ForwardMessageScreen(
             message: selected.first,
-            excludeConversationId: widget.conversationId,
+            excludeConversationId: _convId,
           ),
         ),
       );
@@ -168,7 +168,7 @@ extension _ChatActions on _ChatDetailScreenState {
         MaterialPageRoute(
           builder: (_) => ForwardMessageScreen(
             messages: selected,
-            excludeConversationId: widget.conversationId,
+            excludeConversationId: _convId,
           ),
         ),
       );
@@ -177,13 +177,16 @@ extension _ChatActions on _ChatDetailScreenState {
     if (ok == true && mounted) _exitSelectionMode();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     if (_inputBlocked) return;
     final text = _messageController.text.trim();
-    if (text.isEmpty || widget.conversationId == null || _myId == null) return;
+    if (text.isEmpty || _myId == null) return;
+
+    final convId = await _ensureConversation();
+    if (convId == null) return;
 
     _chat.repository.sendText(
-      conversationID: widget.conversationId!,
+      conversationID: convId,
       content: text,
       replyToID: _replyTo != null && _replyTo!.msgID > 0 ? _replyTo!.msgID : null,
       replyToContent: _replyTo == null ? null : _previewOf(_replyTo!),
@@ -409,7 +412,7 @@ extension _ChatActions on _ChatDetailScreenState {
       MaterialPageRoute(
         builder: (_) => ForwardMessageScreen(
           message: msg,
-          excludeConversationId: widget.conversationId,
+          excludeConversationId: _convId,
         ),
       ),
     );
@@ -429,7 +432,7 @@ extension _ChatActions on _ChatDetailScreenState {
       MaterialPageRoute(
         builder: (_) => ForwardMessageScreen(
           albumItems: items,
-          excludeConversationId: widget.conversationId,
+          excludeConversationId: _convId,
         ),
       ),
     );
@@ -730,7 +733,7 @@ extension _ChatActions on _ChatDetailScreenState {
     List<AlbumSendItem> items, {
     bool viewOnce = false,
   }) async {
-    if (items.isEmpty || widget.conversationId == null || _myId == null) return;
+    if (items.isEmpty || _myId == null) return;
     if (!mounted) return;
 
     final result = await Navigator.push<MediaSendResult>(
@@ -741,7 +744,10 @@ extension _ChatActions on _ChatDetailScreenState {
       ),
     );
     if (result == null || !mounted) return;
-    if (widget.conversationId == null || _myId == null) return;
+    if (_myId == null) return;
+
+    final convId = await _ensureConversation();
+    if (convId == null) return;
 
     if (items.length == 1) {
       final item = items.first;
@@ -757,7 +763,7 @@ extension _ChatActions on _ChatDetailScreenState {
     }
 
     _chat.repository.sendMediaAlbum(
-      conversationID: widget.conversationId!,
+      conversationID: convId,
       items: items,
       content: result.caption,
     );
@@ -770,15 +776,18 @@ extension _ChatActions on _ChatDetailScreenState {
     if (path != null) _sendMediaFile(File(path), type: 4, name: res!.files.single.name);
   }
 
-  void _sendMediaFile(
+  Future<void> _sendMediaFile(
     File file, {
     required int type,
     String? name,
     int? duration,
     bool viewOnce = false,
     String? content,
-  }) {
-    if (widget.conversationId == null || _myId == null) return;
+  }) async {
+    if (_myId == null) return;
+
+    final convId = await _ensureConversation();
+    if (convId == null) return;
 
     final size = file.existsSync() ? file.lengthSync() : 0;
     if (size > _maxMediaBytes) {
@@ -790,8 +799,8 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
 
-    _chat.repository.sendMediaFile(
-      conversationID: widget.conversationId!,
+    await _chat.repository.sendMediaFile(
+      conversationID: convId,
       type: type,
       file: file,
       mediaName: name,
@@ -838,20 +847,20 @@ extension _ChatActions on _ChatDetailScreenState {
   void _onTextChanged(String value) {
     final has = value.trim().isNotEmpty;
     if (has != _hasText) rebuild(() => _hasText = has);
-    if (widget.conversationId == null) return;
+    if (_convId == null) return;
     if (value.isEmpty) {
       _stopTyping();
       return;
     }
-    _apiClient.sendSocketEvent(SocketEvents.typingStart, {'conversationID': widget.conversationId});
+    _apiClient.sendSocketEvent(SocketEvents.typingStart, {'conversationID': _convId});
     _typingTimer?.cancel();
     _typingTimer = Timer(const Duration(seconds: 3), _stopTyping);
   }
 
   void _stopTyping() {
     _typingTimer?.cancel();
-    if (widget.conversationId == null) return;
-    _apiClient.sendSocketEvent(SocketEvents.typingStop, {'conversationID': widget.conversationId});
+    if (_convId == null) return;
+    _apiClient.sendSocketEvent(SocketEvents.typingStop, {'conversationID': _convId});
   }
 
   void _scrollToBottom() {
@@ -864,7 +873,7 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _scrollToReply(int replyToID) async {
-    final convId = widget.conversationId;
+    final convId = _convId;
     if (convId == null || replyToID <= 0) return;
 
     _suppressAutoScroll = true;
@@ -1085,6 +1094,7 @@ extension _ChatActions on _ChatDetailScreenState {
       myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
       myPhoto: me.avatarUrl,
       targetUserName: widget.userName,
+      targetUserPhoto: widget.avatarUrl,
       isVideo: isVideo,
     );
     if (!mounted) return;
@@ -1100,7 +1110,7 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _initiateGroupCall({required bool isVideo}) async {
-    final convId = widget.conversationId;
+    final convId = _convId;
     if (convId == null) return;
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -1241,7 +1251,7 @@ extension _ChatActions on _ChatDetailScreenState {
         builder: (_) => AlbumMediaListScreen(
           messages: sorted,
           initialIndex: initialIndex.clamp(0, sorted.length - 1),
-          excludeConversationId: widget.conversationId,
+          excludeConversationId: _convId,
         ),
       ),
     );

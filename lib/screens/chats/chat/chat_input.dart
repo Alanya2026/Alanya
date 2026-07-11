@@ -86,7 +86,7 @@ extension _ChatInput on _ChatDetailScreenState {
   /// un compteur « i/N », un appui qui défile vers l'épingle courante puis passe
   /// à la suivante.
   Widget _buildPinnedBanner() {
-    final convId = widget.conversationId;
+    final convId = _convId;
     if (convId == null) return const SizedBox.shrink();
     final colors = context.colors;
     return StreamBuilder<List<LocalMessage>>(
@@ -280,7 +280,7 @@ extension _ChatInput on _ChatDetailScreenState {
   /// par des virgules. L'`overflow: ellipsis` du `Text` rajoute '…'
   /// automatiquement quand la ligne dépasse la largeur disponible.
   Widget _buildGroupMembersLine() {
-    final convId = widget.conversationId;
+    final convId = _convId;
     if (convId == null) return const SizedBox.shrink();
     return StreamBuilder<LocalConversation?>(
       stream: _chat.repository.watchConversation(convId),
