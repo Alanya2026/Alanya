@@ -131,6 +131,7 @@ class TalkyApp extends StatelessWidget {
       child: Consumer<ThemeController>(
         builder: (_, tc, __) => MaterialApp(
           navigatorKey: navigatorKey,
+          scaffoldMessengerKey: appMessengerKey,
           debugShowCheckedModeBanner: false,
           title: 'Alanya',
           theme: AppTheme.light,
@@ -279,6 +280,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           case IncomingCallActionType.ended:
             callService.rejectIncomingCallFromPush(
               callerId: action.callerId,
+              callId: action.callId,
             );
             break;
         }

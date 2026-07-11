@@ -9,9 +9,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/app_avatar.dart';
 import 'ongoing_call_screen.dart';
 
-/// Écran d'appel entrant.
+/// Écran d'appel entrant (app au premier plan uniquement).
 ///
 /// Surveille `CallService.status` :
 /// - `connecting` ou `connected` (auto-answer depuis CallKit) → push de
@@ -36,9 +37,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.95, end: 1.10).animate(
+    _pulse = Tween<double>(begin: 0.92, end: 1.08).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
     Provider.of<CallService>(context, listen: false).addListener(_onStatusChanged);
@@ -55,8 +56,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     if (!mounted || _navigated) return;
     final cs = Provider.of<CallService>(context, listen: false);
 
-    // Décrochage via CallKit pendant qu'on est sur cet écran → bascule vers
-    // l'écran d'appel en cours.
     if (cs.status == CallStatus.connecting || cs.status == CallStatus.connected) {
       _navigated = true;
       Navigator.of(context).pushReplacement(
@@ -89,7 +88,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
     final cs = Provider.of<CallService>(context, listen: false);
 
-    // Cas appel de groupe : rejoindre via joinGroupCall
     if (cs.groupRoomId != null) {
       final me = context.read<AuthProvider>().currentUser;
       if (me == null) {
@@ -120,7 +118,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       return;
     }
 
-    // Cas appel 1-à-1 : comportement actuel
     await cs.answerCall();
 
     if (!mounted) return;
@@ -148,7 +145,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         final isVideo = cs.isVideo;
         final isGroup = cs.groupRoomId != null;
         final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : 'Inconnu';
-        final initial = name.substring(0, 1).toUpperCase();
+        final subtitle = isGroup
+            ? (isVideo ? 'Appel groupé vidéo' : 'Appel groupé')
+            : (isVideo ? 'Appel vidéo' : 'Appel vocal');
 
         return PopScope(
           onPopInvokedWithResult: (didPop, _) {
@@ -159,47 +158,76 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
             body: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppColors.brandPrimaryDark, AppColors.black],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.brandPrimaryDark,
+                    Color(0xFF0A1628),
+                    AppColors.black,
+                  ],
                 ),
               ),
               child: SafeArea(
                 child: Column(
                   children: [
-                    AppSpacing.vGapXxl,
+                    AppSpacing.vGapXl,
                     Text(
-                      isGroup
-                          ? (isVideo ? 'Appel groupé vidéo entrant' : 'Appel groupé entrant')
-                          : (isVideo ? 'Appel vidéo entrant' : 'Appel vocal entrant'),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        letterSpacing: 1.2,
+                      'Appel entrant',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontSize: 13,
+                        letterSpacing: 2.0,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const Spacer(),
-                    _AvatarPulse(animation: _pulse, initial: initial, photoUrl: caller?.avatarUrl),
-                    AppSpacing.vGapXxl,
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
+                    _IncomingAvatarPulse(
+                      animation: _pulse,
+                      name: name,
+                      imageUrl: caller?.avatarUrl,
                     ),
-                    AppSpacing.vGapSm,
-                    const Text(
-                      'Talky',
-                      style: TextStyle(color: Colors.white54, fontSize: 14),
+                    AppSpacing.vGapXxl,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    AppSpacing.vGapMd,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isVideo
+                              ? CupertinoIcons.video_camera_solid
+                              : CupertinoIcons.phone_fill,
+                          color: Colors.white.withValues(alpha: 0.45),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.55),
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
                     ),
                     const Spacer(flex: 2),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                      padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _CallActionButton(
                             icon: CupertinoIcons.phone_down_fill,
@@ -229,69 +257,59 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 }
 
-class _AvatarPulse extends StatelessWidget {
-  const _AvatarPulse({
+class _IncomingAvatarPulse extends StatelessWidget {
+  const _IncomingAvatarPulse({
     required this.animation,
-    required this.initial,
-    required this.photoUrl,
+    required this.name,
+    required this.imageUrl,
   });
 
   final Animation<double> animation;
-  final String initial;
-  final String? photoUrl;
+  final String name;
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
-    final url = photoUrl;
-    final hasPhoto = url != null &&
-        url.isNotEmpty &&
-        url.toUpperCase() != 'NON DEFINI' &&
-        (url.startsWith('http://') || url.startsWith('https://'));
     return AnimatedBuilder(
       animation: animation,
       builder: (_, __) {
         return SizedBox(
-          width: 220,
-          height: 220,
+          width: 240,
+          height: 240,
           child: Stack(
             alignment: Alignment.center,
             children: [
               Transform.scale(
                 scale: animation.value,
                 child: Container(
-                  width: 220,
-                  height: 220,
+                  width: 240,
+                  height: 240,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.06),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
               Transform.scale(
-                scale: animation.value * 0.85,
+                scale: animation.value * 0.88,
                 child: Container(
-                  width: 220,
-                  height: 220,
+                  width: 200,
+                  height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.10),
+                    color: AppColors.brandPrimary.withValues(alpha: 0.12),
                   ),
                 ),
               ),
-              CircleAvatar(
-                radius: 72,
+              AppAvatar(
+                imageUrl: imageUrl,
+                name: name,
+                size: 148,
                 backgroundColor: AppColors.brandPrimary,
-                backgroundImage: hasPhoto ? NetworkImage(url) : null,
-                child: hasPhoto
-                    ? null
-                    : Text(
-                        initial,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 56,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                showShadow: true,
               ),
             ],
           ),
@@ -318,29 +336,38 @@ class _CallActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.45),
-                  blurRadius: 20,
-                  spreadRadius: 1,
-                ),
-              ],
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.40),
+                    blurRadius: 24,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 34),
             ),
-            child: Icon(icon, color: Colors.white, size: 32),
           ),
         ),
         AppSpacing.vGapMd,
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.75),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );

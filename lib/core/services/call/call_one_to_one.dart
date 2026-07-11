@@ -84,6 +84,18 @@ extension CallOneToOne on CallService {
       // Ringback côté appelant
       _ringtone.startOutgoingRingback();
 
+      // Filet de sécurité local : si aucun état terminal serveur n'arrive
+      // (call_answered / call_busy / call_no_answer / call_rejected…), on
+      // abandonne l'appel pour ne pas laisser le ringback tourner indéfiniment.
+      _cancelOutgoingTimeout();
+      _outgoingTimeoutTimer = Timer(CallService._outgoingTimeout, () async {
+        if (_status == CallStatus.outgoing || _status == CallStatus.connecting) {
+          debugPrint('[CallService] ⏰ Timeout local appel sortant — abandon');
+          await _terminateCall();
+          _showTransientMessage('Pas de réponse.');
+        }
+      });
+
       notify();
     } catch (e) {
       debugPrint('[CallService] Erreur initiateCall: $e');
@@ -132,6 +144,9 @@ extension CallOneToOne on CallService {
 
     // Verrouille immédiatement pour bloquer un éventuel double-appel.
     _status = CallStatus.connecting;
+    // L'auto-réponse a fait son office : on repasse en navigation normale pour
+    // que la minimisation de l'écran d'appel ne le ré-ouvre pas en boucle.
+    _isAutoAnsweringFromPush = false;
     notify();
 
     await _ringtone.stop();
@@ -240,6 +255,9 @@ extension CallOneToOne on CallService {
   Future<void> rejectCall() async {
     if (_remoteUserId == null) return;
 
+    // Mémorise le callId comme terminal pour ignorer un rejeu `incoming_call`.
+    _markTerminalCallId(_currentCallId);
+
     await _ringtone.stop();
     await _callKit.endAll();
 
@@ -290,6 +308,7 @@ extension CallOneToOne on CallService {
 
   void _resetCallState() {
     _resetCallUiState();
+    _cancelOutgoingTimeout();
     _remoteUserId = null;
     _remoteUserName = null;
     _remoteUserPhoto = null;
@@ -303,5 +322,8 @@ extension CallOneToOne on CallService {
     _isRemoteVideoOn = true;
     _durationTimer?.cancel();
     _callEndedByUs = false;
+    _autoAnswerOnNextIncoming = false;
+    _autoAnswerCallerId = null;
+    _isAutoAnsweringFromPush = false;
   }
 }

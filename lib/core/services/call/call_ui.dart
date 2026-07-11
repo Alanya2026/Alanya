@@ -3,6 +3,7 @@ part of '../call_service.dart';
 
 extension CallUi on CallService {
   bool get isCallActive =>
+      _status == CallStatus.outgoing ||
       _status == CallStatus.connecting ||
       _status == CallStatus.connected ||
       _status == CallStatus.joining;

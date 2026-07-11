@@ -16,6 +16,7 @@ import '../meetings/meets_screen.dart';
 import '../profile/profile_screen.dart';
 import '../status/statuses_screen.dart';
 import '../calls/incoming_call_screen.dart';
+import '../calls/ongoing_call_screen.dart';
 import 'glass_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -27,7 +28,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
-  bool _incomingCallShown = false;
+  // Garde unique : un seul écran d'appel (entrant OU actif) affiché à la fois.
+  bool _callScreenShown = false;
   late final PageController _pageController;
 
   StreamSubscription<NotificationAction>? _notifActionSub;
@@ -56,9 +58,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       final callService = Provider.of<CallService>(context, listen: false);
       callService.addListener(_onCallStatusChanged);
-      if (callService.status == CallStatus.incoming && !_incomingCallShown) {
-        _showIncomingCall();
-      }
+      _onCallStatusChanged();
 
       _notifActionSub =
           PushService.notificationActions.listen(_onNotificationAction);
@@ -113,13 +113,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     final callService = Provider.of<CallService>(context, listen: false);
     debugPrint('[HomeScreen] CallService status: ${callService.status}');
-    if (callService.status == CallStatus.incoming && !_incomingCallShown) {
+
+    if (callService.status == CallStatus.idle ||
+        callService.status == CallStatus.ended) {
+      _callScreenShown = false;
+      return;
+    }
+
+    if (_callScreenShown) return;
+
+    // Accepté depuis notification/CallKit : on saute l'écran entrant.
+    if (callService.isAutoAnsweringFromPush) {
+      if (callService.status == CallStatus.incoming ||
+          callService.status == CallStatus.connecting ||
+          callService.status == CallStatus.connected) {
+        _showOngoingCall();
+      }
+      return;
+    }
+
+    if (callService.status == CallStatus.incoming) {
       _showIncomingCall();
+      return;
+    }
+
+    if (callService.status == CallStatus.outgoing ||
+        callService.status == CallStatus.connecting ||
+        callService.status == CallStatus.connected) {
+      _showOngoingCall();
     }
   }
 
   void _showIncomingCall() {
-    _incomingCallShown = true;
+    _callScreenShown = true;
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -127,7 +153,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         builder: (_) => const IncomingCallScreen(),
       ),
     ).then((_) {
-      if (mounted) _incomingCallShown = false;
+      if (mounted) _callScreenShown = false;
+    });
+  }
+
+  void _showOngoingCall() {
+    _callScreenShown = true;
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const OngoingCallScreen(),
+      ),
+    ).then((_) {
+      if (mounted) _callScreenShown = false;
     });
   }
 

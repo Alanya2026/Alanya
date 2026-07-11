@@ -10,6 +10,7 @@ import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/calls/draggable_video_pip.dart';
 import '../../widgets/calls/speaking_indicator_border.dart';
+import '../../widgets/common/app_avatar.dart';
 
 /// Écran d'appel en cours (1-à-1, audio ou vidéo).
 ///
@@ -32,6 +33,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
   bool _localIsMainView = false;
   Offset? _pipOffset;
   bool _controlsVisible = true;
+  final Set<String> _watchedVideoTrackIds = {};
 
   @override
   void initState() {
@@ -70,6 +72,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
 
     _localRenderer.srcObject = cs.localStream;
     _remoteRenderer.srcObject = cs.remoteStream;
+    _watchVideoTracks(cs.localStream);
+    _watchVideoTracks(cs.remoteStream);
 
     // !! S'abonner aux changements de CallService
     cs.addListener(_onCallChanged);
@@ -99,6 +103,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
           debugPrint('[OngoingCall] 📹 Update remote renderer: ${cs.remoteStream != null ? "stream" : "null"}');
           _remoteRenderer.srcObject = cs.remoteStream;
         }
+        _watchVideoTracks(cs.localStream);
+        _watchVideoTracks(cs.remoteStream);
       }
     });
 
@@ -169,15 +175,45 @@ class _OngoingCallScreenState extends State<OngoingCallScreen> {
     setState(() => _pipOffset = offset);
   }
 
+  bool _streamHasActiveVideo(MediaStream? stream) {
+    if (stream == null) return false;
+    final tracks = stream.getVideoTracks();
+    if (tracks.isEmpty) return false;
+    return tracks.any((track) => track.enabled);
+  }
+
+  void _watchVideoTracks(MediaStream? stream) {
+    if (stream == null) return;
+    for (final track in stream.getVideoTracks()) {
+      final trackId = track.id ?? track.label ?? '';
+      if (trackId.isEmpty || _watchedVideoTrackIds.contains(trackId)) continue;
+      _watchedVideoTrackIds.add(trackId);
+      void refresh() {
+        if (mounted) setState(() {});
+      }
+      track.onMute = refresh;
+      track.onUnMute = refresh;
+    }
+  }
+
+  bool _rendererShowsVideo(RTCVideoRenderer renderer, MediaStream? stream) {
+    if (!_streamHasActiveVideo(stream)) return false;
+    if (!_renderersReady) return true;
+    return renderer.videoWidth > 0;
+  }
+
   bool _hasRemoteVideo(CallService cs, bool isGroup) {
-    return !isGroup &&
-        cs.isVideo &&
-        cs.isRemoteVideoOn &&
-        _remoteRenderer.srcObject != null;
+    if (isGroup || !cs.isVideo || !cs.isRemoteVideoOn) return false;
+    final stream = _remoteRenderer.srcObject;
+    if (stream == null) return false;
+    return _rendererShowsVideo(_remoteRenderer, stream);
   }
 
   bool _hasLocalVideo(CallService cs) {
-    return cs.isVideoOn && _localRenderer.srcObject != null;
+    if (!cs.isVideoOn) return false;
+    final stream = _localRenderer.srcObject;
+    if (stream == null) return false;
+    return _rendererShowsVideo(_localRenderer, stream);
   }
 
   Widget? _buildPipChild(
@@ -429,12 +465,6 @@ class _AudioBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = photoUrl;
-    final hasPhoto = url != null &&
-        url.isNotEmpty &&
-        url.toUpperCase() != 'NON DEFINI' &&
-        (url.startsWith('http://') || url.startsWith('https://'));
-    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -451,20 +481,12 @@ class _AudioBackdrop extends StatelessWidget {
             isSpeaking: isSpeaking && !isMuted && !isRemoteMuted,
             shape: BoxShape.circle,
             borderWidth: 4,
-            child: CircleAvatar(
-              radius: 90,
+            child: AppAvatar(
+              imageUrl: photoUrl,
+              name: name,
+              size: 180,
               backgroundColor: AppColors.brandPrimary,
-              backgroundImage: hasPhoto ? NetworkImage(url) : null,
-              child: hasPhoto
-                  ? null
-                  : Text(
-                      initial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 64,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              foregroundColor: Colors.white,
             ),
           ),
           if (isRemoteMuted)
@@ -519,31 +541,15 @@ class _PipAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = photoUrl;
-    final hasPhoto = url != null &&
-        url.isNotEmpty &&
-        url.toUpperCase() != 'NON DEFINI' &&
-        (url.startsWith('http://') || url.startsWith('https://'));
-    final initial =
-        name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
-
     return ColoredBox(
       color: AppColors.brandPrimaryDark,
       child: Center(
-        child: CircleAvatar(
-          radius: 36,
+        child: AppAvatar(
+          imageUrl: photoUrl,
+          name: name,
+          size: 72,
           backgroundColor: AppColors.brandPrimary,
-          backgroundImage: hasPhoto ? NetworkImage(url) : null,
-          child: hasPhoto
-              ? null
-              : Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+          foregroundColor: Colors.white,
         ),
       ),
     );

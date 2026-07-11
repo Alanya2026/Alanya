@@ -32,6 +32,11 @@ extension CallSignaling on CallService {
         return;
       }
       final incomingCallId = data['callId']?.toString();
+      // Idempotence : appel déjà accepté/refusé → ignorer le rejeu (auth replay).
+      if (_isTerminalCallId(incomingCallId)) {
+        debugPrint('[CallService] 🛡 incoming_call ignoré: callId=$incomingCallId déjà traité (terminal)');
+        return;
+      }
       if (_alreadyHandledIncomingCallId(incomingCallId)) {
         debugPrint('[CallService] 🛡 incoming_call dupliqué ignoré: callId=$incomingCallId');
         return;
@@ -47,7 +52,7 @@ extension CallSignaling on CallService {
         return;
       }
       _remoteUserName = data['callerName'] as String?;
-      _remoteUserPhoto = data['callerPhoto'] as String?;
+      _remoteUserPhoto = normalizeBackendUrl(data['callerPhoto']?.toString());
       _isVideo = data['isVideo'] == true;
       _pendingOffer = Map<String, dynamic>.from(offer);
       _currentCallId = incomingCallId;
@@ -72,10 +77,19 @@ extension CallSignaling on CallService {
         return;
       }
 
-      // Sonnerie système (téléphone par défaut de l'utilisateur).
-      _ringtone.startIncomingRingtone().catchError((e) {
-        debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
-      });
+      // Politique sonnerie (source unique) :
+      //  - auto-réponse depuis push → pas de sonnerie du tout.
+      //  - app en arrière-plan / fermée → CallKit gère déjà la sonnerie système.
+      //  - app au premier plan → RingtoneService (sonnerie système en boucle).
+      if (_isAutoAnsweringFromPush) {
+        debugPrint('[CallService] 🔇 Sonnerie entrante ignorée: auto-réponse en cours');
+      } else if (!_isAppForeground) {
+        debugPrint('[CallService] 🔇 Sonnerie entrante déléguée à CallKit (app en arrière-plan)');
+      } else {
+        _ringtone.startIncomingRingtone().catchError((e) {
+          debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
+        });
+      }
     });
 
     // Appel accepté par l'autre
@@ -88,6 +102,7 @@ extension CallSignaling on CallService {
       }
 
       // 🛑 Arrêter le ringback dès que le destinataire décroche
+      _cancelOutgoingTimeout();
       await _ringtone.stop();
 
       if (data is! Map || data['answer'] == null) {
@@ -126,10 +141,54 @@ extension CallSignaling on CallService {
       await _terminateCall();
     });
 
-    // Appel échoué (destinataire hors-ligne)
+    // Appel échoué (destinataire hors-ligne, données invalides, appel bloqué…)
     _apiClient.onSocketEvent(SocketEvents.callFailed, (data) async {
-      debugPrint('[CallService] Appel échoué: ${data?['reason']}');
+      final reason = (data is Map ? data['reason'] : null)?.toString();
+      final code = (data is Map ? data['code'] : null)?.toString();
+      debugPrint('[CallService] Appel échoué: reason=$reason code=$code');
+      _cancelOutgoingTimeout();
+      _markTerminalCallId(_currentCallId);
       await _terminateCall();
+      if (code == 'CALL_BLOCKED') {
+        _showTransientMessage('Appel impossible.');
+      } else if (reason != null && reason.isNotEmpty) {
+        _showTransientMessage(reason);
+      } else {
+        _showTransientMessage('Échec de l\'appel.');
+      }
+    });
+
+    // Correspondant occupé (déjà en sonnerie ou en communication côté serveur).
+    // ≠ « Un appel est déjà en cours » (état local de l'appelant) : ici c'est le
+    // destinataire distant qui est occupé.
+    _apiClient.onSocketEvent(SocketEvents.callBusy, (data) async {
+      debugPrint('[CallService] 📵 call_busy reçu: $data');
+      if (_status != CallStatus.outgoing && _status != CallStatus.connecting) {
+        debugPrint('[CallService] 🛡 call_busy ignoré: status=$_status');
+        return;
+      }
+      _cancelOutgoingTimeout();
+      _markTerminalCallId(_currentCallId);
+      await _terminateCall();
+      _showTransientMessage('Votre correspondant est occupé.');
+    });
+
+    // Pas de réponse (timeout serveur sur un appel resté en sonnerie).
+    _apiClient.onSocketEvent(SocketEvents.callNoAnswer, (data) async {
+      debugPrint('[CallService] 📴 call_no_answer reçu: $data');
+      if (_status != CallStatus.outgoing && _status != CallStatus.connecting) {
+        debugPrint('[CallService] 🛡 call_no_answer ignoré: status=$_status');
+        return;
+      }
+      _cancelOutgoingTimeout();
+      _markTerminalCallId(_currentCallId);
+      await _terminateCall();
+      _showTransientMessage('Pas de réponse.');
+    });
+
+    // Socket (ré)authentifié : rejoue les refus mis en file avant la connexion.
+    _apiClient.onSocketEvent(SocketEvents.authVerified, (_) {
+      _flushPendingRejects();
     });
 
     // ICE candidate 1-à-1
@@ -157,7 +216,7 @@ extension CallSignaling on CallService {
       }
       _remoteUserId = int.tryParse(data['callerId'].toString());
       _remoteUserName = data['callerName'] as String?;
-      _remoteUserPhoto = data['callerPhoto'] as String?;
+      _remoteUserPhoto = normalizeBackendUrl(data['callerPhoto']?.toString());
       _isVideo = data['isVideo'] == true;
       _groupRoomId = data['roomId'] as String?;
       // Le caller est notre seule info connue à l'instant T → on le pose dans le roster

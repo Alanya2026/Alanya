@@ -85,23 +85,16 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     await callService.navigateToCallUi(context);
   }
 
-  Future<void> _openMessage() async {
-    try {
-      final conv = await _api.createConversation(participantID: _userId);
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChatDetailScreen(
-            userName: _displayName,
-            conversationId: conv['conversID'],
-            userId: _userId,
-          ),
+  void _openMessage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatDetailScreen(
+          userName: _displayName,
+          userId: _userId,
         ),
-      );
-    } catch (e) {
-      _snack('Impossible d\'ouvrir la discussion : $e', error: true);
-    }
+      ),
+    );
   }
 
   Future<void> _toggleFavorite() async {

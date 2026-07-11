@@ -23,10 +23,13 @@ extension CallIncoming on CallService {
     _currentCallId = callId.isNotEmpty ? callId : null;
     _autoAnswerOnNextIncoming = true;
     _autoAnswerCallerId = callerId;
+    // Accepté depuis la notification/CallKit : on saute IncomingCallScreen et on
+    // ouvre directement l'écran d'appel actif (voir HomeScreen + call_ui).
+    _isAutoAnsweringFromPush = true;
     _status = CallStatus.incoming;
     notify();
 
-    debugPrint('[CallService] !! Status = incoming, auto-answer armé');
+    debugPrint('[CallService] !! Status = incoming, auto-answer armé (from push)');
 
     // Si l'offer est déjà arrivée, répondre immédiatement
     if (_pendingOffer != null) {
@@ -76,21 +79,68 @@ extension CallIncoming on CallService {
   }
 
   /// Appelée depuis main.dart quand l'utilisateur refuse un appel via CallKit.
-  Future<void> rejectIncomingCallFromPush({required String callerId}) async {
-    debugPrint('[CallService] 📲 rejectIncomingCallFromPush caller=$callerId');
-    final cid = int.tryParse(callerId);
-    if (cid != null) {
-      try {
-        _apiClient.sendSocketEvent(SocketEvents.rejectCall, {'callerId': cid});
-      } catch (e) {
-        debugPrint('[CallService] rejectCall socket error: $e');
-      }
-    }
+  ///
+  /// On coupe immédiatement CallKit + sonnerie, on mémorise le callId comme
+  /// terminal (pour ignorer un éventuel rejeu `incoming_call`), puis on émet
+  /// `reject_call`. Si le socket n'est pas encore prêt (cold start / app fermée),
+  /// le refus est mis en file et rejoué à l'authentification du socket, ce qui
+  /// évite d'ouvrir l'app inutilement tout en garantissant que l'appelant est
+  /// bien averti.
+  Future<void> rejectIncomingCallFromPush({
+    required String callerId,
+    String? callId,
+  }) async {
+    debugPrint('[CallService] 📲 rejectIncomingCallFromPush caller=$callerId callId=$callId');
+
+    _markTerminalCallId(callId ?? _currentCallId);
     _autoAnswerOnNextIncoming = false;
     _autoAnswerCallerId = null;
+    _isAutoAnsweringFromPush = false;
+
+    await _ringtone.stop();
+    await _callKit.endAll();
+
+    final cid = int.tryParse(callerId);
+    if (cid != null) {
+      if (_apiClient.isSocketReady) {
+        try {
+          _apiClient.sendSocketEvent(SocketEvents.rejectCall, {'callerId': cid});
+        } catch (e) {
+          debugPrint('[CallService] rejectCall socket error: $e');
+          _pendingRejectCallerIds.add(callerId);
+        }
+      } else {
+        debugPrint('[CallService] ⏳ Socket non prêt → refus mis en file');
+        _pendingRejectCallerIds.add(callerId);
+        if (!_apiClient.isSocketConnected) {
+          _apiClient.connectSocket();
+        }
+      }
+    }
+
     if (_status == CallStatus.incoming) {
       _status = CallStatus.idle;
       notify();
+    }
+  }
+
+  /// Rejoue les refus mis en file (voir [rejectIncomingCallFromPush]) une fois le
+  /// socket authentifié. Appelé depuis le listener `auth:verified`.
+  void _flushPendingRejects() {
+    if (_pendingRejectCallerIds.isEmpty) return;
+    if (!_apiClient.isSocketReady) return;
+    final pending = List<String>.from(_pendingRejectCallerIds);
+    _pendingRejectCallerIds.clear();
+    for (final callerId in pending) {
+      final cid = int.tryParse(callerId);
+      if (cid == null) continue;
+      debugPrint('[CallService] 🔁 Rejeu refus en file → reject_call caller=$cid');
+      try {
+        _apiClient.sendSocketEvent(SocketEvents.rejectCall, {'callerId': cid});
+      } catch (e) {
+        debugPrint('[CallService] rejeu reject_call échoué: $e');
+        _pendingRejectCallerIds.add(callerId);
+      }
     }
   }
 }

@@ -33,7 +33,9 @@ class RingtoneService {
   } 
 
   Future<void> startIncomingRingtone() async {
-    if (kIsWeb || _active != _ActiveSound.none) return;
+    if (kIsWeb) return;
+    if (_active == _ActiveSound.incoming) return;
+    if (_active != _ActiveSound.none) await stop();
     _active = _ActiveSound.incoming;
     debugPrint('[RingtoneService] 🔔 Sonnerie système (appelé)');
 
@@ -49,7 +51,9 @@ class RingtoneService {
   // Appelant : ringback custom 
 
   Future<void> startOutgoingRingback() async {
-    if (kIsWeb || _active != _ActiveSound.none) return;
+    if (kIsWeb) return;
+    if (_active == _ActiveSound.outgoing) return;
+    if (_active != _ActiveSound.none) await stop();
     _active = _ActiveSound.outgoing;
     debugPrint('[RingtoneService] 📞 Ringback (appelant)');
 

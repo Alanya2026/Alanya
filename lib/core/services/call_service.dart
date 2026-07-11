@@ -14,6 +14,7 @@ import 'ringtone_service.dart';
 import 'webrtc_service.dart';
 import 'call/speaking_detector.dart'; // détection locale du locuteur actif
 import '../navigation/app_navigator.dart';
+import '../utils/backend_url.dart';
 import 'meeting_service.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
@@ -92,6 +93,23 @@ class CallService extends ChangeNotifier {
   bool _autoAnswerOnNextIncoming = false;
   String? _autoAnswerCallerId;
   final Map<String, DateTime> _recentIncomingCallIds = {};
+
+  // Auto-réponse depuis une notification/CallKit : on saute l'écran d'appel
+  // entrant (IncomingCallScreen) et on ouvre directement l'écran d'appel actif.
+  bool _isAutoAnsweringFromPush = false;
+
+  // Filet de sécurité local : si aucun état terminal serveur (call_answered,
+  // call_busy, call_no_answer, call_rejected…) n'arrive, on abandonne l'appel.
+  Timer? _outgoingTimeoutTimer;
+  static const Duration _outgoingTimeout = Duration(seconds: 50);
+
+  // callId déjà traités (acceptés/refusés) — évite de re-sonner sur un
+  // incoming_call rejoué par le backend (auth replay).
+  final Map<String, DateTime> _handledTerminalCallIds = {};
+
+  // File d'attente des refus émis avant que le socket soit prêt (cold start /
+  // decline depuis la notification). Rejoués à l'authentification du socket.
+  final Set<String> _pendingRejectCallerIds = {};
 
   /// Hook optionnel après fin d'appel local (ex. resync historique).
   Future<void> Function()? onCallTerminatedHook;
@@ -198,6 +216,14 @@ class CallService extends ChangeNotifier {
     }
   }
 
+  /// Vrai si l'app est au premier plan (ou état inconnu au tout début du boot).
+  /// Sert à choisir la source de sonnerie entrante : RingtoneService en
+  /// foreground, CallKit en background/app fermée (source unique).
+  bool get _isAppForeground {
+    final state = WidgetsBinding.instance.lifecycleState;
+    return state == null || state == AppLifecycleState.resumed;
+  }
+
   bool _isMeetingActive() {
     final context = appNavigatorKey.currentContext;
     if (context == null) return false;
@@ -208,6 +234,8 @@ class CallService extends ChangeNotifier {
     }
   }
 
+  bool get isAutoAnsweringFromPush => _isAutoAnsweringFromPush;
+
   bool _alreadyHandledIncomingCallId(String? callId) {
     if (callId == null || callId.isEmpty) return false;
     final now = DateTime.now();
@@ -215,6 +243,44 @@ class CallService extends ChangeNotifier {
     if (_recentIncomingCallIds.containsKey(callId)) return true;
     _recentIncomingCallIds[callId] = now;
     return false;
+  }
+
+  /// Mémorise un callId ayant atteint un état terminal (accepté/refusé) pour
+  /// ignorer un `incoming_call` rejoué par le backend.
+  void _markTerminalCallId(String? callId) {
+    if (callId == null || callId.isEmpty) return;
+    final now = DateTime.now();
+    _handledTerminalCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 120);
+    _handledTerminalCallIds[callId] = now;
+  }
+
+  bool _isTerminalCallId(String? callId) {
+    if (callId == null || callId.isEmpty) return false;
+    final now = DateTime.now();
+    _handledTerminalCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 120);
+    return _handledTerminalCallIds.containsKey(callId);
+  }
+
+  void _cancelOutgoingTimeout() {
+    _outgoingTimeoutTimer?.cancel();
+    _outgoingTimeoutTimer = null;
+  }
+
+  /// Affiche un message transitoire (occupé / pas de réponse / échec) via le
+  /// ScaffoldMessenger racine — indépendant de l'écran courant.
+  void _showTransientMessage(String message) {
+    final messenger = appMessengerKey.currentState;
+    if (messenger == null) {
+      debugPrint('[CallService] ⚠ messenger indisponible: "$message"');
+      return;
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ));
   }
 
   @override

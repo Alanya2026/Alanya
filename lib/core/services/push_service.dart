@@ -60,7 +60,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           callerPhoto: data['photo']?.toString(),
           isVideo: data['isVideo'] == 'true',
           roomId: data['roomId']?.toString(),
-          silent: true,
+          silent: false,
         );
       }
     } else if (type == 'call_ended') {

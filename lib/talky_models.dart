@@ -694,6 +694,8 @@ class SocketEvents {
   static const callRejected  = 'call_rejected';
   static const callEnded     = 'call_ended';
   static const callFailed    = 'call_failed';
+  static const callBusy      = 'call_busy';       // cible occupée (ringing/in_call)
+  static const callNoAnswer  = 'call_no_answer';  // timeout serveur sans réponse
   static const callLogUpdated = 'call_log_updated';
 
   // Appels groupe (Flutter → Backend)
@@ -718,6 +720,7 @@ class SocketEvents {
   static const callVideoState     = 'call:video_state';
   static const groupVideoState    = 'group:video_state';
   static const meetingMuteState   = 'meeting:mute_state';
+  static const meetingVideoState  = 'meeting:video_state';
 
   // Meetings (Flutter → Backend)
   static const meetingCreate      = 'meeting:create';
