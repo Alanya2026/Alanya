@@ -36,6 +36,7 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
   final _captionCtrl = TextEditingController();
   final _pageCtrl = PageController();
   int _page = 0;
+  bool _isSending = false;
 
   @override
   void dispose() {
@@ -45,6 +46,8 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
   }
 
   void _send() {
+    if (_isSending) return;
+    _isSending = true;
     final caption = _captionCtrl.text.trim();
     Navigator.pop(
       context,
@@ -165,11 +168,17 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
                       shape: const CircleBorder(),
                       child: InkWell(
                         customBorder: const CircleBorder(),
-                        onTap: _send,
-                        child: const SizedBox(
+                        onTap: _isSending ? null : _send,
+                        child: SizedBox(
                           width: 48,
                           height: 48,
-                          child: Icon(Icons.send, color: AppColors.white, size: 22),
+                          child: Icon(
+                            Icons.send,
+                            color: _isSending
+                                ? AppColors.white.withValues(alpha: 0.5)
+                                : AppColors.white,
+                            size: 22,
+                          ),
                         ),
                       ),
                     ),

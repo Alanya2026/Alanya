@@ -546,9 +546,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
           foregroundColor: isMe
               ? context.colors.onPrimary
               : context.colors.primary,
-          chatContext: widget.conversationId != null
+          chatContext: _convId != null
               ? VoiceChatContext(
-                  conversationId: widget.conversationId!,
+                  conversationId: _convId!,
                   title: widget.userName,
                   userId: widget.userId,
                   isGroup: widget.isGroup,
@@ -621,6 +621,56 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
+  /// Overlay spinner ou barre de progression pendant l'envoi d'un média.
+  Widget _buildUploadProgressOverlay(LocalMessage msg) {
+    if (msg.status != 0) return const SizedBox.shrink();
+
+    return ValueListenableBuilder<Map<String, double>>(
+      valueListenable: _chat.repository.uploadProgress,
+      builder: (context, progressMap, _) {
+        final progress = progressMap[msg.clientId];
+        return Container(
+          color: Colors.black26,
+          alignment: Alignment.center,
+          child: progress != null
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 4,
+                          backgroundColor: AppColors.white.withValues(alpha: 0.25),
+                          color: AppColors.white,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '${(progress * 100).round()} %',
+                        style: context.text.labelSmall?.copyWith(
+                          color: AppColors.white,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.white,
+                  ),
+                ),
+        );
+      },
+    );
+  }
+
   Widget _buildImageMedia(LocalMessage msg) {
     final uploading = msg.status == 0;
     return GestureDetector(
@@ -643,7 +693,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                           Icon(Icons.broken_image, size: 48, color: context.colors.onSurfaceVariant),
                     ),
             ),
-            if (uploading) const CircularProgressIndicator(color: AppColors.white),
+            if (uploading) _buildUploadProgressOverlay(msg),
           ],
         ),
       ),
@@ -661,14 +711,21 @@ extension _ChatBubbles on _ChatDetailScreenState {
           color: AppColors.immersiveBackground,
           borderRadius: AppRadius.brSm,
         ),
-        child: Center(
-          child: uploading
-              ? const CircularProgressIndicator(color: AppColors.white)
-              : Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm + 2),
-                  decoration: BoxDecoration(color: AppColors.white.withAlpha(50), shape: BoxShape.circle),
-                  child: const Icon(Icons.play_arrow, color: AppColors.white, size: 36),
+        child: Stack(
+          fit: StackFit.expand,
+          alignment: Alignment.center,
+          children: [
+            if (!uploading)
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm + 2),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withAlpha(50),
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.play_arrow, color: AppColors.white, size: 36),
+              ),
+            if (uploading) _buildUploadProgressOverlay(msg),
+          ],
         ),
       ),
     );
@@ -1041,16 +1098,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                   child: const Icon(Icons.play_arrow, color: AppColors.white, size: 24),
                 ),
               ),
-            if (uploading)
-              Container(
-                color: Colors.black26,
-                alignment: Alignment.center,
-                child: const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white),
-                ),
-              ),
+            if (uploading) _buildUploadProgressOverlay(msg),
             if (overlayExtra != null && overlayExtra > 0)
               Container(
                 color: Colors.black54,

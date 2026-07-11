@@ -69,7 +69,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
       String? photoUrl;
       if (_photoFile != null) {
-        final res = await api.uploadAvatar(_photoFile!);
+        final res = await api.uploadImage(_photoFile!);
         photoUrl = (res['url'] as String?)?.trim();
       }
 

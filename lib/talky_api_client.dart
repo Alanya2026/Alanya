@@ -191,15 +191,103 @@ class TalkyApiClient {
 
   // ── UPLOAD HELPER ─────────────────────────────────────────────────
 
+  /// MIME pour upload multipart — fallback par extension si lookup échoue.
+  MediaType mimeTypeForPath(String path) {
+    final mimeStr = lookupMimeType(path) ?? _mimeFallbackFromExtension(path);
+    final slash = mimeStr.indexOf('/');
+    if (slash > 0) {
+      return MediaType(mimeStr.substring(0, slash), mimeStr.substring(slash + 1));
+    }
+    return MediaType('application', 'octet-stream');
+  }
+
+  String _mimeFallbackFromExtension(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'mp4':
+      case 'm4v':
+        return 'video/mp4';
+      case 'mov':
+        return 'video/quicktime';
+      case 'webm':
+        return 'video/webm';
+      case '3gp':
+        return 'video/3gpp';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'm4a':
+        return 'audio/mp4';
+      case 'mp3':
+        return 'audio/mpeg';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  Duration uploadTimeoutForFileSize(int bytes) {
+    final mb = bytes / (1024 * 1024);
+    final seconds = (30 + mb * 2).ceil();
+    return Duration(seconds: seconds.clamp(30, 600));
+  }
+
+  TalkyException uploadHttpException(http.Response response) {
+    final code = response.statusCode;
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map && body['error'] != null) {
+        return TalkyException(body['error'].toString(), code);
+      }
+    } catch (_) {
+      // body non JSON (ex. page nginx HTML)
+    }
+    final snippet = response.body.length > 120
+        ? '${response.body.substring(0, 120)}…'
+        : response.body;
+    return TalkyException(
+      snippet.isEmpty ? 'Upload échoué' : snippet,
+      code,
+    );
+  }
+
   // http.MultipartFile.fromPath n'infère PAS le type MIME (octet-stream par
   // défaut), que le filtre multer du backend rejette. On le détecte ici.
-  Future<http.MultipartFile> _multipartFile(String field, File file) async {
-    final mimeStr = lookupMimeType(file.path) ?? 'application/octet-stream';
-    final slash = mimeStr.indexOf('/');
-    final mediaType = slash > 0
-        ? MediaType(mimeStr.substring(0, slash), mimeStr.substring(slash + 1))
-        : MediaType('application', 'octet-stream');
-    return http.MultipartFile.fromPath(field, file.path, contentType: mediaType);
+  Future<http.MultipartFile> _multipartFile(
+    String field,
+    File file, {
+    void Function(double progress)? onProgress,
+  }) async {
+    final mediaType = mimeTypeForPath(file.path);
+    final length = await file.length();
+    if (onProgress == null) {
+      return http.MultipartFile.fromPath(
+        field,
+        file.path,
+        contentType: mediaType,
+      );
+    }
+    var sent = 0;
+    final stream = file.openRead().map((chunk) {
+      sent += chunk.length;
+      if (length > 0) onProgress(sent / length);
+      return chunk;
+    });
+    final name = file.path.split('/').last;
+    return http.MultipartFile(
+      field,
+      stream,
+      length,
+      filename: name,
+      contentType: mediaType,
+    );
   }
 
   void dispose() {

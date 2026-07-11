@@ -163,11 +163,14 @@ class AuthProvider extends ChangeNotifier {
   /// Upload une nouvelle photo de profil puis rafraîchit le user.
   /// Retourne l'URL servie par le backend. Lève en cas d'échec.
   Future<String> updateAvatar(File file) async {
-    final res = await _apiClient.uploadAvatar(file);
+    final res = await _apiClient.uploadImage(file);
     final url = (res['url'] as String?)?.trim();
     if (url == null || url.isEmpty) {
       throw TalkyException('Réponse upload invalide', 0);
     }
+    // L'upload ne fait qu'héberger l'image : on doit définir explicitement
+    // l'avatar de l'utilisateur connecté (sinon aucune photo n'est appliquée).
+    await _apiClient.updateMe(avatarUrl: url);
     await refreshProfile();
     return url;
   }
