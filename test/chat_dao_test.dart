@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/db/chat_dao.dart';
 
@@ -143,6 +143,79 @@ void main() {
 
       final conv = await (db.select(db.localConversations)..where((c) => c.conversID.equals(convId))).getSingle();
       expect(conv.unreadCount, 0);
+    });
+
+    test('bumpConvLastStatusIfMine updates null preview status', () async {
+      final now = DateTime.now().toUtc();
+      const convId = 30;
+      const myId = 7;
+
+      await db.into(db.localConversations).insert(LocalConversationsCompanion(
+        conversID: const Value(convId),
+        lastMessage: const Value('hello'),
+        lastMessageAt: Value(now),
+        lastMessageSenderID: const Value(myId),
+      ));
+
+      await dao.bumpConvLastStatusIfMine(convId, myId, 3);
+
+      final conv = await (db.select(db.localConversations)
+            ..where((c) => c.conversID.equals(convId)))
+          .getSingle();
+      expect(conv.lastMessageStatus, 3);
+    });
+
+    test('reconcileLastMessageStatus aligns preview with latest sent message', () async {
+      final now = DateTime.now().toUtc();
+      const convId = 31;
+      const myId = 7;
+
+      await db.into(db.localConversations).insert(LocalConversationsCompanion(
+        conversID: const Value(convId),
+        lastMessage: const Value('stale preview'),
+        lastMessageAt: Value(now),
+        lastMessageSenderID: const Value(myId),
+        lastMessageStatus: const Value(1),
+      ));
+
+      await db.into(db.localMessages).insert(LocalMessagesCompanion.insert(
+        clientId: 'srv_500',
+        msgID: const Value(500),
+        conversationID: convId,
+        senderID: myId,
+        sendAt: now,
+        status: const Value(3),
+      ));
+
+      await dao.reconcileLastMessageStatus(convId, myId);
+
+      final conv = await (db.select(db.localConversations)
+            ..where((c) => c.conversID.equals(convId)))
+          .getSingle();
+      expect(conv.lastMessageStatus, 3);
+    });
+
+    test('bumpMyMessagesStatus sets readAt when status becomes read', () async {
+      final now = DateTime.now().toUtc();
+      const convId = 32;
+      const myId = 7;
+
+      await db.into(db.localMessages).insert(LocalMessagesCompanion.insert(
+        clientId: 'srv_600',
+        msgID: const Value(600),
+        conversationID: convId,
+        senderID: myId,
+        sendAt: now,
+        status: const Value(1),
+      ));
+
+      await dao.bumpMyMessagesStatus(convId, myId, 3);
+
+      final msg = await (db.select(db.localMessages)
+            ..where((m) => m.clientId.equals('srv_600')))
+          .getSingle();
+      expect(msg.status, 3);
+      expect(msg.readAt, isNot(isNull));
     });
   });
 }

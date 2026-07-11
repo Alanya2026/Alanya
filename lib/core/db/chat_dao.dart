@@ -210,14 +210,18 @@ class ChatDao {
     }
 
   /// Fait monter le statut de MES messages envoyés dans une conversation
-  
   Future<void> bumpMyMessagesStatus(int conversationID, int myId, int status) {
+    final now = DateTime.now();
     return (db.update(db.localMessages)
           ..where((m) =>
               m.conversationID.equals(conversationID) &
               m.senderID.equals(myId) &
               m.status.isSmallerThanValue(status)))
-        .write(LocalMessagesCompanion(status: Value(status)));
+        .write(LocalMessagesCompanion(
+      status: Value(status),
+      deliveredAt: status >= 2 ? Value(now) : const Value.absent(),
+      readAt: status >= 3 ? Value(now) : const Value.absent(),
+    ));
   }
 
   /// Monte le statut affiché sur l'aperçu de conversation, uniquement si le
@@ -227,8 +231,55 @@ class ChatDao {
           ..where((c) =>
               c.conversID.equals(conversID) &
               c.lastMessageSenderID.equals(myId) &
-              c.lastMessageStatus.isSmallerThanValue(status)))
+              (c.lastMessageStatus.isNull() |
+                  c.lastMessageStatus.isSmallerThanValue(status))))
         .write(LocalConversationsCompanion(lastMessageStatus: Value(status)));
+  }
+
+  /// Aligne `lastMessageStatus` sur le statut réel de mon dernier message
+  /// (évite l'écart liste vs conversation quand l'aperçu cache est stale).
+  Future<void> reconcileLastMessageStatus(int conversID, int myId) async {
+    final conv = await (db.select(db.localConversations)
+          ..where((c) => c.conversID.equals(conversID)))
+        .getSingleOrNull();
+    if (conv == null || conv.lastMessageSenderID != myId) return;
+
+    final latestMine = await (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversID) &
+              m.senderID.equals(myId) &
+              m.isDeleted.equals(false))
+          ..orderBy([
+            (m) => OrderingTerm(expression: m.sendAt, mode: OrderingMode.desc),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+    if (latestMine == null) return;
+
+    final cached = conv.lastMessageStatus ?? 0;
+    if (latestMine.status > cached) {
+      await (db.update(db.localConversations)
+            ..where((c) =>
+                c.conversID.equals(conversID) &
+                c.lastMessageSenderID.equals(myId)))
+          .write(LocalConversationsCompanion(
+        lastMessageStatus: Value(latestMine.status),
+      ));
+    }
+  }
+
+  Future<void> reconcileAllLastMessageStatuses(int myId) async {
+    if (myId == 0) return;
+    final convs = await (db.select(db.localConversations)
+          ..where((c) => c.lastMessageSenderID.equals(myId)))
+        .get();
+    for (final conv in convs) {
+      await reconcileLastMessageStatus(conv.conversID, myId);
+    }
+  }
+
+  Future<List<LocalConversation>> getAllConversations() {
+    return db.select(db.localConversations).get();
   }
 
   /// Marque un message comme définitivement échoué. Sort de l'outbox : il ne sera

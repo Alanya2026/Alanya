@@ -9,6 +9,8 @@ import '../db/chat_dao.dart';
 import '../utils/forward_message.dart';
 import '../utils/backend_url.dart';
 import '../utils/media_album.dart';
+import '../utils/media_staging.dart';
+import '../utils/upload_errors.dart';
 import 'local_notification_helper.dart';
 import 'media_cache_service.dart';
 import 'voice_asset_resolver.dart';
@@ -19,6 +21,13 @@ class ChatRepository {
   final ChatDao _dao;
   final TalkyApiClient _api;
   final MediaCacheService _mediaCache = MediaCacheService();
+
+  /// Progression d'upload éphémère par [clientId] (0.0–1.0).
+  final ValueNotifier<Map<String, double>> uploadProgress =
+      ValueNotifier<Map<String, double>>({});
+
+  /// Uploads en cours par [clientId] — évite les uploads parallèles du même message.
+  final Set<String> _inFlightUploads = {};
 
   int _myId = 0;
   bool _listenersBound = false;
@@ -156,13 +165,34 @@ class ChatRepository {
   Future<void> syncConversations() async {
     try {
       final raw = await _api.getConversations();
+      final localById = {
+        for (final c in await _dao.getAllConversations()) c.conversID: c,
+      };
       final companions = raw
           .whereType<Map<String, dynamic>>()
-          .map((j) => _convToCompanion(Conversation.fromJson(j), j))
+          .map((j) {
+            final conv = Conversation.fromJson(j);
+            var companion = _convToCompanion(conv, j);
+            if (_myId != 0 &&
+                conv.lastMessageSenderID == _myId &&
+                localById[conv.conversID]?.lastMessageSenderID == _myId) {
+              final serverStatus = conv.lastMessageStatus ?? 0;
+              final localStatus =
+                  localById[conv.conversID]?.lastMessageStatus ?? 0;
+              final merged = serverStatus > localStatus ? serverStatus : localStatus;
+              if (merged > serverStatus) {
+                companion = companion.copyWith(
+                  lastMessageStatus: Value(merged),
+                );
+              }
+            }
+            return companion;
+          })
           .toList();
       final serverIds = companions.map((c) => c.conversID.value).toSet();
       await _dao.upsertConversations(companions);
       await _dao.deleteConversationsNotIn(serverIds);
+      await _dao.reconcileAllLastMessageStatuses(_myId);
     } catch (e) {
       debugPrint('[ChatRepo] syncConversations échouée: $e');
     }
@@ -183,6 +213,7 @@ class ChatRepository {
       for (final j in raw.whereType<Map<String, dynamic>>()) {
         await _upsertServerMsg(j, prefetchMedia: true);
       }
+      await _dao.reconcileLastMessageStatus(conversationID, _myId);
     } catch (e) {
       debugPrint('[ChatRepo] syncMessages($conversationID) échouée: $e');
     }
@@ -350,7 +381,16 @@ class ChatRepository {
     }
     final clientId = _newClientId();
     final now = DateTime.now().toUtc();
-    final name = mediaName ?? file.path.split('/').last;
+    File uploadFile;
+    try {
+      uploadFile = file.path.contains('talky_outbox')
+          ? file
+          : await stageMediaFile(file);
+    } catch (e) {
+      debugPrint('[ChatRepo] sendMediaFile staging échoué: $e');
+      return;
+    }
+    final name = mediaName ?? uploadFile.path.split('/').last;
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -363,8 +403,8 @@ class ChatRepository {
       status: const Value(0),
       mediaName: Value(name),
       mediaDuration: Value(mediaDuration),
-      localMediaPath: Value(file.path),
-      pendingUploadPath: Value(file.path),
+      localMediaPath: Value(uploadFile.path),
+      pendingUploadPath: Value(uploadFile.path),
       isForwarded: Value(isForwarded),
       isViewOnce: Value(isViewOnce),
       syncPending: const Value(true),
@@ -378,38 +418,19 @@ class ChatRepository {
         status: 0);
 
     try {
-      final res = await _api.uploadMedia(file);
-      final url = res['url'] as String?;
-      if (url == null) throw Exception('upload sans url');
-
-      await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))
-          .write(LocalMessagesCompanion(
-        mediaUrl: Value(url),
-        pendingUploadPath: const Value(null),
-        status: const Value(1), // envoyé (message:sent affinera ensuite)
-      ));
-
-      _emitSend(
+      await _uploadAndEmit(
         clientId: clientId,
         conversationID: conversationID,
-        content: content,
+        file: uploadFile,
         type: type,
-        mediaUrl: url,
+        content: content,
         mediaName: name,
         mediaDuration: mediaDuration,
         isForwarded: isForwarded,
         isViewOnce: isViewOnce,
       );
     } catch (e) {
-      debugPrint('[ChatRepo] upload média échoué: $e');
-      // Erreur réseau (timeout / socket coupé) → laisser en pending pour rejeu
-      // par flushOutbox à la reconnexion. Erreur fatale (4xx/5xx serveur) →
-      // markFailed pour ne pas tourner en boucle.
-      if (_isTransientNetworkError(e)) {
-        debugPrint('[ChatRepo] upload différé — pending intact pour rejeu');
-      } else {
-        await _dao.markFailed(clientId);
-      }
+      await _handleUploadFailure(clientId, e, 'upload média échoué');
     }
   }
 
@@ -454,8 +475,11 @@ class ChatRepository {
     final preview = previewLabelForAlbumTypes(types);
     final counts = countAlbumMediaTypesFromTypes(types);
 
+    final pending = <_PendingAlbumUpload>[];
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
+      final clientId = _newClientId();
+      final name = item.mediaName ?? item.file.path.split('/').last;
       final marker = encodeAlbumMarker(
         albumId: albumId,
         index: i,
@@ -464,96 +488,203 @@ class ChatRepository {
         videoCount: counts.videos,
         caption: effectiveCaption,
       );
-      await _sendAlbumItem(
+
+      await _dao.upsertMessage(LocalMessagesCompanion.insert(
+        clientId: clientId,
         conversationID: conversationID,
-        type: item.type,
+        senderID: _myId,
+        sendAt: now,
+        clickSentAt: Value(now),
+        content: Value(marker),
+        type: Value(item.type),
+        status: const Value(0),
+        mediaName: Value(name),
+        mediaDuration: Value(item.duration),
+        localMediaPath: Value(item.file.path),
+        pendingUploadPath: Value(item.file.path),
+        isForwarded: Value(isForwarded),
+        syncPending: const Value(true),
+      ));
+
+      pending.add(_PendingAlbumUpload(
+        clientId: clientId,
         file: item.file,
-        mediaName: item.mediaName,
-        mediaDuration: item.duration,
+        type: item.type,
         content: marker,
+        mediaName: name,
+        mediaDuration: item.duration,
         isForwarded: isForwarded,
-        bumpSummary: i == items.length - 1,
-        summaryPreview: preview,
-        summaryType: item.type,
-        summaryAt: now,
-      );
+      ));
+    }
+
+    _bumpConversationSummary(
+      conversationID,
+      preview,
+      items.last.type,
+      now,
+      senderID: _myId,
+      status: 0,
+    );
+
+    await _runConcurrent(pending, 3, (p) async {
+      try {
+        await _uploadAndEmit(
+          clientId: p.clientId,
+          conversationID: conversationID,
+          file: p.file,
+          type: p.type,
+          content: p.content,
+          mediaName: p.mediaName,
+          mediaDuration: p.mediaDuration,
+          isForwarded: p.isForwarded,
+        );
+      } catch (e) {
+        await _handleUploadFailure(p.clientId, e, 'upload album item échoué');
+      }
+    });
+  }
+
+  void _setUploadProgress(String clientId, double? progress) {
+    final next = Map<String, double>.from(uploadProgress.value);
+    if (progress == null) {
+      next.remove(clientId);
+    } else {
+      next[clientId] = progress.clamp(0.0, 1.0);
+    }
+    uploadProgress.value = next;
+  }
+
+
+  Future<File?> _resolvePendingUploadFile(LocalMessage m) async {
+    final pending = m.pendingUploadPath;
+    if (pending != null && pending.isNotEmpty) {
+      final f = File(pending);
+      if (f.existsSync()) return f;
+    }
+    final local = m.localMediaPath;
+    if (local != null && local.isNotEmpty) {
+      final f = File(local);
+      if (f.existsSync()) {
+        try {
+          return await stageMediaFile(f);
+        } catch (e) {
+          debugPrint('[ChatRepo] re-stage échoué: $e');
+        }
+      }
+    }
+    return null;
+  }
+
+  Future<void> _uploadAndEmit({
+    required String clientId,
+    required int conversationID,
+    required File file,
+    required int type,
+    String? content,
+    String? mediaName,
+    int? mediaDuration,
+    bool isForwarded = false,
+    bool isViewOnce = false,
+    int? replyToID,
+    String? replyToContent,
+  }) async {
+    if (!_inFlightUploads.add(clientId)) {
+      debugPrint('[ChatRepo] upload déjà en cours pour $clientId');
+      return;
+    }
+    try {
+      var attempt429 = 0;
+      while (true) {
+        try {
+          final res = await _api.uploadMedia(
+            file,
+            onProgress: (p) => _setUploadProgress(clientId, p),
+          );
+          _setUploadProgress(clientId, null);
+          final url = res['url'] as String?;
+          if (url == null) throw Exception('upload sans url');
+
+          await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))
+              .write(LocalMessagesCompanion(
+            mediaUrl: Value(url),
+            pendingUploadPath: const Value(null),
+          ));
+
+          _emitSend(
+            clientId: clientId,
+            conversationID: conversationID,
+            content: content,
+            type: type,
+            mediaUrl: url,
+            mediaName: mediaName,
+            mediaDuration: mediaDuration,
+            replyToID: replyToID,
+            replyToContent: replyToContent,
+            isForwarded: isForwarded,
+            isViewOnce: isViewOnce,
+          );
+          return;
+        } catch (e) {
+          _setUploadProgress(clientId, null);
+          if (e is TalkyException && e.statusCode == 429 && attempt429 < 2) {
+            attempt429++;
+            await Future.delayed(Duration(seconds: attempt429 == 1 ? 2 : 5));
+            continue;
+          }
+          rethrow;
+        }
+      }
+    } finally {
+      _inFlightUploads.remove(clientId);
     }
   }
 
-  Future<void> _sendAlbumItem({
-    required int conversationID,
-    required int type,
-    required File file,
-    String? mediaName,
-    int? mediaDuration,
-    required String content,
-    bool isForwarded = false,
-    required bool bumpSummary,
-    required String summaryPreview,
-    required int summaryType,
-    required DateTime summaryAt,
-  }) async {
-    final clientId = _newClientId();
-    final name = mediaName ?? file.path.split('/').last;
+  void _emitPendingMessage(LocalMessage m) {
+    _emitSend(
+      clientId: m.clientId,
+      conversationID: m.conversationID,
+      content: m.content,
+      type: m.type,
+      mediaUrl: m.mediaUrl,
+      mediaName: m.mediaName,
+      mediaDuration: m.mediaDuration,
+      replyToID: m.replyToID,
+      replyToContent: m.replyToContent,
+      isForwarded: m.isForwarded,
+      isViewOnce: m.isViewOnce,
+    );
+  }
 
-    await _dao.upsertMessage(LocalMessagesCompanion.insert(
-      clientId: clientId,
-      conversationID: conversationID,
-      senderID: _myId,
-      sendAt: summaryAt,
-      clickSentAt: Value(summaryAt),
-      content: Value(content),
-      type: Value(type),
-      status: const Value(0),
-      mediaName: Value(name),
-      mediaDuration: Value(mediaDuration),
-      localMediaPath: Value(file.path),
-      pendingUploadPath: Value(file.path),
-      isForwarded: Value(isForwarded),
-      syncPending: const Value(true),
-    ));
-
-    if (bumpSummary) {
-      _bumpConversationSummary(
-        conversationID,
-        summaryPreview,
-        summaryType,
-        summaryAt,
-        senderID: _myId,
-        status: 0,
-      );
+  Future<void> _handleUploadFailure(
+    String clientId,
+    Object e,
+    String logLabel,
+  ) async {
+    debugPrint('[ChatRepo] $logLabel: $e');
+    if (isTransientUploadError(e)) {
+      debugPrint('[ChatRepo] upload différé — pending intact pour rejeu');
+    } else {
+      await _dao.markFailed(clientId);
     }
+  }
 
-    try {
-      final res = await _api.uploadMedia(file);
-      final url = res['url'] as String?;
-      if (url == null) throw Exception('upload sans url');
-
-      await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))
-          .write(LocalMessagesCompanion(
-        mediaUrl: Value(url),
-        pendingUploadPath: const Value(null),
-        status: const Value(1),
-      ));
-
-      _emitSend(
-        clientId: clientId,
-        conversationID: conversationID,
-        content: content,
-        type: type,
-        mediaUrl: url,
-        mediaName: name,
-        mediaDuration: mediaDuration,
-        isForwarded: isForwarded,
-      );
-    } catch (e) {
-      debugPrint('[ChatRepo] upload album item échoué: $e');
-      if (_isTransientNetworkError(e)) {
-        debugPrint('[ChatRepo] upload différé — pending intact pour rejeu');
-      } else {
-        await _dao.markFailed(clientId);
+  Future<void> _runConcurrent<T>(
+    List<T> items,
+    int concurrency,
+    Future<void> Function(T item) fn,
+  ) async {
+    if (items.isEmpty) return;
+    var index = 0;
+    Future<void> worker() async {
+      while (true) {
+        final i = index;
+        if (i >= items.length) return;
+        index++;
+        await fn(items[i]);
       }
     }
+    final workers = concurrency.clamp(1, items.length);
+    await Future.wait(List.generate(workers, (_) => worker()));
   }
 
   /// Transfère un album complet vers une ou plusieurs conversations.
@@ -825,15 +956,6 @@ class ChatRepository {
     );
   }
 
-  bool _isTransientNetworkError(Object e) {
-    if (e is TalkyException) {
-      // statusCode 0 = pas de réponse HTTP (offline / timeout). 5xx aussi
-      // raisonnable à retenter. 4xx = erreur cliente, on abandonne.
-      return e.statusCode == 0 || (e.statusCode >= 500 && e.statusCode < 600);
-    }
-    return true; // exceptions Dart inattendues : on est prudent et on retente
-  }
-
   /// Renvoie tous les messages en attente (appelé à la reconnexion socket).
   /// Gère AUSSI les uploads de fichier qui n'ont pas pu aboutir : si un
   /// message porte `pendingUploadPath` sans `mediaUrl`, on relance l'upload
@@ -846,28 +968,19 @@ class ChatRepository {
           (m.mediaUrl == null || m.mediaUrl!.isEmpty);
 
       if (needsUpload) {
-        final file = File(m.pendingUploadPath!);
-        if (!file.existsSync()) {
+        final file = await _resolvePendingUploadFile(m);
+        if (file == null) {
           debugPrint('[ChatRepo] flush: fichier disparu pour ${m.clientId} → failed');
           await _dao.markFailed(m.clientId);
           continue;
         }
         try {
-          final res = await _api.uploadMedia(file);
-          final url = res['url'] as String?;
-          if (url == null) throw Exception('upload sans url');
-          await (_db.update(_db.localMessages)..where((x) => x.clientId.equals(m.clientId)))
-              .write(LocalMessagesCompanion(
-            mediaUrl: Value(url),
-            pendingUploadPath: const Value(null),
-            status: const Value(1),
-          ));
-          _emitSend(
+          await _uploadAndEmit(
             clientId: m.clientId,
             conversationID: m.conversationID,
-            content: m.content,
+            file: file,
             type: m.type,
-            mediaUrl: url,
+            content: m.content,
             mediaName: m.mediaName,
             mediaDuration: m.mediaDuration,
             replyToID: m.replyToID,
@@ -876,26 +989,13 @@ class ChatRepository {
             isViewOnce: m.isViewOnce,
           );
         } catch (e) {
-          debugPrint('[ChatRepo] flush upload échoué pour ${m.clientId}: $e');
-          if (!_isTransientNetworkError(e)) {
-            await _dao.markFailed(m.clientId);
-          }
-          // On laisse tomber la suite pour ce message, on retentera plus tard.
+          await _handleUploadFailure(m.clientId, e, 'flush upload échoué pour ${m.clientId}');
         }
       } else {
-        _emitSend(
-          clientId: m.clientId,
-          conversationID: m.conversationID,
-          content: m.content,
-          type: m.type,
-          mediaUrl: m.mediaUrl,
-          mediaName: m.mediaName,
-          mediaDuration: m.mediaDuration,
-          replyToID: m.replyToID,
-          replyToContent: m.replyToContent,
-          isForwarded: m.isForwarded,
-            isViewOnce: m.isViewOnce,
-        );
+        // Média déjà uploadé (mediaUrl présent) ou message texte : réémettre
+        // message:send. Sans cette branche, un upload HTTP réussi suivi d'un
+        // emit socket ignoré (socket non prêt) reste bloqué indéfiniment.
+        _emitPendingMessage(m);
       }
     }
     // Rejoue les accusés de lecture émis hors-ligne.
@@ -917,27 +1017,18 @@ class ChatRepository {
           (m.mediaUrl == null || m.mediaUrl!.isEmpty);
 
       if (needsUpload) {
-        final file = File(m.pendingUploadPath!);
-        if (!file.existsSync()) {
+        final file = await _resolvePendingUploadFile(m);
+        if (file == null) {
           debugPrint('[ChatRepo] retry: fichier disparu pour ${m.clientId} → keep failed');
           continue;
         }
         try {
-          final res = await _api.uploadMedia(file);
-          final url = res['url'] as String?;
-          if (url == null) throw Exception('upload sans url');
-          await (_db.update(_db.localMessages)..where((x) => x.clientId.equals(m.clientId)))
-              .write(LocalMessagesCompanion(
-            mediaUrl: Value(url),
-            pendingUploadPath: const Value(null),
-            status: const Value(1),
-          ));
-          _emitSend(
+          await _uploadAndEmit(
             clientId: m.clientId,
             conversationID: m.conversationID,
-            content: m.content,
+            file: file,
             type: m.type,
-            mediaUrl: url,
+            content: m.content,
             mediaName: m.mediaName,
             mediaDuration: m.mediaDuration,
             replyToID: m.replyToID,
@@ -946,27 +1037,12 @@ class ChatRepository {
             isViewOnce: m.isViewOnce,
           );
         } catch (e) {
-          debugPrint('[ChatRepo] retry upload échoué pour ${m.clientId}: $e');
-          if (!_isTransientNetworkError(e)) {
-            await _dao.markFailed(m.clientId);
-          }
+          await _handleUploadFailure(m.clientId, e, 'retry upload échoué pour ${m.clientId}');
         }
       } else {
         // Message texte ou média déjà uploadé : remettre en pending et réémettre
         await _dao.retryFailed(m.clientId);
-        _emitSend(
-          clientId: m.clientId,
-          conversationID: m.conversationID,
-          content: m.content,
-          type: m.type,
-          mediaUrl: m.mediaUrl,
-          mediaName: m.mediaName,
-          mediaDuration: m.mediaDuration,
-          replyToID: m.replyToID,
-          replyToContent: m.replyToContent,
-          isForwarded: m.isForwarded,
-            isViewOnce: m.isViewOnce,
-        );
+        _emitPendingMessage(m);
       }
     }
   }
@@ -1248,7 +1324,7 @@ class ChatRepository {
       await _dao.setUnread(convID, 0);
     }
 
-    if (convID != 0 && _api.isSocketConnected) {
+    if (convID != 0 && _api.isSocketReady) {
       // Conversation ouverte → "lu" (✓✓ bleu) ; sinon "livré".
       _api.sendSocketEvent(
         isActive ? SocketEvents.messageRead : SocketEvents.messageDelivered,
@@ -1325,15 +1401,15 @@ class ChatRepository {
     return path;
   }
 
-  void _onMessageStatus(dynamic data) {
+  Future<void> _onMessageStatus(dynamic data) async {
     if (data is! Map) return;
     final convID = _toInt(data['conversationID']);
     final status = _toInt(data['status']);
     final byUserID = _toInt(data['byUserID']);
     if (convID == 0 || status == 0 || byUserID == _myId) return;
-    _dao.bumpMyMessagesStatus(convID, _myId, status);
-    // Reflète l'accusé (✓✓ / ✓✓ bleu) sur l'aperçu si le dernier message est le mien.
-    _dao.bumpConvLastStatusIfMine(convID, _myId, status);
+    await _dao.bumpMyMessagesStatus(convID, _myId, status);
+    await _dao.bumpConvLastStatusIfMine(convID, _myId, status);
+    await _dao.reconcileLastMessageStatus(convID, _myId);
   }
 
   Future<void> _onMessageSent(dynamic data) async {
@@ -1342,10 +1418,12 @@ class ChatRepository {
     final msgID = _toInt(json['msgID']);
     if (msgID == 0) return;
     await _upsertServerMsg(json);
-    // Mon message est confirmé "envoyé" → ✓ sur l'aperçu.
     final convID = _toInt(json['conversationID']);
     final status = _toInt(json['status'], fallback: 1);
-    if (convID != 0) _dao.bumpConvLastStatusIfMine(convID, _myId, status);
+    if (convID != 0) {
+      await _dao.bumpConvLastStatusIfMine(convID, _myId, status);
+      await _dao.reconcileLastMessageStatus(convID, _myId);
+    }
   }
 
   /// (Dés)épingle un message. Optimistic : on écrit localement d'abord pour un
@@ -1438,7 +1516,8 @@ class ChatRepository {
   }) {
     // Garde stricte : tant que le socket n'est pas authentifié, le serveur
     // ignore l'emit silencieusement. On laisse la ligne `syncPending=true` ;
-    // `flushOutbox` la rejouera quand `auth:verified` aura déclenché _onSocketReady.
+    // `flushOutbox` (texte ET média déjà uploadé) la rejouera quand
+    // `auth:verified` aura déclenché _onSocketReady.
     if (!_api.isSocketReady) {
       debugPrint('[ChatRepo] _emitSend différé (socket non prêt) clientId=$clientId');
       return;
@@ -1510,7 +1589,9 @@ class ChatRepository {
       lastMessageAt: Value(_parseDate(c.lastMessageAt)),
       lastMessageSenderID: Value(c.lastMessageSenderID),
       lastMessageType: Value(c.lastMessageType),
-      lastMessageStatus: Value(c.lastMessageStatus),
+      lastMessageStatus: c.lastMessageStatus != null
+          ? Value(c.lastMessageStatus)
+          : const Value.absent(),
       unreadCount: Value(c.unreadCount),
       isPinned: Value(c.isPinned),
       isArchived: Value(c.isArchived),
@@ -1575,4 +1656,24 @@ class ChatRepository {
     if (v is DateTime) return v;
     return DateTime.tryParse(v.toString());
   }
+}
+
+class _PendingAlbumUpload {
+  const _PendingAlbumUpload({
+    required this.clientId,
+    required this.file,
+    required this.type,
+    required this.content,
+    required this.mediaName,
+    this.mediaDuration,
+    required this.isForwarded,
+  });
+
+  final String clientId;
+  final File file;
+  final int type;
+  final String content;
+  final String mediaName;
+  final int? mediaDuration;
+  final bool isForwarded;
 }

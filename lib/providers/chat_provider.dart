@@ -83,7 +83,6 @@ class ChatProvider extends ChangeNotifier {
       _api.onSocketEvent(SocketEvents.messageSent, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.messageUpdated, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.messageDeleted, _onConversationChanged);
-      _api.onSocketEvent(SocketEvents.messageStatus, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationChanged);
       _api.onSocketEvent(SocketEvents.typingStarted, _onTypingStarted);
       _api.onSocketEvent(SocketEvents.typingStopped, _onTypingStopped);
@@ -103,7 +102,6 @@ class ChatProvider extends ChangeNotifier {
       _api.removeSocketListener(SocketEvents.messageSent, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.messageUpdated, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.messageDeleted, _onConversationChanged);
-      _api.removeSocketListener(SocketEvents.messageStatus, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationChanged);
       _api.removeSocketListener(SocketEvents.typingStarted, _onTypingStarted);
       _api.removeSocketListener(SocketEvents.typingStopped, _onTypingStopped);
