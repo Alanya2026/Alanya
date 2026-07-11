@@ -48,6 +48,9 @@ class MeetingService extends ChangeNotifier {
   // États mute des participants distants (userId → isMuted)
   final Map<String, bool> _remoteMutedStates = {};
 
+  // États caméra des participants distants (userId → isVideoOff)
+  final Map<String, bool> _remoteVideoStates = {};
+
   // ID local pendant la réunion + attente confirmation room_joined
   String? _myId;
   Completer<void>? _roomJoinCompleter;
@@ -78,6 +81,8 @@ class MeetingService extends ChangeNotifier {
   bool get isVideoOff => _isVideoOff;
   Map<String, bool> get remoteMutedStates => Map.unmodifiable(_remoteMutedStates);
   bool isParticipantMuted(String userId) => _remoteMutedStates[userId] ?? false;
+  Map<String, bool> get remoteVideoStates => Map.unmodifiable(_remoteVideoStates);
+  bool isParticipantVideoOff(String userId) => _remoteVideoStates[userId] ?? false;
   int get meetingDuration => _meetingDuration;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
   Map<String, String> get participantRoster => Map.unmodifiable(_participantRoster);
@@ -92,6 +97,19 @@ class MeetingService extends ChangeNotifier {
     final fromRoster = _participantRoster[userId];
     if (fromRoster != null && fromRoster.isNotEmpty) return fromRoster;
     return 'User $userId';
+  }
+
+  /// URL d'avatar d'un participant (liste API + organisateur).
+  String? participantAvatarUrl(String userId) {
+    final meeting = _currentMeeting;
+    if (meeting == null) return null;
+    if (meeting.idOrganiser.toString() == userId) {
+      return meeting.organiserAvatar;
+    }
+    final participant = meeting.participants
+        .where((p) => p.participantID.toString() == userId)
+        .firstOrNull;
+    return participant?.avatarUrl;
   }
 
   Set<String> get activeSpeakers => speakingDetector.activeSpeakers;
@@ -162,6 +180,7 @@ class MeetingService extends ChangeNotifier {
       debugPrint('[MeetingService] Room rejointe: $data');
       if (data is Map) {
         _applyMuteStatesSnapshot(data['muteStates']);
+        _applyVideoStatesSnapshot(data['videoStates']);
         notifyListeners();
       }
       if (_roomJoinCompleter != null && !_roomJoinCompleter!.isCompleted) {
@@ -189,10 +208,16 @@ class MeetingService extends ChangeNotifier {
         changed = true;
       }
 
+      if (data.containsKey('isVideoOff')) {
+        _remoteVideoStates[userId] = data['isVideoOff'] == true;
+        changed = true;
+      }
+
       if (changed) notifyListeners();
 
-      // Informer le nouvel arrivant de notre état mute actuel
+      // Informer le nouvel arrivant de nos états micro/caméra actuels
       _broadcastMuteState();
+      _broadcastVideoState();
 
       if (_peerConnections.containsKey(userId)) return;
       await _createPeerAndOffer(userId);
@@ -283,6 +308,17 @@ class MeetingService extends ChangeNotifier {
       _applyRemoteMuteState(userId, isMuted);
       notifyListeners();
     });
+
+    // Video state : un participant a coupé/réactivé sa caméra
+    _apiClient.onSocketEvent(SocketEvents.meetingVideoState, (data) {
+      if (data is! Map) return;
+      final userId = data['userId']?.toString();
+      final isVideoOff = data['isVideoOff'] == true;
+      if (userId == null) return;
+      debugPrint('[MeetingService] 📷 Video state: userId=$userId isVideoOff=$isVideoOff');
+      _remoteVideoStates[userId] = isVideoOff;
+      notifyListeners();
+    });
   }
 
   void _applyRemoteMuteState(String userId, bool isMuted) {
@@ -294,6 +330,13 @@ class MeetingService extends ChangeNotifier {
     if (muteStates is! Map) return;
     muteStates.forEach((key, value) {
       _applyRemoteMuteState(key.toString(), value == true);
+    });
+  }
+
+  void _applyVideoStatesSnapshot(dynamic videoStates) {
+    if (videoStates is! Map) return;
+    videoStates.forEach((key, value) {
+      _remoteVideoStates[key.toString()] = value == true;
     });
   }
 
@@ -315,6 +358,14 @@ class MeetingService extends ChangeNotifier {
     _apiClient.sendSocketEvent(SocketEvents.meetingMuteState, {
       'meetingId': _currentMeeting!.idMeeting,
       'isMuted': _isMuted,
+    });
+  }
+
+  void _broadcastVideoState() {
+    if (_currentMeeting == null) return;
+    _apiClient.sendSocketEvent(SocketEvents.meetingVideoState, {
+      'meetingId': _currentMeeting!.idMeeting,
+      'isVideoOff': _isVideoOff,
     });
   }
 
@@ -544,6 +595,7 @@ class MeetingService extends ChangeNotifier {
       'userID': myId,
       'userName': myName,
       'isMuted': _isMuted,
+      'isVideoOff': _isVideoOff,
     });
 
     try {
@@ -555,6 +607,7 @@ class MeetingService extends ChangeNotifier {
     }
 
     _broadcastMuteState();
+    _broadcastVideoState();
 
     _status = MeetingStatus.connected;
     _startDurationTimer();
@@ -619,9 +672,17 @@ class MeetingService extends ChangeNotifier {
       }
     }
 
-    await _cleanup();
-    _status = MeetingStatus.ended;
-    notifyListeners();
+    // Le statut DOIT passer à `ended` même si un imprévu survient dans le
+    // cleanup, sinon l'écran de réunion ne se referme jamais (le listener et le
+    // bouton dépendent de MeetingStatus.ended pour faire le pop()).
+    try {
+      await _cleanup();
+    } catch (e) {
+      debugPrint('[MeetingService] _cleanup error: $e');
+    } finally {
+      _status = MeetingStatus.ended;
+      notifyListeners();
+    }
   }
 
   // WEBRTC
@@ -781,6 +842,7 @@ class MeetingService extends ChangeNotifier {
     _pendingIceByPeer.remove(userId);
     _remoteDescSetForPeer.remove(userId);
     _remoteMutedStates.remove(userId);
+    _remoteVideoStates.remove(userId);
     notifyListeners();
   }
 
@@ -805,6 +867,9 @@ class MeetingService extends ChangeNotifier {
       final track = _localStream!.getVideoTracks().first;
       track.enabled = !track.enabled;
       _isVideoOff = !track.enabled;
+      if (_currentMeeting != null) {
+        _broadcastVideoState();
+      }
       notifyListeners();
     }
   }
@@ -847,10 +912,19 @@ class MeetingService extends ChangeNotifier {
         }
       }
     }
-    for (final pc in _peerConnections.values) {
-      await pc.close();
-    }
+    // On copie puis on vide la map AVANT de fermer les connexions : pc.close()
+    // déclenche onConnectionState -> _removePeer() qui modifie _peerConnections.
+    // Itérer directement sur la map lèverait une ConcurrentModificationError et
+    // interromprait le cleanup (d'où l'ancien bug du double-appui pour sortir).
+    final peers = _peerConnections.values.toList();
     _peerConnections.clear();
+    for (final pc in peers) {
+      try {
+        await pc.close();
+      } catch (e) {
+        debugPrint('[MeetingService] pc.close error: $e');
+      }
+    }
     _remoteStreams.clear();
     _pendingIceByPeer.clear();
     _remoteDescSetForPeer.clear();
@@ -866,6 +940,7 @@ class MeetingService extends ChangeNotifier {
     _isMuted = false;
     _isVideoOff = false;
     _remoteMutedStates.clear();
+    _remoteVideoStates.clear();
     _isMeetingUiMinimized = false;
     _isMeetingUiRouteOpen = false;
   }

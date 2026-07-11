@@ -8,6 +8,7 @@ import '../../core/services/meeting_service.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/calls/speaking_indicator_border.dart';
+import '../../widgets/common/app_avatar.dart';
 
 // Couleurs spécifiques à l'UI Google-Meet de la réunion (aucun token AppColors
 // ne correspond exactement à ce gris-anthracite, distinct du bleu immersif).
@@ -30,6 +31,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   final Map<String, String> _remoteStreamSignatures = {};
   bool _localRendererReady = false;
   bool _closing = false;
+  final Set<String> _watchedVideoTrackIds = {};
 
   String _streamSignature(dynamic stream) {
     if (stream is! MediaStream) return '';
@@ -69,6 +71,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       _localRendererReady = true;
       _localRenderer.srcObject = meetingService.localStream;
     });
+    _watchVideoTracks(meetingService.localStream);
 
     await _syncRemoteRenderers(meetingService.remoteStreams);
     if (!mounted) return;
@@ -91,9 +94,63 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     if (_localRendererReady &&
         _localRenderer.srcObject != meetingService.localStream) {
       _localRenderer.srcObject = meetingService.localStream;
+      _watchVideoTracks(meetingService.localStream);
     }
 
     _syncRemoteRenderers(meetingService.remoteStreams);
+  }
+
+  bool _streamHasActiveVideo(MediaStream? stream) {
+    if (stream == null) return false;
+    final tracks = stream.getVideoTracks();
+    if (tracks.isEmpty) return false;
+    return tracks.any((track) => track.enabled);
+  }
+
+  void _watchVideoTracks(MediaStream? stream) {
+    if (stream == null) return;
+    for (final track in stream.getVideoTracks()) {
+      final trackId = track.id ?? track.label ?? '';
+      if (trackId.isEmpty || _watchedVideoTrackIds.contains(trackId)) continue;
+      _watchedVideoTrackIds.add(trackId);
+      void refresh() {
+        if (mounted) setState(() {});
+      }
+      track.onMute = refresh;
+      track.onUnMute = refresh;
+    }
+  }
+
+  bool _rendererShowsVideo(
+    RTCVideoRenderer renderer,
+    MediaStream? stream, {
+    required bool rendererReady,
+  }) {
+    if (!_streamHasActiveVideo(stream)) return false;
+    if (!rendererReady) return true;
+    return renderer.videoWidth > 0;
+  }
+
+  bool _localTileShowsVideo(MeetingService meetingService) {
+    if (meetingService.isVideoOff || !_localRendererReady) return false;
+    return _rendererShowsVideo(
+      _localRenderer,
+      meetingService.localStream,
+      rendererReady: _localRendererReady,
+    );
+  }
+
+  bool _remoteTileShowsVideo(
+    RTCVideoRenderer renderer,
+    MediaStream? stream, {
+    required bool isVideoOff,
+  }) {
+    if (isVideoOff) return false;
+    return _rendererShowsVideo(
+      renderer,
+      stream,
+      rendererReady: true,
+    );
   }
 
   Future<void> _syncRemoteRenderers(
@@ -110,16 +167,20 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     for (final key in newKeys.difference(currentKeys)) {
       final renderer = RTCVideoRenderer();
       await renderer.initialize();
-      renderer.srcObject = remoteStreams[key];
+      final stream = remoteStreams[key] as MediaStream?;
+      renderer.srcObject = stream;
       _remoteRenderers[key] = renderer;
-      _remoteStreamSignatures[key] = _streamSignature(remoteStreams[key]);
+      _remoteStreamSignatures[key] = _streamSignature(stream);
+      _watchVideoTracks(stream);
     }
 
     for (final key in newKeys.intersection(currentKeys)) {
       final sig = _streamSignature(remoteStreams[key]);
       if (_remoteStreamSignatures[key] != sig) {
-        _remoteRenderers[key]?.srcObject = remoteStreams[key];
+        final stream = remoteStreams[key] as MediaStream?;
+        _remoteRenderers[key]?.srcObject = stream;
         _remoteStreamSignatures[key] = sig;
+        _watchVideoTracks(stream);
       }
     }
 
@@ -159,6 +220,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                 .currentUser
                 ?.alanyaID ??
             0;
+        final myAvatar =
+            Provider.of<AuthProvider>(context, listen: false).currentUser?.avatarUrl;
         final isOrganiser = meeting?.idOrganiser == myId;
 
         return PopScope(
@@ -237,8 +300,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                           ? _buildVideoTile(
                               label: 'Vous',
                               renderer: _localRenderer,
-                              isVideoOff: meetingService.isVideoOff ||
-                                  !_localRendererReady,
+                              photoUrl: myAvatar,
+                              showVideo: _localTileShowsVideo(meetingService),
                               isMuted: meetingService.isMuted,
                               isSpeaking: meetingService.amISpeaking,
                               mirror: true,
@@ -253,22 +316,34 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                 _buildVideoTile(
                                   label: 'Vous',
                                   renderer: _localRenderer,
-                                  isVideoOff: meetingService.isVideoOff ||
-                                      !_localRendererReady,
+                                  photoUrl: myAvatar,
+                                  showVideo:
+                                      _localTileShowsVideo(meetingService),
                                   isMuted: meetingService.isMuted,
                                   isSpeaking: meetingService.amISpeaking,
                                   mirror: true,
                                 ),
                                 ..._remoteRenderers.entries.map((entry) {
+                                  final userId = entry.key;
                                   final label = meetingService
-                                      .participantDisplayName(entry.key);
+                                      .participantDisplayName(userId);
+                                  final stream =
+                                      meetingService.remoteStreams[userId];
                                   return _buildVideoTile(
                                     label: label,
                                     renderer: entry.value,
-                                    isVideoOff: false,
-                                    isMuted: meetingService.isParticipantMuted(entry.key),
+                                    photoUrl: meetingService
+                                        .participantAvatarUrl(userId),
+                                    showVideo: _remoteTileShowsVideo(
+                                      entry.value,
+                                      stream,
+                                      isVideoOff: meetingService
+                                          .isParticipantVideoOff(userId),
+                                    ),
+                                    isMuted: meetingService
+                                        .isParticipantMuted(userId),
                                     isSpeaking: meetingService
-                                        .isUserSpeaking(entry.key),
+                                        .isUserSpeaking(userId),
                                   );
                                 }),
                               ],
@@ -392,9 +467,10 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   Widget _buildVideoTile({
     required String label,
     required RTCVideoRenderer renderer,
-    required bool isVideoOff,
+    required bool showVideo,
     required bool isMuted,
     required bool isSpeaking,
+    String? photoUrl,
     bool mirror = false,
   }) {
     return SpeakingIndicatorBorder(
@@ -407,7 +483,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       ),
       child: Stack(
         children: [
-          if (!isVideoOff && renderer.srcObject != null)
+          if (showVideo && renderer.srcObject != null)
             ClipRRect(
               borderRadius: AppRadius.brMd,
               child: RTCVideoView(
@@ -419,14 +495,12 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
             )
           else
             Center(
-              child: CircleAvatar(
-                radius: 40,
+              child: AppAvatar(
+                imageUrl: photoUrl,
+                name: label,
+                size: 80,
                 backgroundColor: AppColors.brandPrimary,
-                child: Text(
-                  label.isNotEmpty ? label[0].toUpperCase() : '?',
-                  style: const TextStyle(
-                      fontSize: 32, color: Colors.white),
-                ),
+                foregroundColor: Colors.white,
               ),
             ),
           Positioned(
