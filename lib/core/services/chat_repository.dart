@@ -218,7 +218,8 @@ class ChatRepository {
       return;
     }
     final clientId = _newClientId();
-    final now = DateTime.now().toUtc();
+    final localNow = DateTime.now();
+    final now = localNow.toUtc();
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -247,6 +248,7 @@ class ChatRepository {
       replyToContent: replyToContent,
       isStatusReply: isStatusReply,
       isForwarded: isForwarded,
+      clickSentAt: now,
     );
   }
 
@@ -294,7 +296,8 @@ class ChatRepository {
     bool isViewOnce = false,
   }) async {
     final clientId = _newClientId();
-    final now = DateTime.now().toUtc();
+    final localNow = DateTime.now();
+    final now = localNow.toUtc();
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -331,6 +334,7 @@ class ChatRepository {
       mediaDuration: mediaDuration,
       isForwarded: isForwarded,
       isViewOnce: isViewOnce,
+      clickSentAt: now,
     );
   }
 
@@ -349,7 +353,8 @@ class ChatRepository {
       return;
     }
     final clientId = _newClientId();
-    final now = DateTime.now().toUtc();
+    final localNow = DateTime.now();
+    final now = localNow.toUtc();
     final name = mediaName ?? file.path.split('/').last;
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
@@ -399,6 +404,7 @@ class ChatRepository {
         mediaDuration: mediaDuration,
         isForwarded: isForwarded,
         isViewOnce: isViewOnce,
+        clickSentAt: now,
       );
     } catch (e) {
       debugPrint('[ChatRepo] upload média échoué: $e');
@@ -449,7 +455,8 @@ class ChatRepository {
 
     final albumId = newAlbumId();
     final total = items.length;
-    final now = DateTime.now().toUtc();
+    final localNow = DateTime.now();
+    final now = localNow.toUtc();
     final types = items.map((e) => e.type).toList();
     final preview = previewLabelForAlbumTypes(types);
     final counts = countAlbumMediaTypesFromTypes(types);
@@ -545,6 +552,7 @@ class ChatRepository {
         mediaName: name,
         mediaDuration: mediaDuration,
         isForwarded: isForwarded,
+        clickSentAt: summaryAt,
       );
     } catch (e) {
       debugPrint('[ChatRepo] upload album item échoué: $e');
@@ -874,6 +882,7 @@ class ChatRepository {
             replyToContent: m.replyToContent,
             isForwarded: m.isForwarded,
             isViewOnce: m.isViewOnce,
+            clickSentAt: m.clickSentAt,
           );
         } catch (e) {
           debugPrint('[ChatRepo] flush upload échoué pour ${m.clientId}: $e');
@@ -895,13 +904,16 @@ class ChatRepository {
           replyToContent: m.replyToContent,
           isForwarded: m.isForwarded,
             isViewOnce: m.isViewOnce,
+          clickSentAt: m.clickSentAt,
         );
       }
     }
     // Rejoue les accusés de lecture émis hors-ligne.
     if (_api.isSocketReady && _pendingReads.isNotEmpty) {
       for (final convID in _pendingReads.toList()) {
-        _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': convID});
+        _api.sendSocketEvent(SocketEvents.messageRead, {
+          'conversationID': convID,
+        });
       }
       _pendingReads.clear();
     }
@@ -944,6 +956,7 @@ class ChatRepository {
             replyToContent: m.replyToContent,
             isForwarded: m.isForwarded,
             isViewOnce: m.isViewOnce,
+            clickSentAt: m.clickSentAt,
           );
         } catch (e) {
           debugPrint('[ChatRepo] retry upload échoué pour ${m.clientId}: $e');
@@ -966,6 +979,7 @@ class ChatRepository {
           replyToContent: m.replyToContent,
           isForwarded: m.isForwarded,
             isViewOnce: m.isViewOnce,
+          clickSentAt: m.clickSentAt,
         );
       }
     }
@@ -1077,7 +1091,9 @@ class ChatRepository {
     await LocalNotificationHelper.cancelConversation(conversationID);
     if (_api.isSocketReady) {
       try {
-        _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': conversationID});
+        _api.sendSocketEvent(SocketEvents.messageRead, {
+          'conversationID': conversationID,
+        });
         _pendingReadsRetry.remove(conversationID);
       } catch (e) {
         debugPrint('[ChatRepo] sendSocketEvent failed: $e');
@@ -1117,7 +1133,9 @@ class ChatRepository {
     if (!_api.isSocketReady || _pendingReadsRetry.isEmpty) return;
     for (final convID in _pendingReadsRetry.keys.toList()) {
       try {
-        _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': convID});
+        _api.sendSocketEvent(SocketEvents.messageRead, {
+          'conversationID': convID,
+        });
         _pendingReadsRetry.remove(convID);
       } catch (e) {
         debugPrint('[ChatRepo] _flushPendingReads send failed for $convID: $e');
@@ -1252,7 +1270,9 @@ class ChatRepository {
       // Conversation ouverte → "lu" (✓✓ bleu) ; sinon "livré".
       _api.sendSocketEvent(
         isActive ? SocketEvents.messageRead : SocketEvents.messageDelivered,
-        {'conversationID': convID},
+        {
+          'conversationID': convID,
+        },
       );
     }
     final mtype = _toInt(json['type']);
@@ -1331,7 +1351,13 @@ class ChatRepository {
     final status = _toInt(data['status']);
     final byUserID = _toInt(data['byUserID']);
     if (convID == 0 || status == 0 || byUserID == _myId) return;
-    _dao.bumpMyMessagesStatus(convID, _myId, status);
+    final at = _parseDate(data['at']);
+    _dao.bumpMyMessagesStatus(
+      convID,
+      _myId,
+      status,
+      at: at,
+    );
     // Reflète l'accusé (✓✓ / ✓✓ bleu) sur l'aperçu si le dernier message est le mien.
     _dao.bumpConvLastStatusIfMine(convID, _myId, status);
   }
@@ -1435,6 +1461,7 @@ class ChatRepository {
     int isStatusReply = 0,
     bool isForwarded = false,
     bool isViewOnce = false,
+    DateTime? clickSentAt,
   }) {
     // Garde stricte : tant que le socket n'est pas authentifié, le serveur
     // ignore l'emit silencieusement. On laisse la ligne `syncPending=true` ;
@@ -1456,6 +1483,7 @@ class ChatRepository {
       if (isStatusReply != 0) 'isStatusReply': isStatusReply,
       if (isForwarded) 'isForwarded': 1,
       if (isViewOnce) 'isViewOnce': 1,
+      if (clickSentAt != null) 'clickSentAt': clickSentAt.toIso8601String(),
     });
     // Marque la ligne comme « tout juste émise » → backoff outbox.
     _dao.touchEmitted(clientId);
@@ -1529,9 +1557,13 @@ class ChatRepository {
       type: Value(_toInt(j['type'])),
       status: Value(_toInt(j['status'], fallback: 1)),
       sendAt: Value(_parseDate(j['sendAt']) ?? DateTime.now()),
-      // clickSentAt n'existe que localement (heure du clic de l'expéditeur) :
-      // on ne le renseigne jamais depuis le serveur, et on ne l'écrase pas.
-      clickSentAt: const Value.absent(),
+      // clickSentAt est désormais synchronisé avec le serveur (persisté à
+      // l'envoi) : on l'hydrate depuis le JSON pour que le destinataire le
+      // voie aussi. `_upsertServerMsg` conserve en priorité la valeur locale
+      // déjà connue le cas échéant (même valeur, capturée avant l'aller-retour).
+      clickSentAt: Value(_parseDate(j['clickSentAt'])),
+      messageTz: Value(j['messageTz']?.toString()),
+      messageTzOffset: Value(j['messageTzOffset'] == null ? null : _toInt(j['messageTzOffset'])),
       deliveredAt: Value(_parseDate(j['deliveredAt'])),
       readAt: Value(_parseDate(j['readAt'])),
       mediaUrl: Value(normalizeBackendUrl(j['mediaUrl']?.toString())),
