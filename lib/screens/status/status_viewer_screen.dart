@@ -5,7 +5,9 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/services/media_cache_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -42,6 +44,7 @@ class StatusViewerScreen extends StatefulWidget {
 class _StatusViewerScreenState extends State<StatusViewerScreen>
     with SingleTickerProviderStateMixin {
   static const Duration _textImageDuration = Duration(seconds: 5);
+  static const int _maxMediaBytes = 50 * 1024 * 1024;
 
   late int _contactIndex;
   late int _itemIndex;
@@ -60,7 +63,12 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
 
   final TextEditingController _replyController = TextEditingController();
   final FocusNode _replyFocus = FocusNode();
+  final AudioRecorder _recorder = AudioRecorder();
   bool _sendingReply = false;
+  bool _hasReplyText = false;
+  bool _isRecording = false;
+  int _recordSeconds = 0;
+  Timer? _recordTimer;
   bool _advancing = false;
 
   List<Statut> get _currentGroup => widget.contactGroups[_contactIndex];
@@ -80,14 +88,23 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       ..addStatusListener((s) {
         if (s == AnimationStatus.completed) _next();
       });
+    _replyController.addListener(_onReplyTextChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadCurrent());
+  }
+
+  void _onReplyTextChanged() {
+    final has = _replyController.text.trim().isNotEmpty;
+    if (has != _hasReplyText) setState(() => _hasReplyText = has);
   }
 
   @override
   void dispose() {
+    _recordTimer?.cancel();
+    _recorder.dispose();
     _pageCtrl.dispose();
     _progress.dispose();
     _disposeMedia();
+    _replyController.removeListener(_onReplyTextChanged);
     _replyController.dispose();
     _replyFocus.dispose();
     super.dispose();
@@ -384,6 +401,101 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     }
   }
 
+  Future<void> _startRecordingReply() async {
+    if (_sendingReply || _isRecording) return;
+    if (!await _recorder.hasPermission()) return;
+    _setPaused(true);
+    _replyFocus.unfocus();
+    final dir = await getTemporaryDirectory();
+    final path =
+        '${dir.path}/status_reply_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
+    if (!mounted) return;
+    setState(() {
+      _isRecording = true;
+      _recordSeconds = 0;
+    });
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordSeconds++);
+    });
+  }
+
+  Future<void> _stopRecordingReply({required bool send}) async {
+    _recordTimer?.cancel();
+    final path = await _recorder.stop();
+    final seconds = _recordSeconds;
+    if (mounted) setState(() => _isRecording = false);
+
+    if (send && path != null && seconds >= 1) {
+      await _sendVoiceReply(File(path), seconds);
+    } else if (path != null) {
+      try {
+        File(path).deleteSync();
+      } catch (_) {
+        /* fichier temporaire déjà absent — ignoré */
+      }
+    }
+    if (mounted) _setPaused(false);
+  }
+
+  Future<void> _sendVoiceReply(File file, int seconds) async {
+    if (_sendingReply) return;
+    final author = _current.alanyaID;
+    if (author == 0) return;
+
+    final size = file.existsSync() ? file.lengthSync() : 0;
+    if (size > _maxMediaBytes) {
+      final mb = (size / (1024 * 1024)).toStringAsFixed(1);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Fichier trop volumineux ($mb Mo). Limite : 50 Mo.'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+      return;
+    }
+
+    setState(() => _sendingReply = true);
+    try {
+      final api = context.read<TalkyApiClient>();
+      final chat = context.read<ChatProvider>();
+      final result = await api.createConversation(participantID: author);
+      final convId = result['conversID'] as int?;
+      if (convId == null) throw Exception('conversID manquant');
+
+      await chat.repository.sendMediaFile(
+        conversationID: convId,
+        type: 3,
+        file: file,
+        mediaName: 'Message vocal',
+        mediaDuration: seconds,
+        replyToContent: _statusPreview(),
+        isStatusReply: 1,
+      );
+
+      if (!mounted) return;
+      _setPaused(false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Réponse envoyée'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Échec de l\'envoi : $e')));
+    } finally {
+      if (mounted) setState(() => _sendingReply = false);
+    }
+  }
+
+  String _fmtRec(int s) =>
+      '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+
   Future<void> _confirmDelete() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -566,39 +678,41 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Capsule flottante identique à l'input des messages.
               Expanded(
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 160),
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    borderRadius: AppRadius.brPill,
-                    boxShadow: AppShadows.medium,
-                  ),
-                  child: TextField(
-                    controller: _replyController,
-                    focusNode: _replyFocus,
-                    style: context.text.bodyLarge,
-                    minLines: 1,
-                    maxLines: 4,
-                    onTap: () => _setPaused(true),
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) {
-                      if (canSend) _sendReply();
-                    },
-                    decoration: InputDecoration(
-                      hintText: online
-                          ? 'Répondre au statut…'
-                          : 'Indisponible hors ligne',
-                      hintStyle: context.text.bodyLarge
-                          ?.copyWith(color: colors.onSurfaceVariant),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                    ),
-                  ),
-                ),
+                child: _isRecording
+                    ? _buildRecordingReplyBar(colors)
+                    : Container(
+                        constraints: const BoxConstraints(maxHeight: 160),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: AppRadius.brPill,
+                          boxShadow: AppShadows.medium,
+                        ),
+                        child: TextField(
+                          controller: _replyController,
+                          focusNode: _replyFocus,
+                          style: context.text.bodyLarge,
+                          minLines: 1,
+                          maxLines: 4,
+                          onTap: () => _setPaused(true),
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) {
+                            if (canSend && _hasReplyText) _sendReply();
+                          },
+                          decoration: InputDecoration(
+                            hintText: online
+                                ? 'Répondre au statut…'
+                                : 'Indisponible hors ligne',
+                            hintStyle: context.text.bodyLarge
+                                ?.copyWith(color: colors.onSurfaceVariant),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.md),
+                          ),
+                        ),
+                      ),
               ),
               IconButton(
                 tooltip: liked ? 'Je n\'aime plus' : 'J\'aime',
@@ -618,14 +732,19 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
-              // Bouton rond séparé, comme dans l'input des messages.
               Material(
                 color: canSend ? colors.primary : AppColors.textSecondary,
                 shape: const CircleBorder(),
                 elevation: 3,
                 child: InkWell(
                   customBorder: const CircleBorder(),
-                  onTap: canSend ? _sendReply : null,
+                  onTap: !canSend
+                      ? null
+                      : _isRecording
+                          ? () => _stopRecordingReply(send: true)
+                          : _hasReplyText
+                              ? _sendReply
+                              : _startRecordingReply,
                   child: SizedBox(
                     width: 50,
                     height: 50,
@@ -637,8 +756,15 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                               color: Colors.white,
                             ),
                           )
-                        : Icon(Icons.send,
-                            color: colors.onPrimary, size: AppIconSize.sm + 2),
+                        : Icon(
+                            _isRecording
+                                ? Icons.send
+                                : _hasReplyText
+                                    ? Icons.send
+                                    : Icons.mic,
+                            color: colors.onPrimary,
+                            size: AppIconSize.sm + 2,
+                          ),
                   ),
                 ),
               ),
@@ -646,6 +772,46 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildRecordingReplyBar(ColorScheme colors) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadius.brPill,
+        boxShadow: AppShadows.medium,
+      ),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+      child: Row(
+        children: [
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(Icons.delete_outline,
+                color: colors.error, size: AppIconSize.md),
+            onPressed: () => _stopRecordingReply(send: false),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          const _StatusRecordingDot(),
+          const SizedBox(width: AppSpacing.sm + 2),
+          Text(
+            _fmtRec(_recordSeconds),
+            style: context.text.titleSmall?.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              'Enregistrement…',
+              style: context.text.bodySmall?.copyWith(color: colors.error),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -894,6 +1060,41 @@ class _Footer extends StatelessWidget {
               onPressed: onDelete,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusRecordingDot extends StatefulWidget {
+  const _StatusRecordingDot();
+
+  @override
+  State<_StatusRecordingDot> createState() => _StatusRecordingDotState();
+}
+
+class _StatusRecordingDotState extends State<_StatusRecordingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 700))
+        ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween(begin: 0.3, end: 1.0).animate(_c),
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: const BoxDecoration(
+          color: AppColors.error,
+          shape: BoxShape.circle,
         ),
       ),
     );
