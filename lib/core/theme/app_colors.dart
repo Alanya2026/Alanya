@@ -78,9 +78,22 @@ class AppColors {
   /// Indicateur de présence « en ligne ».
   static const Color online = Color(0xFF1FA363);
 
-  // ── Surfaces sombres (écrans immersifs : appels / réunions / médias) ──
+  // ── Surfaces immersives (appels / réunions / médias) ──
+  /// Fond immersif clair (appels audio en mode clair).
+  static const Color immersiveBackgroundLight = Color(0xFFF2F3FB);
+
+  /// Surface immersive claire (tuiles, contrôles en mode clair).
+  static const Color immersiveSurfaceLight = Color(0xFFE8EAF6);
+
+  /// Fond immersif sombre (appels vidéo, mode sombre).
   static const Color immersiveBackground = Color(0xFF0E1330);
+
+  /// Surface immersive sombre.
   static const Color immersiveSurface = Color(0xFF1B2147);
+
+  /// Chrome semi-transparent pour contrôles vidéo.
+  static const Color callChromeDark = Color(0xCC1A1D23);
+
   static const Color overlayScrim = Color(0x99000000);
 
   // ── Mode sombre (stub — à compléter lors de l'activation) ─────────────

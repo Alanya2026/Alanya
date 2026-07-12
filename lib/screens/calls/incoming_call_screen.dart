@@ -2,22 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/call_ui_theme.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/common/app_avatar.dart';
+import '../../widgets/calls/call_action_button.dart';
+import '../../widgets/calls/call_connecting_overlay.dart';
 import 'ongoing_call_screen.dart';
 
 /// Écran d'appel entrant (app au premier plan uniquement).
-///
-/// Surveille `CallService.status` :
-/// - `connecting` ou `connected` (auto-answer depuis CallKit) → push de
-///   [OngoingCallScreen]
-/// - `ended` ou `idle`  (raccroché côté appelant / refus / timeout) → pop
 class IncomingCallScreen extends StatefulWidget {
   const IncomingCallScreen({super.key});
 
@@ -34,15 +31,20 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.92, end: 1.08).animate(
+    _pulse = Tween<double>(begin: 0.96, end: 1.04).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
     Provider.of<CallService>(context, listen: false).addListener(_onStatusChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    CallUiScope.applyOverlayStyle(context, isVideo: false);
   }
 
   @override
@@ -139,6 +141,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   @override
   Widget build(BuildContext context) {
+    final callUi = context.callUi;
+
     return Consumer<CallService>(
       builder: (_, cs, __) {
         final caller = cs.currentCall?.caller;
@@ -148,6 +152,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         final subtitle = isGroup
             ? (isVideo ? 'Appel groupé vidéo' : 'Appel groupé')
             : (isVideo ? 'Appel vidéo' : 'Appel vocal');
+        final subtitleIcon = isVideo
+            ? CupertinoIcons.video_camera_solid
+            : CupertinoIcons.phone_fill;
 
         return PopScope(
           onPopInvokedWithResult: (didPop, _) {
@@ -155,33 +162,22 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
             unawaited(_reject());
           },
           child: Scaffold(
+            backgroundColor: callUi.backgroundSolid,
             body: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.brandPrimaryDark,
-                    Color(0xFF0A1628),
-                    AppColors.black,
-                  ],
-                ),
+              decoration: BoxDecoration(
+                gradient: callUi.backgroundGradientDecoration,
               ),
               child: SafeArea(
                 child: Column(
                   children: [
                     AppSpacing.vGapXl,
-                    Text(
-                      'Appel entrant',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.55),
-                        fontSize: 13,
-                        letterSpacing: 2.0,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    CallIncomingHeaderPill(
+                      icon: subtitleIcon,
+                      label: 'APPEL ENTRANT',
+                      pulseAnimation: _pulse,
                     ),
                     const Spacer(),
-                    _IncomingAvatarPulse(
+                    CallIncomingAvatarPulse(
                       animation: _pulse,
                       name: name,
                       imageUrl: caller?.avatarUrl,
@@ -191,11 +187,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Text(
                         name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.5,
+                        style: context.text.headlineMedium?.copyWith(
+                          color: callUi.onBackground,
+                          letterSpacing: -0.3,
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 2,
@@ -203,44 +197,51 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                       ),
                     ),
                     AppSpacing.vGapMd,
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          isVideo
-                              ? CupertinoIcons.video_camera_solid
-                              : CupertinoIcons.phone_fill,
-                          color: Colors.white.withValues(alpha: 0.45),
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          subtitle,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.55),
-                            fontSize: 15,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.xs + 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: callUi.chipBackground.withValues(alpha: 0.6),
+                        borderRadius: AppRadius.brPill,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            subtitleIcon,
+                            color: callUi.onBackgroundMuted,
+                            size: 16,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              color: callUi.onBackgroundMuted,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const Spacer(flex: 2),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
+                      padding: const EdgeInsets.fromLTRB(40, 0, 40, 48),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _CallActionButton(
+                          CallActionButton(
                             icon: CupertinoIcons.phone_down_fill,
                             label: 'Refuser',
-                            color: AppColors.error,
+                            color: callUi.actionReject,
                             onTap: _reject,
                           ),
-                          _CallActionButton(
-                            icon: isVideo
-                                ? CupertinoIcons.video_camera_solid
-                                : CupertinoIcons.phone_fill,
+                          const SizedBox(width: 64),
+                          CallActionButton(
+                            icon: subtitleIcon,
                             label: 'Accepter',
-                            color: AppColors.success,
+                            color: callUi.actionAccept,
                             onTap: _accept,
                           ),
                         ],
@@ -253,123 +254,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
           ),
         );
       },
-    );
-  }
-}
-
-class _IncomingAvatarPulse extends StatelessWidget {
-  const _IncomingAvatarPulse({
-    required this.animation,
-    required this.name,
-    required this.imageUrl,
-  });
-
-  final Animation<double> animation;
-  final String name;
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (_, __) {
-        return SizedBox(
-          width: 240,
-          height: 240,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Transform.scale(
-                scale: animation.value,
-                child: Container(
-                  width: 240,
-                  height: 240,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              Transform.scale(
-                scale: animation.value * 0.88,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.brandPrimary.withValues(alpha: 0.12),
-                  ),
-                ),
-              ),
-              AppAvatar(
-                imageUrl: imageUrl,
-                name: name,
-                size: 148,
-                backgroundColor: AppColors.brandPrimary,
-                showShadow: true,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _CallActionButton extends StatelessWidget {
-  const _CallActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const CircleBorder(),
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.40),
-                    blurRadius: 24,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Icon(icon, color: Colors.white, size: 34),
-            ),
-          ),
-        ),
-        AppSpacing.vGapMd,
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.75),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }

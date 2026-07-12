@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Dimensions standard du PiP vidéo (identiques à l'ancien `_LocalPiP`).
 const double kPipWidth = 110;
@@ -96,6 +97,7 @@ class _DraggableVideoPiPState extends State<DraggableVideoPiP> {
   Offset _accumulatedDelta = Offset.zero;
   double _dragDistance = 0;
   bool _suppressNextTap = false;
+  bool _tapScale = false;
 
   Offset _resolvedPosition() {
     final base = widget.position ?? defaultPipOffset(widget.bounds);
@@ -139,6 +141,12 @@ class _DraggableVideoPiPState extends State<DraggableVideoPiP> {
       _suppressNextTap = false;
       return;
     }
+    if (widget.onTap != null) {
+      setState(() => _tapScale = true);
+      Future<void>.delayed(AppDurations.fast, () {
+        if (mounted) setState(() => _tapScale = false);
+      });
+    }
     widget.onTap?.call();
   }
 
@@ -154,11 +162,16 @@ class _DraggableVideoPiPState extends State<DraggableVideoPiP> {
         onPanUpdate: _onPanUpdate,
         onPanEnd: _onPanEnd,
         onTap: widget.onTap != null ? _onTap : null,
-        child: AnimatedSwitcher(
+        child: AnimatedScale(
+          scale: _tapScale ? 0.95 : 1.0,
           duration: AppDurations.fast,
-          child: _PipFrame(
-            key: ValueKey(identityHashCode(widget.child)),
-            child: widget.child,
+          curve: Curves.easeOutCubic,
+          child: AnimatedSwitcher(
+            duration: AppDurations.fast,
+            child: _PipFrame(
+              key: ValueKey(identityHashCode(widget.child)),
+              child: widget.child,
+            ),
           ),
         ),
       ),
@@ -173,17 +186,19 @@ class _PipFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final callUi = context.callUi;
+
     return Container(
       width: kPipWidth,
       height: kPipHeight,
       decoration: BoxDecoration(
-        borderRadius: AppRadius.brSm,
-        border: Border.all(color: Colors.white24),
-        boxShadow: const [
+        borderRadius: AppRadius.brLg,
+        border: Border.all(color: callUi.pipBorder, width: 2),
+        boxShadow: [
           BoxShadow(
-            color: Colors.black54,
-            blurRadius: 12,
-            offset: Offset(0, 4),
+            color: callUi.pipShadow,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),

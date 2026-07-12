@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 import 'app_dimens.dart';
+import 'call_ui_theme.dart';
 
 /// Extension de thème pour les couleurs sémantiques que `ColorScheme` ne
 /// couvre pas nativement (succès, avertissement, info, présence en ligne,
@@ -64,8 +65,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     brandContainer: AppColors.brandContainer,
     onBrandContainer: AppColors.brandPrimary,
     surfaceMuted: AppColors.surfaceMuted,
-    immersiveBackground: AppColors.immersiveBackground,
-    immersiveSurface: AppColors.immersiveSurface,
+    immersiveBackground: AppColors.immersiveBackgroundLight,
+    immersiveSurface: AppColors.immersiveSurfaceLight,
     navGlass: AppColors.navGlass,
     navGlassBorder: AppColors.navGlassBorder,
     navGlassBadgeBorder: AppColors.navGlassBadgeBorder,
@@ -173,6 +174,9 @@ extension AppThemeContext on BuildContext {
   /// l'extension est déclarée sur les deux thèmes.
   AppSemanticColors get semantic =>
       Theme.of(this).extension<AppSemanticColors>() ?? AppSemanticColors.light;
+
+  CallUiColors get callUi =>
+      Theme.of(this).extension<CallUiColors>() ?? CallUiColors.light;
 }
 
 /// Fabrique des thèmes clair / sombre de Talky.
@@ -192,6 +196,7 @@ class AppTheme {
 
     final colorScheme = isLight ? _lightScheme : _darkScheme;
     final semantic = isLight ? AppSemanticColors.light : AppSemanticColors.dark;
+    final callUi = isLight ? CallUiColors.light : CallUiColors.dark;
     final textTheme = _textTheme(colorScheme.onSurface);
 
     return ThemeData(
@@ -200,7 +205,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,
       textTheme: textTheme,
-      extensions: [semantic],
+      extensions: [semantic, callUi],
       splashFactory: InkSparkle.splashFactory,
 
       appBarTheme: AppBarTheme(
