@@ -61,6 +61,8 @@ class MeetingService extends ChangeNotifier {
 
   // Messages in-meeting
   final List<ChatMessage> _chatMessages = [];
+  int _unreadChatCount = 0;
+  bool _isMeetingChatOpen = false;
 
   // Noms des participants connectés (alanyaID → nom affiché).
   final Map<String, String> _participantRoster = {};
@@ -80,11 +82,12 @@ class MeetingService extends ChangeNotifier {
   bool get isMuted => _isMuted;
   bool get isVideoOff => _isVideoOff;
   Map<String, bool> get remoteMutedStates => Map.unmodifiable(_remoteMutedStates);
-  bool isParticipantMuted(String userId) => _remoteMutedStates[userId] ?? false;
+  bool isParticipantMuted(String userId) => _remoteMutedStates[_participantId(userId)] ?? false;
   Map<String, bool> get remoteVideoStates => Map.unmodifiable(_remoteVideoStates);
-  bool isParticipantVideoOff(String userId) => _remoteVideoStates[userId] ?? false;
+  bool isParticipantVideoOff(String userId) => _remoteVideoStates[_participantId(userId)] ?? false;
   int get meetingDuration => _meetingDuration;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+  int get unreadChatCount => _unreadChatCount;
   Map<String, String> get participantRoster => Map.unmodifiable(_participantRoster);
 
   /// Résout le nom affiché d'un participant (liste API + roster temps réel).
@@ -141,6 +144,32 @@ class MeetingService extends ChangeNotifier {
   void markMeetingUiClosed() {
     _isMeetingUiRouteOpen = false;
     notifyListeners();
+  }
+
+  /// Ouvre le chat meeting : remet le compteur non-lu à zéro.
+  void markMeetingChatOpen() {
+    _isMeetingChatOpen = true;
+    markChatRead();
+  }
+
+  /// Referme le chat meeting (sheet fermée).
+  void markMeetingChatClosed() {
+    if (!_isMeetingChatOpen) return;
+    _isMeetingChatOpen = false;
+    notifyListeners();
+  }
+
+  /// Remet à zéro les messages non lus du chat meeting.
+  void markChatRead() {
+    if (_unreadChatCount == 0) return;
+    _unreadChatCount = 0;
+    notifyListeners();
+  }
+
+  /// Clé canonique pour corréler WebRTC (fromUserID) et socket (userId).
+  String _participantId(String userId) {
+    final parsed = int.tryParse(userId);
+    return parsed?.toString() ?? userId;
   }
 
   Future<void> showMeetingScreen() async {
@@ -209,7 +238,7 @@ class MeetingService extends ChangeNotifier {
       }
 
       if (data.containsKey('isVideoOff')) {
-        _remoteVideoStates[userId] = data['isVideoOff'] == true;
+        _remoteVideoStates[_participantId(userId)] = data['isVideoOff'] == true;
         changed = true;
       }
 
@@ -241,11 +270,16 @@ class MeetingService extends ChangeNotifier {
     // Message chat in-meeting
     _apiClient.onSocketEvent(SocketEvents.meetingMessage, (data) {
       if (data is! Map) return;
+      final userId = data['userID']?.toString() ?? '';
       _chatMessages.add(ChatMessage(
-        userId: data['userID']?.toString() ?? '',
+        userId: userId,
         message: data['message']?.toString() ?? '',
         sendAt: DateTime.tryParse(data['sendAt']?.toString() ?? '') ?? DateTime.now(),
       ));
+      final isFromMe = _myId != null && userId == _myId;
+      if (!isFromMe && !_isMeetingChatOpen) {
+        _unreadChatCount++;
+      }
       notifyListeners();
     });
 
@@ -311,18 +345,24 @@ class MeetingService extends ChangeNotifier {
 
     // Video state : un participant a coupé/réactivé sa caméra
     _apiClient.onSocketEvent(SocketEvents.meetingVideoState, (data) {
+      debugPrint('[MeetingService] 📷 RAW video_state reçu: $data');
       if (data is! Map) return;
-      final userId = data['userId']?.toString();
+      final rawId = data['userId']?.toString() ?? data['userID']?.toString();
+      if (rawId == null || rawId.isEmpty) return;
+      final userId = _participantId(rawId);
       final isVideoOff = data['isVideoOff'] == true;
-      if (userId == null) return;
-      debugPrint('[MeetingService] 📷 Video state: userId=$userId isVideoOff=$isVideoOff');
       _remoteVideoStates[userId] = isVideoOff;
+      debugPrint(
+        '[MeetingService] 📷 Video state appliqué: userId=$userId '
+        'isVideoOff=$isVideoOff | peers=${_remoteStreams.keys.toList()} '
+        'states=$_remoteVideoStates',
+      );
       notifyListeners();
     });
   }
 
   void _applyRemoteMuteState(String userId, bool isMuted) {
-    _remoteMutedStates[userId] = isMuted;
+    _remoteMutedStates[_participantId(userId)] = isMuted;
     speakingDetector.setSpeakerMuted(userId, isMuted);
   }
 
@@ -336,7 +376,7 @@ class MeetingService extends ChangeNotifier {
   void _applyVideoStatesSnapshot(dynamic videoStates) {
     if (videoStates is! Map) return;
     videoStates.forEach((key, value) {
-      _remoteVideoStates[key.toString()] = value == true;
+      _remoteVideoStates[_participantId(key.toString())] = value == true;
     });
   }
 
@@ -363,6 +403,10 @@ class MeetingService extends ChangeNotifier {
 
   void _broadcastVideoState() {
     if (_currentMeeting == null) return;
+    debugPrint(
+      '[MeetingService] 📷 Broadcast video state: isVideoOff=$_isVideoOff '
+      'meeting=${_currentMeeting!.idMeeting}',
+    );
     _apiClient.sendSocketEvent(SocketEvents.meetingVideoState, {
       'meetingId': _currentMeeting!.idMeeting,
       'isVideoOff': _isVideoOff,
@@ -841,8 +885,8 @@ class MeetingService extends ChangeNotifier {
     _remoteStreams.remove(userId);
     _pendingIceByPeer.remove(userId);
     _remoteDescSetForPeer.remove(userId);
-    _remoteMutedStates.remove(userId);
-    _remoteVideoStates.remove(userId);
+    _remoteMutedStates.remove(_participantId(userId));
+    _remoteVideoStates.remove(_participantId(userId));
     notifyListeners();
   }
 
@@ -865,8 +909,8 @@ class MeetingService extends ChangeNotifier {
   Future<void> toggleVideo() async {
     if (_localStream != null && _localStream!.getVideoTracks().isNotEmpty) {
       final track = _localStream!.getVideoTracks().first;
-      track.enabled = !track.enabled;
-      _isVideoOff = !track.enabled;
+      _isVideoOff = !_isVideoOff;
+      track.enabled = !_isVideoOff;
       if (_currentMeeting != null) {
         _broadcastVideoState();
       }
@@ -929,6 +973,8 @@ class MeetingService extends ChangeNotifier {
     _pendingIceByPeer.clear();
     _remoteDescSetForPeer.clear();
     _chatMessages.clear();
+    _unreadChatCount = 0;
+    _isMeetingChatOpen = false;
     await _localStream?.dispose();
     _localStream = null;
     _durationTimer?.cancel();

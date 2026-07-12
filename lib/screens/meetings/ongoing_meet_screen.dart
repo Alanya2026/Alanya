@@ -9,6 +9,7 @@ import '../../core/utils/avatar_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/calls/speaking_indicator_border.dart';
 import '../../widgets/common/app_avatar.dart';
+import '../../widgets/common/app_badge.dart';
 
 // Couleurs spécifiques à l'UI Google-Meet de la réunion (aucun token AppColors
 // ne correspond exactement à ce gris-anthracite, distinct du bleu immersif).
@@ -67,6 +68,9 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     await _localRenderer.initialize();
     if (!mounted) return;
 
+    _localRenderer.onResize = () {
+      if (mounted) setState(() {});
+    };
     setState(() {
       _localRendererReady = true;
       _localRenderer.srcObject = meetingService.localStream;
@@ -100,13 +104,6 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     _syncRemoteRenderers(meetingService.remoteStreams);
   }
 
-  bool _streamHasActiveVideo(MediaStream? stream) {
-    if (stream == null) return false;
-    final tracks = stream.getVideoTracks();
-    if (tracks.isEmpty) return false;
-    return tracks.any((track) => track.enabled);
-  }
-
   void _watchVideoTracks(MediaStream? stream) {
     if (stream == null) return;
     for (final track in stream.getVideoTracks()) {
@@ -121,23 +118,11 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     }
   }
 
-  bool _rendererShowsVideo(
-    RTCVideoRenderer renderer,
-    MediaStream? stream, {
-    required bool rendererReady,
-  }) {
-    if (!_streamHasActiveVideo(stream)) return false;
-    if (!rendererReady) return true;
-    return renderer.videoWidth > 0;
-  }
-
   bool _localTileShowsVideo(MeetingService meetingService) {
     if (meetingService.isVideoOff || !_localRendererReady) return false;
-    return _rendererShowsVideo(
-      _localRenderer,
-      meetingService.localStream,
-      rendererReady: _localRendererReady,
-    );
+    final stream = meetingService.localStream;
+    if (stream == null || stream.getVideoTracks().isEmpty) return false;
+    return _localRenderer.srcObject != null;
   }
 
   bool _remoteTileShowsVideo(
@@ -145,12 +130,13 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     MediaStream? stream, {
     required bool isVideoOff,
   }) {
+    // Comme les appels de groupe : on se fie UNIQUEMENT à l'état caméra
+    // synchronisé par socket, pas à `videoWidth`. Le RTCVideoView se
+    // rafraîchit tout seul quand les trames (re)arrivent — sinon la tuile
+    // restait bloquée sur l'avatar après une réactivation.
     if (isVideoOff) return false;
-    return _rendererShowsVideo(
-      renderer,
-      stream,
-      rendererReady: true,
-    );
+    if (stream == null || stream.getVideoTracks().isEmpty) return false;
+    return renderer.srcObject != null;
   }
 
   Future<void> _syncRemoteRenderers(
@@ -169,6 +155,11 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       await renderer.initialize();
       final stream = remoteStreams[key] as MediaStream?;
       renderer.srcObject = stream;
+      // Rebuild quand la 1re trame / la taille change (reprise caméra),
+      // sinon la tuile pouvait rester figée sur l'avatar.
+      renderer.onResize = () {
+        if (mounted) setState(() {});
+      };
       _remoteRenderers[key] = renderer;
       _remoteStreamSignatures[key] = _streamSignature(stream);
       _watchVideoTracks(stream);
@@ -302,6 +293,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               renderer: _localRenderer,
                               photoUrl: myAvatar,
                               showVideo: _localTileShowsVideo(meetingService),
+                              isVideoOff: meetingService.isVideoOff,
                               isMuted: meetingService.isMuted,
                               isSpeaking: meetingService.amISpeaking,
                               mirror: true,
@@ -319,6 +311,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                   photoUrl: myAvatar,
                                   showVideo:
                                       _localTileShowsVideo(meetingService),
+                                  isVideoOff: meetingService.isVideoOff,
                                   isMuted: meetingService.isMuted,
                                   isSpeaking: meetingService.amISpeaking,
                                   mirror: true,
@@ -340,6 +333,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                       isVideoOff: meetingService
                                           .isParticipantVideoOff(userId),
                                     ),
+                                    isVideoOff: meetingService
+                                        .isParticipantVideoOff(userId),
                                     isMuted: meetingService
                                         .isParticipantMuted(userId),
                                     isSpeaking: meetingService
@@ -399,6 +394,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                           icon: Icons.chat_bubble_outline,
                           color: Colors.white24,
                           iconColor: Colors.white,
+                          badgeCount: meetingService.unreadChatCount,
                           onTap: () =>
                               _showMeetingChat(context, meetingService),
                         ),
@@ -470,9 +466,13 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     required bool showVideo,
     required bool isMuted,
     required bool isSpeaking,
+    bool isVideoOff = false,
     String? photoUrl,
     bool mirror = false,
   }) {
+    final showVideoView =
+        showVideo && !isVideoOff && renderer.srcObject != null;
+
     return SpeakingIndicatorBorder(
       isSpeaking: isSpeaking && !isMuted,
       borderRadius: AppRadius.brMd,
@@ -483,7 +483,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       ),
       child: Stack(
         children: [
-          if (showVideo && renderer.srcObject != null)
+          if (showVideoView)
             ClipRRect(
               borderRadius: AppRadius.brMd,
               child: RTCVideoView(
@@ -492,8 +492,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                 objectFit:
                     RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
               ),
-            )
-          else
+            ),
+          if (!showVideoView)
             Center(
               child: AppAvatar(
                 imageUrl: photoUrl,
@@ -544,20 +544,36 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
     required Color iconColor,
     required VoidCallback onTap,
     bool isLarge = false,
+    int? badgeCount,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(isLarge ? AppSpacing.lg : AppSpacing.md),
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        child: Icon(icon,
-            color: iconColor, size: isLarge ? 32 : AppIconSize.md),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: EdgeInsets.all(isLarge ? AppSpacing.lg : AppSpacing.md),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Icon(icon,
+                color: iconColor, size: isLarge ? 32 : AppIconSize.md),
+          ),
+          if (badgeCount != null && badgeCount > 0)
+            Positioned(
+              top: -2,
+              right: -2,
+              child: CountBadge(
+                count: badgeCount,
+                borderColor: _kMeetBg,
+              ),
+            ),
+        ],
       ),
     );
   }
 
   void _showMeetingChat(
       BuildContext context, MeetingService meetingService) {
+    meetingService.markMeetingChatOpen();
     showModalBottomSheet(
       context: context,
       backgroundColor: _kMeetSheet,
@@ -565,7 +581,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
           borderRadius: AppRadius.sheetTop),
       builder: (ctx) =>
           _MeetingChatSheet(meetingService: meetingService),
-    );
+    ).whenComplete(meetingService.markMeetingChatClosed);
   }
 }
 
