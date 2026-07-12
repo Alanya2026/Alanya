@@ -9,6 +9,7 @@ import '../../core/services/meeting_service.dart';
 import '../../core/services/voice_playback_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../screens/chats/chat_detail_screen.dart';
 
 /// Hauteur du bandeau compact (hors status bar / encoche).
@@ -222,7 +223,12 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
         _wasVoiceBannerVisible = showVoice;
 
         if (visible) {
-          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+          final brightness = Theme.of(context).brightness;
+          SystemChrome.setSystemUIOverlayStyle(
+            brightness == Brightness.light
+                ? SystemUiOverlayStyle.dark
+                : SystemUiOverlayStyle.light,
+          );
           if (!_slideCtrl.isCompleted && !_slideCtrl.isAnimating) {
             _slideCtrl.forward(from: 0);
           }
@@ -243,7 +249,7 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
             detail: _callDetail(callService),
             isConnected: callService.status == CallStatus.connected,
             isMuted: callService.isMuted,
-            accent: AppColors.success,
+            accent: context.semantic.success,
             onExpand: () => callService.navigateToCallUi(),
             onHangUp: () async {
               if (callService.groupRoomId != null) {
@@ -334,8 +340,12 @@ class _SessionTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onAccent = _contrastColor(accent);
+
     return Material(
       color: accent,
+      elevation: Theme.of(context).brightness == Brightness.light ? 2 : 0,
+      shadowColor: AppColors.black.withValues(alpha: 0.12),
       child: SafeArea(
         bottom: false,
         child: SizedBox(
@@ -343,7 +353,7 @@ class _SessionTopBar extends StatelessWidget {
           child: Row(
             children: [
               AppSpacing.hGapMd,
-              _LiveDot(isConnected: isConnected),
+              _LiveDot(isConnected: isConnected, color: onAccent),
               AppSpacing.hGapSm,
               Expanded(
                 child: GestureDetector(
@@ -355,8 +365,8 @@ class _SessionTopBar extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: const TextStyle(
-                          color: AppColors.white,
+                        style: TextStyle(
+                          color: onAccent,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           height: 1.2,
@@ -367,7 +377,7 @@ class _SessionTopBar extends StatelessWidget {
                       Text(
                         detail,
                         style: TextStyle(
-                          color: AppColors.white.withValues(alpha: 0.88),
+                          color: onAccent.withValues(alpha: 0.88),
                           fontSize: 12,
                           height: 1.2,
                         ),
@@ -385,7 +395,7 @@ class _SessionTopBar extends StatelessWidget {
                   child: Icon(
                     CupertinoIcons.mic_slash_fill,
                     size: 16,
-                    color: AppColors.white.withValues(alpha: 0.85),
+                    color: onAccent.withValues(alpha: 0.85),
                   ),
                 ),
               _HangUpButton(
@@ -399,6 +409,10 @@ class _SessionTopBar extends StatelessWidget {
       ),
     );
   }
+}
+
+Color _contrastColor(Color background) {
+  return background.computeLuminance() > 0.5 ? AppColors.textPrimary : AppColors.white;
 }
 
 class _VoicePlayPauseButton extends StatelessWidget {
@@ -436,9 +450,10 @@ class _VoicePlayPauseButton extends StatelessWidget {
 }
 
 class _LiveDot extends StatefulWidget {
-  const _LiveDot({required this.isConnected});
+  const _LiveDot({required this.isConnected, required this.color});
 
   final bool isConnected;
+  final Color color;
 
   @override
   State<_LiveDot> createState() => _LiveDotState();
@@ -484,12 +499,12 @@ class _LiveDotState extends State<_LiveDot>
         width: 8,
         height: 8,
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: widget.color,
           shape: BoxShape.circle,
           boxShadow: widget.isConnected
               ? [
                   BoxShadow(
-                    color: AppColors.white.withValues(alpha: 0.5),
+                    color: widget.color.withValues(alpha: 0.5),
                     blurRadius: 4,
                   ),
                 ]

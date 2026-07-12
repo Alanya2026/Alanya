@@ -122,6 +122,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (_callScreenShown) return;
 
+    // L'utilisateur a minimisé volontairement l'appel (bannière active) ou
+    // l'écran plein est déjà à l'affichage : ne pas le ré-ouvrir. Sans ce
+    // garde, le `notify()` du timer de durée (chaque seconde) re-pousserait
+    // l'écran juste après une minimisation.
+    if (callService.isCallUiMinimized || callService.isCallUiRouteOpen) return;
+
     // Accepté depuis notification/CallKit : on saute l'écran entrant.
     if (callService.isAutoAnsweringFromPush) {
       if (callService.status == CallStatus.incoming ||
