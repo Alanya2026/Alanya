@@ -704,29 +704,21 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final uploading = msg.status == 0;
     return GestureDetector(
       onTap: () => _openViewer(msg, isVideo: true),
-      child: Container(
-        height: 160,
-        width: 240,
-        decoration: const BoxDecoration(
-          color: AppColors.immersiveBackground,
-          borderRadius: AppRadius.brSm,
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          alignment: Alignment.center,
-          children: [
-            if (!uploading)
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm + 2),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withAlpha(50),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.play_arrow, color: AppColors.white, size: 36),
-              ),
-            if (uploading) _buildUploadProgressOverlay(msg),
-          ],
-        ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          VideoMessagePreview(
+            pendingPath: msg.pendingUploadPath,
+            localPath: msg.localMediaPath,
+            thumbBase64: msg.mediaThumb,
+            durationSeconds: msg.mediaDuration,
+            width: 240,
+            height: 160,
+            playIconSize: 30,
+            playPadding: 8,
+          ),
+          if (uploading) _buildUploadProgressOverlay(msg),
+        ],
       ),
     );
   }
@@ -1062,18 +1054,15 @@ extension _ChatBubbles on _ChatDetailScreenState {
           fit: StackFit.expand,
           children: [
             if (isVideo)
-              Container(
-                color: AppColors.immersiveBackground,
-                child: _hasLocal(msg)
-                    ? null
-                    : (msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: msg.mediaUrl!,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) =>
-                                Container(color: AppColors.immersiveBackground),
-                          )
-                        : null),
+              VideoMessagePreview(
+                pendingPath: msg.pendingUploadPath,
+                localPath: msg.localMediaPath,
+                thumbBase64: msg.mediaThumb,
+                durationSeconds: msg.mediaDuration,
+                playIconSize: 24,
+                playPadding: 6,
+                borderRadius: BorderRadius.zero,
+                expandToFill: true,
               )
             else
               _hasLocal(msg)
@@ -1087,17 +1076,6 @@ extension _ChatBubbles on _ChatDetailScreenState {
                         color: context.colors.onSurfaceVariant,
                       ),
                     ),
-            if (isVideo)
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withAlpha(50),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.play_arrow, color: AppColors.white, size: 24),
-                ),
-              ),
             if (uploading) _buildUploadProgressOverlay(msg),
             if (overlayExtra != null && overlayExtra > 0)
               Container(

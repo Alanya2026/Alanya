@@ -16,6 +16,7 @@ import '../../core/services/local_cache_repository.dart';
 import '../../core/utils/country_utils.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/alanya_phone_field.dart';
+import '../../widgets/video_message_preview.dart';
 import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
@@ -729,15 +730,6 @@ class _MediaCardState extends State<_MediaCard> {
                               fit: StackFit.expand,
                               children: [
                                 _buildThumb(msg),
-                                if (msg.type == 2)
-                                  Container(
-                                    color: Colors.black26,
-                                    child: const Icon(
-                                      CupertinoIcons.play_circle_fill,
-                                      color: Colors.white,
-                                      size: 30,
-                                    ),
-                                  ),
                               ],
                             ),
                           ),
@@ -771,7 +763,19 @@ class _MediaCardState extends State<_MediaCard> {
         ),
       );
     }
-    if (msg.type == 2) return Container(color: context.colors.surfaceContainerHighest);
+    if (msg.type == 2) {
+      return VideoMessagePreview(
+        pendingPath: msg.pendingUploadPath,
+        localPath: msg.localMediaPath,
+        thumbBase64: msg.mediaThumb,
+        durationSeconds: msg.mediaDuration,
+        borderRadius: BorderRadius.zero,
+        expandToFill: true,
+        playIconSize: 22,
+        playPadding: 5,
+        showDuration: false,
+      );
+    }
 
     final hasLocal = msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
     if (hasLocal) {

@@ -11,6 +11,7 @@ import '../../core/db/app_database.dart';
 import '../../core/utils/rich_text_parser.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/video_message_preview.dart';
 import 'media_viewer_screen.dart';
 
 class _DateGroup {
@@ -354,36 +355,44 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           ),
         ),
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Container(
-            decoration: BoxDecoration(
+      child: isVideo
+          ? VideoMessagePreview(
+              pendingPath: msg.pendingUploadPath,
+              localPath: msg.localMediaPath,
+              thumbBase64: msg.mediaThumb,
+              durationSeconds: msg.mediaDuration,
               borderRadius: BorderRadius.circular(6),
-              color: AppColors.surfaceSubtle,
+              expandToFill: true,
+              playIconSize: 26,
+            )
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    color: AppColors.surfaceSubtle,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _buildThumbnail(msg, msg.localMediaPath ?? msg.mediaUrl),
+                ),
+              ],
             ),
-            clipBehavior: Clip.antiAlias,
-            child: _buildThumbnail(msg, msg.localMediaPath ?? msg.mediaUrl),
-          ),
-          if (isVideo)
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                color: Colors.black26,
-              ),
-              child: const Icon(
-                CupertinoIcons.play_circle_fill,
-                color: Colors.white,
-                size: 36,
-              ),
-            ),
-        ],
-      ),
     );
   }
 
   Widget _buildThumbnail(LocalMessage msg, String? url) {
-    if (msg.type == 2) return Container(color: AppColors.surfaceSubtle);
+    if (msg.type == 2) {
+      return VideoMessagePreview(
+        pendingPath: msg.pendingUploadPath,
+        localPath: msg.localMediaPath,
+        thumbBase64: msg.mediaThumb,
+        durationSeconds: msg.mediaDuration,
+        borderRadius: BorderRadius.zero,
+        expandToFill: true,
+        playIconSize: 26,
+      );
+    }
     final hasLocal =
         msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
     if (hasLocal) {

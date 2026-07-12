@@ -13,6 +13,7 @@ import '../utils/media_staging.dart';
 import '../utils/upload_errors.dart';
 import 'local_notification_helper.dart';
 import 'media_cache_service.dart';
+import 'video_thumbnail_service.dart';
 import 'voice_asset_resolver.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';  
@@ -319,6 +320,7 @@ class ChatRepository {
     required String mediaUrl,
     String? mediaName,
     int? mediaDuration,
+    String? mediaThumb,
     String? localMediaPath,
     String? content,
     bool isForwarded = false,
@@ -326,6 +328,12 @@ class ChatRepository {
   }) async {
     final clientId = _newClientId();
     final now = DateTime.now().toUtc();
+
+    // Vidéo : réutilise la vignette fournie (transfert) sinon la génère depuis
+    // le fichier local si disponible.
+    mediaThumb ??= type == 2 && localMediaPath != null
+        ? await VideoThumbnailService.base64ForFile(localMediaPath)
+        : null;
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -339,6 +347,7 @@ class ChatRepository {
       mediaUrl: Value(mediaUrl),
       mediaName: Value(mediaName),
       mediaDuration: Value(mediaDuration),
+      mediaThumb: Value(mediaThumb),
       localMediaPath: Value(localMediaPath),
       isForwarded: Value(isForwarded),
       isViewOnce: Value(isViewOnce),
@@ -360,6 +369,7 @@ class ChatRepository {
       mediaUrl: mediaUrl,
       mediaName: mediaName,
       mediaDuration: mediaDuration,
+      mediaThumb: mediaThumb,
       isForwarded: isForwarded,
       isViewOnce: isViewOnce,
     );
@@ -372,6 +382,9 @@ class ChatRepository {
     String? mediaName,
     int? mediaDuration,
     String? content,
+    int? replyToID,
+    String? replyToContent,
+    int isStatusReply = 0,
     bool isForwarded = false,
     bool isViewOnce = false,
   }) async {
@@ -392,6 +405,11 @@ class ChatRepository {
     }
     final name = mediaName ?? uploadFile.path.split('/').last;
 
+    // Vidéo : génère une mini-vignette base64 transmise au destinataire (aperçu
+    // instantané et hors ligne, sans télécharger la vidéo).
+    final mediaThumb =
+        type == 2 ? await VideoThumbnailService.base64ForFile(uploadFile.path) : null;
+
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
       conversationID: conversationID,
@@ -403,8 +421,12 @@ class ChatRepository {
       status: const Value(0),
       mediaName: Value(name),
       mediaDuration: Value(mediaDuration),
+      mediaThumb: Value(mediaThumb),
       localMediaPath: Value(uploadFile.path),
       pendingUploadPath: Value(uploadFile.path),
+      replyToID: Value(replyToID),
+      replyToContent: Value(replyToContent),
+      isStatusReply: Value(isStatusReply),
       isForwarded: Value(isForwarded),
       isViewOnce: Value(isViewOnce),
       syncPending: const Value(true),
@@ -426,6 +448,9 @@ class ChatRepository {
         content: content,
         mediaName: name,
         mediaDuration: mediaDuration,
+        replyToID: replyToID,
+        replyToContent: replyToContent,
+        isStatusReply: isStatusReply,
         isForwarded: isForwarded,
         isViewOnce: isViewOnce,
       );
@@ -489,6 +514,10 @@ class ChatRepository {
         caption: effectiveCaption,
       );
 
+      final mediaThumb = item.type == 2
+          ? await VideoThumbnailService.base64ForFile(item.file.path)
+          : null;
+
       await _dao.upsertMessage(LocalMessagesCompanion.insert(
         clientId: clientId,
         conversationID: conversationID,
@@ -500,6 +529,7 @@ class ChatRepository {
         status: const Value(0),
         mediaName: Value(name),
         mediaDuration: Value(item.duration),
+        mediaThumb: Value(mediaThumb),
         localMediaPath: Value(item.file.path),
         pendingUploadPath: Value(item.file.path),
         isForwarded: Value(isForwarded),
@@ -587,6 +617,7 @@ class ChatRepository {
     bool isViewOnce = false,
     int? replyToID,
     String? replyToContent,
+    int isStatusReply = 0,
   }) async {
     if (!_inFlightUploads.add(clientId)) {
       debugPrint('[ChatRepo] upload déjà en cours pour $clientId');
@@ -610,6 +641,12 @@ class ChatRepository {
             pendingUploadPath: const Value(null),
           ));
 
+          // Vignette base64 déjà générée et stockée à l'insertion (vidéos) :
+          // on la relit pour la transmettre au destinataire.
+          final row = await (_db.select(_db.localMessages)
+                ..where((m) => m.clientId.equals(clientId)))
+              .getSingleOrNull();
+
           _emitSend(
             clientId: clientId,
             conversationID: conversationID,
@@ -618,8 +655,10 @@ class ChatRepository {
             mediaUrl: url,
             mediaName: mediaName,
             mediaDuration: mediaDuration,
+            mediaThumb: row?.mediaThumb,
             replyToID: replyToID,
             replyToContent: replyToContent,
+            isStatusReply: isStatusReply,
             isForwarded: isForwarded,
             isViewOnce: isViewOnce,
           );
@@ -648,8 +687,10 @@ class ChatRepository {
       mediaUrl: m.mediaUrl,
       mediaName: m.mediaName,
       mediaDuration: m.mediaDuration,
+      mediaThumb: m.mediaThumb,
       replyToID: m.replyToID,
       replyToContent: m.replyToContent,
+      isStatusReply: m.isStatusReply,
       isForwarded: m.isForwarded,
       isViewOnce: m.isViewOnce,
     );
@@ -793,6 +834,7 @@ class ChatRepository {
           mediaUrl: url,
           mediaName: source.mediaName,
           mediaDuration: source.mediaDuration,
+          mediaThumb: source.mediaThumb,
           localMediaPath: source.localMediaPath,
           content: marker,
           isForwarded: true,
@@ -933,6 +975,7 @@ class ChatRepository {
         mediaUrl: url,
         mediaName: source.mediaName,
         mediaDuration: source.mediaDuration,
+        mediaThumb: source.mediaThumb,
         localMediaPath: source.localMediaPath,
         content: effectiveCaption,
         isForwarded: true,
@@ -985,6 +1028,7 @@ class ChatRepository {
             mediaDuration: m.mediaDuration,
             replyToID: m.replyToID,
             replyToContent: m.replyToContent,
+            isStatusReply: m.isStatusReply,
             isForwarded: m.isForwarded,
             isViewOnce: m.isViewOnce,
           );
@@ -1033,6 +1077,7 @@ class ChatRepository {
             mediaDuration: m.mediaDuration,
             replyToID: m.replyToID,
             replyToContent: m.replyToContent,
+            isStatusReply: m.isStatusReply,
             isForwarded: m.isForwarded,
             isViewOnce: m.isViewOnce,
           );
@@ -1254,9 +1299,11 @@ class ChatRepository {
       // Nouveau message local si aucun candidat avec ce msgID confirmé
       wasNew = candidates.every((m) => m.msgID != msgID);
 
+      String? carriedMediaThumb;
       for (final m in candidates) {
         carriedLocalPath ??= m.localMediaPath;
         carriedClickSentAt ??= m.clickSentAt;
+        carriedMediaThumb ??= m.mediaThumb;
         await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
       }
 
@@ -1267,6 +1314,10 @@ class ChatRepository {
       }
       if (carriedClickSentAt != null) {
         companion = companion.copyWith(clickSentAt: Value(carriedClickSentAt));
+      }
+      // Préserve la vignette locale si le serveur (non migré) ne l'a pas renvoyée.
+      if (carriedMediaThumb != null && !companion.mediaThumb.present) {
+        companion = companion.copyWith(mediaThumb: Value(carriedMediaThumb));
       }
 
       debugPrint('[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
@@ -1508,6 +1559,7 @@ class ChatRepository {
     String? mediaUrl,
     String? mediaName,
     int? mediaDuration,
+    String? mediaThumb,
     int? replyToID,
     String? replyToContent,
     int isStatusReply = 0,
@@ -1530,6 +1582,7 @@ class ChatRepository {
       if (mediaUrl != null) 'mediaUrl': mediaUrl,
       if (mediaName != null) 'mediaName': mediaName,
       if (mediaDuration != null) 'mediaDuration': mediaDuration,
+      if (mediaThumb != null) 'mediaThumb': mediaThumb,
       if (replyToID != null && replyToID > 0) 'replyToID': replyToID,
       if (replyToContent != null) 'replyToContent': replyToContent,
       if (isStatusReply != 0) 'isStatusReply': isStatusReply,
@@ -1618,6 +1671,11 @@ class ChatRepository {
       mediaUrl: Value(normalizeBackendUrl(j['mediaUrl']?.toString())),
       mediaName: Value(j['mediaName']?.toString()),
       mediaDuration: Value(j['mediaDuration'] == null ? null : _toInt(j['mediaDuration'])),
+      // Vignette base64 : on ne l'écrase que si le serveur en fournit une
+      // (backend non migré ⇒ champ absent ⇒ on préserve la valeur locale).
+      mediaThumb: j['mediaThumb'] == null
+          ? const Value.absent()
+          : Value(j['mediaThumb'].toString()),
       replyToID: Value(j['replyToID'] == null ? null : _toInt(j['replyToID'])),
       replyToContent: Value(j['replyToContent']?.toString()),
       isEdited: Value(j['isEdited'] == 1 || j['isEdited'] == true),

@@ -29,6 +29,7 @@ import 'view_once_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
 import 'chat/link_preview_card.dart';
 import '../../core/services/pdf_thumbnail_service.dart';
+import '../../widgets/video_message_preview.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';

@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +17,7 @@ import '../../talky_models.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../core/db/app_database.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/video_message_preview.dart';
 import '../calls/group_participants_picker_screen.dart';
 import '../meetings/participant_picker_screen.dart';
 import 'contact_detail_screen.dart';
@@ -504,15 +504,6 @@ class _MediaCardState extends State<_MediaCard> {
                               fit: StackFit.expand,
                               children: [
                                 _buildThumb(msg),
-                                if (msg.type == 2)
-                                  Container(
-                                    color: Colors.black26,
-                                    child: const Icon(
-                                      CupertinoIcons.play_circle_fill,
-                                      color: Colors.white,
-                                      size: 30,
-                                    ),
-                                  ),
                               ],
                             ),
                           ),
@@ -555,7 +546,20 @@ class _MediaCardState extends State<_MediaCard> {
         ),
       );
     }
-    if (msg.type == 2) return Container(color: placeholder);
+    if (msg.type == 2) {
+      return VideoMessagePreview(
+        pendingPath: msg.pendingUploadPath,
+        localPath: msg.localMediaPath,
+        thumbBase64: msg.mediaThumb,
+        durationSeconds: msg.mediaDuration,
+        borderRadius: BorderRadius.zero,
+        expandToFill: true,
+        playIconSize: 22,
+        playPadding: 5,
+        showDuration: false,
+        fallbackColor: placeholder,
+      );
+    }
 
     final hasLocal = msg.localMediaPath != null &&
         File(msg.localMediaPath!).existsSync();

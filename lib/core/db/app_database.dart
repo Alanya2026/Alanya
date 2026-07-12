@@ -52,6 +52,11 @@ class LocalMessages extends Table {
   TextColumn get mediaName => text().nullable()();
   IntColumn get mediaDuration => integer().nullable()();
 
+  /// Vignette vidéo (JPEG base64) transmise avec le message pour l'aperçu chez
+  /// le destinataire, disponible immédiatement et hors ligne sans télécharger
+  /// la vidéo complète.
+  TextColumn get mediaThumb => text().nullable()();
+
   /// Chemin du média téléchargé/mis en cache localement (consultable offline).
   TextColumn get localMediaPath => text().nullable()();
 
@@ -201,7 +206,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -265,6 +270,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 9) {
             await _migrateLegacyHttpsUrls(m.database);
+          }
+          if (from < 10) {
+            await m.addColumn(localMessages, localMessages.mediaThumb);
           }
         },
       );

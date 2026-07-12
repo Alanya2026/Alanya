@@ -946,6 +946,17 @@ class $LocalMessagesTable extends LocalMessages
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _mediaThumbMeta = const VerificationMeta(
+    'mediaThumb',
+  );
+  @override
+  late final GeneratedColumn<String> mediaThumb = GeneratedColumn<String>(
+    'media_thumb',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _localMediaPathMeta = const VerificationMeta(
     'localMediaPath',
   );
@@ -1209,6 +1220,7 @@ class $LocalMessagesTable extends LocalMessages
     mediaUrl,
     mediaName,
     mediaDuration,
+    mediaThumb,
     localMediaPath,
     pendingUploadPath,
     replyToID,
@@ -1335,6 +1347,12 @@ class $LocalMessagesTable extends LocalMessages
           data['media_duration']!,
           _mediaDurationMeta,
         ),
+      );
+    }
+    if (data.containsKey('media_thumb')) {
+      context.handle(
+        _mediaThumbMeta,
+        mediaThumb.isAcceptableOrUnknown(data['media_thumb']!, _mediaThumbMeta),
       );
     }
     if (data.containsKey('local_media_path')) {
@@ -1554,6 +1572,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.int,
         data['${effectivePrefix}media_duration'],
       ),
+      mediaThumb: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}media_thumb'],
+      ),
       localMediaPath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}local_media_path'],
@@ -1664,6 +1686,11 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   final String? mediaName;
   final int? mediaDuration;
 
+  /// Vignette vidéo (JPEG base64) transmise avec le message pour l'aperçu chez
+  /// le destinataire, disponible immédiatement et hors ligne sans télécharger
+  /// la vidéo complète.
+  final String? mediaThumb;
+
   /// Chemin du média téléchargé/mis en cache localement (consultable offline).
   final String? localMediaPath;
 
@@ -1721,6 +1748,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     this.mediaUrl,
     this.mediaName,
     this.mediaDuration,
+    this.mediaThumb,
     this.localMediaPath,
     this.pendingUploadPath,
     this.replyToID,
@@ -1769,6 +1797,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     }
     if (!nullToAbsent || mediaDuration != null) {
       map['media_duration'] = Variable<int>(mediaDuration);
+    }
+    if (!nullToAbsent || mediaThumb != null) {
+      map['media_thumb'] = Variable<String>(mediaThumb);
     }
     if (!nullToAbsent || localMediaPath != null) {
       map['local_media_path'] = Variable<String>(localMediaPath);
@@ -1844,6 +1875,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       mediaDuration: mediaDuration == null && nullToAbsent
           ? const Value.absent()
           : Value(mediaDuration),
+      mediaThumb: mediaThumb == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaThumb),
       localMediaPath: localMediaPath == null && nullToAbsent
           ? const Value.absent()
           : Value(localMediaPath),
@@ -1910,6 +1944,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       mediaUrl: serializer.fromJson<String?>(json['mediaUrl']),
       mediaName: serializer.fromJson<String?>(json['mediaName']),
       mediaDuration: serializer.fromJson<int?>(json['mediaDuration']),
+      mediaThumb: serializer.fromJson<String?>(json['mediaThumb']),
       localMediaPath: serializer.fromJson<String?>(json['localMediaPath']),
       pendingUploadPath: serializer.fromJson<String?>(
         json['pendingUploadPath'],
@@ -1951,6 +1986,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'mediaUrl': serializer.toJson<String?>(mediaUrl),
       'mediaName': serializer.toJson<String?>(mediaName),
       'mediaDuration': serializer.toJson<int?>(mediaDuration),
+      'mediaThumb': serializer.toJson<String?>(mediaThumb),
       'localMediaPath': serializer.toJson<String?>(localMediaPath),
       'pendingUploadPath': serializer.toJson<String?>(pendingUploadPath),
       'replyToID': serializer.toJson<int?>(replyToID),
@@ -1988,6 +2024,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     Value<String?> mediaUrl = const Value.absent(),
     Value<String?> mediaName = const Value.absent(),
     Value<int?> mediaDuration = const Value.absent(),
+    Value<String?> mediaThumb = const Value.absent(),
     Value<String?> localMediaPath = const Value.absent(),
     Value<String?> pendingUploadPath = const Value.absent(),
     Value<int?> replyToID = const Value.absent(),
@@ -2024,6 +2061,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     mediaDuration: mediaDuration.present
         ? mediaDuration.value
         : this.mediaDuration,
+    mediaThumb: mediaThumb.present ? mediaThumb.value : this.mediaThumb,
     localMediaPath: localMediaPath.present
         ? localMediaPath.value
         : this.localMediaPath,
@@ -2074,6 +2112,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       mediaDuration: data.mediaDuration.present
           ? data.mediaDuration.value
           : this.mediaDuration,
+      mediaThumb: data.mediaThumb.present
+          ? data.mediaThumb.value
+          : this.mediaThumb,
       localMediaPath: data.localMediaPath.present
           ? data.localMediaPath.value
           : this.localMediaPath,
@@ -2139,6 +2180,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('mediaUrl: $mediaUrl, ')
           ..write('mediaName: $mediaName, ')
           ..write('mediaDuration: $mediaDuration, ')
+          ..write('mediaThumb: $mediaThumb, ')
           ..write('localMediaPath: $localMediaPath, ')
           ..write('pendingUploadPath: $pendingUploadPath, ')
           ..write('replyToID: $replyToID, ')
@@ -2178,6 +2220,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     mediaUrl,
     mediaName,
     mediaDuration,
+    mediaThumb,
     localMediaPath,
     pendingUploadPath,
     replyToID,
@@ -2216,6 +2259,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.mediaUrl == this.mediaUrl &&
           other.mediaName == this.mediaName &&
           other.mediaDuration == this.mediaDuration &&
+          other.mediaThumb == this.mediaThumb &&
           other.localMediaPath == this.localMediaPath &&
           other.pendingUploadPath == this.pendingUploadPath &&
           other.replyToID == this.replyToID &&
@@ -2252,6 +2296,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<String?> mediaUrl;
   final Value<String?> mediaName;
   final Value<int?> mediaDuration;
+  final Value<String?> mediaThumb;
   final Value<String?> localMediaPath;
   final Value<String?> pendingUploadPath;
   final Value<int?> replyToID;
@@ -2287,6 +2332,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.mediaUrl = const Value.absent(),
     this.mediaName = const Value.absent(),
     this.mediaDuration = const Value.absent(),
+    this.mediaThumb = const Value.absent(),
     this.localMediaPath = const Value.absent(),
     this.pendingUploadPath = const Value.absent(),
     this.replyToID = const Value.absent(),
@@ -2323,6 +2369,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.mediaUrl = const Value.absent(),
     this.mediaName = const Value.absent(),
     this.mediaDuration = const Value.absent(),
+    this.mediaThumb = const Value.absent(),
     this.localMediaPath = const Value.absent(),
     this.pendingUploadPath = const Value.absent(),
     this.replyToID = const Value.absent(),
@@ -2362,6 +2409,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<String>? mediaUrl,
     Expression<String>? mediaName,
     Expression<int>? mediaDuration,
+    Expression<String>? mediaThumb,
     Expression<String>? localMediaPath,
     Expression<String>? pendingUploadPath,
     Expression<int>? replyToID,
@@ -2398,6 +2446,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (mediaUrl != null) 'media_url': mediaUrl,
       if (mediaName != null) 'media_name': mediaName,
       if (mediaDuration != null) 'media_duration': mediaDuration,
+      if (mediaThumb != null) 'media_thumb': mediaThumb,
       if (localMediaPath != null) 'local_media_path': localMediaPath,
       if (pendingUploadPath != null) 'pending_upload_path': pendingUploadPath,
       if (replyToID != null) 'reply_to_i_d': replyToID,
@@ -2436,6 +2485,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<String?>? mediaUrl,
     Value<String?>? mediaName,
     Value<int?>? mediaDuration,
+    Value<String?>? mediaThumb,
     Value<String?>? localMediaPath,
     Value<String?>? pendingUploadPath,
     Value<int?>? replyToID,
@@ -2472,6 +2522,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       mediaUrl: mediaUrl ?? this.mediaUrl,
       mediaName: mediaName ?? this.mediaName,
       mediaDuration: mediaDuration ?? this.mediaDuration,
+      mediaThumb: mediaThumb ?? this.mediaThumb,
       localMediaPath: localMediaPath ?? this.localMediaPath,
       pendingUploadPath: pendingUploadPath ?? this.pendingUploadPath,
       replyToID: replyToID ?? this.replyToID,
@@ -2537,6 +2588,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     }
     if (mediaDuration.present) {
       map['media_duration'] = Variable<int>(mediaDuration.value);
+    }
+    if (mediaThumb.present) {
+      map['media_thumb'] = Variable<String>(mediaThumb.value);
     }
     if (localMediaPath.present) {
       map['local_media_path'] = Variable<String>(localMediaPath.value);
@@ -2620,6 +2674,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('mediaUrl: $mediaUrl, ')
           ..write('mediaName: $mediaName, ')
           ..write('mediaDuration: $mediaDuration, ')
+          ..write('mediaThumb: $mediaThumb, ')
           ..write('localMediaPath: $localMediaPath, ')
           ..write('pendingUploadPath: $pendingUploadPath, ')
           ..write('replyToID: $replyToID, ')
@@ -5782,6 +5837,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<String?> mediaUrl,
       Value<String?> mediaName,
       Value<int?> mediaDuration,
+      Value<String?> mediaThumb,
       Value<String?> localMediaPath,
       Value<String?> pendingUploadPath,
       Value<int?> replyToID,
@@ -5819,6 +5875,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<String?> mediaUrl,
       Value<String?> mediaName,
       Value<int?> mediaDuration,
+      Value<String?> mediaThumb,
       Value<String?> localMediaPath,
       Value<String?> pendingUploadPath,
       Value<int?> replyToID,
@@ -5913,6 +5970,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<int> get mediaDuration => $composableBuilder(
     column: $table.mediaDuration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mediaThumb => $composableBuilder(
+    column: $table.mediaThumb,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6091,6 +6153,11 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get mediaThumb => $composableBuilder(
+    column: $table.mediaThumb,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get localMediaPath => $composableBuilder(
     column: $table.localMediaPath,
     builder: (column) => ColumnOrderings(column),
@@ -6246,6 +6313,11 @@ class $$LocalMessagesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get mediaThumb => $composableBuilder(
+    column: $table.mediaThumb,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get localMediaPath => $composableBuilder(
     column: $table.localMediaPath,
     builder: (column) => column,
@@ -6377,6 +6449,7 @@ class $$LocalMessagesTableTableManager
                 Value<String?> mediaUrl = const Value.absent(),
                 Value<String?> mediaName = const Value.absent(),
                 Value<int?> mediaDuration = const Value.absent(),
+                Value<String?> mediaThumb = const Value.absent(),
                 Value<String?> localMediaPath = const Value.absent(),
                 Value<String?> pendingUploadPath = const Value.absent(),
                 Value<int?> replyToID = const Value.absent(),
@@ -6412,6 +6485,7 @@ class $$LocalMessagesTableTableManager
                 mediaUrl: mediaUrl,
                 mediaName: mediaName,
                 mediaDuration: mediaDuration,
+                mediaThumb: mediaThumb,
                 localMediaPath: localMediaPath,
                 pendingUploadPath: pendingUploadPath,
                 replyToID: replyToID,
@@ -6449,6 +6523,7 @@ class $$LocalMessagesTableTableManager
                 Value<String?> mediaUrl = const Value.absent(),
                 Value<String?> mediaName = const Value.absent(),
                 Value<int?> mediaDuration = const Value.absent(),
+                Value<String?> mediaThumb = const Value.absent(),
                 Value<String?> localMediaPath = const Value.absent(),
                 Value<String?> pendingUploadPath = const Value.absent(),
                 Value<int?> replyToID = const Value.absent(),
@@ -6484,6 +6559,7 @@ class $$LocalMessagesTableTableManager
                 mediaUrl: mediaUrl,
                 mediaName: mediaName,
                 mediaDuration: mediaDuration,
+                mediaThumb: mediaThumb,
                 localMediaPath: localMediaPath,
                 pendingUploadPath: pendingUploadPath,
                 replyToID: replyToID,

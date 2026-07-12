@@ -13,6 +13,7 @@ import '../../core/utils/media_album.dart';
 import '../../core/utils/media_viewer_items.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/video_message_preview.dart';
 import 'forward_message_screen.dart';
 import 'media_viewer_screen.dart';
 
@@ -229,16 +230,26 @@ class _AlbumListTile extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (hasLocal)
+                if (isVideo)
+                  VideoMessagePreview(
+                    pendingPath: message.pendingUploadPath,
+                    localPath: message.localMediaPath,
+                    thumbBase64: message.mediaThumb,
+                    durationSeconds: message.mediaDuration,
+                    borderRadius: BorderRadius.zero,
+                    expandToFill: true,
+                    playIconSize: 36,
+                    playPadding: 10,
+                  )
+                else if (hasLocal)
                   Image.file(File(message.localMediaPath!), fit: BoxFit.cover)
-                else if (message.mediaUrl != null && message.mediaUrl!.isNotEmpty)
+                else if (message.mediaUrl != null &&
+                    message.mediaUrl!.isNotEmpty)
                   CachedNetworkImage(
                     imageUrl: message.mediaUrl!,
                     fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
-                      color: isVideo
-                          ? AppColors.immersiveBackground
-                          : context.semantic.surfaceMuted,
+                      color: context.semantic.surfaceMuted,
                       child: const Center(child: CircularProgressIndicator()),
                     ),
                     errorWidget: (_, __, ___) => Container(
@@ -252,21 +263,6 @@ class _AlbumListTile extends StatelessWidget {
                   )
                 else
                   Container(color: AppColors.immersiveBackground),
-                if (isVideo)
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withAlpha(50),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow,
-                        color: AppColors.white,
-                        size: 40,
-                      ),
-                    ),
-                  ),
                 if (uploading)
                   Container(
                     color: Colors.black26,
