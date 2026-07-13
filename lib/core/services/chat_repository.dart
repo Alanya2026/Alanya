@@ -1163,24 +1163,13 @@ class ChatRepository {
     }
   }
 
-  /// Met à jour le dernier aperçu visible d'une conversation après suppression.
+  /// Met à jour l'aperçu d'une conversation après suppression pour afficher
+  /// « Ce message a été supprimé » (cohérent avec le rendu dans la discussion).
   Future<void> _refreshConversationPreview(int conversationID) async {
-    final latest = await _dao.latestVisibleMessage(conversationID, _myId);
     await (_db.update(_db.localConversations)
           ..where((c) => c.conversID.equals(conversationID)))
-        .write(LocalConversationsCompanion(
-      lastMessage: latest != null
-          ? Value(latest.content)
-          : const Value(null),
-      lastMessageAt: latest != null
-          ? Value(latest.sendAt)
-          : const Value(null),
-      lastMessageSenderID: latest != null
-          ? Value(latest.senderID)
-          : const Value(null),
-      lastMessageType: latest != null
-          ? Value(latest.type)
-          : const Value(null),
+        .write(const LocalConversationsCompanion(
+      lastMessage: Value('Ce message a été supprimé'),
     ));
   }
 
