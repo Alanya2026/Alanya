@@ -1118,9 +1118,20 @@ class ChatRepository {
     bool forAll = false,
     int? conversationID,
   }) async {
+    // Collecte les conversationID affectées pour rafraîchir les aperçus.
+    final affectedConvIDs = <int>{};
+
     // 1. Messages confirmés (msgID > 0)
     final serverIds = msgIDs.where((id) => id > 0).toSet().toList();
     if (serverIds.isNotEmpty) {
+      // Récupère les conversationID avant suppression.
+      for (final id in serverIds) {
+        final msg = await (_db.select(_db.localMessages)
+              ..where((m) => m.msgID.equals(id))
+              ..limit(1))
+            .getSingleOrNull();
+        if (msg != null) affectedConvIDs.add(msg.conversationID);
+      }
       if (forAll) {
         await _dao.softDeleteManyByServerId(serverIds);
       } else {
@@ -1138,12 +1149,39 @@ class ChatRepository {
     //    (via flushOutbox / confirmMessage qui détecte isDeleted).
     final hasPending = msgIDs.any((id) => id == 0);
     if (hasPending && conversationID != null) {
+      affectedConvIDs.add(conversationID);
       await _dao.softDeletePendingMessages(
         conversationID,
         _myId,
         forAll: forAll,
       );
     }
+
+    // 3. Rafraîchir l'aperçu de chaque conversation affectée.
+    for (final convId in affectedConvIDs) {
+      await _refreshConversationPreview(convId);
+    }
+  }
+
+  /// Met à jour le dernier aperçu visible d'une conversation après suppression.
+  Future<void> _refreshConversationPreview(int conversationID) async {
+    final latest = await _dao.latestVisibleMessage(conversationID, _myId);
+    await (_db.update(_db.localConversations)
+          ..where((c) => c.conversID.equals(conversationID)))
+        .write(LocalConversationsCompanion(
+      lastMessage: latest != null
+          ? Value(latest.content)
+          : const Value(null),
+      lastMessageAt: latest != null
+          ? Value(latest.sendAt)
+          : const Value(null),
+      lastMessageSenderID: latest != null
+          ? Value(latest.senderID)
+          : const Value(null),
+      lastMessageType: latest != null
+          ? Value(latest.type)
+          : const Value(null),
+    ));
   }
 
   /// Remet un message échoué en file d'envoi (déclenché par l'utilisateur via

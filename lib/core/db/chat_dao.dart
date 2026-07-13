@@ -391,6 +391,19 @@ class ChatDao {
         .get();
   }
 
+  /// Retourne le dernier message non-supprimé d'une conversation (pour rafraîchir
+  /// l'aperçu dans la liste des conversations après suppression).
+  Future<LocalMessage?> latestVisibleMessage(int conversationID, int myId) {
+    return (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversationID) &
+              m.isDeleted.equals(false) &
+              (m.deletedForID.isNull() | m.deletedForID.equals(myId).not()))
+          ..orderBy([(m) => OrderingTerm(expression: m.sendAt, mode: OrderingMode.desc)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
   /// Marque un média vue unique comme consommé : pose `viewedAt` et efface
   /// toute trace exploitable (URL réseau + chemin local) pour empêcher toute
   /// ré-ouverture.
