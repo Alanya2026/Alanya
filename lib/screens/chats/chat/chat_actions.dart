@@ -327,13 +327,14 @@ extension _ChatActions on _ChatDetailScreenState {
 
   /// Feuille « Détails du message ».
   ///
-  /// Vue EXPÉDITEUR (mes messages) : Envoyé à (sendAt), Livré à (deliveredAt),
-  /// Lu à (readAt) — chacun avec le fuseau horaire de l'appareil où
-  /// l'évènement s'est produit (le mien pour l'envoi, celui du destinataire
-  /// pour la remise/lecture).
+  /// Vue EXPÉDITEUR (mes messages) : Livré à (deliveredAt), Lu à (readAt)
+  /// — "Envoyé à" retiré (peu utile pour l'expéditeur).
   ///
   /// Vue DESTINATAIRE (messages reçus) : Appui sur envoyer (clickSentAt) et
-  /// Envoyé à (sendAt) — avec le fuseau horaire de l'expéditeur.
+  /// Envoyé à (sendAt).
+  ///
+  /// Vue DESTINATAIRE (messages reçus) : Appui sur envoyer (clickSentAt)
+  /// uniquement — "Envoyé à" retiré (redondant, peu utile pour le destinataire).
   void _showMessageInfo(LocalMessage msg) {
     final isMe = msg.senderID == _myId;
 
@@ -398,7 +399,6 @@ extension _ChatActions on _ChatDetailScreenState {
     // seule fois à l'envoi) — affiché à côté de chaque horodatage.
     final tz = tzLabel(msg.messageTz, msg.messageTzOffset);
     if (isMe) {
-      rows.add(line(Icons.send_outlined, 'Envoyé à', fmt(msg.sendAt)));
       rows.add(line(
         Icons.done_all_outlined,
         'Livré à',

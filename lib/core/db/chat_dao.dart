@@ -231,12 +231,26 @@ class ChatDao {
         readAt: at != null ? Value(at) : const Value.absent(),
       );
     }
-    return (db.update(db.localMessages)
-          ..where((m) =>
-              m.conversationID.equals(conversationID) &
-              m.senderID.equals(myId) &
-              m.status.isSmallerThanValue(status)))
-        .write(companion);
+    final query = db.update(db.localMessages)
+      ..where((m) =>
+          m.conversationID.equals(conversationID) &
+          m.senderID.equals(myId) &
+          m.status.isSmallerThanValue(status));
+    final future = query.write(companion);
+    if (status == 3 && at != null) {
+      // "Lu" implique forcément "livré" : si la conversation était déjà
+      // ouverte côté destinataire, l'appli saute directement au statut "lu"
+      // sans jamais émettre d'accusé "livré" séparé — deliveredAt resterait
+      // sinon null pour toujours. Le serveur applique le même COALESCE.
+      return future.then((_) => (db.update(db.localMessages)
+            ..where((m) =>
+                m.conversationID.equals(conversationID) &
+                m.senderID.equals(myId) &
+                m.status.equals(3) &
+                m.deliveredAt.isNull()))
+          .write(LocalMessagesCompanion(deliveredAt: Value(at))));
+    }
+    return future;
   }
 
   /// Monte le statut affiché sur l'aperçu de conversation, uniquement si le
