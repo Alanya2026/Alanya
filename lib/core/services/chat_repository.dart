@@ -18,6 +18,8 @@ import 'voice_asset_resolver.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';  
 class ChatRepository {
+  static const _deletedPreview = 'Ce message a été supprimé';
+
   final AppDatabase _db;
   final ChatDao _dao;
   final TalkyApiClient _api;
@@ -186,6 +188,16 @@ class ChatRepository {
                   lastMessageStatus: Value(merged),
                 );
               }
+            }
+            // Préserve l'aperçu « Ce message a été supprimé » si déjà en local
+            // pour ne pas écraser la suppression par l'ancien aperçu du serveur.
+            final localLast = localById[conv.conversID]?.lastMessage;
+            if (localLast == _deletedPreview &&
+                companion.lastMessage.present &&
+                companion.lastMessage.value != _deletedPreview) {
+              companion = companion.copyWith(
+                lastMessage: const Value(_deletedPreview),
+              );
             }
             return companion;
           })
@@ -1169,7 +1181,7 @@ class ChatRepository {
     await (_db.update(_db.localConversations)
           ..where((c) => c.conversID.equals(conversationID)))
         .write(const LocalConversationsCompanion(
-      lastMessage: Value('Ce message a été supprimé'),
+      lastMessage: Value(_deletedPreview),
     ));
   }
 
