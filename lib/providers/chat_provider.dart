@@ -175,8 +175,12 @@ class ChatProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> deleteMessages(List<int> msgIDs, {bool forAll = false}) {
-    return repository.deleteMessages(msgIDs, forAll: forAll);
+  Future<void> deleteMessages(
+    List<int> msgIDs, {
+    bool forAll = false,
+    int? conversationID,
+  }) {
+    return repository.deleteMessages(msgIDs, forAll: forAll, conversationID: conversationID);
   }
 
   Future<void> setConversationsPinned(List<int> conversIDs, bool pinned) {

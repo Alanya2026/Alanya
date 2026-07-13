@@ -1103,23 +1103,46 @@ class ChatRepository {
   }
 
   /// Supprime un ou plusieurs messages (délègue au batch si nécessaire).
-  Future<void> deleteMessage(int msgID, {bool forAll = false}) async {
-    await deleteMessages([msgID], forAll: forAll);
+  /// [conversationID] est requis pour pouvoir supprimer les messages en attente
+  /// de confirmation (msgID = 0).
+  Future<void> deleteMessage(
+    int msgID, {
+    bool forAll = false,
+    int? conversationID,
+  }) async {
+    await deleteMessages([msgID], forAll: forAll, conversationID: conversationID);
   }
 
-  Future<void> deleteMessages(List<int> msgIDs, {bool forAll = false}) async {
-    final ids = msgIDs.where((id) => id > 0).toSet().toList();
-    if (ids.isEmpty) return;
-
-    if (forAll) {
-      await _dao.softDeleteManyByServerId(ids);
-    } else {
-      await _dao.softDeleteManyForUser(ids, _myId);
+  Future<void> deleteMessages(
+    List<int> msgIDs, {
+    bool forAll = false,
+    int? conversationID,
+  }) async {
+    // 1. Messages confirmés (msgID > 0)
+    final serverIds = msgIDs.where((id) => id > 0).toSet().toList();
+    if (serverIds.isNotEmpty) {
+      if (forAll) {
+        await _dao.softDeleteManyByServerId(serverIds);
+      } else {
+        await _dao.softDeleteManyForUser(serverIds, _myId);
+      }
+      try {
+        await _api.deleteMessages(serverIds, forAll: forAll);
+      } catch (e) {
+        debugPrint('[ChatRepo] deleteMessages échouée: $e');
+      }
     }
-    try {
-      await _api.deleteMessages(ids, forAll: forAll);
-    } catch (e) {
-      debugPrint('[ChatRepo] deleteMessages échouée: $e');
+
+    // 2. Messages en attente de confirmation (msgID = 0)
+    //    On les marque localement. L'appel API sera fait après confirmation
+    //    (via flushOutbox / confirmMessage qui détecte isDeleted).
+    final hasPending = msgIDs.any((id) => id == 0);
+    if (hasPending && conversationID != null) {
+      await _dao.softDeletePendingMessages(
+        conversationID,
+        _myId,
+        forAll: forAll,
+      );
     }
   }
 
@@ -1680,8 +1703,11 @@ class ChatRepository {
       replyToContent: Value(j['replyToContent']?.toString()),
       isEdited: Value(j['isEdited'] == 1 || j['isEdited'] == true),
       editedAt: Value(_parseDate(j['editedAt'])),
-      isDeleted: Value(j['isDeleted'] == 1 || j['isDeleted'] == true),
-      deletedForID: Value(j['deletedForID'] == null ? null : _toInt(j['deletedForID'])),
+      // Ces champs ne doivent JAMAIS être écrasés par le sync serveur.
+      // isDeleted est set par softDeleteMany* (action locale) ou via socket.
+      // deletedForID est purement local (suppression « pour moi »).
+      isDeleted: const Value.absent(),
+      deletedForID: const Value.absent(),
       isStatusReply: Value(_toInt(j['isStatusReply'])),
       isForwarded: Value(j['isForwarded'] == 1 || j['isForwarded'] == true),
       isPinned: Value(j['isPinned'] == 1 || j['isPinned'] == true),

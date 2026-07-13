@@ -94,7 +94,11 @@ extension _ChatActions on _ChatDetailScreenState {
   Future<void> _deleteSelected({required bool forAll}) async {
     final ids = _selectedMsgIDs.toList();
     if (ids.isEmpty) return;
-    await _chat.repository.deleteMessages(ids, forAll: forAll);
+    await _chat.repository.deleteMessages(
+      ids,
+      forAll: forAll,
+      conversationID: _convId,
+    );
     if (!mounted) return;
     _exitSelectionMode();
   }
@@ -301,7 +305,11 @@ extension _ChatActions on _ChatDetailScreenState {
                 title: const Text('Supprimer pour tous'),
                 onTap: () {
                   Navigator.pop(context);
-                  if (msg.msgID != 0) _chat.repository.deleteMessage(msg.msgID, forAll: true);
+                  _chat.repository.deleteMessage(
+                    msg.msgID,
+                    forAll: true,
+                    conversationID: _convId,
+                  );
                 },
               ),
             ListTile(
@@ -309,7 +317,11 @@ extension _ChatActions on _ChatDetailScreenState {
               title: const Text('Supprimer pour moi'),
               onTap: () {
                 Navigator.pop(context);
-                if (msg.msgID != 0) _chat.repository.deleteMessage(msg.msgID, forAll: false);
+                _chat.repository.deleteMessage(
+                  msg.msgID,
+                  forAll: false,
+                  conversationID: _convId,
+                );
               },
             ),
             if (msg.msgID != 0)
@@ -477,7 +489,11 @@ extension _ChatActions on _ChatDetailScreenState {
                     .where((id) => id > 0)
                     .toList();
                 if (ids.isNotEmpty) {
-                  _chat.repository.deleteMessages(ids, forAll: false);
+                  _chat.repository.deleteMessages(
+                    ids,
+                    forAll: false,
+                    conversationID: _convId,
+                  );
                 }
               },
             ),
@@ -492,7 +508,11 @@ extension _ChatActions on _ChatDetailScreenState {
                       .where((id) => id > 0)
                       .toList();
                   if (ids.isNotEmpty) {
-                    _chat.repository.deleteMessages(ids, forAll: true);
+                    _chat.repository.deleteMessages(
+                      ids,
+                      forAll: true,
+                      conversationID: _convId,
+                    );
                   }
                 },
               ),

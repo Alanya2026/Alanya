@@ -128,6 +128,8 @@ class ChatDao {
   /// Messages en attente d'envoi (outbox), du plus ancien au plus récent.
   /// Filtre les lignes émises il y a moins de [cooldown] (backoff côté client)
   /// pour ne pas spammer le serveur en cas de race auth/connect.
+  /// Exclut les messages supprimés (isDeleted) pour éviter qu'ils soient
+  /// ré-émis par le flushOutbox après suppression locale.
   Future<List<LocalMessage>> pendingMessages({
     Duration cooldown = const Duration(seconds: 5),
   }) {
@@ -135,6 +137,7 @@ class ChatDao {
     return (db.select(db.localMessages)
           ..where((m) =>
               m.syncPending.equals(true) &
+              m.isDeleted.equals(false) &
               (m.lastEmittedAt.isNull() |
                   m.lastEmittedAt.isSmallerThanValue(threshold)))
           ..orderBy([(m) => OrderingTerm(expression: m.sendAt)]))
@@ -344,6 +347,30 @@ class ChatDao {
         );
       }
     });
+  }
+
+  /// Supprime les messages en attente de confirmation (msgID = 0) dans une
+  /// conversation. Utilisé quand l'utilisateur supprime un message juste après
+  /// l'avoir envoyé, avant que le serveur n'assigne le msgID définitif.
+  Future<void> softDeletePendingMessages(
+    int conversationID,
+    int userId, {
+    bool forAll = false,
+  }) {
+    if (forAll) {
+      return (db.update(db.localMessages)
+            ..where((m) =>
+                m.conversationID.equals(conversationID) &
+                m.senderID.equals(userId) &
+                m.msgID.equals(0)))
+          .write(const LocalMessagesCompanion(isDeleted: Value(true)));
+    }
+    return (db.update(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversationID) &
+              m.senderID.equals(userId) &
+              m.msgID.equals(0)))
+        .write(LocalMessagesCompanion(deletedForID: Value(userId)));
   }
 
   Future<void> setLocalMediaPath(int msgID, String path) {
