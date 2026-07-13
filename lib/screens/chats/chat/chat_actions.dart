@@ -665,13 +665,21 @@ extension _ChatActions on _ChatDetailScreenState {
 
   Future<void> _pickImageFromCamera() async {
     final viewOnce = _pendingViewOnce;
-    final x = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-    if (x != null) {
-      await _composeAndSendMedia(
-        [AlbumSendItem(file: File(x.path), type: 1)],
-        viewOnce: viewOnce,
-      );
+    final result = await Navigator.push<CameraResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const CameraScreen()),
+    );
+    if (result == null || !mounted) return;
+
+    final type = result.isVideo ? 2 : 1;
+    int? durSec;
+    if (result.isVideo) {
+      durSec = await _readVideoDuration(File(result.file.path));
     }
+    await _composeAndSendMedia(
+      [AlbumSendItem(file: File(result.file.path), type: type, duration: durSec)],
+      viewOnce: viewOnce,
+    );
   }
 
   Future<void> _pickVideo() async {

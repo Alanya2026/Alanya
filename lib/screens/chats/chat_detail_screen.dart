@@ -48,6 +48,7 @@ import 'forward_message_screen.dart';
 import 'album_media_list_screen.dart';
 import 'media_send_screen.dart';
 import 'media_viewer_screen.dart';
+import 'camera_screen.dart';
 import 'voice_message_bubble.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :

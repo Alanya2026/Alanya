@@ -51,5 +51,9 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>Alanya a besoin d'accéder à votre caméra pour prendre des photos et enregistrer des vidéos.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Alanya a besoin d'accéder à votre microphone pour enregistrer des vidéos avec son.</string>
 	</dict>
 </plist>

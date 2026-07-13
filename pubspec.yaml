@@ -66,6 +66,7 @@ dependencies:
 
   # ── Chat : médias (images, vidéos, fichiers) ──────────────────────
   image_picker: ^1.1.2                # Galerie / caméra (photos & vidéos)
+  camera: ^0.11.0+2                   # Écran caméra intégré (photo + vidéo)
   file_picker: ^8.1.2                 # Sélection de documents
   cached_network_image: ^3.4.1        # Affichage + cache disque des images
   video_player: ^2.9.2                # Lecture vidéo inline

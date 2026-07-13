@@ -134,7 +134,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nouveau message'),
+        title: const Text('Nouveau contact'),
       ),
       body: Column(
         children: [
