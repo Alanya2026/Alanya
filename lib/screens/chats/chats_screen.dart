@@ -391,19 +391,26 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     AppSpacing.hGapXs,
                   ],
                   Expanded(
-                    child: Text(
-                      conv.lastMessage != null
-                          ? stripMarkers(
-                              normalizeConversationPreview(conv.lastMessage!),
-                            )
-                          : 'Aucun message',
-                      style: context.text.bodyMedium?.copyWith(
-                        color: hasUnread ? colors.onSurface : colors.onSurfaceVariant,
-                        fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: conv.lastMessage != null
+                        ? Text.rich(
+                            TextSpan(
+                              children: parseRichSpans(
+                                normalizeConversationPreview(conv.lastMessage!),
+                                context.text.bodyMedium!.copyWith(
+                                  color: hasUnread ? colors.onSurface : colors.onSurfaceVariant,
+                                  fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : Text(
+                            'Aucun message',
+                            style: context.text.bodyMedium?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
                   ),
                 ],
               ),
