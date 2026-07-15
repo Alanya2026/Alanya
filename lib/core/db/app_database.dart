@@ -86,9 +86,21 @@ class LocalMessages extends Table {
 
   /// Heure locale à laquelle l'expéditeur a appuyé sur « envoyer » (heure du
   /// clic). Distincte de `sendAt`, qui devient l'horodatage serveur (départ
-  /// effectif) une fois le message confirmé. Renseignée seulement pour mes
-  /// propres messages ; préservée à travers les resynchronisations.
+  /// effectif) une fois le message confirmé. Désormais synchronisée avec le
+  /// serveur : visible aussi bien par l'expéditeur que par le destinataire.
   DateTimeColumn get clickSentAt => dateTime().nullable()();
+
+  /// Cache local (dénormalisé, comme [senderNom]) du fuseau horaire de
+  /// l'expéditeur, tel que renvoyé par le serveur. PAS de capture côté
+  /// appareil ni de colonne dédiée en base : le serveur le dérive à la
+  /// volée via une jointure `users` → `pays.timeZone` (le pays enregistré
+  /// de l'expéditeur), donc rien n'est dupliqué par message côté backend.
+  TextColumn get messageTz => text().nullable()();
+
+  /// Décalage horaire (en heures) du pays de l'expéditeur, renvoyé par le
+  /// serveur (`pays.decalageHoraire`) — permet un affichage direct type
+  /// "UTC+1" sans avoir à interpréter [messageTz].
+  IntColumn get messageTzOffset => integer().nullable()();
 
   TextColumn get senderNom => text().nullable()();
   TextColumn get senderPseudo => text().nullable()();
@@ -273,6 +285,8 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 10) {
             await m.addColumn(localMessages, localMessages.mediaThumb);
+            await m.addColumn(localMessages, localMessages.messageTz);
+            await m.addColumn(localMessages, localMessages.messageTzOffset);
           }
         },
       );

@@ -115,6 +115,14 @@ class Message {
   final String sendAt;
   final String? deliveredAt;
   final String? readAt;
+  /// Instant (horloge de l'expéditeur) où il a appuyé sur "Envoyer".
+  final String? clickSentAt;
+  /// Fuseau horaire de l'expéditeur (pays enregistré), renvoyé par le
+  /// serveur — dérivé via jointure, jamais capturé ni stocké par message.
+  final String? messageTz;
+  /// Décalage horaire (heures) du pays de l'expéditeur, pour un affichage
+  /// direct type "UTC+1" sans interpréter [messageTz].
+  final int? messageTzOffset;
   final String? mediaUrl;
   final String? mediaName;
   final int? mediaDuration;
@@ -143,6 +151,9 @@ class Message {
     required this.sendAt,
     this.deliveredAt,
     this.readAt,
+    this.clickSentAt,
+    this.messageTz,
+    this.messageTzOffset,
     this.mediaUrl,
     this.mediaName,
     this.mediaDuration,
@@ -171,6 +182,11 @@ class Message {
         sendAt: json['sendAt'] ?? '',
         deliveredAt: json['deliveredAt'],
         readAt: json['readAt'],
+        clickSentAt: json['clickSentAt'],
+        messageTz: json['messageTz'],
+        messageTzOffset: json['messageTzOffset'] is int
+            ? json['messageTzOffset'] as int
+            : int.tryParse(json['messageTzOffset']?.toString() ?? ''),
         mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
         mediaName: json['mediaName'],
         mediaDuration: json['mediaDuration'],

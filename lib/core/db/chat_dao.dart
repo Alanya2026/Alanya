@@ -212,19 +212,48 @@ class ChatDao {
       });
     }
 
-  /// Fait monter le statut de MES messages envoyés dans une conversation
-  Future<void> bumpMyMessagesStatus(int conversationID, int myId, int status) {
-    final now = DateTime.now();
-    return (db.update(db.localMessages)
-          ..where((m) =>
-              m.conversationID.equals(conversationID) &
-              m.senderID.equals(myId) &
-              m.status.isSmallerThanValue(status)))
-        .write(LocalMessagesCompanion(
-      status: Value(status),
-      deliveredAt: status >= 2 ? Value(now) : const Value.absent(),
-      readAt: status >= 3 ? Value(now) : const Value.absent(),
-    ));
+  /// Fait monter le statut de MES messages envoyés dans une conversation,
+  /// et pose l'horodatage précis reçu dans l'évènement socket
+  /// `message:status`. [at] est l'instant exact (serveur) de la remise/lecture.
+  /// Le fuseau horaire n'a pas besoin d'être repassé ici : il est déjà
+  /// connu via `messageTz`, fixé une seule fois à l'envoi du message.
+  /// status 2=livré → deliveredAt ; status 3=lu → readAt.
+  Future<void> bumpMyMessagesStatus(
+    int conversationID,
+    int myId,
+    int status, {
+    DateTime? at,
+  }) {
+    var companion = LocalMessagesCompanion(status: Value(status));
+    if (status == 2) {
+      companion = companion.copyWith(
+        deliveredAt: at != null ? Value(at) : const Value.absent(),
+      );
+    } else if (status == 3) {
+      companion = companion.copyWith(
+        readAt: at != null ? Value(at) : const Value.absent(),
+      );
+    }
+    final query = db.update(db.localMessages)
+      ..where((m) =>
+          m.conversationID.equals(conversationID) &
+          m.senderID.equals(myId) &
+          m.status.isSmallerThanValue(status));
+    final future = query.write(companion);
+    if (status == 3 && at != null) {
+      // "Lu" implique forcément "livré" : si la conversation était déjà
+      // ouverte côté destinataire, l'appli saute directement au statut "lu"
+      // sans jamais émettre d'accusé "livré" séparé — deliveredAt resterait
+      // sinon null pour toujours. Le serveur applique le même COALESCE.
+      return future.then((_) => (db.update(db.localMessages)
+            ..where((m) =>
+                m.conversationID.equals(conversationID) &
+                m.senderID.equals(myId) &
+                m.status.equals(3) &
+                m.deliveredAt.isNull()))
+          .write(LocalMessagesCompanion(deliveredAt: Value(at))));
+    }
+    return future;
   }
 
   /// Monte le statut affiché sur l'aperçu de conversation, uniquement si le

@@ -340,8 +340,16 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
-  /// Feuille « Détails du message » : horodatages d'envoi (clic + serveur),
-  /// de remise et de lecture, plus le fuseau horaire pour mes propres messages.
+  /// Feuille « Détails du message ».
+  ///
+  /// Vue EXPÉDITEUR (mes messages) : Livré à (deliveredAt), Lu à (readAt)
+  /// — "Envoyé à" retiré (peu utile pour l'expéditeur).
+  ///
+  /// Vue DESTINATAIRE (messages reçus) : Appui sur envoyer (clickSentAt) et
+  /// Envoyé à (sendAt).
+  ///
+  /// Vue DESTINATAIRE (messages reçus) : Appui sur envoyer (clickSentAt)
+  /// uniquement — "Envoyé à" retiré (redondant, peu utile pour le destinataire).
   void _showMessageInfo(LocalMessage msg) {
     final isMe = msg.senderID == _myId;
 
@@ -353,16 +361,29 @@ extension _ChatActions on _ChatDetailScreenState {
           '${two(l.hour)}:${two(l.minute)}:${two(l.second)}';
     }
 
-    String tzLabel() {
-      final now = DateTime.now();
-      final off = now.timeZoneOffset;
-      final sign = off.isNegative ? '-' : '+';
-      final h = off.inHours.abs().toString().padLeft(2, '0');
-      final m = (off.inMinutes.abs() % 60).toString().padLeft(2, '0');
-      return '${now.timeZoneName} (UTC$sign$h:$m)';
+    // Fuseau horaire lisible à partir du nom (pays de l'expéditeur, ex.
+    // "Africa/Douala") et du décalage en heures renvoyés par le serveur
+    // (dérivés via jointure `users` → `pays`, jamais stockés par message).
+    // Si l'info n'est pas encore disponible (ancien message / hors-ligne),
+    // on retombe sur le fuseau de CET appareil.
+    String tzLabel(String? name, int? offsetHours) {
+      String tzName;
+      int offMin;
+      if (name != null && name.isNotEmpty && offsetHours != null) {
+        tzName = name;
+        offMin = offsetHours * 60;
+      } else {
+        final now = DateTime.now();
+        tzName = now.timeZoneName;
+        offMin = now.timeZoneOffset.inMinutes;
+      }
+      final sign = offMin.isNegative ? '-' : '+';
+      final h = (offMin.abs() ~/ 60).toString().padLeft(2, '0');
+      final m = (offMin.abs() % 60).toString().padLeft(2, '0');
+      return '$tzName (UTC$sign$h:$m)';
     }
 
-    Widget line(IconData icon, String label, String value) => Padding(
+    Widget line(IconData icon, String label, String value, {String? tz}) => Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,12 +398,41 @@ extension _ChatActions on _ChatDetailScreenState {
                         style: context.text.labelSmall
                             ?.copyWith(color: context.colors.onSurfaceVariant)),
                     Text(value, style: context.text.bodyMedium),
+                    if (tz != null)
+                      Text(tz,
+                          style: context.text.labelSmall
+                              ?.copyWith(color: context.colors.onSurfaceVariant)),
                   ],
                 ),
               ),
             ],
           ),
         );
+
+    final rows = <Widget>[];
+    // Fuseau horaire unique du message (celui de l'expéditeur, capturé une
+    // seule fois à l'envoi) — affiché à côté de chaque horodatage.
+    final tz = tzLabel(msg.messageTz, msg.messageTzOffset);
+    if (isMe) {
+      rows.add(line(
+        Icons.done_all_outlined,
+        'Livré à',
+        msg.deliveredAt != null ? fmt(msg.deliveredAt) : 'Pas encore livré',
+      ));
+      rows.add(line(
+        Icons.visibility_outlined,
+        'Lu à',
+        msg.readAt != null ? fmt(msg.readAt) : 'Pas encore lu',
+      ));
+    } else {
+      rows.add(line(
+        Icons.touch_app_outlined,
+        'Appui sur envoyer',
+        msg.clickSentAt != null ? fmt(msg.clickSentAt) : '—',
+      ));
+      rows.add(line(Icons.send_outlined, 'Envoyé à', fmt(msg.sendAt)));
+    }
+    rows.add(line(Icons.public, 'Fuseau horaire', tz));
 
     showAppBottomSheet(
       context: context,
@@ -395,14 +445,7 @@ extension _ChatActions on _ChatDetailScreenState {
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: Text('Détails du message', style: context.text.titleSmall),
             ),
-            // Heure du clic : connue uniquement pour mes propres messages.
-            if (isMe && msg.clickSentAt != null)
-              line(Icons.touch_app_outlined, 'Envoyé (appui sur envoyer)',
-                  fmt(msg.clickSentAt)),
-            line(Icons.send_outlined, 'Envoyé à', fmt(msg.sendAt)),
-            line(Icons.visibility_outlined, 'Lu',
-                msg.readAt != null ? fmt(msg.readAt) : 'Non lu'),
-            if (isMe) line(Icons.public, 'Fuseau horaire', tzLabel()),
+            ...rows,
             AppSpacing.vGapSm,
           ],
         ),
