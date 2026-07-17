@@ -38,6 +38,21 @@ int? conversationOtherUserId(LocalConversation conv, int myId) {
   return id == 0 ? null : id;
 }
 
+/// Retrouve l'ID d'une conversation 1-1 locale avec [peerUserId], ou null.
+int? findLocalDirectConversationId(
+  Iterable<LocalConversation> convs,
+  int myId,
+  int peerUserId,
+) {
+  for (final c in convs) {
+    if (c.isGroup) continue;
+    if (conversationOtherUserId(c, myId) == peerUserId) {
+      return c.conversID;
+    }
+  }
+  return null;
+}
+
 bool conversationMatchesSearch(LocalConversation conv, int myId, String query) {
   final q = query.trim().toLowerCase();
   if (q.isEmpty) return true;

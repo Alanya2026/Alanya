@@ -8,6 +8,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
+import '../../core/utils/conversation_display.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -141,12 +143,30 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   Future<void> _openChat() async {
     if (_contact == null) return;
     if (!mounted) return;
+
+    // Depuis les contacts préférés (ou autre entrée sans conversationId),
+    // retrouver la discussion 1-1 existante pour ouvrir l'historique.
+    int? convId = widget.conversationId;
+    if (convId == null) {
+      final myId =
+          context.read<AuthProvider>().currentUser?.alanyaID;
+      if (myId != null) {
+        final convs = await context
+            .read<ChatProvider>()
+            .repository
+            .dao
+            .getAllConversations();
+        convId = findLocalDirectConversationId(convs, myId, widget.userId);
+      }
+    }
+
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => ChatDetailScreen(
           userName: _contact!.nom,
-          conversationId: widget.conversationId,
+          conversationId: convId,
           userId: widget.userId,
           avatarUrl: _contact!.avatarUrl,
         ),

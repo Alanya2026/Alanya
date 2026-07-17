@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../services/chat/conversation_merge.dart';
+import '../utils/media_album.dart';
 import 'app_database.dart';
  
 class ChatDao {
@@ -268,46 +270,109 @@ class ChatDao {
         .write(LocalConversationsCompanion(lastMessageStatus: Value(status)));
   }
 
-  /// Aligne `lastMessageStatus` sur le statut réel de mon dernier message
+  /// Aligne `lastMessage*` sur le dernier message local réel
   /// (évite l'écart liste vs conversation quand l'aperçu cache est stale).
+  ///
+  /// Important : met à jour **aussi** le texte d'aperçu et efface
+  /// `lastMessageStatus` si le dernier message n'est pas le mien — sinon on
+  /// peut afficher les ✓ à côté d'un message entrant (senderID remis à moi
+  /// sans réaligner le texte).
   Future<void> reconcileLastMessageStatus(int conversID, int myId) async {
     final conv = await (db.select(db.localConversations)
           ..where((c) => c.conversID.equals(conversID)))
         .getSingleOrNull();
-    if (conv == null || conv.lastMessageSenderID != myId) return;
+    if (conv == null) return;
 
-    final latestMine = await (db.select(db.localMessages)
+    final latest = await (db.select(db.localMessages)
           ..where((m) =>
               m.conversationID.equals(conversID) &
-              m.senderID.equals(myId) &
+              m.isDeleted.equals(false) &
+              (m.deletedForID.isNull() | m.deletedForID.equals(myId).not()))
+          ..orderBy([
+            (m) => OrderingTerm(expression: m.sendAt, mode: OrderingMode.desc),
+            (m) => OrderingTerm(expression: m.msgID, mode: OrderingMode.desc),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+    if (latest == null) return;
+
+    // Ne pas écraser un envoi optimiste plus récent que le dernier confirmé.
+    if (latest.msgID > 0 &&
+        await hasPendingNewerThan(conversID, latest.sendAt)) {
+      return;
+    }
+
+    final mine = latest.senderID == myId;
+    final preview = normalizeConversationPreview(
+      latest.isDeleted
+          ? ConversationMerge.deletedPreview
+          : ConversationMerge.previewForMedia(
+              latest.type,
+              latest.content,
+              latest.mediaName,
+              isViewOnce: latest.isViewOnce,
+            ),
+    );
+    final desiredStatus = mine ? latest.status : null;
+
+    final needsUpdate = conv.lastMessageSenderID != latest.senderID ||
+        conv.lastMessageType != latest.type ||
+        conv.lastMessage != preview ||
+        conv.lastMessageAt != latest.sendAt ||
+        conv.lastMessageStatus != desiredStatus;
+
+    if (!needsUpdate) return;
+
+    await (db.update(db.localConversations)
+          ..where((c) => c.conversID.equals(conversID)))
+        .write(LocalConversationsCompanion(
+      lastMessage: Value(preview),
+      lastMessageSenderID: Value(latest.senderID),
+      lastMessageType: Value(latest.type),
+      lastMessageAt: Value(latest.sendAt),
+      lastMessageStatus: Value(desiredStatus),
+    ));
+  }
+
+  Future<void> reconcileAllLastMessageStatuses(int myId) async {
+    if (myId == 0) return;
+    final convs = await db.select(db.localConversations).get();
+    for (final conv in convs) {
+      await reconcileLastMessageStatus(conv.conversID, myId);
+    }
+  }
+
+  /// True si un message optimiste (pending) est plus récent que [serverLastAt].
+  Future<bool> hasPendingNewerThan(int conversID, DateTime? serverLastAt) async {
+    final pending = await (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversID) &
+              m.syncPending.equals(true) &
               m.isDeleted.equals(false))
           ..orderBy([
             (m) => OrderingTerm(expression: m.sendAt, mode: OrderingMode.desc),
           ])
           ..limit(1))
         .getSingleOrNull();
-    if (latestMine == null) return;
-
-    final cached = conv.lastMessageStatus ?? 0;
-    if (latestMine.status > cached) {
-      await (db.update(db.localConversations)
-            ..where((c) =>
-                c.conversID.equals(conversID) &
-                c.lastMessageSenderID.equals(myId)))
-          .write(LocalConversationsCompanion(
-        lastMessageStatus: Value(latestMine.status),
-      ));
-    }
+    if (pending == null) return false;
+    if (serverLastAt == null) return true;
+    return pending.sendAt.isAfter(serverLastAt);
   }
 
-  Future<void> reconcileAllLastMessageStatuses(int myId) async {
-    if (myId == 0) return;
-    final convs = await (db.select(db.localConversations)
-          ..where((c) => c.lastMessageSenderID.equals(myId)))
+  /// Conversations où j'ai des messages entrants pas encore livrés (status &lt; 2).
+  Future<List<int>> conversationIdsNeedingDelivery(int myId) async {
+    final rows = await (db.selectOnly(db.localMessages)
+          ..addColumns([db.localMessages.conversationID])
+          ..where(db.localMessages.senderID.equals(myId).not() &
+              db.localMessages.status.isSmallerThanValue(2) &
+              db.localMessages.isDeleted.equals(false) &
+              db.localMessages.msgID.isBiggerThanValue(0))
+          ..groupBy([db.localMessages.conversationID]))
         .get();
-    for (final conv in convs) {
-      await reconcileLastMessageStatus(conv.conversID, myId);
-    }
+    return rows
+        .map((r) => r.read(db.localMessages.conversationID))
+        .whereType<int>()
+        .toList();
   }
 
   Future<List<LocalConversation>> getAllConversations() {
@@ -319,6 +384,25 @@ class ChatDao {
   Future<void> markFailed(String clientId) {
     return (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
         .write(const LocalMessagesCompanion(status: Value(4), syncPending: Value(false)));
+  }
+
+  /// Messages syncPending depuis trop longtemps (horloge coincée).
+  /// Exige aussi un dernier emit ancien pour ne pas fail juste après un retry.
+  Future<List<LocalMessage>> stuckPendingMessages({
+    Duration olderThan = const Duration(minutes: 5),
+    Duration sinceLastEmit = const Duration(seconds: 90),
+  }) {
+    final sendThreshold = DateTime.now().toUtc().subtract(olderThan);
+    final emitThreshold = DateTime.now().subtract(sinceLastEmit);
+    return (db.select(db.localMessages)
+          ..where((m) =>
+              m.syncPending.equals(true) &
+              m.isDeleted.equals(false) &
+              m.status.equals(0) &
+              m.sendAt.isSmallerThanValue(sendThreshold) &
+              m.lastEmittedAt.isNotNull() &
+              m.lastEmittedAt.isSmallerThanValue(emitThreshold)))
+        .get();
   }
 
   /// Incrémente le compteur de retry pour un message identifié par `clientId`.
@@ -378,9 +462,39 @@ class ChatDao {
     });
   }
 
+  /// Supprime des messages en attente ciblés par [clientIds] (pas toute la conv).
+  Future<void> softDeletePendingByClientIds(
+    List<String> clientIds,
+    int userId, {
+    bool forAll = false,
+  }) {
+    if (clientIds.isEmpty) return Future.value();
+    if (forAll) {
+      return (db.update(db.localMessages)
+            ..where((m) =>
+                m.clientId.isIn(clientIds) &
+                m.senderID.equals(userId) &
+                m.msgID.equals(0)))
+          .write(const LocalMessagesCompanion(
+            isDeleted: Value(true),
+            syncPending: Value(false),
+          ));
+    }
+    return (db.update(db.localMessages)
+          ..where((m) =>
+              m.clientId.isIn(clientIds) &
+              m.senderID.equals(userId) &
+              m.msgID.equals(0)))
+        .write(LocalMessagesCompanion(
+          deletedForID: Value(userId),
+          syncPending: const Value(false),
+        ));
+  }
+
   /// Supprime les messages en attente de confirmation (msgID = 0) dans une
-  /// conversation. Utilisé quand l'utilisateur supprime un message juste après
-  /// l'avoir envoyé, avant que le serveur n'assigne le msgID définitif.
+  /// conversation. Préférer [softDeletePendingByClientIds] pour ne pas
+  /// toucher tous les pending d'un coup.
+  @Deprecated('Utiliser softDeletePendingByClientIds')
   Future<void> softDeletePendingMessages(
     int conversationID,
     int userId, {

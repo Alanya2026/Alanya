@@ -7,6 +7,8 @@ import '../../widgets/alanya_phone_field.dart';
 import '../../core/utils/country_utils.dart';
 import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../core/utils/conversation_display.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
@@ -85,13 +87,26 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     await callService.navigateToCallUi(context);
   }
 
-  void _openMessage() {
+  Future<void> _openMessage() async {
+    // Depuis un appel récent, retrouver la discussion 1-1 existante
+    // pour ouvrir l'historique (sinon ChatDetailScreen reste vide).
+    int? convId;
+    final myId = context.read<AuthProvider>().currentUser?.alanyaID;
+    if (myId != null) {
+      final convs =
+          await context.read<ChatProvider>().repository.dao.getAllConversations();
+      convId = findLocalDirectConversationId(convs, myId, _userId);
+    }
+
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ChatDetailScreen(
           userName: _displayName,
+          conversationId: convId,
           userId: _userId,
+          avatarUrl: widget.user.avatarUrl,
         ),
       ),
     );

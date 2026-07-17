@@ -440,35 +440,15 @@ extension _ChatBubbles on _ChatDetailScreenState {
   }
 
   // ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec.
-  // Tooltips remontent l'heure exacte via deliveredAt/readAt quand dispos.
   Widget _statusIcon(int status, {DateTime? deliveredAt, DateTime? readAt}) {
-    Widget wrap(String tooltip, Widget child) =>
-        Tooltip(message: tooltip, child: child);
-    // Les accusés ne s'affichent que sur mes propres bulles (fond primary).
-    final onBubble = context.colors.onPrimary.withAlpha(180);
-    switch (status) {
-      case 0:
-        return wrap('En attente',
-            Icon(Icons.schedule, size: 11, color: onBubble));
-      case 1:
-        return wrap('Envoyé',
-            Icon(Icons.check, size: 12, color: onBubble));
-      case 2:
-        return wrap(
-            deliveredAt != null
-                ? 'Livré à ${_formatTime(deliveredAt)}'
-                : 'Livré',
-            Icon(Icons.done_all, size: 12, color: onBubble));
-      case 3:
-        return wrap(
-            readAt != null ? 'Lu à ${_formatTime(readAt)}' : 'Lu',
-            Icon(Icons.done_all, size: 12, color: context.semantic.info));
-      case 4:
-        return wrap('Échec — appui long pour réessayer',
-            Icon(Icons.error_outline, size: 12, color: context.colors.error));
-      default:
-        return const SizedBox.shrink();
-    }
+    return MessageStatusIcon(
+      status: status,
+      deliveredAt: deliveredAt,
+      readAt: readAt,
+      size: status == 0 ? 11 : 12,
+      onBubble: true,
+      timeFormatter: _formatTime,
+    );
   }
 
   // Chip "Réponse à un statut" affichée au sommet du bubble.
@@ -824,7 +804,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final selected = _isMessageSelected(first);
     final selectable = sorted.any(_isSelectableMessage);
     final anyDeleted = sorted.any((m) => m.isDeleted);
-    final worstStatus = sorted.map((m) => m.status).reduce((a, b) => a > b ? a : b);
+    // Pire statut de l'album (min) : pas de ✓✓ bleu tant que tous ne le sont pas.
+    final worstStatus = sorted.map((m) => m.status).reduce((a, b) => a < b ? a : b);
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(AppRadius.lg),
       topRight: const Radius.circular(AppRadius.lg),

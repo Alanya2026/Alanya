@@ -15,6 +15,7 @@ import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/typing_indicator.dart';
+import '../../widgets/chat/message_status_icon.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
@@ -461,22 +462,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec.
+  // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge · !
   Widget _previewStatusIcon(int? status) {
-    final muted = context.colors.onSurfaceVariant;
-    switch (status) {
-      case 0:
-        return Icon(Icons.schedule, size: 13, color: muted);
-      case 2:
-        return Icon(Icons.done_all, size: 14, color: muted);
-      case 3:
-        return Icon(Icons.done_all, size: 14, color: context.colors.primary);
-      case 4:
-        return Icon(Icons.error_outline, size: 14, color: context.colors.error);
-      case 1:
-      default:
-        return Icon(Icons.check, size: 14, color: muted);
-    }
+    return MessageStatusIcon(status: status, size: 13, onBubble: false);
   }
 
   void _openChatWithUser(User user) {

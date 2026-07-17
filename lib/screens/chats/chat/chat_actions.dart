@@ -309,6 +309,7 @@ extension _ChatActions on _ChatDetailScreenState {
                     msg.msgID,
                     forAll: true,
                     conversationID: _convId,
+                    clientId: msg.msgID == 0 ? msg.clientId : null,
                   );
                 },
               ),
@@ -321,6 +322,7 @@ extension _ChatActions on _ChatDetailScreenState {
                   msg.msgID,
                   forAll: false,
                   conversationID: _convId,
+                  clientId: msg.msgID == 0 ? msg.clientId : null,
                 );
               },
             ),

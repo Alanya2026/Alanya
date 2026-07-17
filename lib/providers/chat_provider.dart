@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../core/db/app_database.dart';
 import '../core/db/chat_dao.dart';
 import '../core/services/chat_repository.dart';
+import '../core/services/chat_sync_timer.dart';
 import '../core/utils/forward_message.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
@@ -24,6 +25,7 @@ class TypingInfo {
 class ChatProvider extends ChangeNotifier {
   final TalkyApiClient _api;
   late final ChatRepository repository;
+  ChatSyncTimer? _syncTimer;
 
   final Map<int, PresenceInfo> _presence = {};
   final Map<int, TypingInfo> _typing = {};
@@ -36,6 +38,7 @@ class ChatProvider extends ChangeNotifier {
 
   ChatProvider({required TalkyApiClient api, AppDatabase? database}) : _api = api {
     repository = ChatRepository(api: _api, database: database);
+    _syncTimer = ChatSyncTimer(repository);
   }
 
   PresenceInfo? presenceOf(int userID) => _presence[userID];
@@ -79,30 +82,26 @@ class ChatProvider extends ChangeNotifier {
       _bound = true;
       _api.onSocketEvent(SocketEvents.presenceUpdated, _onPresenceUpdated);
       _api.onSocketEvent(SocketEvents.authVerified, _onSocketReady);
-      _api.onSocketEvent(SocketEvents.messageReceived, _onConversationChanged);
-      _api.onSocketEvent(SocketEvents.messageSent, _onConversationChanged);
-      _api.onSocketEvent(SocketEvents.messageUpdated, _onConversationChanged);
-      _api.onSocketEvent(SocketEvents.messageDeleted, _onConversationChanged);
-      _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationChanged);
+      // Les événements message mettent à jour Drift via ChatRepository ;
+      // pas de refetch HTTP ici (écrasait l'aperçu optimiste).
+      _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
       _api.onSocketEvent(SocketEvents.typingStarted, _onTypingStarted);
       _api.onSocketEvent(SocketEvents.typingStopped, _onTypingStopped);
     }
     await refreshConversations();
     await repository.flushOutbox();
+    _syncTimer?.start();
   }
 
   /// Réinitialise l'état (listeners + présence) pour autoriser un nouveau
   /// `bind` après un logout dans la même session d'app.
   void unbind() {
+    _syncTimer?.stop();
     if (_bound) {
       _bound = false;
       _api.removeSocketListener(SocketEvents.presenceUpdated, _onPresenceUpdated);
       _api.removeSocketListener(SocketEvents.authVerified, _onSocketReady);
-      _api.removeSocketListener(SocketEvents.messageReceived, _onConversationChanged);
-      _api.removeSocketListener(SocketEvents.messageSent, _onConversationChanged);
-      _api.removeSocketListener(SocketEvents.messageUpdated, _onConversationChanged);
-      _api.removeSocketListener(SocketEvents.messageDeleted, _onConversationChanged);
-      _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationChanged);
+      _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
       _api.removeSocketListener(SocketEvents.typingStarted, _onTypingStarted);
       _api.removeSocketListener(SocketEvents.typingStopped, _onTypingStopped);
     }
@@ -126,10 +125,9 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> _onSocketReady(dynamic _) async {
     try {
-      // Ordre critique : on flush l'outbox + accusés de lecture AVANT de
-      // re-fetcher la liste, sinon le unreadCount serveur peut revenir > 0
-      // et faire flickr le badge alors qu'on l'a déjà marqué lu offline.
+      // Ordre critique : outbox + accusés AVANT re-fetch liste.
       await repository.flushOutbox();
+      await repository.flushReceiptsCatchUp();
       await refreshConversations();
       await repository.resyncActiveConversation();
       repository.rejoinActiveRoom();
@@ -139,7 +137,8 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  void _onConversationChanged(dynamic _) {
+  void _onConversationCreated(dynamic _) {
+    // Nouvelle conversation : un catch-up liste est légitime.
     _refreshDebounce?.cancel();
     _refreshDebounce = Timer(const Duration(milliseconds: 200), () {
       refreshConversations();
@@ -179,8 +178,14 @@ class ChatProvider extends ChangeNotifier {
     List<int> msgIDs, {
     bool forAll = false,
     int? conversationID,
+    List<String>? clientIds,
   }) {
-    return repository.deleteMessages(msgIDs, forAll: forAll, conversationID: conversationID);
+    return repository.deleteMessages(
+      msgIDs,
+      forAll: forAll,
+      conversationID: conversationID,
+      clientIds: clientIds,
+    );
   }
 
   Future<void> setConversationsPinned(List<int> conversIDs, bool pinned) {

@@ -19,6 +19,7 @@ import '../../core/services/call_service.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
+import '../../core/utils/conversation_display.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
 import '../../core/utils/media_staging.dart';
@@ -41,6 +42,7 @@ import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/typing_indicator.dart';
+import '../../widgets/chat/message_status_icon.dart';
 import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
@@ -159,10 +161,33 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await _loadBlockStatus();
     }
 
+    // Ouverture via userId seul (contacts préférés, nouvelle discussion…) :
+    // rattacher la conversation 1-1 existante avant d'afficher, sinon l'UI
+    // reste sur « Aucun message » sans jamais charger l'historique.
+    if (_convId == null && !widget.isGroup && widget.userId != null) {
+      final existing = await _findLocalDirectConversation(widget.userId!);
+      if (existing != null) {
+        if (!mounted) return;
+        setState(() => _convId = existing);
+      } else {
+        // Pas en cache local : l'API renvoie la conversation existante
+        // (idempotent) ou en crée une nouvelle.
+        await _ensureConversation();
+        return;
+      }
+    }
+
     final convId = _convId;
     if (convId != null) {
       await _attachToConversation(convId);
     }
+  }
+
+  Future<int?> _findLocalDirectConversation(int peerUserId) async {
+    final myId = _myId;
+    if (myId == null) return null;
+    final convs = await _chat.repository.dao.getAllConversations();
+    return findLocalDirectConversationId(convs, myId, peerUserId);
   }
 
   Future<void> _attachToConversation(int convId) async {
@@ -177,17 +202,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ))
       ..enterChat(convId);
 
-    // Synchronise l'historique depuis le serveur (l'UI affiche déjà le cache).
-    _chat.repository.syncMessages(convId);
+    // 1) La conversation active est déjà posée (ci-dessus) AVANT tout flux
+    //    entrant, pour que tout message reçu pendant la sync/join soit vu comme
+    //    actif (sinon : un message avant setActiveConversation incrémente
+    //    unreadCount puis markAsRead l'efface sans accusé → « non lu → lu »).
 
-    // Réconcilie les chemins locaux des vocaux (legacy cache disque, DB stale).
+    // 2) Rejoint la room temps réel d'abord : tout message poussé par le
+    //    serveur est désormais vu comme actif et marqué lu en direct.
+    _apiClient.sendSocketEvent(SocketEvents.joinConversation, {'conversationID': convId});
+
+    // 3) Synchronise l'historique (l'UI affiche déjà le cache) + réconcilie les
+    //    chemins vocaux legacy. Fire-and-forget : on ne doit PAS await-er
+    //    (sinon on retarderait setActiveConversation/markAsRead et on élargirait
+    //    la fenêtre de race).
+    unawaited(_chat.repository.syncMessages(convId));
     unawaited(_chat.repository.reconcileVoiceLocalPaths(convId));
 
-    // Rejoint la room temps réel + marque comme lu. On signale aussi la
-    // conversation active : tout message reçu pendant qu'elle est ouverte
-    // sera marqué lu en direct (pas de badge non-lu fantôme).
-    _apiClient.sendSocketEvent(SocketEvents.joinConversation, {'conversationID': convId});
-    _chat.repository.setActiveConversation(convId);
+    // 4) Marque comme lu (idempotent : ne fait rien si déjà lu).
     _chat.repository.markAsRead(convId);
   }
 

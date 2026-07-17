@@ -683,6 +683,8 @@ class SocketEvents {
   static const messageSend       = 'message:send';
   static const messageReceived   = 'message:received';
   static const messageSent       = 'message:sent';
+  /// Échec d'envoi métier / validation (payload: clientId, code, message).
+  static const messageSendFailed = 'message:send_failed';
   static const messageUpdated    = 'message:updated';
   static const messageDeleted    = 'message:deleted';
   static const messagesDeleted   = 'messages:deleted';
