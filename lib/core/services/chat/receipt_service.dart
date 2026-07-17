@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../db/chat_dao.dart';
@@ -25,10 +27,21 @@ class ReceiptService {
   final int Function() _activeConversationID;
   final Map<int, int> _pendingReadsRetry;
 
+  /// Lecture locale instantanée (badge Drift → 0) puis propagation réseau
+  /// en arrière-plan pour ne pas bloquer l'UI.
   Future<void> markAsRead(int conversationID) async {
+    await markAsReadLocal(conversationID);
+    unawaited(_propagateRead(conversationID));
+  }
+
+  /// Uniquement le cache local + notifs (immédiat).
+  Future<void> markAsReadLocal(int conversationID) async {
     final myId = _myId();
     await _dao.markConversationReadAtomic(conversationID, myId);
     await LocalNotificationHelper.cancelConversation(conversationID);
+  }
+
+  Future<void> _propagateRead(int conversationID) async {
     if (_api.isSocketReady) {
       try {
         _api.sendSocketEvent(SocketEvents.messageRead, {

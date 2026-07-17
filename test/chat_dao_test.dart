@@ -176,6 +176,7 @@ void main() {
         lastMessageAt: Value(now),
         lastMessageSenderID: const Value(myId),
         lastMessageStatus: const Value(1),
+        unreadCount: const Value(3),
       ));
 
       await db.into(db.localMessages).insert(LocalMessagesCompanion.insert(
@@ -185,6 +186,7 @@ void main() {
         senderID: myId,
         sendAt: now,
         status: const Value(3),
+        content: const Value('hello'),
       ));
 
       await dao.reconcileLastMessageStatus(convId, myId);
@@ -193,6 +195,8 @@ void main() {
             ..where((c) => c.conversID.equals(convId)))
           .getSingle();
       expect(conv.lastMessageStatus, 3);
+      expect(conv.lastMessage, 'hello');
+      expect(conv.unreadCount, 0);
     });
 
     test('bumpMyMessagesStatus sets readAt when status becomes read', () async {

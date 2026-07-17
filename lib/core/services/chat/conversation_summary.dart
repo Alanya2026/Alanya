@@ -34,6 +34,9 @@ class ConversationSummary {
       lastMessageStatus: status != null
           ? Value(status)
           : (senderID != null ? const Value(null) : const Value.absent()),
+      // Envoi local ou message reçu dans le chat actif → badge à 0 tout de suite.
+      // (fromOther=true uniquement hors écran : le +1 unread est géré plus bas.)
+      unreadCount: fromOther ? const Value.absent() : const Value(0),
     );
     await _db.into(_db.localConversations).insertOnConflictUpdate(companion);
     if (fromOther && conversID != activeConversationID) {

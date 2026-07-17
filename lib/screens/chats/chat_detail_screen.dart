@@ -191,6 +191,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _attachToConversation(int convId) async {
+    // 1) Conversation active AVANT tout flux entrant : sinon chaque message
+    //    reçu pendant sync/join incrémente unreadCount (fromOther=true).
+    _chat.repository.setActiveConversation(convId);
+
     final voice = context.read<VoicePlaybackService>();
     voice
       ..setChatContext(VoiceChatContext(
@@ -202,24 +206,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ))
       ..enterChat(convId);
 
-    // 1) La conversation active est déjà posée (ci-dessus) AVANT tout flux
-    //    entrant, pour que tout message reçu pendant la sync/join soit vu comme
-    //    actif (sinon : un message avant setActiveConversation incrémente
-    //    unreadCount puis markAsRead l'efface sans accusé → « non lu → lu »).
+    // 2) Badge à 0 immédiat (await = local seulement ; HTTP/socket en fond).
+    await _chat.repository.markAsRead(convId);
 
-    // 2) Rejoint la room temps réel d'abord : tout message poussé par le
-    //    serveur est désormais vu comme actif et marqué lu en direct.
+    // 3) Room temps réel : messages poussés pendant l'écran = actifs / lus.
     _apiClient.sendSocketEvent(SocketEvents.joinConversation, {'conversationID': convId});
 
-    // 3) Synchronise l'historique (l'UI affiche déjà le cache) + réconcilie les
-    //    chemins vocaux legacy. Fire-and-forget : on ne doit PAS await-er
-    //    (sinon on retarderait setActiveConversation/markAsRead et on élargirait
-    //    la fenêtre de race).
+    // 4) Sync historique + vocaux (ne bloque pas l'UI / le badge).
     unawaited(_chat.repository.syncMessages(convId));
     unawaited(_chat.repository.reconcileVoiceLocalPaths(convId));
-
-    // 4) Marque comme lu (idempotent : ne fait rien si déjà lu).
-    _chat.repository.markAsRead(convId);
   }
 
   Future<int?> _ensureConversation() async {

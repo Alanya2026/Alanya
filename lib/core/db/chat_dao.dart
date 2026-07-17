@@ -314,12 +314,14 @@ class ChatDao {
             ),
     );
     final desiredStatus = mine ? latest.status : null;
+    final desiredUnread = mine ? 0 : conv.unreadCount;
 
     final needsUpdate = conv.lastMessageSenderID != latest.senderID ||
         conv.lastMessageType != latest.type ||
         conv.lastMessage != preview ||
         conv.lastMessageAt != latest.sendAt ||
-        conv.lastMessageStatus != desiredStatus;
+        conv.lastMessageStatus != desiredStatus ||
+        (mine && conv.unreadCount != 0);
 
     if (!needsUpdate) return;
 
@@ -331,6 +333,7 @@ class ChatDao {
       lastMessageType: Value(latest.type),
       lastMessageAt: Value(latest.sendAt),
       lastMessageStatus: Value(desiredStatus),
+      unreadCount: Value(desiredUnread),
     ));
   }
 

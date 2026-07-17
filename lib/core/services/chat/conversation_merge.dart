@@ -5,7 +5,7 @@ import '../../utils/media_album.dart';
 import '../../../talky_models.dart';
 
 /// Merge monotonic conversation list HTTP → cache local.
-/// HTTP = catch-up ; jamais de downgrade d'aperçu / statut optimiste.
+/// HTTP = catch-up ; jamais de downgrade d'aperçu / statut / unread optimiste.
 class ConversationMerge {
   static const deletedPreview = 'Ce message a été supprimé';
 
@@ -22,6 +22,7 @@ class ConversationMerge {
     if (local == null) return companion;
 
     // Ne jamais écraser un aperçu local plus récent (envoi optimiste en cours).
+    // Préserve aussi unreadCount local (sinon le sync « ressuscite » un badge).
     if (hasLocalPendingNewer) {
       companion = companion.copyWith(
         lastMessage: Value(local.lastMessage),
@@ -29,8 +30,14 @@ class ConversationMerge {
         lastMessageSenderID: Value(local.lastMessageSenderID),
         lastMessageType: Value(local.lastMessageType),
         lastMessageStatus: Value(local.lastMessageStatus),
+        unreadCount: Value(local.unreadCount),
       );
-      return companion;
+      return _applyUnreadRules(
+        companion: companion,
+        local: local,
+        server: server,
+        myId: myId,
+      );
     }
 
     final localAt = local.lastMessageAt;
@@ -64,7 +71,50 @@ class ConversationMerge {
       companion = companion.copyWith(lastMessage: const Value(deletedPreview));
     }
 
-    return companion;
+    return _applyUnreadRules(
+      companion: companion,
+      local: local,
+      server: server,
+      myId: myId,
+    );
+  }
+
+  /// Règles unread local-first :
+  /// - dernier message = moi → unread = 0
+  /// - local 0 et serveur > 0 sans message serveur plus récent → garder 0
+  /// - sinon max(local, server)
+  static LocalConversationsCompanion _applyUnreadRules({
+    required LocalConversationsCompanion companion,
+    required LocalConversation local,
+    required Conversation server,
+    required int myId,
+  }) {
+    final resolvedSender = companion.lastMessageSenderID.present
+        ? companion.lastMessageSenderID.value
+        : server.lastMessageSenderID;
+    // Comparer les horodatages d'origine (pas ceux déjà fusionnés dans companion).
+    final localAt = local.lastMessageAt;
+    final serverAt = server.lastMessageAt != null
+        ? DateTime.tryParse(server.lastMessageAt!)
+        : null;
+
+    final localUnread = local.unreadCount;
+    final serverUnread = server.unreadCount;
+
+    int unread;
+    if (myId != 0 && resolvedSender == myId) {
+      unread = 0;
+    } else if (localUnread == 0 && serverUnread > 0) {
+      final serverClearlyNewer = localAt != null &&
+          serverAt != null &&
+          serverAt.isAfter(localAt) &&
+          server.lastMessageSenderID != myId;
+      unread = serverClearlyNewer ? serverUnread : 0;
+    } else {
+      unread = localUnread > serverUnread ? localUnread : serverUnread;
+    }
+
+    return companion.copyWith(unreadCount: Value(unread));
   }
 
   static String previewForMedia(
