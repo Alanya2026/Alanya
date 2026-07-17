@@ -266,7 +266,11 @@ class LocalNotificationHelper {
 
   static Future<void> cancelConversation(int conversationId) async {
     if (kIsWeb || conversationId == 0) return;
-    await _plugin.cancel(conversationId, tag: _convTag(conversationId));
+    try {
+      await _plugin.cancel(conversationId, tag: _convTag(conversationId));
+    } catch (_) {
+      // Plugin absent (tests unitaires / plateforme non supportée).
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_bufferKey(conversationId));
   }

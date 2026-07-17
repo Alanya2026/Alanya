@@ -3,29 +3,32 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../db/chat_dao.dart';
-import '../../../talky_api_client.dart';
 import '../../../talky_models.dart';
 import '../local_notification_helper.dart';
+import 'chat_api.dart';
 
 /// Accusés de lecture / livraison + catch-up hors ligne.
 class ReceiptService {
   ReceiptService({
-    required TalkyApiClient api,
+    required ChatApi api,
     required ChatDao dao,
     required int Function() myId,
     required int Function() activeConversationID,
     required Map<int, int> pendingReadsRetry,
+    required Future<void> Function(int conversationID) recompute,
   })  : _api = api,
         _dao = dao,
         _myId = myId,
         _activeConversationID = activeConversationID,
-        _pendingReadsRetry = pendingReadsRetry;
+        _pendingReadsRetry = pendingReadsRetry,
+        _recompute = recompute;
 
-  final TalkyApiClient _api;
+  final ChatApi _api;
   final ChatDao _dao;
   final int Function() _myId;
   final int Function() _activeConversationID;
   final Map<int, int> _pendingReadsRetry;
+  final Future<void> Function(int conversationID) _recompute;
 
   /// Lecture locale instantanée (badge Drift → 0) puis propagation réseau
   /// en arrière-plan pour ne pas bloquer l'UI.
@@ -35,9 +38,11 @@ class ReceiptService {
   }
 
   /// Uniquement le cache local + notifs (immédiat).
+  /// Marque les incoming à status=3 puis dérive unread via recompute.
   Future<void> markAsReadLocal(int conversationID) async {
     final myId = _myId();
-    await _dao.markConversationReadAtomic(conversationID, myId);
+    await _dao.markConversationRead(conversationID, myId);
+    await _recompute(conversationID);
     await LocalNotificationHelper.cancelConversation(conversationID);
   }
 

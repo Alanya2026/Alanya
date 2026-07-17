@@ -32,8 +32,16 @@ extension SocketApi on TalkyApiClient {
     });
 
     _socket!.on(SocketEvents.authError, (data) {
-      debugPrint('[Socket] Erreur auth: ${data['message']}');
+      final code = data is Map ? data['code']?.toString() : null;
+      debugPrint('[Socket] Erreur auth: ${data is Map ? data['message'] : data} (code=$code)');
       _isSocketAuthVerified = false;
+      // Token d'accès expiré : rafraîchir le JWT puis ré-émettre `auth:login`.
+      // Sans ça, après une reconnexion avec un token périmé le socket reste
+      // connecté mais NON authentifié → plus aucun `message:received` (temps
+      // réel mort jusqu'à un appel HTTP qui rafraîchit le token par hasard).
+      if (code == 'TOKEN_EXPIRED' && _refreshToken != null) {
+        _refreshSocketAuth();
+      }
     });
 
     _socket!.on(SocketEvents.authConflict, (data) {
@@ -63,6 +71,21 @@ extension SocketApi on TalkyApiClient {
     });
 
     _socket!.connect();
+  }
+
+  /// Rafraîchit le JWT (refresh token) suite à un `auth:error` TOKEN_EXPIRED,
+  /// puis ré-authentifie le socket. `_refreshAccessToken` appelle déjà
+  /// `reauthSocketIfConnected()` en cas de succès (ré-émet `auth:login`).
+  Future<void> _refreshSocketAuth() async {
+    if (_socketReauthInFlight) return;
+    _socketReauthInFlight = true;
+    try {
+      await _refreshAccessToken();
+    } catch (e) {
+      debugPrint('[Socket] refresh auth (TOKEN_EXPIRED) échoué: $e');
+    } finally {
+      _socketReauthInFlight = false;
+    }
   }
 
   /// Ré-authentifie le socket après renouvellement du token JWT.

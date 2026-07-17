@@ -1,7 +1,7 @@
 // Endpoints conversations & messages (part of talky_api_client.dart).
 part of '../talky_api_client.dart';
 
-extension ChatApi on TalkyApiClient {
+extension ChatHttpApi on TalkyApiClient {
   // ── CONVERSATIONS ─────────────────────────────────────────────────
 
   Future<List<dynamic>> getConversations() async {
@@ -159,6 +159,38 @@ extension ChatApi on TalkyApiClient {
       () => _client.get(Uri.parse(url), headers: _headers),
     );
     return data is List ? data : [];
+  }
+
+  /// Sync delta globale : rapatrie en UNE requête tous les messages
+  /// `msgID > curseur` de plusieurs conversations. [cursors] = { conversID:
+  /// dernierMsgIDLocal }. Renvoie `{ messages: [...], hasMore: bool }`.
+  ///
+  /// Curseur PAR conversation (pas global) : sinon, être à jour dans une conv
+  /// masquerait des messages anciens manquants d'une autre.
+  Future<Map<String, dynamic>> syncMessagesGlobal(
+    Map<int, int> cursors, {
+    int limit = 300,
+  }) async {
+    if (cursors.isEmpty) {
+      return const {'messages': <dynamic>[], 'hasMore': false};
+    }
+    final body = {
+      'limit': limit,
+      'cursors': [
+        for (final e in cursors.entries) {'c': e.key, 'm': e.value},
+      ],
+    };
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/sync'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    return const {'messages': <dynamic>[], 'hasMore': false};
   }
 
   Future<Map<String, dynamic>> sendMessage({

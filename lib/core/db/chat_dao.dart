@@ -51,9 +51,27 @@ class ChatDao {
     await (db.delete(db.localMessages)..where((m) => m.conversationID.isIn(conversIDs))).go();
   }
 
+  /// @Deprecated('Unread dérivé via ConversationSummaryReducer / countUnread')
   Future<void> setUnread(int conversID, int count) {
     return (db.update(db.localConversations)..where((c) => c.conversID.equals(conversID)))
         .write(LocalConversationsCompanion(unreadCount: Value(count)));
+  }
+
+  /// Nombre de messages entrants non lus : `senderID != myId`, `status < 3`,
+  /// non soft-deleted pour moi. Source de vérité pour `unreadCount` dérivé.
+  Future<int> countUnread(int conversationID, int myId) async {
+    if (myId == 0) return 0;
+    final countExp = db.localMessages.clientId.count();
+    final q = db.selectOnly(db.localMessages)
+      ..addColumns([countExp])
+      ..where(db.localMessages.conversationID.equals(conversationID) &
+          db.localMessages.senderID.equals(myId).not() &
+          db.localMessages.status.isSmallerThanValue(3) &
+          db.localMessages.isDeleted.equals(false) &
+          (db.localMessages.deletedForID.isNull() |
+              db.localMessages.deletedForID.equals(myId).not()));
+    final row = await q.getSingleOrNull();
+    return row?.read(countExp) ?? 0;
   }
 
   Future<void> setPinned(int conversID, bool pinned) {
@@ -105,6 +123,28 @@ class ChatDao {
         b.insert(db.localMessages, m, onConflict: DoUpdate((_) => m));
       }
     });
+  }
+
+  /// Curseur par conversation pour la sync delta globale : pour chaque
+  /// conversation ayant au moins un message confirmé (`msgID > 0`), son plus
+  /// grand `msgID` local. Les conversations sans message confirmé sont exclues
+  /// (leur premier chargement se fait à l'ouverture, pas via le delta global).
+  Future<Map<int, int>> conversationCursors() async {
+    final maxExpr = db.localMessages.msgID.max();
+    final q = db.selectOnly(db.localMessages)
+      ..addColumns([db.localMessages.conversationID, maxExpr])
+      ..where(db.localMessages.msgID.isBiggerThanValue(0))
+      ..groupBy([db.localMessages.conversationID]);
+    final rows = await q.get();
+    final out = <int, int>{};
+    for (final r in rows) {
+      final convId = r.read(db.localMessages.conversationID);
+      final maxId = r.read(maxExpr);
+      if (convId != null && maxId != null && maxId > 0) {
+        out[convId] = maxId;
+      }
+    }
+    return out;
   }
 
   /// Plus grand `msgID` confirmé d'une conversation (curseur de delta-sync).
@@ -197,20 +237,21 @@ class ChatDao {
         .write(const LocalMessagesCompanion(status: Value(3)));
   }
 
-    /// Atomically mark all messages in a conversation as read and reset unread
-    /// counter. This prevents races where an incoming message increments the
-    /// unread count while we reset it.
+    /// Marque comme lus tous les messages reçus d'une conversation et remet
+    /// le badge à 0. Préférer [markConversationRead] +
+    /// [ConversationSummaryReducer.recompute] (unread dérivé).
     Future<void> markConversationReadAtomic(int conversationID, int myId) async {
       await db.transaction(() async {
-    await (db.update(db.localMessages)
-      ..where((m) =>
-          m.conversationID.equals(conversationID) &
-          m.senderID.equals(myId).not() &
-          m.status.isSmallerThanValue(3)))
-        .write(const LocalMessagesCompanion(status: Value(3)));
+        await (db.update(db.localMessages)
+              ..where((m) =>
+                  m.conversationID.equals(conversationID) &
+                  m.senderID.equals(myId).not() &
+                  m.status.isSmallerThanValue(3)))
+            .write(const LocalMessagesCompanion(status: Value(3)));
 
-    await (db.update(db.localConversations)..where((c) => c.conversID.equals(conversationID)))
-        .write(const LocalConversationsCompanion(unreadCount: Value(0)));
+        await (db.update(db.localConversations)
+              ..where((c) => c.conversID.equals(conversationID)))
+            .write(const LocalConversationsCompanion(unreadCount: Value(0)));
       });
     }
 
@@ -260,6 +301,7 @@ class ChatDao {
 
   /// Monte le statut affiché sur l'aperçu de conversation, uniquement si le
   /// dernier message est le mien (accusé ✓ / ✓✓ / ✓✓ bleu). Jamais en arrière.
+  /// @Deprecated('Utiliser ConversationSummaryReducer.recompute')
   Future<void> bumpConvLastStatusIfMine(int conversID, int myId, int status) {
     return (db.update(db.localConversations)
           ..where((c) =>
@@ -277,16 +319,19 @@ class ChatDao {
   /// `lastMessageStatus` si le dernier message n'est pas le mien — sinon on
   /// peut afficher les ✓ à côté d'un message entrant (senderID remis à moi
   /// sans réaligner le texte).
+  /// @Deprecated('Utiliser ConversationSummaryReducer.recompute')
   Future<void> reconcileLastMessageStatus(int conversID, int myId) async {
     final conv = await (db.select(db.localConversations)
           ..where((c) => c.conversID.equals(conversID)))
         .getSingleOrNull();
     if (conv == null) return;
 
+    // Dernier message visible pour moi : on garde les messages « supprimés pour
+    // tous » (isDeleted) car ils s'affichent comme placeholder « supprimé »,
+    // mais on exclut ceux supprimés « pour moi » (deletedForID == myId).
     final latest = await (db.select(db.localMessages)
           ..where((m) =>
               m.conversationID.equals(conversID) &
-              m.isDeleted.equals(false) &
               (m.deletedForID.isNull() | m.deletedForID.equals(myId).not()))
           ..orderBy([
             (m) => OrderingTerm(expression: m.sendAt, mode: OrderingMode.desc),

@@ -47,6 +47,10 @@ class TalkyApiClient {
   /// jeter les events côté serveur.
   bool _isSocketAuthVerified = false;
 
+  /// Garde anti-réentrance : refresh JWT en cours suite à un `auth:error`
+  /// TOKEN_EXPIRED (évite d'empiler plusieurs refresh sur des events répétés).
+  bool _socketReauthInFlight = false;
+
   // Cache TURN/ICE (voir fetchIceServers dans misc_api.dart)
   List<Map<String, dynamic>>? _cachedIceServers;
   DateTime? _iceServersExpiresAt;

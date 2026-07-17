@@ -15,6 +15,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/db/app_database.dart';
 import '../../core/call_limits.dart';
 import '../../core/db/chat_dao.dart' show decodeParticipants;
+import '../../core/navigation/app_navigator.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
@@ -82,7 +83,12 @@ class ChatDetailScreen extends StatefulWidget {
   State<ChatDetailScreen> createState() => _ChatDetailScreenState();
 }
 
-class _ChatDetailScreenState extends State<ChatDetailScreen> {
+class _ChatDetailScreenState extends State<ChatDetailScreen>
+    with RouteAware, WidgetsBindingObserver {
+  /// Vrai quand ce chat est réellement visible (au sommet de la pile) ET l'app
+  /// au premier plan. Sert à ne marquer « lu » que le chat effectivement lu.
+  bool _chatVisible = false;
+  ModalRoute<dynamic>? _observedRoute;
   final TextEditingController _messageController = RichTextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -135,7 +141,56 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _chat = Provider.of<ChatProvider>(context, listen: false);
     _myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID;
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addObserver(this);
     _init();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute && route != _observedRoute) {
+      if (_observedRoute is PageRoute) {
+        appRouteObserver.unsubscribe(this);
+      }
+      _observedRoute = route;
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  // ── Visibilité réelle du chat (route au sommet + app au premier plan) ──
+  @override
+  void didPush() => _setChatVisible(true); // ouvert et affiché
+  @override
+  void didPopNext() => _setChatVisible(true); // revenu (sous-écran fermé)
+  @override
+  void didPushNext() => _setChatVisible(false); // recouvert par un autre écran
+  @override
+  void didPop() => _setChatVisible(false); // quitté
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Ne réactive que si ce chat est bien la route courante.
+      if (_observedRoute?.isCurrent ?? false) _setChatVisible(true);
+    } else {
+      _setChatVisible(false);
+    }
+  }
+
+  /// Applique l'état visible/masqué : « conversation active » = ce chat est lu
+  /// en direct uniquement quand il est réellement à l'écran.
+  void _setChatVisible(bool visible) {
+    if (_chatVisible == visible) return;
+    _chatVisible = visible;
+    final convId = _convId;
+    if (convId == null) return;
+    if (visible) {
+      _chat.repository.setActiveConversation(convId);
+      unawaited(_chat.repository.markAsRead(convId));
+    } else {
+      _chat.repository.clearActiveConversation(convId);
+    }
   }
 
   void _onScroll() {
@@ -191,8 +246,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _attachToConversation(int convId) async {
-    // 1) Conversation active AVANT tout flux entrant : sinon chaque message
-    //    reçu pendant sync/join incrémente unreadCount (fromOther=true).
+    // 1) Marque ce chat visible → conversation active + lecture immédiate.
+    //    (didPush a pu se déclencher avant la résolution async du convId ;
+    //    on force donc l'état visible ici une fois le convId connu.)
+    _chatVisible = true;
     _chat.repository.setActiveConversation(convId);
 
     final voice = context.read<VoicePlaybackService>();
@@ -306,6 +363,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_observedRoute is PageRoute) appRouteObserver.unsubscribe(this);
     _typingTimer?.cancel();
     _recordTimer?.cancel();
     _highlightTimer?.cancel();

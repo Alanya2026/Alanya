@@ -1,15 +1,19 @@
 import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
-import '../../utils/media_album.dart';
 import '../../../talky_models.dart';
+import '../../utils/media_album.dart';
 
 /// Merge monotonic conversation list HTTP → cache local.
-/// HTTP = catch-up ; jamais de downgrade d'aperçu / statut / unread optimiste.
+///
+/// HTTP = catch-up d'identité / meta (pin, archive, participants, aperçu
+/// serveur initial). L'unread et l'aperçu définitifs sont dérivés ensuite par
+/// [ConversationSummaryReducer] à partir des messages locaux.
 class ConversationMerge {
   static const deletedPreview = 'Ce message a été supprimé';
 
   /// Garde le plus récent entre local et serveur ; protège pending optimistes.
+  /// Ne touche plus aux règles unread ad-hoc (source unique = reducer).
   static LocalConversationsCompanion mergeConversation({
     required Conversation server,
     required LocalConversationsCompanion fromServer,
@@ -22,21 +26,15 @@ class ConversationMerge {
     if (local == null) return companion;
 
     // Ne jamais écraser un aperçu local plus récent (envoi optimiste en cours).
-    // Préserve aussi unreadCount local (sinon le sync « ressuscite » un badge).
     if (hasLocalPendingNewer) {
-      companion = companion.copyWith(
+      return companion.copyWith(
         lastMessage: Value(local.lastMessage),
         lastMessageAt: Value(local.lastMessageAt),
         lastMessageSenderID: Value(local.lastMessageSenderID),
         lastMessageType: Value(local.lastMessageType),
         lastMessageStatus: Value(local.lastMessageStatus),
+        // Unread : conserver local jusqu'au recompute (messages = vérité).
         unreadCount: Value(local.unreadCount),
-      );
-      return _applyUnreadRules(
-        companion: companion,
-        local: local,
-        server: server,
-        myId: myId,
       );
     }
 
@@ -52,6 +50,7 @@ class ConversationMerge {
         lastMessageSenderID: Value(local.lastMessageSenderID),
         lastMessageType: Value(local.lastMessageType),
         lastMessageStatus: Value(local.lastMessageStatus),
+        unreadCount: Value(local.unreadCount),
       );
     } else if (myId != 0 &&
         server.lastMessageSenderID == myId &&
@@ -71,50 +70,14 @@ class ConversationMerge {
       companion = companion.copyWith(lastMessage: const Value(deletedPreview));
     }
 
-    return _applyUnreadRules(
-      companion: companion,
-      local: local,
-      server: server,
-      myId: myId,
-    );
-  }
-
-  /// Règles unread local-first :
-  /// - dernier message = moi → unread = 0
-  /// - local 0 et serveur > 0 sans message serveur plus récent → garder 0
-  /// - sinon max(local, server)
-  static LocalConversationsCompanion _applyUnreadRules({
-    required LocalConversationsCompanion companion,
-    required LocalConversation local,
-    required Conversation server,
-    required int myId,
-  }) {
-    final resolvedSender = companion.lastMessageSenderID.present
-        ? companion.lastMessageSenderID.value
-        : server.lastMessageSenderID;
-    // Comparer les horodatages d'origine (pas ceux déjà fusionnés dans companion).
-    final localAt = local.lastMessageAt;
-    final serverAt = server.lastMessageAt != null
-        ? DateTime.tryParse(server.lastMessageAt!)
-        : null;
-
-    final localUnread = local.unreadCount;
-    final serverUnread = server.unreadCount;
-
-    int unread;
-    if (myId != 0 && resolvedSender == myId) {
-      unread = 0;
-    } else if (localUnread == 0 && serverUnread > 0) {
-      final serverClearlyNewer = localAt != null &&
-          serverAt != null &&
-          serverAt.isAfter(localAt) &&
-          server.lastMessageSenderID != myId;
-      unread = serverClearlyNewer ? serverUnread : 0;
-    } else {
-      unread = localUnread > serverUnread ? localUnread : serverUnread;
+    // Si on a déjà des messages locaux, le unread serveur n'est qu'un hint :
+    // le reducer le recalculera. On préserve le local pour éviter un flash.
+    final hasLocalPreview = local.lastMessageAt != null;
+    if (hasLocalPreview) {
+      companion = companion.copyWith(unreadCount: Value(local.unreadCount));
     }
 
-    return companion.copyWith(unreadCount: Value(unread));
+    return companion;
   }
 
   static String previewForMedia(

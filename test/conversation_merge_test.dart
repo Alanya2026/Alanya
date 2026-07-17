@@ -5,7 +5,7 @@ import 'package:talky_flutter/core/services/chat/conversation_merge.dart';
 import 'package:talky_flutter/talky_models.dart';
 
 void main() {
-  group('ConversationMerge unread rules', () {
+  group('ConversationMerge (preview monotonic, unread deferred to reducer)', () {
     LocalConversation localConv({
       required int unread,
       int? senderId,
@@ -68,7 +68,7 @@ void main() {
       );
     }
 
-    test('does not resurrect unread when local is 0 and server stale', () {
+    test('preserves local unread when local already has preview (no flash)', () {
       const myId = 7;
       final local = localConv(unread: 0, senderId: 9);
       final server = serverConv(unread: 3, senderId: 9);
@@ -82,7 +82,7 @@ void main() {
       expect(merged.unreadCount.value, 0);
     });
 
-    test('forces unread 0 when last message is mine', () {
+    test('preserves local unread even if last message is mine (reducer owns 0)', () {
       const myId = 7;
       final local = localConv(unread: 4, senderId: myId);
       final server = serverConv(unread: 4, senderId: myId);
@@ -93,10 +93,10 @@ void main() {
         myId: myId,
         hasLocalPendingNewer: false,
       );
-      expect(merged.unreadCount.value, 0);
+      expect(merged.unreadCount.value, 4);
     });
 
-    test('takes server unread when server has newer message from other', () {
+    test('preserves local unread when server claims newer (until msg sync)', () {
       const myId = 7;
       final local = localConv(
         unread: 0,
@@ -115,10 +115,10 @@ void main() {
         myId: myId,
         hasLocalPendingNewer: false,
       );
-      expect(merged.unreadCount.value, 2);
+      expect(merged.unreadCount.value, 0);
     });
 
-    test('preserves local unread when pending newer', () {
+    test('preserves local unread + preview when pending newer', () {
       const myId = 7;
       final local = localConv(unread: 0, senderId: myId, preview: 'pending');
       final server = serverConv(unread: 5, senderId: 9, preview: 'old');

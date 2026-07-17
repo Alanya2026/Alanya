@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
@@ -8,30 +8,32 @@ import '../../db/chat_dao.dart';
 import '../../utils/forward_message.dart';
 import '../../utils/backend_url.dart';
 import '../../utils/media_album.dart';
-import '../../utils/media_staging.dart';
-import '../../utils/upload_errors.dart';
 import '../local_notification_helper.dart';
 import '../media_cache_service.dart';
-import '../video_thumbnail_service.dart';
 import '../voice_asset_resolver.dart';
-import '../../../talky_api_client.dart';
+import '../../../talky_api_client.dart' hide ChatHttpApi;
 import '../../../talky_models.dart';
-import 'conversation_merge.dart';
-import 'conversation_summary.dart';
+import 'chat_api.dart';
+import 'conversation_summary_reducer.dart';
 import 'conversation_sync.dart';
 import 'receipt_service.dart';
+import 'message_outbox.dart';
+import 'message_sender.dart';
+import 'socket_message_handlers.dart';
+import 'talky_chat_api.dart';
 
 /// Facade messaging : sync, envoi, outbox, accusés, handlers socket.
 class ChatRepository {
-  static const _deletedPreview = ConversationMerge.deletedPreview;
-
   final AppDatabase _db;
   final ChatDao _dao;
-  final TalkyApiClient _api;
+  final ChatApi _api;
   final MediaCacheService _mediaCache = MediaCacheService();
-  late final ConversationSummary _summary;
+  late final ConversationSummaryReducer _reducer;
   late final ConversationSync _sync;
   late final ReceiptService _receipts;
+  late final MessageSender _sender;
+  late final MessageOutbox _outbox;
+  late final SocketMessageHandlers _handlers;
 
   /// Progression d'upload éphémère par [clientId] (0.0–1.0).
   final ValueNotifier<Map<String, double>> uploadProgress =
@@ -43,10 +45,25 @@ class ChatRepository {
   int _myId = 0;
   bool _listenersBound = false;
 
+  /// Rattrapage coalescé de la liste des conversations après un événement
+  /// socket entrant. Filet de sécurité : garantit que la liste reflète la
+  /// réalité même si `recompute` n'a pas pu agir (conversation encore absente
+  /// en local, `conversation:created` perdu, event dédupliqué, etc.).
+  /// Débouncé pour coalescer les rafales (une seule sync par fenêtre courte).
+  Timer? _listCatchUpTimer;
+
   /// Conversation actuellement ouverte à l'écran (0 = aucune). Un message reçu
   /// pour cette conversation est marqué lu immédiatement et n'incrémente pas
-  /// l'unread (l'utilisateur le voit en direct).
+  /// l'unread (l'utilisateur le voit en direct) — **uniquement si l'app est
+  /// au premier plan** (sinon écran encore sur la pile mais téléphone verrouillé).
   int _activeConversationID = 0;
+
+  /// False dès que l'app passe en arrière-plan / inactive.
+  bool _appInForeground = true;
+
+  /// True seulement si le chat est ouvert ET visible (pas en veille).
+  bool get _isChatVisiblyActive =>
+      _activeConversationID != 0 && _appInForeground;
 
   /// Lectures à confirmer au serveur dès la reconnexion (lecture hors-ligne).
   final Set<int> _pendingReads = {};
@@ -55,7 +72,9 @@ class ChatRepository {
 
   void setActiveConversation(int conversationID) {
     _activeConversationID = conversationID;
-    LocalNotificationHelper.setActiveConversationId(conversationID);
+    if (_appInForeground) {
+      LocalNotificationHelper.setActiveConversationId(conversationID);
+    }
   }
 
   void clearActiveConversation(int conversationID) {
@@ -65,10 +84,11 @@ class ChatRepository {
     }
   }
 
-  /// Synchronise la suppression push avec le cycle de vie de l'app.
-  /// En arrière-plan, on ne bloque plus les notifs même si le chat est encore
-  /// sur la pile de navigation.
+  /// Synchronise la suppression push + le traitement « chat actif » avec le
+  /// cycle de vie. En arrière-plan : on reçoit les notifs et on compte les
+  /// non-lus (même si le ChatDetail est encore sur la pile).
   void syncPushSuppressionForLifecycle(bool appInForeground) {
+    _appInForeground = appInForeground;
     if (!appInForeground || _activeConversationID == 0) {
       LocalNotificationHelper.setActiveConversationId(null);
     } else {
@@ -77,7 +97,7 @@ class ChatRepository {
   }
 
   ChatRepository._(this._api, this._db) : _dao = ChatDao(_db) {
-    _summary = ConversationSummary(_db);
+    _reducer = ConversationSummaryReducer(_db, _dao);
     _sync = ConversationSync(
       api: _api,
       dao: _dao,
@@ -85,19 +105,73 @@ class ChatRepository {
       upsertServerMsg: _upsertServerMsg,
       convToCompanion: _convToCompanion,
       parseDate: _parseDate,
+      recompute: (convId) => _reducer.recompute(convId, _myId),
+      recomputeAll: () => _reducer.recomputeAll(_myId),
     );
     _receipts = ReceiptService(
       api: _api,
       dao: _dao,
       myId: () => _myId,
-      activeConversationID: () => _activeConversationID,
+      activeConversationID: () =>
+          _isChatVisiblyActive ? _activeConversationID : 0,
       pendingReadsRetry: _pendingReadsRetry,
+      recompute: (convId) => _reducer.recompute(convId, _myId),
+    );
+
+    _sender = MessageSender(
+      api: _api,
+      dao: _dao,
+      db: _db,
+      myId: () => _myId,
+      recompute: (id) => _reducer.recompute(id, _myId),
+      uploadProgress: uploadProgress,
+      inFlightUploads: _inFlightUploads,
+    );
+    _outbox = MessageOutbox(
+      api: _api,
+      dao: _dao,
+      db: _db,
+      sender: _sender,
+      pendingReads: _pendingReads,
+    );
+    _handlers = SocketMessageHandlers(
+      api: _api,
+      dao: _dao,
+      db: _db,
+      myId: () => _myId,
+      activeConversationID: () => _activeConversationID,
+      appInForeground: () => _appInForeground,
+      recompute: (id) => _reducer.recompute(id, _myId),
+      upsertServerMsg: _upsertServerMsg,
+      receipts: _receipts,
+      mediaCache: _mediaCache,
+      scheduleListCatchUp: scheduleListCatchUp,
     );
   }
 
+  /// Planifie un rattrapage coalescé de la liste des conversations (débouncé).
+  /// Sûr côté récepteur : `ConversationSync` protège les aperçus optimistes
+  /// (via `hasLocalPendingNewer`) et redérive tout depuis les messages locaux.
+  void scheduleListCatchUp() {
+    _listCatchUpTimer?.cancel();
+    _listCatchUpTimer = Timer(const Duration(milliseconds: 600), () {
+      if (_myId == 0) return;
+      _sync.syncConversations();
+    });
+  }
+
   MediaCacheService get mediaCache => _mediaCache;
+
   factory ChatRepository({required TalkyApiClient api, AppDatabase? database}) {
-    return ChatRepository._(api, database ?? AppDatabase());
+    return ChatRepository._(TalkyChatApi(api), database ?? AppDatabase());
+  }
+
+  /// Constructeur de test : injecte un [ChatApi] (ex. FakeChatApi) + Drift mémoire.
+  factory ChatRepository.forTesting({
+    required ChatApi api,
+    required AppDatabase database,
+  }) {
+    return ChatRepository._(api, database);
   }
 
   AppDatabase get db => _db;
@@ -139,15 +213,15 @@ class ChatRepository {
     if (_listenersBound) return;
     _listenersBound = true;
 
-    _api.onSocketEvent(SocketEvents.messageReceived, _onMessageReceived);
-    _api.onSocketEvent(SocketEvents.messageSent, _onMessageSent);
-    _api.onSocketEvent(SocketEvents.messageSendFailed, _onMessageSendFailed);
-    _api.onSocketEvent(SocketEvents.messageUpdated, _onMessageUpdated);
-    _api.onSocketEvent(SocketEvents.messageDeleted, _onMessageDeleted);
-    _api.onSocketEvent(SocketEvents.messagesDeleted, _onMessagesDeleted);
-    _api.onSocketEvent(SocketEvents.messagePinned, _onMessagePinned);
-    _api.onSocketEvent(SocketEvents.messageViewed, _onMessageViewed);
-    _api.onSocketEvent(SocketEvents.messageStatus, _onMessageStatus);
+    _api.onSocketEvent(SocketEvents.messageReceived, _handlers.onMessageReceived);
+    _api.onSocketEvent(SocketEvents.messageSent, _handlers.onMessageSent);
+    _api.onSocketEvent(SocketEvents.messageSendFailed, _handlers.onMessageSendFailed);
+    _api.onSocketEvent(SocketEvents.messageUpdated, _handlers.onMessageUpdated);
+    _api.onSocketEvent(SocketEvents.messageDeleted, _handlers.onMessageDeleted);
+    _api.onSocketEvent(SocketEvents.messagesDeleted, _handlers.onMessagesDeleted);
+    _api.onSocketEvent(SocketEvents.messagePinned, _handlers.onMessagePinned);
+    _api.onSocketEvent(SocketEvents.messageViewed, _handlers.onMessageViewed);
+    _api.onSocketEvent(SocketEvents.messageStatus, _handlers.onMessageStatus);
     _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
     _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
   }
@@ -157,17 +231,19 @@ class ChatRepository {
   /// registre côté API client, mais on remet le drapeau à zéro pour que la
   /// prochaine connexion repasse par l'enregistrement complet.
   void unbind() {
+    _listCatchUpTimer?.cancel();
+    _listCatchUpTimer = null;
     if (!_listenersBound) return;
     _listenersBound = false;
-    _api.removeSocketListener(SocketEvents.messageReceived, _onMessageReceived);
-    _api.removeSocketListener(SocketEvents.messageSent, _onMessageSent);
-    _api.removeSocketListener(SocketEvents.messageSendFailed, _onMessageSendFailed);
-    _api.removeSocketListener(SocketEvents.messageUpdated, _onMessageUpdated);
-    _api.removeSocketListener(SocketEvents.messageDeleted, _onMessageDeleted);
-    _api.removeSocketListener(SocketEvents.messagesDeleted, _onMessagesDeleted);
-    _api.removeSocketListener(SocketEvents.messagePinned, _onMessagePinned);
-    _api.removeSocketListener(SocketEvents.messageViewed, _onMessageViewed);
-    _api.removeSocketListener(SocketEvents.messageStatus, _onMessageStatus);
+    _api.removeSocketListener(SocketEvents.messageReceived, _handlers.onMessageReceived);
+    _api.removeSocketListener(SocketEvents.messageSent, _handlers.onMessageSent);
+    _api.removeSocketListener(SocketEvents.messageSendFailed, _handlers.onMessageSendFailed);
+    _api.removeSocketListener(SocketEvents.messageUpdated, _handlers.onMessageUpdated);
+    _api.removeSocketListener(SocketEvents.messageDeleted, _handlers.onMessageDeleted);
+    _api.removeSocketListener(SocketEvents.messagesDeleted, _handlers.onMessagesDeleted);
+    _api.removeSocketListener(SocketEvents.messagePinned, _handlers.onMessagePinned);
+    _api.removeSocketListener(SocketEvents.messageViewed, _handlers.onMessageViewed);
+    _api.removeSocketListener(SocketEvents.messageStatus, _handlers.onMessageStatus);
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
     _activeConversationID = 0;
@@ -179,6 +255,8 @@ class ChatRepository {
 
   /// Efface conversations, messages et cache média (logout / changement de compte).
   Future<void> clearLocalSession() async {
+    _listCatchUpTimer?.cancel();
+    _listCatchUpTimer = null;
     _activeConversationID = 0;
     LocalNotificationHelper.setActiveConversationId(null);
     _pendingReads.clear();
@@ -195,6 +273,10 @@ class ChatRepository {
  
   Future<void> syncConversations() => _sync.syncConversations();
 
+  /// Sync delta globale des messages (curseur par conversation). Rattrapage
+  /// garanti et sans trou des messages manqués par le WebSocket.
+  Future<void> syncGlobalDelta() => _sync.syncGlobalDelta();
+
   /// Charge l'historique d'une conversation.
   /// Si `delta == true`, ne récupère que les messages plus récents que le
   /// dernier confirmé en local (curseur `after` côté API).
@@ -205,6 +287,9 @@ class ChatRepository {
   Future<int> loadOlderMessages(int conversationID, {int limit = 30}) =>
       _sync.loadOlderMessages(conversationID, limit: limit);
 
+
+  static const int maxAlbumItems = MessageSender.maxAlbumItems;
+
   Future<void> sendText({
     required int conversationID,
     required String content,
@@ -212,68 +297,19 @@ class ChatRepository {
     String? replyToContent,
     int isStatusReply = 0,
     bool isForwarded = false,
-  }) async {
-    if (_myId == 0) {
-      debugPrint('[ChatRepo] sendText ignoré : utilisateur non lié (myId=0)');
-      return;
-    }
-    final clientId = _newClientId();
-    final localNow = DateTime.now();
-    final now = localNow.toUtc();
-
-    await _dao.upsertMessage(LocalMessagesCompanion.insert(
-      clientId: clientId,
-      conversationID: conversationID,
-      senderID: _myId,
-      sendAt: now,
-      clickSentAt: Value(now),
-      content: Value(content),
-      type: const Value(0),
-      status: const Value(0),
-      replyToID: Value(replyToID),
-      replyToContent: Value(replyToContent),
-      isStatusReply: Value(isStatusReply),
-      isForwarded: Value(isForwarded),
-      syncPending: const Value(true),
-    ));
-    _bumpConversationSummary(conversationID, content, 0, now,
-        senderID: _myId, status: 0);
-
-    _emitSend(
-      clientId: clientId,
-      conversationID: conversationID,
-      content: content,
-      type: 0,
-      replyToID: replyToID,
-      replyToContent: replyToContent,
-      isStatusReply: isStatusReply,
-      isForwarded: isForwarded,
-      clickSentAt: now,
-    );
-  }
-
-  /// Aperçu canonique pour les messages média : on respecte le `content` saisi
-  /// s'il existe, sinon on retombe sur l'emoji + libellé de type. Évite que
-  /// l'aperçu de conv affiche un nom de fichier brut (`IMG_2026.jpg`).
-  ///
-  /// Pour une vue unique, la légende reste réservée à la visionneuse.
-  static String _previewForMedia(
-    int type,
-    String? content,
-    String? mediaName, {
-    bool isViewOnce = false,
   }) =>
-      ConversationMerge.previewForMedia(
-        type,
-        content,
-        mediaName,
-        isViewOnce: isViewOnce,
+      _sender.sendText(
+        conversationID: conversationID,
+        content: content,
+        replyToID: replyToID,
+        replyToContent: replyToContent,
+        isStatusReply: isStatusReply,
+        isForwarded: isForwarded,
       );
-
 
   Future<void> sendMedia({
     required int conversationID,
-    required int type, // 1=image 2=vidéo 3=audio 4=fichier
+    required int type,
     required String mediaUrl,
     String? mediaName,
     int? mediaDuration,
@@ -282,65 +318,23 @@ class ChatRepository {
     String? content,
     bool isForwarded = false,
     bool isViewOnce = false,
-  }) async {
-    if (_myId == 0) {
-      debugPrint('[ChatRepo] sendMedia ignoré : utilisateur non lié (myId=0)');
-      return;
-    }
-    final clientId = _newClientId();
-    final localNow = DateTime.now();
-    final now = localNow.toUtc();
-
-    // Vidéo : réutilise la vignette fournie (transfert) sinon la génère depuis
-    // le fichier local si disponible.
-    mediaThumb ??= type == 2 && localMediaPath != null
-        ? await VideoThumbnailService.base64ForFile(localMediaPath)
-        : null;
-
-    await _dao.upsertMessage(LocalMessagesCompanion.insert(
-      clientId: clientId,
-      conversationID: conversationID,
-      senderID: _myId,
-      sendAt: now,
-      clickSentAt: Value(now),
-      content: Value(content),
-      type: Value(type),
-      status: const Value(0),
-      mediaUrl: Value(mediaUrl),
-      mediaName: Value(mediaName),
-      mediaDuration: Value(mediaDuration),
-      mediaThumb: Value(mediaThumb),
-      localMediaPath: Value(localMediaPath),
-      isForwarded: Value(isForwarded),
-      isViewOnce: Value(isViewOnce),
-      syncPending: const Value(true),
-    ));
-    _bumpConversationSummary(
-        conversationID,
-        _previewForMedia(type, content, mediaName, isViewOnce: isViewOnce),
-        type,
-        now,
-        senderID: _myId,
-        status: 0);
-
-    _emitSend(
-      clientId: clientId,
-      conversationID: conversationID,
-      content: content,
-      type: type,
-      mediaUrl: mediaUrl,
-      mediaName: mediaName,
-      mediaDuration: mediaDuration,
-      mediaThumb: mediaThumb,
-      isForwarded: isForwarded,
-      isViewOnce: isViewOnce,
-      clickSentAt: now,
-    );
-  }
+  }) =>
+      _sender.sendMedia(
+        conversationID: conversationID,
+        type: type,
+        mediaUrl: mediaUrl,
+        mediaName: mediaName,
+        mediaDuration: mediaDuration,
+        mediaThumb: mediaThumb,
+        localMediaPath: localMediaPath,
+        content: content,
+        isForwarded: isForwarded,
+        isViewOnce: isViewOnce,
+      );
 
   Future<void> sendMediaFile({
     required int conversationID,
-    required int type, // 1=image 2=vidéo 3=audio 4=fichier
+    required int type,
     required File file,
     String? mediaName,
     int? mediaDuration,
@@ -350,347 +344,33 @@ class ChatRepository {
     int isStatusReply = 0,
     bool isForwarded = false,
     bool isViewOnce = false,
-  }) async {
-    if (_myId == 0) {
-      debugPrint('[ChatRepo] sendMediaFile ignoré : utilisateur non lié (myId=0)');
-      return;
-    }
-    final clientId = _newClientId();
-    final now = DateTime.now().toUtc();
-    File uploadFile;
-    try {
-      uploadFile = file.path.contains('talky_outbox')
-          ? file
-          : await stageMediaFile(file);
-    } catch (e) {
-      debugPrint('[ChatRepo] sendMediaFile staging échoué: $e');
-      return;
-    }
-    final name = mediaName ?? uploadFile.path.split('/').last;
-
-    // Vidéo : génère une mini-vignette base64 transmise au destinataire (aperçu
-    // instantané et hors ligne, sans télécharger la vidéo).
-    final mediaThumb =
-        type == 2 ? await VideoThumbnailService.base64ForFile(uploadFile.path) : null;
-
-    await _dao.upsertMessage(LocalMessagesCompanion.insert(
-      clientId: clientId,
-      conversationID: conversationID,
-      senderID: _myId,
-      sendAt: now,
-      clickSentAt: Value(now),
-      content: Value(content),
-      type: Value(type),
-      status: const Value(0),
-      mediaName: Value(name),
-      mediaDuration: Value(mediaDuration),
-      mediaThumb: Value(mediaThumb),
-      localMediaPath: Value(uploadFile.path),
-      pendingUploadPath: Value(uploadFile.path),
-      replyToID: Value(replyToID),
-      replyToContent: Value(replyToContent),
-      isStatusReply: Value(isStatusReply),
-      isForwarded: Value(isForwarded),
-      isViewOnce: Value(isViewOnce),
-      syncPending: const Value(true),
-    ));
-    _bumpConversationSummary(
-        conversationID,
-        _previewForMedia(type, content, name, isViewOnce: isViewOnce),
-        type,
-        now,
-        senderID: _myId,
-        status: 0);
-
-    try {
-      await _uploadAndEmit(
-        clientId: clientId,
+  }) =>
+      _sender.sendMediaFile(
         conversationID: conversationID,
-        file: uploadFile,
         type: type,
-        content: content,
-        mediaName: name,
+        file: file,
+        mediaName: mediaName,
         mediaDuration: mediaDuration,
+        content: content,
         replyToID: replyToID,
         replyToContent: replyToContent,
         isStatusReply: isStatusReply,
         isForwarded: isForwarded,
         isViewOnce: isViewOnce,
       );
-    } catch (e) {
-      await _handleUploadFailure(clientId, e, 'upload média échoué');
-    }
-  }
 
-  /// Élément d'un album multi-médias (photo ou vidéo).
-  static const int maxAlbumItems = 30;
-
-  /// Envoie plusieurs photos/vidéos regroupées en album (marqueur dans `content`).
-  ///
-  /// [content] est la légende optionnelle (stockée sur le premier item).
   Future<void> sendMediaAlbum({
     required int conversationID,
     required List<AlbumSendItem> items,
     String? content,
     bool isForwarded = false,
-  }) async {
-    if (_myId == 0) {
-      debugPrint('[ChatRepo] sendMediaAlbum ignoré : utilisateur non lié (myId=0)');
-      return;
-    }
-    if (items.isEmpty) return;
-    final caption = content?.trim();
-    final effectiveCaption =
-        caption != null && caption.isNotEmpty ? caption : null;
-    if (items.length == 1) {
-      final item = items.first;
-      await sendMediaFile(
+  }) =>
+      _sender.sendMediaAlbum(
         conversationID: conversationID,
-        type: item.type,
-        file: item.file,
-        mediaName: item.mediaName,
-        mediaDuration: item.duration,
-        content: effectiveCaption,
+        items: items,
+        content: content,
         isForwarded: isForwarded,
       );
-      return;
-    }
-
-    final albumId = newAlbumId();
-    final total = items.length;
-    final localNow = DateTime.now();
-    final now = localNow.toUtc();
-    final types = items.map((e) => e.type).toList();
-    final preview = previewLabelForAlbumTypes(types);
-    final counts = countAlbumMediaTypesFromTypes(types);
-
-    final pending = <_PendingAlbumUpload>[];
-    for (var i = 0; i < items.length; i++) {
-      final item = items[i];
-      final clientId = _newClientId();
-      final name = item.mediaName ?? item.file.path.split('/').last;
-      final marker = encodeAlbumMarker(
-        albumId: albumId,
-        index: i,
-        total: total,
-        photoCount: counts.photos,
-        videoCount: counts.videos,
-        caption: effectiveCaption,
-      );
-
-      final mediaThumb = item.type == 2
-          ? await VideoThumbnailService.base64ForFile(item.file.path)
-          : null;
-
-      await _dao.upsertMessage(LocalMessagesCompanion.insert(
-        clientId: clientId,
-        conversationID: conversationID,
-        senderID: _myId,
-        sendAt: now,
-        clickSentAt: Value(now),
-        content: Value(marker),
-        type: Value(item.type),
-        status: const Value(0),
-        mediaName: Value(name),
-        mediaDuration: Value(item.duration),
-        mediaThumb: Value(mediaThumb),
-        localMediaPath: Value(item.file.path),
-        pendingUploadPath: Value(item.file.path),
-        isForwarded: Value(isForwarded),
-        syncPending: const Value(true),
-      ));
-
-      pending.add(_PendingAlbumUpload(
-        clientId: clientId,
-        file: item.file,
-        type: item.type,
-        content: marker,
-        mediaName: name,
-        mediaDuration: item.duration,
-        isForwarded: isForwarded,
-      ));
-    }
-
-    _bumpConversationSummary(
-      conversationID,
-      preview,
-      items.last.type,
-      now,
-      senderID: _myId,
-      status: 0,
-    );
-
-    await _runConcurrent(pending, 3, (p) async {
-      try {
-        await _uploadAndEmit(
-          clientId: p.clientId,
-          conversationID: conversationID,
-          file: p.file,
-          type: p.type,
-          content: p.content,
-          mediaName: p.mediaName,
-          mediaDuration: p.mediaDuration,
-          isForwarded: p.isForwarded,
-        );
-      } catch (e) {
-        await _handleUploadFailure(p.clientId, e, 'upload album item échoué');
-      }
-    });
-  }
-
-  void _setUploadProgress(String clientId, double? progress) {
-    final next = Map<String, double>.from(uploadProgress.value);
-    if (progress == null) {
-      next.remove(clientId);
-    } else {
-      next[clientId] = progress.clamp(0.0, 1.0);
-    }
-    uploadProgress.value = next;
-  }
-
-
-  Future<File?> _resolvePendingUploadFile(LocalMessage m) async {
-    final pending = m.pendingUploadPath;
-    if (pending != null && pending.isNotEmpty) {
-      final f = File(pending);
-      if (f.existsSync()) return f;
-    }
-    final local = m.localMediaPath;
-    if (local != null && local.isNotEmpty) {
-      final f = File(local);
-      if (f.existsSync()) {
-        try {
-          return await stageMediaFile(f);
-        } catch (e) {
-          debugPrint('[ChatRepo] re-stage échoué: $e');
-        }
-      }
-    }
-    return null;
-  }
-
-  Future<void> _uploadAndEmit({
-    required String clientId,
-    required int conversationID,
-    required File file,
-    required int type,
-    String? content,
-    String? mediaName,
-    int? mediaDuration,
-    bool isForwarded = false,
-    bool isViewOnce = false,
-    int? replyToID,
-    String? replyToContent,
-    int isStatusReply = 0,
-  }) async {
-    if (!_inFlightUploads.add(clientId)) {
-      debugPrint('[ChatRepo] upload déjà en cours pour $clientId');
-      return;
-    }
-    try {
-      var attempt429 = 0;
-      while (true) {
-        try {
-          final res = await _api.uploadMedia(
-            file,
-            onProgress: (p) => _setUploadProgress(clientId, p),
-          );
-          _setUploadProgress(clientId, null);
-          final url = res['url'] as String?;
-          if (url == null) throw Exception('upload sans url');
-
-          await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))
-              .write(LocalMessagesCompanion(
-            mediaUrl: Value(url),
-            pendingUploadPath: const Value(null),
-          ));
-
-          // Vignette base64 déjà générée et stockée à l'insertion (vidéos) :
-          // on la relit pour la transmettre au destinataire.
-          final row = await (_db.select(_db.localMessages)
-                ..where((m) => m.clientId.equals(clientId)))
-              .getSingleOrNull();
-
-          _emitSend(
-            clientId: clientId,
-            conversationID: conversationID,
-            content: content,
-            type: type,
-            mediaUrl: url,
-            mediaName: mediaName,
-            mediaDuration: mediaDuration,
-            mediaThumb: row?.mediaThumb,
-            replyToID: replyToID,
-            replyToContent: replyToContent,
-            isStatusReply: isStatusReply,
-            isForwarded: isForwarded,
-            isViewOnce: isViewOnce,
-          );
-          return;
-        } catch (e) {
-          _setUploadProgress(clientId, null);
-          if (e is TalkyException && e.statusCode == 429 && attempt429 < 2) {
-            attempt429++;
-            await Future.delayed(Duration(seconds: attempt429 == 1 ? 2 : 5));
-            continue;
-          }
-          rethrow;
-        }
-      }
-    } finally {
-      _inFlightUploads.remove(clientId);
-    }
-  }
-
-  void _emitPendingMessage(LocalMessage m) {
-    _emitSend(
-      clientId: m.clientId,
-      conversationID: m.conversationID,
-      content: m.content,
-      type: m.type,
-      mediaUrl: m.mediaUrl,
-      mediaName: m.mediaName,
-      mediaDuration: m.mediaDuration,
-      mediaThumb: m.mediaThumb,
-      replyToID: m.replyToID,
-      replyToContent: m.replyToContent,
-      isStatusReply: m.isStatusReply,
-      isForwarded: m.isForwarded,
-      isViewOnce: m.isViewOnce,
-    );
-  }
-
-  Future<void> _handleUploadFailure(
-    String clientId,
-    Object e,
-    String logLabel,
-  ) async {
-    debugPrint('[ChatRepo] $logLabel: $e');
-    if (isTransientUploadError(e)) {
-      debugPrint('[ChatRepo] upload différé — pending intact pour rejeu');
-    } else {
-      await _dao.markFailed(clientId);
-    }
-  }
-
-  Future<void> _runConcurrent<T>(
-    List<T> items,
-    int concurrency,
-    Future<void> Function(T item) fn,
-  ) async {
-    if (items.isEmpty) return;
-    var index = 0;
-    Future<void> worker() async {
-      while (true) {
-        final i = index;
-        if (i >= items.length) return;
-        index++;
-        await fn(items[i]);
-      }
-    }
-    final workers = concurrency.clamp(1, items.length);
-    await Future.wait(List.generate(workers, (_) => worker()));
-  }
 
   /// Transfère un album complet vers une ou plusieurs conversations.
   Future<ForwardResult> forwardAlbum({
@@ -967,115 +647,27 @@ class ChatRepository {
   /// Gère AUSSI les uploads de fichier qui n'ont pas pu aboutir : si un
   /// message porte `pendingUploadPath` sans `mediaUrl`, on relance l'upload
   /// avant l'émission du message:send.
-  Future<void> flushOutbox() async {
-    final pending = await _dao.pendingMessages();
-    for (final m in pending) {
-      final needsUpload = m.pendingUploadPath != null &&
-          m.pendingUploadPath!.isNotEmpty &&
-          (m.mediaUrl == null || m.mediaUrl!.isEmpty);
+  Future<void> flushOutbox() => _outbox.flushOutbox();
 
-      if (needsUpload) {
-        final file = await _resolvePendingUploadFile(m);
-        if (file == null) {
-          debugPrint('[ChatRepo] flush: fichier disparu pour ${m.clientId} → failed');
-          await _dao.markFailed(m.clientId);
-          continue;
-        }
-        try {
-          await _uploadAndEmit(
-            clientId: m.clientId,
-            conversationID: m.conversationID,
-            file: file,
-            type: m.type,
-            content: m.content,
-            mediaName: m.mediaName,
-            mediaDuration: m.mediaDuration,
-            replyToID: m.replyToID,
-            replyToContent: m.replyToContent,
-            isStatusReply: m.isStatusReply,
-            isForwarded: m.isForwarded,
-            isViewOnce: m.isViewOnce,
-          );
-        } catch (e) {
-          await _handleUploadFailure(m.clientId, e, 'flush upload échoué pour ${m.clientId}');
-        }
-      } else {
-        // Média déjà uploadé (mediaUrl présent) ou message texte : réémettre
-        // message:send. Sans cette branche, un upload HTTP réussi suivi d'un
-        // emit socket ignoré (socket non prêt) reste bloqué indéfiniment.
-        _emitPendingMessage(m);
-      }
-    }
-
-    // Horloge coincée : pending depuis > 5 min malgré des retries → failed
-    // (l'utilisateur peut relancer via le menu). Avec idempotence serveur,
-    // les retries antérieurs n'ont pas créé de doublons.
-    final stuck = await _dao.stuckPendingMessages();
-    for (final m in stuck) {
-      debugPrint('[ChatRepo] stuck pending → failed ${m.clientId}');
-      await _dao.markFailed(m.clientId);
-    }
-
-    // Rejoue les accusés de lecture émis hors-ligne.
-    if (_api.isSocketReady && _pendingReads.isNotEmpty) {
-      for (final convID in _pendingReads.toList()) {
-        _api.sendSocketEvent(SocketEvents.messageRead, {
-          'conversationID': convID,
-        });
-      }
-      _pendingReads.clear();
-    }
-
-    // Retry des messages marqués failed (status==4) avec retryCount < 3
-    final failed = await (_db.select(_db.localMessages)
-          ..where((m) => m.status.equals(4) & m.retryCount.isSmallerThanValue(3)))
-        .get();
-    for (final m in failed) {
-      await _dao.incrementRetryCount(m.clientId);
-      final needsUpload = m.pendingUploadPath != null &&
-          m.pendingUploadPath!.isNotEmpty &&
-          (m.mediaUrl == null || m.mediaUrl!.isEmpty);
-
-      if (needsUpload) {
-        final file = await _resolvePendingUploadFile(m);
-        if (file == null) {
-          debugPrint('[ChatRepo] retry: fichier disparu pour ${m.clientId} → keep failed');
-          continue;
-        }
-        try {
-          await _uploadAndEmit(
-            clientId: m.clientId,
-            conversationID: m.conversationID,
-            file: file,
-            type: m.type,
-            content: m.content,
-            mediaName: m.mediaName,
-            mediaDuration: m.mediaDuration,
-            replyToID: m.replyToID,
-            replyToContent: m.replyToContent,
-            isStatusReply: m.isStatusReply,
-            isForwarded: m.isForwarded,
-            isViewOnce: m.isViewOnce,
-          );
-        } catch (e) {
-          await _handleUploadFailure(m.clientId, e, 'retry upload échoué pour ${m.clientId}');
-        }
-      } else {
-        // Message texte ou média déjà uploadé : remettre en pending et réémettre
-        await _dao.retryFailed(m.clientId);
-        _emitPendingMessage(m);
-      }
-    }
-  }
-
-  /// Modifie un message texte (le mien). Applique localement puis serveur.
   Future<void> editMessage(int msgID, String content) async {
     await _dao.updateContentByServerId(msgID, content);
+    // Aperçu à jour si c'était le dernier message.
+    final convID = await _conversationIdForMsg(msgID);
+    if (convID != null) await _recomputeSummary(convID);
     try {
       await _api.editMessage(msgID, content);
     } catch (e) {
       debugPrint('[ChatRepo] editMessage échouée: $e');
     }
+  }
+
+  Future<int?> _conversationIdForMsg(int msgID) async {
+    if (msgID == 0) return null;
+    final row = await (_db.select(_db.localMessages)
+          ..where((m) => m.msgID.equals(msgID))
+          ..limit(1))
+        .getSingleOrNull();
+    return row?.conversationID;
   }
 
   /// Supprime un ou plusieurs messages (délègue au batch si nécessaire).
@@ -1148,33 +740,16 @@ class ChatRepository {
       );
     }
 
-    // 3. Rafraîchir l'aperçu de chaque conversation affectée.
+    // 3. Réaligner l'aperçu de chaque conversation sur son dernier message réel
+    //    (et non forcer « supprimé » : si le message effacé n'était pas le
+    //    dernier, l'aperçu doit rester le vrai dernier message).
     for (final convId in affectedConvIDs) {
-      await _refreshConversationPreview(convId);
+      await _recomputeSummary(convId);
     }
   }
 
-  /// Met à jour l'aperçu d'une conversation après suppression pour afficher
-  /// « Ce message a été supprimé » (cohérent avec le rendu dans la discussion).
-  Future<void> _refreshConversationPreview(int conversationID) async {
-    await (_db.update(_db.localConversations)
-          ..where((c) => c.conversID.equals(conversationID)))
-        .write(const LocalConversationsCompanion(
-      lastMessage: Value(_deletedPreview),
-    ));
-  }
+  Future<void> retryMessage(String clientId) => _outbox.retryMessage(clientId);
 
-  /// Remet un message échoué en file d'envoi (déclenché par l'utilisateur via
-  /// le menu contextuel). Le prochain `flushOutbox` le rejoue.
-  Future<void> retryMessage(String clientId) async {
-    await _dao.retryFailed(clientId);
-    if (_api.isSocketReady) {
-      await flushOutbox();
-    }
-  }
-
-  /// Met à jour l'épinglage côté serveur (conv_participants) puis localement.
-  /// Optimistic : on écrit la valeur en cache d'abord pour un feedback instantané.
   Future<void> setConversationPinned(int conversID, bool pinned) async {
     await _dao.setPinned(conversID, pinned);
     try {
@@ -1239,14 +814,15 @@ class ChatRepository {
 
   /// Re-sync de la conversation actuellement à l'écran après reconnexion.
   /// Évite à l'utilisateur de quitter/rouvrir la conv pour voir les messages
-  /// reçus pendant la coupure.
+  /// reçus pendant la coupure. Ne marque lu que si l'app est au premier plan.
   Future<void> resyncActiveConversation() async {
     if (_activeConversationID == 0) return;
     if (_myId == 0) return;
     final convID = _activeConversationID;
     await syncMessages(convID, delta: true);
+    if (!_appInForeground) return;
     await _dao.markConversationRead(convID, _myId);
-    await _dao.setUnread(convID, 0);
+    await _recomputeSummary(convID);
     try {
       _api.sendSocketEvent(SocketEvents.messageRead, {'conversationID': convID});
     } catch (_) {
@@ -1295,10 +871,12 @@ class ChatRepository {
       var candidates = await (_db.select(_db.localMessages)
             ..where((m) {
               // Ligne déjà confirmée avec le même msgID mais clé différente
-              final sameOtherKey = m.msgID.equals(msgID) & m.clientId.equals(srvKey).not();
+              final sameOtherKey =
+                  m.msgID.equals(msgID) & m.clientId.equals(srvKey).not();
 
               // Base optimiste : même conversation et msgID==0
-              final optimisticBase = m.conversationID.equals(convID) & m.msgID.equals(0);
+              final optimisticBase =
+                  m.conversationID.equals(convID) & m.msgID.equals(0);
 
               // Match prioritaire par clientId si fourni par le serveur
               Expression<bool> optimistic = const Constant(false);
@@ -1307,9 +885,13 @@ class ChatRepository {
               } else if (content != null && content.isNotEmpty) {
                 // Pour matcher sur le contenu, restreindre au messages dont
                 // l'émetteur local est bien l'utilisateur courant (évite collisions)
-                optimistic = optimisticBase & m.content.equals(content) & m.senderID.equals(_myId);
+                optimistic = optimisticBase &
+                    m.content.equals(content) &
+                    m.senderID.equals(_myId);
               } else if (mediaName != null && mediaName.isNotEmpty) {
-                optimistic = optimisticBase & m.mediaName.equals(mediaName) & m.senderID.equals(_myId);
+                optimistic = optimisticBase &
+                    m.mediaName.equals(mediaName) &
+                    m.senderID.equals(_myId);
               }
 
               return sameOtherKey | optimistic;
@@ -1346,11 +928,14 @@ class ChatRepository {
         carriedLocalPath ??= m.localMediaPath;
         carriedClickSentAt ??= m.clickSentAt;
         carriedMediaThumb ??= m.mediaThumb;
-        await (_db.delete(_db.localMessages)..where((x) => x.clientId.equals(m.clientId))).go();
+        await (_db.delete(_db.localMessages)
+              ..where((x) => x.clientId.equals(m.clientId)))
+            .go();
       }
 
       // Insère une seule ligne normalisée `srv_<msgID>` (clé primaire stable).
-      var companion = _msgJsonToCompanion(json).copyWith(clientId: Value(srvKey));
+      var companion =
+          _msgJsonToCompanion(json).copyWith(clientId: Value(srvKey));
       if (carriedLocalPath != null) {
         companion = companion.copyWith(localMediaPath: Value(carriedLocalPath));
       }
@@ -1362,7 +947,8 @@ class ChatRepository {
         companion = companion.copyWith(mediaThumb: Value(carriedMediaThumb));
       }
 
-      debugPrint('[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
+      debugPrint(
+          '[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
       await _dao.upsertMessage(companion);
     });
 
@@ -1383,57 +969,6 @@ class ChatRepository {
       }
     }
     return wasNew;
-  }
-
-  Future<void> _onMessageReceived(dynamic data) async {
-    if (data is! Map) return;
-    final json = Map<String, dynamic>.from(data);
-    final senderID0 = _toInt(json['senderID']);
-
-    final isNew = await _upsertServerMsg(json);
-    // Si le même événement est reçu plusieurs fois, on évite de regonfler
-    // unread/accusés/notifications. Le message est déjà à jour via l'upsert.
-    if (!isNew) return;
-    if (senderID0 == _myId) return;
-
-    final convID = _toInt(json['conversationID']);
-    final type = _toInt(json['type']);
-    final isViewOnce =
-        json['isViewOnce'] == 1 || json['isViewOnce'] == true;
-    final preview = _previewForMedia(
-      type,
-      json['content']?.toString(),
-      json['mediaName']?.toString(),
-      isViewOnce: isViewOnce,
-    );
-    final at = _parseDate(json['sendAt']) ?? DateTime.now().toUtc();
-    final isActive = convID != 0 && convID == _activeConversationID;
-
-    // Conversation ouverte → message lu immédiatement (pas de badge non-lu).
-    _bumpConversationSummary(convID, preview, type, at,
-        fromOther: !isActive, senderID: senderID0);
-    if (isActive) {
-      await _dao.markConversationRead(convID, _myId);
-      await _dao.setUnread(convID, 0);
-    }
-
-    if (convID != 0 && _api.isSocketReady) {
-      _receipts.emitDeliveredOrRead(convID, isActive: isActive);
-    }
-    final mtype = _toInt(json['type']);
-    final mediaUrl = json['mediaUrl']?.toString();
-    final msgID = _toInt(json['msgID']);
-    if (mediaUrl != null && msgID != 0 && !isViewOnce) {
-      if (mtype == 1) {
-        // Images : auto-cache. Audio (3) : téléchargement manuel dans le chat.
-        _cacheMedia(msgID, mediaUrl);
-      } else if (mtype == 4) {
-        // Fichiers : auto-cache si < 5 MB (sinon coût data trop élevé,
-        // ouverture manuelle redéclenchera ensureCached).
-        _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
-      }
-      // Vidéos (mtype==2) : on-demand uniquement (déjà via tap → ensureCached).
-    }
   }
 
   Future<void> _cacheMedia(int msgID, String url, {int? maxBytes}) async {
@@ -1490,67 +1025,6 @@ class ChatRepository {
     return path;
   }
 
-  Future<void> _onMessageStatus(dynamic data) async {
-    if (data is! Map) return;
-    final convID = _toInt(data['conversationID']);
-    final status = _toInt(data['status']);
-    final byUserID = _toInt(data['byUserID']);
-    if (convID == 0 || status == 0 || byUserID == _myId) return;
-    final at = _parseDate(data['at']);
-    await _dao.bumpMyMessagesStatus(
-      convID,
-      _myId,
-      status,
-      at: at,
-    );
-    // Reflète l'accusé (✓✓ / ✓✓ bleu) sur l'aperçu si le dernier message est le mien.
-    await _dao.bumpConvLastStatusIfMine(convID, _myId, status);
-    await _dao.reconcileLastMessageStatus(convID, _myId);
-  }
-
-  Future<void> _onMessageSent(dynamic data) async {
-    if (data is! Map) return;
-    final json = Map<String, dynamic>.from(data);
-    final msgID = _toInt(json['msgID']);
-    if (msgID == 0) return;
-    await _upsertServerMsg(json);
-    final convID = _toInt(json['conversationID']);
-    final status = _toInt(json['status'], fallback: 1);
-    if (convID == 0) return;
-
-    final type = _toInt(json['type']);
-    final isViewOnce =
-        json['isViewOnce'] == 1 || json['isViewOnce'] == true;
-    final preview = _previewForMedia(
-      type,
-      json['content']?.toString(),
-      json['mediaName']?.toString(),
-      isViewOnce: isViewOnce,
-    );
-    final at = _parseDate(json['sendAt']) ?? DateTime.now().toUtc();
-    await _bumpConversationSummary(
-      convID,
-      preview,
-      type,
-      at,
-      senderID: _myId,
-      status: status,
-    );
-    await _dao.bumpConvLastStatusIfMine(convID, _myId, status);
-    await _dao.reconcileLastMessageStatus(convID, _myId);
-  }
-
-  Future<void> _onMessageSendFailed(dynamic data) async {
-    if (data is! Map) return;
-    final json = Map<String, dynamic>.from(data);
-    final clientId = _clientIdFromJson(json);
-    if (clientId == null || clientId.isEmpty) return;
-    debugPrint(
-      '[ChatRepo] message:send_failed clientId=$clientId '
-      'code=${json['code']} msg=${json['message']}',
-    );
-    await _dao.markFailed(clientId);
-  }
 
   /// (Dés)épingle un message. Optimistic : on écrit localement d'abord pour un
   /// retour instantané, puis on confirme côté serveur (rollback en cas d'échec).
@@ -1565,13 +1039,6 @@ class ChatRepository {
     }
   }
 
-  void _onMessagePinned(dynamic data) {
-    if (data is! Map) return;
-    final id = _toInt(data['msgID']);
-    if (id == 0) return;
-    final pinned = data['isPinned'] == 1 || data['isPinned'] == true;
-    _dao.setMessagePinnedByServerId(id, pinned);
-  }
 
   /// Signale au serveur qu'un média à vue unique a été consulté, puis marque
   /// le message consommé localement (efface toute trace ré-ouvrable).
@@ -1585,110 +1052,9 @@ class ChatRepository {
     }
   }
 
-  void _onMessageViewed(dynamic data) {
-    if (data is! Map) return;
-    final id = _toInt(data['msgID']);
-    if (id != 0) _dao.markViewedByServerId(id);
-  }
 
-  void _onMessageUpdated(dynamic data) {
-    if (data is! Map) return;
-    final id = _toInt(data['msgID']);
-    final content = data['content']?.toString();
-    if (id != 0 && content != null) _dao.updateContentByServerId(id, content);
-  }
-
-  void _onMessageDeleted(dynamic data) {
-    if (data is! Map) return;
-    final id = _toInt(data['msgID']);
-    if (id == 0) return;
-    final all = data['all'] == true;
-    final deletedForID = _toInt(data['deletedForID']);
-    if (all) {
-      _dao.softDeleteByServerId(id);
-    } else if (deletedForID == _myId) {
-      _dao.softDeleteForUser(id, _myId);
-    }
-  }
-
-  void _onMessagesDeleted(dynamic data) {
-    if (data is! Map) return;
-    final rawIds = data['msgIDs'];
-    if (rawIds is! List || rawIds.isEmpty) return;
-    final ids = rawIds.map(_toInt).where((id) => id > 0).toList();
-    if (ids.isEmpty) return;
-    final all = data['all'] == true;
-    final deletedForID = _toInt(data['deletedForID']);
-    if (all) {
-      _dao.softDeleteManyByServerId(ids);
-    } else if (deletedForID == _myId) {
-      _dao.softDeleteManyForUser(ids, _myId);
-    }
-  }
-
-  void _emitSend({
-    required String clientId,
-    required int conversationID,
-    String? content,
-    required int type,
-    String? mediaUrl,
-    String? mediaName,
-    int? mediaDuration,
-    String? mediaThumb,
-    int? replyToID,
-    String? replyToContent,
-    int isStatusReply = 0,
-    bool isForwarded = false,
-    bool isViewOnce = false,
-    DateTime? clickSentAt,
-  }) {
-    // Garde stricte : tant que le socket n'est pas authentifié, le serveur
-    // ignore l'emit silencieusement. On laisse la ligne `syncPending=true` ;
-    // `flushOutbox` (texte ET média déjà uploadé) la rejouera quand
-    // `auth:verified` aura déclenché _onSocketReady.
-    if (!_api.isSocketReady) {
-      debugPrint('[ChatRepo] _emitSend différé (socket non prêt) clientId=$clientId');
-      return;
-    }
-    _api.sendSocketEvent(SocketEvents.messageSend, {
-      'clientId': clientId,
-      'conversationID': conversationID,
-      if (content != null) 'content': content,
-      'type': type,
-      if (mediaUrl != null) 'mediaUrl': mediaUrl,
-      if (mediaName != null) 'mediaName': mediaName,
-      if (mediaDuration != null) 'mediaDuration': mediaDuration,
-      if (mediaThumb != null) 'mediaThumb': mediaThumb,
-      if (replyToID != null && replyToID > 0) 'replyToID': replyToID,
-      if (replyToContent != null) 'replyToContent': replyToContent,
-      if (isStatusReply != 0) 'isStatusReply': isStatusReply,
-      if (isForwarded) 'isForwarded': 1,
-      if (isViewOnce) 'isViewOnce': 1,
-      if (clickSentAt != null) 'clickSentAt': clickSentAt.toIso8601String(),
-    });
-    // Marque la ligne comme « tout juste émise » → backoff outbox.
-    _dao.touchEmitted(clientId);
-  }
-
-  Future<void> _bumpConversationSummary(
-    int conversID,
-    String preview,
-    int type,
-    DateTime at, {
-    bool fromOther = false,
-    int? senderID,
-    int? status,
-  }) {
-    return _summary.bump(
-      conversID: conversID,
-      preview: preview,
-      type: type,
-      at: at,
-      activeConversationID: _activeConversationID,
-      fromOther: fromOther,
-      senderID: senderID,
-      status: status,
-    );
+  Future<void> _recomputeSummary(int conversID) {
+    return _reducer.recompute(conversID, _myId);
   }
 
   LocalConversationsCompanion _convToCompanion(Conversation c, Map<String, dynamic> raw) {
@@ -1773,8 +1139,6 @@ class ChatRepository {
     );
   }
 
-  String _newClientId() =>
-      'c_${_myId}_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(99999)}';
 
   static String? _clientIdFromJson(Map<String, dynamic> j) {
     final v = j['clientId'] ?? j['clientID'];
@@ -1796,22 +1160,3 @@ class ChatRepository {
   }
 }
 
-class _PendingAlbumUpload {
-  const _PendingAlbumUpload({
-    required this.clientId,
-    required this.file,
-    required this.type,
-    required this.content,
-    required this.mediaName,
-    this.mediaDuration,
-    required this.isForwarded,
-  });
-
-  final String clientId;
-  final File file;
-  final int type;
-  final String content;
-  final String mediaName;
-  final int? mediaDuration;
-  final bool isForwarded;
-}

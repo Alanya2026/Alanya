@@ -131,6 +131,7 @@ class TalkyApp extends StatelessWidget {
       child: Consumer<ThemeController>(
         builder: (_, tc, __) => MaterialApp(
           navigatorKey: navigatorKey,
+          navigatorObservers: [appRouteObserver],
           scaffoldMessengerKey: appMessengerKey,
           debugShowCheckedModeBanner: false,
           title: 'Alanya',
