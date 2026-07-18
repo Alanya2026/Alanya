@@ -25,6 +25,18 @@ const String kConvTagPrefix = 'conv_';
 const int kMeetingNotifOffset = 1000000000;
 const int kMaxBufferedMessages = 7;
 
+/// Petite icône (barre de statut) : silhouette blanche monochrome du logo.
+/// Android n'utilise que le canal alpha du small icon → une icône couleur
+/// (ic_launcher) apparaîtrait en carré blanc. On passe donc par un drawable dédié.
+const String kNotificationIcon = '@drawable/ic_stat_notification';
+
+/// Grande icône (à droite de la notif, façon WhatsApp) : logo couleur complet.
+const AndroidBitmap<Object> kNotificationLargeIcon =
+    DrawableResourceAndroidBitmap('@mipmap/ic_launcher');
+
+/// Couleur d'accent (bleu du logo) qui teinte la petite icône monochrome.
+const Color kNotificationAccentColor = Color(0xFF114B86);
+
 /// Helper partagé foreground / background pour les notifications locales.
 class LocalNotificationHelper {
   LocalNotificationHelper._();
@@ -40,7 +52,7 @@ class LocalNotificationHelper {
     if (_initialized) return;
 
     const initSettings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings(kNotificationIcon),
       iOS: DarwinInitializationSettings(),
     );
     await _plugin.initialize(
@@ -197,8 +209,9 @@ class LocalNotificationHelper {
           channelDescription: _kChannelMeetings.description,
           importance: Importance.max,
           priority: Priority.high,
-          color: const Color(0xFF3F51B5),
-          icon: '@mipmap/ic_launcher',
+          color: kNotificationAccentColor,
+          icon: kNotificationIcon,
+          largeIcon: kNotificationLargeIcon,
           groupKey: 'talky_meetings',
           styleInformation:
               body.isNotEmpty ? BigTextStyleInformation(body) : null,
@@ -246,7 +259,9 @@ class LocalNotificationHelper {
           _kChannelMessages.name,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: kNotificationIcon,
+          color: kNotificationAccentColor,
+          largeIcon: kNotificationLargeIcon,
           styleInformation: notifBody.isNotEmpty
               ? BigTextStyleInformation(notifBody)
               : null,
@@ -336,7 +351,9 @@ class LocalNotificationHelper {
       channelDescription: _kChannelMessages.description,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: kNotificationIcon,
+      color: kNotificationAccentColor,
+      largeIcon: kNotificationLargeIcon,
       tag: _convTag(conversationId),
       styleInformation: styleInformation,
     );

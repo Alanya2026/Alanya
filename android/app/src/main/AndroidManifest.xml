@@ -57,7 +57,10 @@
             android:value="talky_messages" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:value="@mipmap/ic_launcher" />
+            android:value="@drawable/ic_stat_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

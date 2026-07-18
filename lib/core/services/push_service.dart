@@ -78,6 +78,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
   if (kIsWeb) return;
+  // Les types visibles portent désormais un bloc `notification` : le système
+  // Android l'affiche déjà (arrière-plan / app tuée). Construire une notif locale
+  // ici créerait un doublon → on laisse le système gérer l'affichage.
+  if (message.notification != null) return;
   final data = Map<String, dynamic>.from(message.data);
   final type = data['type']?.toString();
   final title = (data['title'] ?? message.notification?.title ?? '').toString();
