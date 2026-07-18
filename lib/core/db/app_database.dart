@@ -218,10 +218,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
+
+  /// Nouveau domaine après migration serveur (Let's Encrypt HTTPS).
+  static const _newHost = 'https://www.alanya237.com';
 
   Future<void> _migrateLegacyHttpsUrls(GeneratedDatabase db) async {
     Future<void> fixColumn(String table, String column) async {
@@ -246,6 +249,38 @@ class AppDatabase extends _$AppDatabase {
       "UPDATE local_meetings SET participants_json = REPLACE(participants_json, '$_legacyHttps', '$_httpHost') "
       "WHERE participants_json LIKE '%$_legacyHttps%'",
     );
+  }
+
+  /// Réécrit toute URL de l'ancien hôte (`http`/`https://158.220.107.211`) vers
+  /// le nouveau domaine, pour que les médias déjà en cache restent accessibles
+  /// après la migration serveur vers www.alanya237.com.
+  Future<void> _migrateToNewHost(GeneratedDatabase db) async {
+    Future<void> fixColumn(String table, String column) async {
+      for (final legacy in const [_legacyHttps, _httpHost]) {
+        await db.customStatement(
+          "UPDATE $table SET $column = REPLACE($column, '$legacy', '$_newHost') "
+          "WHERE $column LIKE '$legacy%'",
+        );
+      }
+    }
+
+    await fixColumn('local_messages', 'media_url');
+    await fixColumn('local_messages', 'sender_avatar');
+    await fixColumn('local_conversations', 'group_photo');
+    await fixColumn('local_users', 'avatar_url');
+    await fixColumn('local_calls', 'other_avatar');
+    await fixColumn('local_statuses', 'media_url');
+    await fixColumn('local_statuses', 'author_avatar');
+    for (final legacy in const [_legacyHttps, _httpHost]) {
+      await db.customStatement(
+        "UPDATE local_conversations SET participants_json = REPLACE(participants_json, '$legacy', '$_newHost') "
+        "WHERE participants_json LIKE '%$legacy%'",
+      );
+      await db.customStatement(
+        "UPDATE local_meetings SET participants_json = REPLACE(participants_json, '$legacy', '$_newHost') "
+        "WHERE participants_json LIKE '%$legacy%'",
+      );
+    }
   }
 
   @override
@@ -287,6 +322,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(localMessages, localMessages.mediaThumb);
             await m.addColumn(localMessages, localMessages.messageTz);
             await m.addColumn(localMessages, localMessages.messageTzOffset);
+          }
+          if (from < 11) {
+            await _migrateToNewHost(m.database);
           }
         },
       );

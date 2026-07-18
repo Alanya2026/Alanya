@@ -25,6 +25,18 @@ const String kConvTagPrefix = 'conv_';
 const int kMeetingNotifOffset = 1000000000;
 const int kMaxBufferedMessages = 7;
 
+/// Clé de groupe partagée par toutes les notifs de messages : Android les
+/// rassemble sous un même « bloc » applicatif (façon WhatsApp).
+const String kMessagesGroupKey = 'com.alanya.talky.MESSAGES';
+
+/// Id de la notification résumé (en-tête du bloc). Grand entier dédié pour ne
+/// jamais entrer en collision avec un conversationId ou l'offset réunions.
+const int kMessagesSummaryId = 2147483646;
+
+/// Liste (SharedPreferences) des conversations ayant une notif active, pour
+/// construire/rafraîchir le résumé du bloc.
+const String kGroupConvIdsKey = 'notif_group_conv_ids';
+
 /// Petite icône (barre de statut) : silhouette blanche monochrome du logo.
 /// Android n'utilise que le canal alpha du small icon → une icône couleur
 /// (ic_launcher) apparaîtrait en carré blanc. On passe donc par un drawable dédié.
@@ -179,6 +191,11 @@ class LocalNotificationHelper {
         payload: payload,
       );
     }
+
+    // Regroupement façon WhatsApp : on trace la conversation et on (re)construit
+    // la notification résumé qui coiffe le bloc applicatif.
+    await _addGroupConvId(conversationId);
+    await _refreshGroupSummary();
   }
 
   // ── Affichage réunions ───────────────────────────────────────────────
@@ -288,6 +305,8 @@ class LocalNotificationHelper {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_bufferKey(conversationId));
+    await _removeGroupConvId(conversationId);
+    await _refreshGroupSummary();
   }
 
   static Future<void> cancelMeeting(int meetingId) async {
@@ -355,6 +374,7 @@ class LocalNotificationHelper {
       color: kNotificationAccentColor,
       largeIcon: kNotificationLargeIcon,
       tag: _convTag(conversationId),
+      groupKey: kMessagesGroupKey,
       styleInformation: styleInformation,
     );
   }
@@ -393,6 +413,122 @@ class LocalNotificationHelper {
     }
     await prefs.setString(key, jsonEncode(messages));
     return messages;
+  }
+
+  static Future<List<Map<String, String>>> _readBuffer(
+    int conversationId,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getString(_bufferKey(conversationId));
+    if (existing == null) return [];
+    try {
+      final decoded = jsonDecode(existing) as List;
+      return decoded.map((e) => Map<String, String>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // ── Regroupement (bloc applicatif façon WhatsApp) ─────────────────────
+
+  static Future<List<int>> _groupConvIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(kGroupConvIdsKey) ?? const [];
+    return raw
+        .map((e) => int.tryParse(e))
+        .whereType<int>()
+        .where((id) => id != 0)
+        .toList();
+  }
+
+  static Future<void> _addGroupConvId(int conversationId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = (prefs.getStringList(kGroupConvIdsKey) ?? const []).toSet();
+    ids.add('$conversationId');
+    await prefs.setStringList(kGroupConvIdsKey, ids.toList());
+  }
+
+  static Future<void> _removeGroupConvId(int conversationId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = (prefs.getStringList(kGroupConvIdsKey) ?? const []).toSet();
+    ids.remove('$conversationId');
+    await prefs.setStringList(kGroupConvIdsKey, ids.toList());
+  }
+
+  /// (Re)construit la notification résumé qui coiffe le bloc de messages.
+  /// Auto-nettoyage : les conversations dont le buffer est vide sont retirées.
+  static Future<void> _refreshGroupSummary() async {
+    if (kIsWeb) return;
+    final ids = await _groupConvIds();
+
+    var totalMessages = 0;
+    final lines = <String>[];
+    final liveIds = <int>[];
+    for (final id in ids) {
+      final buffer = await _readBuffer(id);
+      if (buffer.isEmpty) continue;
+      liveIds.add(id);
+      totalMessages += buffer.length;
+      final last = buffer.last;
+      final sender = (last['sender'] ?? '').trim();
+      final body = last['body'] ?? '';
+      lines.add(sender.isNotEmpty ? '$sender: $body' : body);
+    }
+
+    // Persiste l'ensemble nettoyé (retire les conversations sans buffer).
+    if (liveIds.length != ids.length) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        kGroupConvIdsKey,
+        liveIds.map((e) => '$e').toList(),
+      );
+    }
+
+    if (liveIds.isEmpty) {
+      try {
+        await _plugin.cancel(kMessagesSummaryId);
+      } catch (_) {
+        // Plugin absent.
+      }
+      return;
+    }
+
+    final convCount = liveIds.length;
+    final plural = totalMessages > 1 ? 's' : '';
+    final summaryText = convCount > 1
+        ? '$totalMessages messages · $convCount conversations'
+        : '$totalMessages nouveau$plural message$plural';
+
+    final inbox = InboxStyleInformation(
+      lines,
+      contentTitle: summaryText,
+      summaryText: 'Alanya',
+    );
+
+    try {
+      await _plugin.show(
+        kMessagesSummaryId,
+        'Alanya',
+        summaryText,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _kChannelMessages.id,
+            _kChannelMessages.name,
+            channelDescription: _kChannelMessages.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: kNotificationIcon,
+            color: kNotificationAccentColor,
+            groupKey: kMessagesGroupKey,
+            setAsGroupSummary: true,
+            onlyAlertOnce: true,
+            styleInformation: inbox,
+          ),
+        ),
+      );
+    } catch (_) {
+      // Plateforme non supportée / plugin absent.
+    }
   }
 
   static MessagingStyleInformation _buildMessagingStyle({

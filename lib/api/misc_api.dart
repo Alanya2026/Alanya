@@ -69,7 +69,7 @@ extension MiscApi on TalkyApiClient {
   Future<bool> checkHealth() async {
     try {
       final response = await _client
-          .get(Uri.parse('http://158.220.107.211/health'))
+          .get(Uri.parse('https://www.alanya237.com/health'))
           .timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
     } catch (_) {

@@ -5,6 +5,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../firebase_options.dart';
 import '../../talky_api_client.dart';
 import 'callkit_service.dart';
@@ -78,9 +80,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
   if (kIsWeb) return;
-  // Les types visibles portent désormais un bloc `notification` : le système
-  // Android l'affiche déjà (arrière-plan / app tuée). Construire une notif locale
-  // ici créerait un doublon → on laisse le système gérer l'affichage.
+  // Filet de sécurité : si un jour un message arrive avec un bloc `notification`
+  // (affiché directement par le système), on n'en construit pas un doublon local.
+  // En fonctionnement normal les pushs sont data-only → cette garde ne bloque rien.
   if (message.notification != null) return;
   final data = Map<String, dynamic>.from(message.data);
   final type = data['type']?.toString();
@@ -185,6 +187,8 @@ class PushService {
         onTap: _onLocalNotifTap,
       );
 
+      await _maybeRequestBatteryOptimizationExemption();
+
       final launchDetails =
           await LocalNotificationHelper.plugin.getNotificationAppLaunchDetails();
       if (launchDetails?.didNotificationLaunchApp == true) {
@@ -230,6 +234,25 @@ class PushService {
       debugPrint('[Push] FCM token enregistré côté backend');
     } catch (e) {
       debugPrint('[Push] updateFcmToken failed: $e');
+    }
+  }
+
+  /// Demande (une seule fois) l'exemption d'optimisation batterie sur Android.
+  /// Sans elle, le système peut empêcher le handler FCM de s'exécuter quand
+  /// l'app est fermée → notifications manquantes. Sur les versions récentes,
+  /// c'est le prérequis pour un comportement fiable façon WhatsApp.
+  Future<void> _maybeRequestBatteryOptimizationExemption() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('asked_battery_opt') == true) return;
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      if (!status.isGranted) {
+        await Permission.ignoreBatteryOptimizations.request();
+      }
+      await prefs.setBool('asked_battery_opt', true);
+    } catch (e) {
+      debugPrint('[Push] exemption optimisation batterie: $e');
     }
   }
 
