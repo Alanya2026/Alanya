@@ -17,6 +17,7 @@ extension CallOneToOne on CallService {
       notify();
       return;
     }
+    if (!await _ensureFullyConnectedForOutgoingCall()) return;
     _errorMessage = null;
     _status = CallStatus.outgoing;
     _remoteUserId = targetUserId;

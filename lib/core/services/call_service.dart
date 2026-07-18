@@ -15,6 +15,7 @@ import 'webrtc_service.dart';
 import 'call/speaking_detector.dart'; // détection locale du locuteur actif
 import '../navigation/app_navigator.dart';
 import '../utils/backend_url.dart';
+import 'connectivity_service.dart';
 import 'meeting_service.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
@@ -46,9 +47,13 @@ class GroupParticipantInfo {
 
 class CallService extends ChangeNotifier {
   final TalkyApiClient _apiClient;
+  final ConnectivityService _connectivity = ConnectivityService();
   final WebRTCService _webrtc = WebRTCService();
   final RingtoneService _ringtone = RingtoneService.instance;
   final CallKitService _callKit = CallKitService.instance;
+
+  static const String _offlineCallMessage =
+      'Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.';
 
   CallStatus _status = CallStatus.idle;
   int? _remoteUserId;
@@ -281,6 +286,48 @@ class CallService extends ChangeNotifier {
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
       ));
+  }
+
+  /// Vérifie réseau OS + socket avant un appel sortant.
+  /// Affiche un popup si la connexion n'est pas complète et retourne `false`.
+  Future<bool> _ensureFullyConnectedForOutgoingCall() async {
+    bool hasNetwork = true;
+    try {
+      hasNetwork = await _connectivity.currentNetwork;
+    } catch (e) {
+      debugPrint('[CallService] Lecture réseau échouée: $e');
+      hasNetwork = false;
+    }
+    final fullyConnected = hasNetwork && _apiClient.isSocketConnected;
+    if (fullyConnected) return true;
+
+    debugPrint(
+      '[CallService] Appel bloqué (réseau=$hasNetwork '
+      'socket=${_apiClient.isSocketConnected})',
+    );
+    await _showOfflineCallDialog();
+    return false;
+  }
+
+  Future<void> _showOfflineCallDialog() async {
+    final context = appNavigatorKey.currentContext;
+    if (context == null || !context.mounted) {
+      _showTransientMessage(_offlineCallMessage);
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Connexion requise'),
+        content: const Text(_offlineCallMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

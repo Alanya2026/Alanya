@@ -16,6 +16,7 @@ extension CallGroup on CallService {
     List<GroupParticipantInfo>? targets,
   }) async {
     if (_status != CallStatus.idle) return;
+    if (!await _ensureFullyConnectedForOutgoingCall()) return;
 
     final maxOthers = CallLimits.maxSelectable(isVideo: isVideo);
     if (targetUserIds.length > maxOthers) {

@@ -1,0 +1,37 @@
+---
+description: Avant toute modification, couvrir les cas limites et ne jamais casser une fonctionnalité déjà correcte.
+alwaysApply: true
+---
+
+# Modifications : cas limites + ne pas casser l’existant
+
+Avant d’écrire ou de livrer un correctif / une feature, **énumérer explicitement** les cas et vérifier que le comportement reste correct pour chacun. Ne pas se contenter du happy path.
+
+## Ne pas casser ce qui marche déjà
+
+- Identifier les **comportements déjà corrects** touchés par la zone modifiée (même indirectement).
+- Toute modification doit **préserver** ces comportements, sauf si le brief demande explicitement de les changer.
+- Si un correctif risque une régression : **élargir le design** (garde, flag, condition) plutôt que d’échanger un bug contre un autre.
+- Après le code : rejouer mentalement / tester les flux qui marchaient avant (envoi, lecture, badge, notifs, sync, arrière-plan, etc.).
+- Exemple vécu : poser `activeConversation` (nécessaire) sans tenir compte du background a cassé les non-lus — inacceptable.
+
+## Checklist obligatoire
+
+1. **Happy path** — cas nominal demandé.
+2. **États opposés** — online / offline ; socket prêt / non prêt ; premier plan / arrière-plan / kill app.
+3. **Cycle de vie UI** — écran ouvert, en pile mais app en veille, quitté (`dispose`), rotation.
+4. **Courses (races)** — sync HTTP vs socket vs Drift ; flush outbox vs ack ; markAsRead vs message entrant.
+5. **Idempotence / retries** — 1re tentative, N retries, ack perdu, doublon serveur.
+6. **Identité / direction** — message mien vs entrant ; badge unread vs statut ✓ ; aperçu vs dernier message réel.
+7. **Régression** — inventaire de ce qui marchait dans les fichiers / flux touchés ; confirmer que ça marche encore.
+
+## Messagerie (rappel)
+
+- « Conversation active » = **ouverte ET app au premier plan**, pas seulement sur la pile de navigation.
+- En arrière-plan : incrémenter unread, notifs, `delivered` — **ne pas** marquer lu.
+- Sync HTTP ne doit ni ressusciter ni effacer à tort les non-lus / l’aperçu.
+
+## Méthode
+
+Avant le code : lister scénarios **et** fonctionnalités existantes à préserver.  
+Après le code : revérifier les deux listes.
