@@ -554,110 +554,45 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   Widget _buildLocationMedia(LocalMessage msg, bool isMe) {
     final loc = LocationPayload.tryParse(msg.content);
-    final label = loc?.displayLabel ?? 'Position';
-    final textColor = _bubbleText(isMe);
     final muted = _bubbleMuted(isMe);
 
-    return GestureDetector(
-      onTap: loc == null ? null : () => _openLocationInMaps(loc),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    if (loc == null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: SizedBox(
-              width: 240,
-              height: 140,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (loc != null)
-                    CachedNetworkImage(
-                      imageUrl: loc.staticMapUrl(width: 480, height: 280),
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => ColoredBox(
-                        color: context.semantic.surfaceMuted,
-                        child: Center(
-                          child: Icon(Icons.map_outlined, color: muted),
-                        ),
-                      ),
-                      errorWidget: (_, __, ___) => ColoredBox(
-                        color: context.semantic.surfaceMuted,
-                        child: Center(
-                          child: Icon(Icons.map_outlined, color: muted, size: 36),
-                        ),
-                      ),
-                    )
-                  else
-                    ColoredBox(
-                      color: context.semantic.surfaceMuted,
-                      child: Center(
-                        child: Icon(Icons.location_off, color: muted, size: 36),
-                      ),
-                    ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.location_on,
-                      size: 36,
-                      color: context.colors.primary,
-                      shadows: const [
-                        Shadow(blurRadius: 4, color: Colors.black45),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          Icon(Icons.location_off, size: 18, color: muted),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Position indisponible',
+            style: context.text.bodyMedium?.copyWith(color: muted),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.location_on, size: 16, color: textColor),
-              const SizedBox(width: AppSpacing.xs),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.text.bodyMedium?.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (loc?.address != null &&
-              loc!.address!.isNotEmpty &&
-              loc.address != label)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                loc.address!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: context.text.bodySmall?.copyWith(color: muted),
-              ),
-            ),
         ],
-      ),
+      );
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openLocationInMaps(loc),
+      child: LocationMessagePreview(location: loc),
     );
   }
 
   Future<void> _openLocationInMaps(LocationPayload loc) async {
     try {
       final maps = loc.mapsOpenUri();
-      if (await canLaunchUrl(maps)) {
-        await launchUrl(maps, mode: LaunchMode.externalApplication);
-        return;
-      }
+      final launched = await launchUrl(
+        maps,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
+
       final geo = loc.geoUri();
-      if (await canLaunchUrl(geo)) {
-        await launchUrl(geo, mode: LaunchMode.externalApplication);
-        return;
-      }
+      final geoLaunched = await launchUrl(
+        geo,
+        mode: LaunchMode.externalApplication,
+      );
+      if (geoLaunched) return;
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Impossible d\'ouvrir Maps')),

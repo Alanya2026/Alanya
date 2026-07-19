@@ -57,6 +57,7 @@ import 'location_picker_screen.dart';
 import 'voice_message_bubble.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/utils/location_payload.dart';
+import '../../widgets/chat/location_message_preview.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels

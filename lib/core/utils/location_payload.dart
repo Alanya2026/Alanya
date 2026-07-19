@@ -61,18 +61,6 @@ class LocationPayload {
     }
   }
 
-  /// Miniature carte statique (OSM staticmap).
-  String staticMapUrl({int width = 600, int height = 300, int zoom = 15}) {
-    final w = width.clamp(100, 1280);
-    final h = height.clamp(100, 1280);
-    return 'https://staticmap.openstreetmap.de/staticmap.php'
-        '?center=$lat,$lng'
-        '&zoom=$zoom'
-        '&size=${w}x$h'
-        '&maptype=mapnik'
-        '&markers=$lat,$lng,lightblue1';
-  }
-
   /// URL pour ouvrir la position dans une app / navigateur Maps.
   Uri mapsOpenUri() {
     return Uri.parse(
