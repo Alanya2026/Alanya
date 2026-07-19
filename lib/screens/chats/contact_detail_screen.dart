@@ -9,6 +9,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/utils/conversation_display.dart';
+import '../../core/utils/document_file_style.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
@@ -765,17 +766,19 @@ class _MediaCardState extends State<_MediaCard> {
 
   Widget _buildThumb(LocalMessage msg) {
     if (msg.type == 4) {
-      final name = msg.mediaName ?? 'Document';
-      final ext = name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
+      final style = DocumentFileStyle.fromMessage(
+        mediaName: msg.mediaName,
+        mediaUrl: msg.mediaUrl,
+      );
       return Container(
         color: context.colors.surfaceContainerHighest,
         child: Center(
           child: Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(color: _docColor(ext), borderRadius: AppRadius.brSm),
+            decoration: BoxDecoration(color: style.color, borderRadius: AppRadius.brSm),
             child: Center(
-              child: Text(ext,
+              child: Text(style.extension,
                   style: const TextStyle(
                       color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
             ),
@@ -815,17 +818,6 @@ class _MediaCardState extends State<_MediaCard> {
       );
     }
     return Container(color: context.colors.surfaceContainerHighest);
-  }
-
-  Color _docColor(String ext) {
-    switch (ext) {
-      case 'PDF': return Colors.red.shade400;
-      case 'DOC': case 'DOCX': return Colors.blue.shade400;
-      case 'XLS': case 'XLSX': return Colors.green.shade400;
-      case 'PPT': case 'PPTX': return Colors.orange.shade400;
-      case 'ZIP': case 'RAR': return Colors.purple.shade400;
-      default: return Colors.grey.shade500;
-    }
   }
 
   Future<void> _openDoc(LocalMessage msg) async {

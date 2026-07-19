@@ -15,6 +15,7 @@ import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/utils/avatar_utils.dart';
+import '../../core/utils/document_file_style.dart';
 import '../../core/db/app_database.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/video_message_preview.dart';
@@ -520,9 +521,10 @@ class _MediaCardState extends State<_MediaCard> {
   Widget _buildThumb(LocalMessage msg) {
     final placeholder = context.colors.surfaceContainerHighest;
     if (msg.type == 4) {
-      final name = msg.mediaName ?? 'Document';
-      final ext =
-          name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
+      final style = DocumentFileStyle.fromMessage(
+        mediaName: msg.mediaName,
+        mediaUrl: msg.mediaUrl,
+      );
       return Container(
         color: placeholder,
         child: Center(
@@ -530,12 +532,12 @@ class _MediaCardState extends State<_MediaCard> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _docColor(ext),
+              color: style.color,
               borderRadius: AppRadius.brSm,
             ),
             child: Center(
               child: Text(
-                ext,
+                style.extension,
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
@@ -580,27 +582,6 @@ class _MediaCardState extends State<_MediaCard> {
       );
     }
     return Container(color: placeholder);
-  }
-
-  Color _docColor(String ext) {
-    switch (ext) {
-      case 'PDF':
-        return Colors.red.shade400;
-      case 'DOC':
-      case 'DOCX':
-        return Colors.blue.shade400;
-      case 'XLS':
-      case 'XLSX':
-        return Colors.green.shade400;
-      case 'PPT':
-      case 'PPTX':
-        return Colors.orange.shade400;
-      case 'ZIP':
-      case 'RAR':
-        return Colors.purple.shade400;
-      default:
-        return Colors.grey.shade500;
-    }
   }
 
   Future<void> _openDoc(LocalMessage msg) async {

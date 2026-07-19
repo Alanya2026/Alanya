@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/conversation_display.dart';
+import '../../core/utils/document_file_style.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
 import '../../providers/auth_provider.dart';
@@ -158,8 +159,8 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
     }
   }
 
-  IconData _previewIcon(int type) {
-    switch (type) {
+  IconData _previewIcon(LocalMessage msg) {
+    switch (msg.type) {
       case 1:
         return Icons.image_outlined;
       case 2:
@@ -167,10 +168,23 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
       case 3:
         return Icons.mic_outlined;
       case 4:
-        return Icons.insert_drive_file_outlined;
+        return DocumentFileStyle.fromMessage(
+          mediaName: msg.mediaName,
+          mediaUrl: msg.mediaUrl,
+        ).icon;
       default:
         return Icons.chat_bubble_outline;
     }
+  }
+
+  Color _previewIconColor(LocalMessage msg, Color fallback) {
+    if (msg.type == 4) {
+      return DocumentFileStyle.fromMessage(
+        mediaName: msg.mediaName,
+        mediaUrl: msg.mediaUrl,
+      ).color;
+    }
+    return fallback;
   }
 
   @override
@@ -356,8 +370,8 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
         children: [
           if (isMedia) ...[
             Icon(
-              _previewIcon(msg.type),
-              color: context.colors.primary,
+              _previewIcon(msg),
+              color: _previewIconColor(msg, context.colors.primary),
               size: AppIconSize.md,
             ),
             AppSpacing.hGapMd,
@@ -417,9 +431,9 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
               children: [
                 if (msg.type != 0) ...[
                   Icon(
-                    _previewIcon(msg.type),
+                    _previewIcon(msg),
                     size: AppIconSize.sm,
-                    color: context.colors.onSurfaceVariant,
+                    color: _previewIconColor(msg, context.colors.onSurfaceVariant),
                   ),
                   AppSpacing.hGapSm,
                 ],

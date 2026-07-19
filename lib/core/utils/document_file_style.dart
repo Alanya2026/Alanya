@@ -105,6 +105,14 @@ class DocumentFileStyle {
           icon: Icons.folder_zip,
           label: 'Archive',
         );
+      case 'apk':
+        return DocumentFileStyle(
+          extension: 'APK',
+          family: 'apk',
+          color: Colors.lightGreen.shade700,
+          icon: Icons.android,
+          label: 'APK',
+        );
       case 'txt':
       case 'rtf':
         return DocumentFileStyle(

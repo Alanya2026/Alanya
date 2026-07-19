@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/db/app_database.dart';
+import '../../core/utils/document_file_style.dart';
 import '../../core/utils/rich_text_parser.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/common/common.dart';
@@ -255,8 +256,10 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
 
   Widget _buildDocTile(LocalMessage msg) {
     final name = msg.mediaName ?? 'Document';
-    final ext =
-        name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
+    final style = DocumentFileStyle.fromMessage(
+      mediaName: msg.mediaName,
+      mediaUrl: msg.mediaUrl,
+    );
     return Container(
       decoration: BoxDecoration(
         color: context.colors.surface,
@@ -269,11 +272,11 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: _docColor(ext),
+            color: style.color,
             borderRadius: AppRadius.brSm,
           ),
           child: Center(
-            child: Text(ext,
+            child: Text(style.extension,
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
@@ -428,17 +431,6 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
       );
     }
     return Container(color: AppColors.surfaceSubtle);
-  }
-
-  Color _docColor(String ext) {
-    switch (ext) {
-      case 'PDF': return Colors.red.shade400;
-      case 'DOC': case 'DOCX': return Colors.blue.shade400;
-      case 'XLS': case 'XLSX': return Colors.green.shade400;
-      case 'PPT': case 'PPTX': return Colors.orange.shade400;
-      case 'ZIP': case 'RAR': return Colors.purple.shade400;
-      default: return Colors.grey.shade500;
-    }
   }
 
   Future<void> _openDoc(LocalMessage msg) async {
