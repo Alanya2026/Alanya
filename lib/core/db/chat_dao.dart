@@ -281,6 +281,10 @@ class ChatDao {
       ..where((m) =>
           m.conversationID.equals(conversationID) &
           m.senderID.equals(myId) &
+          // Ne pas marquer « livré/lu » les envois encore non confirmés
+          // (sinon ✓✓ bleu sur une vidéo jamais arrivée chez le destinataire).
+          m.msgID.isBiggerThanValue(0) &
+          m.syncPending.equals(false) &
           m.status.isSmallerThanValue(status));
     final future = query.write(companion);
     if (status == 3 && at != null) {
@@ -292,6 +296,8 @@ class ChatDao {
             ..where((m) =>
                 m.conversationID.equals(conversationID) &
                 m.senderID.equals(myId) &
+                m.msgID.isBiggerThanValue(0) &
+                m.syncPending.equals(false) &
                 m.status.equals(3) &
                 m.deliveredAt.isNull()))
           .write(LocalMessagesCompanion(deliveredAt: Value(at))));

@@ -189,11 +189,29 @@ extension _ChatActions on _ChatDetailScreenState {
     final convId = await _ensureConversation();
     if (convId == null) return;
 
+    // Résoudre un msgID frais : le snapshot `_replyTo` peut encore avoir
+    // msgID=0 si la vidéo était en cours d'ack au moment du long-press.
+    final reply = _replyTo;
+    int? replyId;
+    String? replyContent;
+    if (reply != null) {
+      replyContent = _previewOf(reply);
+      replyId = reply.msgID > 0 ? reply.msgID : null;
+      if (replyId == null) {
+        for (final m in _currentMessages) {
+          if (m.clientId == reply.clientId && m.msgID > 0) {
+            replyId = m.msgID;
+            break;
+          }
+        }
+      }
+    }
+
     _chat.repository.sendText(
       conversationID: convId,
       content: text,
-      replyToID: _replyTo != null && _replyTo!.msgID > 0 ? _replyTo!.msgID : null,
-      replyToContent: _replyTo == null ? null : _previewOf(_replyTo!),
+      replyToID: replyId,
+      replyToContent: replyContent,
     );
 
     _messageController.clear();
@@ -1266,6 +1284,73 @@ extension _ChatActions on _ChatDetailScreenState {
   bool _hasLocal(LocalMessage msg) =>
       msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
 
+  /// Média reçu non view-once sans fichier local → téléchargement manuel requis.
+  bool _needsMediaDownload(LocalMessage msg) {
+    if (msg.isViewOnce) return false;
+    if (_myId != null && msg.senderID == _myId) return false;
+    if (_hasLocal(msg)) return false;
+    if (msg.type != 1 && msg.type != 2 && msg.type != 4) return false;
+    final url = msg.mediaUrl;
+    return url != null && url.isNotEmpty;
+  }
+
+  Future<String?> _downloadReceivedMedia(LocalMessage msg) async {
+    final url = msg.mediaUrl;
+    if (url == null || url.isEmpty || msg.msgID == 0) return null;
+    if (_mediaDownloadingIds.contains(msg.msgID)) return null;
+
+    rebuild(() => _mediaDownloadingIds.add(msg.msgID));
+    try {
+      final isMine = _myId != null && msg.senderID == _myId;
+      final path = await _chat.repository.ensureReceivedMediaLocal(
+        msgID: msg.msgID,
+        mediaUrl: url,
+        type: msg.type,
+        isMine: isMine,
+        isViewOnce: msg.isViewOnce,
+        mediaName: msg.mediaName,
+      );
+      if (path == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible de télécharger le média'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return path;
+    } finally {
+      if (mounted) {
+        rebuild(() => _mediaDownloadingIds.remove(msg.msgID));
+      } else {
+        _mediaDownloadingIds.remove(msg.msgID);
+      }
+    }
+  }
+
+  Widget _mediaDownloadBadge({required bool downloading}) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: downloading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.download_rounded, color: Colors.white, size: 26),
+      ),
+    );
+  }
+
   Future<void> _openViewer(LocalMessage msg, {required bool isVideo}) async {
     await _openAlbumViewer([msg], initialIndex: 0);
   }
@@ -1278,10 +1363,20 @@ extension _ChatActions on _ChatDetailScreenState {
       _toggleSelection(items[initialIndex.clamp(0, items.length - 1)]);
       return;
     }
+
+    final target = items.isEmpty
+        ? null
+        : items[initialIndex.clamp(0, items.length - 1)];
+    if (target != null && _needsMediaDownload(target)) {
+      final path = await _downloadReceivedMedia(target);
+      if (path == null) return;
+    }
+
     var loaderShown = false;
     final prepared = await buildMediaViewerItems(
       items,
       _chat.repository,
+      myId: _myId,
       loadingForIndex: initialIndex,
       onLoadingVideo: () {
         if (!mounted || loaderShown) return;
@@ -1405,12 +1500,32 @@ extension _ChatActions on _ChatDetailScreenState {
 
     if (path == null) {
       if (msg.mediaUrl == null) return;
-      _showLoading();
-      path = await _chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
-      if (path != null && msg.msgID != 0) {
-        await _chat.repository.dao.setLocalMediaPath(msg.msgID, path);
+      if (_needsMediaDownload(msg)) {
+        path = await _downloadReceivedMedia(msg);
+      } else {
+        _showLoading();
+        final isMine = _myId != null && msg.senderID == _myId;
+        path = await _chat.repository.ensureReceivedMediaLocal(
+          msgID: msg.msgID,
+          mediaUrl: msg.mediaUrl!,
+          type: msg.type,
+          isMine: isMine,
+          isViewOnce: msg.isViewOnce,
+          mediaName: msg.mediaName,
+        );
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
       }
-      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    } else if (!msg.isViewOnce && msg.msgID != 0) {
+      final isMine = _myId != null && msg.senderID == _myId;
+      await _chat.repository.ensureReceivedMediaLocal(
+        msgID: msg.msgID,
+        mediaUrl: msg.mediaUrl ?? '',
+        type: msg.type,
+        isMine: isMine,
+        isViewOnce: false,
+        mediaName: msg.mediaName,
+        existingLocalPath: path,
+      );
     }
 
     if (path == null) {

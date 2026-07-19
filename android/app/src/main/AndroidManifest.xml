@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Permissions requises pour les appels audio/vidéo -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -20,11 +21,18 @@
     <!-- Fiabiliser la réception des pushs data-only quand l'app est fermée
          (exécution du handler FCM en arrière-plan, façon WhatsApp). -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- Sauvegarde album Alanya / Downloads (API ≤ 29). API 29+ : MediaStore sans perm.
+         tools:replace : camera_android_camerax déclare maxSdkVersion=28. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"
+        tools:replace="android:maxSdkVersion" />
 
     <application
         android:label="Alanya"
         android:name="${applicationName}"
         android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

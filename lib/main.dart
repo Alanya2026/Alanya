@@ -18,6 +18,7 @@ import 'core/navigation/app_navigator.dart';
 import 'core/utils/app_log.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'core/services/media_download_preferences.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/local_cache_repository.dart';
@@ -87,6 +88,9 @@ void main() async {
     debugPrint('[Main] ** Init Firebase échouée — push désactivé: $e');
   }
 
+  // Charger avant runApp : le prefetch socket/sync lit ce flag de façon sync.
+  await MediaDownloadPreferences.preload();
+
   runApp(const TalkyApp());
 }
 
@@ -103,6 +107,8 @@ class TalkyApp extends StatelessWidget {
       providers: [
         // ThemeController en tête : MaterialApp en dépend via Consumer.
         ChangeNotifierProvider(create: (_) => ThemeController()..load()),
+        ChangeNotifierProvider(
+            create: (_) => MediaDownloadPreferences()..load()),
         Provider<TalkyApiClient>.value(value: apiClient),
         Provider<AppDatabase>.value(value: database),
         Provider<LocalCacheRepository>.value(value: localCache),

@@ -232,6 +232,36 @@ class TalkyApiClient {
         return 'audio/mpeg';
       case 'pdf':
         return 'application/pdf';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'xls':
+        return 'application/vnd.ms-excel';
+      case 'xlsx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case 'csv':
+        return 'text/csv';
+      case 'ppt':
+        return 'application/vnd.ms-powerpoint';
+      case 'pptx':
+        return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      case 'odt':
+        return 'application/vnd.oasis.opendocument.text';
+      case 'ods':
+        return 'application/vnd.oasis.opendocument.spreadsheet';
+      case 'odp':
+        return 'application/vnd.oasis.opendocument.presentation';
+      case 'rtf':
+        return 'application/rtf';
+      case 'zip':
+        return 'application/zip';
+      case '7z':
+        return 'application/x-7z-compressed';
+      case 'rar':
+        return 'application/vnd.rar';
+      case 'txt':
+        return 'text/plain';
       default:
         return 'application/octet-stream';
     }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_controller.dart';
+import '../../core/services/media_download_preferences.dart';
 import 'privacy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -53,6 +54,44 @@ class SettingsScreen extends StatelessWidget {
                   selected: {tc.mode},
                   onSelectionChanged: (s) => tc.setMode(s.first),
                 ),
+              ),
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          _SettingsGroup(
+            title: 'Médias',
+            child: Consumer<MediaDownloadPreferences>(
+              builder: (_, prefs, __) => SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.sm,
+                ),
+                secondary: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: context.semantic.surfaceMuted,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.download_rounded,
+                    color: context.colors.onSurfaceVariant,
+                    size: AppIconSize.md,
+                  ),
+                ),
+                title: Text(
+                  'Téléchargement automatique',
+                  style: context.text.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                subtitle: Text(
+                  'Photos, vidéos et fichiers reçus s’enregistrent dans Alanya',
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+                value: prefs.autoDownload,
+                onChanged: prefs.setAutoDownload,
               ),
             ),
           ),

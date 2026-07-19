@@ -65,6 +65,7 @@ dependencies:
   crypto: ^3.0.6
 
   # ── Chat : médias (images, vidéos, fichiers) ──────────────────────
+  gal: ^2.3.1                         # Sauvegarde photos/vidéos vers album Alanya
   image_picker: ^1.1.2                # Galerie / caméra (photos & vidéos)
   camera: ^0.11.0+2                   # Écran caméra intégré (photo + vidéo)
   file_picker: ^8.1.2                 # Sélection de documents

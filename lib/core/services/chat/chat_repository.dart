@@ -8,8 +8,10 @@ import '../../db/chat_dao.dart';
 import '../../utils/forward_message.dart';
 import '../../utils/backend_url.dart';
 import '../../utils/media_album.dart';
+import '../alanya_media_export_service.dart';
 import '../local_notification_helper.dart';
 import '../media_cache_service.dart';
+import '../media_download_preferences.dart';
 import '../voice_asset_resolver.dart';
 import '../../../talky_api_client.dart' hide ChatHttpApi;
 import '../../../talky_models.dart';
@@ -952,28 +954,112 @@ class ChatRepository {
       await _dao.upsertMessage(companion);
     });
 
-    // Préfetch média (images/audio toujours, fichiers < 5 Mo) pour rendre
-    // l'historique consultable offline. On ne déclenche que pour les messages
-    // réellement nouveaux afin d'éviter de recharger l'identique à chaque sync.
-    // Exception : un média à vue unique ne doit JAMAIS être mis en cache local.
+    // Préfetch médias reçus si auto-download activé (images, vidéos, fichiers < 5 Mo).
+    // Les vues uniques ne sont jamais mises en cache. Les vocaux restent manuels.
     final isViewOnce = json['isViewOnce'] == 1 || json['isViewOnce'] == true;
-    if (prefetchMedia && wasNew && !isViewOnce) {
+    final senderID = _toInt(json['senderID']);
+    final isMine = senderID != 0 && senderID == _myId;
+    if (prefetchMedia &&
+        wasNew &&
+        !isViewOnce &&
+        !isMine &&
+        MediaDownloadPreferences.isAutoDownloadEnabled) {
       final mtype = _toInt(json['type']);
       final mediaUrl = json['mediaUrl']?.toString();
       if (mediaUrl != null && mediaUrl.isNotEmpty) {
-        if (mtype == 1) {
-          _cacheMedia(msgID, mediaUrl);
+        final mediaName = json['mediaName']?.toString();
+        if (mtype == 1 || mtype == 2) {
+          _cacheMedia(
+            msgID,
+            mediaUrl,
+            type: mtype,
+            isMine: false,
+            isViewOnce: false,
+            mediaName: mediaName,
+          );
         } else if (mtype == 4) {
-          _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
+          _cacheMedia(
+            msgID,
+            mediaUrl,
+            maxBytes: 5 * 1024 * 1024,
+            type: 4,
+            isMine: false,
+            isViewOnce: false,
+            mediaName: mediaName,
+          );
         }
       }
     }
     return wasNew;
   }
 
-  Future<void> _cacheMedia(int msgID, String url, {int? maxBytes}) async {
-    final path = await _mediaCache.ensureCached(url, maxBytes: maxBytes);
-    if (path != null) await _dao.setLocalMediaPath(msgID, path);
+  /// Télécharge un média reçu vers le cache app, met à jour [localMediaPath],
+  /// puis exporte vers l'album/dossier Alanya (sauf vue unique / message mien).
+  Future<String?> ensureReceivedMediaLocal({
+    required int msgID,
+    required String mediaUrl,
+    required int type,
+    required bool isMine,
+    required bool isViewOnce,
+    String? mediaName,
+    String? existingLocalPath,
+    int? maxBytes,
+    void Function(double? progress)? onProgress,
+  }) async {
+    if (isViewOnce) return null;
+
+    String? path = (existingLocalPath != null &&
+            File(existingLocalPath).existsSync())
+        ? existingLocalPath
+        : null;
+
+    if (path == null) {
+      if (mediaUrl.isEmpty) return null;
+      if (onProgress != null) {
+        path = await _mediaCache.downloadWithProgress(
+          mediaUrl,
+          onProgress: onProgress,
+          maxBytes: maxBytes,
+        );
+      } else {
+        path = await _mediaCache.ensureCached(mediaUrl, maxBytes: maxBytes);
+      }
+      if (path == null) return null;
+      if (msgID != 0) {
+        await _dao.setLocalMediaPath(msgID, path);
+      }
+    }
+
+    await AlanyaMediaExportService.instance.exportIfNeeded(
+      msgID: msgID,
+      type: type,
+      localPath: path,
+      isViewOnce: isViewOnce,
+      isMine: isMine,
+      mediaName: mediaName,
+    );
+    return path;
+  }
+
+  Future<void> _cacheMedia(
+    int msgID,
+    String url, {
+    int? maxBytes,
+    required int type,
+    required bool isMine,
+    required bool isViewOnce,
+    String? mediaName,
+  }) async {
+    if (!MediaDownloadPreferences.isAutoDownloadEnabled) return;
+    await ensureReceivedMediaLocal(
+      msgID: msgID,
+      mediaUrl: url,
+      type: type,
+      isMine: isMine,
+      isViewOnce: isViewOnce,
+      mediaName: mediaName,
+      maxBytes: maxBytes,
+    );
   }
 
   /// Lie un fichier déjà présent dans le cache disque au message (legacy auto-cache).
@@ -1112,8 +1198,14 @@ class ChatRepository {
       mediaThumb: j['mediaThumb'] == null
           ? const Value.absent()
           : Value(j['mediaThumb'].toString()),
-      replyToID: Value(j['replyToID'] == null ? null : _toInt(j['replyToID'])),
-      replyToContent: Value(j['replyToContent']?.toString()),
+      replyToID: j['replyToID'] == null
+          ? const Value.absent()
+          : Value(_toInt(j['replyToID'])),
+      // Préserve la citation locale si le serveur renvoie null (ID non résolu).
+      replyToContent: (j['replyToContent'] == null ||
+              j['replyToContent'].toString().trim().isEmpty)
+          ? const Value.absent()
+          : Value(j['replyToContent'].toString()),
       isEdited: Value(j['isEdited'] == 1 || j['isEdited'] == true),
       editedAt: Value(_parseDate(j['editedAt'])),
       // Ces champs ne doivent JAMAIS être écrasés par le sync serveur.

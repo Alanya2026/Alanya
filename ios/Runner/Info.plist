@@ -55,5 +55,13 @@
 		<string>Alanya a besoin d'accéder à votre caméra pour prendre des photos et enregistrer des vidéos.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Alanya a besoin d'accéder à votre microphone pour enregistrer des vidéos avec son.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Alanya enregistre les photos et vidéos reçues dans l'album Alanya.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Alanya enregistre les photos et vidéos reçues dans l'album Alanya.</string>
+		<key>UIFileSharingEnabled</key>
+		<true/>
+		<key>LSSupportsOpeningDocumentsInPlace</key>
+		<true/>
 	</dict>
 </plist>

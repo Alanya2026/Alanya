@@ -401,13 +401,30 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           errorBuilder: (_, __, ___) =>
               Container(color: AppColors.surfaceSubtle));
     }
+    // Reçu sans fichier local : preview réseau OK, badge download via l'ouverture.
+    final myId = context.read<ChatProvider>().repository.myId;
+    final isReceivedPending = !msg.isViewOnce &&
+        msg.senderID != myId &&
+        !hasLocal &&
+        url != null &&
+        url.isNotEmpty;
     if (url != null && url.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: url,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => const LoadingState(),
-        errorWidget: (context, url, error) =>
-            Container(color: AppColors.surfaceSubtle),
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => const LoadingState(),
+            errorWidget: (context, url, error) =>
+                Container(color: AppColors.surfaceSubtle),
+          ),
+          if (isReceivedPending)
+            const Align(
+              alignment: Alignment.center,
+              child: Icon(Icons.download_rounded, color: Colors.white, size: 28),
+            ),
+        ],
       );
     }
     return Container(color: AppColors.surfaceSubtle);
@@ -434,11 +451,28 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
       if (msg.mediaUrl == null) return;
       _showLoading();
       final chat = context.read<ChatProvider>();
-      path = await chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
-      if (path != null && msg.msgID != 0) {
-        await chat.repository.dao.setLocalMediaPath(msg.msgID, path);
-      }
+      final isMine = msg.senderID == chat.repository.myId;
+      path = await chat.repository.ensureReceivedMediaLocal(
+        msgID: msg.msgID,
+        mediaUrl: msg.mediaUrl!,
+        type: msg.type,
+        isMine: isMine,
+        isViewOnce: msg.isViewOnce,
+        mediaName: msg.mediaName,
+      );
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    } else if (!msg.isViewOnce && msg.msgID != 0) {
+      final chat = context.read<ChatProvider>();
+      final isMine = msg.senderID == chat.repository.myId;
+      await chat.repository.ensureReceivedMediaLocal(
+        msgID: msg.msgID,
+        mediaUrl: msg.mediaUrl ?? '',
+        type: msg.type,
+        isMine: isMine,
+        isViewOnce: false,
+        mediaName: msg.mediaName,
+        existingLocalPath: path,
+      );
     }
 
     if (path == null) {

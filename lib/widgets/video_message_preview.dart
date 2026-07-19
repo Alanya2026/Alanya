@@ -25,6 +25,7 @@ class VideoMessagePreview extends StatelessWidget {
     this.showDuration = true,
     this.fallbackColor,
     this.expandToFill = false,
+    this.hidePlayIcon = false,
   });
 
   final String? pendingPath;
@@ -44,6 +45,7 @@ class VideoMessagePreview extends StatelessWidget {
   final bool showDuration;
   final Color? fallbackColor;
   final bool expandToFill;
+  final bool hidePlayIcon;
 
   static String formatDuration(int seconds) {
     final d = Duration(seconds: seconds);
@@ -95,7 +97,7 @@ class VideoMessagePreview extends StatelessWidget {
               ColoredBox(color: fallback),
             if (bytes != null)
               const ColoredBox(color: Color(0x42000000)),
-            if (!generating)
+            if (!generating && !hidePlayIcon)
               Container(
                 padding: EdgeInsets.all(playPadding),
                 decoration: BoxDecoration(

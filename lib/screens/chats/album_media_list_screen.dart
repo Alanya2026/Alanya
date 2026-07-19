@@ -74,6 +74,7 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
       final items = await buildMediaViewerItems(
         widget.messages,
         chat.repository,
+        myId: chat.repository.myId,
         loadingForIndex: index,
         onLoadingVideo: () {
           if (!mounted || loaderShown) return;
@@ -215,6 +216,12 @@ class _AlbumListTile extends StatelessWidget {
     final uploading = message.status == 0;
     final hasLocal = message.localMediaPath != null &&
         File(message.localMediaPath!).existsSync();
+    final myId = context.read<ChatProvider>().repository.myId;
+    final needsDl = !message.isViewOnce &&
+        message.senderID != myId &&
+        !hasLocal &&
+        message.mediaUrl != null &&
+        message.mediaUrl!.isNotEmpty;
 
     return Material(
       color: Colors.transparent,
@@ -240,6 +247,7 @@ class _AlbumListTile extends StatelessWidget {
                     expandToFill: true,
                     playIconSize: 36,
                     playPadding: 10,
+                    hidePlayIcon: needsDl,
                   )
                 else if (hasLocal)
                   Image.file(File(message.localMediaPath!), fit: BoxFit.cover)
@@ -263,6 +271,22 @@ class _AlbumListTile extends StatelessWidget {
                   )
                 else
                   Container(color: AppColors.immersiveBackground),
+                if (needsDl)
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.download_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    ),
+                  ),
                 if (uploading)
                   Container(
                     color: Colors.black26,

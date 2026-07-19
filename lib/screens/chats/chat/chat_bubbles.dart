@@ -140,10 +140,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
                   if (msg.isForwarded)
                     _buildForwardedChip(isMe),
                   if (msg.replyToContent != null &&
-                      msg.replyToContent!.isNotEmpty &&
-                      msg.replyToID != null &&
-                      msg.replyToID! > 0)
-                    _buildReplyQuote(msg.replyToContent!, isMe, replyToID: msg.replyToID!),
+                      msg.replyToContent!.isNotEmpty)
+                    _buildReplyQuote(
+                      msg.replyToContent!,
+                      isMe,
+                      replyToID: msg.replyToID,
+                    ),
                   if (msg.isDeleted)
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -410,12 +412,14 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildReplyQuote(String content, bool isMe, {required int replyToID}) {
+  Widget _buildReplyQuote(String content, bool isMe, {int? replyToID}) {
     final accent = isMe ? context.colors.onPrimary : context.colors.primary;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _scrollToReply(replyToID),
+        onTap: (replyToID != null && replyToID > 0)
+            ? () => _scrollToReply(replyToID)
+            : null,
         borderRadius: BorderRadius.circular(6),
         child: Container(
           margin: const EdgeInsets.only(bottom: 6),
@@ -653,8 +657,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   Widget _buildImageMedia(LocalMessage msg) {
     final uploading = msg.status == 0;
+    final needsDl = _needsMediaDownload(msg);
+    final downloading = _mediaDownloadingIds.contains(msg.msgID);
     return GestureDetector(
-      onTap: () => _openViewer(msg, isVideo: false),
+      onTap: () async {
+        if (needsDl) {
+          final path = await _downloadReceivedMedia(msg);
+          if (path == null) return;
+        }
+        await _openViewer(msg, isVideo: false);
+      },
       child: ClipRRect(
         borderRadius: AppRadius.brSm,
         child: Stack(
@@ -664,15 +676,33 @@ extension _ChatBubbles on _ChatDetailScreenState {
               constraints: const BoxConstraints(maxHeight: 220, maxWidth: 240),
               child: _hasLocal(msg)
                   ? Image.file(File(msg.localMediaPath!), fit: BoxFit.cover)
-                  : CachedNetworkImage(
-                      imageUrl: msg.mediaUrl ?? '',
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const SizedBox(
-                          height: 160, width: 200, child: Center(child: CircularProgressIndicator())),
-                      errorWidget: (_, __, ___) =>
-                          Icon(Icons.broken_image, size: 48, color: context.colors.onSurfaceVariant),
-                    ),
+                  : (msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty)
+                      // Preview réseau (cache UI) même si auto-download OFF —
+                      // ce n'est PAS le téléchargement Alanya / localMediaPath.
+                      ? CachedNetworkImage(
+                          imageUrl: msg.mediaUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => const SizedBox(
+                              height: 160,
+                              width: 200,
+                              child: Center(child: CircularProgressIndicator())),
+                          errorWidget: (_, __, ___) => Icon(
+                              Icons.broken_image,
+                              size: 48,
+                              color: context.colors.onSurfaceVariant),
+                        )
+                      : Container(
+                          height: 160,
+                          width: 200,
+                          color: Colors.black26,
+                          child: Icon(
+                            Icons.image_outlined,
+                            size: 48,
+                            color: context.colors.onSurfaceVariant,
+                          ),
+                        ),
             ),
+            if (needsDl) _mediaDownloadBadge(downloading: downloading),
             if (uploading) _buildUploadProgressOverlay(msg),
           ],
         ),
@@ -682,8 +712,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   Widget _buildVideoMedia(LocalMessage msg) {
     final uploading = msg.status == 0;
+    final needsDl = _needsMediaDownload(msg);
+    final downloading = _mediaDownloadingIds.contains(msg.msgID);
     return GestureDetector(
-      onTap: () => _openViewer(msg, isVideo: true),
+      onTap: () async {
+        if (needsDl) {
+          final path = await _downloadReceivedMedia(msg);
+          if (path == null) return;
+        }
+        await _openViewer(msg, isVideo: true);
+      },
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -696,35 +734,53 @@ extension _ChatBubbles on _ChatDetailScreenState {
             height: 160,
             playIconSize: 30,
             playPadding: 8,
+            // Masque le play natif si download requis (badge download à la place).
+            hidePlayIcon: needsDl,
           ),
+          if (needsDl) _mediaDownloadBadge(downloading: downloading),
           if (uploading) _buildUploadProgressOverlay(msg),
         ],
       ),
     );
   }
 
-  bool _isPdf(LocalMessage msg) {
-    final name = (msg.mediaName ?? '').toLowerCase();
-    if (name.endsWith('.pdf')) return true;
-    final url = (msg.mediaUrl ?? '').toLowerCase();
-    return url.split('?').first.endsWith('.pdf');
-  }
+  DocumentFileStyle _docStyle(LocalMessage msg) => DocumentFileStyle.fromMessage(
+        mediaName: msg.mediaName,
+        mediaUrl: msg.mediaUrl,
+      );
+
+  bool _isPdf(LocalMessage msg) => _docStyle(msg).isPdf;
 
   Widget _buildFileMedia(LocalMessage msg, bool isMe) {
-    final isPdf = _isPdf(msg);
+    final style = _docStyle(msg);
     final color = isMe ? context.colors.onPrimary : context.colors.primary;
-    final iconColor = (isPdf && msg.status != 0) ? const Color(0xFFE5252A) : color;
+    final iconColor = msg.status != 0 ? style.color : color;
+    final needsDl = _needsMediaDownload(msg);
+    final downloading = _mediaDownloadingIds.contains(msg.msgID);
 
     final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          msg.status == 0
-              ? Icons.upload_file
-              : (isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file),
-          color: iconColor,
-        ),
-        const SizedBox(width: AppSpacing.sm),
+        if (needsDl)
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            child: downloading
+                ? SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: color,
+                    ),
+                  )
+                : Icon(Icons.download_rounded, color: color, size: 26),
+          )
+        else
+          Icon(
+            msg.status == 0 ? Icons.upload_file : style.icon,
+            color: iconColor,
+          ),
+        if (!needsDl) const SizedBox(width: AppSpacing.sm),
         Flexible(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -739,9 +795,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (isPdf && msg.status != 0)
+              if (msg.status != 0)
                 Text(
-                  'PDF · appuyer pour ouvrir',
+                  needsDl ? 'Appuyer pour télécharger' : style.openHint,
                   style: context.text.labelSmall?.copyWith(
                     color: _bubbleText(isMe).withAlpha(170),
                   ),
@@ -754,7 +810,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
     return GestureDetector(
       onTap: msg.status == 0 ? null : () => _openFile(msg),
-      child: (isPdf && msg.status != 0)
+      child: (style.isPdf && msg.status != 0 && !needsDl)
           ? Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1025,9 +1081,18 @@ extension _ChatBubbles on _ChatDetailScreenState {
   }) {
     final uploading = msg.status == 0;
     final isVideo = msg.type == 2;
+    final needsDl = _needsMediaDownload(msg);
+    final downloading = _mediaDownloadingIds.contains(msg.msgID);
 
     return GestureDetector(
-      onTap: () => _openAlbumMediaList(all, initialIndex: index),
+      onTap: () async {
+        if (needsDl) {
+          final path = await _downloadReceivedMedia(msg);
+          if (path == null) return;
+        }
+        if (!mounted) return;
+        _openAlbumMediaList(all, initialIndex: index);
+      },
       onLongPress: () => _showMessageMenu(msg, isMe),
       child: ClipRRect(
         borderRadius: AppRadius.brSm,
@@ -1044,19 +1109,31 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 playPadding: 6,
                 borderRadius: BorderRadius.zero,
                 expandToFill: true,
+                hidePlayIcon: needsDl,
               )
             else
               _hasLocal(msg)
                   ? Image.file(File(msg.localMediaPath!), fit: BoxFit.cover)
-                  : CachedNetworkImage(
-                      imageUrl: msg.mediaUrl ?? '',
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: context.semantic.surfaceMuted),
-                      errorWidget: (_, __, ___) => Icon(
-                        Icons.broken_image,
-                        color: context.colors.onSurfaceVariant,
-                      ),
-                    ),
+                  : (msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty)
+                      ? CachedNetworkImage(
+                          imageUrl: msg.mediaUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              Container(color: context.semantic.surfaceMuted),
+                          errorWidget: (_, __, ___) => Icon(
+                            Icons.broken_image,
+                            color: context.colors.onSurfaceVariant,
+                          ),
+                        )
+                      : ColoredBox(
+                          color: context.semantic.surfaceMuted,
+                          child: Icon(
+                            Icons.image_outlined,
+                            color: context.colors.onSurfaceVariant,
+                          ),
+                        ),
+            if (needsDl)
+              Center(child: _mediaDownloadBadge(downloading: downloading)),
             if (uploading) _buildUploadProgressOverlay(msg),
             if (overlayExtra != null && overlayExtra > 0)
               Container(

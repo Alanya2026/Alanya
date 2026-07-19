@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../alanya_media_export_service.dart';
 import '../media_cache_service.dart';
+import '../media_download_preferences.dart';
 import 'chat_api.dart';
 import 'receipt_service.dart';
 
@@ -104,22 +106,52 @@ class SocketMessageHandlers {
     final mtype = _toInt(json['type']);
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
-    if (mediaUrl != null && msgID != 0 && !isViewOnce) {
-      if (mtype == 1) {
-        // Images : auto-cache. Audio (3) : téléchargement manuel dans le chat.
-        _cacheMedia(msgID, mediaUrl);
+    // Auto-download des médias reçus (pas les miens — déjà return plus haut).
+    if (mediaUrl != null &&
+        msgID != 0 &&
+        !isViewOnce &&
+        MediaDownloadPreferences.isAutoDownloadEnabled) {
+      final mediaName = json['mediaName']?.toString();
+      if (mtype == 1 || mtype == 2) {
+        _cacheMedia(
+          msgID,
+          mediaUrl,
+          type: mtype,
+          mediaName: mediaName,
+        );
       } else if (mtype == 4) {
-        // Fichiers : auto-cache si < 5 MB (sinon coût data trop élevé,
-        // ouverture manuelle redéclenchera ensureCached).
-        _cacheMedia(msgID, mediaUrl, maxBytes: 5 * 1024 * 1024);
+        // Fichiers : auto-cache si < 5 MB (sinon ouverture manuelle).
+        _cacheMedia(
+          msgID,
+          mediaUrl,
+          maxBytes: 5 * 1024 * 1024,
+          type: 4,
+          mediaName: mediaName,
+        );
       }
-      // Vidéos (mtype==2) : on-demand uniquement (déjà via tap → ensureCached).
     }
   }
 
-  Future<void> _cacheMedia(int msgID, String url, {int? maxBytes}) async {
+  Future<void> _cacheMedia(
+    int msgID,
+    String url, {
+    int? maxBytes,
+    required int type,
+    String? mediaName,
+  }) async {
+    // Re-vérifie : la préférence a pu être coupée entre le test et l'appel.
+    if (!MediaDownloadPreferences.isAutoDownloadEnabled) return;
     final path = await _mediaCache.ensureCached(url, maxBytes: maxBytes);
-    if (path != null) await _dao.setLocalMediaPath(msgID, path);
+    if (path == null) return;
+    await _dao.setLocalMediaPath(msgID, path);
+    await AlanyaMediaExportService.instance.exportIfNeeded(
+      msgID: msgID,
+      type: type,
+      localPath: path,
+      isViewOnce: false,
+      isMine: false,
+      mediaName: mediaName,
+    );
   }
 
   Future<void> onMessageStatus(dynamic data) async {

@@ -837,11 +837,28 @@ class _MediaCardState extends State<_MediaCard> {
       if (msg.mediaUrl == null) return;
       _showLoading();
       final chat = context.read<ChatProvider>();
-      path = await chat.repository.mediaCache.ensureCached(msg.mediaUrl!);
-      if (path != null && msg.msgID != 0) {
-        await chat.repository.dao.setLocalMediaPath(msg.msgID, path);
-      }
+      final isMine = msg.senderID == chat.repository.myId;
+      path = await chat.repository.ensureReceivedMediaLocal(
+        msgID: msg.msgID,
+        mediaUrl: msg.mediaUrl!,
+        type: msg.type,
+        isMine: isMine,
+        isViewOnce: msg.isViewOnce,
+        mediaName: msg.mediaName,
+      );
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    } else if (!msg.isViewOnce && msg.msgID != 0) {
+      final chat = context.read<ChatProvider>();
+      final isMine = msg.senderID == chat.repository.myId;
+      await chat.repository.ensureReceivedMediaLocal(
+        msgID: msg.msgID,
+        mediaUrl: msg.mediaUrl ?? '',
+        type: msg.type,
+        isMine: isMine,
+        isViewOnce: false,
+        mediaName: msg.mediaName,
+        existingLocalPath: path,
+      );
     }
 
     if (path == null) {

@@ -3,15 +3,15 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:pdfx/pdfx.dart';
 import 'media_cache_service.dart';
+import 'media_download_preferences.dart';
 
 /// Génère (et met en cache **en mémoire**) une vignette de la première page
 /// d'un PDF, pour l'afficher dans la bulle.
 ///
 /// Source du fichier, par ordre de préférence :
 ///  1. `localPath` (le PDF que J'AI envoyé, déjà sur l'appareil) → immédiat ;
-///  2. sinon `url` → téléchargé via le cache média (qui gère le cert auto-signé
-///     du serveur), puis rasterisé. Les PDF < 5 Mo sont déjà préfetchés par
-///     l'app, donc c'est souvent instantané.
+///  2. sinon `url` → téléchargé **seulement** si le téléchargement automatique
+///     est activé (sinon on laisse l'utilisateur télécharger via la bulle).
 ///
 /// Un échec est aussi caché (null) pour ne pas réessayer en boucle au scroll.
 class PdfThumbnailService {
@@ -31,7 +31,11 @@ class PdfThumbnailService {
   static Future<Uint8List?> _generate(String key, String? localPath, String? url) async {
     try {
       String? path = (localPath != null && File(localPath).existsSync()) ? localPath : null;
-      path ??= (url != null) ? await _media.ensureCached(url) : null;
+      if (path == null &&
+          url != null &&
+          MediaDownloadPreferences.isAutoDownloadEnabled) {
+        path = await _media.ensureCached(url);
+      }
       if (path == null) return _remember(key, null);
 
       final document = await PdfDocument.openFile(path);

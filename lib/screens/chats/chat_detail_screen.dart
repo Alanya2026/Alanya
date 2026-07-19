@@ -21,6 +21,7 @@ import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
 import '../../core/utils/conversation_display.dart';
+import '../../core/utils/document_file_style.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
 import '../../core/utils/media_staging.dart';
@@ -128,6 +129,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   bool _selectionMode = false;
   final Set<int> _selectedMsgIDs = {};
+  /// msgID en cours de téléchargement manuel (overlay WhatsApp).
+  final Set<int> _mediaDownloadingIds = {};
   List<LocalMessage> _currentMessages = const [];
 
   /// Pont public vers `setState()` (lui-même `@protected`), afin que les
