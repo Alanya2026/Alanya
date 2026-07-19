@@ -2,6 +2,7 @@
 // Champs mappés exactement sur les colonnes MySQL
 
 import 'core/utils/backend_url.dart';
+import 'core/utils/location_payload.dart';
 
 // ── USER ─────────────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@ class Message {
   final int senderID;
   final int conversationID;
   final String? content;
-  final int type; // 0=texte,1=image,2=vidéo,3=audio,4=fichier
+  final int type; // 0=texte,1=image,2=vidéo,3=audio,4=fichier,5=localisation
   final int status; // 0=sending,1=sent,2=delivered,3=read
   final String sendAt;
   final String? deliveredAt;
@@ -211,6 +212,10 @@ class Message {
 
   // Texte affiché dans le résumé de conversation
   String get displayContent {
+    if (type == 5) {
+      final loc = LocationPayload.tryParse(content);
+      return loc?.previewLabel ?? '📍 Position';
+    }
     if (content != null && content!.isNotEmpty) return content!;
     if (mediaName != null) return mediaName!;
     switch (type) {

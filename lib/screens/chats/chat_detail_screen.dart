@@ -53,7 +53,10 @@ import 'album_media_list_screen.dart';
 import 'media_send_screen.dart';
 import 'media_viewer_screen.dart';
 import 'camera_screen.dart';
+import 'location_picker_screen.dart';
 import 'voice_message_bubble.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/utils/location_payload.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels

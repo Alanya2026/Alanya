@@ -315,7 +315,8 @@ class LocalCacheRepository {
     required Call call,
   }) async {
     final preview = call.isVideo ? '📹 Appel vidéo' : '📞 Appel vocal';
-    final type = call.isVideo ? 6 : 5;
+    // 10/11 : aperçus d'appel locaux (évite collision avec message.type 5=location).
+    final type = call.isVideo ? 11 : 10;
     final at = _parseDate(call.createdAt) ?? DateTime.now();
     final normalized = normalizeConversationPreview(preview);
     final companion = LocalConversationsCompanion(

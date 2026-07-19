@@ -59,6 +59,8 @@
 		<string>Alanya enregistre les photos et vidéos reçues dans l'album Alanya.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Alanya enregistre les photos et vidéos reçues dans l'album Alanya.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Alanya a besoin de votre position pour partager une localisation dans une conversation.</string>
 		<key>UIFileSharingEnabled</key>
 		<true/>
 		<key>LSSupportsOpeningDocumentsInPlace</key>

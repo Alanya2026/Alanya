@@ -226,10 +226,29 @@ extension _ChatActions on _ChatDetailScreenState {
   String _previewOf(LocalMessage m) {
     // Vue unique : ne jamais exposer la légende hors de la visionneuse.
     if (m.isViewOnce) return _mediaLabel(m.type);
+    // Localisation : JSON lat/lng — ne jamais exposer le content brut.
+    if (m.type == 5) return locationPreviewLabel(m.content);
     // Item d'album : aperçu du média seul (pas du groupe).
     if (isAlbumMarkerContent(m.content)) return _mediaLabel(m.type);
     if (m.content != null && m.content!.isNotEmpty) return stripMarkers(m.content!);
     return _mediaLabel(m.type);
+  }
+
+  Future<void> _pickLocation() async {
+    final convId = await _ensureConversation();
+    if (convId == null || !mounted) return;
+
+    final result = await Navigator.push<LocationSendResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+    if (result == null || !mounted) return;
+
+    await _chat.repository.sendLocation(
+      conversationID: convId,
+      location: result.payload,
+    );
+    _scrollToBottom();
   }
 
   bool _canEditMessage(LocalMessage msg) {
@@ -662,6 +681,21 @@ extension _ChatActions on _ChatDetailScreenState {
                   _attachOption(Icons.camera_alt, 'Caméra', context.colors.primary, _pickImageFromCamera),
                   _attachOption(Icons.videocam, 'Vidéo', context.colors.error, _pickVideo),
                   _attachOption(Icons.insert_drive_file, 'Fichier', sem.warning, _pickFile),
+                ],
+              ),
+              AppSpacing.vGapMd,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _attachOption(
+                    Icons.location_on,
+                    'Position',
+                    sem.success,
+                    _pickLocation,
+                  ),
+                  const SizedBox(width: 72),
+                  const SizedBox(width: 72),
+                  const SizedBox(width: 72),
                 ],
               ),
             ],
@@ -1570,6 +1604,8 @@ extension _ChatActions on _ChatDetailScreenState {
         return '🎵 Audio';
       case 4:
         return '📎 Fichier';
+      case 5:
+        return '📍 Position';
       default:
         return '';
     }

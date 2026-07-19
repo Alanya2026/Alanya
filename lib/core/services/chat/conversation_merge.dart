@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
 import '../../../talky_models.dart';
+import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
 
 /// Merge monotonic conversation list HTTP → cache local.
@@ -86,6 +87,9 @@ class ConversationMerge {
     String? mediaName, {
     bool isViewOnce = false,
   }) {
+    // type=5 : JSON lat/lng — ne jamais exposer le content brut.
+    if (type == 5) return locationPreviewLabel(content);
+
     if (!isViewOnce) {
       final marker = parseAlbumMarker(content);
       if (marker != null) return previewLabelForAlbumMarker(marker);

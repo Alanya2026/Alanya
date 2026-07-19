@@ -350,6 +350,8 @@ class LocalNotificationHelper {
         return '🎵 Audio';
       case 4:
         return '📎 Fichier';
+      case 5:
+        return '📍 Position';
       default:
         return 'Nouveau message';
     }

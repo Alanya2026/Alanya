@@ -7,6 +7,7 @@ import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
 import '../../utils/forward_message.dart';
 import '../../utils/backend_url.dart';
+import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
 import '../alanya_media_export_service.dart';
 import '../local_notification_helper.dart';
@@ -309,6 +310,21 @@ class ChatRepository {
         isForwarded: isForwarded,
       );
 
+  Future<void> sendLocation({
+    required int conversationID,
+    required LocationPayload location,
+    int? replyToID,
+    String? replyToContent,
+    bool isForwarded = false,
+  }) =>
+      _sender.sendLocation(
+        conversationID: conversationID,
+        location: location,
+        replyToID: replyToID,
+        replyToContent: replyToContent,
+        isForwarded: isForwarded,
+      );
+
   Future<void> sendMedia({
     required int conversationID,
     required int type,
@@ -608,6 +624,19 @@ class ChatRepository {
       await sendText(
         conversationID: conversationID,
         content: source.content!.trim(),
+        isForwarded: true,
+      );
+      return;
+    }
+
+    if (source.type == 5) {
+      final loc = LocationPayload.tryParse(source.content);
+      if (loc == null) {
+        throw StateError('Position invalide pour le transfert');
+      }
+      await sendLocation(
+        conversationID: conversationID,
+        location: loc,
         isForwarded: true,
       );
       return;

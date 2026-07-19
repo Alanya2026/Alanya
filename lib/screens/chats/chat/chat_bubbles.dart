@@ -502,6 +502,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   /// Texte affiché sous un média : légende utilisateur, hors marqueur album.
   String? _captionText(LocalMessage msg) {
+    // Localisation : le content est du JSON, affiché via la bulle carte.
+    if (msg.type == 5) return null;
     final content = msg.content;
     if (content == null || content.isEmpty) return null;
     if (isAlbumMarkerContent(content)) {
@@ -542,9 +544,129 @@ extension _ChatBubbles on _ChatDetailScreenState {
         );
       case 4:
         return _buildFileMedia(msg, isMe);
+      case 5:
+        return _buildLocationMedia(msg, isMe);
       default:
         return Text(_mediaLabel(msg.type),
             style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));
+    }
+  }
+
+  Widget _buildLocationMedia(LocalMessage msg, bool isMe) {
+    final loc = LocationPayload.tryParse(msg.content);
+    final label = loc?.displayLabel ?? 'Position';
+    final textColor = _bubbleText(isMe);
+    final muted = _bubbleMuted(isMe);
+
+    return GestureDetector(
+      onTap: loc == null ? null : () => _openLocationInMaps(loc),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: SizedBox(
+              width: 240,
+              height: 140,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (loc != null)
+                    CachedNetworkImage(
+                      imageUrl: loc.staticMapUrl(width: 480, height: 280),
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => ColoredBox(
+                        color: context.semantic.surfaceMuted,
+                        child: Center(
+                          child: Icon(Icons.map_outlined, color: muted),
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => ColoredBox(
+                        color: context.semantic.surfaceMuted,
+                        child: Center(
+                          child: Icon(Icons.map_outlined, color: muted, size: 36),
+                        ),
+                      ),
+                    )
+                  else
+                    ColoredBox(
+                      color: context.semantic.surfaceMuted,
+                      child: Center(
+                        child: Icon(Icons.location_off, color: muted, size: 36),
+                      ),
+                    ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.location_on,
+                      size: 36,
+                      color: context.colors.primary,
+                      shadows: const [
+                        Shadow(blurRadius: 4, color: Colors.black45),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.location_on, size: 16, color: textColor),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.bodyMedium?.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (loc?.address != null &&
+              loc!.address!.isNotEmpty &&
+              loc.address != label)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                loc.address!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.bodySmall?.copyWith(color: muted),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openLocationInMaps(LocationPayload loc) async {
+    try {
+      final maps = loc.mapsOpenUri();
+      if (await canLaunchUrl(maps)) {
+        await launchUrl(maps, mode: LaunchMode.externalApplication);
+        return;
+      }
+      final geo = loc.geoUri();
+      if (await canLaunchUrl(geo)) {
+        await launchUrl(geo, mode: LaunchMode.externalApplication);
+        return;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d\'ouvrir Maps')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d\'ouvrir Maps')),
+      );
     }
   }
 

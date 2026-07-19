@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../db/app_database.dart';
+import 'location_payload.dart';
 import 'media_album.dart';
 
 class ForwardResult {
@@ -27,6 +28,10 @@ bool canForwardMessage(LocalMessage message) {
     return message.content != null && message.content!.trim().isNotEmpty;
   }
 
+  if (message.type == 5) {
+    return LocationPayload.tryParse(message.content) != null;
+  }
+
   final url = message.mediaUrl;
   if (url != null && url.isNotEmpty) return true;
 
@@ -36,7 +41,11 @@ bool canForwardMessage(LocalMessage message) {
 /// Indique si le transfert peut être délégué au batch serveur (médias déjà hébergés).
 bool canBatchForwardOnServer(List<LocalMessage> sources) {
   return sources.every(
-    (m) => m.msgID > 0 && (m.type == 0 || (m.mediaUrl?.isNotEmpty ?? false)),
+    (m) =>
+        m.msgID > 0 &&
+        (m.type == 0 ||
+            m.type == 5 ||
+            (m.mediaUrl?.isNotEmpty ?? false)),
   );
 }
 
@@ -76,6 +85,8 @@ String mediaLabelForType(int type, {String? mediaName}) {
       return 'Audio';
     case 4:
       return mediaName?.isNotEmpty == true ? mediaName! : 'Fichier';
+    case 5:
+      return 'Position';
     default:
       return 'Média';
   }
@@ -87,6 +98,9 @@ String previewTextForForward(LocalMessage message) {
     return message.content?.trim().isNotEmpty == true
         ? message.content!.trim()
         : 'Message vide';
+  }
+  if (message.type == 5) {
+    return locationPreviewLabel(message.content);
   }
   // Item d'album transféré seul : libellé du média, pas de l'album entier.
   if (isAlbumMarkerContent(message.content)) {
