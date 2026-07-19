@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
 import '../../utils/media_staging.dart';
@@ -126,6 +127,50 @@ class MessageSender {
       conversationID: conversationID,
       content: content,
       type: 5,
+      replyToID: replyToID,
+      replyToContent: replyToContent,
+      isForwarded: isForwarded,
+      clickSentAt: now,
+    );
+  }
+
+  /// Envoi d'un contact partagé (`type = 7`, JSON dans content, pas d'upload).
+  Future<void> sendContact({
+    required int conversationID,
+    required ContactPayload contact,
+    int? replyToID,
+    String? replyToContent,
+    bool isForwarded = false,
+  }) async {
+    if (_myId() == 0) {
+      debugPrint('[MessageSender] sendContact ignoré : utilisateur non lié (myId=0)');
+      return;
+    }
+    final clientId = _newClientId();
+    final now = DateTime.now().toUtc();
+    final content = contact.encode();
+
+    await _dao.upsertMessage(LocalMessagesCompanion.insert(
+      clientId: clientId,
+      conversationID: conversationID,
+      senderID: _myId(),
+      sendAt: now,
+      clickSentAt: Value(now),
+      content: Value(content),
+      type: const Value(7),
+      status: const Value(0),
+      replyToID: Value(replyToID),
+      replyToContent: Value(replyToContent),
+      isForwarded: Value(isForwarded),
+      syncPending: const Value(true),
+    ));
+    await _recompute(conversationID);
+
+    emitSend(
+      clientId: clientId,
+      conversationID: conversationID,
+      content: content,
+      type: 7,
       replyToID: replyToID,
       replyToContent: replyToContent,
       isForwarded: isForwarded,

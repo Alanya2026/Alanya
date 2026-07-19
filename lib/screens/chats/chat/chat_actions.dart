@@ -228,6 +228,8 @@ extension _ChatActions on _ChatDetailScreenState {
     if (m.isViewOnce) return _mediaLabel(m.type);
     // Localisation : JSON lat/lng — ne jamais exposer le content brut.
     if (m.type == 5) return locationPreviewLabel(m.content);
+    // Contact : JSON — ne jamais exposer le content brut.
+    if (m.type == 7) return contactPreviewLabel(m.content);
     // Item d'album : aperçu du média seul (pas du groupe).
     if (isAlbumMarkerContent(m.content)) return _mediaLabel(m.type);
     if (m.content != null && m.content!.isNotEmpty) return stripMarkers(m.content!);
@@ -247,6 +249,23 @@ extension _ChatActions on _ChatDetailScreenState {
     await _chat.repository.sendLocation(
       conversationID: convId,
       location: result.payload,
+    );
+    _scrollToBottom();
+  }
+
+  Future<void> _pickContact() async {
+    final convId = await _ensureConversation();
+    if (convId == null || !mounted) return;
+
+    final payload = await showAppBottomSheet<ContactPayload>(
+      context: context,
+      builder: (_) => const SharePreferredContactSheet(),
+    );
+    if (payload == null || !mounted) return;
+
+    await _chat.repository.sendContact(
+      conversationID: convId,
+      contact: payload,
     );
     _scrollToBottom();
   }
@@ -693,7 +712,12 @@ extension _ChatActions on _ChatDetailScreenState {
                     sem.success,
                     _pickLocation,
                   ),
-                  const SizedBox(width: 72),
+                  _attachOption(
+                    Icons.person,
+                    'Contact',
+                    sem.info,
+                    _pickContact,
+                  ),
                   const SizedBox(width: 72),
                   const SizedBox(width: 72),
                 ],
@@ -1606,6 +1630,8 @@ extension _ChatActions on _ChatDetailScreenState {
         return '📎 Fichier';
       case 5:
         return '📍 Position';
+      case 7:
+        return '👤 Contact';
       default:
         return '';
     }

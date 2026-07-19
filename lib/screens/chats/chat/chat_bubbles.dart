@@ -502,8 +502,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   /// Texte affiché sous un média : légende utilisateur, hors marqueur album.
   String? _captionText(LocalMessage msg) {
-    // Localisation : le content est du JSON, affiché via la bulle carte.
-    if (msg.type == 5) return null;
+    // Localisation / contact : le content est du JSON, affiché via la bulle carte.
+    if (msg.type == 5 || msg.type == 7) return null;
     final content = msg.content;
     if (content == null || content.isEmpty) return null;
     if (isAlbumMarkerContent(content)) {
@@ -546,6 +546,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
         return _buildFileMedia(msg, isMe);
       case 5:
         return _buildLocationMedia(msg, isMe);
+      case 7:
+        return _buildContactMedia(msg, isMe);
       default:
         return Text(_mediaLabel(msg.type),
             style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));
@@ -574,6 +576,43 @@ extension _ChatBubbles on _ChatDetailScreenState {
       behavior: HitTestBehavior.opaque,
       onTap: () => _openLocationInMaps(loc),
       child: LocationMessagePreview(location: loc),
+    );
+  }
+
+  Widget _buildContactMedia(LocalMessage msg, bool isMe) {
+    final contact = ContactPayload.tryParse(msg.content);
+    final muted = _bubbleMuted(isMe);
+
+    if (contact == null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.person_off_outlined, size: 18, color: muted),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Contact indisponible',
+            style: context.text.bodyMedium?.copyWith(color: muted),
+          ),
+        ],
+      );
+    }
+
+    return ContactMessagePreview(
+      contact: contact,
+      isMe: isMe,
+      onOpenDetail: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ContactDetailScreen(
+              userId: contact.alanyaID,
+              conversationId: widget.conversationId,
+              initialName: contact.displayLabel,
+              initialAvatar: contact.avatarUrl ?? '',
+            ),
+          ),
+        );
+      },
     );
   }
 

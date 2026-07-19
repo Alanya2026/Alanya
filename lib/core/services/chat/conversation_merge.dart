@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
 import '../../../talky_models.dart';
+import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
 
@@ -89,6 +90,8 @@ class ConversationMerge {
   }) {
     // type=5 : JSON lat/lng — ne jamais exposer le content brut.
     if (type == 5) return locationPreviewLabel(content);
+    // type=7 : JSON contact — ne jamais exposer le content brut.
+    if (type == 7) return contactPreviewLabel(content);
 
     if (!isViewOnce) {
       final marker = parseAlbumMarker(content);

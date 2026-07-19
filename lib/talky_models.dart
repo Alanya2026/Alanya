@@ -2,6 +2,7 @@
 // Champs mappés exactement sur les colonnes MySQL
 
 import 'core/utils/backend_url.dart';
+import 'core/utils/contact_payload.dart';
 import 'core/utils/location_payload.dart';
 
 // ── USER ─────────────────────────────────────────────────────────────
@@ -215,6 +216,10 @@ class Message {
     if (type == 5) {
       final loc = LocationPayload.tryParse(content);
       return loc?.previewLabel ?? '📍 Position';
+    }
+    if (type == 7) {
+      final contact = ContactPayload.tryParse(content);
+      return contact?.previewLabel ?? '👤 Contact';
     }
     if (content != null && content!.isNotEmpty) return content!;
     if (mediaName != null) return mediaName!;

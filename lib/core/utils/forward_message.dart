@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../db/app_database.dart';
+import 'contact_payload.dart';
 import 'location_payload.dart';
 import 'media_album.dart';
 
@@ -32,6 +33,10 @@ bool canForwardMessage(LocalMessage message) {
     return LocationPayload.tryParse(message.content) != null;
   }
 
+  if (message.type == 7) {
+    return ContactPayload.tryParse(message.content) != null;
+  }
+
   final url = message.mediaUrl;
   if (url != null && url.isNotEmpty) return true;
 
@@ -45,6 +50,7 @@ bool canBatchForwardOnServer(List<LocalMessage> sources) {
         m.msgID > 0 &&
         (m.type == 0 ||
             m.type == 5 ||
+            m.type == 7 ||
             (m.mediaUrl?.isNotEmpty ?? false)),
   );
 }
@@ -87,6 +93,8 @@ String mediaLabelForType(int type, {String? mediaName}) {
       return mediaName?.isNotEmpty == true ? mediaName! : 'Fichier';
     case 5:
       return 'Position';
+    case 7:
+      return 'Contact';
     default:
       return 'Média';
   }
@@ -101,6 +109,9 @@ String previewTextForForward(LocalMessage message) {
   }
   if (message.type == 5) {
     return locationPreviewLabel(message.content);
+  }
+  if (message.type == 7) {
+    return contactPreviewLabel(message.content);
   }
   // Item d'album transféré seul : libellé du média, pas de l'album entier.
   if (isAlbumMarkerContent(message.content)) {

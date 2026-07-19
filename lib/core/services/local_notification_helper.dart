@@ -352,6 +352,8 @@ class LocalNotificationHelper {
         return '📎 Fichier';
       case 5:
         return '📍 Position';
+      case 7:
+        return '👤 Contact';
       default:
         return 'Nouveau message';
     }
