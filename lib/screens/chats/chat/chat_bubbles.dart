@@ -415,6 +415,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   Widget _buildReplyQuote(String content, bool isMe, {int? replyToID}) {
     final accent = isMe ? context.colors.onPrimary : context.colors.primary;
+    final target = _messageById(replyToID);
+    final thumb = target != null ? _buildReplyMediaThumb(target, size: 44) : null;
     return Material(
       color: const Color(0x00000000),
       child: InkWell(
@@ -424,22 +426,147 @@ extension _ChatBubbles on _ChatDetailScreenState {
         borderRadius: BorderRadius.circular(6),
         child: Container(
           margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2, vertical: 6),
           decoration: BoxDecoration(
             color: accent.withAlpha(30),
-            border: Border(left: BorderSide(color: accent, width: 3)),
             borderRadius: BorderRadius.circular(6),
           ),
-          child: Text(
-            content,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: context.text.bodySmall?.copyWith(
-              color: _bubbleMuted(isMe),
-              fontStyle: FontStyle.italic,
-            ),
+          clipBehavior: Clip.antiAlias,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 3,
+                height: thumb != null ? 44 : 32,
+                color: accent,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.sm + 2,
+                    6,
+                    thumb != null ? AppSpacing.sm : AppSpacing.sm + 2,
+                    6,
+                  ),
+                  child: Text(
+                    content,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.bodySmall?.copyWith(
+                      color: _bubbleMuted(isMe),
+                    ),
+                  ),
+                ),
+              ),
+              if (thumb != null) thumb,
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Message d'origine d'une réponse, s'il est déjà chargé dans le fil.
+  LocalMessage? _messageById(int? msgID) {
+    if (msgID == null || msgID <= 0) return null;
+    for (final m in _currentMessages) {
+      if (m.msgID == msgID) return m;
+    }
+    return null;
+  }
+
+  bool _canShowReplyThumb(LocalMessage msg) =>
+      !msg.isViewOnce && (msg.type == 1 || msg.type == 2 || msg.type == 4);
+
+  /// Mini-vignette réponse (photo / vidéo / fichier). Carré borné obligatoire.
+  Widget? _buildReplyMediaThumb(LocalMessage msg, {double size = 44}) {
+    if (!_canShowReplyThumb(msg)) return null;
+
+    final fallback = context.colors.surfaceContainerHighest;
+    final Widget child;
+    if (msg.type == 4) {
+      final style = DocumentFileStyle.fromMessage(
+        mediaName: msg.mediaName,
+        mediaUrl: msg.mediaUrl,
+      );
+      if (style.isPdf) {
+        child = FutureBuilder<Uint8List?>(
+          future: PdfThumbnailService.forMessage(
+            localPath: msg.localMediaPath,
+            url: msg.mediaUrl,
+          ),
+          builder: (context, snap) {
+            final bytes = snap.data;
+            if (bytes != null) {
+              return Image.memory(
+                bytes,
+                fit: BoxFit.cover,
+                width: size,
+                height: size,
+                gaplessPlayback: true,
+              );
+            }
+            return _replyDocBadge(style, size);
+          },
+        );
+      } else {
+        child = _replyDocBadge(style, size);
+      }
+    } else if (msg.type == 2) {
+      child = VideoMessagePreview(
+        pendingPath: msg.pendingUploadPath,
+        localPath: msg.localMediaPath,
+        thumbBase64: msg.mediaThumb,
+        borderRadius: BorderRadius.zero,
+        expandToFill: true,
+        showDuration: false,
+        hidePlayIcon: true,
+        fallbackColor: fallback,
+      );
+    } else {
+      final hasLocal =
+          msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
+      final myId = _chat.repository.myId;
+      final needsDl = msg.senderID != myId &&
+          !hasLocal &&
+          msg.mediaUrl != null &&
+          msg.mediaUrl!.isNotEmpty;
+      child = ImageMessagePreview(
+        localPath: msg.localMediaPath,
+        networkUrl: msg.mediaUrl,
+        thumbBase64: msg.mediaThumb,
+        useBlurredThumb: needsDl,
+        borderRadius: BorderRadius.zero,
+        expandToFill: true,
+        fallbackColor: fallback,
+      );
+    }
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          child,
+          if (msg.type == 2)
+            const Align(
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.play_circle_fill_rounded,
+                size: 18,
+                color: Color(0xE6FFFFFF),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _replyDocBadge(DocumentFileStyle style, double size) {
+    return ColoredBox(
+      color: style.color.withAlpha(28),
+      child: Center(
+        child: Icon(style.icon, size: size * 0.45, color: style.color),
       ),
     );
   }

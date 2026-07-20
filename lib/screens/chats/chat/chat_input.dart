@@ -35,31 +35,57 @@ extension _ChatInput on _ChatDetailScreenState {
 
   Widget _buildReplyBanner() {
     final colors = context.colors;
+    final reply = _replyTo!;
+    final thumb = _buildReplyMediaThumb(reply, size: 44);
     return Container(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.sm, 0),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, 4, AppSpacing.sm),
       color: context.semantic.brandContainer,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(width: 3, height: 36, color: colors.primary),
+          Container(
+            width: 3,
+            height: 44,
+            decoration: BoxDecoration(
+              color: colors.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           AppSpacing.hGapSm,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(context.l10n.reply2, style: context.text.labelSmall?.copyWith(color: colors.primary, fontWeight: FontWeight.w700)),
                 Text(
-                  _previewOf(_replyTo!),
+                  context.l10n.reply2,
+                  style: context.text.labelSmall?.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _previewOf(reply),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.text.bodySmall,
+                  style: context.text.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
+          if (thumb != null) ...[
+            const SizedBox(width: 8),
+            thumb,
+          ],
           IconButton(
-            icon: const Icon(Icons.close_rounded),
+            icon: const Icon(Icons.close_rounded, size: 20),
             color: colors.onSurfaceVariant,
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             onPressed: () => rebuild(() => _replyTo = null),
           ),
         ],
