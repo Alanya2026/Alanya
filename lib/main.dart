@@ -280,6 +280,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
       debugPrint('[AuthWrapper] !! init() complété');
       await _syncSessionBindings();
 
+      // Refus CallKit persistés (app tuée) : rejouer dès que possible.
+      if (authProvider.isLoggedIn) {
+        final callService = Provider.of<CallService>(context, listen: false);
+        unawaited(callService.flushPendingRejects());
+      }
+
       try {
         await PushService.init(apiClient, navKey: navigatorKey);
       } catch (e) {

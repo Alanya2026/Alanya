@@ -5,34 +5,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../talky_api_client.dart';
 
-/// File persistante des refus d'appel (cross-isolate / survie process kill).
+/// File persistante des refus d'appel (cross-isolate / cold-start).
 ///
-/// Aussi miroir du token + base URL pour le BroadcastReceiver Android
-/// (refus CallKit app tuée → POST /calls/reject sans Flutter).
+/// Clés aussi lues par le BroadcastReceiver Android natif
+/// (`FlutterSharedPreferences` + préfixe `flutter.`).
 class PendingCallRejectStore {
   PendingCallRejectStore._();
 
-  static const _queueKey = 'pending_call_rejects_v1';
-  static const _tokenKey = 'call_reject_access_token';
-  static const _apiBaseKey = 'call_reject_api_base';
-  static const _ttl = Duration(minutes: 5);
+  static const prefsKey = 'pending_call_rejects_v1';
+  static const tokenKey = 'call_reject_access_token';
+  static const apiBaseKey = 'call_reject_api_base';
 
-  /// Miroir credentials pour le receiver natif Android.
-  static Future<void> syncNativeCredentials({
-    required String? accessToken,
-    String apiBase = TalkyApiClient.baseUrl,
-  }) async {
+  /// Miroir du JWT + base URL pour le receiver Android (app tuée).
+  static Future<void> syncNativeCredentials(String? accessToken) async {
     if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       if (accessToken == null || accessToken.isEmpty) {
-        await prefs.remove(_tokenKey);
+        await prefs.remove(tokenKey);
       } else {
-        await prefs.setString(_tokenKey, accessToken);
+        await prefs.setString(tokenKey, accessToken);
       }
-      await prefs.setString(_apiBaseKey, apiBase);
+      await prefs.setString(apiBaseKey, TalkyApiClient.baseUrl);
     } catch (e) {
-      debugPrint('[PendingCallRejectStore] syncNativeCredentials: $e');
+      debugPrint('[PendingCallRejectStore] syncNativeCredentials error: $e');
     }
   }
 
@@ -40,14 +36,14 @@ class PendingCallRejectStore {
     if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_tokenKey);
-      await prefs.remove(_apiBaseKey);
+      await prefs.remove(tokenKey);
+      await prefs.remove(apiBaseKey);
     } catch (e) {
-      debugPrint('[PendingCallRejectStore] clearNativeCredentials: $e');
+      debugPrint('[PendingCallRejectStore] clearNativeCredentials error: $e');
     }
   }
 
-  /// Ajoute un refus à la file (déduplique par callerId+callId).
+  /// Enfile un refus. Déduplique sur (callerId, callId).
   static Future<void> enqueue({
     required String callerId,
     String? callId,
@@ -57,18 +53,20 @@ class PendingCallRejectStore {
     try {
       final prefs = await SharedPreferences.getInstance();
       final list = _read(prefs);
-      final now = DateTime.now().millisecondsSinceEpoch;
-      _prune(list, now);
       final call = (callId ?? '').trim();
-      list.removeWhere(
-        (e) => e['callerId'] == cid && (e['callId'] ?? '') == call,
-      );
+      list.removeWhere((e) =>
+          e['callerId'] == cid &&
+          ((e['callId'] ?? '') == call || call.isEmpty || (e['callId'] ?? '').isEmpty));
       list.add({
         'callerId': cid,
-        'callId': call,
-        'ts': now,
+        if (call.isNotEmpty) 'callId': call,
+        'ts': DateTime.now().millisecondsSinceEpoch,
       });
-      await prefs.setString(_queueKey, jsonEncode(list));
+      // Garde les 20 plus récents.
+      while (list.length > 20) {
+        list.removeAt(0);
+      }
+      await prefs.setString(prefsKey, jsonEncode(list));
       debugPrint('[PendingCallRejectStore] enqueue caller=$cid callId=$call');
     } catch (e) {
       debugPrint('[PendingCallRejectStore] enqueue error: $e');
@@ -78,14 +76,11 @@ class PendingCallRejectStore {
   static Future<List<Map<String, String>>> list() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final list = _read(prefs);
-      final now = DateTime.now().millisecondsSinceEpoch;
-      _prune(list, now);
-      await prefs.setString(_queueKey, jsonEncode(list));
-      return list
+      return _read(prefs)
           .map((e) => {
                 'callerId': (e['callerId'] ?? '').toString(),
-                'callId': (e['callId'] ?? '').toString(),
+                if ((e['callId'] ?? '').toString().isNotEmpty)
+                  'callId': e['callId'].toString(),
               })
           .where((e) => e['callerId']!.isNotEmpty)
           .toList();
@@ -105,19 +100,24 @@ class PendingCallRejectStore {
       final prefs = await SharedPreferences.getInstance();
       final list = _read(prefs);
       final call = (callId ?? '').trim();
+      final before = list.length;
       list.removeWhere((e) {
         if (e['callerId'] != cid) return false;
         if (call.isEmpty) return true;
-        return (e['callId'] ?? '') == call;
+        final existing = (e['callId'] ?? '').toString();
+        return existing.isEmpty || existing == call;
       });
-      await prefs.setString(_queueKey, jsonEncode(list));
+      if (list.length != before) {
+        await prefs.setString(prefsKey, jsonEncode(list));
+        debugPrint('[PendingCallRejectStore] remove caller=$cid callId=$call');
+      }
     } catch (e) {
       debugPrint('[PendingCallRejectStore] remove error: $e');
     }
   }
 
   static List<Map<String, dynamic>> _read(SharedPreferences prefs) {
-    final raw = prefs.getString(_queueKey);
+    final raw = prefs.getString(prefsKey);
     if (raw == null || raw.isEmpty) return [];
     try {
       final decoded = jsonDecode(raw);
@@ -129,14 +129,5 @@ class PendingCallRejectStore {
     } catch (_) {
       return [];
     }
-  }
-
-  static void _prune(List<Map<String, dynamic>> list, int nowMs) {
-    final minTs = nowMs - _ttl.inMilliseconds;
-    list.removeWhere((e) {
-      final ts = e['ts'];
-      final n = ts is int ? ts : int.tryParse(ts?.toString() ?? '') ?? 0;
-      return n < minTs;
-    });
   }
 }

@@ -113,11 +113,9 @@ extension CallIncoming on CallService {
   /// Appelée depuis main.dart quand l'utilisateur refuse un appel via CallKit.
   ///
   /// On coupe immédiatement CallKit + sonnerie, on mémorise le callId comme
-  /// terminal (pour ignorer un éventuel rejeu `incoming_call`), puis on émet
-  /// `reject_call`. Si le socket n'est pas encore prêt (cold start / app fermée),
-  /// le refus est mis en file et rejoué à l'authentification du socket, ce qui
-  /// évite d'ouvrir l'app inutilement tout en garantissant que l'appelant est
-  /// bien averti.
+  /// terminal, on persiste le refus, puis on tente HTTP (prioritaire, marche
+  /// sans socket) et socket en secours. Le flush à `auth:verified` / bootstrap
+  /// rejoue ce qui n'a pas encore abouti.
   Future<void> rejectIncomingCallFromPush({
     required String callerId,
     String? callId,
@@ -135,20 +133,15 @@ extension CallIncoming on CallService {
 
     final cid = int.tryParse(callerId);
     if (cid != null) {
-      if (_apiClient.isSocketReady) {
-        try {
-          _apiClient.sendSocketEvent(SocketEvents.rejectCall, {'callerId': cid});
-        } catch (e) {
-          debugPrint('[CallService] rejectCall socket error: $e');
-          _pendingRejectCallerIds.add(callerId);
-        }
-      } else {
-        debugPrint('[CallService] ⏳ Socket non prêt → refus mis en file');
-        _pendingRejectCallerIds.add(callerId);
-        if (!_apiClient.isSocketConnected) {
-          _apiClient.connectSocket();
-        }
-      }
+      await PendingCallRejectStore.enqueue(
+        callerId: callerId,
+        callId: resolvedCallId,
+      );
+      unawaited(_deliverReject(
+        callerId: callerId,
+        callerIdInt: cid,
+        callId: resolvedCallId,
+      ));
     }
 
     if (_status == CallStatus.incoming ||
@@ -160,24 +153,67 @@ extension CallIncoming on CallService {
     }
   }
 
-  /// Rejoue les refus mis en file (voir [rejectIncomingCallFromPush]) une fois le
-  /// socket authentifié. Appelé depuis le listener `auth:verified`.
-  void _flushPendingRejects() {
-    if (_pendingRejectCallerIds.isEmpty) return;
-    if (!_apiClient.isSocketReady) return;
-    final pending = List<String>.from(_pendingRejectCallerIds);
-    _pendingRejectCallerIds.clear();
-    for (final callerId in pending) {
-      final cid = int.tryParse(callerId);
-      if (cid == null) continue;
-      debugPrint('[CallService] 🔁 Rejeu refus en file → reject_call caller=$cid');
-      try {
-        _apiClient.sendSocketEvent(SocketEvents.rejectCall, {'callerId': cid});
-      } catch (e) {
-        debugPrint('[CallService] rejeu reject_call échoué: $e');
-        _pendingRejectCallerIds.add(callerId);
-      }
+  /// Envoie le refus via HTTP puis socket. Retire de la file si au moins
+  /// un canal a réussi.
+  Future<void> _deliverReject({
+    required String callerId,
+    required int callerIdInt,
+    String? callId,
+  }) async {
+    var delivered = false;
+
+    try {
+      await _apiClient.rejectCallHttp(callerId: callerIdInt, callId: callId);
+      delivered = true;
+      debugPrint('[CallService] !! reject HTTP ok caller=$callerIdInt');
+    } catch (e) {
+      debugPrint('[CallService] reject HTTP error: $e');
     }
+
+    if (_apiClient.isSocketReady) {
+      try {
+        _apiClient.sendSocketEvent(SocketEvents.rejectCall, {
+          'callerId': callerIdInt,
+          if (callId != null && callId.isNotEmpty) 'callId': callId,
+        });
+        delivered = true;
+      } catch (e) {
+        debugPrint('[CallService] rejectCall socket error: $e');
+      }
+    } else if (!_apiClient.isSocketConnected) {
+      _apiClient.connectSocket();
+    }
+
+    if (delivered) {
+      await PendingCallRejectStore.remove(callerId: callerId, callId: callId);
+    }
+  }
+
+  /// Rejoue les refus persistés (mémoire disque + éventuel enqueue natif).
+  /// Appelé depuis `auth:verified` et au bootstrap AuthWrapper.
+  Future<void> flushPendingRejects() async {
+    final pending = await PendingCallRejectStore.list();
+    if (pending.isEmpty) return;
+    debugPrint('[CallService] 🔁 flushPendingRejects count=${pending.length}');
+    for (final item in pending) {
+      final callerId = item['callerId'] ?? '';
+      final callId = item['callId'];
+      final cid = int.tryParse(callerId);
+      if (cid == null) {
+        await PendingCallRejectStore.remove(callerId: callerId, callId: callId);
+        continue;
+      }
+      await _deliverReject(
+        callerId: callerId,
+        callerIdInt: cid,
+        callId: callId,
+      );
+    }
+  }
+
+  /// Alias privé pour les listeners socket.
+  void _flushPendingRejects() {
+    unawaited(flushPendingRejects());
   }
 
   /// Rejoue les end_call mis en file quand le socket n'était pas prêt.

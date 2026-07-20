@@ -32,7 +32,7 @@
 
     <application
         android:label="Alanya"
-        android:name="${applicationName}"
+        android:name=".TalkyApplication"
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher">

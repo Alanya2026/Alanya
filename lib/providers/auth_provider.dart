@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
+import '../core/services/call/pending_call_reject_store.dart';
 import '../core/utils/app_log.dart';
 import '../core/utils/alanya_phone_formatter.dart';
 import '../talky_api_client.dart';
@@ -70,6 +71,8 @@ class AuthProvider extends ChangeNotifier {
     if (refreshToken != null) {
       _apiClient.setRefreshToken(refreshToken);
     }
+    // Miroir pour CallDeclineReceiver Android (refus app tuée).
+    await PendingCallRejectStore.syncNativeCredentials(accessToken);
     return true;
   }
 
