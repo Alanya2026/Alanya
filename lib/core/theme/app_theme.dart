@@ -190,10 +190,7 @@ extension L10nContext on BuildContext {
 
 /// Fabrique des thèmes clair / sombre de Talky.
 ///
-/// **Mode sombre** : structure prête mais désactivée à la livraison
-/// (`themeMode: ThemeMode.light` dans `main.dart`). Les écrans qui consomment
-/// `ColorScheme` / `AppSemanticColors` basculeront automatiquement quand on
-/// l'activera.
+/// Les deux thèmes sont branchés via `ThemeController` / `MaterialApp.themeMode`.
 class AppTheme {
   AppTheme._();
 
@@ -361,15 +358,51 @@ class AppTheme {
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.brSm),
       ),
 
+      // Material 3 : tokens ColorScheme uniquement.
+      // Avant : pouce/piste selected = primary (+ alpha) → contraste nul ;
+      // OFF renvoyait null (defaults Material) → piste invisible en dark.
+      // Pouce OFF = onSurfaceVariant (pas outline) pour rester lisible sur la piste.
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? colorScheme.primary : null,
-        ),
-        trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected)
-              ? colorScheme.primary.withAlpha(120)
-              : null,
-        ),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return colorScheme.onSurface.withValues(alpha: 0.38);
+          }
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.onPrimary;
+          }
+          return colorScheme.onSurfaceVariant;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return colorScheme.onSurface.withValues(alpha: 0.12);
+          }
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary;
+          }
+          return colorScheme.surfaceContainerHighest;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected) ||
+              states.contains(WidgetState.disabled)) {
+            return Colors.transparent;
+          }
+          return colorScheme.outline;
+        }),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          final base = states.contains(WidgetState.selected)
+              ? colorScheme.primary
+              : colorScheme.onSurface;
+          if (states.contains(WidgetState.pressed)) {
+            return base.withValues(alpha: 0.12);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return base.withValues(alpha: 0.08);
+          }
+          if (states.contains(WidgetState.focused)) {
+            return base.withValues(alpha: 0.12);
+          }
+          return null;
+        }),
       ),
 
       tabBarTheme: TabBarThemeData(
@@ -442,7 +475,8 @@ class AppTheme {
     surfaceContainerHigh: Color(0xFF242832),
     surfaceContainerHighest: Color(0xFF2C313B),
     outline: AppColors.darkOutline,
-    outlineVariant: Color(0xFF3A404C),
+    // Plus soft que `outline` ; distinct de surfaceContainerHighest pour les pistes OFF.
+    outlineVariant: Color(0xFF323742),
     inverseSurface: AppColors.darkTextPrimary,
     onInverseSurface: AppColors.darkSurface,
     shadow: AppColors.black,

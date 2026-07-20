@@ -100,7 +100,9 @@ class AppColors {
   static const Color darkBackground = Color(0xFF0F1115);
   static const Color darkSurface = Color(0xFF181B21);
   static const Color darkSurfaceMuted = Color(0xFF1F232B);
-  static const Color darkOutline = Color(0xFF2C313B);
+  /// Bordures / séparateurs en sombre — distinct de `surfaceContainerHighest`
+  /// (évite pouce/piste de Switch confondus quand on utilise `outline`).
+  static const Color darkOutline = Color(0xFF3A404C);
   static const Color darkTextPrimary = Color(0xFFF2F4F8);
   static const Color darkTextSecondary = Color(0xFFAAB1C0);
   static const Color darkTextTertiary = Color(0xFF6F7787);
