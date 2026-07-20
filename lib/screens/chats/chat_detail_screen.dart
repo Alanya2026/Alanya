@@ -207,7 +207,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   void _onScroll() {
     final pos = _scrollController.position;
     // reverse: true → offset 0 = bas (messages récents).
-    _atBottom = pos.pixels <= 150;
+    final atBottom = pos.pixels <= 150;
+    if (atBottom != _atBottom && mounted) {
+      setState(() => _atBottom = atBottom);
+    } else {
+      _atBottom = atBottom;
+    }
 
     // Près du haut visuel → charger une page d'anciens messages.
     if (pos.pixels >= pos.maxScrollExtent - 80 && !_loadingOlder) {
@@ -416,117 +421,130 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
               const OfflineBanner(wrapSafeArea: false),
               _buildPinnedBanner(),
               Expanded(
-                child: convId == null
-                    ? (widget.userId != null && !widget.isGroup
-                        ? EmptyState(
-                            icon: Icons.waving_hand_outlined,
-                            title: context.l10n.noMessages,
-                            message:
-                                context.l10n.sayHelloToStartTheConversation,
-                          )
-                        : EmptyState(
-                            icon: Icons.chat_bubble_outline_rounded,
-                            title: context.l10n.conversationNotFound,
-                          ))
-                    : StreamBuilder<List<LocalMessage>>(
-                        stream: _chat.watchMessages(convId),
-                        builder: (context, snapshot) {
-                          final messages = snapshot.data ?? const [];
-                          _currentMessages = messages;
-                          if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
-                            return const LoadingState();
-                          }
-                          // Journal d'appels : discussions 1-1 uniquement.
-                          final callsStream = (!widget.isGroup && widget.userId != null)
-                              ? context.read<LocalCacheRepository>().watchCalls()
-                              : Stream<List<LocalCall>>.value(const []);
-                          return StreamBuilder<List<LocalCall>>(
-                            stream: callsStream,
-                            builder: (context, callSnap) {
-                              final calls = (callSnap.data ?? const <LocalCall>[])
-                                  .where((c) =>
-                                      (c.idCaller == _myId && c.idReceiver == widget.userId) ||
-                                      (c.idCaller == widget.userId && c.idReceiver == _myId))
-                                  .toList();
-
-                              if (messages.isEmpty && calls.isEmpty && !partnerTyping) {
-                                return EmptyState(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: convId == null
+                          ? (widget.userId != null && !widget.isGroup
+                              ? EmptyState(
                                   icon: Icons.waving_hand_outlined,
                                   title: context.l10n.noMessages,
-                                  message: context.l10n.sayHelloToStartTheConversation,
-                                );
-                              }
-                              // Auto-scroll si déjà en bas (nouveau message, frappe…).
-                              if (!_suppressAutoScroll && _atBottom) {
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  _scrollToBottom();
-                                });
-                              }
-                              // Fil unifié : messages/albums + appels, triés par date.
-                              final feed = <Object>[
-                                ...groupMessagesForDisplay(messages),
-                                ...calls,
-                              ]..sort((a, b) => _feedTime(a).compareTo(_feedTime(b)));
-                              // reverse: true → index 0 en bas ; on inverse pour afficher
-                              // les récents près de la zone de saisie.
-                              final reversedFeed = feed.reversed.toList();
+                                  message:
+                                      context.l10n.sayHelloToStartTheConversation,
+                                )
+                              : EmptyState(
+                                  icon: Icons.chat_bubble_outline_rounded,
+                                  title: context.l10n.conversationNotFound,
+                                ))
+                          : StreamBuilder<List<LocalMessage>>(
+                              stream: _chat.watchMessages(convId),
+                              builder: (context, snapshot) {
+                                final messages = snapshot.data ?? const [];
+                                _currentMessages = messages;
+                                if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
+                                  return const LoadingState();
+                                }
+                                // Journal d'appels : discussions 1-1 uniquement.
+                                final callsStream = (!widget.isGroup && widget.userId != null)
+                                    ? context.read<LocalCacheRepository>().watchCalls()
+                                    : Stream<List<LocalCall>>.value(const []);
+                                return StreamBuilder<List<LocalCall>>(
+                                  stream: callsStream,
+                                  builder: (context, callSnap) {
+                                    final calls = (callSnap.data ?? const <LocalCall>[])
+                                        .where((c) =>
+                                            (c.idCaller == _myId && c.idReceiver == widget.userId) ||
+                                            (c.idCaller == widget.userId && c.idReceiver == _myId))
+                                        .toList();
 
-                              return ListView.builder(
-                                controller: _scrollController,
-                                reverse: true,
-                                padding: const EdgeInsets.all(AppSpacing.lg),
-                                itemCount: reversedFeed.length + 1,
-                                itemBuilder: (context, index) {
-                                  if (index == 0) {
-                                    return TypingBubbleSlot(visible: partnerTyping);
-                                  }
-                                  final feedIndex = index - 1;
-                                  final item = reversedFeed[feedIndex];
-                                  final itemTime = _feedTime(item);
-                                  final olderTime = feedIndex < reversedFeed.length - 1
-                                      ? _feedTime(reversedFeed[feedIndex + 1])
-                                      : null;
-                                  final showDate = olderTime == null ||
-                                      !_sameDay(olderTime.toLocal(), itemTime.toLocal());
+                                    if (messages.isEmpty && calls.isEmpty && !partnerTyping) {
+                                      return EmptyState(
+                                        icon: Icons.waving_hand_outlined,
+                                        title: context.l10n.noMessages,
+                                        message: context.l10n.sayHelloToStartTheConversation,
+                                      );
+                                    }
+                                    // Auto-scroll si déjà en bas (nouveau message, frappe…).
+                                    if (!_suppressAutoScroll && _atBottom) {
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        _scrollToBottom();
+                                      });
+                                    }
+                                    // Fil unifié : messages/albums + appels, triés par date.
+                                    final feed = <Object>[
+                                      ...groupMessagesForDisplay(messages),
+                                      ...calls,
+                                    ]..sort((a, b) => _feedTime(a).compareTo(_feedTime(b)));
+                                    // reverse: true → index 0 en bas ; on inverse pour afficher
+                                    // les récents près de la zone de saisie.
+                                    final reversedFeed = feed.reversed.toList();
 
-                                  // Entrée d'appel (journal type WhatsApp).
-                                  if (item is LocalCall) {
-                                    return Column(
-                                      children: [
-                                        if (showDate) _buildDateSeparator(itemTime.toLocal()),
-                                        _buildCallBubble(item),
-                                      ],
-                                    );
-                                  }
+                                    return ListView.builder(
+                                      controller: _scrollController,
+                                      reverse: true,
+                                      padding: const EdgeInsets.all(AppSpacing.lg),
+                                      itemCount: reversedFeed.length + 1,
+                                      itemBuilder: (context, index) {
+                                        if (index == 0) {
+                                          return TypingBubbleSlot(visible: partnerTyping);
+                                        }
+                                        final feedIndex = index - 1;
+                                        final item = reversedFeed[feedIndex];
+                                        final itemTime = _feedTime(item);
+                                        final olderTime = feedIndex < reversedFeed.length - 1
+                                            ? _feedTime(reversedFeed[feedIndex + 1])
+                                            : null;
+                                        final showDate = olderTime == null ||
+                                            !_sameDay(olderTime.toLocal(), itemTime.toLocal());
 
-                                  final chatItem = item as ChatListItem;
-                                  final msg = switch (chatItem) {
-                                    ChatListSingle(:final message) => message,
-                                    ChatListAlbum(:final messages) => messages.last,
-                                  };
-                                  if (msg.msgID == _pendingScrollMsgId) {
-                                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                                      _tryRevealMessage(msg.msgID);
-                                    });
-                                  }
-                                  return Column(
-                                    key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
-                                    children: [
-                                      if (showDate) _buildDateSeparator(itemTime.toLocal()),
-                                      switch (chatItem) {
-                                        ChatListSingle(:final message) =>
-                                          _buildMessageBubble(message, message.senderID == _myId),
-                                        ChatListAlbum(:final messages) =>
-                                          _buildAlbumBubble(messages, messages.first.senderID == _myId),
+                                        // Entrée d'appel (journal type WhatsApp).
+                                        if (item is LocalCall) {
+                                          return Column(
+                                            children: [
+                                              if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                              _buildCallBubble(item),
+                                            ],
+                                          );
+                                        }
+
+                                        final chatItem = item as ChatListItem;
+                                        final msg = switch (chatItem) {
+                                          ChatListSingle(:final message) => message,
+                                          ChatListAlbum(:final messages) => messages.last,
+                                        };
+                                        if (msg.msgID == _pendingScrollMsgId) {
+                                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                                            _tryRevealMessage(msg.msgID);
+                                          });
+                                        }
+                                        return Column(
+                                          key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
+                                          children: [
+                                            if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                            switch (chatItem) {
+                                              ChatListSingle(:final message) =>
+                                                _buildMessageBubble(message, message.senderID == _myId),
+                                              ChatListAlbum(:final messages) =>
+                                                _buildAlbumBubble(messages, messages.first.senderID == _myId),
+                                            },
+                                          ],
+                                        );
                                       },
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                    // Retour rapide en bas du fil (évite de re-scroller tout l'historique).
+                    if (convId != null && !_selectionMode && !_atBottom)
+                      Positioned(
+                        right: AppSpacing.lg,
+                        bottom: AppSpacing.md,
+                        child: _buildScrollToBottomButton(),
                       ),
+                  ],
+                ),
               ),
               if (!_selectionMode && _replyTo != null) _buildReplyBanner(),
               if (!_selectionMode && _inputBlocked) _buildBlockedBanner(),

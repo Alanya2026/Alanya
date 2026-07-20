@@ -1013,10 +1013,40 @@ extension _ChatActions on _ChatDetailScreenState {
 
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
+    final pixels = _scrollController.position.pixels;
+    // Loin dans l'historique : saut immédiat (évite d'animer des milliers de px).
+    if (pixels > 800) {
+      _scrollController.jumpTo(0);
+      if (mounted && !_atBottom) rebuild(() => _atBottom = true);
+      return;
+    }
     _scrollController.animateTo(
       0,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
+    );
+  }
+
+  Widget _buildScrollToBottomButton() {
+    final colors = context.colors;
+    return Material(
+      color: colors.surface,
+      shape: const CircleBorder(),
+      elevation: 3,
+      shadowColor: Colors.black26,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: _scrollToBottom,
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: colors.onSurfaceVariant,
+            size: AppIconSize.md,
+          ),
+        ),
+      ),
     );
   }
 
