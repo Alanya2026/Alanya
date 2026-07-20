@@ -81,18 +81,13 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
   if (kIsWeb) return;
-  // Filet de sécurité : si le backend a inclus un bloc `notification`
-  // (affiché directement par le système Android app tuée), on n'en construit
-  // pas un doublon local. En foreground, onMessage affiche le MessagingStyle.
-  if (message.notification != null) return;
   final data = Map<String, dynamic>.from(message.data);
   final type = data['type']?.toString();
   final title = (data['title'] ?? message.notification?.title ?? '').toString();
   final body = (data['body'] ?? message.notification?.body ?? '').toString();
   if (title.isEmpty && body.isEmpty) return;
 
-  // iOS : l'alerte APNS (configurée côté backend) affiche déjà la notif
-  // quand l'app est fermée — éviter le doublon avec une notif locale.
+  // iOS : l'alerte APNS affiche déjà la notif — éviter le doublon local.
   final iosHandledByApns = !kIsWeb &&
       Platform.isIOS &&
       (type == 'message' ||
@@ -100,6 +95,13 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
           type == 'meeting_reminder' ||
           type == 'status_view');
   if (iosHandledByApns) return;
+
+  // Android messages : même si FCM a déjà posté un bloc `notification`
+  // (filet app tuée), on reconstruit en MessagingStyle avec le même tag
+  // `conv_*` → remplace la notif système et empile l'historique par
+  // conversation au lieu d'écraser avec une seule ligne.
+  // Meetings / statut : le système suffit → pas de doublon local.
+  if (message.notification != null && type != 'message') return;
 
   await LocalNotificationHelper.ensureInitialized();
 
