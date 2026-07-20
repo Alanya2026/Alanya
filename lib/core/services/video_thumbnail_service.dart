@@ -12,12 +12,19 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 ///  2. `localPath` (vidéo locale téléchargée ou conservée après envoi).
 ///
 /// Pas de téléchargement réseau : si aucun fichier local n'existe, retourne null.
-/// Un échec est aussi caché (null) pour ne pas réessayer en boucle au scroll.
+///
+/// Les succès sont cachés durablement. Les échecs ne le sont pas, pour permettre
+/// un nouvel essai après téléchargement / fichier stabilisé (sinon le destinataire
+/// resterait coincé sur le `mediaThumb` basse qualité).
 class VideoThumbnailService {
   VideoThumbnailService._();
 
-  static final Map<String, Uint8List?> _cache = {};
+  static final Map<String, Uint8List> _cache = {};
   static final Map<String, Future<Uint8List?>> _inFlight = {};
+  /// Échecs récents : cooldown pour éviter un storm au scroll, sans bloquer
+  /// définitivement un retry (ex. fichier pas encore stabilisé après download).
+  static final Map<String, DateTime> _failedAt = {};
+  static const Duration _failCooldown = Duration(seconds: 30);
 
   static String? resolveLocalPath({
     String? pendingPath,
@@ -41,7 +48,13 @@ class VideoThumbnailService {
   }
 
   static Future<Uint8List?> forFile(String path) {
-    if (_cache.containsKey(path)) return Future.value(_cache[path]);
+    final cached = _cache[path];
+    if (cached != null) return Future.value(cached);
+    final failed = _failedAt[path];
+    if (failed != null &&
+        DateTime.now().difference(failed) < _failCooldown) {
+      return Future.value(null);
+    }
     return _inFlight.putIfAbsent(path, () => _generate(path));
   }
 
@@ -57,24 +70,37 @@ class VideoThumbnailService {
 
   static Future<Uint8List?> _generate(String path) async {
     try {
-      final bytes = await VideoThumbnail.thumbnailData(
-        video: path,
-        imageFormat: ImageFormat.JPEG,
-        maxWidth: 480,
-        quality: 75,
-        timeMs: 0,
-      );
-      return _remember(path, bytes);
+      // timeMs: 0 échoue parfois (frame noire / codec) → retry un peu plus loin.
+      var bytes = await _thumbnailData(path, timeMs: 0);
+      if (bytes == null || bytes.isEmpty) {
+        bytes = await _thumbnailData(path, timeMs: 1000);
+      }
+      if (bytes == null || bytes.isEmpty) {
+        debugPrint('[VideoThumb] vide $path');
+        _failedAt[path] = DateTime.now();
+        _inFlight.remove(path);
+        return null;
+      }
+      _cache[path] = bytes;
+      _failedAt.remove(path);
+      _inFlight.remove(path);
+      return bytes;
     } catch (e) {
       debugPrint('[VideoThumb] échec $path: $e');
-      return _remember(path, null);
+      _failedAt[path] = DateTime.now();
+      _inFlight.remove(path);
+      return null;
     }
   }
 
-  static Uint8List? _remember(String key, Uint8List? bytes) {
-    _cache[key] = bytes;
-    _inFlight.remove(key);
-    return bytes;
+  static Future<Uint8List?> _thumbnailData(String path, {required int timeMs}) {
+    return VideoThumbnail.thumbnailData(
+      video: path,
+      imageFormat: ImageFormat.JPEG,
+      maxWidth: 480,
+      quality: 75,
+      timeMs: timeMs,
+    );
   }
 
   /// Cache des bytes décodés d'une vignette base64 reçue, indexé par hashCode
@@ -103,13 +129,22 @@ class VideoThumbnailService {
   static Future<String?> base64ForFile(String path) async {
     try {
       if (!File(path).existsSync()) return null;
-      final bytes = await VideoThumbnail.thumbnailData(
+      var bytes = await VideoThumbnail.thumbnailData(
         video: path,
         imageFormat: ImageFormat.JPEG,
         maxWidth: 320,
         quality: 45,
         timeMs: 0,
       );
+      if (bytes == null || bytes.isEmpty) {
+        bytes = await VideoThumbnail.thumbnailData(
+          video: path,
+          imageFormat: ImageFormat.JPEG,
+          maxWidth: 320,
+          quality: 45,
+          timeMs: 1000,
+        );
+      }
       if (bytes == null || bytes.isEmpty) return null;
       return base64Encode(bytes);
     } catch (e) {
