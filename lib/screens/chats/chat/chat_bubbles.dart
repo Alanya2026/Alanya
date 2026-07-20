@@ -779,35 +779,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 220, maxWidth: 240),
-              child: _hasLocal(msg)
-                  ? Image.file(File(msg.localMediaPath!), fit: BoxFit.cover)
-                  : (msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty)
-                      // Preview réseau (cache UI) même si auto-download OFF —
-                      // ce n'est PAS le téléchargement Alanya / localMediaPath.
-                      ? CachedNetworkImage(
-                          imageUrl: msg.mediaUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => const SizedBox(
-                              height: 160,
-                              width: 200,
-                              child: Center(child: CircularProgressIndicator())),
-                          errorWidget: (_, __, ___) => Icon(
-                              Icons.broken_image,
-                              size: 48,
-                              color: context.colors.onSurfaceVariant),
-                        )
-                      : Container(
-                          height: 160,
-                          width: 200,
-                          color: AppColors.black.withValues(alpha: 0.26),
-                          child: Icon(
-                            Icons.image_outlined,
-                            size: 48,
-                            color: context.colors.onSurfaceVariant,
-                          ),
-                        ),
+            ImageMessagePreview(
+              localPath: msg.localMediaPath,
+              networkUrl: msg.mediaUrl,
+              thumbBase64: msg.mediaThumb,
+              useBlurredThumb: needsDl,
+              borderRadius: BorderRadius.zero,
+              fallbackColor: AppColors.black.withValues(alpha: 0.26),
             ),
             if (needsDl) _mediaDownloadBadge(downloading: downloading),
             if (uploading) _buildUploadProgressOverlay(msg),
@@ -1223,26 +1201,15 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 hidePlayIcon: needsDl,
               )
             else
-              _hasLocal(msg)
-                  ? Image.file(File(msg.localMediaPath!), fit: BoxFit.cover)
-                  : (msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty)
-                      ? CachedNetworkImage(
-                          imageUrl: msg.mediaUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) =>
-                              Container(color: context.semantic.surfaceMuted),
-                          errorWidget: (_, __, ___) => Icon(
-                            Icons.broken_image,
-                            color: context.colors.onSurfaceVariant,
-                          ),
-                        )
-                      : ColoredBox(
-                          color: context.semantic.surfaceMuted,
-                          child: Icon(
-                            Icons.image_outlined,
-                            color: context.colors.onSurfaceVariant,
-                          ),
-                        ),
+              ImageMessagePreview(
+                localPath: msg.localMediaPath,
+                networkUrl: msg.mediaUrl,
+                thumbBase64: msg.mediaThumb,
+                useBlurredThumb: needsDl,
+                borderRadius: BorderRadius.zero,
+                expandToFill: true,
+                fallbackColor: context.semantic.surfaceMuted,
+              ),
             if (needsDl)
               Center(child: _mediaDownloadBadge(downloading: downloading)),
             if (uploading) _buildUploadProgressOverlay(msg),

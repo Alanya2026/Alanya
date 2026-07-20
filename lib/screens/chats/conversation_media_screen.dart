@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
@@ -13,6 +12,7 @@ import '../../core/utils/document_file_style.dart';
 import '../../core/utils/rich_text_parser.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/image_message_preview.dart';
 import '../../widgets/video_message_preview.dart';
 import 'media_viewer_screen.dart';
 
@@ -417,38 +417,32 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     }
     final hasLocal =
         msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
-    if (hasLocal) {
-      return Image.file(File(msg.localMediaPath!),
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: placeholder));
-    }
-    // Reçu sans fichier local : preview réseau OK, badge download via l'ouverture.
     final myId = context.read<ChatProvider>().repository.myId;
-    final isReceivedPending = !msg.isViewOnce &&
+    final needsDl = !msg.isViewOnce &&
         msg.senderID != myId &&
         !hasLocal &&
-        url != null &&
-        url.isNotEmpty;
-    if (url != null && url.isNotEmpty) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedNetworkImage(
-            imageUrl: url,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => const LoadingState(),
-            errorWidget: (context, url, error) =>
-                Container(color: placeholder),
+        msg.mediaUrl != null &&
+        msg.mediaUrl!.isNotEmpty;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ImageMessagePreview(
+          localPath: msg.localMediaPath,
+          networkUrl: url,
+          thumbBase64: msg.mediaThumb,
+          useBlurredThumb: needsDl,
+          borderRadius: BorderRadius.zero,
+          expandToFill: true,
+          fallbackColor: placeholder,
+        ),
+        if (needsDl)
+          const Align(
+            alignment: Alignment.center,
+            child: Icon(Icons.download_rounded, color: AppColors.white, size: 28),
           ),
-          if (isReceivedPending)
-            const Align(
-              alignment: Alignment.center,
-              child: Icon(Icons.download_rounded, color: AppColors.white, size: 28),
-            ),
-        ],
-      );
-    }
-    return Container(color: placeholder);
+      ],
+    );
   }
 
   Future<void> _openDoc(LocalMessage msg) async {

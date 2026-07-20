@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -17,6 +16,8 @@ import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/image_message_preview.dart';
+import '../../widgets/video_message_preview.dart';
 import 'new_chat_screen.dart';
 
 class ForwardMessageScreen extends StatefulWidget {
@@ -511,22 +512,38 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
   Widget _albumThumb(LocalMessage msg) {
     final hasLocal = msg.localMediaPath != null &&
         File(msg.localMediaPath!).existsSync();
+    final myId = context.read<ChatProvider>().repository.myId;
+    final needsDl = !msg.isViewOnce &&
+        msg.senderID != myId &&
+        !hasLocal &&
+        msg.mediaUrl != null &&
+        msg.mediaUrl!.isNotEmpty;
+
     return ClipRRect(
       borderRadius: AppRadius.brSm,
       child: AspectRatio(
         aspectRatio: 1,
-        child: hasLocal
-            ? Image.file(File(msg.localMediaPath!), fit: BoxFit.cover)
-            : CachedNetworkImage(
-                imageUrl: msg.mediaUrl ?? '',
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => Container(
-                  color: AppColors.surfaceMuted,
-                  child: Icon(
-                    msg.type == 2 ? Icons.videocam : Icons.image,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+        child: msg.type == 2
+            ? VideoMessagePreview(
+                pendingPath: msg.pendingUploadPath,
+                localPath: msg.localMediaPath,
+                thumbBase64: msg.mediaThumb,
+                borderRadius: BorderRadius.zero,
+                expandToFill: true,
+                showDuration: false,
+                hidePlayIcon: true,
+                playIconSize: 20,
+                playPadding: 4,
+                fallbackColor: AppColors.surfaceMuted,
+              )
+            : ImageMessagePreview(
+                localPath: msg.localMediaPath,
+                networkUrl: msg.mediaUrl,
+                thumbBase64: msg.mediaThumb,
+                useBlurredThumb: needsDl,
+                borderRadius: BorderRadius.zero,
+                expandToFill: true,
+                fallbackColor: AppColors.surfaceMuted,
               ),
       ),
     );

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
@@ -20,6 +19,7 @@ import '../../core/services/local_cache_repository.dart';
 import '../../core/utils/country_utils.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/alanya_phone_field.dart';
+import '../../widgets/image_message_preview.dart';
 import '../../widgets/video_message_preview.dart';
 import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
@@ -840,23 +840,22 @@ class _MediaCardState extends State<_MediaCard> {
 
     final placeholder = context.colors.surfaceContainerHighest;
     final hasLocal = msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
-    if (hasLocal) {
-      return Image.file(File(msg.localMediaPath!),
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: placeholder));
-    }
-    final url = msg.mediaUrl;
-    if (url != null && url.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: url,
-        width: 80,
-        height: 80,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => Container(color: placeholder),
-        errorWidget: (context, url, error) => Container(color: placeholder),
-      );
-    }
-    return Container(color: placeholder);
+    final myId = context.read<ChatProvider>().repository.myId;
+    final needsDl = !msg.isViewOnce &&
+        msg.senderID != myId &&
+        !hasLocal &&
+        msg.mediaUrl != null &&
+        msg.mediaUrl!.isNotEmpty;
+
+    return ImageMessagePreview(
+      localPath: msg.localMediaPath,
+      networkUrl: msg.mediaUrl,
+      thumbBase64: msg.mediaThumb,
+      useBlurredThumb: needsDl,
+      borderRadius: BorderRadius.zero,
+      expandToFill: true,
+      fallbackColor: placeholder,
+    );
   }
 
   Future<void> _openDoc(LocalMessage msg) async {

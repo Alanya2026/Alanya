@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +35,7 @@ import 'pdf_viewer_screen.dart';
 import 'chat/link_preview_card.dart';
 import '../../core/services/pdf_thumbnail_service.dart';
 import '../../widgets/video_message_preview.dart';
+import '../../widgets/image_message_preview.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -44,6 +44,7 @@ import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/typing_indicator.dart';
+import '../../widgets/chat/chat_wallpaper.dart';
 import '../../widgets/chat/message_status_icon.dart';
 import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
@@ -407,128 +408,133 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       child: Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
       appBar: _selectionMode ? _buildSelectionAppBar() : _buildChatAppBar(partnerTyping),
-      body: Column(
+      body: Stack(
         children: [
-          const OfflineBanner(wrapSafeArea: false),
-          _buildPinnedBanner(),
-          Expanded(
-            child: convId == null
-                ? (widget.userId != null && !widget.isGroup
-                    ? EmptyState(
-                        icon: Icons.waving_hand_outlined,
-                        title: context.l10n.noMessages,
-                        message:
-                            context.l10n.sayHelloToStartTheConversation,
-                      )
-                    : EmptyState(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        title: context.l10n.conversationNotFound,
-                      ))
-                : StreamBuilder<List<LocalMessage>>(
-                    stream: _chat.watchMessages(convId),
-                    builder: (context, snapshot) {
-                      final messages = snapshot.data ?? const [];
-                      _currentMessages = messages;
-                      if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
-                        return const LoadingState();
-                      }
-                      // Journal d'appels : discussions 1-1 uniquement.
-                      final callsStream = (!widget.isGroup && widget.userId != null)
-                          ? context.read<LocalCacheRepository>().watchCalls()
-                          : Stream<List<LocalCall>>.value(const []);
-                      return StreamBuilder<List<LocalCall>>(
-                        stream: callsStream,
-                        builder: (context, callSnap) {
-                          final calls = (callSnap.data ?? const <LocalCall>[])
-                              .where((c) =>
-                                  (c.idCaller == _myId && c.idReceiver == widget.userId) ||
-                                  (c.idCaller == widget.userId && c.idReceiver == _myId))
-                              .toList();
-
-                          if (messages.isEmpty && calls.isEmpty && !partnerTyping) {
-                            return EmptyState(
-                              icon: Icons.waving_hand_outlined,
-                              title: context.l10n.noMessages,
-                              message: context.l10n.sayHelloToStartTheConversation,
-                            );
+          const Positioned.fill(child: ChatWallpaper()),
+          Column(
+            children: [
+              const OfflineBanner(wrapSafeArea: false),
+              _buildPinnedBanner(),
+              Expanded(
+                child: convId == null
+                    ? (widget.userId != null && !widget.isGroup
+                        ? EmptyState(
+                            icon: Icons.waving_hand_outlined,
+                            title: context.l10n.noMessages,
+                            message:
+                                context.l10n.sayHelloToStartTheConversation,
+                          )
+                        : EmptyState(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            title: context.l10n.conversationNotFound,
+                          ))
+                    : StreamBuilder<List<LocalMessage>>(
+                        stream: _chat.watchMessages(convId),
+                        builder: (context, snapshot) {
+                          final messages = snapshot.data ?? const [];
+                          _currentMessages = messages;
+                          if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
+                            return const LoadingState();
                           }
-                          // Auto-scroll si déjà en bas (nouveau message, frappe…).
-                          if (!_suppressAutoScroll && _atBottom) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              _scrollToBottom();
-                            });
-                          }
-                          // Fil unifié : messages/albums + appels, triés par date.
-                          final feed = <Object>[
-                            ...groupMessagesForDisplay(messages),
-                            ...calls,
-                          ]..sort((a, b) => _feedTime(a).compareTo(_feedTime(b)));
-                          // reverse: true → index 0 en bas ; on inverse pour afficher
-                          // les récents près de la zone de saisie.
-                          final reversedFeed = feed.reversed.toList();
+                          // Journal d'appels : discussions 1-1 uniquement.
+                          final callsStream = (!widget.isGroup && widget.userId != null)
+                              ? context.read<LocalCacheRepository>().watchCalls()
+                              : Stream<List<LocalCall>>.value(const []);
+                          return StreamBuilder<List<LocalCall>>(
+                            stream: callsStream,
+                            builder: (context, callSnap) {
+                              final calls = (callSnap.data ?? const <LocalCall>[])
+                                  .where((c) =>
+                                      (c.idCaller == _myId && c.idReceiver == widget.userId) ||
+                                      (c.idCaller == widget.userId && c.idReceiver == _myId))
+                                  .toList();
 
-                          return ListView.builder(
-                            controller: _scrollController,
-                            reverse: true,
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            itemCount: reversedFeed.length + 1,
-                            itemBuilder: (context, index) {
-                              if (index == 0) {
-                                return TypingBubbleSlot(visible: partnerTyping);
-                              }
-                              final feedIndex = index - 1;
-                              final item = reversedFeed[feedIndex];
-                              final itemTime = _feedTime(item);
-                              final olderTime = feedIndex < reversedFeed.length - 1
-                                  ? _feedTime(reversedFeed[feedIndex + 1])
-                                  : null;
-                              final showDate = olderTime == null ||
-                                  !_sameDay(olderTime.toLocal(), itemTime.toLocal());
-
-                              // Entrée d'appel (journal type WhatsApp).
-                              if (item is LocalCall) {
-                                return Column(
-                                  children: [
-                                    if (showDate) _buildDateSeparator(itemTime.toLocal()),
-                                    _buildCallBubble(item),
-                                  ],
+                              if (messages.isEmpty && calls.isEmpty && !partnerTyping) {
+                                return EmptyState(
+                                  icon: Icons.waving_hand_outlined,
+                                  title: context.l10n.noMessages,
+                                  message: context.l10n.sayHelloToStartTheConversation,
                                 );
                               }
-
-                              final chatItem = item as ChatListItem;
-                              final msg = switch (chatItem) {
-                                ChatListSingle(:final message) => message,
-                                ChatListAlbum(:final messages) => messages.last,
-                              };
-                              if (msg.msgID == _pendingScrollMsgId) {
+                              // Auto-scroll si déjà en bas (nouveau message, frappe…).
+                              if (!_suppressAutoScroll && _atBottom) {
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  _tryRevealMessage(msg.msgID);
+                                  _scrollToBottom();
                                 });
                               }
-                              return Column(
-                                key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
-                                children: [
-                                  if (showDate) _buildDateSeparator(itemTime.toLocal()),
-                                  switch (chatItem) {
-                                    ChatListSingle(:final message) =>
-                                      _buildMessageBubble(message, message.senderID == _myId),
-                                    ChatListAlbum(:final messages) =>
-                                      _buildAlbumBubble(messages, messages.first.senderID == _myId),
-                                  },
-                                ],
+                              // Fil unifié : messages/albums + appels, triés par date.
+                              final feed = <Object>[
+                                ...groupMessagesForDisplay(messages),
+                                ...calls,
+                              ]..sort((a, b) => _feedTime(a).compareTo(_feedTime(b)));
+                              // reverse: true → index 0 en bas ; on inverse pour afficher
+                              // les récents près de la zone de saisie.
+                              final reversedFeed = feed.reversed.toList();
+
+                              return ListView.builder(
+                                controller: _scrollController,
+                                reverse: true,
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                itemCount: reversedFeed.length + 1,
+                                itemBuilder: (context, index) {
+                                  if (index == 0) {
+                                    return TypingBubbleSlot(visible: partnerTyping);
+                                  }
+                                  final feedIndex = index - 1;
+                                  final item = reversedFeed[feedIndex];
+                                  final itemTime = _feedTime(item);
+                                  final olderTime = feedIndex < reversedFeed.length - 1
+                                      ? _feedTime(reversedFeed[feedIndex + 1])
+                                      : null;
+                                  final showDate = olderTime == null ||
+                                      !_sameDay(olderTime.toLocal(), itemTime.toLocal());
+
+                                  // Entrée d'appel (journal type WhatsApp).
+                                  if (item is LocalCall) {
+                                    return Column(
+                                      children: [
+                                        if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                        _buildCallBubble(item),
+                                      ],
+                                    );
+                                  }
+
+                                  final chatItem = item as ChatListItem;
+                                  final msg = switch (chatItem) {
+                                    ChatListSingle(:final message) => message,
+                                    ChatListAlbum(:final messages) => messages.last,
+                                  };
+                                  if (msg.msgID == _pendingScrollMsgId) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      _tryRevealMessage(msg.msgID);
+                                    });
+                                  }
+                                  return Column(
+                                    key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
+                                    children: [
+                                      if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                      switch (chatItem) {
+                                        ChatListSingle(:final message) =>
+                                          _buildMessageBubble(message, message.senderID == _myId),
+                                        ChatListAlbum(:final messages) =>
+                                          _buildAlbumBubble(messages, messages.first.senderID == _myId),
+                                      },
+                                    ],
+                                  );
+                                },
                               );
                             },
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
+              ),
+              if (!_selectionMode && _replyTo != null) _buildReplyBanner(),
+              if (!_selectionMode && _inputBlocked) _buildBlockedBanner(),
+              if (!_selectionMode && _showFormatBar && !_inputBlocked) _buildFormatBar(),
+              if (!_selectionMode) _buildInputBar(),
+              if (!_selectionMode && _showEmoji) _buildEmojiPicker(),
+            ],
           ),
-          if (!_selectionMode && _replyTo != null) _buildReplyBanner(),
-          if (!_selectionMode && _inputBlocked) _buildBlockedBanner(),
-          if (!_selectionMode && _showFormatBar && !_inputBlocked) _buildFormatBar(),
-          if (!_selectionMode) _buildInputBar(),
-          if (!_selectionMode && _showEmoji) _buildEmojiPicker(),
         ],
       ),
       ),

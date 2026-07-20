@@ -12,6 +12,7 @@ import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
 import '../../utils/media_staging.dart';
 import '../../utils/upload_errors.dart';
+import '../image_thumbnail_service.dart';
 import '../video_thumbnail_service.dart';
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../../talky_models.dart';
@@ -218,11 +219,9 @@ class MessageSender {
     final localNow = DateTime.now();
     final now = localNow.toUtc();
 
-    // Vidéo : réutilise la vignette fournie (transfert) sinon la génère depuis
-    // le fichier local si disponible.
-    mediaThumb ??= type == 2 && localMediaPath != null
-        ? await VideoThumbnailService.base64ForFile(localMediaPath)
-        : null;
+    // Image / vidéo : réutilise la vignette fournie (transfert) sinon la génère
+    // depuis le fichier local si disponible (aperçu destinataire hors DL).
+    mediaThumb ??= await _mediaThumbFor(type, localMediaPath);
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -289,10 +288,8 @@ class MessageSender {
     }
     final name = mediaName ?? uploadFile.path.split('/').last;
 
-    // Vidéo : génère une mini-vignette base64 transmise au destinataire (aperçu
-    // instantané et hors ligne, sans télécharger la vidéo).
-    final mediaThumb =
-        type == 2 ? await VideoThumbnailService.base64ForFile(uploadFile.path) : null;
+    // Image / vidéo : mini-vignette base64 pour l'aperçu destinataire (hors DL).
+    final mediaThumb = await _mediaThumbFor(type, uploadFile.path);
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -389,9 +386,7 @@ class MessageSender {
         caption: effectiveCaption,
       );
 
-      final mediaThumb = item.type == 2
-          ? await VideoThumbnailService.base64ForFile(item.file.path)
-          : null;
+      final mediaThumb = await _mediaThumbFor(item.type, item.file.path);
 
       await _dao.upsertMessage(LocalMessagesCompanion.insert(
         clientId: clientId,
@@ -511,7 +506,7 @@ class MessageSender {
             pendingUploadPath: const Value(null),
           ));
 
-          // Vignette base64 déjà générée et stockée à l'insertion (vidéos) :
+          // Vignette base64 déjà générée et stockée à l'insertion (image/vidéo) :
           // on la relit pour la transmettre au destinataire.
           final row = await (_db.select(_db.localMessages)
                 ..where((m) => m.clientId.equals(clientId)))
@@ -596,6 +591,14 @@ class MessageSender {
     }
     final workers = concurrency.clamp(1, items.length);
     await Future.wait(List.generate(workers, (_) => worker()));
+  }
+
+  /// Vignette base64 pour image (type 1) ou vidéo (type 2).
+  Future<String?> _mediaThumbFor(int type, String? path) async {
+    if (path == null || path.isEmpty) return null;
+    if (type == 1) return ImageThumbnailService.base64ForFile(path);
+    if (type == 2) return VideoThumbnailService.base64ForFile(path);
+    return null;
   }
 
   void emitSend({

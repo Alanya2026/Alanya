@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,6 +12,7 @@ import '../../core/utils/media_album.dart';
 import '../../core/utils/media_viewer_items.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/image_message_preview.dart';
 import '../../widgets/video_message_preview.dart';
 import 'forward_message_screen.dart';
 import 'media_viewer_screen.dart';
@@ -249,28 +249,16 @@ class _AlbumListTile extends StatelessWidget {
                     playPadding: 10,
                     hidePlayIcon: needsDl,
                   )
-                else if (hasLocal)
-                  Image.file(File(message.localMediaPath!), fit: BoxFit.cover)
-                else if (message.mediaUrl != null &&
-                    message.mediaUrl!.isNotEmpty)
-                  CachedNetworkImage(
-                    imageUrl: message.mediaUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      color: context.semantic.surfaceMuted,
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: context.semantic.surfaceMuted,
-                      child: Icon(
-                        Icons.broken_image,
-                        size: 48,
-                        color: context.colors.onSurfaceVariant,
-                      ),
-                    ),
-                  )
                 else
-                  Container(color: AppColors.immersiveBackground),
+                  ImageMessagePreview(
+                    localPath: message.localMediaPath,
+                    networkUrl: message.mediaUrl,
+                    thumbBase64: message.mediaThumb,
+                    useBlurredThumb: needsDl,
+                    borderRadius: BorderRadius.zero,
+                    expandToFill: true,
+                    fallbackColor: context.semantic.surfaceMuted,
+                  ),
                 if (needsDl)
                   Center(
                     child: Container(
