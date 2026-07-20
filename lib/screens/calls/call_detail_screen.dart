@@ -124,7 +124,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       }
       if (mounted) setState(() => _isFavorite = next);
     } catch (e) {
-      _snack('Action impossible : $e', error: true);
+      _snack(context.l10n.actionFailedWithError('$e'), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -144,7 +144,10 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   Widget build(BuildContext context) {
     final avatar = widget.user.avatarUrl;
     return Scaffold(
-      appBar: AppBar(),
+      backgroundColor: context.semantic.surfaceMuted,
+      appBar: AppBar(
+        backgroundColor: context.semantic.surfaceMuted,
+      ),
       body: ListView(
         children: [
           AppSpacing.vGapSm,
@@ -193,24 +196,24 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
               children: [
                 ContactActionButton(
                     icon: Icons.call,
-                    label: 'Appel',
+                    label: context.l10n.callNoun,
                     onTap: () => _initiateCall(isVideo: false)),
                 AppSpacing.hGapSm,
                 ContactActionButton(
                     icon: Icons.videocam,
-                    label: 'Vidéo',
+                    label: context.l10n.video2,
                     onTap: () => _initiateCall(isVideo: true)),
                 AppSpacing.hGapSm,
                 ContactActionButton(
                     icon: Icons.sms_outlined,
-                    label: 'Message',
+                    label: context.l10n.messageNoun,
                     onTap: _openMessage),
                 AppSpacing.hGapSm,
                 ContactActionButton(
                   icon: _isFavorite ? Icons.star : Icons.star_border,
-                  label: _isFavorite ? 'Favori' : 'Ajouter',
+                  label: _isFavorite ? context.l10n.favoriteSingular : context.l10n.add,
                   color: _isFavorite
-                      ? Colors.amber.shade700
+                      ? context.semantic.warning
                       : context.colors.primary,
                   onTap: _toggleFavorite,
                 ),
@@ -227,18 +230,24 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   Widget _buildCallInfo() {
     final c = widget.call;
     final missed = c.isMissed;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: AppSpacing.screenH,
       padding: AppSpacing.card,
       decoration: BoxDecoration(
-        color: context.colors.surface,
+        color: isDark
+            ? context.colors.surfaceContainerHigh
+            : context.colors.surface,
         borderRadius: AppRadius.brMd,
-        boxShadow: AppShadows.subtle,
+        boxShadow: isDark ? null : AppShadows.subtle,
+        border: isDark
+            ? Border.all(color: context.colors.outline.withValues(alpha: 0.55))
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Dernier appel', style: context.text.titleMedium),
+          Text(context.l10n.lastCall, style: context.text.titleMedium),
           AppSpacing.vGapMd,
           _infoRow(
             icon: missed ? Icons.call_missed : Icons.call_made,
@@ -249,7 +258,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           _infoRow(
             icon: c.isVideo ? Icons.videocam : Icons.call,
             iconColor: context.colors.primary,
-            label: c.isVideo ? 'Appel vidéo' : 'Appel audio',
+            label: c.isVideo ? context.l10n.videoCall : context.l10n.audioCall,
           ),
           AppSpacing.vGapSm,
           _infoRow(
@@ -262,7 +271,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
             _infoRow(
               icon: Icons.timer_outlined,
               iconColor: context.colors.onSurfaceVariant,
-              label: 'Durée ${c.formattedDuration}',
+              label: context.l10n.durationLabel(c.formattedDuration),
             ),
           ],
         ],
@@ -292,11 +301,11 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       if (date.day == now.day &&
           date.month == now.month &&
           date.year == now.year) {
-        return "Aujourd'hui à $hm";
+        return context.l10n.todayAtTime(hm);
       }
-      return '${date.day}/${date.month}/${date.year} à $hm';
+      return context.l10n.dateAtTimeFull(date.day, date.month, date.year, hm);
     } catch (_) {
-      return 'Récemment';
+      return context.l10n.recently;
     }
   }
 }

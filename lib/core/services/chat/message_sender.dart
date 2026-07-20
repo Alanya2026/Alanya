@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../../theme/locale_controller.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
@@ -500,7 +501,9 @@ class MessageSender {
           );
           _setUploadProgress(clientId, null);
           final url = res['url'] as String?;
-          if (url == null) throw Exception('upload sans url');
+          if (url == null) {
+            throw Exception(LocaleController.instance.l10n.invalidUploadResponse);
+          }
 
           await (_db.update(_db.localMessages)..where((m) => m.clientId.equals(clientId)))
               .write(LocalMessagesCompanion(

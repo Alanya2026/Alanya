@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../core/theme/app_colors.dart';
+import '../core/theme/app_theme.dart';
 import '../core/utils/avatar_utils.dart';
 
 /// Avatar circulaire encadré d'un anneau segmenté (un arc par statut).
@@ -40,6 +40,7 @@ class StatusRingAvatar extends StatelessWidget {
     final showPreview = previewUrl != null && hasValidAvatarUrl(previewUrl);
     final showAvatar = hasValidAvatarUrl(avatarUrl);
 
+    final colors = context.colors;
     final center = showPreview
         ? CircleAvatar(
             radius: inner / 2,
@@ -48,7 +49,7 @@ class StatusRingAvatar extends StatelessWidget {
           )
         : CircleAvatar(
             radius: inner / 2,
-            backgroundColor: AppColors.outlineStrong,
+            backgroundColor: colors.surfaceContainerHighest,
             backgroundImage: showAvatar
                 ? CachedNetworkImageProvider(avatarUrl!)
                 : null,
@@ -61,7 +62,7 @@ class StatusRingAvatar extends StatelessWidget {
                     style: TextStyle(
                       fontSize: inner * 0.4,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondary,
+                      color: colors.onSurfaceVariant,
                     ),
                   )
                 : null,
@@ -85,6 +86,7 @@ class StatusRingAvatar extends StatelessWidget {
               unseen: unseenCount.clamp(0, totalCount),
               strokeWidth: strokeWidth,
               gapDeg: gapDeg,
+              seenColor: colors.outline,
             ),
           ),
           center,
@@ -133,17 +135,18 @@ class _RingPainter extends CustomPainter {
   final int unseen;
   final double strokeWidth;
   final double gapDeg;
+  final Color seenColor;
 
   _RingPainter({
     required this.total,
     required this.unseen,
     required this.strokeWidth,
     required this.gapDeg,
+    required this.seenColor,
   });
 
-  // Couleurs intentionnelles de l'anneau de statut (style WhatsApp).
+  // Vert non-vu intentionnel (style WhatsApp) — indépendant du thème.
   static const _unseenColor = Color(0xFF25D366);
-  static const _seenColor = AppColors.outlineStrong;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -159,7 +162,7 @@ class _RingPainter extends CustomPainter {
     double start = -math.pi / 2 + gapRad / 2;
     for (var i = 0; i < n; i++) {
       final paint = Paint()
-        ..color = i < unseen ? _unseenColor : _seenColor
+        ..color = i < unseen ? _unseenColor : seenColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
@@ -173,5 +176,6 @@ class _RingPainter extends CustomPainter {
       old.total != total ||
       old.unseen != unseen ||
       old.strokeWidth != strokeWidth ||
-      old.gapDeg != gapDeg;
+      old.gapDeg != gapDeg ||
+      old.seenColor != seenColor;
 }

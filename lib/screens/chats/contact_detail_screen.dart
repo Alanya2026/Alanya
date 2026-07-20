@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
@@ -54,6 +55,10 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   bool _isBlocked = false;
   bool _blockedByThem = false;
   bool _busy = false;
+  /// 1-1 locale avec [widget.userId] si [widget.conversationId] est absent.
+  int? _resolvedConvId;
+
+  int? get _effectiveConvId => widget.conversationId ?? _resolvedConvId;
 
   @override
   void initState() {
@@ -62,8 +67,28 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     _load();
   }
 
+  Future<void> _resolveDirectConversation() async {
+    if (widget.conversationId != null) return;
+    final myId = context.read<AuthProvider>().currentUser?.alanyaID;
+    if (myId == null) return;
+    try {
+      final convs = await context
+          .read<ChatProvider>()
+          .repository
+          .dao
+          .getAllConversations();
+      if (!mounted) return;
+      final id = findLocalDirectConversationId(convs, myId, widget.userId);
+      if (mounted) setState(() => _resolvedConvId = id);
+    } catch (e, st) {
+      AppLog.e('ContactDetail', 'Résolution conversation 1-1 échouée', e, st);
+    }
+  }
+
   Future<void> _load() async {
     final cache = context.read<LocalCacheRepository>();
+    // Résoudre tôt pour que Médias / actions ciblent la bonne 1-1.
+    await _resolveDirectConversation();
 
     if (widget.initialName.isNotEmpty || widget.initialAvatar.isNotEmpty) {
       setState(() {
@@ -145,9 +170,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     if (_contact == null) return;
     if (!mounted) return;
 
-    // Depuis les contacts préférés (ou autre entrée sans conversationId),
-    // retrouver la discussion 1-1 existante pour ouvrir l'historique.
-    int? convId = widget.conversationId;
+    // Utiliser la conv fournie ou celle résolue au chargement ; sinon re-chercher.
+    int? convId = _effectiveConvId;
     if (convId == null) {
       final myId =
           context.read<AuthProvider>().currentUser?.alanyaID;
@@ -187,7 +211,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       }
       if (mounted) setState(() => _isFavorite = next);
     } catch (e) {
-      _snack('Action impossible : $e', error: true);
+      _snack(context.l10n.actionFailedWithError('$e'), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -197,11 +221,11 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     if (_busy) return;
     final next = !_isBlocked;
     final confirmed = await _confirm(
-      title: next ? 'Bloquer ce contact ?' : 'Débloquer ce contact ?',
+      title: next ? context.l10n.blockThisContact : context.l10n.unblockThisContact,
       message: next
-          ? 'Il ne pourra plus vous envoyer de messages ni vous appeler.'
-          : 'Il pourra de nouveau vous contacter.',
-      confirmLabel: next ? 'Bloquer' : 'Débloquer',
+          ? context.l10n.theyWillNoLongerBeAble
+          : context.l10n.heCanContactYouAgain,
+      confirmLabel: next ? context.l10n.commonBlock : context.l10n.unblock,
       destructive: next,
     );
     if (confirmed != true) return;
@@ -217,23 +241,23 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         if (next) _blockedByThem = false;
       });
     } catch (e) {
-      _snack('Action impossible : $e', error: true);
+      _snack(context.l10n.actionFailedWithError('$e'), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _clearMessages() async {
-    final convId = widget.conversationId;
+    final convId = _effectiveConvId;
     if (convId == null) {
-      _snack('Aucune discussion à effacer');
+      _snack(context.l10n.noConversationToClear);
       return;
     }
     final confirmed = await _confirm(
-      title: 'Effacer les messages ?',
+      title: context.l10n.clearMessages,
       message:
-          'Les messages locaux de cette discussion seront supprimés.',
-      confirmLabel: 'Effacer',
+          context.l10n.localMessagesInThisChatWill,
+      confirmLabel: context.l10n.clearAction,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
@@ -241,19 +265,19 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     await (dao.db.delete(dao.db.localMessages)
           ..where((m) => m.conversationID.equals(convId)))
         .go();
-    if (mounted) _snack('Messages effacés');
+    if (mounted) _snack(context.l10n.messagesCleared);
   }
 
   Future<void> _deleteConversation() async {
-    final convId = widget.conversationId;
+    final convId = _effectiveConvId;
     if (convId == null) {
-      _snack('Aucune discussion à supprimer');
+      _snack(context.l10n.noConversationToDelete);
       return;
     }
     final confirmed = await _confirm(
-      title: 'Supprimer la discussion ?',
-      message: 'L\'historique sera supprimé.',
-      confirmLabel: 'Supprimer',
+      title: context.l10n.deleteConversation,
+      message: context.l10n.historyWillBeDeleted,
+      confirmLabel: context.l10n.commonDelete,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
@@ -263,8 +287,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       AppLog.e('ContactDetail', 'deleteConversation serveur échouée', e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Discussion supprimée localement (serveur injoignable)'),
+          SnackBar(
+            content: Text(context.l10n.conversationDeletedLocallyServerUnreachable),
           ),
         );
       }
@@ -292,7 +316,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -314,7 +338,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
           content: Text(msg),
-          backgroundColor: error ? AppColors.error : null),
+          backgroundColor: error ? context.colors.error : null),
     );
   }
 
@@ -345,14 +369,14 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'block',
-                child: Text(_isBlocked ? 'Débloquer' : 'Bloquer'),
+                child: Text(_isBlocked ? context.l10n.unblock : context.l10n.commonBlock),
               ),
-              if (widget.conversationId != null) ...const [
+              if (_effectiveConvId != null) ...[
                 PopupMenuItem(
-                    value: 'clear', child: Text('Effacer les messages')),
+                    value: 'clear', child: Text(context.l10n.clearMessages2)),
                 PopupMenuItem(
                     value: 'delete',
-                    child: Text('Supprimer la discussion')),
+                    child: Text(context.l10n.deleteConversation2)),
               ],
             ],
           ),
@@ -375,27 +399,28 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         AppSpacing.vGapXl,
         _PrimaryActions(
           callsDisabled: _isBlocked || _blockedByThem,
-          onCall: () => _snack('Appel à venir'),
-          onVideo: () => _snack('Vidéo à venir'),
+          onCall: () => _snack(context.l10n.callComingSoon),
+          onVideo: () => _snack(context.l10n.videoComingSoon),
           onMessage: _openChat,
         ),
         AppSpacing.vGapLg,
         _QuickActionsCard(
           isFavorite: _isFavorite,
           onToggleFavorite: _toggleFavorite,
-          onSearch: () => _snack('Recherche à venir'),
+          onSearch: () => _snack(context.l10n.searchComingSoon),
           onClear: _clearMessages,
         ),
         AppSpacing.vGapLg,
         _MediaCard(
-          conversationId: widget.conversationId,
+          key: ValueKey('media-${_effectiveConvId ?? 'none'}'),
+          conversationId: _effectiveConvId,
           conversationName: u.nom,
         ),
         AppSpacing.vGapLg,
         _DangerActionsCard(
           isBlocked: _isBlocked,
           isFavorite: _isFavorite,
-          hasConversation: widget.conversationId != null,
+          hasConversation: _effectiveConvId != null,
           onBlock: _toggleBlock,
           onDeleteConversation: _deleteConversation,
           onRemoveContact: _toggleFavorite,
@@ -478,7 +503,7 @@ class _PrimaryActions extends StatelessWidget {
         Expanded(
           child: _PrimaryActionTile(
             icon: Icons.call,
-            label: 'Appel',
+            label: context.l10n.callNoun,
             onTap: callsDisabled ? null : onCall,
           ),
         ),
@@ -486,12 +511,12 @@ class _PrimaryActions extends StatelessWidget {
         Expanded(
           child: _PrimaryActionTile(
             icon: Icons.videocam,
-            label: 'Vidéo',
+            label: context.l10n.video2,
             onTap: callsDisabled ? null : onVideo,
           ),
         ),
         AppSpacing.hGapMd,
-        Expanded(child: _PrimaryActionTile(icon: Icons.chat_bubble, label: 'Message', onTap: onMessage)),
+        Expanded(child: _PrimaryActionTile(icon: Icons.chat_bubble, label: context.l10n.messageNoun, onTap: onMessage)),
       ],
     );
   }
@@ -559,7 +584,7 @@ class _QuickActionsCard extends StatelessWidget {
           Expanded(
             child: _QuickAction(
               icon: isFavorite ? Icons.star : Icons.star_border,
-              label: isFavorite ? 'Favori' : 'Ajouter',
+              label: isFavorite ? context.l10n.favoriteSingular : context.l10n.add,
               iconColor: isFavorite ? context.semantic.warning : context.colors.primary,
               bg: isFavorite ? context.semantic.warningContainer : context.colors.primaryContainer,
               onTap: onToggleFavorite,
@@ -568,7 +593,7 @@ class _QuickActionsCard extends StatelessWidget {
           Expanded(
             child: _QuickAction(
               icon: Icons.search,
-              label: 'Rechercher',
+              label: context.l10n.commonSearch,
               iconColor: context.colors.primary,
               bg: context.colors.primaryContainer,
               onTap: onSearch,
@@ -577,7 +602,7 @@ class _QuickActionsCard extends StatelessWidget {
           Expanded(
             child: _QuickAction(
               icon: Icons.cleaning_services,
-              label: 'Effacer',
+              label: context.l10n.clearAction,
               iconColor: context.colors.primary,
               bg: context.colors.primaryContainer,
               onTap: onClear,
@@ -636,13 +661,18 @@ class _QuickAction extends StatelessWidget {
 class _MediaCard extends StatefulWidget {
   final int? conversationId;
   final String conversationName;
-  const _MediaCard({required this.conversationId, required this.conversationName});
+  const _MediaCard({
+    super.key,
+    required this.conversationId,
+    required this.conversationName,
+  });
 
   @override
   State<_MediaCard> createState() => _MediaCardState();
 }
 
 class _MediaCardState extends State<_MediaCard> {
+  StreamSubscription<List<LocalMessage>>? _messagesSub;
   List<LocalMessage> _mediaMessages = [];
 
   @override
@@ -651,12 +681,19 @@ class _MediaCardState extends State<_MediaCard> {
     _init();
   }
 
-  Future<void> _init() async {
+  @override
+  void dispose() {
+    _messagesSub?.cancel();
+    super.dispose();
+  }
+
+  void _init() {
     final id = widget.conversationId;
     if (id == null) return;
     final chat = context.read<ChatProvider>();
-    await chat.repository.syncMessages(id);
-    chat.watchMessages(id).listen(_onMessages);
+    // Local-first : Drift immédiat, sync réseau en fond.
+    _messagesSub = chat.watchMessages(id).listen(_onMessages);
+    unawaited(chat.repository.syncMessages(id));
   }
 
   void _onMessages(List<LocalMessage> messages) {
@@ -681,7 +718,7 @@ class _MediaCardState extends State<_MediaCard> {
           Row(
             children: [
               Expanded(
-                child: Text('Médias, liens et docs', style: context.text.titleSmall),
+                child: Text(context.l10n.mediaLinksAndDocs, style: context.text.titleSmall),
               ),
               if (widget.conversationId != null)
                 InkWell(
@@ -698,7 +735,7 @@ class _MediaCardState extends State<_MediaCard> {
                     padding: const EdgeInsets.all(AppSpacing.xs),
                     child: Row(
                       children: [
-                        Text('Voir tout',
+                        Text(context.l10n.seeAll,
                             style: context.text.labelMedium?.copyWith(
                                 color: context.colors.primary,
                                 fontWeight: FontWeight.w600)),
@@ -715,7 +752,7 @@ class _MediaCardState extends State<_MediaCard> {
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   child: Center(
-                    child: Text('Aucun média partagé',
+                    child: Text(context.l10n.noSharedMedia,
                         style: context.text.bodySmall
                             ?.copyWith(color: context.colors.onSurfaceVariant)),
                   ),
@@ -780,7 +817,7 @@ class _MediaCardState extends State<_MediaCard> {
             child: Center(
               child: Text(style.extension,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                      color: AppColors.white, fontSize: 10, fontWeight: FontWeight.w700)),
             ),
           ),
         ),
@@ -797,14 +834,16 @@ class _MediaCardState extends State<_MediaCard> {
         playIconSize: 22,
         playPadding: 5,
         showDuration: false,
+        fallbackColor: context.colors.surfaceContainerHighest,
       );
     }
 
+    final placeholder = context.colors.surfaceContainerHighest;
     final hasLocal = msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
     if (hasLocal) {
       return Image.file(File(msg.localMediaPath!),
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: context.colors.surfaceContainerHighest));
+          errorBuilder: (_, __, ___) => Container(color: placeholder));
     }
     final url = msg.mediaUrl;
     if (url != null && url.isNotEmpty) {
@@ -813,11 +852,11 @@ class _MediaCardState extends State<_MediaCard> {
         width: 80,
         height: 80,
         fit: BoxFit.cover,
-        placeholder: (context, url) => Container(color: context.colors.surfaceContainerHighest),
-        errorWidget: (context, url, error) => Container(color: context.colors.surfaceContainerHighest),
+        placeholder: (context, url) => Container(color: placeholder),
+        errorWidget: (context, url, error) => Container(color: placeholder),
       );
     }
-    return Container(color: context.colors.surfaceContainerHighest);
+    return Container(color: placeholder);
   }
 
   Future<void> _openDoc(LocalMessage msg) async {
@@ -856,9 +895,9 @@ class _MediaCardState extends State<_MediaCard> {
     if (path == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Impossible de télécharger le fichier'),
-              backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text(context.l10n.unableToDownloadTheFile),
+              backgroundColor: context.colors.error),
         );
       }
       return;
@@ -868,8 +907,8 @@ class _MediaCardState extends State<_MediaCard> {
     if (res.type != ResultType.done && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Aucune app pour ouvrir ce fichier (${res.message})'),
-          backgroundColor: AppColors.error,
+          content: Text(context.l10n.cannotOpenFileApp(res.message)),
+          backgroundColor: context.colors.error,
         ),
       );
     }
@@ -879,7 +918,8 @@ class _MediaCardState extends State<_MediaCard> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+      builder: (ctx) =>
+          Center(child: CircularProgressIndicator(color: ctx.colors.primary)),
     );
   }
 }
@@ -907,14 +947,14 @@ class _DangerActionsCard extends StatelessWidget {
     final rows = <Widget>[
       _DangerRow(
         icon: CupertinoIcons.nosign,
-        label: isBlocked ? 'Débloquer le contact' : 'Bloquer le contact',
+        label: isBlocked ? context.l10n.unblockContact : context.l10n.blockContact,
         onTap: onBlock,
       ),
       if (hasConversation) ...[
         _DangerDivider(),
         _DangerRow(
           icon: Icons.delete_outline,
-          label: 'Supprimer la discussion',
+          label: context.l10n.deleteConversation2,
           onTap: onDeleteConversation,
         ),
       ],
@@ -922,7 +962,7 @@ class _DangerActionsCard extends StatelessWidget {
         _DangerDivider(),
         _DangerRow(
           icon: Icons.person_remove_outlined,
-          label: 'Retirer des contacts',
+          label: context.l10n.removeFromContacts,
           onTap: onRemoveContact,
         ),
       ],
@@ -946,12 +986,12 @@ class _DangerRow extends StatelessWidget {
             horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.error, size: AppIconSize.md),
+            Icon(icon, color: context.colors.error, size: AppIconSize.md),
             AppSpacing.hGapMd,
             Expanded(
               child: Text(label,
                   style: context.text.bodyLarge?.copyWith(
-                      color: AppColors.error, fontWeight: FontWeight.w600)),
+                      color: context.colors.error, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -990,15 +1030,15 @@ class _ErrorState extends StatelessWidget {
           AppSpacing.vGapMd,
           Text(
             name.isNotEmpty
-                ? 'Impossible de charger $name'
-                : 'Contact introuvable',
+                ? context.l10n.unableToLoadNamed(name)
+                : context.l10n.contactNotFound,
             style: context.text.bodyMedium
                 ?.copyWith(color: context.colors.onSurfaceVariant),
           ),
           AppSpacing.vGapLg,
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Retour'),
+            child: Text(context.l10n.back),
           ),
         ],
       ),
@@ -1017,11 +1057,19 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: context.colors.surface,
+        // En sombre, `surface` est plus foncé que `surfaceMuted` (fond page) :
+        // on élève la carte pour garder le contraste carte / fond.
+        color: isDark
+            ? context.colors.surfaceContainerHigh
+            : context.colors.surface,
         borderRadius: AppRadius.brMd,
-        boxShadow: AppShadows.subtle,
+        boxShadow: isDark ? null : AppShadows.subtle,
+        border: isDark
+            ? Border.all(color: context.colors.outline.withValues(alpha: 0.55))
+            : null,
       ),
       child: Padding(padding: padding, child: child),
     );

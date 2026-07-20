@@ -48,6 +48,7 @@ class CountryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -55,7 +56,9 @@ class CountryRow extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           country,
-          style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );

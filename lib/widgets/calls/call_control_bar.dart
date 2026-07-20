@@ -85,7 +85,7 @@ class CallControlBar extends StatelessWidget {
                   icon: isMuted ? CupertinoIcons.mic_off : CupertinoIcons.mic_solid,
                   active: isMuted,
                   useVideoChrome: useVideoChrome,
-                  semanticsLabel: isMuted ? 'Activer le micro' : 'Couper le micro',
+                  semanticsLabel: isMuted ? context.l10n.unmuteMic : context.l10n.muteMic,
                   onTap: () {
                     HapticFeedback.selectionClick();
                     onMute();
@@ -97,7 +97,7 @@ class CallControlBar extends StatelessWidget {
                     icon: isVideoOn ? Icons.videocam : Icons.videocam_off,
                     active: !isVideoOn,
                     useVideoChrome: useVideoChrome,
-                    semanticsLabel: isVideoOn ? 'Couper la caméra' : 'Activer la caméra',
+                    semanticsLabel: isVideoOn ? context.l10n.turnOffCamera : context.l10n.enableCamera,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onCamera();
@@ -110,7 +110,7 @@ class CallControlBar extends StatelessWidget {
                         : CupertinoIcons.speaker_2,
                     active: isSpeakerOn,
                     useVideoChrome: useVideoChrome,
-                    semanticsLabel: isSpeakerOn ? 'Désactiver le haut-parleur' : 'Activer le haut-parleur',
+                    semanticsLabel: isSpeakerOn ? context.l10n.turnOffSpeaker : context.l10n.turnOnSpeaker,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onSpeaker();
@@ -122,7 +122,7 @@ class CallControlBar extends StatelessWidget {
                     icon: CupertinoIcons.switch_camera,
                     active: false,
                     useVideoChrome: useVideoChrome,
-                    semanticsLabel: 'Changer de caméra',
+                    semanticsLabel: context.l10n.switchCamera,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onSwitchCam();
@@ -135,7 +135,7 @@ class CallControlBar extends StatelessWidget {
           AppSpacing.vGapLg,
           Semantics(
             button: true,
-            label: 'Raccrocher',
+            label: context.l10n.hangUp,
             child: GestureDetector(
               onTap: () {
                 HapticFeedback.mediumImpact();

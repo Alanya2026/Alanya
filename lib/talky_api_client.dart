@@ -17,6 +17,7 @@ import 'package:http_parser/http_parser.dart' show MediaType;
 import 'package:mime/mime.dart' show lookupMimeType;
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'talky_models.dart';
+import 'core/theme/locale_controller.dart';
 
 part 'api/auth_api.dart';
 part 'api/users_api.dart';
@@ -86,18 +87,21 @@ class TalkyApiClient {
             final retried = await request().timeout(timeout);
             return _parseResponse(retried);
           } catch (_) {
-            throw TalkyException('Session expirée', 401);
+            throw TalkyException(LocaleController.instance.l10n.sessionExpired, 401);
           }
         }
-        throw TalkyException('Non authentifié', 401);
+        throw TalkyException(LocaleController.instance.l10n.notAuthenticated, 401);
       }
       return _parseResponse(response);
     } on TalkyException {
       rethrow;
     } on TimeoutException {
-      throw TalkyException('Timeout réseau', 0);
+      throw TalkyException(LocaleController.instance.l10n.networkTimeout, 0);
     } catch (e) {
-      throw TalkyException('Erreur réseau: $e', 0);
+      throw TalkyException(
+        LocaleController.instance.l10n.networkErrorWithDetails('$e'),
+        0,
+      );
     }
   }
 
@@ -105,18 +109,25 @@ class TalkyApiClient {
     try {
       final body = jsonDecode(response.body);
       if (response.statusCode >= 400) {
-        final msg = body is Map ? (body['error'] ?? 'Erreur serveur') : 'Erreur serveur';
+        final msg = body is Map
+            ? (body['error'] ?? LocaleController.instance.l10n.serverError)
+            : LocaleController.instance.l10n.serverError;
         throw TalkyException(msg.toString(), response.statusCode);
       }
       return body;
     } catch (e) {
       if (e is TalkyException) rethrow;
-      throw TalkyException('Réponse invalide (${response.statusCode})', response.statusCode);
+      throw TalkyException(
+        LocaleController.instance.l10n.invalidResponseWithCode(response.statusCode),
+        response.statusCode,
+      );
     }
   }
 
   Future<void> _refreshAccessToken() async {
-    if (_refreshToken == null) throw TalkyException('Pas de refresh token', 401);
+    if (_refreshToken == null) {
+      throw TalkyException(LocaleController.instance.l10n.noRefreshToken, 401);
+    }
     final response = await _client.post(
       Uri.parse('$baseUrl/auth/refresh'),
       headers: {'Content-Type': 'application/json'},
@@ -128,7 +139,7 @@ class TalkyApiClient {
       _refreshToken = data['refreshToken'];
       reauthSocketIfConnected();
     } else {
-      throw TalkyException(data['error'] ?? 'Refresh échoué', response.statusCode);
+      throw TalkyException(data['error'] ?? LocaleController.instance.l10n.refreshFailed, response.statusCode);
     }
   }
 
@@ -289,7 +300,7 @@ class TalkyApiClient {
         ? '${response.body.substring(0, 120)}…'
         : response.body;
     return TalkyException(
-      snippet.isEmpty ? 'Upload échoué' : snippet,
+      snippet.isEmpty ? LocaleController.instance.l10n.uploadFailed : snippet,
       code,
     );
   }

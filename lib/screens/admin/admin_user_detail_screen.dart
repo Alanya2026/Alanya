@@ -40,7 +40,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
     if (mounted) {
       setState(() {
         _appBarName =
-            user.nom.isNotEmpty ? user.nom : 'Utilisateur';
+            user.nom.isNotEmpty ? user.nom : context.l10n.userFallback;
       });
     }
     Map<String, dynamic> activity = const {};
@@ -90,7 +90,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
               child: Padding(
                 padding: AppSpacing.card,
                 child: Text(
-                  'Erreur: ${snapshot.error ?? "données indisponibles"}',
+                  context.l10n.errorColon('${snapshot.error ?? context.l10n.dataUnavailable}'),
                   textAlign: TextAlign.center,
                   style: context.text.bodyMedium
                       ?.copyWith(color: context.colors.onSurface),
@@ -170,21 +170,21 @@ class _ProfileCard extends StatelessWidget {
           AppSpacing.vGapSm,
           _InfoRow(label: 'ID', value: '${user.alanyaID}'),
           _InfoRow(
-              label: 'Téléphone',
+              label: context.l10n.phone,
               value: AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone)),
-          _InfoRow(label: 'Email', value: user.email),
+          _InfoRow(label: context.l10n.email, value: user.email),
           if ((user.paysLibelle ?? '').isNotEmpty)
-            _InfoRow(label: 'Pays', value: user.paysLibelle!),
+            _InfoRow(label: context.l10n.country, value: user.paysLibelle!),
           _InfoRow(
-              label: 'Inscrit(e) le',
+              label: context.l10n.joinedOn,
               value: _formatDate(user.createdAt)),
           _InfoRow(
-              label: 'Dernière vue',
+              label: context.l10n.lastView,
               value: _formatDate(user.lastSeen)),
           if (user.exclus &&
               (user.excludeReason ?? '').isNotEmpty)
             _InfoRow(
-                label: 'Motif ban', value: user.excludeReason!),
+                label: context.l10n.banReason, value: user.excludeReason!),
           AppSpacing.vGapSm,
         ],
       ),
@@ -209,14 +209,14 @@ class _RoleBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, fg, bg) = banned
-        ? ('Banni', context.colors.error, context.colors.errorContainer)
+        ? (context.l10n.bannedLabel, context.colors.error, context.colors.errorContainer)
         : typeCompte >= 2
-            ? ('Super Admin', const Color(0xFF7C4DFF),
+            ? (context.l10n.superAdmin, const Color(0xFF7C4DFF),
                 Color(0xFF7C4DFF).withValues(alpha: 0.16))
             : typeCompte >= 1
-                ? ('Admin', context.colors.primary,
+                ? (context.l10n.admin, context.colors.primary,
                     context.colors.primaryContainer)
-                : ('Utilisateur', context.colors.onSurfaceVariant,
+                : (context.l10n.userFallback, context.colors.onSurfaceVariant,
                     context.semantic.surfaceMuted);
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -285,31 +285,31 @@ class _ActivityCard extends StatelessWidget {
     // Couleurs sémantiques intentionnelles pour les métriques d'activité.
     final items = [
       _ActivityItem(
-        label: 'Messages',
+        label: context.l10n.messagesChannelName,
         value: _i('messagesSent'),
         icon: CupertinoIcons.chat_bubble_2_fill,
         iconColor: const Color(0xFF3B82F6),
       ),
       _ActivityItem(
-        label: 'Conversations',
+        label: context.l10n.conversationsLabel,
         value: _i('conversations'),
         icon: CupertinoIcons.chat_bubble_2,
         iconColor: const Color(0xFF14B8A6),
       ),
       _ActivityItem(
-        label: 'Appels émis',
+        label: context.l10n.outgoingCalls,
         value: _i('callsMade'),
         icon: Icons.phone_forwarded,
         iconColor: AppColors.warning,
       ),
       _ActivityItem(
-        label: 'Appels reçus',
+        label: context.l10n.receivedCalls,
         value: _i('callsReceived'),
         icon: Icons.phone_callback,
         iconColor: AppColors.error,
       ),
       _ActivityItem(
-        label: 'Statuts',
+        label: context.l10n.navStatuses,
         value: _i('statusesPublished'),
         icon: CupertinoIcons.sparkles,
         iconColor: const Color(0xFFEC4899),
@@ -320,7 +320,7 @@ class _ActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Activité', style: context.text.titleLarge),
+          Text(context.l10n.activity, style: context.text.titleLarge),
           AppSpacing.vGapMd,
           GridView.count(
             shrinkWrap: true,
@@ -409,11 +409,11 @@ class _LoginsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Connexions récentes', style: context.text.titleLarge),
+          Text(context.l10n.recentConnections, style: context.text.titleLarge),
           AppSpacing.vGapMd,
           if (logins.isEmpty)
             Text(
-              'Aucune connexion enregistrée',
+              context.l10n.noConnectionsRecorded,
               style: context.text.bodyMedium
                   ?.copyWith(color: context.colors.onSurfaceVariant),
             )
@@ -522,16 +522,16 @@ class _ActionsCard extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Changer le numéro'),
+        title: Text(context.l10n.changeNumber),
         content: AlanyaPhoneField(controller: ctrl),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmer'),
+            child: Text(context.l10n.commonConfirm),
           ),
         ],
       ),
@@ -565,17 +565,17 @@ class _ActionsCard extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer l\'utilisateur ?'),
-        content: const Text('Cette action est irréversible.'),
+        title: Text(context.l10n.deleteUser),
+        content: Text(context.l10n.thisActionCannotBeUndone),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Supprimer',
+            child: Text(
+              context.l10n.commonDelete,
               style: TextStyle(color: AppColors.error),
             ),
           ),
@@ -606,13 +606,13 @@ class _ActionsCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(
                 right: AppSpacing.sm, bottom: AppSpacing.xs),
-            child: Text('Actions', style: context.text.titleLarge),
+            child: Text(context.l10n.actionsLabel, style: context.text.titleLarge),
           ),
           _ActionRow(
             icon: user.exclus
                 ? CupertinoIcons.checkmark_circle_fill
                 : CupertinoIcons.nosign,
-            label: user.exclus ? 'Débannir' : 'Bannir',
+            label: user.exclus ? context.l10n.unban : context.l10n.ban,
             iconColor:
                 user.exclus ? AppColors.success : AppColors.error,
             iconBg: user.exclus
@@ -625,7 +625,7 @@ class _ActionsCard extends StatelessWidget {
           if (isAdmin) ...[
             _ActionRow(
               icon: CupertinoIcons.phone_fill,
-              label: 'Changer le numéro',
+              label: context.l10n.changeNumber,
               iconColor: context.colors.primary,
               iconBg: context.colors.primaryContainer,
               onTap: () => _changePhone(context),
@@ -637,15 +637,15 @@ class _ActionsCard extends StatelessWidget {
                   ? CupertinoIcons.shield_slash_fill
                   : CupertinoIcons.shield_fill,
               label: user.typeCompte >= 1
-                  ? 'Rétrograder'
-                  : 'Rendre admin',
+                  ? context.l10n.demote
+                  : context.l10n.makeAdmin,
               iconColor: context.colors.primary,
               iconBg: context.colors.primaryContainer,
               onTap: () => _toggleAdmin(context),
             ),
             _ActionRow(
               icon: CupertinoIcons.trash_fill,
-              label: 'Supprimer',
+              label: context.l10n.commonDelete,
               iconColor: AppColors.error,
               iconBg: context.colors.errorContainer,
               labelColor: AppColors.error,

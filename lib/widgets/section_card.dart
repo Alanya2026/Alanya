@@ -22,12 +22,16 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: AppSpacing.screenH,
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: isDark ? colors.surfaceContainerHigh : colors.surface,
         borderRadius: AppRadius.brMd,
-        boxShadow: AppShadows.subtle,
+        boxShadow: isDark ? null : AppShadows.subtle,
+        border: isDark
+            ? Border.all(color: colors.outline.withValues(alpha: 0.55))
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +62,7 @@ class SectionCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Voir tout',
+                            context.l10n.seeAll,
                             style: context.text.labelMedium?.copyWith(
                               color: colors.primary,
                             ),

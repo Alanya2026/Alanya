@@ -162,9 +162,9 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
         imageUrl: item.networkUrl ?? '',
         placeholder: (_, __) =>
             const CircularProgressIndicator(color: AppColors.white),
-        errorWidget: (_, __, ___) => const Icon(
+        errorWidget: (_, __, ___) => Icon(
           Icons.broken_image,
-          color: Colors.white54,
+          color: AppColors.white.withValues(alpha: 0.54),
           size: 64,
         ),
       ),

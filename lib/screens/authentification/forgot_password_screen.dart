@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/validators.dart';
+import '../../l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -12,6 +14,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _otpController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -29,6 +32,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   void _clearError() => setState(() => _error = null);
 
   Future<void> _requestOTP() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     _clearError();
     setState(() => _isLoading = true);
     try {
@@ -44,13 +48,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Erreur: $e';
+        _error = context.l10n.errorColon('$e');
         _isLoading = false;
       });
     }
   }
 
   Future<void> _validateOTP() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     _clearError();
     setState(() => _isLoading = true);
     try {
@@ -70,23 +75,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Erreur: $e';
+        _error = context.l10n.errorColon('$e');
         _isLoading = false;
       });
     }
   }
 
   Future<void> _resetPassword() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     _clearError();
-    if (_passwordController.text != _confirmPasswordController.text) {
-      setState(() => _error = 'Les mots de passe ne correspondent pas');
-      return;
-    }
-    if (_passwordController.text.length < 6) {
-      setState(
-          () => _error = 'Le mot de passe doit contenir au moins 6 caractères');
-      return;
-    }
     setState(() => _isLoading = true);
     try {
       await _apiClient.completePasswordReset(
@@ -95,8 +92,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Mot de passe réinitialisé avec succès')),
+          SnackBar(
+              content: Text(context.l10n.passwordResetSuccessfully)),
         );
         Navigator.pop(context);
       }
@@ -107,7 +104,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Erreur: $e';
+        _error = context.l10n.errorColon('$e');
         _isLoading = false;
       });
     }
@@ -124,41 +121,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Récupération du mot de passe'),
+        title: Text(l10n?.forgotPasswordTitle ?? context.l10n.forgotPasswordTitle),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xxl, vertical: AppSpacing.xxl),
-          child: Column(
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Étape 1: Email
               if (_step == 'email') ...[
                 AppSpacing.vGapXxl,
                 Text(
-                  'Entrez votre email',
+                  l10n?.forgotEmailTitle ?? context.l10n.forgotEmailTitle,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 AppSpacing.vGapSm,
                 Text(
-                  'Un code OTP sera envoyé à votre email',
+                  l10n?.forgotEmailSubtitle ??
+                      context.l10n.forgotEmailSubtitle,
                   style: context.text.bodyMedium
                       ?.copyWith(color: context.colors.onSurfaceVariant),
                 ),
                 AppSpacing.vGapXxl,
-                TextField(
+                TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    hintText: 'E-mail',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  validator: (v) => Validators.email(v, l10n: l10n),
+                  decoration: InputDecoration(
+                    hintText: l10n?.forgotEmailHint ?? context.l10n.forgotEmailHint,
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                 ),
               ],
@@ -167,28 +170,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               if (_step == 'otp') ...[
                 AppSpacing.vGapXxl,
                 Text(
-                  'Vérification du code',
+                  l10n?.forgotOtpTitle ?? context.l10n.forgotOtpTitle,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 AppSpacing.vGapSm,
                 Text(
-                  'Entrez le code 6 chiffres envoyé à ${_emailController.text}',
+                  l10n?.forgotOtpSubtitle(_emailController.text) ??
+                      context.l10n.forgotOtpSubtitle(_emailController.text),
                   style: context.text.bodyMedium
                       ?.copyWith(color: context.colors.onSurfaceVariant),
                 ),
                 AppSpacing.vGapXxl,
-                TextField(
+                TextFormField(
                   controller: _otpController,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 32, letterSpacing: 4),
+                  validator: (v) => Validators.otp6(v, l10n: l10n),
                   decoration: const InputDecoration(hintText: '000000'),
                 ),
                 AppSpacing.vGapLg,
                 TextButton(
                   onPressed: _requestOTP,
-                  child: const Text('Renvoyer le code'),
+                  child: Text(l10n?.forgotResendCode ?? context.l10n.forgotResendCode),
                 ),
               ],
 
@@ -196,21 +201,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               if (_step == 'password') ...[
                 AppSpacing.vGapXxl,
                 Text(
-                  'Nouveau mot de passe',
+                  l10n?.forgotNewPasswordTitle ?? context.l10n.forgotNewPasswordHint,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 AppSpacing.vGapSm,
                 Text(
-                  'Entrez votre nouveau mot de passe',
+                  l10n?.forgotNewPasswordSubtitle ??
+                      context.l10n.forgotNewPasswordSubtitle,
                   style: context.text.bodyMedium
                       ?.copyWith(color: context.colors.onSurfaceVariant),
                 ),
                 AppSpacing.vGapXxl,
-                TextField(
+                TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  validator: (v) => Validators.minLength(v, 6, l10n: l10n),
                   decoration: InputDecoration(
-                    hintText: 'Nouveau mot de passe',
+                    hintText: l10n?.forgotNewPasswordHint ??
+                        context.l10n.forgotNewPasswordHint,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -224,11 +232,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                 ),
                 AppSpacing.vGapLg,
-                TextField(
+                TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
+                  validator: (v) => Validators.passwordMatch(
+                    v,
+                    _passwordController.text,
+                    l10n: l10n,
+                  ),
                   decoration: InputDecoration(
-                    hintText: 'Confirmer le mot de passe',
+                    hintText: l10n?.forgotConfirmPasswordHint ??
+                        context.l10n.forgotConfirmPasswordHint,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -286,15 +300,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       )
                     : Text(
                         _step == 'email'
-                            ? 'Envoyer le code'
+                            ? context.l10n.sendCode
                             : _step == 'otp'
-                                ? 'Vérifier le code'
-                                : 'Réinitialiser le mot de passe',
+                                ? context.l10n.verifyCode
+                                : context.l10n.resetPassword,
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w600),
                       ),
               ),
             ],
+          ),
           ),
         ),
       ),

@@ -136,7 +136,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              '${user.nom.isNotEmpty ? user.nom : user.pseudo} ajouté aux contacts préférés'),
+              context.l10n.addedToPreferredContacts(user.nom.isNotEmpty ? user.nom : user.pseudo)),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.success,
           duration: const Duration(seconds: 2),
@@ -147,7 +147,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
       if (!mounted) return;
       setState(() => _adding.remove(user.alanyaID));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d\'ajouter ce contact, réessayez')),
+        SnackBar(content: Text(context.l10n.unableToAddThisContactTry)),
       );
     }
   }
@@ -180,7 +180,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
             ),
             AppSpacing.vGapLg,
             Text(
-              'Ajouter un contact préféré',
+              context.l10n.addAPreferredContact,
               style: context.text.titleLarge,
             ),
             AppSpacing.vGapLg,
@@ -188,7 +188,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
               padding: AppSpacing.screenH,
               child: AppSearchField(
                 controller: _searchController,
-                hintText: 'Rechercher par nom, pseudo ou téléphone…',
+                hintText: context.l10n.searchByNameUsernameOrPhone,
                 autofocus: true,
                 onChanged: (_) {},
                 onClear: () {
@@ -208,8 +208,8 @@ class _AddContactSheetState extends State<AddContactSheet> {
                               ? CupertinoIcons.search
                               : Icons.person_search,
                           title: _searchController.text.trim().isEmpty
-                              ? 'Rechercher un contact'
-                              : 'Aucun résultat',
+                              ? context.l10n.searchAContact
+                              : context.l10n.noResults,
                         )
                       : ListView.builder(
                           controller: scrollController,
@@ -280,7 +280,7 @@ class AddContactItem extends StatelessWidget {
         ],
       ),
       trailing: alreadyContact
-          ? const StatusChip(label: 'Ajouté')
+          ? StatusChip(label: context.l10n.added)
           : isAdding
               ? SizedBox(
                   width: 24,

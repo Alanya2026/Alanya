@@ -187,16 +187,16 @@ class _CallsScreenState extends State<CallsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Appels', style: context.text.headlineLarge),
+        title: Text(context.l10n.navCalls, style: context.text.headlineLarge),
         actions: [
           IconButton(
             icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded),
-            tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
+            tooltip: _searchOpen ? context.l10n.closeSearch : context.l10n.commonSearch,
             onPressed: _toggleSearch,
           ),
           IconButton(
             icon: const Icon(Icons.add_call),
-            tooltip: 'Nouvel appel',
+            tooltip: context.l10n.newCall,
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SelectContactScreen()),
@@ -241,10 +241,10 @@ class _CallsScreenState extends State<CallsScreen> {
     if (filtered.isEmpty) {
       return EmptyState(
         icon: Icons.call_outlined,
-        title: _search.isEmpty ? 'Aucun appel récent' : 'Aucun résultat',
+        title: _search.isEmpty ? context.l10n.noRecentCalls : context.l10n.noResults,
         message: _search.isEmpty
-            ? 'Vos appels passés et reçus apparaîtront ici.'
-            : 'Essayez un autre nom.',
+            ? context.l10n.yourPastAndReceivedCallsWill
+            : context.l10n.tryAnotherName,
       );
     }
     final colors = context.colors;
@@ -265,17 +265,17 @@ class _CallsScreenState extends State<CallsScreen> {
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.sm,
             ),
-            onLongPress: () => _showCallActions(call, otherUser?.nom ?? 'Inconnu'),
+            onLongPress: () => _showCallActions(call, otherUser?.nom ?? context.l10n.unknownSender),
             leading: ProfileAvatar(
               imageUrl: otherUser?.avatarUrl,
-              name: otherUser?.nom ?? 'Inconnu',
+              name: otherUser?.nom ?? context.l10n.unknownSender,
               userId: otherUser?.alanyaID ?? 0,
               isGroup: false,
               size: AppSizes.avatarLg,
               borderRadius: AppSizes.avatarLg / 2,
             ),
             title: Text(
-              otherUser?.nom ?? 'Inconnu',
+              otherUser?.nom ?? context.l10n.unknownSender,
               style: context.text.titleMedium?.copyWith(
                 color: isMissed ? colors.error : colors.onSurface,
               ),
@@ -292,7 +292,7 @@ class _CallsScreenState extends State<CallsScreen> {
                   AppSpacing.hGapXs,
                   Flexible(
                     child: Text(
-                      '${_formatDate(call.createdAt)} • ${isVideo ? "Vidéo" : "Audio"}'
+                      '${_formatDate(call.createdAt)} • ${isVideo ? context.l10n.video2 : context.l10n.audio2}'
                       '${call.duree != null && call.duree! > 0 ? " • ${call.formattedDuration}" : ""}',
                       style: context.text.bodyMedium,
                       overflow: TextOverflow.ellipsis,
@@ -345,7 +345,7 @@ class _CallsScreenState extends State<CallsScreen> {
             ),
             ListTile(
               leading: Icon(Icons.delete_outline, color: error),
-              title: Text('Supprimer', style: TextStyle(color: error)),
+              title: Text(context.l10n.commonDelete, style: TextStyle(color: error)),
               onTap: () async {
                 Navigator.pop(sheetCtx);
                 await hidden.hideCall(call.idCall);
@@ -363,11 +363,11 @@ class _CallsScreenState extends State<CallsScreen> {
       final date = DateTime.parse(dateStr).toLocal();
       final now = DateTime.now();
       if (date.day == now.day && date.month == now.month && date.year == now.year) {
-        return 'Aujourd\'hui ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+        return context.l10n.todayTimeShort('${date.hour}:${date.minute.toString().padLeft(2, '0')}');
       }
       return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } catch (_) {
-      return 'Récemment';
+      return context.l10n.recently;
     }
   }
 }

@@ -115,7 +115,7 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.black,
         iconTheme: const IconThemeData(color: AppColors.white),
-        title: const Text('Vue unique',
+        title: Text(context.l10n.viewOnce,
             style: TextStyle(color: AppColors.white, fontSize: 16)),
       ),
       body: Stack(
@@ -133,8 +133,8 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.72),
+                      const Color(0x00000000),
+                      AppColors.black.withValues(alpha: 0.72),
                     ],
                   ),
                 ),
@@ -174,12 +174,12 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
       return const CircularProgressIndicator(color: AppColors.white);
     }
     if (_error || _tempPath == null) {
-      return const Column(
+      return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.error_outline, color: Colors.white54, size: 64),
-          SizedBox(height: 12),
-          Text('Média indisponible', style: TextStyle(color: Colors.white54)),
+          Icon(Icons.error_outline, color: AppColors.white.withValues(alpha: 0.54), size: 64),
+          const SizedBox(height: 12),
+          Text(context.l10n.mediaUnavailable, style: TextStyle(color: AppColors.white.withValues(alpha: 0.54))),
         ],
       );
     }
@@ -255,7 +255,7 @@ class _AudioView extends StatelessWidget {
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
                       activeTrackColor: AppColors.white,
-                      inactiveTrackColor: Colors.white24,
+                      inactiveTrackColor: AppColors.white.withValues(alpha: 0.24),
                       thumbColor: AppColors.white,
                     ),
                     child: Slider(
@@ -267,8 +267,8 @@ class _AudioView extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(_fmt(pos), style: const TextStyle(color: Colors.white70)),
-                      Text(_fmt(total), style: const TextStyle(color: Colors.white70)),
+                      Text(_fmt(pos), style: TextStyle(color: AppColors.white.withValues(alpha: 0.7))),
+                      Text(_fmt(total), style: TextStyle(color: AppColors.white.withValues(alpha: 0.7))),
                     ],
                   ),
                 ],

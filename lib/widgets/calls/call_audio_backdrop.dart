@@ -74,7 +74,7 @@ class CallAudioBackdrop extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Micro coupé',
+                      context.l10n.micMuted,
                       style: TextStyle(
                         color: callUi.mutedBadgeOnBackground,
                         fontSize: 13,

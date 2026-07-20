@@ -31,6 +31,8 @@ class AlanyaPhoneField extends StatefulWidget {
   final InputDecoration? decoration;
   final ValueChanged<String>? onChanged;
   final bool autofocus;
+  final String? Function(String?)? validator;
+  final AutovalidateMode? autovalidateMode;
 
   const AlanyaPhoneField({
     super.key,
@@ -38,6 +40,8 @@ class AlanyaPhoneField extends StatefulWidget {
     this.decoration,
     this.onChanged,
     this.autofocus = false,
+    this.validator,
+    this.autovalidateMode,
   });
 
   static String canonicalFrom(TextEditingController controller) =>
@@ -71,11 +75,15 @@ class _AlanyaPhoneFieldState extends State<AlanyaPhoneField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: widget.controller,
       autofocus: widget.autofocus,
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]'))],
+      autovalidateMode: widget.autovalidateMode,
+      validator: widget.validator == null
+          ? null
+          : (_) => widget.validator!(AlanyaPhoneField.canonicalFrom(widget.controller)),
       decoration: widget.decoration ??
           const InputDecoration(
             hintText: '00 00 00 00',

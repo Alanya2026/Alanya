@@ -42,7 +42,7 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
       if (me == null) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil non disponible, réessayez')),
+          SnackBar(content: Text(context.l10n.profileUnavailableTryAgain)),
         );
         return;
       }
@@ -64,7 +64,7 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Échec de la connexion à la réunion : $e')),
+          SnackBar(content: Text(context.l10n.meetingConnectFailed('$e'))),
         );
       }
     } finally {
@@ -80,7 +80,7 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Rejoindre une réunion'),
+        title: Text(context.l10n.joinAMeeting),
         actions: [
           TextButton(
             onPressed: _isCodeValid && !_isJoining ? _joinMeeting : null,
@@ -91,7 +91,7 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    'Rejoindre',
+                    context.l10n.join,
                     style: TextStyle(
                       color: _isCodeValid
                           ? context.colors.primary
@@ -110,21 +110,20 @@ class _JoinMeetScreenState extends State<JoinMeetScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Entrez le code de réunion fourni par l\'organisateur',
+              context.l10n.enterTheMeetingCodeProvidedBy,
               style: context.text.bodyLarge,
             ),
             AppSpacing.vGapXxl,
             TextField(
               controller: _codeController,
-              decoration: const InputDecoration(
-                hintText: 'Exemple : abc-defg-hij',
+              decoration: InputDecoration(
+                hintText: context.l10n.exampleAbcDefgHij,
               ),
               style: const TextStyle(fontSize: 18, letterSpacing: 1.2),
             ),
             AppSpacing.vGapXxl,
             Text(
-              'Pour rejoindre une réunion, vous avez besoin d\'un code comme abc-defg-hij. '
-              'Si vous avez reçu un lien de réunion, vous pouvez cliquer sur le lien à la place.',
+              '${context.l10n.exampleAbcDefgHij}. ${context.l10n.ifYouReceivedAMeetingLink}',
               style: context.text.bodySmall
                   ?.copyWith(color: context.colors.onSurfaceVariant),
             ),

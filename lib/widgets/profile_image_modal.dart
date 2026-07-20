@@ -117,18 +117,18 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
                                 children: [
                                   if (!widget.isGroup) ...[
                                     _buildCTAIcon(Icons.message_outlined,
-                                        'Message', _openChat),
+                                        context.l10n.messageNoun, _openChat),
                                     _buildCTAIcon(
                                         Icons.call,
-                                        'Audio',
+                                        context.l10n.audio2,
                                         () => _initiateCall(isVideo: false)),
                                     _buildCTAIcon(
                                         Icons.videocam_outlined,
-                                        'Vidéo',
+                                        context.l10n.video2,
                                         () => _initiateCall(isVideo: true)),
                                   ],
                                   _buildCTAIcon(
-                                      Icons.info_outlined, 'Info', _openContactDetail),
+                                      Icons.info_outlined, context.l10n.infoAction, _openContactDetail),
                                 ],
                               ),
                             ),
@@ -265,7 +265,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
       if (me == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil non disponible, réessayez')),
+          SnackBar(content: Text(context.l10n.profileUnavailableTryAgain)),
         );
         return;
       }
@@ -300,7 +300,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
       AppLog.e('ProfileImageModal', 'Lancement de l\'appel échoué', e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de lancer l\'appel, réessayez')),
+          SnackBar(content: Text(context.l10n.unableToStartTheCallTry)),
         );
       }
     }
@@ -311,7 +311,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
     if (widget.isGroup) {
       if (widget.conversationId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur : ID du groupe introuvable')),
+          SnackBar(content: Text(context.l10n.errorGroupIdNotFound)),
         );
         return;
       }

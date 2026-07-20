@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/locale_controller.dart';
 import '../../core/theme/theme_controller.dart';
 import '../../core/services/media_download_preferences.dart';
 import 'privacy_screen.dart';
@@ -12,6 +13,7 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
@@ -19,13 +21,13 @@ class SettingsScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Paramètres'),
+        title: Text(l10n.settingsTitle),
       ),
       body: ListView(
         children: [
           AppSpacing.vGapLg,
           _SettingsGroup(
-            title: 'Apparence',
+            title: l10n.settingsAppearance,
             child: Padding(
               padding: AppSpacing.card,
               child: Consumer<ThemeController>(
@@ -34,21 +36,21 @@ class SettingsScreen extends StatelessWidget {
                   style: SegmentedButton.styleFrom(
                     minimumSize: const Size(0, AppSizes.buttonHeight),
                   ),
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: ThemeMode.light,
-                      icon: Icon(Icons.wb_sunny_outlined),
-                      label: Text('Clair'),
+                      icon: const Icon(Icons.wb_sunny_outlined),
+                      label: Text(l10n.settingsThemeLight),
                     ),
                     ButtonSegment(
                       value: ThemeMode.dark,
-                      icon: Icon(Icons.nights_stay_outlined),
-                      label: Text('Sombre'),
+                      icon: const Icon(Icons.nights_stay_outlined),
+                      label: Text(l10n.settingsThemeDark),
                     ),
                     ButtonSegment(
                       value: ThemeMode.system,
-                      icon: Icon(Icons.brightness_auto_outlined),
-                      label: Text('Système'),
+                      icon: const Icon(Icons.brightness_auto_outlined),
+                      label: Text(l10n.settingsThemeSystem),
                     ),
                   ],
                   selected: {tc.mode},
@@ -59,7 +61,41 @@ class SettingsScreen extends StatelessWidget {
           ),
           AppSpacing.vGapXxl,
           _SettingsGroup(
-            title: 'Médias',
+            title: l10n.settingsLanguage,
+            child: Padding(
+              padding: AppSpacing.card,
+              child: Consumer<LocaleController>(
+                builder: (_, lc, __) => SegmentedButton<AppLocalePreference>(
+                  showSelectedIcon: false,
+                  style: SegmentedButton.styleFrom(
+                    minimumSize: const Size(0, AppSizes.buttonHeight),
+                  ),
+                  segments: [
+                    ButtonSegment(
+                      value: AppLocalePreference.french,
+                      icon: const Icon(Icons.language),
+                      label: Text(l10n.settingsLangFr),
+                    ),
+                    ButtonSegment(
+                      value: AppLocalePreference.english,
+                      icon: const Icon(Icons.translate),
+                      label: Text(l10n.settingsLangEn),
+                    ),
+                    ButtonSegment(
+                      value: AppLocalePreference.system,
+                      icon: const Icon(Icons.brightness_auto_outlined),
+                      label: Text(l10n.settingsLangSystem),
+                    ),
+                  ],
+                  selected: {lc.preference},
+                  onSelectionChanged: (s) => lc.setPreference(s.first),
+                ),
+              ),
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          _SettingsGroup(
+            title: l10n.settingsMedia,
             child: Consumer<MediaDownloadPreferences>(
               builder: (_, prefs, __) => SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(
@@ -79,13 +115,13 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ),
                 title: Text(
-                  'Téléchargement automatique',
+                  l10n.settingsAutoDownload,
                   style: context.text.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 subtitle: Text(
-                  'Photos, vidéos et fichiers reçus s’enregistrent dans Alanya',
+                  l10n.settingsAutoDownloadSubtitle,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.onSurfaceVariant,
                   ),
@@ -97,7 +133,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           AppSpacing.vGapXxl,
           _SettingsGroup(
-            title: 'Confidentialité',
+            title: l10n.settingsPrivacy,
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.xl,
@@ -116,13 +152,13 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               title: Text(
-                'Confidentialité',
+                l10n.settingsPrivacy,
                 style: context.text.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
               ),
               subtitle: Text(
-                'Contacts bloqués',
+                l10n.settingsPrivacySubtitle,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.onSurfaceVariant,
                 ),

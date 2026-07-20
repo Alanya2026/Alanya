@@ -83,7 +83,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Tableau de bord'),
+        title: Text(context.l10n.dashboard),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.maybePop(context),
@@ -111,17 +111,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               }
             },
             itemBuilder: (ctx) => [
-              const PopupMenuItem(value: 'create', child: Text('Créer un utilisateur')),
+              PopupMenuItem(value: 'create', child: Text(context.l10n.createUser)),
               if (AdminProvider.isSuperAdmin(
                   context.read<AuthProvider>().currentUser))
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'reserved',
-                  child: Text('Numéros réservés'),
+                  child: Text(context.l10n.reservedNumbers),
                 ),
             ],
           ),
           IconButton(
-            tooltip: 'Actualiser',
+            tooltip: context.l10n.refresh,
             onPressed: provider.isLoadingUsers || provider.isLoadingStats
                 ? null
                 : _refresh,
@@ -137,16 +137,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 padding: const EdgeInsets.fromLTRB(
                     AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl),
                 children: [
-                  Text('Bienvenue', style: context.text.headlineLarge),
+                  Text(context.l10n.loginWelcome, style: context.text.headlineLarge),
                   AppSpacing.vGapSm,
                   Text(
-                    'Gérez les utilisateurs et surveillance',
+                    context.l10n.manageUsersAndMonitoring,
                     style: context.text.bodySmall
                         ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
                   AppSpacing.vGapXxl,
                   Text(
-                    "Vue d'ensemble",
+                    context.l10n.overviewSection,
                     style: context.text.titleSmall
                         ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
@@ -160,42 +160,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     childAspectRatio: 1.05,
                     children: [
                       _GradientStatCard(
-                        label: 'Utilisateurs',
+                        label: context.l10n.usersLabel,
                         value: '${stats.totalUsers}',
-                        sub: 'Total',
+                        sub: context.l10n.totalLabel,
                         icon: CupertinoIcons.person_2_fill,
                         colors: const [Color(0xFF5B8DEF), Color(0xFF4A6FD0)],
                       ),
                       _GradientStatCard(
-                        label: 'En ligne',
+                        label: context.l10n.online,
                         value: '${stats.onlineUsers}',
                         sub: '${onlinePct.toStringAsFixed(1)}%',
                         icon: CupertinoIcons.circle_fill,
                         colors: const [Color(0xFF5DBE7A), Color(0xFF3FA45F)],
                       ),
                       _GradientStatCard(
-                        label: 'Messages (7j)',
+                        label: context.l10n.messages7d,
                         value: '${stats.messagesPeriod}',
-                        sub: 'Dernière semaine',
+                        sub: context.l10n.lastWeek,
                         icon: CupertinoIcons.chat_bubble_2_fill,
                         colors: const [Color(0xFF4FC3D8), Color(0xFF2BA5BD)],
                       ),
                       _GradientStatCard(
-                        label: 'Appels (7j)',
+                        label: context.l10n.calls7d,
                         value: '${stats.callsPeriod}',
-                        sub: 'Dernière semaine',
+                        sub: context.l10n.lastWeek,
                         icon: CupertinoIcons.phone_fill,
                         colors: const [Color(0xFFFFA552), Color(0xFFE9803D)],
                       ),
                       _GradientStatCard(
-                        label: 'Statuts (7j)',
+                        label: context.l10n.statuses7d,
                         value: '${stats.statusesPeriod}',
-                        sub: 'Dernière semaine',
+                        sub: context.l10n.lastWeek,
                         icon: CupertinoIcons.sparkles,
                         colors: const [Color(0xFFE94BA0), Color(0xFFB23DBF)],
                       ),
                       _GradientStatCard(
-                        label: 'Bannis',
+                        label: context.l10n.bannedUsers,
                         value: '${stats.bannedUsers}',
                         sub: '${bannedPct.toStringAsFixed(1)}%',
                         icon: CupertinoIcons.nosign,
@@ -209,7 +209,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   // détacher du fond `surfaceMuted` de la page.
                   AppSearchField(
                     controller: _searchCtrl,
-                    hintText: 'Rechercher par nom, pseudo ou ...',
+                    hintText: context.l10n.searchByNameUsernameOr,
                     fillColor: context.colors.surface,
                     borderColor: context.colors.outline,
                     onChanged: (val) {
@@ -234,14 +234,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Row(
                       children: [
                         _FilterChip(
-                          label: 'Tous',
+                          label: context.l10n.allFilter,
                           icon: CupertinoIcons.person_2,
                           selected: _filter == _UserFilter.all,
                           onTap: () => _applyFilter(_UserFilter.all),
                         ),
                         AppSpacing.hGapSm,
                         _FilterChip(
-                          label: 'En ligne',
+                          label: context.l10n.online,
                           icon: CupertinoIcons.circle_fill,
                           accent: context.semantic.online,
                           selected: _filter == _UserFilter.online,
@@ -249,7 +249,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         AppSpacing.hGapSm,
                         _FilterChip(
-                          label: 'Bannis',
+                          label: context.l10n.bannedUsers,
                           icon: CupertinoIcons.nosign,
                           accent: context.colors.error,
                           selected: _filter == _UserFilter.banned,
@@ -257,7 +257,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         AppSpacing.hGapSm,
                         _FilterChip(
-                          label: 'Admins',
+                          label: context.l10n.adminsLabel,
                           icon: CupertinoIcons.shield_lefthalf_fill,
                           selected: _filter == _UserFilter.admin,
                           onTap: () => _applyFilter(_UserFilter.admin),
@@ -278,10 +278,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                     ),
                   if (users.isEmpty && !provider.isLoadingUsers)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(AppSpacing.xxl),
                       child: Center(
-                          child: Text('Aucun utilisateur trouvé')),
+                          child: Text(context.l10n.noUsersFound)),
                     )
                   else if (provider.isLoadingUsers && users.isEmpty)
                     const Padding(
@@ -578,7 +578,7 @@ class _UserTile extends StatelessWidget {
                             borderRadius: _kBrXs,
                           ),
                           child: Text(
-                            'Banni',
+                            context.l10n.bannedLabel,
                             style: TextStyle(
                               color: context.colors.error,
                               fontSize: 10,
@@ -597,7 +597,7 @@ class _UserTile extends StatelessWidget {
                             borderRadius: _kBrXs,
                           ),
                           child: Text(
-                            'Admin',
+                            context.l10n.admin,
                             style: TextStyle(
                               color: context.colors.primary,
                               fontSize: 10,
@@ -654,44 +654,44 @@ class _UserActions extends StatelessWidget {
       itemBuilder: (context) => [
         if (!user.exclus)
           PopupMenuItem(
-            child: const Text('Bannir'),
+            child: Text(context.l10n.ban),
             onTap: () async => await provider.toggleBan(user),
           )
         else
           PopupMenuItem(
-            child: const Text('Débannir'),
+            child: Text(context.l10n.unban),
             onTap: () async => await provider.toggleBan(user),
           ),
         if (isSuper) ...[
           if (user.typeCompte < 1)
             PopupMenuItem(
-              child: const Text('Rendre admin'),
+              child: Text(context.l10n.makeAdmin),
               onTap: () async =>
                   await provider.setAccountType(user.alanyaID, 1),
             )
           else
             PopupMenuItem(
-              child: const Text('Rétrograder'),
+              child: Text(context.l10n.demote),
               onTap: () async =>
                   await provider.setAccountType(user.alanyaID, 0),
             ),
           PopupMenuItem(
-            child: const Text('Supprimer'),
+            child: Text(context.l10n.commonDelete),
             onTap: () async {
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Supprimer l\'utilisateur ?'),
-                  content: const Text('Cette action est irréversible.'),
+                  title: Text(context.l10n.deleteUser),
+                  content: Text(context.l10n.thisActionCannotBeUndone),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Annuler'),
+                      child: Text(context.l10n.commonCancel),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text(
-                        'Supprimer',
+                      child: Text(
+                        context.l10n.commonDelete,
                         style: TextStyle(color: AppColors.error),
                       ),
                     ),
@@ -752,12 +752,12 @@ class _Pagination extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  'Page $page / $pageCount',
+                  context.l10n.pageOf(page, pageCount),
                   style: context.text.labelMedium,
                 ),
                 AppSpacing.vGapXs,
                 Text(
-                  '$from–$to sur $total',
+                  context.l10n.rangeOfTotal(from, to, total),
                   style: context.text.labelSmall?.copyWith(
                       color: context.colors.onSurfaceVariant),
                 ),

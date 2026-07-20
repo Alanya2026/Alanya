@@ -1,5 +1,9 @@
+import '../../l10n/app_localizations.dart';
 import '../db/app_database.dart';
 import '../db/chat_dao.dart';
+import '../services/chat/conversation_merge.dart';
+import '../theme/locale_controller.dart';
+import 'media_album.dart';
 
 int conversationParticipantId(dynamic v) {
   if (v is int) return v;
@@ -17,9 +21,9 @@ Map<String, dynamic>? otherParticipant(LocalConversation conv, int myId) {
 }
 
 String conversationDisplayName(LocalConversation conv, int myId) {
-  if (conv.isGroup) return conv.groupName ?? 'Groupe';
+  if (conv.isGroup) return conv.groupName ?? LocaleController.instance.l10n.groupFallback;
   final other = otherParticipant(conv, myId);
-  return (other?['nom'] as String?) ?? 'Inconnu';
+  return (other?['nom'] as String?) ?? LocaleController.instance.l10n.unknownSender;
 }
 
 String? conversationDisplayAvatar(LocalConversation conv, int myId) {
@@ -57,4 +61,15 @@ bool conversationMatchesSearch(LocalConversation conv, int myId, String query) {
   final q = query.trim().toLowerCase();
   if (q.isEmpty) return true;
   return conversationDisplayName(conv, myId).toLowerCase().contains(q);
+}
+
+/// Aperçu prêt pour l'UI / notifications : album + sentinelle supprimé → l10n.
+///
+/// Ne pas écrire le résultat en Drift (garder [ConversationMerge.deletedPreview]).
+String displayConversationPreview(String? text, AppLocalizations l10n) {
+  final normalized = normalizeConversationPreview(text);
+  if (ConversationMerge.isDeletedPreview(normalized)) {
+    return l10n.thisMessageWasDeleted;
+  }
+  return normalized;
 }

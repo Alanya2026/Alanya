@@ -150,11 +150,11 @@ extension CallSignaling on CallService {
       _markTerminalCallId(_currentCallId);
       await _terminateCall();
       if (code == 'CALL_BLOCKED') {
-        _showTransientMessage('Appel impossible.');
+        _showTransientMessage(LocaleController.instance.l10n.callImpossible);
       } else if (reason != null && reason.isNotEmpty) {
         _showTransientMessage(reason);
       } else {
-        _showTransientMessage('Échec de l\'appel.');
+        _showTransientMessage(LocaleController.instance.l10n.callFailed);
       }
     });
 
@@ -170,7 +170,7 @@ extension CallSignaling on CallService {
       _cancelOutgoingTimeout();
       _markTerminalCallId(_currentCallId);
       await _terminateCall();
-      _showTransientMessage('Votre correspondant est occupé.');
+      _showTransientMessage(LocaleController.instance.l10n.theOtherPartyIsBusy);
     });
 
     // Pas de réponse (timeout serveur sur un appel resté en sonnerie).
@@ -183,7 +183,7 @@ extension CallSignaling on CallService {
       _cancelOutgoingTimeout();
       _markTerminalCallId(_currentCallId);
       await _terminateCall();
-      _showTransientMessage('Pas de réponse.');
+      _showTransientMessage(LocaleController.instance.l10n.noAnswer);
     });
 
     // Socket (ré)authentifié : rejoue les refus mis en file avant la connexion.
@@ -224,7 +224,9 @@ extension CallSignaling on CallService {
       if (callerId != null && callerId.isNotEmpty) {
         _groupRoster[callerId] = GroupParticipantInfo(
           id: callerId,
-          name: (_remoteUserName?.isNotEmpty == true) ? _remoteUserName! : 'Participant',
+          name: (_remoteUserName?.isNotEmpty == true)
+              ? _remoteUserName!
+              : LocaleController.instance.l10n.participantFallback,
           photo: _remoteUserPhoto,
         );
       }
@@ -240,7 +242,9 @@ extension CallSignaling on CallService {
       final userPhoto = data['userPhoto'] as String?;
       _groupRoster[userId] = GroupParticipantInfo(
         id: userId,
-        name: userName.isNotEmpty ? userName : 'Participant',
+        name: userName.isNotEmpty
+            ? userName
+            : LocaleController.instance.l10n.participantFallback,
         photo: userPhoto,
       );
       notify();
@@ -264,7 +268,11 @@ extension CallSignaling on CallService {
           final pseudo = (u['pseudo'] as String?) ?? '';
           _groupRoster[id] = GroupParticipantInfo(
             id: id,
-            name: nom.isNotEmpty ? nom : (pseudo.isNotEmpty ? pseudo : 'Participant'),
+            name: nom.isNotEmpty
+                ? nom
+                : (pseudo.isNotEmpty
+                    ? pseudo
+                    : LocaleController.instance.l10n.participantFallback),
             photo: u['avatar_url'] as String?,
           );
           notify();

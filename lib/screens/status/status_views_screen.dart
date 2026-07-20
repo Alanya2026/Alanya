@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/status_provider.dart';
@@ -22,7 +21,7 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
     final provider = context.read<StatusProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Vues')),
+      appBar: AppBar(title: Text(context.l10n.viewsTitle)),
       body: FutureBuilder<List<StatutView>>(
         future: provider.getViews(widget.statusId),
         builder: (context, snapshot) {
@@ -31,9 +30,9 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
           }
           final data = snapshot.data;
           if (data == null || data.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.visibility_off_outlined,
-              title: 'Aucune vue',
+              title: context.l10n.noViews,
             );
           }
 
@@ -64,7 +63,7 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
                       Padding(
                         padding: const EdgeInsets.only(right: AppSpacing.sm),
                         child: Icon(Icons.favorite,
-                            color: AppColors.error, size: AppIconSize.sm),
+                            color: context.colors.error, size: AppIconSize.sm),
                       ),
                     Text(
                       _formatSeenAt(v.seenAt),
@@ -93,9 +92,9 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
     if (local.day == now.day &&
         local.month == now.month &&
         local.year == now.year) {
-      return 'vu à $hm';
+      return context.l10n.seenAtLower(hm);
     }
 
-    return 'vu hier à $hm';
+    return context.l10n.seenYesterdayAtLower(hm);
   }
 }

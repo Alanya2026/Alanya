@@ -5,18 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../utils/media_album.dart';
+import '../utils/conversation_display.dart';
 import 'notification_navigation.dart';
+import '../theme/locale_controller.dart';
 
-const _kChannelMessages = AndroidNotificationChannel(
+AndroidNotificationChannel get _kChannelMessages => AndroidNotificationChannel(
   'talky_messages',
-  'Messages',
+  LocaleController.instance.l10n.messagesChannelName,
   importance: Importance.high,
 );
-const _kChannelMeetings = AndroidNotificationChannel(
+AndroidNotificationChannel get _kChannelMeetings => AndroidNotificationChannel(
   'talky_meetings',
-  'Réunions',
-  description: 'Invitations et rappels de réunion',
+  LocaleController.instance.l10n.navMeetings,
+  description: LocaleController.instance.l10n.meetingInvitationsAndReminders,
   importance: Importance.max,
 );
 
@@ -127,7 +128,7 @@ class LocalNotificationHelper {
 
     if (suppressIfActive && await shouldSuppressMessage(conversationId)) return;
 
-    final senderName = title ?? data['title']?.toString() ?? 'Alanya';
+    final senderName = title ?? data['title']?.toString() ?? LocaleController.instance.l10n.appTitle;
     final messageBody = body ?? bodyFromPayload(data);
     if (messageBody.isEmpty && senderName.isEmpty) return;
 
@@ -206,7 +207,7 @@ class LocalNotificationHelper {
 
     final type = data['type']?.toString() ?? '';
     final meetingId = int.tryParse(data['meetingId']?.toString() ?? '') ?? 0;
-    final title = data['title']?.toString() ?? 'Réunion';
+    final title = data['title']?.toString() ?? LocaleController.instance.l10n.meeting;
     final body = data['body']?.toString() ?? '';
     if (title.isEmpty && body.isEmpty) return;
 
@@ -258,7 +259,7 @@ class LocalNotificationHelper {
     if (kIsWeb) return;
     await ensureInitialized();
 
-    final notifTitle = title ?? data['title']?.toString() ?? 'Alanya';
+    final notifTitle = title ?? data['title']?.toString() ?? LocaleController.instance.l10n.appTitle;
     final notifBody = body ?? data['body']?.toString() ?? '';
     if (notifTitle.isEmpty && notifBody.isEmpty) return;
 
@@ -335,27 +336,28 @@ class LocalNotificationHelper {
 
   static String bodyFromPayload(Map<String, dynamic> data) {
     final raw = data['body']?.toString();
-    final normalized = normalizeConversationPreview(
+    final normalized = displayConversationPreview(
       raw != null && raw.isNotEmpty ? raw : null,
+      LocaleController.instance.l10n,
     );
     if (normalized.isNotEmpty) return normalized;
 
     final type = int.tryParse(data['msgType']?.toString() ?? '') ?? 0;
     switch (type) {
       case 1:
-        return '📷 Photo';
+        return LocaleController.instance.l10n.photo;
       case 2:
-        return '🎥 Vidéo';
+        return LocaleController.instance.l10n.video;
       case 3:
-        return '🎵 Audio';
+        return LocaleController.instance.l10n.audio;
       case 4:
-        return '📎 Fichier';
+        return LocaleController.instance.l10n.file;
       case 5:
-        return '📍 Position';
+        return LocaleController.instance.l10n.location;
       case 7:
-        return '👤 Contact';
+        return LocaleController.instance.l10n.contact;
       default:
-        return 'Nouveau message';
+        return LocaleController.instance.l10n.newMessage;
     }
   }
 
@@ -498,21 +500,23 @@ class LocalNotificationHelper {
     }
 
     final convCount = liveIds.length;
-    final plural = totalMessages > 1 ? 's' : '';
+    final l10n = LocaleController.instance.l10n;
     final summaryText = convCount > 1
-        ? '$totalMessages messages · $convCount conversations'
-        : '$totalMessages nouveau$plural message$plural';
+        ? l10n.messagesSummaryMulti(totalMessages, convCount)
+        : (totalMessages > 1
+            ? l10n.messagesSummaryMany(totalMessages)
+            : l10n.messagesSummaryOne(totalMessages));
 
     final inbox = InboxStyleInformation(
       lines,
       contentTitle: summaryText,
-      summaryText: 'Alanya',
+      summaryText: LocaleController.instance.l10n.appTitle,
     );
 
     try {
       await _plugin.show(
         kMessagesSummaryId,
-        'Alanya',
+        LocaleController.instance.l10n.appTitle,
         summaryText,
         NotificationDetails(
           android: AndroidNotificationDetails(
@@ -547,11 +551,11 @@ class LocalNotificationHelper {
       return Message(
         m['body'] ?? '',
         ts,
-        Person(name: sender.isNotEmpty ? sender : 'Alanya'),
+        Person(name: sender.isNotEmpty ? sender : LocaleController.instance.l10n.appTitle),
       );
     }).toList();
 
-    final personName = latestSender.trim().isNotEmpty ? latestSender : 'Alanya';
+    final personName = latestSender.trim().isNotEmpty ? latestSender : LocaleController.instance.l10n.appTitle;
     return MessagingStyleInformation(
       Person(name: personName),
       conversationTitle: isGroup && groupName.isNotEmpty ? groupName : null,

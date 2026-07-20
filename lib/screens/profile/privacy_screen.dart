@@ -14,7 +14,7 @@ class PrivacyScreen extends StatelessWidget {
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
         title: Text(
-          'Confidentialité',
+          context.l10n.settingsPrivacy,
           style: context.text.headlineSmall,
         ),
       ),
@@ -41,13 +41,13 @@ class PrivacyScreen extends StatelessWidget {
                 ),
               ),
               title: Text(
-                'Contacts bloqués',
+                context.l10n.settingsPrivacySubtitle,
                 style: context.text.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
               ),
               subtitle: Text(
-                'Voir et débloquer les contacts',
+                context.l10n.viewAndUnblockContacts,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.onSurfaceVariant,
                 ),

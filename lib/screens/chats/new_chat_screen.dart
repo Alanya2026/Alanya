@@ -134,7 +134,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nouveau contact'),
+        title: Text(context.l10n.newContact),
       ),
       body: Column(
         children: [
@@ -143,7 +143,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                 horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
             child: AppSearchField(
               controller: _searchController,
-              hintText: 'Rechercher par nom, pseudo ou téléphone…',
+              hintText: context.l10n.searchByNameUsernameOrPhone,
               onChanged: (_) {},
               onClear: _clearSearch,
             ),
@@ -155,7 +155,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
               children: [
                 _buildActionTile(
                   Icons.group_outlined,
-                  'Nouveau groupe',
+                  context.l10n.newGroup,
                   () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -165,7 +165,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                 AppSpacing.hGapMd,
                 _buildActionTile(
                   Icons.person_add_alt_1,
-                  'Ajouter',
+                  context.l10n.add,
                   _showAddContactSheet,
                 ),
               ],
@@ -179,7 +179,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                         icon: hasQuery
                             ? Icons.person_search
                             : Icons.people_outline,
-                        title: hasQuery ? 'Aucun résultat' : 'Aucun contact',
+                        title: hasQuery ? context.l10n.noResults : context.l10n.noContacts,
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -192,7 +192,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                 AppSpacing.xl,
                                 AppSpacing.xs),
                             child: Text(
-                              hasQuery ? 'Résultats' : 'Contacts préférés',
+                              hasQuery ? context.l10n.results : context.l10n.preferredContacts,
                               style: context.text.labelMedium?.copyWith(
                                 color: context.colors.onSurfaceVariant,
                               ),
@@ -284,7 +284,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0x00000000),
       builder: (_) => AddContactSheet(
         existingIds: _contacts.map((u) => u.alanyaID).toSet(),
         onAdded: (_) => _loadContacts(),
@@ -311,7 +311,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.xs),
               child: Text(
-                'Groupes',
+                context.l10n.groupsFilter,
                 style: context.text.labelMedium
                     ?.copyWith(color: context.colors.onSurfaceVariant),
               ),
@@ -328,14 +328,14 @@ class _NewChatScreenState extends State<NewChatScreen> {
                         imageUrl: g.groupPhoto?.isNotEmpty == true
                             ? g.groupPhoto
                             : null,
-                        name: g.groupName ?? 'Groupe',
+                        name: g.groupName ?? context.l10n.groupFallback,
                         isGroup: true,
                         size: AppSizes.avatarMd,
                       ),
                       AppSpacing.hGapMd,
                       Expanded(
                         child: Text(
-                          g.groupName ?? 'Groupe',
+                          g.groupName ?? context.l10n.groupFallback,
                           style: context.text.titleSmall,
                         ),
                       ),
@@ -352,10 +352,11 @@ class _NewChatScreenState extends State<NewChatScreen> {
 
   void _openGroup(LocalConversation g) {
     final navigator = Navigator.of(context);
+    final groupName = g.groupName ?? context.l10n.groupFallback;
     navigator.pop();
     navigator.push(MaterialPageRoute(
       builder: (_) => ChatDetailScreen(
-        userName: g.groupName ?? 'Groupe',
+        userName: groupName,
         conversationId: g.conversID,
         userId: null,
         isGroup: true,

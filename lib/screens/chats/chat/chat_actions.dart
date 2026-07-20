@@ -83,7 +83,7 @@ extension _ChatActions on _ChatDetailScreenState {
     final newIds = ids.where((id) => !_selectedMsgIDs.contains(id)).toList();
     if (_selectedMsgIDs.length + newIds.length > _maxSelectionCount) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Maximum $_maxSelectionCount messages')),
+        SnackBar(content: Text(context.l10n.maxMessages(_maxSelectionCount))),
       );
       return;
     }
@@ -121,7 +121,7 @@ extension _ChatActions on _ChatDetailScreenState {
           children: [
             ListTile(
               leading: Icon(Icons.delete_outline, color: muted),
-              title: const Text('Supprimer pour moi'),
+              title: Text(context.l10n.deleteForMe),
               onTap: () {
                 Navigator.pop(context);
                 _deleteSelected(forAll: false);
@@ -130,7 +130,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (canDeleteForAll)
               ListTile(
                 leading: Icon(Icons.delete_forever, color: error),
-                title: const Text('Supprimer pour tous'),
+                title: Text(context.l10n.deleteForEveryone),
                 onTap: () {
                   Navigator.pop(context);
                   _deleteSelected(forAll: true);
@@ -148,8 +148,8 @@ extension _ChatActions on _ChatDetailScreenState {
     if (selected.isEmpty) return;
     if (!selected.every(canForwardMessage)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Un ou plusieurs messages ne peuvent pas être transférés'),
+        SnackBar(
+          content: Text(context.l10n.oneOrMoreMessagesCannotBe),
         ),
       );
       return;
@@ -291,7 +291,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (_isSelectableMessage(msg))
               ListTile(
                 leading: Icon(Icons.check_circle_outline, color: primary),
-                title: const Text('Sélectionner'),
+                title: Text(context.l10n.select),
                 onTap: () {
                   Navigator.pop(context);
                   _enterSelectionMode(msg);
@@ -301,7 +301,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (isMe && msg.status == 4)
               ListTile(
                 leading: Icon(Icons.refresh, color: primary),
-                title: const Text('Réessayer l\'envoi'),
+                title: Text(context.l10n.retrySending),
                 onTap: () {
                   Navigator.pop(context);
                   _chat.repository.retryMessage(msg.clientId);
@@ -309,7 +309,7 @@ extension _ChatActions on _ChatDetailScreenState {
               ),
             ListTile(
               leading: Icon(Icons.reply, color: primary),
-              title: const Text('Répondre'),
+              title: Text(context.l10n.reply),
               onTap: () {
                 Navigator.pop(context);
                 rebuild(() => _replyTo = msg);
@@ -319,7 +319,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (canForwardMessage(msg))
               ListTile(
                 leading: Icon(Icons.forward, color: primary),
-                title: const Text('Transférer'),
+                title: Text(context.l10n.forward),
                 onTap: () {
                   Navigator.pop(context);
                   _openForwardPicker(msg);
@@ -331,7 +331,7 @@ extension _ChatActions on _ChatDetailScreenState {
                   msg.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                   color: primary,
                 ),
-                title: Text(msg.isPinned ? 'Détacher' : 'Épingler'),
+                title: Text(msg.isPinned ? context.l10n.unpin2 : context.l10n.pin),
                 onTap: () {
                   Navigator.pop(context);
                   _togglePin(msg);
@@ -340,7 +340,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (isText && msg.content != null)
               ListTile(
                 leading: Icon(Icons.copy, color: primary),
-                title: const Text('Copier'),
+                title: Text(context.l10n.copy),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: msg.content!));
                   Navigator.pop(context);
@@ -349,7 +349,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (isMe && isText && !msg.isDeleted && _canEditMessage(msg))
               ListTile(
                 leading: Icon(Icons.edit, color: primary),
-                title: const Text('Modifier'),
+                title: Text(context.l10n.edit),
                 onTap: () {
                   Navigator.pop(context);
                   _showEditDialog(msg);
@@ -358,7 +358,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (isMe && !msg.isDeleted)
               ListTile(
                 leading: Icon(Icons.delete_forever, color: error),
-                title: const Text('Supprimer pour tous'),
+                title: Text(context.l10n.deleteForEveryone),
                 onTap: () {
                   Navigator.pop(context);
                   _chat.repository.deleteMessage(
@@ -371,7 +371,7 @@ extension _ChatActions on _ChatDetailScreenState {
               ),
             ListTile(
               leading: Icon(Icons.delete_outline, color: muted),
-              title: const Text('Supprimer pour moi'),
+              title: Text(context.l10n.deleteForMe),
               onTap: () {
                 Navigator.pop(context);
                 _chat.repository.deleteMessage(
@@ -385,7 +385,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (msg.msgID != 0)
               ListTile(
                 leading: Icon(Icons.info_outline, color: primary),
-                title: const Text('Infos'),
+                title: Text(context.l10n.infoAction),
                 onTap: () {
                   Navigator.pop(context);
                   _showMessageInfo(msg);
@@ -401,13 +401,13 @@ extension _ChatActions on _ChatDetailScreenState {
   /// Feuille « Détails du message ».
   ///
   /// Vue EXPÉDITEUR (mes messages) : Livré à (deliveredAt), Lu à (readAt)
-  /// — "Envoyé à" retiré (peu utile pour l'expéditeur).
+  /// — context.l10n.sentAt retiré (peu utile pour l'expéditeur).
   ///
   /// Vue DESTINATAIRE (messages reçus) : Appui sur envoyer (clickSentAt) et
   /// Envoyé à (sendAt).
   ///
   /// Vue DESTINATAIRE (messages reçus) : Appui sur envoyer (clickSentAt)
-  /// uniquement — "Envoyé à" retiré (redondant, peu utile pour le destinataire).
+  /// uniquement — context.l10n.sentAt retiré (redondant, peu utile pour le destinataire).
   void _showMessageInfo(LocalMessage msg) {
     final isMe = msg.senderID == _myId;
 
@@ -415,8 +415,7 @@ extension _ChatActions on _ChatDetailScreenState {
       if (d == null) return '—';
       final l = d.toLocal();
       String two(int n) => n.toString().padLeft(2, '0');
-      return '${two(l.day)}/${two(l.month)}/${l.year} à '
-          '${two(l.hour)}:${two(l.minute)}:${two(l.second)}';
+      return context.l10n.dateAtTimeFull(l.day, l.month, l.year, '${two(l.hour)}:${two(l.minute)}:${two(l.second)}');
     }
 
     // Fuseau horaire lisible à partir du nom (pays de l'expéditeur, ex.
@@ -474,23 +473,23 @@ extension _ChatActions on _ChatDetailScreenState {
     if (isMe) {
       rows.add(line(
         Icons.done_all_outlined,
-        'Livré à',
-        msg.deliveredAt != null ? fmt(msg.deliveredAt) : 'Pas encore livré',
+        context.l10n.deliveredAt,
+        msg.deliveredAt != null ? fmt(msg.deliveredAt) : context.l10n.notDeliveredYet,
       ));
       rows.add(line(
         Icons.visibility_outlined,
-        'Lu à',
-        msg.readAt != null ? fmt(msg.readAt) : 'Pas encore lu',
+        context.l10n.readAt,
+        msg.readAt != null ? fmt(msg.readAt) : context.l10n.notYetRead,
       ));
     } else {
       rows.add(line(
         Icons.touch_app_outlined,
-        'Appui sur envoyer',
+        context.l10n.sentOnTapSend,
         msg.clickSentAt != null ? fmt(msg.clickSentAt) : '—',
       ));
-      rows.add(line(Icons.send_outlined, 'Envoyé à', fmt(msg.sendAt)));
+      rows.add(line(Icons.send_outlined, context.l10n.sentAt, fmt(msg.sendAt)));
     }
-    rows.add(line(Icons.public, 'Fuseau horaire', tz));
+    rows.add(line(Icons.public, context.l10n.timeZoneLabel, tz));
 
     showAppBottomSheet(
       context: context,
@@ -501,7 +500,7 @@ extension _ChatActions on _ChatDetailScreenState {
           children: [
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text('Détails du message', style: context.text.titleSmall),
+              child: Text(context.l10n.messageDetails, style: context.text.titleSmall),
             ),
             ...rows,
             AppSpacing.vGapSm,
@@ -514,8 +513,8 @@ extension _ChatActions on _ChatDetailScreenState {
   void _openForwardPicker(LocalMessage msg) {
     if (!canForwardMessage(msg)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ce message ne peut pas être transféré pour le moment'),
+        SnackBar(
+          content: Text(context.l10n.thisMessageCannotBeForwardedRight),
         ),
       );
       return;
@@ -534,8 +533,8 @@ extension _ChatActions on _ChatDetailScreenState {
   void _openForwardAlbumPicker(List<LocalMessage> items) {
     if (!canForwardAlbum(items)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cet album ne peut pas être transféré pour le moment'),
+        SnackBar(
+          content: Text(context.l10n.thisAlbumCannotBeForwardedRight),
         ),
       );
       return;
@@ -565,7 +564,7 @@ extension _ChatActions on _ChatDetailScreenState {
           children: [
             ListTile(
               leading: Icon(Icons.check_circle_outline, color: primary),
-              title: Text('Sélectionner (${items.length})'),
+              title: Text(context.l10n.selectCount(items.length)),
               onTap: () {
                 Navigator.pop(context);
                 _enterSelectionModeAlbum(items);
@@ -574,7 +573,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (canForwardAlbum(items))
               ListTile(
                 leading: Icon(Icons.forward, color: primary),
-                title: Text('Transférer l\'album (${items.length})'),
+                title: Text(context.l10n.forwardAlbumCount(items.length)),
                 onTap: () {
                   Navigator.pop(context);
                   _openForwardAlbumPicker(items);
@@ -582,7 +581,7 @@ extension _ChatActions on _ChatDetailScreenState {
               ),
             ListTile(
               leading: Icon(Icons.delete_outline, color: muted),
-              title: const Text('Supprimer pour moi'),
+              title: Text(context.l10n.deleteForMe),
               onTap: () {
                 Navigator.pop(context);
                 final ids = items
@@ -601,7 +600,7 @@ extension _ChatActions on _ChatDetailScreenState {
             if (isMe)
               ListTile(
                 leading: Icon(Icons.delete_forever, color: error),
-                title: const Text('Supprimer pour tous'),
+                title: Text(context.l10n.deleteForEveryone),
                 onTap: () {
                   Navigator.pop(context);
                   final ids = items
@@ -631,7 +630,7 @@ extension _ChatActions on _ChatDetailScreenState {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Action impossible, réessayez')),
+        SnackBar(content: Text(context.l10n.actionFailedPleaseTryAgain)),
       );
     }
   }
@@ -639,8 +638,8 @@ extension _ChatActions on _ChatDetailScreenState {
   void _showEditDialog(LocalMessage msg) {
     if (!_canEditMessage(msg)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La modification n\'est possible que dans les 30 minutes suivant l\'envoi'),
+        SnackBar(
+          content: Text(context.l10n.editingIsOnlyPossibleWithin30),
         ),
       );
       return;
@@ -649,17 +648,17 @@ extension _ChatActions on _ChatDetailScreenState {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Modifier le message'),
+        title: Text(context.l10n.editMessage),
         content: TextField(controller: ctrl, autofocus: true, maxLines: null),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.commonCancel)),
           ElevatedButton(
             onPressed: () {
               final t = ctrl.text.trim();
               if (t.isNotEmpty && msg.msgID != 0) _chat.repository.editMessage(msg.msgID, t);
               Navigator.pop(context);
             },
-            child: const Text('Enregistrer'),
+            child: Text(context.l10n.commonSave),
           ),
         ],
       ),
@@ -686,8 +685,8 @@ extension _ChatActions on _ChatDetailScreenState {
                     _pendingViewOnce ? Icons.timer : Icons.timer_outlined,
                     color: context.colors.primary,
                   ),
-                  title: const Text('Vue unique'),
-                  subtitle: const Text('Ouvrable une seule fois, puis inaccessible'),
+                  title: Text(context.l10n.viewOnce),
+                  subtitle: Text(context.l10n.canBeOpenedOnlyOnceThen),
                   contentPadding: EdgeInsets.zero,
                 ),
                 const Divider(height: 1),
@@ -696,10 +695,10 @@ extension _ChatActions on _ChatDetailScreenState {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _attachOption(Icons.photo_library, 'Galerie', sem.info, _pickImageFromGallery),
-                  _attachOption(Icons.camera_alt, 'Caméra', context.colors.primary, _pickImageFromCamera),
-                  _attachOption(Icons.videocam, 'Vidéo', context.colors.error, _pickVideo),
-                  _attachOption(Icons.insert_drive_file, 'Fichier', sem.warning, _pickFile),
+                  _attachOption(Icons.photo_library, context.l10n.gallery, sem.info, _pickImageFromGallery),
+                  _attachOption(Icons.camera_alt, context.l10n.camera, context.colors.primary, _pickImageFromCamera),
+                  _attachOption(Icons.videocam, context.l10n.video2, context.colors.error, _pickVideo),
+                  _attachOption(Icons.insert_drive_file, context.l10n.file2, sem.warning, _pickFile),
                 ],
               ),
               AppSpacing.vGapMd,
@@ -708,13 +707,13 @@ extension _ChatActions on _ChatDetailScreenState {
                 children: [
                   _attachOption(
                     Icons.location_on,
-                    'Position',
+                    context.l10n.location2,
                     sem.success,
                     _pickLocation,
                   ),
                   _attachOption(
                     Icons.person,
-                    'Contact',
+                    context.l10n.contact2,
                     sem.info,
                     _pickContact,
                   ),
@@ -775,8 +774,8 @@ extension _ChatActions on _ChatDetailScreenState {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Maximum ${ChatRepository.maxAlbumItems} photos. '
-              'Seules les ${ChatRepository.maxAlbumItems} premières seront envoyées.',
+              '${context.l10n.maxPhotos(ChatRepository.maxAlbumItems)} '
+              '${context.l10n.albumFirstOnly(ChatRepository.maxAlbumItems)}',
             ),
           ),
         );
@@ -847,8 +846,8 @@ extension _ChatActions on _ChatDetailScreenState {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Maximum ${ChatRepository.maxAlbumItems} vidéos. '
-            'Seules les ${ChatRepository.maxAlbumItems} premières seront envoyées.',
+            '${context.l10n.maxVideos(ChatRepository.maxAlbumItems)} '
+            '${context.l10n.albumFirstOnly(ChatRepository.maxAlbumItems)}',
           ),
         ),
       );
@@ -863,7 +862,7 @@ extension _ChatActions on _ChatDetailScreenState {
         if (mounted) {
           final mb = (size / (1024 * 1024)).toStringAsFixed(1);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Vidéo ignorée ($mb Mo). Limite : 50 Mo.'),
+            content: Text(context.l10n.videoTooLarge('$mb')),
             backgroundColor: AppColors.error,
           ));
         }
@@ -942,7 +941,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (size > _maxMediaBytes) {
       final mb = (size / (1024 * 1024)).toStringAsFixed(1);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Fichier trop volumineux ($mb Mo). Limite : 50 Mo.'),
+        content: Text(context.l10n.fileTooLarge(mb)),
         backgroundColor: AppColors.error,
       ));
       return;
@@ -984,7 +983,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (mounted) rebuild(() => _isRecording = false);
 
     if (send && path != null && seconds >= 1) {
-      _sendMediaFile(File(path), type: 3, name: 'Message vocal', duration: seconds, viewOnce: _voiceViewOnce);
+      _sendMediaFile(File(path), type: 3, name: context.l10n.voiceMessage, duration: seconds, viewOnce: _voiceViewOnce);
     } else if (path != null) {
       // Annulé ou trop court → supprimer le fichier temporaire.
       try {
@@ -1033,7 +1032,7 @@ extension _ChatActions on _ChatDetailScreenState {
       if (!mounted) return;
       if (!found) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Message introuvable dans cette conversation')),
+          SnackBar(content: Text(context.l10n.messageNotFoundInThisConversation)),
         );
         return;
       }
@@ -1076,7 +1075,7 @@ extension _ChatActions on _ChatDetailScreenState {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible d\'afficher le message')),
+          SnackBar(content: Text(context.l10n.unableToDisplayTheMessage)),
         );
       }
     } finally {
@@ -1182,7 +1181,7 @@ extension _ChatActions on _ChatDetailScreenState {
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
               child: Text(
-                'Rappeler $name',
+                context.l10n.callBackName(name),
                 style: context.text.titleSmall,
               ),
             ),
@@ -1191,7 +1190,7 @@ extension _ChatActions on _ChatDetailScreenState {
                 callWasVideo ? Icons.videocam_rounded : Icons.call_rounded,
                 color: primary,
               ),
-              title: Text(callWasVideo ? 'Appel vidéo' : 'Appel vocal'),
+              title: Text(callWasVideo ? context.l10n.videoCall : context.l10n.voiceCall),
               onTap: () {
                 Navigator.pop(context);
                 _initiateCall(isVideo: callWasVideo);
@@ -1202,7 +1201,7 @@ extension _ChatActions on _ChatDetailScreenState {
                 callWasVideo ? Icons.call_rounded : Icons.videocam_rounded,
                 color: context.colors.onSurfaceVariant,
               ),
-              title: Text(callWasVideo ? 'Appel vocal' : 'Appel vidéo'),
+              title: Text(callWasVideo ? context.l10n.voiceCall : context.l10n.videoCall),
               onTap: () {
                 Navigator.pop(context);
                 _initiateCall(isVideo: !callWasVideo);
@@ -1217,7 +1216,7 @@ extension _ChatActions on _ChatDetailScreenState {
   Future<void> _initiateCall({required bool isVideo}) async {
     if (_callsDisabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appel impossible avec ce contact')),
+        SnackBar(content: Text(context.l10n.cannotCallThisContact)),
       );
       return;
     }
@@ -1231,7 +1230,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (me == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil non disponible, réessayez')),
+        SnackBar(content: Text(context.l10n.profileUnavailableTryAgain)),
       );
       return;
     }
@@ -1277,7 +1276,7 @@ extension _ChatActions on _ChatDetailScreenState {
 
     if (others.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aucun autre membre à appeler')),
+        SnackBar(content: Text(context.l10n.noOtherMembersToCall)),
       );
       return;
     }
@@ -1303,7 +1302,7 @@ extension _ChatActions on _ChatDetailScreenState {
     final callService = Provider.of<CallService>(context, listen: false);
     if (callService.status != CallStatus.idle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Un appel est déjà en cours')),
+        SnackBar(content: Text(context.l10n.aCallIsAlreadyInProgress)),
       );
       return;
     }
@@ -1370,8 +1369,8 @@ extension _ChatActions on _ChatDetailScreenState {
       );
       if (path == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible de télécharger le média'),
+          SnackBar(
+            content: Text(context.l10n.unableToDownloadTheMedia),
             backgroundColor: AppColors.error,
           ),
         );
@@ -1391,7 +1390,7 @@ extension _ChatActions on _ChatDetailScreenState {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: AppColors.black.withValues(alpha: 0.55),
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -1401,10 +1400,10 @@ extension _ChatActions on _ChatDetailScreenState {
                 height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: Colors.white,
+                  color: AppColors.white,
                 ),
               )
-            : const Icon(Icons.download_rounded, color: Colors.white, size: 26),
+            : const Icon(Icons.download_rounded, color: AppColors.white, size: 26),
       ),
     );
   }
@@ -1494,19 +1493,19 @@ extension _ChatActions on _ChatDetailScreenState {
     }
     if (msg.viewedAt != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ce média a déjà été ouvert')),
+        SnackBar(content: Text(context.l10n.thisMediaHasAlreadyBeenOpened)),
       );
       return;
     }
     if (msg.senderID == _myId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Média à vue unique — visible une seule fois par le destinataire')),
+        SnackBar(content: Text(context.l10n.viewOnceMediaVisibleOnlyOnce)),
       );
       return;
     }
     if (msg.mediaUrl == null || msg.mediaUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ce média n\'est plus disponible')),
+        SnackBar(content: Text(context.l10n.thisMediaIsNoLongerAvailable)),
       );
       return;
     }
@@ -1589,7 +1588,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (path == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de télécharger le fichier'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(context.l10n.unableToDownloadTheFile), backgroundColor: AppColors.error),
         );
       }
       return;
@@ -1603,7 +1602,7 @@ extension _ChatActions on _ChatDetailScreenState {
         MaterialPageRoute(
           builder: (_) => PdfViewerScreen(
             path: path!,
-            title: msg.mediaName ?? 'Document PDF',
+            title: msg.mediaName ?? context.l10n.pdfDocument,
           ),
         ),
       );
@@ -1613,7 +1612,7 @@ extension _ChatActions on _ChatDetailScreenState {
     final res = await OpenFilex.open(path);
     if (res.type != ResultType.done && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Aucune application pour ouvrir ce fichier (${res.message})'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.l10n.cannotOpenFileAppAlt(res.message)), backgroundColor: AppColors.error),
       );
     }
   }
@@ -1621,17 +1620,17 @@ extension _ChatActions on _ChatDetailScreenState {
   String _mediaLabel(int type) {
     switch (type) {
       case 1:
-        return '📷 Photo';
+        return context.l10n.photo;
       case 2:
-        return '🎥 Vidéo';
+        return context.l10n.video;
       case 3:
-        return '🎵 Audio';
+        return context.l10n.audio;
       case 4:
-        return '📎 Fichier';
+        return context.l10n.file;
       case 5:
-        return '📍 Position';
+        return context.l10n.location;
       case 7:
-        return '👤 Contact';
+        return context.l10n.contact;
       default:
         return '';
     }

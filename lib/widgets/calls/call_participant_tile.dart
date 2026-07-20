@@ -204,7 +204,7 @@ class CallGroupGrid extends StatelessWidget {
             ),
             AppSpacing.vGapLg,
             Text(
-              'En attente des participants…',
+              context.l10n.waitingForParticipants,
               style: TextStyle(
                 color: callUi.onBackgroundMuted,
                 fontSize: 14,
@@ -233,14 +233,14 @@ class CallGroupGrid extends StatelessWidget {
           childAspectRatio: 0.75,
         ),
         itemCount: entries.length,
-        itemBuilder: (_, i) {
+        itemBuilder: (context, i) {
           final e = entries[i];
           final info = roster[e.key];
           return CallParticipantTile(
             key: ValueKey('remote_${e.key}'),
             userId: e.key,
             stream: e.value,
-            name: info?.name ?? 'Participant',
+            name: info?.name ?? context.l10n.participantFallback,
             photoUrl: info?.photo,
             isSpeaking: activeSpeakers.contains(e.key),
             isMuted: info?.isMuted ?? false,

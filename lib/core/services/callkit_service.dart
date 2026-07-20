@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
+import '../theme/locale_controller.dart';
 class IncomingCallAction {
   final String callId;
   final String callerId;
@@ -58,18 +59,18 @@ class CallKitService {
     final params = CallKitParams(
       id: callId,
       nameCaller: callerName,
-      appName: 'Alanya',
+      appName: LocaleController.instance.l10n.appTitle,
       avatar: callerPhoto,
       handle: callerId,
       type: isVideo ? 1 : 0,
       duration: 30000,
-      textAccept: 'Accepter',
-      textDecline: 'Refuser',
+      textAccept: LocaleController.instance.l10n.commonAccept,
+      textDecline: LocaleController.instance.l10n.commonDecline,
       missedCallNotification: NotificationParams(
         showNotification: true,
         isShowCallback: false,
-        subtitle: 'Appel manqué',
-        callbackText: 'Rappeler',
+        subtitle: LocaleController.instance.l10n.callMissed,
+        callbackText: LocaleController.instance.l10n.commonCallBack,
       ),
       extra: {
         'callId': callId,
@@ -85,8 +86,8 @@ class CallKitService {
         ringtonePath: silent ? '' : 'system_ringtone_default',
         backgroundColor: '#0955fa',
         actionColor: '#4CAF50',
-        incomingCallNotificationChannelName: 'Appels entrants',
-        missedCallNotificationChannelName: 'Appels manqués',
+        incomingCallNotificationChannelName: LocaleController.instance.l10n.incomingCallsChannel,
+        missedCallNotificationChannelName: LocaleController.instance.l10n.missedCalls,
       ),
     );
 
@@ -105,7 +106,7 @@ class CallKitService {
     final params = CallKitParams(
       id: callId,
       nameCaller: displayName,
-      appName: 'Alanya',
+      appName: LocaleController.instance.l10n.appTitle,
       handle: handle,
       type: isVideo ? 1 : 0,
       duration: 0,
@@ -114,14 +115,14 @@ class CallKitService {
         'callerName': displayName,
         'isVideo': isVideo,
       },
-      android: const AndroidParams(
+      android: AndroidParams(
         isCustomNotification: true,
         isShowLogo: false,
         ringtonePath: '',
         backgroundColor: '#0955fa',
         actionColor: '#4CAF50',
-        incomingCallNotificationChannelName: 'Appels en cours',
-        missedCallNotificationChannelName: 'Appels manqués',
+        incomingCallNotificationChannelName: LocaleController.instance.l10n.ongoingCallsChannel,
+        missedCallNotificationChannelName: LocaleController.instance.l10n.missedCalls,
       ),
     );
 

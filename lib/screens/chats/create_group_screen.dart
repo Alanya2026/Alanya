@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/validators.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
@@ -24,6 +25,7 @@ class CreateGroupScreen extends StatefulWidget {
 }
 
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   late List<User> _members;
   File? _photoFile;
@@ -53,11 +55,11 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   }
 
   Future<void> _create() async {
-    if (_nameController.text.isEmpty || _members.isEmpty) {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_members.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Remplir tous les champs et ajouter au moins un membre')),
+        SnackBar(
+            content: Text(context.l10n.addAtLeastOneMember)),
       );
       return;
     }
@@ -83,11 +85,11 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       if (!mounted) return;
       Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e, st) {
-      AppLog.e('CreateGroup', 'Création du groupe échouée', e, st);
+      AppLog.e('CreateGroup', context.l10n.failedToCreateGroup, e, st);
       if (mounted) {
         setState(() => _creating = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de créer le groupe, réessayez')),
+          SnackBar(content: Text(context.l10n.unableToCreateTheGroupTry)),
         );
       }
     }
@@ -96,10 +98,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Créer un groupe')),
+      appBar: AppBar(title: Text(context.l10n.createAGroup)),
       body: SingleChildScrollView(
         padding: AppSpacing.card,
-        child: Column(
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Photo
@@ -132,18 +137,19 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             AppSpacing.vGapXxl,
 
             // Name field
-            Text('Nom du groupe', style: context.text.titleSmall),
+            Text(context.l10n.groupName, style: context.text.titleSmall),
             AppSpacing.vGapSm,
-            TextField(
+            TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                hintText: 'Entrez le nom du groupe',
+              validator: Validators.required,
+              decoration: InputDecoration(
+                hintText: context.l10n.enterTheGroupName,
               ),
             ),
             AppSpacing.vGapXxl,
 
             // Members
-            Text('Membres (${_members.length})',
+            Text(context.l10n.membersCount(_members.length),
                 style: context.text.titleSmall),
             AppSpacing.vGapSm,
             ListView.separated(
@@ -215,10 +221,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                             ? CupertinoIcons.check_mark
                             : CupertinoIcons.wifi_slash),
                     label: Text(_creating
-                        ? 'Création...'
+                        ? context.l10n.creating
                         : (online
-                            ? 'Créer le groupe'
-                            : 'Indisponible hors ligne')),
+                            ? context.l10n.createGroup
+                            : context.l10n.unavailableOffline)),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
                       shape: const RoundedRectangleBorder(
@@ -230,6 +236,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               },
             ),
           ],
+          ),
         ),
       ),
     );

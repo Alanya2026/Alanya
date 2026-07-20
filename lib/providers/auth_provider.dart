@@ -7,6 +7,7 @@ import '../core/utils/app_log.dart';
 import '../core/utils/alanya_phone_formatter.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
+import '../core/theme/locale_controller.dart';
 
 class AuthProvider extends ChangeNotifier {
   final TalkyApiClient _apiClient;
@@ -114,7 +115,7 @@ class AuthProvider extends ChangeNotifier {
       _error = e.message;
       debugPrint('[AuthProvider] Login TalkyException: ${e.message} (Status: ${e.statusCode})');
     } catch (e) {
-      _error = 'Une erreur est survenue: $e';
+      _error = LocaleController.instance.l10n.anErrorOccurred('$e');
       debugPrint('[AuthProvider] Login Exception: $e');
     } finally {
       _setLoading(false);
@@ -153,7 +154,7 @@ class AuthProvider extends ChangeNotifier {
       _error = e.message;
       debugPrint('[AuthProvider] Register TalkyException: ${e.message} (Status: ${e.statusCode})');
     } catch (e) {
-      _error = 'Une erreur est survenue: $e';
+      _error = LocaleController.instance.l10n.anErrorOccurred('$e');
       debugPrint('[AuthProvider] Register Exception: $e');
     } finally {
       _setLoading(false);
@@ -166,7 +167,7 @@ class AuthProvider extends ChangeNotifier {
     final res = await _apiClient.uploadImage(file);
     final url = (res['url'] as String?)?.trim();
     if (url == null || url.isEmpty) {
-      throw TalkyException('Réponse upload invalide', 0);
+      throw TalkyException(LocaleController.instance.l10n.invalidUploadResponse, 0);
     }
     // L'upload ne fait qu'héberger l'image : on doit définir explicitement
     // l'avatar de l'utilisateur connecté (sinon aucune photo n'est appliquée).

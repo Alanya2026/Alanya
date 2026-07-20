@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../../talky_api_client.dart';
 import '../../core/utils/app_log.dart';
 import '../../talky_models.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/country_utils.dart';
@@ -63,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AppLog.e('ProfileScreen', 'Suppression contact préféré échouée', e, st);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible de retirer ce contact, réessayez')),
+        SnackBar(content: Text(context.l10n.unableToRemoveThisContactTry)),
       );
     }
   }
@@ -90,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.outlineStrong,
+                color: context.colors.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -99,7 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: Icon(Icons.person_remove_outlined,
                   color: context.colors.error),
               title: Text(
-                'Retirer ${user.nom.isNotEmpty ? user.nom : user.pseudo} des contacts préférés',
+                context.l10n.removePreferredContact(user.nom.isNotEmpty ? user.nom : user.pseudo),
                 style: TextStyle(color: context.colors.error),
               ),
               onTap: () {
@@ -124,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
-        title: Text('Profil', style: context.text.headlineLarge),
+        title: Text(context.l10n.navProfile, style: context.text.headlineLarge),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
@@ -154,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Contacts préférés',
+                            context.l10n.preferredContacts,
                             style: context.text.titleMedium,
                           ),
                           if (contacts.length > 4)
@@ -208,7 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  _buildMenuItem(CupertinoIcons.person, 'Compte', () {
+                  _buildMenuItem(CupertinoIcons.person, context.l10n.accountLabel, () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -216,7 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   }),
                   const Divider(height: 1),
-                  _buildMenuItem(CupertinoIcons.settings, 'Paramètres', () {
+                  _buildMenuItem(CupertinoIcons.settings, context.l10n.settingsTitle, () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -228,7 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       user.typeCompte >= 1) ...[
                     const Divider(height: 1),
                     _buildMenuItem(Icons.admin_panel_settings,
-                        'Tableau de bord Admin', () {
+                        context.l10n.adminDashboard, () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -254,7 +253,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: AppColors.errorContainer,
+                    color: context.colors.errorContainer,
                     borderRadius: AppRadius.brSm,
                   ),
                   child: Icon(Icons.logout,
@@ -262,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       size: AppIconSize.sm),
                 ),
                 title: Text(
-                  'Déconnexion',
+                  context.l10n.signOut,
                   style: context.text.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: context.colors.error,
@@ -287,10 +286,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       leading: Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: AppColors.brandContainer,
+          color: context.semantic.brandContainer,
           borderRadius: AppRadius.brSm,
         ),
-        child: Icon(icon, color: AppColors.brandPrimary, size: AppIconSize.sm),
+        child: Icon(icon, color: context.colors.primary, size: AppIconSize.sm),
       ),
       title: Text(
         title,
@@ -346,7 +345,7 @@ class _ProfileHeader extends StatelessWidget {
                           imageUrl: user!.avatarUrl.trim(),
                           fit: BoxFit.cover,
                           placeholder: (_, __) =>
-                              Container(color: AppColors.brandContainer),
+                              Container(color: context.semantic.brandContainer),
                           errorWidget: (_, __, ___) =>
                               _AvatarFallback(initial: initial, fontSize: 40),
                         )
@@ -370,9 +369,9 @@ class _ProfileHeader extends StatelessWidget {
                       color: context.colors.primary,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.camera_alt,
-                      color: AppColors.white,
+                      color: context.colors.onPrimary,
                       size: AppIconSize.sm,
                     ),
                   ),
@@ -385,7 +384,7 @@ class _ProfileHeader extends StatelessWidget {
             const CircularProgressIndicator()
           else ...[
             Text(
-              user?.nom ?? 'User',
+              user?.nom ?? context.l10n.userFallback,
               style: context.text.headlineSmall,
             ),
             if ((user?.typeCompte ?? 0) >= 1) ...[
@@ -504,7 +503,7 @@ class _ContactChip extends StatelessWidget {
                             imageUrl: user.avatarUrl.trim(),
                             fit: BoxFit.cover,
                             placeholder: (_, __) =>
-                                Container(color: AppColors.brandContainer),
+                                Container(color: context.semantic.brandContainer),
                             errorWidget: (_, __, ___) =>
                                 _AvatarFallback(initial: initial, fontSize: 18),
                           )
@@ -519,7 +518,7 @@ class _ContactChip extends StatelessWidget {
                       width: 11,
                       height: 11,
                       decoration: BoxDecoration(
-                        color: AppColors.online,
+                        color: context.semantic.online,
                         shape: BoxShape.circle,
                         border: Border.all(
                             color: context.colors.surface, width: 1.5),
@@ -577,13 +576,13 @@ class _EmptyContacts extends StatelessWidget {
               size: 44, color: context.colors.outline),
           AppSpacing.vGapMd,
           Text(
-            'Aucun contact préféré',
+            context.l10n.noPreferredContacts,
             style: context.text.titleSmall
                 ?.copyWith(color: context.colors.onSurfaceVariant),
           ),
           AppSpacing.vGapSm,
           Text(
-            'Ajoutez des contacts pour les retrouver\nrapidement lors de vos réunions',
+            context.l10n.addContactsToFindThemQuickly,
             textAlign: TextAlign.center,
             style: context.text.bodySmall
                 ?.copyWith(color: context.colors.outlineVariant),
@@ -592,9 +591,9 @@ class _EmptyContacts extends StatelessWidget {
           TextButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add_circle_outline),
-            label: const Text(
-              'Ajouter un contact',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            label: Text(
+              context.l10n.addAContact,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -611,10 +610,15 @@ class _RoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final superAdminAccent = const Color(0xFF7C4DFF);
     final (label, icon, fg, bg) = typeCompte >= 2
-        ? ('Super Admin', Icons.shield, const Color(0xFF6B3CD2),
-            const Color(0xFFEDE3FC))
-        : ('Admin', Icons.verified_user, context.colors.primary,
+        ? (
+            context.l10n.superAdmin,
+            Icons.shield,
+            superAdminAccent,
+            superAdminAccent.withValues(alpha: 0.16),
+          )
+        : (context.l10n.admin, Icons.verified_user, context.colors.primary,
             context.colors.primaryContainer);
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -650,14 +654,14 @@ class _AvatarFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.brandContainer,
+      color: context.semantic.brandContainer,
       alignment: Alignment.center,
       child: Text(
         initial,
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          color: AppColors.brandPrimary,
+          color: context.colors.primary,
         ),
       ),
     );

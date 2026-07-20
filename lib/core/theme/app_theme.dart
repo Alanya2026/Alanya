@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_dimens.dart';
 import 'call_ui_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Extension de thème pour les couleurs sémantiques que `ColorScheme` ne
 /// couvre pas nativement (succès, avertissement, info, présence en ligne,
@@ -177,6 +178,14 @@ extension AppThemeContext on BuildContext {
 
   CallUiColors get callUi =>
       Theme.of(this).extension<CallUiColors>() ?? CallUiColors.light;
+}
+
+
+
+/// Raccourci i18n : `context.l10n.xxx`.
+extension L10nContext on BuildContext {
+  AppLocalizations get l10n =>
+      AppLocalizations.of(this) ?? lookupAppLocalizations(const Locale('fr'));
 }
 
 /// Fabrique des thèmes clair / sombre de Talky.

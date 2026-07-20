@@ -102,8 +102,9 @@ class ChatDao {
 
   /// Messages d'une conversation (anciens → récents).
   /// Les messages soft-deletés ([isDeleted]=1) sont conservés pour afficher
-  /// « Ce message a été supprimé ». Les messages supprimés « pour moi » via
-  /// [deletedForID] sont en revanche masqués pour cet utilisateur uniquement.
+  /// le placeholder supprimé (sentinelle Drift + l10n à l'affichage).
+  /// Ceux supprimés « pour moi » via [deletedForID] sont masqués pour cet
+  /// utilisateur uniquement.
   Stream<List<LocalMessage>> watchMessages(int conversationID, int myId) {
     return (db.select(db.localMessages)
           ..where((m) =>

@@ -4,6 +4,7 @@
 import 'core/utils/backend_url.dart';
 import 'core/utils/contact_payload.dart';
 import 'core/utils/location_payload.dart';
+import 'core/theme/locale_controller.dart';
 
 // ── USER ─────────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ class Message {
   final String sendAt;
   final String? deliveredAt;
   final String? readAt;
-  /// Instant (horloge de l'expéditeur) où il a appuyé sur "Envoyer".
+  /// Instant (horloge de l'expéditeur) où il a appuyé sur LocaleController.instance.l10n.commonSend.
   final String? clickSentAt;
   /// Fuseau horaire de l'expéditeur (pays enregistré), renvoyé par le
   /// serveur — dérivé via jointure, jamais capturé ni stocké par message.
@@ -215,19 +216,19 @@ class Message {
   String get displayContent {
     if (type == 5) {
       final loc = LocationPayload.tryParse(content);
-      return loc?.previewLabel ?? '📍 Position';
+      return loc?.previewLabel ?? LocaleController.instance.l10n.location;
     }
     if (type == 7) {
       final contact = ContactPayload.tryParse(content);
-      return contact?.previewLabel ?? '👤 Contact';
+      return contact?.previewLabel ?? LocaleController.instance.l10n.contact;
     }
     if (content != null && content!.isNotEmpty) return content!;
     if (mediaName != null) return mediaName!;
     switch (type) {
-      case 1: return '📷 Photo';
-      case 2: return '🎥 Vidéo';
-      case 3: return '🎵 Audio';
-      case 4: return '📎 Fichier';
+      case 1: return LocaleController.instance.l10n.photo;
+      case 2: return LocaleController.instance.l10n.video;
+      case 3: return LocaleController.instance.l10n.audio;
+      case 4: return LocaleController.instance.l10n.file;
       default: return '';
     }
   }
@@ -291,9 +292,9 @@ class Conversation {
 
   // Nom à afficher (groupe ou nom de l'autre participant)
   String displayName(int myId) {
-    if (isGroup) return groupName ?? 'Groupe';
+    if (isGroup) return groupName ?? LocaleController.instance.l10n.groupFallback;
     final other = participants.where((u) => u.alanyaID != myId).firstOrNull;
-    return other?.nom ?? 'Inconnu';
+    return other?.nom ?? LocaleController.instance.l10n.unknownSender;
   }
 
   // Avatar à afficher
@@ -373,10 +374,10 @@ class Call {
 
   String get statusLabel {
     switch (status) {
-      case 0: return 'En cours';
-      case 1: return 'Terminé';
-      case 2: return 'Rejeté';
-      case 3: return 'Manqué';
+      case 0: return LocaleController.instance.l10n.inProgress;
+      case 1: return LocaleController.instance.l10n.ended2;
+      case 2: return LocaleController.instance.l10n.rejected;
+      case 3: return LocaleController.instance.l10n.missed;
       default: return '';
     }
   }
@@ -431,7 +432,7 @@ class Meeting {
         idOrganiser: json['idOrganiser'] ?? 0,
         startTime: json['start_time'] ?? '',
         duree: json['duree'] ?? 60,
-        objet: json['objet'] ?? 'Réunion',
+        objet: json['objet'] ?? LocaleController.instance.l10n.meeting,
         room: json['room'] ?? '',
         isEnd: json['isEnd'] == 1 || json['isEnd'] == true,
         typeMedia: json['type_media'] ?? 0,

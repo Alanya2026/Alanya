@@ -47,7 +47,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
         height: 26,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: selected ? context.colors.primary : Colors.transparent,
+          color: selected ? context.colors.primary : const Color(0x00000000),
           border: Border.all(
             color: selected
                 ? context.colors.primary
@@ -56,7 +56,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           ),
         ),
         child: selected
-            ? const Icon(Icons.check, size: 16, color: Colors.white)
+            ? const Icon(Icons.check, size: 16, color: AppColors.white)
             : null,
       ),
     );
@@ -104,7 +104,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           Padding(
             padding: const EdgeInsets.only(left: AppSpacing.lg, bottom: AppSpacing.xs),
             child: Text(
-              msg.senderNom ?? msg.senderPseudo ?? 'Unknown',
+              msg.senderNom ?? msg.senderPseudo ?? (AppLocalizations.of(context)?.unknownSender ?? context.l10n.unknownSender),
               style: context.text.labelSmall?.copyWith(color: context.colors.primary),
             ),
           ),
@@ -155,7 +155,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                             color: _bubbleMuted(isMe)),
                         const SizedBox(width: AppSpacing.xs),
                         Text(
-                          'Ce message a été supprimé',
+                          context.l10n.thisMessageWasDeleted,
                           style: context.text.bodyMedium?.copyWith(
                             color: _bubbleMuted(isMe),
                             fontStyle: FontStyle.italic,
@@ -211,10 +211,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
                         const SizedBox(width: AppSpacing.xs),
                         Tooltip(
                           message: msg.editedAt != null
-                              ? 'Modifié à ${_formatTime(msg.editedAt!)}'
-                              : 'Modifié',
+                              ? context.l10n.editedAt(_formatTime(msg.editedAt!))
+                              : context.l10n.edited2,
                           child: Text(
-                            '· modifié',
+                            context.l10n.edited,
                             style: context.text.labelSmall?.copyWith(
                               color: _bubbleMuted(isMe),
                               fontSize: 10,
@@ -229,7 +229,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       ],
                       if (isMe && !msg.isDeleted) ...[
                         const SizedBox(width: 4),
-                        _statusIcon(msg.status, deliveredAt: msg.deliveredAt, readAt: msg.readAt),
+                        _statusIcon(msg.status, deliveredAt: msg.deliveredAt, readAt: msg.readAt, retryClientId: msg.clientId),
                       ],
                     ],
                   ),
@@ -256,9 +256,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final yest = now.subtract(const Duration(days: 1));
     String label;
     if (_sameDay(date, now)) {
-      label = "Aujourd'hui";
+      label = context.l10n.today;
     } else if (_sameDay(date, yest)) {
-      label = 'Hier';
+      label = context.l10n.yesterday;
     } else {
       label = '${date.day}/${date.month}/${date.year}';
     }
@@ -316,12 +316,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
         : (outgoing ? Icons.call_made : Icons.call_received);
     final dirColor = answered ? context.semantic.success : colors.error;
 
-    final kind = isVideo ? 'Appel vidéo' : 'Appel vocal';
-    final direction = outgoing ? 'sortant' : 'entrant';
+    final l10n = context.l10n;
+    final label = isVideo
+        ? (outgoing ? l10n.videoCallOutgoing : l10n.videoCallIncoming)
+        : (outgoing ? l10n.voiceCallOutgoing : l10n.voiceCallIncoming);
     final statusLabel = answered
-        ? 'Répondu'
-        : (missed ? 'Sans réponse' : (rejected ? 'Rejeté' : 'Manqué'));
-    final label = '$kind $direction';
+        ? l10n.answered
+        : (missed ? l10n.noAnswer2 : (rejected ? l10n.rejected : l10n.missed));
 
     final t = call.createdAt.toLocal();
     two(int n) => n.toString().padLeft(2, '0');
@@ -415,7 +416,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
   Widget _buildReplyQuote(String content, bool isMe, {int? replyToID}) {
     final accent = isMe ? context.colors.onPrimary : context.colors.primary;
     return Material(
-      color: Colors.transparent,
+      color: const Color(0x00000000),
       child: InkWell(
         onTap: (replyToID != null && replyToID > 0)
             ? () => _scrollToReply(replyToID)
@@ -444,7 +445,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
   }
 
   // ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge en attente · ! échec.
-  Widget _statusIcon(int status, {DateTime? deliveredAt, DateTime? readAt}) {
+  Widget _statusIcon(
+    int status, {
+    DateTime? deliveredAt,
+    DateTime? readAt,
+    String? retryClientId,
+  }) {
     return MessageStatusIcon(
       status: status,
       deliveredAt: deliveredAt,
@@ -452,10 +458,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
       size: status == 0 ? 11 : 12,
       onBubble: true,
       timeFormatter: _formatTime,
+      onRetry: status == 4 && retryClientId != null
+          ? () => _chat.repository.retryMessage(retryClientId)
+          : null,
     );
   }
 
-  // Chip "Réponse à un statut" affichée au sommet du bubble.
+  // Chip context.l10n.statusReply affichée au sommet du bubble.
   Widget _buildStatusReplyChip(bool isMe) {
     final fg = isMe ? context.colors.onPrimary.withAlpha(200) : context.colors.primary;
     return Padding(
@@ -466,7 +475,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           Icon(Icons.auto_awesome_motion, size: 12, color: fg),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            'Réponse à un statut',
+            context.l10n.statusReply,
             style: context.text.labelSmall?.copyWith(
               color: fg,
               fontWeight: FontWeight.w600,
@@ -488,7 +497,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           Icon(Icons.forward, size: 12, color: fg),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            'Transféré',
+            context.l10n.forwarded,
             style: context.text.labelSmall?.copyWith(
               color: fg,
               fontWeight: FontWeight.w600,
@@ -565,7 +574,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           Icon(Icons.location_off, size: 18, color: muted),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            'Position indisponible',
+            context.l10n.positionUnavailable,
             style: context.text.bodyMedium?.copyWith(color: muted),
           ),
         ],
@@ -590,7 +599,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           Icon(Icons.person_off_outlined, size: 18, color: muted),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            'Contact indisponible',
+            context.l10n.contactUnavailable,
             style: context.text.bodyMedium?.copyWith(color: muted),
           ),
         ],
@@ -601,12 +610,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
       contact: contact,
       isMe: isMe,
       onOpenDetail: () {
+        // Ne pas passer la conv courante (souvent l'expéditeur) :
+        // la fiche résout la 1-1 avec le contact partagé.
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => ContactDetailScreen(
               userId: contact.alanyaID,
-              conversationId: widget.conversationId,
               initialName: contact.displayLabel,
               initialAvatar: contact.avatarUrl ?? '',
             ),
@@ -634,12 +644,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d\'ouvrir Maps')),
+        SnackBar(content: Text(context.l10n.unableToOpenMaps)),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d\'ouvrir Maps')),
+        SnackBar(content: Text(context.l10n.unableToOpenMaps)),
       );
     }
   }
@@ -656,20 +666,22 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final String label;
     final IconData icon;
     if (uploading) {
-      label = 'Envoi…';
+      label = context.l10n.sending;
       icon = Icons.timer_outlined;
     } else if (opened) {
-      label = 'Ouvert';
+      label = context.l10n.viewOnceOpened;
       icon = Icons.visibility_off_outlined;
     } else {
       final kind = msg.type == 1
-          ? 'Photo'
+          ? context.l10n.photo2
           : msg.type == 2
-              ? 'Vidéo'
+              ? context.l10n.video2
               : msg.type == 3
-                  ? 'Audio'
-                  : 'Média';
-      label = isMe ? '$kind · Vue unique' : '$kind · Appuyer pour voir';
+                  ? context.l10n.audio2
+                  : context.l10n.mediaFallback;
+      label = isMe
+          ? context.l10n.kindViewOnce(kind)
+          : context.l10n.tapToViewKind(kind);
       icon = Icons.timer;
     }
 
@@ -710,7 +722,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
       builder: (context, progressMap, _) {
         final progress = progressMap[msg.clientId];
         return Container(
-          color: Colors.black26,
+          color: AppColors.black.withValues(alpha: 0.26),
           alignment: Alignment.center,
           child: progress != null
               ? Padding(
@@ -732,7 +744,6 @@ extension _ChatBubbles on _ChatDetailScreenState {
                         '${(progress * 100).round()} %',
                         style: context.text.labelSmall?.copyWith(
                           color: AppColors.white,
-                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -790,7 +801,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       : Container(
                           height: 160,
                           width: 200,
-                          color: Colors.black26,
+                          color: AppColors.black.withValues(alpha: 0.26),
                           child: Icon(
                             Icons.image_outlined,
                             size: 48,
@@ -883,7 +894,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                msg.mediaName ?? 'Fichier',
+                msg.mediaName ?? context.l10n.file2,
                 style: context.text.bodyLarge?.copyWith(
                   color: _bubbleText(isMe),
                   decoration: TextDecoration.underline,
@@ -893,7 +904,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
               ),
               if (msg.status != 0)
                 Text(
-                  needsDl ? 'Appuyer pour télécharger' : style.openHint,
+                  needsDl ? context.l10n.tapToDownload : style.openHint,
                   style: context.text.labelSmall?.copyWith(
                     color: _bubbleText(isMe).withAlpha(170),
                   ),
@@ -972,7 +983,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           Padding(
             padding: const EdgeInsets.only(left: AppSpacing.lg, bottom: AppSpacing.xs),
             child: Text(
-              first.senderNom ?? first.senderPseudo ?? 'Unknown',
+              first.senderNom ?? first.senderPseudo ?? (AppLocalizations.of(context)?.unknownSender ?? context.l10n.unknownSender),
               style: context.text.labelSmall?.copyWith(color: context.colors.primary),
             ),
           ),
@@ -1008,7 +1019,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                         Icon(Icons.block, size: 14, color: _bubbleMuted(isMe)),
                         const SizedBox(width: AppSpacing.xs),
                         Text(
-                          'Ce message a été supprimé',
+                          context.l10n.thisMessageWasDeleted,
                           style: context.text.bodyMedium?.copyWith(
                             color: _bubbleMuted(isMe),
                             fontStyle: FontStyle.italic,
@@ -1062,6 +1073,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
                           worstStatus,
                           deliveredAt: last.deliveredAt,
                           readAt: last.readAt,
+                          retryClientId: sorted
+                              .where((m) => m.status == 4)
+                              .map((m) => m.clientId)
+                              .firstOrNull,
                         ),
                       ],
                     ],
@@ -1233,7 +1248,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
             if (uploading) _buildUploadProgressOverlay(msg),
             if (overlayExtra != null && overlayExtra > 0)
               Container(
-                color: Colors.black54,
+                color: AppColors.black.withValues(alpha: 0.54),
                 alignment: Alignment.center,
                 child: Text(
                   '+$overlayExtra',

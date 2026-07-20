@@ -158,15 +158,15 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
       appBar: AppBar(
         title: Text(
           _selected.isEmpty
-              ? 'Nouveau groupe'
-              : '${_selected.length} sélectionné',
+              ? context.l10n.newGroup
+              : context.l10n.selectedCount(_selected.length),
         ),
         actions: [
           if (_selected.isNotEmpty)
             TextButton(
               onPressed: _goToCreate,
               child: Text(
-                'Suivant',
+                context.l10n.next,
                 style: TextStyle(
                   color: context.colors.primary,
                   fontWeight: FontWeight.bold,
@@ -183,7 +183,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                 horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
             child: AppSearchField(
               controller: _searchController,
-              hintText: 'Rechercher par nom, pseudo ou téléphone…',
+              hintText: context.l10n.searchByNameUsernameOrPhone,
               onChanged: (_) {},
               onClear: _clearSearch,
             ),
@@ -196,7 +196,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                         icon: hasQuery
                             ? Icons.person_search
                             : Icons.people_outline,
-                        title: hasQuery ? 'Aucun résultat' : 'Aucun contact',
+                        title: hasQuery ? context.l10n.noResults : context.l10n.noContacts,
                       )
                     : ListView.builder(
                         itemCount: _filteredUsers.length,
@@ -271,7 +271,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                                     decoration: BoxDecoration(
                                       color: selected
                                           ? context.colors.primary
-                                          : Colors.transparent,
+                                          : const Color(0x00000000),
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: selected
@@ -282,7 +282,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                                     ),
                                     child: selected
                                         ? const Icon(Icons.check,
-                                            color: Colors.white, size: 16)
+                                            color: AppColors.white, size: 16)
                                         : null,
                                   ),
                                 ],

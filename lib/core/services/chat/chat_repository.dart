@@ -25,6 +25,7 @@ import 'message_outbox.dart';
 import 'message_sender.dart';
 import 'socket_message_handlers.dart';
 import 'talky_chat_api.dart';
+import '../../theme/locale_controller.dart';
 
 /// Facade messaging : sync, envoi, outbox, accusés, handlers socket.
 class ChatRepository {
@@ -412,17 +413,17 @@ class ChatRepository {
     required List<int> targetConversationIDs,
   }) async {
     if (_myId == 0) {
-      return const ForwardResult(
+      return ForwardResult(
         succeeded: 0,
         failed: 0,
-        errors: ['Utilisateur non connecté'],
+        errors: [LocaleController.instance.l10n.userNotConnected],
       );
     }
     if (!canForwardAlbum(sourceItems)) {
-      return const ForwardResult(
+      return ForwardResult(
         succeeded: 0,
         failed: 1,
-        errors: ['Cet album ne peut pas être transféré'],
+        errors: [LocaleController.instance.l10n.albumCannotBeForwarded],
       );
     }
     if (targetConversationIDs.isEmpty) {
@@ -522,7 +523,7 @@ class ChatRepository {
 
       final file = localMediaFileForForward(source);
       if (file == null) {
-        throw StateError('Média indisponible pour le transfert');
+        throw StateError(LocaleController.instance.l10n.mediaUnavailableForTransfer);
       }
 
       await sendMediaFile(
@@ -557,20 +558,20 @@ class ChatRepository {
     String? caption,
   }) async {
     if (_myId == 0) {
-      return const ForwardResult(
+      return ForwardResult(
         succeeded: 0,
         failed: 0,
-        errors: ['Utilisateur non connecté'],
+        errors: [LocaleController.instance.l10n.userNotConnected],
       );
     }
     if (sources.isEmpty || targetConversationIDs.isEmpty) {
       return const ForwardResult(succeeded: 0, failed: 0);
     }
     if (!sources.every(canForwardMessage)) {
-      return const ForwardResult(
+      return ForwardResult(
         succeeded: 0,
         failed: 1,
-        errors: ['Un ou plusieurs messages ne peuvent pas être transférés'],
+        errors: [LocaleController.instance.l10n.oneOrMoreMessagesCannotBe],
       );
     }
 
@@ -648,7 +649,7 @@ class ChatRepository {
     if (source.type == 5) {
       final loc = LocationPayload.tryParse(source.content);
       if (loc == null) {
-        throw StateError('Position invalide pour le transfert');
+        throw StateError(LocaleController.instance.l10n.invalidPositionForTransfer);
       }
       await sendLocation(
         conversationID: conversationID,
@@ -661,7 +662,7 @@ class ChatRepository {
     if (source.type == 7) {
       final contact = ContactPayload.tryParse(source.content);
       if (contact == null) {
-        throw StateError('Contact invalide pour le transfert');
+        throw StateError(LocaleController.instance.l10n.invalidContactForTransfer);
       }
       await sendContact(
         conversationID: conversationID,
@@ -689,7 +690,7 @@ class ChatRepository {
 
     final file = localMediaFileForForward(source);
     if (file == null) {
-      throw StateError('Média indisponible pour le transfert');
+      throw StateError(LocaleController.instance.l10n.mediaUnavailableForTransfer);
     }
 
     await sendMediaFile(

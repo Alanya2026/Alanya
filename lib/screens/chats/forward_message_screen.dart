@@ -92,16 +92,16 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
     final messenger = ScaffoldMessenger.of(context);
     if (result.hasSuccess && result.failed == 0) {
       final label = widget.isExplicitAlbumForward
-          ? 'Album'
+          ? context.l10n.albumNoun
           : widget.isMultiMessage
-              ? '${widget.messages!.length} messages'
-              : 'Message';
+              ? context.l10n.messagesCountLabel(widget.messages!.length)
+              : context.l10n.messageNoun;
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             result.succeeded == 1
-                ? '$label transféré'
-                : '$label transféré vers ${result.succeeded} discussions',
+                ? context.l10n.labelForwarded(label)
+                : context.l10n.labelForwardedTo(label, result.succeeded),
           ),
           backgroundColor: AppColors.success,
         ),
@@ -111,7 +111,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Transféré vers ${result.succeeded}/${result.succeeded + result.failed} discussions',
+            context.l10n.forwardedToRatio(result.succeeded, result.succeeded + result.failed),
           ),
         ),
       );
@@ -121,10 +121,10 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
         SnackBar(
           content: Text(
             widget.isExplicitAlbumForward
-                ? 'Impossible de transférer l\'album'
+                ? context.l10n.unableToForwardTheAlbum
                 : widget.isMultiMessage
-                    ? 'Impossible de transférer les messages'
-                    : 'Impossible de transférer le message',
+                    ? context.l10n.unableToForwardTheMessages
+                    : context.l10n.unableToForwardTheMessage,
           ),
           backgroundColor: AppColors.error,
         ),
@@ -153,7 +153,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de créer la discussion')),
+          SnackBar(content: Text(context.l10n.unableToCreateTheConversation)),
         );
       }
     }
@@ -200,7 +200,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Transférer'),
+        title: Text(context.l10n.forward),
         actions: [
           TextButton(
             onPressed: _selectedIds.isEmpty || _sending
@@ -208,8 +208,8 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
                 : () => _send(chat),
             child: Text(
               _selectedIds.isEmpty
-                  ? 'Envoyer'
-                  : 'Envoyer (${_selectedIds.length})',
+                  ? context.l10n.commonSend
+                  : context.l10n.sendWithCount(_selectedIds.length),
               style: TextStyle(
                 color: _selectedIds.isEmpty
                     ? context.colors.onSurfaceVariant
@@ -236,8 +236,8 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
                   ),
                   child: TextField(
                     controller: _captionController,
-                    decoration: const InputDecoration(
-                      hintText: 'Ajouter une légende (optionnel)',
+                    decoration: InputDecoration(
+                      hintText: context.l10n.addACaptionOptional,
                       isDense: true,
                       border: OutlineInputBorder(),
                     ),
@@ -253,14 +253,14 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _pickNewContact,
                   icon: const Icon(Icons.person_add_outlined),
-                  label: const Text('Nouveau contact'),
+                  label: Text(context.l10n.newContact),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: AppSearchField(
                   controller: _searchController,
-                  hintText: 'Rechercher une discussion…',
+                  hintText: context.l10n.searchChats,
                   onChanged: (_) => setState(() {}),
                   onClear: () {
                     _searchController.clear();
@@ -284,8 +284,8 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
                       return EmptyState(
                         icon: Icons.forum_outlined,
                         title: query.trim().isEmpty
-                            ? 'Aucune discussion'
-                            : 'Aucun résultat',
+                            ? context.l10n.noChats
+                            : context.l10n.noResults,
                       );
                     }
 
@@ -318,7 +318,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
                           title: Text(name, style: context.text.titleSmall),
                           subtitle: conv.isGroup
                               ? Text(
-                                  'Groupe',
+                                  context.l10n.groupFallback,
                                   style: context.text.bodySmall?.copyWith(
                                     color: context.colors.onSurfaceVariant,
                                   ),
@@ -336,7 +336,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
           ),
           if (_sending)
             Container(
-              color: Colors.black26,
+              color: AppColors.black.withValues(alpha: 0.26),
               alignment: Alignment.center,
               child: const CircularProgressIndicator(),
             ),
@@ -381,7 +381,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Message à transférer',
+                  context.l10n.messageToForward,
                   style: context.text.labelSmall?.copyWith(
                     color: context.colors.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -418,7 +418,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${sorted.length} message${sorted.length > 1 ? 's' : ''}',
+            sorted.length == 1 ? context.l10n.messagesCountLabelOne(sorted.length) : context.l10n.messagesCountLabel(sorted.length),
             style: context.text.labelSmall?.copyWith(
               color: context.colors.onSurfaceVariant,
               fontWeight: FontWeight.w600,
@@ -451,7 +451,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
           ],
           if (sorted.length > 4)
             Text(
-              '… et ${sorted.length - 4} autre${sorted.length - 4 > 1 ? 's' : ''}',
+              context.l10n.andNOthers(sorted.length - 4),
               style: context.text.bodySmall?.copyWith(
                 color: context.colors.onSurfaceVariant,
               ),
@@ -483,7 +483,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Album à transférer',
+            context.l10n.albumToForward,
             style: context.text.labelSmall?.copyWith(
               color: context.colors.onSurfaceVariant,
               fontWeight: FontWeight.w600,

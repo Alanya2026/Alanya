@@ -13,7 +13,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/utils/user_search.dart';
-import '../../widgets/alanya_phone_field.dart';
 import '../../widgets/common/common.dart';
 
 class KeypadScreen extends StatefulWidget {
@@ -162,8 +161,8 @@ class _KeypadScreenState extends State<KeypadScreen> {
     if (AlanyaPhoneFormatter.validate(_phoneDigits) != null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Numéro invalide : 3, 4 ou 8 chiffres requis'),
+          SnackBar(
+            content: Text(context.l10n.invalidNumber34Or8),
           ),
         );
       }
@@ -187,7 +186,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
       });
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Utilisateur introuvable')),
+          SnackBar(content: Text(context.l10n.userNotFound)),
         );
       }
     }
@@ -196,8 +195,8 @@ class _KeypadScreenState extends State<KeypadScreen> {
   void _showCallTypeSheet() {
     if (_foundUser == null && _phoneDigits.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Entrez un numéro ou choisissez un contact'),
+        SnackBar(
+          content: Text(context.l10n.enterANumberOrChooseA),
         ),
       );
       return;
@@ -209,7 +208,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Lancer un appel', style: context.text.titleLarge),
+            Text(context.l10n.placeACall, style: context.text.titleLarge),
             AppSpacing.vGapLg,
             Row(
               children: [
@@ -217,7 +216,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
                   child: _callOption(
                     sheetContext,
                     icon: CupertinoIcons.phone_fill,
-                    label: 'Audio',
+                    label: context.l10n.audio2,
                     color: context.semantic.success,
                     isVideo: false,
                   ),
@@ -227,7 +226,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
                   child: _callOption(
                     sheetContext,
                     icon: CupertinoIcons.videocam_fill,
-                    label: 'Vidéo',
+                    label: context.l10n.video2,
                     color: context.colors.primary,
                     isVideo: true,
                   ),
@@ -251,7 +250,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
     if (me == null) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil non disponible, réessayez')),
+        SnackBar(content: Text(context.l10n.profileUnavailableTryAgain)),
       );
       return;
     }
@@ -287,7 +286,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
     if (_addingContact) return;
     final phone = _phoneDigits;
     if (_foundUser == null && phone.isEmpty) {
-      _showSnack('Entrez un numéro à ajouter');
+      _showSnack(context.l10n.enterANumberToAdd);
       return;
     }
 
@@ -304,11 +303,11 @@ class _KeypadScreenState extends State<KeypadScreen> {
 
       if (!mounted) return;
       if (user == null) {
-        _showSnack('Utilisateur introuvable');
+        _showSnack(context.l10n.userNotFound);
         return;
       }
       if (_preferredIds.contains(user.alanyaID)) {
-        _showSnack('Déjà dans vos contacts préférés');
+        _showSnack(context.l10n.alreadyInYourPreferredContacts);
         return;
       }
 
@@ -320,11 +319,11 @@ class _KeypadScreenState extends State<KeypadScreen> {
         _preferredContacts = [..._preferredContacts, added];
       });
       _showSnack(
-        '${added.nom.isNotEmpty ? added.nom : added.pseudo} ajouté aux contacts préférés',
+        context.l10n.addedToPreferredContacts(added.nom.isNotEmpty ? added.nom : added.pseudo),
         success: true,
       );
     } catch (e) {
-      if (mounted) _showSnack('Erreur : $e');
+      if (mounted) _showSnack(context.l10n.errorColon('$e'));
     } finally {
       if (mounted) setState(() => _addingContact = false);
     }
@@ -351,7 +350,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Clavier'),
+        title: Text(context.l10n.keypadTitle),
       ),
       body: SafeArea(
         child: Column(
@@ -405,11 +404,11 @@ class _KeypadScreenState extends State<KeypadScreen> {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       children: [
         if (preferred.isNotEmpty) ...[
-          _sectionLabel('Contacts préférés'),
+          _sectionLabel(context.l10n.preferredContacts),
           ...preferred.map(_buildContactTile),
         ],
         if (others.isNotEmpty) ...[
-          _sectionLabel('Autres résultats'),
+          _sectionLabel(context.l10n.otherResults),
           ...others.map(_buildContactTile),
         ],
         if (_loadingSuggestions)
@@ -499,7 +498,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
                       onLongPress: _clearAll,
                       child: IconButton(
                         onPressed: _onDelete,
-                        tooltip: 'Effacer',
+                        tooltip: context.l10n.clearAction,
                         icon: Icon(
                           CupertinoIcons.delete_left,
                           size: AppIconSize.lg,

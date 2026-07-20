@@ -1,3 +1,5 @@
+import 'theme/locale_controller.dart';
+
 /// Limites de participants pour appels de groupe et réunions.
 abstract final class CallLimits {
   static const int maxVideoParticipants = 4;
@@ -18,11 +20,16 @@ abstract final class CallLimits {
   static int maxSelectableForMeeting(int typeMedia) =>
       maxParticipantsForMeeting(typeMedia) - 1;
 
-  static String mediaLabel({required bool isVideo}) =>
-      isVideo ? 'vidéo' : 'audio';
+  static String mediaLabel({required bool isVideo}) {
+    final l10n = LocaleController.instance.l10n;
+    return isVideo ? l10n.mediaLabelVideo : l10n.mediaLabelAudio;
+  }
 
   static String limitReachedMessage({required bool isVideo}) {
     final total = maxParticipants(isVideo: isVideo);
-    return 'Maximum $total participants en ${mediaLabel(isVideo: isVideo)} (vous inclus)';
+    return LocaleController.instance.l10n.limitReachedParticipants(
+      total,
+      mediaLabel(isVideo: isVideo),
+    );
   }
 }

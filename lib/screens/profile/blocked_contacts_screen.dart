@@ -59,7 +59,7 @@ class _BlockedContactsScreenState extends State<BlockedContactsScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible de charger les contacts bloqués')),
+        SnackBar(content: Text(context.l10n.unableToLoadBlockedContacts)),
       );
     }
   }
@@ -80,17 +80,17 @@ class _BlockedContactsScreenState extends State<BlockedContactsScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Débloquer ce contact ?'),
-        content: Text('$name pourra de nouveau vous contacter.'),
+        title: Text(context.l10n.unblockThisContact),
+        content: Text(context.l10n.canContactAgain(name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              'Débloquer',
+              context.l10n.unblock,
               style: TextStyle(color: context.colors.primary),
             ),
           ),
@@ -121,7 +121,7 @@ class _BlockedContactsScreenState extends State<BlockedContactsScreen> {
       if (!mounted) return;
       setState(() => _unblocking.remove(user.alanyaID));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible de débloquer ce contact')),
+        SnackBar(content: Text(context.l10n.unableToUnblockThisContact)),
       );
     }
   }
@@ -134,7 +134,7 @@ class _BlockedContactsScreenState extends State<BlockedContactsScreen> {
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
         title: Text(
-          'Contacts bloqués',
+          context.l10n.settingsPrivacySubtitle,
           style: context.text.headlineSmall,
         ),
       ),
@@ -150,7 +150,7 @@ class _BlockedContactsScreenState extends State<BlockedContactsScreen> {
                     ),
                     child: AppSearchField(
                       controller: _searchController,
-                      hintText: 'Rechercher…',
+                      hintText: context.l10n.search,
                       fillColor: context.colors.surface,
                       borderColor: context.colors.outline,
                       onChanged: (_) {},
@@ -159,11 +159,11 @@ class _BlockedContactsScreenState extends State<BlockedContactsScreen> {
                   ),
                 Expanded(
                   child: _contacts.isEmpty
-                      ? const EmptyState(
+                      ? EmptyState(
                           icon: Icons.block,
-                          title: 'Aucun contact bloqué',
+                          title: context.l10n.noBlockedContacts,
                           message:
-                              'Les personnes que vous bloquez apparaîtront ici.',
+                              context.l10n.peopleYouBlockWillAppearHere,
                         )
                       : _filtered.isEmpty
                           ? EmptyState(
@@ -171,8 +171,8 @@ class _BlockedContactsScreenState extends State<BlockedContactsScreen> {
                                   ? Icons.person_search
                                   : Icons.block,
                               title: hasQuery
-                                  ? 'Aucun résultat'
-                                  : 'Aucun contact bloqué',
+                                  ? context.l10n.noResults
+                                  : context.l10n.noBlockedContacts,
                             )
                           : ListView.builder(
                               padding: const EdgeInsets.symmetric(
@@ -275,7 +275,7 @@ class _BlockedTile extends StatelessWidget {
                   TextButton(
                     onPressed: onUnblock,
                     child: Text(
-                      'Débloquer',
+                      context.l10n.unblock,
                       style: TextStyle(
                         color: context.colors.primary,
                         fontWeight: FontWeight.w600,

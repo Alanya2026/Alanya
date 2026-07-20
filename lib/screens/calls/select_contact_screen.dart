@@ -160,8 +160,8 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Maximum $_maxSelection participants (appel audio). '
-                'Vidéo : ${CallLimits.maxSelectable(isVideo: true)} max.',
+                '${context.l10n.maxAudioParticipantsHint(_maxSelection)}'
+                '${context.l10n.videoMaxSelectable(CallLimits.maxSelectable(isVideo: true))}',
               ),
               duration: const Duration(seconds: 2),
             ),
@@ -181,7 +181,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     if (me == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil non disponible, réessayez')),
+        SnackBar(content: Text(context.l10n.profileUnavailableTryAgain)),
       );
       return;
     }
@@ -234,7 +234,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     final cs = context.read<CallService>();
     if (cs.status != CallStatus.idle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Un appel est déjà en cours')),
+        SnackBar(content: Text(context.l10n.aCallIsAlreadyInProgress)),
       );
       return;
     }
@@ -291,7 +291,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
         title: Text(
           _selecting
               ? '${_selectedIds.length} / $_maxSelection'
-              : 'Nouvel appel',
+              : context.l10n.newCall,
         ),
       ),
       body: Column(
@@ -305,7 +305,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                 opacity: _selecting ? 0.45 : 1.0,
                 child: AppSearchField(
                   controller: _searchController,
-                  hintText: 'Rechercher par nom, pseudo ou téléphone…',
+                  hintText: context.l10n.searchByNameUsernameOrPhone,
                   onChanged: (_) {},
                   onClear: _clearSearch,
                 ),
@@ -321,8 +321,8 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                             ? Icons.person_search
                             : Icons.people_outline,
                         title: _searchController.text.isNotEmpty
-                            ? 'Aucun résultat'
-                            : 'Aucun contact',
+                            ? context.l10n.noResults
+                            : context.l10n.noContacts,
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -335,10 +335,10 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                                 AppSpacing.xs),
                             child: Text(
                               _selecting
-                                  ? 'Appui long pour quitter la sélection'
+                                  ? context.l10n.longPressToExitSelection
                                   : (_searchController.text.isNotEmpty
-                                      ? 'Résultats'
-                                      : 'Contacts préférés'),
+                                      ? context.l10n.results
+                                      : context.l10n.preferredContacts),
                               style: context.text.labelMedium?.copyWith(
                                 color: context.colors.onSurfaceVariant,
                               ),
@@ -388,7 +388,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: context.colors.surface, width: 2),
                 ),
-                child: const Icon(Icons.check, color: Colors.white, size: 12),
+                child: const Icon(Icons.check, color: AppColors.white, size: 12),
               ),
             ),
         ],
@@ -446,7 +446,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                 onPressed: disabled ? null : () => _initiateGroupCall(false),
                 icon: Icon(Icons.call, color: context.semantic.success),
                 label: Text(
-                  'Appel vocal',
+                  context.l10n.voiceCall,
                   style: TextStyle(
                       color: context.semantic.success,
                       fontWeight: FontWeight.bold),
@@ -464,8 +464,8 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
               child: ElevatedButton.icon(
                 onPressed: disabled ? null : () => _initiateGroupCall(true),
                 icon: const Icon(Icons.videocam),
-                label: const Text(
-                  'Appel vidéo',
+                label: Text(
+                  context.l10n.videoCall,
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(

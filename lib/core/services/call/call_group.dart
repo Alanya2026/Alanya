@@ -61,7 +61,7 @@ extension CallGroup on CallService {
         _currentCallId = 'group_$roomId';
         await _acquireCallSession(
           isVideo: isVideo,
-          displayName: 'Appel groupé',
+          displayName: LocaleController.instance.l10n.groupCall,
           handle: roomId,
         );
         await _markCallSessionConnected();
@@ -118,7 +118,7 @@ extension CallGroup on CallService {
         _currentCallId = 'group_$roomId';
         await _acquireCallSession(
           isVideo: isVideo,
-          displayName: 'Appel groupé',
+          displayName: LocaleController.instance.l10n.groupCall,
           handle: roomId,
         );
         await _markCallSessionConnected();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -107,7 +108,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     if (others.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aucun autre membre à appeler')),
+        SnackBar(content: Text(context.l10n.noOtherMembersToCall)),
       );
       return;
     }
@@ -133,7 +134,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final cs = context.read<CallService>();
     if (cs.status != CallStatus.idle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Un appel est déjà en cours')),
+        SnackBar(content: Text(context.l10n.aCallIsAlreadyInProgress)),
       );
       return;
     }
@@ -166,6 +167,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   Future<void> _addParticipants() async {
     if (_group == null) return;
     final messenger = ScaffoldMessenger.of(context);
+    final errorColor = context.colors.error;
     final api = Provider.of<TalkyApiClient>(context, listen: false);
     final chat = Provider.of<ChatProvider>(context, listen: false);
 
@@ -176,7 +178,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => ParticipantPickerScreen(
-          confirmLabel: 'Ajouter',
+          confirmLabel: context.l10n.add,
           excludeIds: excludeIds,
         ),
       ),
@@ -192,13 +194,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       if (!mounted) return;
       await _loadGroup();
       messenger.showSnackBar(SnackBar(
-        content: Text('${picked.length} participant(s) ajouté(s)'),
+        content: Text(context.l10n.participantsAdded(picked.length)),
       ));
     } catch (e, st) {
-      AppLog.e('GroupDetail', 'Ajout de participants échoué', e, st);
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Impossible d\'ajouter les participants, réessayez'),
-        backgroundColor: AppColors.error,
+      AppLog.e('GroupDetail', context.l10n.failedToAddParticipants, e, st);
+      messenger.showSnackBar(SnackBar(
+        content: Text(context.l10n.unableToAddParticipantsTryAgain),
+        backgroundColor: errorColor,
       ));
     }
   }
@@ -207,17 +209,17 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Quitter le groupe ?'),
-        content: const Text(
-            'Vous ne verrez plus ce groupe dans votre liste de discussions.'),
+        title: Text(context.l10n.leaveGroup),
+        content: Text(
+            context.l10n.youWillNoLongerSeeThis),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Quitter',
+            child: Text(context.l10n.leave,
                 style: TextStyle(color: context.colors.error)),
           ),
         ],
@@ -235,12 +237,12 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       await chat.refreshConversations();
       if (mounted) Navigator.pop(context);
     } catch (e, st) {
-      AppLog.e('GroupDetail', 'Quitter le groupe échoué', e, st);
+      AppLog.e('GroupDetail', context.l10n.failedToLeaveGroup, e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Impossible de quitter le groupe, réessayez'),
-              backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text(context.l10n.unableToLeaveTheGroupTry),
+              backgroundColor: context.colors.error),
         );
       }
     }
@@ -253,19 +255,19 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       appBar: AppBar(
         backgroundColor: context.semantic.surfaceMuted,
         centerTitle: true,
-        title: const Text('Infos du groupe'),
+        title: Text(context.l10n.groupInfo),
         // Appels de groupe audio/vidéo — masqués temporairement, à remettre plus tard.
         // actions: _group == null
         //     ? null
         //     : [
         //         IconButton(
         //           icon: const Icon(Icons.videocam_outlined),
-        //           tooltip: 'Appel vidéo',
+        //           tooltip: context.l10n.videoCall,
         //           onPressed: () => _startGroupCall(true),
         //         ),
         //         IconButton(
         //           icon: const Icon(Icons.call_outlined),
-        //           tooltip: 'Appel vocal',
+        //           tooltip: context.l10n.voiceCall,
         //           onPressed: () => _startGroupCall(false),
         //         ),
         //       ],
@@ -275,8 +277,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           : _group == null
               ? EmptyState(
                   icon: Icons.group_off,
-                  title: 'Groupe introuvable',
-                  message: 'Ce groupe n\'est plus accessible.',
+                  title: context.l10n.groupNotFound,
+                  message: context.l10n.thisGroupIsNoLongerAccessible,
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(
@@ -317,11 +319,19 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: context.colors.surface,
+        // En sombre, `surface` est plus foncé que `surfaceMuted` (fond page) :
+        // on élève la carte pour garder le contraste carte / fond.
+        color: isDark
+            ? context.colors.surfaceContainerHigh
+            : context.colors.surface,
         borderRadius: AppRadius.brMd,
-        boxShadow: AppShadows.subtle,
+        boxShadow: isDark ? null : AppShadows.subtle,
+        border: isDark
+            ? Border.all(color: context.colors.outline.withValues(alpha: 0.55))
+            : null,
       ),
       child: Padding(padding: padding, child: child),
     );
@@ -366,7 +376,7 @@ class _Header extends StatelessWidget {
           ),
           AppSpacing.vGapSm,
           Text(
-            'Groupe • $memberCount membres',
+            context.l10n.groupMembersCount(memberCount),
             style: context.text.bodySmall
                 ?.copyWith(color: context.colors.onSurfaceVariant),
           ),
@@ -392,6 +402,7 @@ class _MediaCard extends StatefulWidget {
 }
 
 class _MediaCardState extends State<_MediaCard> {
+  StreamSubscription<List<LocalMessage>>? _messagesSub;
   List<LocalMessage> _mediaMessages = [];
 
   @override
@@ -400,10 +411,18 @@ class _MediaCardState extends State<_MediaCard> {
     _init();
   }
 
-  Future<void> _init() async {
+  @override
+  void dispose() {
+    _messagesSub?.cancel();
+    super.dispose();
+  }
+
+  void _init() {
     final chat = context.read<ChatProvider>();
-    await chat.repository.syncMessages(widget.conversationId);
-    chat.watchMessages(widget.conversationId).listen(_onMessages);
+    // Local-first : Drift immédiat, sync réseau en fond.
+    _messagesSub =
+        chat.watchMessages(widget.conversationId).listen(_onMessages);
+    unawaited(chat.repository.syncMessages(widget.conversationId));
   }
 
   void _onMessages(List<LocalMessage> messages) {
@@ -429,7 +448,7 @@ class _MediaCardState extends State<_MediaCard> {
             children: [
               Expanded(
                 child: Text(
-                  'Médias, liens et docs',
+                  context.l10n.mediaLinksAndDocs,
                   style: context.text.titleSmall,
                 ),
               ),
@@ -448,7 +467,7 @@ class _MediaCardState extends State<_MediaCard> {
                   child: Row(
                     children: [
                       Text(
-                        'Voir tout',
+                        context.l10n.seeAll,
                         style: context.text.labelMedium?.copyWith(
                           color: context.colors.primary,
                           fontWeight: FontWeight.w600,
@@ -468,7 +487,7 @@ class _MediaCardState extends State<_MediaCard> {
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   child: Center(
                     child: Text(
-                      'Aucun média partagé',
+                      context.l10n.noSharedMedia,
                       style: context.text.bodySmall?.copyWith(
                           color: context.colors.onSurfaceVariant),
                     ),
@@ -539,7 +558,7 @@ class _MediaCardState extends State<_MediaCard> {
               child: Text(
                 style.extension,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.w700),
               ),
@@ -621,9 +640,9 @@ class _MediaCardState extends State<_MediaCard> {
     if (path == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Impossible de télécharger le fichier'),
-              backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text(context.l10n.unableToDownloadTheFile),
+              backgroundColor: context.colors.error),
         );
       }
       return;
@@ -634,8 +653,8 @@ class _MediaCardState extends State<_MediaCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:
-              Text('Aucune app pour ouvrir ce fichier (${res.message})'),
-          backgroundColor: AppColors.error,
+              Text(context.l10n.cannotOpenFileApp(res.message)),
+          backgroundColor: context.colors.error,
         ),
       );
     }
@@ -673,7 +692,7 @@ class _MembersCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm,
                 AppSpacing.lg, AppSpacing.xs),
             child: Text(
-              '${participants.length} membres',
+              context.l10n.membersOnlyCount(participants.length),
               style: context.text.titleSmall,
             ),
           ),
@@ -690,7 +709,7 @@ class _MembersCard extends StatelessWidget {
                     color: context.colors.primary),
               ),
               title: Text(
-                'Ajouter des participants',
+                context.l10n.addParticipants,
                 style: context.text.titleSmall
                     ?.copyWith(color: context.colors.primary),
               ),
@@ -710,13 +729,13 @@ class _MembersCard extends StatelessWidget {
               ),
               title: Text(
                 isYou
-                    ? 'Vous'
+                    ? context.l10n.youLabel
                     : (member.nom.isNotEmpty ? member.nom : member.pseudo),
                 style: context.text.titleSmall,
               ),
               subtitle: (!isYou && member.isOnline)
                   ? Text(
-                      'En ligne',
+                      context.l10n.online,
                       style: context.text.bodySmall?.copyWith(
                           color: context.semantic.online),
                     )
@@ -763,7 +782,7 @@ class _DangerCard extends StatelessWidget {
                   color: context.colors.error, size: AppIconSize.md),
               AppSpacing.hGapMd,
               Text(
-                'Quitter le groupe',
+                context.l10n.leaveGroup2,
                 style: context.text.bodyLarge?.copyWith(
                   color: context.colors.error,
                   fontWeight: FontWeight.w600,

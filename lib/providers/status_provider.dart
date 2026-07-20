@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/db/app_database.dart';
 import '../core/services/local_cache_repository.dart';
+import '../core/theme/locale_controller.dart';
 import '../core/utils/app_log.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
@@ -227,7 +228,9 @@ class StatusProvider extends ChangeNotifier {
     try {
       final upload = await _api.uploadMedia(file);
       final url = upload['url'] as String?;
-      if (url == null) throw Exception('Upload sans URL');
+      if (url == null) {
+        throw Exception(LocaleController.instance.l10n.invalidUploadResponse);
+      }
       final json = await _api.createStatut(
         text: (caption?.isNotEmpty ?? false) ? caption : null,
         mediaUrl: url,

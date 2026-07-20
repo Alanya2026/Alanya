@@ -235,7 +235,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
         return _PipVideo(renderer: _remoteRenderer);
       }
       return _PipAvatar(
-        name: cs.remoteUserName ?? 'Inconnu',
+        name: cs.remoteUserName ?? context.l10n.unknownSender,
         photoUrl: cs.remoteUserPhoto,
       );
     }
@@ -263,7 +263,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
     if (!cs.isVideo) {
       return CallAudioBackdrop(
-        name: cs.remoteUserName ?? 'Inconnu',
+        name: cs.remoteUserName ?? context.l10n.unknownSender,
         photoUrl: cs.remoteUserPhoto,
         isSpeaking: cs.isUserSpeaking(cs.remoteUserId?.toString() ?? ''),
         isRemoteMuted: cs.isRemoteMuted,
@@ -294,7 +294,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     }
 
     return CallAudioBackdrop(
-      name: cs.remoteUserName ?? 'Inconnu',
+      name: cs.remoteUserName ?? context.l10n.unknownSender,
       photoUrl: cs.remoteUserPhoto,
       isSpeaking: cs.isUserSpeaking(cs.remoteUserId?.toString() ?? ''),
       isRemoteMuted: cs.isRemoteMuted,
@@ -304,13 +304,13 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   String _statusLabel(CallService cs) {
     switch (cs.status) {
       case CallStatus.outgoing:
-        return 'Appel en cours…';
+        return context.l10n.callInProgress;
       case CallStatus.connecting:
-        return 'Connexion…';
+        return context.l10n.connecting2;
       case CallStatus.connected:
-        return 'En cours';
+        return context.l10n.inProgress;
       case CallStatus.ended:
-        return 'Terminé';
+        return context.l10n.ended2;
       default:
         return '';
     }
@@ -318,9 +318,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
   String _connectingMessage(CallService cs) {
     if (cs.status == CallStatus.outgoing) {
-      return 'Appel de ${cs.remoteUserName ?? 'contact'}…';
+      return context.l10n.callFrom(cs.remoteUserName ?? context.l10n.contact2);
     }
-    return 'Connexion en cours…';
+    return context.l10n.connecting;
   }
 
   @override
@@ -337,10 +337,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
           final hasRemoteVideo = _hasRemoteVideo(cs, isGroup);
           final isConnecting = _isConnecting(cs) && !isGroup;
           final localUser = context.watch<AuthProvider>().currentUser;
-          final localName = localUser?.nom ?? 'Moi';
+          final localName = localUser?.nom ?? context.l10n.meLabel;
           final localPhoto = localUser?.avatarUrl;
           final displayName =
-              isGroup ? 'Appel groupé' : (cs.remoteUserName ?? 'Appel');
+              isGroup ? context.l10n.groupCall : (cs.remoteUserName ?? context.l10n.callNoun);
           final pipChild = _buildPipChild(
             cs,
             isGroup,
@@ -385,7 +385,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
                     if (isConnecting)
                       CallConnectingOverlay(
-                        name: cs.remoteUserName ?? 'Appel',
+                        name: cs.remoteUserName ?? context.l10n.callNoun,
                         photoUrl: cs.remoteUserPhoto,
                         message: _connectingMessage(cs),
                         animation: _pulse,
@@ -425,7 +425,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                             child: CallTopBar(
                               name: displayName,
                               status: isGroup
-                                  ? '${cs.groupRemoteStreams.length + 1} participants'
+                                  ? context.l10n.participantsCount(cs.groupRemoteStreams.length + 1)
                                   : _statusLabel(cs),
                               duration: cs.status == CallStatus.connected
                                   ? cs.formattedDuration

@@ -69,7 +69,7 @@ class _SharePreferredContactSheetState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Partager un contact',
+              context.l10n.shareAContact,
               style: context.text.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -77,7 +77,7 @@ class _SharePreferredContactSheetState
             AppSpacing.vGapMd,
             AppSearchField(
               controller: _searchController,
-              hintText: 'Rechercher…',
+              hintText: context.l10n.search,
               fillColor: context.semantic.surfaceMuted,
               borderColor: context.colors.outline,
               onChanged: (_) {},
@@ -100,19 +100,19 @@ class _SharePreferredContactSheetState
                   if (all.isEmpty) {
                     return EmptyState(
                       icon: CupertinoIcons.person_2,
-                      title: 'Aucun contact préféré',
+                      title: context.l10n.noPreferredContacts,
                       action: FilledButton.icon(
                         onPressed: () => _openAddContact(existingIds),
                         icon: const Icon(Icons.add, size: AppIconSize.sm),
-                        label: const Text('Ajouter'),
+                        label: Text(context.l10n.add),
                       ),
                     );
                   }
 
                   if (filtered.isEmpty) {
-                    return const EmptyState(
+                    return EmptyState(
                       icon: Icons.person_search,
-                      title: 'Aucun résultat',
+                      title: context.l10n.noResults,
                     );
                   }
 

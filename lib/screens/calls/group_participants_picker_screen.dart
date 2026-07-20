@@ -40,7 +40,7 @@ class _GroupParticipantsPickerScreenState
         if (_selected.length >= widget.maxSelection) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Maximum ${widget.maxSelection} participants'),
+              content: Text(context.l10n.maxParticipants(widget.maxSelection)),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -74,8 +74,8 @@ class _GroupParticipantsPickerScreenState
             padding: const EdgeInsets.only(bottom: AppSpacing.md),
             child: Text(
               widget.isVideo
-                  ? 'Sélectionnez jusqu\'à ${widget.maxSelection} membres pour l\'appel vidéo'
-                  : 'Sélectionnez jusqu\'à ${widget.maxSelection} membres pour l\'appel vocal',
+                  ? context.l10n.selectUpToVideo(widget.maxSelection)
+                  : context.l10n.selectUpToVoice(widget.maxSelection),
               style: context.text.bodySmall
                   ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
@@ -139,8 +139,8 @@ class _GroupParticipantsPickerScreenState
             icon: Icon(widget.isVideo ? Icons.videocam : Icons.call),
             label: Text(
               widget.isVideo
-                  ? 'Démarrer l\'appel vidéo'
-                  : 'Démarrer l\'appel vocal',
+                  ? context.l10n.startVideoCall
+                  : context.l10n.startVoiceCall,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(

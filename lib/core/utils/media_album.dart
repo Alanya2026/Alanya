@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import '../db/app_database.dart';
+import '../theme/locale_controller.dart';
 
 /// Préfixe du marqueur album stocké dans [LocalMessage.content].
 const albumMarkerPrefix = '__talky_album__';
@@ -127,12 +128,12 @@ String albumPreviewLabel({
 }) {
   final parts = <String>[];
   if (photoCount > 0) {
-    parts.add(photoCount == 1 ? '📷 Photo' : '📷 $photoCount photos');
+    parts.add(photoCount == 1 ? LocaleController.instance.l10n.photo : LocaleController.instance.l10n.photosCount(photoCount));
   }
   if (videoCount > 0) {
-    parts.add(videoCount == 1 ? '🎥 Vidéo' : '🎥 $videoCount vidéos');
+    parts.add(videoCount == 1 ? LocaleController.instance.l10n.video : LocaleController.instance.l10n.videosCount(videoCount));
   }
-  if (parts.isEmpty) return '📷 Album';
+  if (parts.isEmpty) return LocaleController.instance.l10n.album;
   return parts.join(', ');
 }
 
@@ -144,13 +145,16 @@ String previewLabelForAlbumMarker(AlbumMarker marker) {
     return albumPreviewLabel(photoCount: photos, videoCount: videos);
   }
   // Legacy sans comptes : total affiché comme photos.
-  return marker.total == 1 ? '📷 Photo' : '📷 ${marker.total} photos';
+  return marker.total == 1 ? LocaleController.instance.l10n.photo : LocaleController.instance.l10n.photosCount(marker.total);
 }
 
 /// Normalise un aperçu de conversation : marqueur album → décompte photos/vidéos.
 ///
 /// À utiliser à l'affichage et à l'écriture de `lastMessage`, car le serveur
 /// peut encore stocker le marqueur brut (`__talky_album__|…`).
+///
+/// Ne localise pas la sentinelle « message supprimé » — pour l'UI utiliser
+/// [displayConversationPreview].
 String normalizeConversationPreview(String? text) {
   if (text == null || text.isEmpty) return text ?? '';
   final marker = parseAlbumMarker(text);

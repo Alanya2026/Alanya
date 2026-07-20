@@ -10,6 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/calls/speaking_indicator_border.dart';
 import '../../widgets/common/app_avatar.dart';
 import '../../widgets/common/app_badge.dart';
+import '../../core/theme/app_theme.dart';
 
 // Couleurs spécifiques à l'UI Google-Meet de la réunion (aucun token AppColors
 // ne correspond exactement à ce gris-anthracite, distinct du bleu immersif).
@@ -236,7 +237,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               IconButton(
                                 icon: const Icon(
                                   CupertinoIcons.chevron_down,
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                   size: 28,
                                 ),
                                 onPressed: _minimize,
@@ -244,9 +245,9 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               AppSpacing.hGapSm,
                               Flexible(
                                 child: Text(
-                                  meeting?.objet ?? 'Meeting',
+                                  meeting?.objet ?? context.l10n.meeting,
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -267,13 +268,13 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                             IconButton(
                               icon: const Icon(
                                   CupertinoIcons.switch_camera,
-                                  color: Colors.white),
+                                  color: AppColors.white),
                               onPressed: () =>
                                   meetingService.switchCamera(),
                             ),
                             IconButton(
                               icon: const Icon(Icons.people_outline,
-                                  color: Colors.white),
+                                  color: AppColors.white),
                               onPressed: () =>
                                   _showParticipantsPanel(meetingService),
                             ),
@@ -289,7 +290,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       child: _remoteRenderers.isEmpty
                           ? _buildVideoTile(
-                              label: 'Vous',
+                              label: context.l10n.youLabel,
                               renderer: _localRenderer,
                               photoUrl: myAvatar,
                               showVideo: _localTileShowsVideo(meetingService),
@@ -306,7 +307,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               childAspectRatio: 0.8,
                               children: [
                                 _buildVideoTile(
-                                  label: 'Vous',
+                                  label: context.l10n.youLabel,
                                   renderer: _localRenderer,
                                   photoUrl: myAvatar,
                                   showVideo:
@@ -358,7 +359,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                         _buildControlBtn(
                           icon: Icons.call_end,
                           color: AppColors.error,
-                          iconColor: Colors.white,
+                          iconColor: AppColors.white,
                           onTap: () async {
                             _closing = true;
                             await meetingService.leaveMeeting();
@@ -371,11 +372,11 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               ? CupertinoIcons.video_camera
                               : CupertinoIcons.video_camera_solid,
                           color: meetingService.isVideoOff
-                              ? Colors.white
+                              ? AppColors.white
                               : Colors.white24,
                           iconColor: meetingService.isVideoOff
-                              ? Colors.black
-                              : Colors.white,
+                              ? AppColors.black
+                              : AppColors.white,
                           onTap: () => meetingService.toggleVideo(),
                         ),
                         _buildControlBtn(
@@ -383,17 +384,17 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                               ? CupertinoIcons.mic_off
                               : CupertinoIcons.mic,
                           color: meetingService.isMuted
-                              ? Colors.white
+                              ? AppColors.white
                               : Colors.white24,
                           iconColor: meetingService.isMuted
-                              ? Colors.black
-                              : Colors.white,
+                              ? AppColors.black
+                              : AppColors.white,
                           onTap: () => meetingService.toggleMute(),
                         ),
                         _buildControlBtn(
                           icon: Icons.chat_bubble_outline,
                           color: Colors.white24,
-                          iconColor: Colors.white,
+                          iconColor: AppColors.white,
                           badgeCount: meetingService.unreadChatCount,
                           onTap: () =>
                               _showMeetingChat(context, meetingService),
@@ -401,8 +402,8 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                         if (isOrganiser)
                           _buildControlBtn(
                             icon: Icons.stop_circle_outlined,
-                            color: const Color(0xFFB71C1C),
-                            iconColor: Colors.white,
+                            color: AppColors.error,
+                            iconColor: AppColors.white,
                             onTap: () => _confirmEndForAll(
                                 context, meetingService),
                           )
@@ -410,7 +411,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                           _buildControlBtn(
                             icon: Icons.more_vert,
                             color: Colors.white24,
-                            iconColor: Colors.white,
+                            iconColor: AppColors.white,
                             onTap: () =>
                                 _showParticipantsPanel(meetingService),
                           ),
@@ -434,22 +435,22 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
         backgroundColor: _kMeetSheet,
         shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.brMd),
-        title: const Text('Terminer pour tous',
-            style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Voulez-vous mettre fin à la réunion pour tous les participants ?',
+        title: Text(context.l10n.endForEveryone,
+            style: TextStyle(color: AppColors.white)),
+        content: Text(
+          context.l10n.doYouWantToEndThe,
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler',
+            child: Text(context.l10n.commonCancel,
                 style: TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Terminer',
-                style: TextStyle(color: AppColors.error)),
+            child: Text(context.l10n.endMeetingAction,
+                style: const TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -500,7 +501,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                 name: label,
                 size: 80,
                 backgroundColor: AppColors.brandPrimary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.white,
               ),
             ),
           Positioned(
@@ -515,7 +516,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
               ),
               child: Text(label,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 12)),
+                      color: AppColors.white, fontSize: 12)),
             ),
           ),
           Positioned(
@@ -527,7 +528,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                   color: Colors.black54, shape: BoxShape.circle),
               child: Icon(
                 isMuted ? Icons.mic_off : Icons.mic,
-                color: isMuted ? AppColors.error : Colors.white,
+                color: isMuted ? AppColors.error : AppColors.white,
                 size: 14,
               ),
             ),
@@ -628,10 +629,10 @@ class _ParticipantsSheet extends StatelessWidget {
                       horizontal: AppSpacing.xl, vertical: AppSpacing.xs),
                   child: Row(
                     children: [
-                      const Text(
-                        'Participants',
+                      Text(
+                        context.l10n.participants,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.white,
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
@@ -655,9 +656,9 @@ class _ParticipantsSheet extends StatelessWidget {
                 ),
                 Expanded(
                   child: participants.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            'Aucun participant connecté',
+                            context.l10n.noParticipantsConnected,
                             style: TextStyle(color: Colors.white54),
                           ),
                         )
@@ -671,13 +672,16 @@ class _ParticipantsSheet extends StatelessWidget {
                             final isConnected = p.connecte ||
                                 connectedIds.contains(
                                     p.participantID.toString());
-                            final name =
-                                p.nom ?? p.pseudo ?? 'Participant';
+                            final name = p.nom ??
+                                p.pseudo ??
+                                context.l10n.participantFallback;
                             final isMe = p.participantID == myId;
                             final isHost =
                                 meeting?.idOrganiser == p.participantID;
                             return _ParticipantRow(
-                              name: isMe ? '$name (vous)' : name,
+                              name: isMe
+                                  ? context.l10n.nameYouParen(name)
+                                  : name,
                               avatarUrl: p.avatarUrl,
                               isConnected: isConnected,
                               isHost: isHost,
@@ -722,7 +726,7 @@ class _ParticipantRow extends StatelessWidget {
                 child: hasValidAvatarUrl(avatarUrl)
                     ? null
                     : Text(initial,
-                        style: const TextStyle(color: Colors.white)),
+                        style: const TextStyle(color: AppColors.white)),
               ),
               if (isConnected)
                 Positioned(
@@ -745,7 +749,7 @@ class _ParticipantRow extends StatelessWidget {
           Expanded(
             child: Text(name,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 14)),
+                    color: AppColors.white, fontSize: 14)),
           ),
           if (isHost)
             Container(
@@ -755,9 +759,9 @@ class _ParticipantRow extends StatelessWidget {
                 color: AppColors.brandPrimary.withAlpha(60),
                 borderRadius: AppRadius.brSm,
               ),
-              child: const Text(
-                'Hôte',
-                style: TextStyle(
+              child: Text(
+                context.l10n.hostLabel,
+                style: const TextStyle(
                     color: AppColors.brandPrimary,
                     fontSize: 11,
                     fontWeight: FontWeight.bold),
@@ -771,9 +775,9 @@ class _ParticipantRow extends StatelessWidget {
                 color: Colors.white10,
                 borderRadius: AppRadius.brSm,
               ),
-              child: const Text(
-                'Invité',
-                style: TextStyle(color: Colors.white38, fontSize: 11),
+              child: Text(
+                context.l10n.guestLabel,
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
               ),
             ),
         ],
@@ -821,22 +825,22 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.all(AppSpacing.lg),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Text(
-                'Chat',
-                style: TextStyle(
-                    color: Colors.white,
+                context.l10n.chatLabel,
+                style: const TextStyle(
+                    color: AppColors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold),
               ),
             ),
             Expanded(
               child: svc.chatMessages.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
-                        'Aucun message pour le moment',
-                        style: TextStyle(color: Colors.white38),
+                        context.l10n.noMessagesYet,
+                        style: const TextStyle(color: Colors.white38),
                       ),
                     )
                   : ListView.builder(
@@ -847,7 +851,7 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                         final msg = svc.chatMessages[i];
                         final isMe = msg.userId == myId.toString();
                         final senderName = isMe
-                            ? 'Vous'
+                            ? context.l10n.youLabel
                             : svc.participantDisplayName(msg.userId);
                         return Padding(
                           padding: const EdgeInsets.only(
@@ -875,7 +879,7 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                                 child: Text(
                                   msg.message,
                                   style: const TextStyle(
-                                      color: Colors.white),
+                                      color: AppColors.white),
                                 ),
                               ),
                             ],
@@ -896,9 +900,9 @@ class _MeetingChatSheetState extends State<_MeetingChatSheet> {
                   Expanded(
                     child: TextField(
                       controller: _ctrl,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.white),
                       decoration: InputDecoration(
-                        hintText: 'Message...',
+                        hintText: context.l10n.message,
                         hintStyle:
                             const TextStyle(color: Colors.white38),
                         filled: true,

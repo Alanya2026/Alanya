@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -75,11 +74,11 @@ class _StatusesScreenState extends State<StatusesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Statuts', style: context.text.headlineSmall),
+        title: Text(context.l10n.navStatuses, style: context.text.headlineLarge),
         actions: [
           IconButton(
             icon: Icon(_searchOpen ? Icons.close : Icons.search),
-            tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
+            tooltip: _searchOpen ? context.l10n.closeSearch : context.l10n.commonSearch,
             onPressed: _toggleSearch,
           ),
         ],
@@ -109,7 +108,7 @@ class _StatusesScreenState extends State<StatusesScreen> {
                     ),
                     const Divider(height: 1),
                   ],
-                  if (recents.isNotEmpty) _SectionHeader(label: 'Récents'),
+                  if (recents.isNotEmpty) _SectionHeader(label: context.l10n.recent),
                   for (var i = 0; i < recents.length; i++)
                     _ContactStatusTile(
                       authorId: recents[i].key,
@@ -122,7 +121,7 @@ class _StatusesScreenState extends State<StatusesScreen> {
                         contactIndex: i,
                       ),
                     ),
-                  if (viewed.isNotEmpty) _SectionHeader(label: 'Déjà vus'),
+                  if (viewed.isNotEmpty) _SectionHeader(label: context.l10n.alreadyViewed),
                   for (var i = 0; i < viewed.length; i++)
                     _ContactStatusTile(
                       authorId: viewed[i].key,
@@ -138,9 +137,9 @@ class _StatusesScreenState extends State<StatusesScreen> {
                   if (recents.isEmpty && viewed.isEmpty && !provider.loading)
                     EmptyState(
                       icon: CupertinoIcons.sparkles,
-                      title: 'Aucun statut récent',
+                      title: context.l10n.noRecentStatus,
                       message:
-                          'Les statuts de vos contacts qui vous ont ajouté en favori s\'afficheront ici.',
+                          context.l10n.statusesFromContactsWhoFavoritedYou,
                     ),
                   const SizedBox(height: 80),
                 ],
@@ -259,11 +258,11 @@ class _MyStatusTile extends StatelessWidget {
                 width: 22,
                 height: 22,
                 decoration: BoxDecoration(
-                  color: AppColors.brandPrimary,
+                  color: context.colors.primary,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.white, width: 2),
+                  border: Border.all(color: context.colors.surface, width: 2),
                 ),
-                child: const Icon(Icons.add, color: Colors.white, size: 14),
+                child: Icon(Icons.add, color: context.colors.onPrimary, size: 14),
               ),
             ),
             AppSpacing.hGapMd,
@@ -271,12 +270,12 @@ class _MyStatusTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Mon statut', style: context.text.titleSmall),
+                  Text(context.l10n.myStatus, style: context.text.titleSmall),
                   AppSpacing.vGapXs,
                   Text(
                     hasStatus
-                        ? '${statuses.length} statut(s) actif(s) — appuyer pour voir'
-                        : 'Appuyer pour ajouter votre statut',
+                        ? context.l10n.activeStatusesTapToView(statuses.length)
+                        : context.l10n.tapToAddYourStatus,
                     style: context.text.bodySmall
                         ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
@@ -336,12 +335,12 @@ class _ContactStatusTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    last.nom ?? 'Contact',
+                    last.nom ?? context.l10n.contact2,
                     style: context.text.titleSmall,
                   ),
                   AppSpacing.vGapXs,
                   Text(
-                    _formatRelative(last.createdAt),
+                    _formatRelative(context, last.createdAt),
                     style: context.text.bodySmall
                         ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
@@ -354,13 +353,13 @@ class _ContactStatusTile extends StatelessWidget {
     );
   }
 
-  static String _formatRelative(String iso) {
+  static String _formatRelative(BuildContext context, String iso) {
     final dt = DateTime.tryParse(iso);
     if (dt == null) return '';
     final diff = DateTime.now().difference(dt.toLocal());
-    if (diff.inMinutes < 1) return 'à l\'instant';
-    if (diff.inMinutes < 60) return 'il y a ${diff.inMinutes} min';
-    if (diff.inHours < 24) return 'il y a ${diff.inHours} h';
-    return 'il y a ${diff.inDays} j';
+    if (diff.inMinutes < 1) return context.l10n.justNow;
+    if (diff.inMinutes < 60) return context.l10n.timeAgoMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return context.l10n.timeAgoHours(diff.inHours);
+    return context.l10n.timeAgoDays(diff.inDays);
   }
 }

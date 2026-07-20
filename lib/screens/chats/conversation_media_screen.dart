@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
@@ -39,6 +40,7 @@ class ConversationMediaScreen extends StatefulWidget {
 class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  StreamSubscription<List<LocalMessage>>? _messagesSub;
   List<LocalMessage> _images = [];
   List<LocalMessage> _videos = [];
   List<LocalMessage> _documents = [];
@@ -54,14 +56,17 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
 
   @override
   void dispose() {
+    _messagesSub?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
-  Future<void> _init() async {
+  void _init() {
     final chat = context.read<ChatProvider>();
-    await chat.repository.syncMessages(widget.conversationId);
-    chat.watchMessages(widget.conversationId).listen(_onMessages);
+    // Local-first : Drift immédiat, sync réseau en fond (comme chat_detail).
+    _messagesSub =
+        chat.watchMessages(widget.conversationId).listen(_onMessages);
+    unawaited(chat.repository.syncMessages(widget.conversationId));
   }
 
   void _onMessages(List<LocalMessage> messages) {
@@ -102,24 +107,27 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surfaceMuted,
+      backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
+        backgroundColor: context.semantic.surfaceMuted,
         title: Text(
-          '${widget.conversationName} — Médias',
+          context.l10n.mediaTitleNamed(widget.conversationName),
           style: context.text.titleMedium,
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Container(
-            color: context.colors.surface,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? context.colors.surfaceContainerHigh
+                : context.colors.surface,
             child: TabBar(
               controller: _tabController,
               indicatorSize: TabBarIndicatorSize.tab,
-              tabs: const [
-                Tab(icon: Icon(Icons.image, size: 22), text: 'Images'),
-                Tab(icon: Icon(Icons.videocam, size: 22), text: 'Vidéos'),
-                Tab(icon: Icon(Icons.description, size: 22), text: 'Documents'),
-                Tab(icon: Icon(Icons.link, size: 22), text: 'Liens'),
+              tabs: [
+                Tab(icon: Icon(Icons.image, size: 22), text: context.l10n.images),
+                Tab(icon: Icon(Icons.videocam, size: 22), text: context.l10n.videos),
+                Tab(icon: Icon(Icons.description, size: 22), text: context.l10n.documents),
+                Tab(icon: Icon(Icons.link, size: 22), text: context.l10n.links),
               ],
             ),
           ),
@@ -142,22 +150,22 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   // ── Images ──────────────────────────────────────────────────────────
 
   Widget _buildImageGrid() {
-    if (_images.isEmpty) return _emptyState(CupertinoIcons.photo, 'Aucune image');
+    if (_images.isEmpty) return _emptyState(CupertinoIcons.photo, context.l10n.noImages);
     return _buildDateSections(_images, isGrid: true, isVideo: false);
   }
 
   Widget _buildVideoGrid() {
-    if (_videos.isEmpty) return _emptyState(CupertinoIcons.videocam, 'Aucune vidéo');
+    if (_videos.isEmpty) return _emptyState(CupertinoIcons.videocam, context.l10n.noVideos);
     return _buildDateSections(_videos, isGrid: true, isVideo: true);
   }
 
   Widget _buildDocumentList() {
-    if (_documents.isEmpty) return _emptyState(Icons.insert_drive_file, 'Aucun document');
+    if (_documents.isEmpty) return _emptyState(Icons.insert_drive_file, context.l10n.noDocuments);
     return _buildDateSections(_documents, isGrid: false);
   }
 
   Widget _buildLinksList() {
-    if (_links.isEmpty) return _emptyState(CupertinoIcons.link, 'Aucun lien');
+    if (_links.isEmpty) return _emptyState(CupertinoIcons.link, context.l10n.noLinks);
     return _buildDateSections(_links, isGrid: false);
   }
 
@@ -177,9 +185,9 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
       final date = DateTime(m.sendAt.year, m.sendAt.month, m.sendAt.day);
       String label;
       if (date == today) {
-        label = "Aujourd'hui";
+        label = context.l10n.today;
       } else if (date == yesterday) {
-        label = 'Hier';
+        label = context.l10n.yesterday;
       } else {
         label =
             '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -255,14 +263,17 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   }
 
   Widget _buildDocTile(LocalMessage msg) {
-    final name = msg.mediaName ?? 'Document';
+    final name = msg.mediaName ?? context.l10n.document;
     final style = DocumentFileStyle.fromMessage(
       mediaName: msg.mediaName,
       mediaUrl: msg.mediaUrl,
     );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: context.colors.surface,
+        color: isDark
+            ? context.colors.surfaceContainerHigh
+            : context.colors.surface,
         borderRadius: AppRadius.brSm,
       ),
       child: ListTile(
@@ -278,7 +289,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           child: Center(
             child: Text(style.extension,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w700)),
           ),
@@ -303,9 +314,13 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     // Le contenu du message peut contenir du texte autour de l'URL
     // (« regarde ça : https://exemple.com ») : on n'ouvre que l'URL elle-même.
     final url = extractFirstUrl(msg.content ?? '');
+    final info = context.semantic.info;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: context.colors.surface,
+        color: isDark
+            ? context.colors.surfaceContainerHigh
+            : context.colors.surface,
         borderRadius: AppRadius.brSm,
       ),
       child: ListTile(
@@ -315,14 +330,14 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppColors.infoContainer,
+            color: context.semantic.infoContainer,
             borderRadius: AppRadius.brSm,
           ),
-          child: const Icon(CupertinoIcons.link, color: AppColors.info, size: 22),
+          child: Icon(CupertinoIcons.link, color: info, size: 22),
         ),
-        title: Text(msg.content ?? 'Lien',
+        title: Text(msg.content ?? context.l10n.linkNoun,
             style: context.text.titleSmall?.copyWith(
-              color: url != null ? AppColors.info : null,
+              color: url != null ? info : null,
               decoration: url != null ? TextDecoration.underline : null,
             ),
             maxLines: 1,
@@ -346,6 +361,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   }
 
   Widget _gridItem(LocalMessage msg, {required bool isVideo}) {
+    final placeholder = context.colors.surfaceContainerHighest;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -367,6 +383,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
               borderRadius: BorderRadius.circular(6),
               expandToFill: true,
               playIconSize: 26,
+              fallbackColor: placeholder,
             )
           : Stack(
               fit: StackFit.expand,
@@ -374,7 +391,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(6),
-                    color: AppColors.surfaceSubtle,
+                    color: placeholder,
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: _buildThumbnail(msg, msg.localMediaPath ?? msg.mediaUrl),
@@ -385,6 +402,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
   }
 
   Widget _buildThumbnail(LocalMessage msg, String? url) {
+    final placeholder = context.colors.surfaceContainerHighest;
     if (msg.type == 2) {
       return VideoMessagePreview(
         pendingPath: msg.pendingUploadPath,
@@ -394,6 +412,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
         borderRadius: BorderRadius.zero,
         expandToFill: true,
         playIconSize: 26,
+        fallbackColor: placeholder,
       );
     }
     final hasLocal =
@@ -401,8 +420,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     if (hasLocal) {
       return Image.file(File(msg.localMediaPath!),
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              Container(color: AppColors.surfaceSubtle));
+          errorBuilder: (_, __, ___) => Container(color: placeholder));
     }
     // Reçu sans fichier local : preview réseau OK, badge download via l'ouverture.
     final myId = context.read<ChatProvider>().repository.myId;
@@ -420,17 +438,17 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
             fit: BoxFit.cover,
             placeholder: (context, url) => const LoadingState(),
             errorWidget: (context, url, error) =>
-                Container(color: AppColors.surfaceSubtle),
+                Container(color: placeholder),
           ),
           if (isReceivedPending)
             const Align(
               alignment: Alignment.center,
-              child: Icon(Icons.download_rounded, color: Colors.white, size: 28),
+              child: Icon(Icons.download_rounded, color: AppColors.white, size: 28),
             ),
         ],
       );
     }
-    return Container(color: AppColors.surfaceSubtle);
+    return Container(color: placeholder);
   }
 
   Future<void> _openDoc(LocalMessage msg) async {
@@ -470,9 +488,9 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     if (path == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Impossible de télécharger le fichier'),
-              backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text(context.l10n.unableToDownloadTheFile),
+              backgroundColor: context.colors.error),
         );
       }
       return;
@@ -482,8 +500,8 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     if (res.type != ResultType.done && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Aucune app pour ouvrir ce fichier (${res.message})'),
-          backgroundColor: AppColors.error,
+          content: Text(context.l10n.cannotOpenFileApp(res.message)),
+          backgroundColor: context.colors.error,
         ),
       );
     }
@@ -493,8 +511,8 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          const Center(child: CircularProgressIndicator(color: Colors.white)),
+      builder: (ctx) =>
+          Center(child: CircularProgressIndicator(color: ctx.colors.primary)),
     );
   }
 }

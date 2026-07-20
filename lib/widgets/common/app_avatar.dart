@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../core/utils/backend_url.dart';
 
@@ -71,7 +71,10 @@ class AppAvatar extends StatelessWidget {
         borderRadius: _borderRadius,
         boxShadow: showShadow ? AppShadows.subtle : null,
       ),
-      child: ClipRRect(borderRadius: _borderRadius, child: _buildContent()),
+      child: ClipRRect(
+        borderRadius: _borderRadius,
+        child: _buildContent(context),
+      ),
     );
 
     if (onTap != null) {
@@ -80,14 +83,14 @@ class AppAvatar extends StatelessWidget {
     return avatar;
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
     if (_hasLocal) {
       return Image.file(
         File(localPath!),
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFallback(),
+        errorBuilder: (_, __, ___) => _buildFallback(context),
       );
     }
     if (_hasNetwork) {
@@ -97,16 +100,17 @@ class AppAvatar extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        placeholder: (_, __) => Container(color: AppColors.surfaceSubtle),
-        errorWidget: (_, __, ___) => _buildFallback(),
+        placeholder: (_, __) =>
+            Container(color: context.colors.surfaceContainerHighest),
+        errorWidget: (_, __, ___) => _buildFallback(context),
       );
     }
-    return _buildFallback();
+    return _buildFallback(context);
   }
 
-  Widget _buildFallback() {
-    final bg = backgroundColor ?? AppColors.brandContainer;
-    final fg = foregroundColor ?? AppColors.brandPrimary;
+  Widget _buildFallback(BuildContext context) {
+    final bg = backgroundColor ?? context.colors.primaryContainer;
+    final fg = foregroundColor ?? context.colors.onPrimaryContainer;
     final initials = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '?';
 
     return Container(

@@ -74,7 +74,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
                 padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
                     AppSpacing.md, AppSpacing.lg, AppSpacing.sm),
                 child: AppSearchField(
-                  hintText: 'Rechercher un pays...',
+                  hintText: context.l10n.searchForACountry,
                   autofocus: true,
                   onChanged: (v) => setState(() => _query = v),
                 ),
@@ -83,7 +83,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
                 child: _filtered.isEmpty
                     ? EmptyState(
                         icon: Icons.public_off,
-                        title: 'Aucun pays trouvé',
+                        title: context.l10n.noCountryFound,
                       )
                     : ListView.builder(
                         controller: scrollController,

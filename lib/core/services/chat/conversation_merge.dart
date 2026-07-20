@@ -5,6 +5,7 @@ import '../../../talky_models.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
+import '../../theme/locale_controller.dart';
 
 /// Merge monotonic conversation list HTTP → cache local.
 ///
@@ -12,7 +13,18 @@ import '../../utils/media_album.dart';
 /// serveur initial). L'unread et l'aperçu définitifs sont dérivés ensuite par
 /// [ConversationSummaryReducer] à partir des messages locaux.
 class ConversationMerge {
+  /// Sentinelle **interne** stockée en Drift (`lastMessage` / comparaisons).
+  /// Ne jamais localiser à l'écriture : les lignes existantes et les merges
+  /// comparent cette chaîne. Localiser uniquement à l'affichage via
+  /// [displayConversationPreview] / `l10n.thisMessageWasDeleted`.
   static const deletedPreview = 'Ce message a été supprimé';
+
+  /// Variante EN éventuellement déjà écrite (affichage / merge défensif).
+  static const deletedPreviewEn = 'This message was deleted';
+
+  /// True si [text] est une sentinelle « message supprimé » connue.
+  static bool isDeletedPreview(String? text) =>
+      text == deletedPreview || text == deletedPreviewEn;
 
   /// Garde le plus récent entre local et serveur ; protège pending optimistes.
   /// Ne touche plus aux règles unread ad-hoc (source unique = reducer).
@@ -66,9 +78,11 @@ class ConversationMerge {
     }
 
     final localLast = local.lastMessage;
-    if (localLast == deletedPreview &&
+    // Préserver l'aperçu « supprimé » local face à un catch-up HTTP qui
+    // renverrait encore le contenu d'avant suppression.
+    if (isDeletedPreview(localLast) &&
         companion.lastMessage.present &&
-        companion.lastMessage.value != deletedPreview) {
+        !isDeletedPreview(companion.lastMessage.value)) {
       companion = companion.copyWith(lastMessage: const Value(deletedPreview));
     }
 
@@ -100,15 +114,15 @@ class ConversationMerge {
     }
     switch (type) {
       case 1:
-        return isViewOnce ? '📷 Photo · Vue unique' : '📷 Photo';
+        return isViewOnce ? LocaleController.instance.l10n.photoViewOnce : LocaleController.instance.l10n.photo;
       case 2:
-        return isViewOnce ? '🎥 Vidéo · Vue unique' : '🎥 Vidéo';
+        return isViewOnce ? LocaleController.instance.l10n.videoViewOnce : LocaleController.instance.l10n.video;
       case 3:
-        return isViewOnce ? '🎵 Audio · Vue unique' : '🎵 Audio';
+        return isViewOnce ? LocaleController.instance.l10n.audioViewOnce : LocaleController.instance.l10n.audio;
       case 4:
-        return mediaName?.isNotEmpty == true ? '📎 $mediaName' : '📎 Fichier';
+        return mediaName?.isNotEmpty == true ? LocaleController.instance.l10n.fileWithName(mediaName!) : LocaleController.instance.l10n.file;
       default:
-        return mediaName ?? 'Média';
+        return mediaName ?? LocaleController.instance.l10n.mediaFallback;
     }
   }
 }

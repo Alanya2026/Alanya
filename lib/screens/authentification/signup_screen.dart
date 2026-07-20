@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/countries_repository.dart';
 import '../../widgets/alanya_phone_field.dart';
+import '../../core/utils/validators.dart';
+import '../../l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -20,6 +22,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _pseudoController = TextEditingController();
   final _emailController = TextEditingController();
@@ -58,13 +61,13 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() {
         _countries = countries;
         _loadingCountries = false;
-        _countriesError = countries.isEmpty ? 'Liste des pays indisponible' : null;
+        _countriesError = countries.isEmpty ? context.l10n.countryListUnavailable : null;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loadingCountries = false;
-        _countriesError = 'Impossible de charger la liste des pays';
+        _countriesError = context.l10n.unableToLoadCountryList;
       });
     }
   }
@@ -72,13 +75,10 @@ class _SignupScreenState extends State<SignupScreen> {
   bool get _canSubmit =>
       !_loadingCountries &&
       _countries.isNotEmpty &&
-      _selectedCountry != null &&
-      _nameController.text.trim().isNotEmpty &&
-      _pseudoController.text.trim().isNotEmpty &&
-      _emailController.text.trim().isNotEmpty &&
-      _passwordController.text.isNotEmpty;
+      _selectedCountry != null;
 
   Future<void> _signup() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     final country = _selectedCountry;
     if (country == null) return;
 
@@ -99,18 +99,18 @@ class _SignupScreenState extends State<SignupScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Text('Vos identifiants de connexion'),
+        title: Text(context.l10n.yourSignInCredentials),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Notez ces informations — elles vous serviront à vous connecter :',
+            Text(
+              context.l10n.saveTheseDetailsYouWillNeed,
               textAlign: TextAlign.center,
             ),
             AppSpacing.vGapXl,
             Text(
-              'Téléphone Alanya',
+              context.l10n.alanyaPhone,
               textAlign: TextAlign.center,
               style: context.text.labelMedium?.copyWith(
                 color: context.colors.onSurfaceVariant,
@@ -129,7 +129,7 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
             AppSpacing.vGapXl,
             Text(
-              'Mot de passe',
+              context.l10n.signupPasswordHint,
               textAlign: TextAlign.center,
               style: context.text.labelMedium?.copyWith(
                 color: context.colors.onSurfaceVariant,
@@ -148,7 +148,7 @@ class _SignupScreenState extends State<SignupScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('J\'ai noté'),
+            child: Text(context.l10n.gotIt),
           ),
         ],
       ),
@@ -166,66 +166,70 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xxl, vertical: AppSpacing.xxxl),
-          child: Column(
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AppSpacing.vGapXxl,
               const Center(child: AppLogo(size: 120)),
               AppSpacing.vGapXxl,
               Text(
-                'Créer un compte',
+                l10n?.signupTitle ?? context.l10n.signupTitle,
                 textAlign: TextAlign.center,
                 style: context.text.headlineLarge,
               ),
               AppSpacing.vGapSm,
               Text(
-                'Rejoignez la communauté Alanya',
+                l10n?.signupSubtitle ?? context.l10n.signupSubtitle,
                 textAlign: TextAlign.center,
                 style: context.text.bodyLarge
                     ?.copyWith(color: context.colors.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpacing.xxxl + 16),
-              TextField(
+              TextFormField(
                 controller: _nameController,
-                onChanged: (_) => setState(() {}),
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  hintText: 'Nom complet',
+                validator: (v) => Validators.required(v, l10n: l10n),
+                decoration: InputDecoration(
+                  hintText: l10n?.signupNameHint ?? context.l10n.signupNameHint,
                   prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
               AppSpacing.vGapLg,
-              TextField(
+              TextFormField(
                 controller: _pseudoController,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  hintText: 'Pseudo',
+                validator: (v) => Validators.required(v, l10n: l10n),
+                decoration: InputDecoration(
+                  hintText: l10n?.signupPseudoHint ?? context.l10n.signupPseudoHint,
                   prefixIcon: Icon(Icons.alternate_email),
                 ),
               ),
               AppSpacing.vGapLg,
-              TextField(
+              TextFormField(
                 controller: _emailController,
-                onChanged: (_) => setState(() {}),
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
-                decoration: const InputDecoration(
-                  hintText: 'Adresse e-mail',
+                validator: (v) => Validators.email(v, l10n: l10n),
+                decoration: InputDecoration(
+                  hintText: l10n?.signupEmailHint ?? context.l10n.signupEmailHint,
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
               AppSpacing.vGapLg,
-              TextField(
+              TextFormField(
                 controller: _passwordController,
-                onChanged: (_) => setState(() {}),
                 obscureText: _obscurePassword,
+                validator: (v) => Validators.minLength(v, 6, l10n: l10n),
                 decoration: InputDecoration(
-                  hintText: 'Mot de passe',
+                  hintText: l10n?.signupPasswordHint ?? context.l10n.signupPasswordHint,
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -274,7 +278,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                       TextButton(
                         onPressed: _loadCountries,
-                        child: const Text('Réessayer'),
+                        child: Text(l10n?.retry ?? context.l10n.commonRetry),
                       ),
                     ],
                   ),
@@ -299,9 +303,9 @@ class _SignupScreenState extends State<SignupScreen> {
                             color: AppColors.white,
                           ),
                         )
-                      : const Text(
-                          'S\'inscrire',
-                          style: TextStyle(
+                      : Text(
+                          l10n?.signupSubmit ?? context.l10n.signupSubmit,
+                          style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),
@@ -310,17 +314,18 @@ class _SignupScreenState extends State<SignupScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Déjà un compte ?'),
+                  Text(l10n?.signupHasAccount ?? context.l10n.signupHasAccount),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Se connecter',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    child: Text(
+                      l10n?.signupLogin ?? context.l10n.signupLogin,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),
@@ -329,10 +334,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Widget _buildCountryField() {
     if (_loadingCountries) {
-      return const TextField(
+      return TextField(
         enabled: false,
         decoration: InputDecoration(
-          hintText: 'Chargement des pays…',
+          hintText: context.l10n.loadingCountries,
           prefixIcon: Icon(Icons.public_outlined),
           suffixIcon: Padding(
             padding: EdgeInsets.all(12),
@@ -347,10 +352,10 @@ class _SignupScreenState extends State<SignupScreen> {
     }
 
     if (_countriesError != null) {
-      return const TextField(
+      return TextField(
         enabled: false,
         decoration: InputDecoration(
-          hintText: 'Pays indisponible',
+          hintText: context.l10n.countryUnavailable,
           prefixIcon: Icon(Icons.public_outlined),
         ),
       );

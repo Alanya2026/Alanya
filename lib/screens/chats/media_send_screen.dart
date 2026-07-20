@@ -77,13 +77,13 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close, color: AppColors.white),
-                    tooltip: 'Annuler',
+                    tooltip: context.l10n.commonCancel,
                   ),
                   Expanded(
                     child: Text(
                       multi
                           ? '${_page + 1}/${items.length}'
-                          : (items.first.type == 2 ? 'Vidéo' : 'Photo'),
+                          : (items.first.type == 2 ? context.l10n.video2 : context.l10n.photo2),
                       textAlign: TextAlign.center,
                       style: context.text.titleMedium?.copyWith(
                         color: AppColors.white,
@@ -147,7 +147,7 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: AppColors.white.withValues(alpha: 0.12),
-                          hintText: 'Ajouter une légende…',
+                          hintText: context.l10n.addACaption,
                           hintStyle: TextStyle(
                             color: AppColors.white.withValues(alpha: 0.55),
                           ),
@@ -266,10 +266,10 @@ class _LocalVideoPreviewState extends State<_LocalVideoPreview> {
 
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          color: Colors.white70,
+          color: AppColors.white.withValues(alpha: 0.7),
         ),
       );
     }

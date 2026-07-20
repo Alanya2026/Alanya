@@ -62,7 +62,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         _loadingGps = false;
         _serviceDisabled = true;
         _statusHint =
-            'Activez la localisation pour utiliser votre position, ou déplacez la carte.';
+            context.l10n.enableLocationToUseYourPosition;
       });
       return;
     }
@@ -78,8 +78,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         _loadingGps = false;
         _permissionDenied = true;
         _statusHint = permission == LocationPermission.deniedForever
-            ? 'Permission refusée. Ouvrez les réglages ou choisissez un point sur la carte.'
-            : 'Permission refusée. Vous pouvez quand même choisir un point sur la carte.';
+            ? context.l10n.permissionDeniedOpenSettingsOrPick
+            : context.l10n.permissionDeniedYouCanStillPick;
       });
       return;
     }
@@ -110,7 +110,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             _center = point;
             _hasFix = true;
             _loadingGps = false;
-            _statusHint = 'Position approximative (GPS lent).';
+            _statusHint = context.l10n.approximateGpsSlow;
           });
           _mapCtrl.move(point, 15);
           return;
@@ -120,7 +120,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       setState(() {
         _loadingGps = false;
         _statusHint =
-            'GPS indisponible. Déplacez la carte pour choisir un point.';
+            context.l10n.gpsUnavailableMoveTheMapTo;
       });
     }
   }
@@ -194,8 +194,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   Icons.location_on,
                   size: 48,
                   color: colors.primary,
-                  shadows: const [
-                    Shadow(blurRadius: 6, color: Colors.black45),
+                  shadows: [
+                    Shadow(blurRadius: 6, color: AppColors.black.withValues(alpha: 0.45)),
                   ],
                 ),
               ),
@@ -215,19 +215,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.close, color: AppColors.white),
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.black45,
+                          backgroundColor: AppColors.black.withValues(alpha: 0.45),
                         ),
-                        tooltip: 'Annuler',
+                        tooltip: context.l10n.commonCancel,
                       ),
                       Expanded(
                         child: Text(
-                          'Envoyer une position',
+                          context.l10n.sendALocation,
                           textAlign: TextAlign.center,
                           style: context.text.titleMedium?.copyWith(
                             color: AppColors.white,
                             fontWeight: FontWeight.w600,
-                            shadows: const [
-                              Shadow(blurRadius: 4, color: Colors.black54),
+                            shadows: [
+                              Shadow(blurRadius: 4, color: AppColors.black.withValues(alpha: 0.54)),
                             ],
                           ),
                         ),
@@ -242,7 +242,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: Material(
-                      color: Colors.black.withValues(alpha: 0.72),
+                      color: AppColors.black.withValues(alpha: 0.72),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.md),
@@ -260,14 +260,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                               AppSpacing.vGapSm,
                               TextButton(
                                 onPressed: _openAppSettings,
-                                child: const Text('Ouvrir les réglages'),
+                                child: Text(context.l10n.openSettings),
                               ),
                             ],
                             if (_serviceDisabled) ...[
                               AppSpacing.vGapSm,
                               TextButton(
                                 onPressed: _openLocationSettings,
-                                child: const Text('Activer la localisation'),
+                                child: Text(context.l10n.enableLocation),
                               ),
                             ],
                           ],
@@ -306,14 +306,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                                   height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                   ),
                                 )
                               : const Icon(Icons.send),
                           label: Text(
                             _hasFix
-                                ? 'Envoyer cette position'
-                                : 'Envoyer la position',
+                                ? context.l10n.sendThisLocation
+                                : context.l10n.sendLocation,
                           ),
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(

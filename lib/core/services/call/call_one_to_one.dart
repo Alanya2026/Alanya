@@ -13,7 +13,7 @@ extension CallOneToOne on CallService {
     String? targetUserPhoto,
   }) async {
     if (_status != CallStatus.idle) {
-      _errorMessage = 'Un appel est déjà en cours';
+      _errorMessage = LocaleController.instance.l10n.aCallIsAlreadyInProgress;
       notify();
       return;
     }
@@ -77,7 +77,7 @@ extension CallOneToOne on CallService {
       if (!kIsWeb) {
         await _acquireCallSession(
           isVideo: isVideo,
-          displayName: targetUserName ?? 'Appel',
+          displayName: targetUserName ?? LocaleController.instance.l10n.callNoun,
           handle: targetUserId.toString(),
         );
       }
@@ -93,7 +93,7 @@ extension CallOneToOne on CallService {
         if (_status == CallStatus.outgoing || _status == CallStatus.connecting) {
           debugPrint('[CallService] ⏰ Timeout local appel sortant — abandon');
           await _terminateCall();
-          _showTransientMessage('Pas de réponse.');
+          _showTransientMessage(LocaleController.instance.l10n.noAnswer);
         }
       });
 
@@ -103,23 +103,23 @@ extension CallOneToOne on CallService {
       debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
 
       // Déterminer le type d'erreur pour afficher un message clair
-      String errorMsg = 'Erreur lors du démarrage de l\'appel';
+      String errorMsg = LocaleController.instance.l10n.errorStartingTheCall;
       final errorStr = e.toString().toLowerCase();
 
       if (errorStr.contains('permission')) {
-        errorMsg = 'Permission refusée. Veuillez autoriser le microphone/caméra.';
+        errorMsg = LocaleController.instance.l10n.permissionDeniedPleaseAllowMicrophoneCamera;
       } else if (errorStr.contains('microphone') || errorStr.contains('audio')) {
-        errorMsg = 'Erreur microphone. Veuillez vérifier vos permissions et votre matériel audio.';
+        errorMsg = LocaleController.instance.l10n.microphoneErrorPleaseCheckYourPermissions;
       } else if (errorStr.contains('camera') || errorStr.contains('video')) {
-        errorMsg = 'Erreur caméra. Veuillez vérifier vos permissions et votre caméra.';
+        errorMsg = LocaleController.instance.l10n.cameraErrorPleaseCheckYourPermissions;
       } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = 'Erreur d\'accès aux médias. Vérifiez que HTTPS est activé ou que vous êtes sur localhost.';
+        errorMsg = LocaleController.instance.l10n.mediaAccessErrorMakeSureHttps;
       } else if (errorStr.contains('notfounderror')) {
-        errorMsg = 'Aucun appareil microphone/caméra trouvé sur votre système.';
+        errorMsg = LocaleController.instance.l10n.noMicrophoneCameraDeviceFoundOn;
       } else if (errorStr.contains('notreadableerror')) {
-        errorMsg = 'Impossible d\'accéder au microphone/caméra. Vérifiez que l\'application a les permissions.';
+        errorMsg = LocaleController.instance.l10n.cannotAccessMicrophoneCameraCheckThat;
       } else {
-        errorMsg = 'Erreur: ${e.toString()}';
+        errorMsg = LocaleController.instance.l10n.errorColon(e.toString());
       }
 
       _errorMessage = errorMsg;
@@ -162,7 +162,7 @@ extension CallOneToOne on CallService {
     }
     if (!_apiClient.isSocketReady) {
       debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
-      _errorMessage = 'Socket non connecté';
+      _errorMessage = LocaleController.instance.l10n.socketNotConnected;
       _status = CallStatus.idle;
       notify();
       return;
@@ -220,7 +220,7 @@ extension CallOneToOne on CallService {
       if (!kIsWeb) {
         await _acquireCallSession(
           isVideo: _isVideo,
-          displayName: _remoteUserName ?? 'Appel',
+          displayName: _remoteUserName ?? LocaleController.instance.l10n.callNoun,
           handle: _remoteUserId.toString(),
           startCallKit: false,
         );
@@ -232,19 +232,19 @@ extension CallOneToOne on CallService {
       debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
 
       // Déterminer le type d'erreur pour afficher un message clair
-      String errorMsg = 'Erreur lors de l\'acceptation de l\'appel';
+      String errorMsg = LocaleController.instance.l10n.errorAcceptingCall;
       final errorStr = e.toString().toLowerCase();
 
       if (errorStr.contains('permission')) {
-        errorMsg = 'Permission refusée. Veuillez autoriser le microphone/caméra.';
+        errorMsg = LocaleController.instance.l10n.permissionDeniedPleaseAllowMicrophoneCamera;
       } else if (errorStr.contains('microphone') || errorStr.contains('audio')) {
-        errorMsg = 'Erreur microphone. Veuillez vérifier vos permissions et votre matériel audio.';
+        errorMsg = LocaleController.instance.l10n.microphoneErrorPleaseCheckYourPermissions;
       } else if (errorStr.contains('camera') || errorStr.contains('video')) {
-        errorMsg = 'Erreur caméra. Veuillez vérifier vos permissions et votre caméra.';
+        errorMsg = LocaleController.instance.l10n.cameraErrorPleaseCheckYourPermissions;
       } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = 'Erreur d\'accès aux médias. Vérifiez que HTTPS est activé ou que vous êtes sur localhost.';
+        errorMsg = LocaleController.instance.l10n.mediaAccessErrorMakeSureHttps;
       } else {
-        errorMsg = 'Erreur: ${e.toString()}';
+        errorMsg = LocaleController.instance.l10n.errorColon(e.toString());
       }
 
       _errorMessage = errorMsg;

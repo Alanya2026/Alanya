@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Résultat retourné par [CameraScreen].
 class CameraResult {
@@ -277,8 +278,8 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                const Text(
-                  'Photo',
+                Text(
+                  context.l10n.photo2,
                   style: TextStyle(color: AppColors.white, fontSize: 12),
                 ),
               ],
@@ -322,7 +323,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  _isRecording ? _formatDuration(_recordingSeconds) : 'Vidéo',
+                  _isRecording ? _formatDuration(_recordingSeconds) : context.l10n.video2,
                   style: TextStyle(
                     color: _isRecording ? AppColors.error : AppColors.white,
                     fontSize: 12,

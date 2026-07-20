@@ -7,6 +7,7 @@ import '../../core/services/meeting_service.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'ongoing_meet_screen.dart';
+import '../../core/theme/app_theme.dart';
 
 class MeetingLobbyScreen extends StatefulWidget {
   final int meetingId;
@@ -112,7 +113,7 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
       if (!mounted) return;
       setState(() => _joining = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de rejoindre : $e')),
+        SnackBar(content: Text(context.l10n.cannotJoinMeeting('$e'))),
       );
     }
   }
@@ -129,9 +130,9 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _loadingMeeting ? 'Réunion' : (_meeting?.objet ?? 'Réunion'),
+          _loadingMeeting ? context.l10n.meeting : (_meeting?.objet ?? context.l10n.meeting),
           style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontSize: 17,
               fontWeight: FontWeight.w600),
         ),
@@ -169,13 +170,13 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                                     ? widget.myName[0].toUpperCase()
                                     : '?',
                                 style: const TextStyle(
-                                    fontSize: 36, color: Colors.white),
+                                    fontSize: 36, color: AppColors.white),
                               ),
                             ),
                             if (!_isCamOn) ...[
                               AppSpacing.vGapMd,
-                              const Text(
-                                'Caméra désactivée',
+                              Text(
+                                context.l10n.cameraDisabled,
                                 style: TextStyle(
                                     color: Colors.white54, fontSize: 13),
                               ),
@@ -187,9 +188,11 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                       bottom: AppSpacing.lg,
                       left: AppSpacing.lg,
                       child: Text(
-                        widget.myName.isNotEmpty ? widget.myName : 'Vous',
+                        widget.myName.isNotEmpty
+                            ? widget.myName
+                            : context.l10n.youLabel,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.white,
                           fontWeight: FontWeight.w600,
                           shadows: [Shadow(blurRadius: 4)],
                         ),
@@ -213,7 +216,7 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                     children: [
                       _LobbyToggle(
                         icon: _isMicOn ? Icons.mic : Icons.mic_off,
-                        label: _isMicOn ? 'Micro actif' : 'Micro coupé',
+                        label: _isMicOn ? context.l10n.micOn : context.l10n.micMuted,
                         active: _isMicOn,
                         onTap: _toggleMic,
                       ),
@@ -222,7 +225,7 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                         _LobbyToggle(
                           icon: _isCamOn ? Icons.videocam : Icons.videocam_off,
                           label:
-                              _isCamOn ? 'Caméra active' : 'Caméra coupée',
+                              _isCamOn ? context.l10n.cameraOn : context.l10n.cameraOff,
                           active: _isCamOn,
                           onTap: _toggleCam,
                         ),
@@ -246,10 +249,10 @@ class _MeetingLobbyScreenState extends State<MeetingLobbyScreen> {
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
+                                  strokeWidth: 2, color: AppColors.white),
                             )
-                          : const Text(
-                              'Rejoindre',
+                          : Text(
+                              context.l10n.join,
                               style: TextStyle(
                                   fontSize: 17, fontWeight: FontWeight.bold),
                             ),
@@ -292,7 +295,7 @@ class _LobbyToggle extends StatelessWidget {
               color: active ? Colors.white24 : AppColors.error,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.white, size: 26),
+            child: Icon(icon, color: AppColors.white, size: 26),
           ),
           AppSpacing.vGapSm,
           Text(label,

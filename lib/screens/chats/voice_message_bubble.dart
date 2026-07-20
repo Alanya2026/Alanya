@@ -100,7 +100,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     final snap = coordinator.snapshotFor(widget.messageId);
     if (snap?.phase == VoiceUiPhase.error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(snap!.error ?? 'Échec du téléchargement')),
+        SnackBar(content: Text(snap!.error ?? context.l10n.downloadFailed)),
       );
     }
   }
@@ -122,7 +122,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Audio indisponible')),
+        SnackBar(content: Text(context.l10n.audioUnavailable)),
       );
     }
   }
@@ -146,7 +146,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Audio indisponible')),
+        SnackBar(content: Text(context.l10n.audioUnavailable)),
       );
     }
   }
@@ -271,7 +271,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
         final String timeText;
         if (snap.phase == VoiceUiPhase.downloading) {
-          timeText = 'Téléchargement…';
+          timeText = context.l10n.downloading;
         } else if (hasStarted) {
           timeText = '${_fmt(position)} / ${_fmt(total)}';
         } else {
@@ -314,7 +314,6 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                       timeText,
                       style: context.text.labelSmall?.copyWith(
                         color: widget.foregroundColor.withAlpha(180),
-                        fontSize: 11,
                       ),
                     ),
                   ],

@@ -12,6 +12,7 @@ import '../../talky_models.dart';
 import '../../widgets/alanya_phone_field.dart';
 import '../../widgets/common/app_skeleton.dart';
 import '../../widgets/country_selector_tile.dart';
+import '../../core/theme/app_theme.dart';
 
 class AdminCreateUserScreen extends StatefulWidget {
   const AdminCreateUserScreen({super.key, this.initialReservedPhone});
@@ -173,7 +174,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
     final label = _patternSuggestion?['label'];
     return label is String && label.isNotEmpty
         ? label
-        : 'Pattern réservé (attribution directe)';
+        : context.l10n.reservedPatternDirectAssignment;
   }
 
   String _reservedLabel(Map<String, dynamic> item) {
@@ -209,12 +210,12 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
     if (_nomCtrl.text.trim().isEmpty ||
         _pseudoCtrl.text.trim().isEmpty ||
         _passwordCtrl.text.isEmpty) {
-      _show('Nom, pseudo et mot de passe requis');
+      _show(context.l10n.nameUsernamePasswordRequired);
       return;
     }
     final country = _selectedCountry;
     if (country == null) {
-      _show('Sélectionnez un pays');
+      _show(context.l10n.selectACountry);
       return;
     }
 
@@ -241,7 +242,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
         final reason = _manualPhoneCheck!['reason'];
         _show(reason is String && reason.isNotEmpty
             ? reason
-            : 'Ce numéro ne peut pas être attribué');
+            : context.l10n.thisNumberCannotBeAssigned);
         return;
       }
       body['alanyaPhone'] = canonical;
@@ -270,7 +271,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
         _selectedReservedPhone != null && _selectedReservedPhone!.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Créer un utilisateur')),
+      appBar: AppBar(title: Text(context.l10n.createUser)),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl,
@@ -279,20 +280,20 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
         children: [
           TextField(
             controller: _nomCtrl,
-            decoration: const InputDecoration(labelText: 'Nom *'),
+            decoration: InputDecoration(labelText: context.l10n.name),
           ),
           AppSpacing.vGapMd,
           TextField(
             controller: _pseudoCtrl,
-            decoration: const InputDecoration(labelText: 'Pseudo *'),
+            decoration: InputDecoration(labelText: context.l10n.username),
           ),
           AppSpacing.vGapMd,
           TextField(
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              hintText: 'Obligatoire sauf tier 3',
+            decoration: InputDecoration(
+              labelText: context.l10n.email,
+              hintText: context.l10n.requiredExceptTier3,
             ),
           ),
           AppSpacing.vGapMd,
@@ -301,13 +302,13 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
               Expanded(
                 child: TextField(
                   controller: _passwordCtrl,
-                  decoration: const InputDecoration(labelText: 'Mot de passe *'),
+                  decoration: InputDecoration(labelText: context.l10n.password),
                 ),
               ),
               IconButton(
                 onPressed: () => setState(() => _passwordCtrl.text = _randomPassword()),
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Générer',
+                tooltip: context.l10n.generate,
               ),
             ],
           ),
@@ -316,20 +317,18 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
             if (_selectedReservedPhone != null) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Numéro réservé'),
+                title: Text(context.l10n.reservedNumber),
                 subtitle: Text(
                   AlanyaPhoneFormatter.formatDisplay(_selectedReservedPhone!),
                 ),
                 trailing: TextButton(
                   onPressed: () => setState(() => _selectedReservedPhone = null),
-                  child: const Text('Effacer'),
+                  child: Text(context.l10n.clearAction),
                 ),
               ),
             ] else ...[
               Text(
-                'Recherchez dans la liste admin ou saisissez un pattern complet '
-                '(3 ch., 4 ch., ou 8 ch. XXYYZZTT). Les patterns peuvent être '
-                'attribués directement sans être ajoutés à la liste.',
+context.l10n.reservedPhoneSearchHelp,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -337,9 +336,9 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
               AppSpacing.vGapSm,
               TextField(
                 controller: _reservedSearchCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Attribuer un numéro réservé (optionnel)',
-                  hintText: 'Ex. 11223344, 1234, ou libellé…',
+                decoration: InputDecoration(
+                  labelText: context.l10n.assignAReservedNumberOptional,
+                  hintText: context.l10n.eG112233441234OrLabel,
                 ),
                 onChanged: _onReservedSearchChanged,
               ),
@@ -361,7 +360,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                     ),
                     subtitle: _patternSuggestionAssignable()
                         ? null
-                        : const Text('Déjà utilisé'),
+                        : Text(context.l10n.alreadyUsed),
                     onTap: _patternSuggestionAssignable()
                         ? () {
                             setState(() {
@@ -397,9 +396,8 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                 Text(
                   AlanyaPhoneFormatter.isAssignableQuery(
                           _reservedSearchCtrl.text)
-                      ? 'Aucun numéro libre trouvé dans la liste admin'
-                      : 'Aucun résultat — saisissez un numéro pattern complet '
-                          '(3, 4 ou 8 ch. XXYYZZTT)',
+                      ? context.l10n.noFreeNumberFoundInThe
+                      : '${context.l10n.noResultsEnterAFullPattern}(${context.l10n.n34DigitsOrXxyyzztt})',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -416,7 +414,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                 children: [
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Saisie manuelle du numéro'),
+                    title: Text(context.l10n.manualNumberEntry),
                     value: _manualPhone,
                     onChanged: (v) => setState(() => _manualPhone = v),
                   ),
@@ -431,7 +429,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'Vérification…',
+                          context.l10n.verifying,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -445,9 +443,9 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                         child: Text(
                           _manualPhoneCheck!['assignable'] == true
                               ? ((_manualPhoneCheck!['hint'] as String?) ??
-                                  'Numéro disponible')
+                                  context.l10n.numberAvailable)
                               : ((_manualPhoneCheck!['reason'] as String?) ??
-                                  'Numéro indisponible'),
+                                  context.l10n.numberUnavailable),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: _manualPhoneCheck!['assignable'] == true
                                     ? Theme.of(context).colorScheme.primary
@@ -458,7 +456,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        'Saisie libre : patterns réservés ou numéros standard 8 chiffres',
+                        context.l10n.freeEntryReservedPatternsOrStandard,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color:
                                   Theme.of(context).colorScheme.onSurfaceVariant,
@@ -467,7 +465,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                     ),
                   ] else
                     Text(
-                      '8 chiffres (génération automatique, hors numéros réservés)',
+                      context.l10n.n8DigitsAutoGeneratedExcludingReserved,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
@@ -479,7 +477,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
           if (reservedSelected) ...[
             AppSpacing.vGapSm,
             Text(
-              'Numéro attribué : ${AlanyaPhoneFormatter.formatDisplay(_selectedReservedPhone!)}',
+              context.l10n.numberAssigned(AlanyaPhoneFormatter.formatDisplay(_selectedReservedPhone!)),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.w600,
@@ -490,7 +488,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
           if (_loadingCountries)
             const LinearProgressIndicator()
           else if (_countries.isEmpty)
-            const Text('Liste des pays indisponible')
+            Text(context.l10n.countryListUnavailable)
           else
             CountrySelectorTile(
               countries: _countries,
@@ -500,10 +498,10 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
           AppSpacing.vGapMd,
           DropdownButtonFormField<String>(
             value: _avatarGender,
-            decoration: const InputDecoration(labelText: 'Avatar'),
-            items: const [
-              DropdownMenuItem(value: 'male', child: Text('Homme')),
-              DropdownMenuItem(value: 'female', child: Text('Femme')),
+            decoration: InputDecoration(labelText: context.l10n.avatarLabel),
+            items: [
+              DropdownMenuItem(value: 'male', child: Text(context.l10n.genderMale)),
+              DropdownMenuItem(value: 'female', child: Text(context.l10n.genderFemale)),
             ],
             onChanged: (v) => setState(() => _avatarGender = v ?? 'male'),
           ),
@@ -511,11 +509,11 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
             AppSpacing.vGapMd,
             DropdownButtonFormField<int>(
               value: _typeCompte,
-              decoration: const InputDecoration(labelText: 'Rôle'),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text('Utilisateur')),
-                DropdownMenuItem(value: 1, child: Text('Admin')),
-                DropdownMenuItem(value: 2, child: Text('Super-admin')),
+              decoration: InputDecoration(labelText: context.l10n.role),
+              items: [
+                DropdownMenuItem(value: 0, child: Text(context.l10n.userFallback)),
+                DropdownMenuItem(value: 1, child: Text(context.l10n.admin)),
+                DropdownMenuItem(value: 2, child: Text(context.l10n.superAdmin)),
               ],
               onChanged: (v) => setState(() => _typeCompte = v ?? 0),
             ),
@@ -529,7 +527,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Créer'),
+                : Text(context.l10n.create),
           ),
         ],
       ),

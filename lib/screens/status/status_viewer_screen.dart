@@ -351,13 +351,13 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     if (s.text != null && s.text!.trim().isNotEmpty) return s.text!.trim();
     switch (s.type) {
       case 1:
-        return '📷 Photo';
+        return context.l10n.photo;
       case 2:
-        return '🎥 Vidéo';
+        return context.l10n.video;
       case 3:
-        return '🎵 Audio';
+        return context.l10n.audio;
       default:
-        return 'Statut';
+        return context.l10n.statusNoun;
     }
   }
 
@@ -387,15 +387,15 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       _replyFocus.unfocus();
       _setPaused(false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Réponse envoyée'),
+        SnackBar(
+          content: Text(context.l10n.replySent),
           duration: Duration(seconds: 2),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Échec de l\'envoi : $e')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.sendFailedWithError('$e'))));
     } finally {
       if (mounted) setState(() => _sendingReply = false);
     }
@@ -451,8 +451,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       final mb = (size / (1024 * 1024)).toStringAsFixed(1);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Fichier trop volumineux ($mb Mo). Limite : 50 Mo.'),
-          backgroundColor: AppColors.error,
+          content: Text(context.l10n.fileTooLarge(mb)),
+          backgroundColor: context.colors.error,
         ));
       }
       return;
@@ -470,7 +470,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         conversationID: convId,
         type: 3,
         file: file,
-        mediaName: 'Message vocal',
+        mediaName: context.l10n.voiceMessage,
         mediaDuration: seconds,
         replyToContent: _statusPreview(),
         isStatusReply: 1,
@@ -479,15 +479,15 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       if (!mounted) return;
       _setPaused(false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Réponse envoyée'),
+        SnackBar(
+          content: Text(context.l10n.replySent),
           duration: Duration(seconds: 2),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Échec de l\'envoi : $e')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.sendFailedWithError('$e'))));
     } finally {
       if (mounted) setState(() => _sendingReply = false);
     }
@@ -499,18 +499,18 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   Future<void> _confirmDelete() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Supprimer ce statut ?'),
-        content: const Text('Cette action est irréversible.'),
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.l10n.deleteThisStatus),
+        content: Text(ctx.l10n.thisActionCannotBeUndone),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(ctx.l10n.commonCancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Supprimer'),
+            style: FilledButton.styleFrom(backgroundColor: ctx.colors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(ctx.l10n.commonDelete),
           ),
         ],
       ),
@@ -701,8 +701,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                           },
                           decoration: InputDecoration(
                             hintText: online
-                                ? 'Répondre au statut…'
-                                : 'Indisponible hors ligne',
+                                ? context.l10n.replyToStatus
+                                : context.l10n.unavailableOffline,
                             hintStyle: context.text.bodyLarge
                                 ?.copyWith(color: colors.onSurfaceVariant),
                             border: InputBorder.none,
@@ -715,7 +715,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                       ),
               ),
               IconButton(
-                tooltip: liked ? 'Je n\'aime plus' : 'J\'aime',
+                tooltip: liked ? context.l10n.unlike : context.l10n.likeAction,
                 onPressed: _toggleLike,
                 iconSize: AppIconSize.md,
                 splashRadius: 22,
@@ -733,7 +733,9 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
               ),
               const SizedBox(width: AppSpacing.xs),
               Material(
-                color: canSend ? colors.primary : AppColors.textSecondary,
+                color: canSend
+                    ? colors.primary
+                    : colors.onSurfaceVariant.withValues(alpha: 0.35),
                 shape: const CircleBorder(),
                 elevation: 3,
                 child: InkWell(
@@ -749,11 +751,11 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                     width: 50,
                     height: 50,
                     child: _sendingReply
-                        ? const Padding(
-                            padding: EdgeInsets.all(AppSpacing.md),
+                        ? Padding(
+                            padding: const EdgeInsets.all(AppSpacing.md),
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: colors.onPrimary,
                             ),
                           )
                         : Icon(
@@ -805,7 +807,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
-              'Enregistrement…',
+              context.l10n.recordingEllipsis,
               style: context.text.bodySmall?.copyWith(color: colors.error),
               overflow: TextOverflow.ellipsis,
             ),
@@ -819,6 +821,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     switch (s.type) {
       case 0:
         final bg = _parseColor(s.backgroundColor) ?? AppColors.brandPrimary;
+        final fg = bg.computeLuminance() > 0.5 ? Colors.black : Colors.white;
         return Container(
           color: bg,
           alignment: Alignment.center,
@@ -826,8 +829,8 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           child: Text(
             s.text ?? '',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: fg,
               fontSize: 28,
               fontWeight: FontWeight.w600,
             ),
@@ -947,14 +950,14 @@ class _Header extends StatelessWidget {
 
   const _Header({required this.statut, required this.onClose});
 
-  String _relative(String iso) {
+  String _relative(BuildContext context, String iso) {
     final dt = DateTime.tryParse(iso);
     if (dt == null) return '';
     final diff = DateTime.now().difference(dt.toLocal());
-    if (diff.inMinutes < 1) return 'à l\'instant';
-    if (diff.inMinutes < 60) return 'il y a ${diff.inMinutes} min';
-    if (diff.inHours < 24) return 'il y a ${diff.inHours} h';
-    return 'il y a ${diff.inDays} j';
+    if (diff.inMinutes < 1) return context.l10n.justNow;
+    if (diff.inMinutes < 60) return context.l10n.timeAgoMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return context.l10n.timeAgoHours(diff.inHours);
+    return context.l10n.timeAgoDays(diff.inDays);
   }
 
   @override
@@ -983,12 +986,12 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  statut.nom ?? 'Moi',
+                  statut.nom ?? context.l10n.meLabel,
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.w600),
                 ),
                 Text(
-                  _relative(statut.createdAt),
+                  _relative(context, statut.createdAt),
                   style:
                       const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
@@ -1041,7 +1044,7 @@ class _Footer extends StatelessWidget {
                   const Icon(Icons.visibility, color: Colors.white, size: AppIconSize.sm),
                   AppSpacing.hGapSm,
                   Text(
-                    '${statut.viewedBy} vue${statut.viewedBy > 1 ? 's' : ''}',
+                    context.l10n.viewsCountLabel(statut.viewedBy),
                     style: const TextStyle(color: Colors.white),
                   ),
                   const SizedBox(width: AppSpacing.md + 2),
@@ -1092,8 +1095,8 @@ class _StatusRecordingDotState extends State<_StatusRecordingDot>
       child: Container(
         width: 12,
         height: 12,
-        decoration: const BoxDecoration(
-          color: AppColors.error,
+        decoration: BoxDecoration(
+          color: context.colors.error,
           shape: BoxShape.circle,
         ),
       ),

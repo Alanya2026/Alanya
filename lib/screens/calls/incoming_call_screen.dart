@@ -101,7 +101,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
               id: cs.remoteUserId.toString(),
               name: (cs.remoteUserName?.isNotEmpty == true)
                   ? cs.remoteUserName!
-                  : 'Participant',
+                  : context.l10n.participantFallback,
               photo: cs.remoteUserPhoto,
             )
           : null;
@@ -148,10 +148,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         final caller = cs.currentCall?.caller;
         final isVideo = cs.isVideo;
         final isGroup = cs.groupRoomId != null;
-        final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : 'Inconnu';
+        final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : context.l10n.unknownSender;
         final subtitle = isGroup
-            ? (isVideo ? 'Appel groupé vidéo' : 'Appel groupé')
-            : (isVideo ? 'Appel vidéo' : 'Appel vocal');
+            ? (isVideo ? context.l10n.groupVideoCall : context.l10n.groupCall)
+            : (isVideo ? context.l10n.videoCall : context.l10n.voiceCall);
         final subtitleIcon = isVideo
             ? CupertinoIcons.video_camera_solid
             : CupertinoIcons.phone_fill;
@@ -173,7 +173,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     AppSpacing.vGapXl,
                     CallIncomingHeaderPill(
                       icon: subtitleIcon,
-                      label: 'APPEL ENTRANT',
+                      label: context.l10n.callIncoming,
                       pulseAnimation: _pulse,
                     ),
                     const Spacer(),
@@ -233,14 +233,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                         children: [
                           CallActionButton(
                             icon: CupertinoIcons.phone_down_fill,
-                            label: 'Refuser',
+                            label: context.l10n.commonDecline,
                             color: callUi.actionReject,
                             onTap: _reject,
                           ),
                           const SizedBox(width: 64),
                           CallActionButton(
                             icon: subtitleIcon,
-                            label: 'Accepter',
+                            label: context.l10n.commonAccept,
                             color: callUi.actionAccept,
                             onTap: _accept,
                           ),

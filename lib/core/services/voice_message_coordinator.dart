@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'chat_repository.dart';
 import 'voice_asset_resolver.dart';
 import 'voice_waveform_store.dart';
+import '../theme/locale_controller.dart';
 
 enum VoiceUiPhase {
   resolving,
@@ -182,7 +183,7 @@ class VoiceMessageCoordinator extends ChangeNotifier {
           VoiceMessageSnapshot(
             phase: VoiceUiPhase.error,
             ref: ref,
-            error: 'Échec du téléchargement',
+            error: LocaleController.instance.l10n.downloadFailed,
           ),
         );
         return;
@@ -195,7 +196,7 @@ class VoiceMessageCoordinator extends ChangeNotifier {
         VoiceMessageSnapshot(
           phase: VoiceUiPhase.error,
           ref: ref,
-          error: 'Échec du téléchargement',
+          error: LocaleController.instance.l10n.downloadFailed,
         ),
       );
     }
@@ -250,7 +251,7 @@ class VoiceMessageCoordinator extends ChangeNotifier {
       final snap = VoiceMessageSnapshot(
         phase: VoiceUiPhase.error,
         ref: ref,
-        error: 'Audio indisponible',
+        error: LocaleController.instance.l10n.audioUnavailable,
       );
       _setSnapshot(snap);
       return snap;

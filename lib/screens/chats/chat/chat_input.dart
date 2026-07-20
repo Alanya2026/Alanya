@@ -18,7 +18,7 @@ extension _ChatInput on _ChatDetailScreenState {
           AppSpacing.hGapSm,
           Expanded(
             child: Text(
-              'Vous avez bloqué cet utilisateur',
+              context.l10n.youHaveBlockedThisUser,
               style: context.text.bodySmall?.copyWith(
                 color: colors.onSurfaceVariant,
               ),
@@ -26,7 +26,7 @@ extension _ChatInput on _ChatDetailScreenState {
           ),
           TextButton(
             onPressed: _unblockContact,
-            child: const Text('Débloquer'),
+            child: Text(context.l10n.unblock),
           ),
         ],
       ),
@@ -47,7 +47,7 @@ extension _ChatInput on _ChatDetailScreenState {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Réponse', style: context.text.labelSmall?.copyWith(color: colors.primary, fontWeight: FontWeight.w700)),
+                Text(context.l10n.reply2, style: context.text.labelSmall?.copyWith(color: colors.primary, fontWeight: FontWeight.w700)),
                 Text(
                   _previewOf(_replyTo!),
                   maxLines: 1,
@@ -179,7 +179,7 @@ extension _ChatInput on _ChatDetailScreenState {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text('Messages épinglés (${list.length})',
+                  child: Text(context.l10n.pinnedMessagesCount(list.length),
                       style: context.text.titleSmall),
                 ),
                 ...list.map((m) => ListTile(
@@ -235,11 +235,11 @@ extension _ChatInput on _ChatDetailScreenState {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            btn(Icons.format_bold, '*', 'Gras'),
-            btn(Icons.format_italic, '_', 'Italique'),
-            btn(Icons.format_underlined, '=', 'Souligné'),
-            btn(Icons.strikethrough_s, '~', 'Barré'),
-            btn(Icons.gesture, '#', 'Manuscrit'),
+            btn(Icons.format_bold, '*', context.l10n.formatBold),
+            btn(Icons.format_italic, '_', context.l10n.formatItalic),
+            btn(Icons.format_underlined, '=', context.l10n.formatUnderline),
+            btn(Icons.strikethrough_s, '~', context.l10n.formatStrikethrough),
+            btn(Icons.gesture, '#', context.l10n.formatHandwriting),
           ],
         ),
       ),
@@ -364,7 +364,7 @@ extension _ChatInput on _ChatDetailScreenState {
                     scrollPhysics: const ClampingScrollPhysics(),
                     style: context.text.bodyLarge,
                     decoration: InputDecoration(
-                      hintText: 'Message…',
+                      hintText: context.l10n.message2,
                       hintStyle: context.text.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
                       filled: false,
                       border: InputBorder.none,
@@ -439,7 +439,9 @@ extension _ChatInput on _ChatDetailScreenState {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    _voiceViewOnce ? 'Vocal · vue unique' : 'Enregistrement…',
+                    _voiceViewOnce
+                        ? context.l10n.voiceViewOnce
+                        : context.l10n.recordingEllipsis,
                     style: context.text.bodySmall?.copyWith(
                       color: _voiceViewOnce ? colors.primary : colors.error,
                     ),
@@ -448,7 +450,7 @@ extension _ChatInput on _ChatDetailScreenState {
                 ),
                 if (!widget.isGroup)
                   Tooltip(
-                    message: 'Vue unique',
+                    message: context.l10n.viewOnce,
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),

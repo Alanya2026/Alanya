@@ -9,6 +9,7 @@ import '../core/services/chat_sync_timer.dart';
 import '../core/utils/forward_message.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
+import '../core/theme/locale_controller.dart';
  
 class PresenceInfo {
   final bool online;
@@ -59,17 +60,17 @@ class ChatProvider extends ChangeNotifier {
   String presenceLabel(int userID) {
     final p = _presence[userID];
     if (p == null) return '';
-    if (p.online) return 'En ligne';
+    if (p.online) return LocaleController.instance.l10n.online;
     final ls = p.lastSeen?.toLocal();
-    if (ls == null) return 'Hors ligne';
+    if (ls == null) return LocaleController.instance.l10n.offline;
     final now = DateTime.now();
     final hm = '${ls.hour.toString().padLeft(2, '0')}:${ls.minute.toString().padLeft(2, '0')}';
     final isToday = ls.year == now.year && ls.month == now.month && ls.day == now.day;
     final yest = now.subtract(const Duration(days: 1));
     final isYesterday = ls.year == yest.year && ls.month == yest.month && ls.day == yest.day;
-    if (isToday) return 'Vu à $hm';
-    if (isYesterday) return 'Vu hier à $hm';
-    return 'Vu le ${ls.day}/${ls.month}';
+    if (isToday) return LocaleController.instance.l10n.seenAt(hm);
+    if (isYesterday) return LocaleController.instance.l10n.seenYesterdayAt(hm);
+    return LocaleController.instance.l10n.seenOnDate(ls.day, ls.month);
   }
  
   Stream<List<LocalConversation>> watchConversations() => repository.watchConversations();

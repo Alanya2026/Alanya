@@ -10,6 +10,7 @@ import '../../talky_api_client.dart';
 import '../../widgets/alanya_phone_field.dart';
 import '../../widgets/common/app_skeleton.dart';
 import 'admin_create_user_screen.dart';
+import '../../core/theme/app_theme.dart';
 
 class AdminReservedPhonesScreen extends StatefulWidget {
   const AdminReservedPhonesScreen({super.key});
@@ -87,7 +88,7 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
       if (!mounted) return;
       setState(() => _error = '$e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur chargement : $e')),
+        SnackBar(content: Text(context.l10n.loadErrorWithDetails('$e'))),
       );
     } finally {
       if (mounted) {
@@ -111,7 +112,7 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
     final err = AlanyaPhoneFormatter.validateReservedCandidate(canonical);
     if (err != null || _labelCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err ?? 'Libellé requis')),
+        SnackBar(content: Text(err ?? context.l10n.labelRequired)),
       );
       return;
     }
@@ -159,10 +160,10 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Numéros réservés'),
+        title: Text(context.l10n.reservedNumbers),
         actions: [
           IconButton(
-            tooltip: 'Actualiser',
+            tooltip: context.l10n.refresh,
             onPressed: _fetching ? null : () => _load(),
             icon: const Icon(Icons.refresh),
           ),
@@ -182,16 +183,14 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
                       children: [
                         AlanyaPhoneField(
                           controller: _phoneCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Numéro',
-                            hintText: '3 / 4 ch. ou XXYYZZTT',
+                          decoration: InputDecoration(
+                            labelText: context.l10n.number,
+                            hintText: context.l10n.n34DigitsOrXxyyzztt,
                           ),
                         ),
                         AppSpacing.vGapSm,
                         Text(
-                          'Uniquement 3 ou 4 chiffres, ou 8 chiffres XXYYZZTT '
-                          '(ex. 11 22 33 44). Ces formes sont exclus de '
-                          "l'inscription automatique.",
+                          context.l10n.reservedPhoneOnlyHint,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -202,16 +201,16 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
                         TextField(
                           controller: _labelCtrl,
                           decoration:
-                              const InputDecoration(labelText: 'Libellé'),
+                              InputDecoration(labelText: context.l10n.label),
                         ),
                         AppSpacing.vGapMd,
                         FilledButton(
                           onPressed: _add,
-                          child: const Text('Ajouter'),
+                          child: Text(context.l10n.add),
                         ),
                         AppSpacing.vGapXxl,
                         Text(
-                          _loading ? 'Liste' : 'Liste ($_total)',
+                          _loading ? context.l10n.listLabel : context.l10n.listWithCount(_total),
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         AppSpacing.vGapMd,
@@ -220,9 +219,9 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
                         ] else ...[
                           TextField(
                             controller: _searchCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Rechercher',
-                              hintText: 'Numéro ou libellé…',
+                            decoration: InputDecoration(
+                              labelText: context.l10n.commonSearch,
+                              hintText: context.l10n.numberOrLabel,
                               prefixIcon: Icon(Icons.search),
                             ),
                             onChanged: _onSearchChanged,
@@ -231,14 +230,14 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
                           DropdownButtonFormField<String?>(
                             value: _availableFilter,
                             decoration:
-                                const InputDecoration(labelText: 'Filtre'),
-                            items: const [
+                                InputDecoration(labelText: context.l10n.filterLabel),
+                            items: [
                               DropdownMenuItem(
-                                  value: null, child: Text('Tous')),
+                                  value: null, child: Text(context.l10n.allFilter)),
                               DropdownMenuItem(
-                                  value: '1', child: Text('Libres')),
+                                  value: '1', child: Text(context.l10n.freePlural)),
                               DropdownMenuItem(
-                                  value: '0', child: Text('Utilisés')),
+                                  value: '0', child: Text(context.l10n.used)),
                             ],
                             onChanged: (value) {
                               setState(() => _availableFilter = value);
@@ -265,8 +264,8 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
                                   vertical: AppSpacing.xl),
                               child: Text(
                                 _error != null
-                                    ? 'Impossible de charger les numéros'
-                                    : 'Aucun numéro réservé',
+                                    ? context.l10n.unableToLoadNumbers
+                                    : context.l10n.noReservedNumbers,
                                 textAlign: TextAlign.center,
                               ),
                             )
@@ -301,10 +300,10 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
         ? usedByNom!
         : (usedByPseudo?.trim().isNotEmpty == true
             ? usedByPseudo!
-            : (usedById != null ? 'Utilisateur #$usedById' : null));
+            : (usedById != null ? context.l10n.userHashId(usedById) : null));
     final statusText = isUsed
-        ? (ownerLabel != null ? 'Utilisé · $ownerLabel' : 'Utilisé')
-        : 'Libre · non assigné';
+        ? (ownerLabel != null ? context.l10n.usedByOwner(ownerLabel) : context.l10n.usedLabel)
+        : context.l10n.freeUnassigned;
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -325,7 +324,7 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () => _assign(phone),
-                child: const Text('Attribuer'),
+                child: Text(context.l10n.assignAction),
               ),
             IconButton(
               visualDensity: VisualDensity.compact,
@@ -364,9 +363,9 @@ class _AdminReservedPhonesScreenState extends State<AdminReservedPhonesScreen> {
             Expanded(
               child: Column(
                 children: [
-                  Text('Page $_page / $_pageCount'),
+                  Text(context.l10n.pageOf(_page, _pageCount)),
                   Text(
-                    '$from–$to sur $_total',
+                    context.l10n.rangeOfTotal(from, to, _total),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/locale_controller.dart';
 
 /// Identité visuelle d'un document (icône, couleur, label) selon l'extension.
 class DocumentFileStyle {
@@ -23,7 +24,7 @@ class DocumentFileStyle {
   final String label;
 
   /// Sous-titre bulle : `{label} · appuyer pour ouvrir`.
-  String get openHint => '$label · appuyer pour ouvrir';
+  String get openHint => LocaleController.instance.l10n.tapToOpenLabel(label);
 
   bool get isPdf => family == 'pdf';
 
@@ -103,7 +104,7 @@ class DocumentFileStyle {
           family: 'archive',
           color: Colors.purple.shade400,
           icon: Icons.folder_zip,
-          label: 'Archive',
+          label: LocaleController.instance.l10n.fileArchive,
         );
       case 'apk':
         return DocumentFileStyle(
@@ -120,7 +121,7 @@ class DocumentFileStyle {
           family: 'text',
           color: Colors.blueGrey.shade400,
           icon: Icons.text_snippet,
-          label: 'Texte',
+          label: LocaleController.instance.l10n.text2,
         );
       default:
         return DocumentFileStyle(
@@ -128,7 +129,7 @@ class DocumentFileStyle {
           family: 'other',
           color: Colors.grey.shade500,
           icon: Icons.insert_drive_file,
-          label: 'Fichier',
+          label: LocaleController.instance.l10n.file2,
         );
     }
   }

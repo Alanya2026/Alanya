@@ -2,9 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/status_provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/services/realtime_sync_service.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/notification_navigation.dart';
@@ -17,6 +21,7 @@ import '../profile/profile_screen.dart';
 import '../status/statuses_screen.dart';
 import '../calls/incoming_call_screen.dart';
 import '../calls/ongoing_call_screen.dart';
+import '../../widgets/common/offline_banner.dart';
 import 'glass_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -35,6 +40,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   StreamSubscription<NotificationAction>? _notifActionSub;
   Timer? _resumeSyncDebounce;
 
+  static const _kCallsVisitKey = 'nav_calls_last_visit_ms';
+  DateTime? _callsLastVisit;
+
   static const int _tabCalls = 1;
   static const int _tabStatuses = 2;
   static const int _tabMeetings = 3;
@@ -52,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _pageController = PageController(initialPage: 0);
+    unawaited(_loadCallsWatermark());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -207,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     callService.prepareIncomingFromCallKit(
       callId: data['callId'] ?? data['roomId'] ?? '',
       callerId: data['callerId'] ?? '',
-      callerName: data['callerName'] ?? data['title'] ?? 'Appel',
+      callerName: data['callerName'] ?? data['title'] ?? context.l10n.callNoun,
       callerPhoto: data['photo'],
       isVideo: data['isVideo'] == 'true',
       roomId: data['roomId'],
@@ -276,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    'Invitation de ${notif.organiserName}',
+                    context.l10n.invitationFrom(notif.organiserName),
                     style: context.text.bodySmall?.copyWith(color: onBrand.withAlpha(220)),
                   ),
                 ],
@@ -286,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
         action: notif.meetingId != 0
             ? SnackBarAction(
-                label: 'Voir',
+                label: context.l10n.viewAction,
                 textColor: onBrand,
                 onPressed: () => Navigator.push(
                   context,
@@ -314,7 +323,50 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // ── Navigation ───────────────────────────────────────────────────────
 
+
+  Future<void> _loadCallsWatermark() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ms = prefs.getInt(_kCallsVisitKey);
+    if (!mounted) return;
+    setState(() {
+      _callsLastVisit = ms != null
+          ? DateTime.fromMillisecondsSinceEpoch(ms)
+          : null;
+    });
+  }
+
+  Future<void> _markCallsTabVisited() async {
+    final now = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kCallsVisitKey, now.millisecondsSinceEpoch);
+    if (!mounted) return;
+    setState(() => _callsLastVisit = now);
+  }
+
+  int _sumUnread(List<LocalConversation> convs) =>
+      convs.fold<int>(0, (sum, c) => sum + c.unreadCount);
+
+  int _missedCallsSinceVisit(List<LocalCall> calls) {
+    final since = _callsLastVisit ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return calls.where((c) {
+      final missed = c.status == 2 || c.status == 3; // Call.isMissed
+      return missed && c.createdAt.isAfter(since);
+    }).length;
+  }
+
+  int _upcomingMeetingsBadge(List<LocalMeeting> meetings) {
+    final now = DateTime.now();
+    final limit = now.add(const Duration(hours: 24));
+    return meetings
+        .where((m) =>
+            m.statut == 0 &&
+            !m.startTime.isBefore(now) &&
+            !m.startTime.isAfter(limit))
+        .length;
+  }
+
   void _onItemTapped(int index) {
+    if (index == _tabCalls) unawaited(_markCallsTabVisited());
     _pageController.animateToPage(
       index,
       duration: const Duration(milliseconds: 300),
@@ -323,7 +375,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _onPageChanged(int index) {
+    if (index == _tabCalls) unawaited(_markCallsTabVisited());
     setState(() => _selectedIndex = index);
+  }
+
+
+  Widget _buildGlassNavBar() {
+    final chat = context.read<ChatProvider>();
+    final cache = context.read<LocalCacheRepository>();
+    final status = context.watch<StatusProvider>();
+
+    return StreamBuilder<List<LocalConversation>>(
+      stream: chat.watchConversations(),
+      builder: (context, convSnap) {
+        final chatsBadge = _sumUnread(convSnap.data ?? const []);
+        return StreamBuilder<List<LocalCall>>(
+          stream: cache.watchCalls(),
+          builder: (context, callSnap) {
+            final callsBadge = _missedCallsSinceVisit(callSnap.data ?? const []);
+            return StreamBuilder<List<LocalMeeting>>(
+              stream: cache.watchMeetings(),
+              builder: (context, meetSnap) {
+                final meetingsBadge =
+                    _upcomingMeetingsBadge(meetSnap.data ?? const []);
+                final statusBadge = status.byAuthor.keys
+                    .where((id) => status.hasUnseenFrom(id))
+                    .length;
+                return GlassNavBar(
+                  selectedIndex: _selectedIndex,
+                  onItemTapped: _onItemTapped,
+                  badges: [
+                    chatsBadge,
+                    callsBadge,
+                    statusBadge,
+                    meetingsBadge,
+                    0,
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -340,26 +434,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Stack(
+      body: Column(
         children: [
-          MediaQuery(
-            data: injectedMq,
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              children: _screens.map((s) => KeepAliveWrapper(child: s)).toList(),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: GlassNavBar(
-                selectedIndex: _selectedIndex,
-                onItemTapped: _onItemTapped,
-              ),
+          const OfflineBanner(),
+          Expanded(
+            child: Stack(
+              children: [
+                MediaQuery(
+                  data: injectedMq,
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    children: _screens.map((s) => KeepAliveWrapper(child: s)).toList(),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: SafeArea(
+                    top: false,
+                    child: _buildGlassNavBar(),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -414,7 +512,7 @@ class _ReminderDialogState extends State<_ReminderDialog> {
           ),
           AppSpacing.vGapLg,
           Text(
-            'Réunion dans moins de 10 minutes',
+            context.l10n.meetingInLessThan10Minutes,
             style: context.text.titleMedium,
             textAlign: TextAlign.center,
           ),
@@ -428,7 +526,7 @@ class _ReminderDialogState extends State<_ReminderDialog> {
           ),
           AppSpacing.vGapXs,
           Text(
-            'Organisé par ${widget.notif.organiserName}',
+            context.l10n.organizedBy(widget.notif.organiserName),
             style: context.text.bodySmall,
             textAlign: TextAlign.center,
           ),
@@ -447,14 +545,14 @@ class _ReminderDialogState extends State<_ReminderDialog> {
             Expanded(
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Plus tard'),
+                child: Text(context.l10n.later),
               ),
             ),
             AppSpacing.hGapMd,
             Expanded(
               child: FilledButton(
                 onPressed: _join,
-                child: const Text('Rejoindre'),
+                child: Text(context.l10n.join),
               ),
             ),
           ],

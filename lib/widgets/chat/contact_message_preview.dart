@@ -101,8 +101,8 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
       if (!mounted) return;
       setState(() => _adding = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Impossible d\'ajouter ce contact, réessayez'),
+        SnackBar(
+          content: Text(context.l10n.unableToAddThisContactTry),
         ),
       );
     }
@@ -197,7 +197,7 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
                                       color: context.colors.onPrimary,
                                     ),
                                   )
-                                : const Text('Ajouter'),
+                                : Text(context.l10n.add),
                           )
                         : FilledButton.tonal(
                             onPressed: _adding ? null : _addPreferred,
@@ -214,7 +214,7 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text('Ajouter'),
+                                : Text(context.l10n.add),
                           ),
                   ),
                 ],

@@ -58,14 +58,14 @@ class _FullscreenProfileImageViewerState
         placeholder: (_, __) =>
             const CircularProgressIndicator(color: AppColors.white),
         errorWidget: (_, __, ___) =>
-            const Icon(Icons.broken_image, color: Colors.white54, size: 64),
+            Icon(Icons.broken_image, color: AppColors.white.withValues(alpha: 0.54), size: 64),
         fit: BoxFit.contain,
       );
     }
 
-    return const Icon(
+    return Icon(
       Icons.image_not_supported,
-      color: Colors.white54,
+      color: AppColors.white.withValues(alpha: 0.54),
       size: 64,
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:pdfx/pdfx.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Visionneuse PDF intégrée (défilement + zoom pincé).
 ///
@@ -50,7 +51,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             ),
           IconButton(
             icon: const Icon(Icons.open_in_new),
-            tooltip: 'Ouvrir avec…',
+            tooltip: context.l10n.openWith,
             onPressed: () => OpenFilex.open(widget.path),
           ),
         ],

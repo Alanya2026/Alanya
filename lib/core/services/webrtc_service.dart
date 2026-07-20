@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../theme/locale_controller.dart';
 
 enum CallType { audio, video }
 
@@ -61,7 +62,7 @@ class WebRTCService {
       if (!kIsWeb) {
         final micGranted = await _requestMicrophonePermission();
         if (!micGranted) {
-          throw Exception('Permission microphone refusée');
+          throw Exception(LocaleController.instance.l10n.microphonePermissionDenied);
         }
 
         if (type == CallType.video) {

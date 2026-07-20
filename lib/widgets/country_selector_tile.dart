@@ -10,12 +10,12 @@ enum CountrySelectorStyle { formField, settingsRow }
 
 /// Sélecteur de pays réutilisable (inscription, compte).
 class CountrySelectorTile extends StatefulWidget {
-  const CountrySelectorTile({
+  CountrySelectorTile({
     super.key,
     required this.countries,
     required this.onChanged,
     this.selected,
-    this.label = 'Pays',
+    this.label,
     this.required = false,
     this.style = CountrySelectorStyle.formField,
     this.enabled = true,
@@ -24,7 +24,7 @@ class CountrySelectorTile extends StatefulWidget {
   final List<Pays> countries;
   final Pays? selected;
   final ValueChanged<Pays> onChanged;
-  final String label;
+  final String? label;
   final bool required;
   final CountrySelectorStyle style;
   final bool enabled;
@@ -96,14 +96,14 @@ class _CountrySelectorTileState extends State<CountrySelectorTile> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.label,
+                        (widget.label ?? context.l10n.country),
                         style: context.text.labelSmall?.copyWith(
                           color: context.colors.onSurfaceVariant,
                         ),
                       ),
                       Text(
                         widget.selected == null
-                            ? 'Non défini'
+                            ? context.l10n.notSet
                             : _labelFor(widget.selected),
                         style: context.text.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,
@@ -131,8 +131,8 @@ class _CountrySelectorTileState extends State<CountrySelectorTile> {
         child: TextField(
           readOnly: true,
           controller: _displayController,
-          decoration: const InputDecoration(
-            hintText: 'Pays',
+          decoration: InputDecoration(
+            hintText: context.l10n.country,
             prefixIcon: Icon(Icons.public_outlined),
             suffixIcon: Icon(Icons.arrow_drop_down),
           ),

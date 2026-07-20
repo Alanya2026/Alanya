@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
@@ -71,8 +70,8 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
       AppLog.e('PreferredContacts', 'Suppression contact préféré échouée', e, st);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Impossible de retirer ce contact, réessayez'),
+        SnackBar(
+          content: Text(context.l10n.unableToRemoveThisContactTry),
         ),
       );
     }
@@ -92,7 +91,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.outlineStrong,
+                color: context.colors.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -103,7 +102,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                 color: context.colors.error,
               ),
               title: Text(
-                'Retirer ${user.nom.isNotEmpty ? user.nom : user.pseudo} des contacts préférés',
+                context.l10n.removePreferredContact(user.nom.isNotEmpty ? user.nom : user.pseudo),
                 style: TextStyle(color: context.colors.error),
               ),
               onTap: () {
@@ -127,7 +126,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
         title: Text(
-          'Contacts préférés',
+          context.l10n.preferredContacts,
           style: context.text.headlineSmall,
         ),
         leading: IconButton(
@@ -157,7 +156,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                     Expanded(
                       child: AppSearchField(
                         controller: _searchController,
-                        hintText: 'Rechercher par nom, pseudo ou téléphone…',
+                        hintText: context.l10n.searchByNameUsernameOrPhone,
                         fillColor: context.colors.surface,
                         borderColor: context.colors.outline,
                         onChanged: (_) {},
@@ -172,7 +171,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                         color: context.colors.primary,
                       ),
                       label: Text(
-                        'Ajouter',
+                        context.l10n.add,
                         style: TextStyle(
                           color: context.colors.primary,
                           fontWeight: FontWeight.w600,
@@ -186,11 +185,11 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                 child: contacts.isEmpty
                     ? EmptyState(
                         icon: CupertinoIcons.person_2,
-                        title: 'Aucun contact préféré',
+                        title: context.l10n.noPreferredContacts,
                         action: FilledButton.icon(
                           onPressed: () => _openAddContact(existingIds),
                           icon: const Icon(Icons.add, size: AppIconSize.sm),
-                          label: const Text('Ajouter'),
+                          label: Text(context.l10n.add),
                         ),
                       )
                     : filteredContacts.isEmpty
@@ -199,8 +198,8 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                                 ? Icons.person_search
                                 : CupertinoIcons.person_2,
                             title: hasQuery
-                                ? 'Aucun résultat'
-                                : 'Aucun contact préféré',
+                                ? context.l10n.noResults
+                                : context.l10n.noPreferredContacts,
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(
@@ -277,7 +276,7 @@ class _ContactTile extends StatelessWidget {
                           width: 10,
                           height: 10,
                           decoration: BoxDecoration(
-                            color: AppColors.online,
+                            color: context.semantic.online,
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: context.colors.surface,
@@ -315,7 +314,7 @@ class _ContactTile extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(AppSpacing.sm - 2),
                     decoration: BoxDecoration(
-                      color: AppColors.errorContainer,
+                      color: context.colors.errorContainer,
                       borderRadius: AppRadius.brSm,
                     ),
                     child: Icon(

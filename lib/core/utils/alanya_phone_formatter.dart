@@ -1,3 +1,5 @@
+import '../theme/locale_controller.dart';
+
 class AlanyaPhoneFormatter {
   static const validLengths = [3, 4, 8];
 
@@ -12,12 +14,12 @@ class AlanyaPhoneFormatter {
   }
 
   static String? validate(String canonical) {
-    if (canonical.isEmpty) return 'Numéro Alanya requis';
+    if (canonical.isEmpty) return LocaleController.instance.l10n.alanyaNumberRequired;
     if (!RegExp(r'^\d+$').hasMatch(canonical)) {
-      return 'Le numéro ne doit contenir que des chiffres';
+      return LocaleController.instance.l10n.numberMustContainOnlyDigits;
     }
     if (getTier(canonical) == null) {
-      return 'Numéro invalide : 3, 4 ou 8 chiffres requis';
+      return LocaleController.instance.l10n.invalidNumber34Or8;
     }
     return null;
   }
@@ -47,8 +49,7 @@ class AlanyaPhoneFormatter {
     final err = validate(canonical);
     if (err != null) return err;
     if (!isPatternReserved(canonical)) {
-      return 'Réservation limitée aux numéros 3 ou 4 chiffres, '
-          'ou 8 chiffres au format XXYYZZTT (ex. 11 22 33 44)';
+      return LocaleController.instance.l10n.reservationLimitedTo3Or4OrXxyyzztt;
     }
     return null;
   }

@@ -17,6 +17,7 @@ import '../navigation/app_navigator.dart';
 import '../utils/backend_url.dart';
 import 'connectivity_service.dart';
 import 'meeting_service.dart';
+import '../theme/locale_controller.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -52,8 +53,8 @@ class CallService extends ChangeNotifier {
   final RingtoneService _ringtone = RingtoneService.instance;
   final CallKitService _callKit = CallKitService.instance;
 
-  static const String _offlineCallMessage =
-      'Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.';
+  static String get _offlineCallMessage =>
+      LocaleController.instance.l10n.cannotPlaceCallCheckInternet;
 
   CallStatus _status = CallStatus.idle;
   int? _remoteUserId;
@@ -318,12 +319,12 @@ class CallService extends ChangeNotifier {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Connexion requise'),
-        content: const Text(_offlineCallMessage),
+        title: Text(LocaleController.instance.l10n.connectionRequired),
+        content: Text(_offlineCallMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK'),
+            child: Text(LocaleController.instance.l10n.commonOk),
           ),
         ],
       ),

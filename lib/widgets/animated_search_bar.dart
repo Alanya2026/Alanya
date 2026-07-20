@@ -21,7 +21,7 @@ class AnimatedSearchBar extends StatefulWidget {
     required this.controller,
     required this.onClose,
     this.onChanged,
-    this.hintText = 'Rechercher...',
+    this.hintText = '', // filled by l10n in build if empty — see below
     this.duration = const Duration(milliseconds: 220),
   });
 
@@ -72,14 +72,14 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> {
                 textInputAction: TextInputAction.search,
                 style: context.text.bodyLarge,
                 decoration: InputDecoration(
-                  hintText: widget.hintText,
+                  hintText: widget.hintText.isEmpty ? context.l10n.searchEllipsis : widget.hintText,
                   prefixIcon: Icon(Icons.search_rounded,
                       color: context.colors.onSurfaceVariant),
                   suffixIcon: IconButton(
                     icon: Icon(Icons.close_rounded,
                         color: context.colors.onSurfaceVariant),
                     onPressed: widget.onClose,
-                    tooltip: 'Fermer',
+                    tooltip: context.l10n.commonClose,
                   ),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   border: const OutlineInputBorder(

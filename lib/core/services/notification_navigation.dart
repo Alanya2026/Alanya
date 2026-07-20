@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../db/app_database.dart';
 import '../db/chat_dao.dart' show decodeParticipants;
+import '../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../screens/chats/chat_detail_screen.dart';
@@ -69,15 +70,15 @@ class NotificationNavigation {
 
     final chat = context.read<ChatProvider>();
     final myId = context.read<AuthProvider>().currentUser?.alanyaID ?? 0;
-    final fallbackName = data['title'] ?? 'Discussion';
+    final fallbackName = data['title'] ?? context.l10n.discussionFallback;
     final fallbackUserId = int.tryParse(data['callerId'] ?? '');
     final isGroupFromPayload =
         data['isGroup'] == '1' || data['isGroup'] == 'true';
     final groupNameFromPayload = data['groupName'] ?? '';
 
     var conv = await _findConversation(chat, conversationId);
+    if (!context.mounted) return;
     if (conv == null) {
-      if (!context.mounted) return;
       final displayName = isGroupFromPayload &&
               groupNameFromPayload.isNotEmpty
           ? groupNameFromPayload
@@ -97,12 +98,10 @@ class NotificationNavigation {
     }
 
     final other = _otherParticipant(conv, myId);
-    final displayName = _displayName(conv, myId, fallbackName);
+    final displayName = _displayName(context, conv, myId, fallbackName);
     final displayAvatar =
         conv.isGroup ? conv.groupPhoto : other?['avatar_url'] as String?;
     final otherId = _toInt(other?['alanyaID']);
-
-    if (!context.mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -141,12 +140,15 @@ class NotificationNavigation {
   }
 
   static String _displayName(
+    BuildContext context,
     LocalConversation conv,
     int myId,
     String fallback,
   ) {
     if (conv.isGroup) {
-      return conv.groupName?.isNotEmpty == true ? conv.groupName! : 'Groupe';
+      return conv.groupName?.isNotEmpty == true
+          ? conv.groupName!
+          : context.l10n.groupFallback;
     }
     final other = _otherParticipant(conv, myId);
     final name = other?['username']?.toString();

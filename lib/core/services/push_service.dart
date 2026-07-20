@@ -8,11 +8,21 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../firebase_options.dart';
+import '../../l10n/app_localizations.dart';
 import '../../talky_api_client.dart';
 import 'callkit_service.dart';
 import 'local_notification_helper.dart';
 import 'notification_navigation.dart';
 import 'ringtone_service.dart';
+
+/// Locale pour l'isolate FCM (pas de [LocaleController] ici).
+AppLocalizations get _backgroundL10n {
+  final code =
+      WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+  return lookupAppLocalizations(
+    code == 'en' ? const Locale('en') : const Locale('fr'),
+  );
+}
 
 const String _kDefaultFirebaseVapidKey =
     'BBde_uFKtUbLFwAQZ0Kd5ENuaPD1LuRf2ZvvHMPZ3wigioZpjIf7a9rh3pFcI2TRYRrC1YmoiRnAJ4n8io5QBTk';
@@ -58,7 +68,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         await CallKitService.instance.showIncoming(
           callId: (data['callId'] ?? data['roomId'] ?? '').toString(),
           callerId: (data['callerId'] ?? '').toString(),
-          callerName: (data['callerName'] ?? data['title'] ?? 'Appel').toString(),
+          callerName: (data['callerName'] ?? data['title'] ?? _backgroundL10n.callNoun).toString(),
           callerPhoto: data['photo']?.toString(),
           isVideo: data['isVideo'] == 'true',
           roomId: data['roomId']?.toString(),

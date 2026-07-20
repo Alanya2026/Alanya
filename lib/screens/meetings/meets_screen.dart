@@ -19,6 +19,8 @@ import 'join_meet_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'participant_picker_screen.dart';
 import '../shared/schedule_screen.dart';
+import '../../core/theme/locale_controller.dart';
+import 'package:intl/intl.dart';
 
 class MeetsScreen extends StatefulWidget {
   const MeetsScreen({super.key});
@@ -164,7 +166,7 @@ class _MeetsScreenState extends State<MeetsScreen>
       context,
       MaterialPageRoute(
         builder: (_) =>
-            const ParticipantPickerScreen(confirmLabel: 'Démarrer'),
+            ParticipantPickerScreen(confirmLabel: context.l10n.startAction),
       ),
     );
     if (participants == null || !mounted) return;
@@ -180,7 +182,7 @@ class _MeetsScreenState extends State<MeetsScreen>
           : '';
 
       await meetingService.createAndJoin(
-        objet: 'Réunion ${now.toString().substring(0, 16)}',
+        objet: context.l10n.meetingNamed(now.toString().substring(0, 16)),
         startTime: now.toUtc().toIso8601String(),
         room: 'mtg-${now.millisecondsSinceEpoch}',
         myId: _myId,
@@ -198,7 +200,7 @@ class _MeetsScreenState extends State<MeetsScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de créer la réunion : $e')),
+        SnackBar(content: Text(context.l10n.cannotCreateMeeting('$e'))),
       );
     }
   }
@@ -225,26 +227,26 @@ class _MeetsScreenState extends State<MeetsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Réunions', style: context.text.headlineLarge),
+        title: Text(context.l10n.navMeetings, style: context.text.headlineLarge),
         actions: [
           IconButton(
             icon: Icon(_searchOpen ? Icons.close : Icons.search),
-            tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
+            tooltip: _searchOpen ? context.l10n.closeSearch : context.l10n.commonSearch,
             onPressed: _toggleSearch,
           ),
           IconButton(
             icon: const Icon(Icons.calendar_month_outlined),
-            tooltip: 'Planifier',
+            tooltip: context.l10n.scheduleAction,
             onPressed: _openSchedule,
           ),
           AppSpacing.hGapLg,
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: "Aujourd'hui"),
-            Tab(text: 'À venir'),
-            Tab(text: 'Passés'),
+          tabs: [
+            Tab(text: context.l10n.today),
+            Tab(text: context.l10n.upcoming),
+            Tab(text: context.l10n.past),
           ],
         ),
       ),
@@ -264,7 +266,7 @@ class _MeetsScreenState extends State<MeetsScreen>
               children: [
                 Expanded(
                   child: _ActionCard(
-                    title: 'Nouvelle réunion',
+                    title: context.l10n.newMeeting,
                     icon: CupertinoIcons.video_camera_solid,
                     onTap: _createNewMeeting,
                   ),
@@ -272,7 +274,7 @@ class _MeetsScreenState extends State<MeetsScreen>
                 AppSpacing.hGapMd,
                 Expanded(
                   child: _ActionCard(
-                    title: 'Rejoindre',
+                    title: context.l10n.join,
                     icon: CupertinoIcons.keyboard,
                     isOutline: true,
                     onTap: () => Navigator.push(
@@ -294,8 +296,8 @@ class _MeetsScreenState extends State<MeetsScreen>
                       _MeetingList(
                         meetings: _filtered(_todayMeetings),
                         emptyMessage: _search.isEmpty
-                            ? "Aucune réunion aujourd'hui"
-                            : 'Aucun résultat',
+                            ? context.l10n.noMeetingsToday
+                            : context.l10n.noResults,
                         emptyIcon: CupertinoIcons.calendar_badge_plus,
                         onRefresh: _loadMeetings,
                         showScheduleButton: true,
@@ -305,8 +307,8 @@ class _MeetsScreenState extends State<MeetsScreen>
                       _MeetingList(
                         meetings: _filtered(_upcomingMeetings),
                         emptyMessage: _search.isEmpty
-                            ? 'Aucune réunion à venir'
-                            : 'Aucun résultat',
+                            ? context.l10n.noUpcomingMeetings
+                            : context.l10n.noResults,
                         emptyIcon: CupertinoIcons.calendar,
                         onRefresh: _loadMeetings,
                         showScheduleButton: true,
@@ -316,8 +318,8 @@ class _MeetsScreenState extends State<MeetsScreen>
                       _MeetingList(
                         meetings: _filtered(_pastMeetings),
                         emptyMessage: _search.isEmpty
-                            ? 'Aucune réunion passée'
-                            : 'Aucun résultat',
+                            ? context.l10n.noPastMeetings
+                            : context.l10n.noResults,
                         emptyIcon: CupertinoIcons.clock,
                         onRefresh: _loadMeetings,
                         showScheduleButton: false,
@@ -333,7 +335,7 @@ class _MeetsScreenState extends State<MeetsScreen>
         heroTag: 'meets_schedule_fab',
         onPressed: _openSchedule,
         elevation: 4,
-        tooltip: 'Planifier une réunion',
+        tooltip: context.l10n.scheduleAMeeting,
         child: const Icon(Icons.add),
       ),
     );
@@ -381,8 +383,8 @@ class _MeetingList extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onSchedule,
                     icon: const Icon(Icons.add),
-                    label: const Text(
-                      'Planifier une réunion',
+                    label: Text(
+                      context.l10n.scheduleAMeeting,
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -426,29 +428,16 @@ class _MeetingCard extends StatelessWidget {
     String hm(DateTime dt) =>
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     final timeStr = '${hm(d)} — ${hm(e)}';
-    if (m.isToday) return "Aujourd'hui · $timeStr";
+    if (m.isToday) return LocaleController.instance.l10n.todayAt(timeStr);
     final tomorrow = now.add(const Duration(days: 1));
     if (d.year == tomorrow.year &&
         d.month == tomorrow.month &&
         d.day == tomorrow.day) {
-      return 'Demain · $timeStr';
+      return LocaleController.instance.l10n.tomorrowAt(timeStr);
     }
-    const months = [
-      '',
-      'Jan',
-      'Fév',
-      'Mar',
-      'Avr',
-      'Mai',
-      'Jun',
-      'Jul',
-      'Aoû',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Déc'
-    ];
-    return '${d.day} ${months[d.month]} · $timeStr';
+    final locale = LocaleController.instance.resolvedLocale.toLanguageTag();
+    final month = DateFormat.MMM(locale).format(d);
+    return '${d.day} $month · $timeStr';
   }
 
   bool _isInProgress(Meeting m) {
@@ -473,7 +462,7 @@ class _MeetingCard extends StatelessWidget {
     final inProgress = _isInProgress(meeting);
     final minsUntil = _minutesUntilStart(meeting);
     final organiser =
-        meeting.organiserNom ?? meeting.organiserPseudo ?? 'Organisateur';
+        meeting.organiserNom ?? meeting.organiserPseudo ?? context.l10n.organizer;
 
     return InkWell(
       onTap: onTap,
@@ -520,14 +509,14 @@ class _MeetingCard extends StatelessWidget {
                           ),
                         ),
                         if (inProgress)
-                          const StatusChip(
-                              label: 'En cours',
+                          StatusChip(
+                              label: context.l10n.inProgress,
                               tone: StatusChipTone.success)
                         else if (minsUntil != null)
                           StatusChip(
                             label: minsUntil == 0
-                                ? 'Maintenant'
-                                : 'Dans ${minsUntil}min',
+                                ? context.l10n.nowLabel
+                                : context.l10n.inMinutes(minsUntil),
                             tone: StatusChipTone.warning,
                           ),
                         if (meeting.typeMedia == 1)
@@ -569,7 +558,7 @@ class _MeetingCard extends StatelessWidget {
                         ),
                         if (meeting.participants.isNotEmpty)
                           Text(
-                            '· ${meeting.participants.length} participant${meeting.participants.length > 1 ? 's' : ''}',
+                            context.l10n.dotParticipantsCount(meeting.participants.length),
                             style: context.text.labelSmall?.copyWith(
                                 color: context.colors.outlineVariant),
                           ),
@@ -628,7 +617,7 @@ class _ActionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isOutline
                     ? context.semantic.surfaceMuted
-                    : Colors.white.withAlpha(51),
+                    : context.colors.onPrimary.withAlpha(51),
                 shape: BoxShape.circle,
               ),
               child: Icon(

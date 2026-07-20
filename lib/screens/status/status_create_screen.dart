@@ -29,8 +29,6 @@ class StatusCreateScreen extends StatefulWidget {
 
 class _StatusCreateScreenState extends State<StatusCreateScreen>
     with TickerProviderStateMixin {
-  static const Color _textStatusForeground = Colors.white;
-
   static const List<Color> _palette = [
     Color(0xFFE53935),
     Color(0xFF3949AB),
@@ -148,7 +146,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     if (!await _recorder.hasPermission()) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permission micro refusée')),
+          SnackBar(content: Text(context.l10n.microphonePermissionDenied2)),
         );
       }
       return;
@@ -188,7 +186,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
         _isRecording = false;
         _mediaFile = File(path);
         _audioDurationMs = seconds * 1000;
-        _audioName = 'Message vocal';
+        _audioName = context.l10n.voiceMessage;
       });
     } else {
       if (path != null) {
@@ -240,7 +238,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Couleur de fond', style: ctx.text.titleMedium),
+            Text(context.l10n.backgroundColor, style: ctx.text.titleMedium),
             AppSpacing.vGapLg,
             Wrap(
               spacing: AppSpacing.md,
@@ -324,8 +322,8 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           SnackBar(
             content: Text(
               detail.isNotEmpty
-                  ? 'Impossible de publier le statut : $detail'
-                  : 'Impossible de publier le statut, réessayez',
+                  ? context.l10n.unableToPostStatusWithError(detail)
+                  : context.l10n.unableToPostTheStatusTry,
             ),
           ),
         );
@@ -342,19 +340,19 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     return Scaffold(
       backgroundColor: context.colors.surface,
       appBar: AppBar(
-        title: Text('Nouveau statut', style: context.text.titleLarge),
+        title: Text(context.l10n.newStatus, style: context.text.titleLarge),
         actions: [
           if (isText)
             IconButton(
               icon: const Icon(Icons.palette_rounded),
-              tooltip: 'Couleur de fond',
+              tooltip: context.l10n.backgroundColor,
               onPressed: _openColorPicker,
             ),
           if (_mediaFile != null &&
               (_type == _StatusType.photo || _type == _StatusType.video))
             IconButton(
               icon: const Icon(Icons.swap_horiz_rounded),
-              tooltip: 'Changer le média',
+              tooltip: context.l10n.changeMedia,
               onPressed: () => _pickMedia(
                 ImageSource.gallery,
                 video: _type == _StatusType.video,
@@ -377,18 +375,18 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                         color: context.colors.primary,
                       ),
                     )
-                  : const Text('Publier'),
+                  : Text(context.l10n.publishAction),
             ),
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
           indicatorSize: TabBarIndicatorSize.label,
-          tabs: const [
-            Tab(text: 'Texte'),
-            Tab(text: 'Photo'),
-            Tab(text: 'Vidéo'),
-            Tab(text: 'Audio'),
+          tabs: [
+            Tab(text: context.l10n.text2),
+            Tab(text: context.l10n.photo2),
+            Tab(text: context.l10n.video2),
+            Tab(text: context.l10n.audio2),
           ],
         ),
       ),
@@ -421,6 +419,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 
   Widget _buildTextCanvas() {
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final fg = _onBackground(_bgColor);
     return ColoredBox(
       color: _bgColor,
       child: Padding(
@@ -436,9 +435,9 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
             onChanged: (_) => setState(() {}),
             maxLines: null,
             textAlign: TextAlign.center,
-            cursorColor: _textStatusForeground,
-            style: const TextStyle(
-              color: _textStatusForeground,
+            cursorColor: fg,
+            style: TextStyle(
+              color: fg,
               fontSize: 28,
               fontWeight: FontWeight.w600,
               height: 1.3,
@@ -449,9 +448,9 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
-              hintText: 'Tapez votre statut…',
+              hintText: context.l10n.typeYourStatus,
               hintStyle: TextStyle(
-                color: _textStatusForeground.withValues(alpha: 0.55),
+                color: fg.withValues(alpha: 0.55),
                 fontSize: 28,
                 fontWeight: FontWeight.w600,
               ),
@@ -527,7 +526,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
-                              hintText: 'Ajouter une description…',
+                              hintText: context.l10n.addADescription,
                               hintStyle: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.7),
                               ),
@@ -537,11 +536,11 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                       ),
                     ),
                     if (isVideo)
-                      const Positioned(
+                      Positioned(
                         top: AppSpacing.md,
                         right: AppSpacing.md,
                         child: StatusChip(
-                          label: 'Vidéo',
+                          label: context.l10n.video2,
                           tone: StatusChipTone.brand,
                           icon: Icons.movie_outlined,
                         ),
@@ -561,8 +560,8 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
         padding: EdgeInsets.only(bottom: bottom),
         child: EmptyState(
           icon: isVideo ? CupertinoIcons.videocam : CupertinoIcons.photo,
-          title: isVideo ? 'Ajouter une vidéo' : 'Ajouter une photo',
-          message: 'Depuis la galerie ou l\'appareil photo',
+          title: isVideo ? context.l10n.addAVideo : context.l10n.addAPhoto,
+          message: context.l10n.fromGalleryOrCamera,
           action: Wrap(
             alignment: WrapAlignment.center,
             spacing: AppSpacing.md,
@@ -571,7 +570,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
               FilledButton.icon(
                 onPressed: () => _pickMedia(ImageSource.gallery, video: isVideo),
                 icon: const Icon(Icons.photo_library_outlined, size: AppIconSize.sm),
-                label: const Text('Galerie'),
+                label: Text(context.l10n.gallery),
               ),
               OutlinedButton.icon(
                 onPressed: () => _pickMedia(ImageSource.camera, video: isVideo),
@@ -579,7 +578,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                   isVideo ? Icons.videocam_outlined : Icons.camera_alt_outlined,
                   size: AppIconSize.sm,
                 ),
-                label: Text(isVideo ? 'Caméra' : 'Appareil'),
+                label: Text(context.l10n.camera),
               ),
             ],
           ),
@@ -630,10 +629,10 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
               AppSpacing.vGapXl,
               Text(
                 _isRecording
-                    ? 'Enregistrement… ${_formatDuration(_recordSeconds)}'
+                    ? '${context.l10n.recordingEllipsis} ${_formatDuration(_recordSeconds)}'
                     : hasFile
-                        ? (_audioName ?? 'Message vocal')
-                        : 'Enregistrez un vocal ou importez un fichier audio',
+                        ? (_audioName ?? context.l10n.voiceMessage)
+                        : context.l10n.recordOrImportAudio,
                 style: context.text.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -657,12 +656,12 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                     OutlinedButton.icon(
                       onPressed: () => _stopRecording(keep: false),
                       icon: const Icon(Icons.delete_outline, size: AppIconSize.sm),
-                      label: const Text('Annuler'),
+                      label: Text(context.l10n.commonCancel),
                     ),
                     FilledButton.icon(
                       onPressed: () => _stopRecording(keep: true),
                       icon: const Icon(Icons.check_rounded, size: AppIconSize.sm),
-                      label: const Text('Terminer'),
+                      label: Text(context.l10n.finishAction),
                     ),
                   ],
                 )
@@ -675,12 +674,12 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                     FilledButton.icon(
                       onPressed: _startRecording,
                       icon: const Icon(Icons.mic_rounded, size: AppIconSize.sm),
-                      label: Text(hasFile ? 'Réenregistrer' : 'Enregistrer'),
+                      label: Text(hasFile ? context.l10n.reRecord : context.l10n.recordAction),
                     ),
                     OutlinedButton.icon(
                       onPressed: _pickAudioFile,
                       icon: const Icon(Icons.upload_file_rounded, size: AppIconSize.sm),
-                      label: const Text('Importer'),
+                      label: Text(context.l10n.importAction),
                     ),
                   ],
                 ),

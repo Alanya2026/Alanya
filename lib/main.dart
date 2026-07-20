@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker_android/image_picker_android.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:provider/provider.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/connectivity_provider.dart';
@@ -18,6 +19,7 @@ import 'core/navigation/app_navigator.dart';
 import 'core/utils/app_log.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'core/theme/locale_controller.dart';
 import 'core/services/media_download_preferences.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
@@ -107,6 +109,7 @@ class TalkyApp extends StatelessWidget {
       providers: [
         // ThemeController en tête : MaterialApp en dépend via Consumer.
         ChangeNotifierProvider(create: (_) => ThemeController()..load()),
+        ChangeNotifierProvider(create: (_) => LocaleController()..load()),
         ChangeNotifierProvider(
             create: (_) => MediaDownloadPreferences()..load()),
         Provider<TalkyApiClient>.value(value: apiClient),
@@ -134,16 +137,30 @@ class TalkyApp extends StatelessWidget {
           ),
         ),
       ],
-      child: Consumer<ThemeController>(
-        builder: (_, tc, __) => MaterialApp(
+      child: Consumer2<ThemeController, LocaleController>(
+        builder: (_, tc, lc, __) => MaterialApp(
           navigatorKey: navigatorKey,
           navigatorObservers: [appRouteObserver],
           scaffoldMessengerKey: appMessengerKey,
           debugShowCheckedModeBanner: false,
-          title: 'Alanya',
+          onGenerateTitle: (ctx) => AppLocalizations.of(ctx)?.appTitle ?? 'Alanya',
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: tc.mode,
+          locale: lc.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localeResolutionCallback: (device, supported) {
+            if (lc.preference != AppLocalePreference.system && lc.locale != null) {
+              return lc.locale;
+            }
+            if (device != null) {
+              for (final l in supported) {
+                if (l.languageCode == device.languageCode) return l;
+              }
+            }
+            return const Locale('fr');
+          },
           builder: (context, child) => ActiveSessionChrome(child: child),
           home: const AuthWrapper(),
         ),

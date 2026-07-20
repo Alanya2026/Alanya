@@ -126,10 +126,10 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
     if (messenger == null) return;
 
     final message = callEnded
-        ? 'Appel terminé'
+        ? context.l10n.callEnded
         : meetingEnded
-            ? 'Réunion terminée'
-            : 'Message vocal terminé';
+            ? context.l10n.meetingEnded
+            : context.l10n.voiceMessageEnded;
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
@@ -167,9 +167,9 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
 
   String _voiceDetail(VoicePlaybackService service) {
     if (service.isPlaying) {
-      return '${_fmtVoiceDuration(service.position)} · Message vocal · Toucher pour revenir';
+      return context.l10n.voiceMessageDurationTapToReturn(_fmtVoiceDuration(service.position));
     }
-    return 'En pause · Message vocal · Toucher pour revenir';
+    return context.l10n.pausedVoiceMessageTapToReturn;
   }
 
   @override
@@ -261,9 +261,9 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
           );
         } else if (showMeeting) {
           bar = _SessionTopBar(
-            label: meetingService.currentMeeting?.objet ?? 'Réunion',
+            label: meetingService.currentMeeting?.objet ?? context.l10n.meeting,
             detail:
-                '${meetingService.formattedDuration} · Toucher pour revenir',
+                context.l10n.durationTapToReturn(meetingService.formattedDuration),
             isConnected: meetingService.status == MeetingStatus.connected,
             isMuted: meetingService.isMuted,
             accent: AppColors.brandPrimaryStrong,
@@ -271,7 +271,7 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
             onHangUp: () => meetingService.leaveMeeting(),
           );
         } else {
-          final title = voiceService.chatContext?.title ?? 'Message vocal';
+          final title = voiceService.chatContext?.title ?? context.l10n.voiceMessage;
           bar = _SessionTopBar(
             label: title,
             detail: _voiceDetail(voiceService),
@@ -297,21 +297,21 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
   }
 
   String _callLabel(CallService cs) {
-    if (cs.groupRoomId != null) return 'Appel groupé en cours';
-    return cs.remoteUserName ?? 'Appel en cours';
+    if (cs.groupRoomId != null) return context.l10n.groupCallInProgress;
+    return cs.remoteUserName ?? context.l10n.callInProgress;
   }
 
   String _callDetail(CallService cs) {
     if (cs.status == CallStatus.connecting) {
-      return 'Connexion… · Toucher pour revenir';
+      return context.l10n.connectingTapToReturn;
     }
     final duration = cs.formattedDuration;
     if (cs.groupRoomId != null) {
       final count = cs.groupRemoteStreams.length + 1;
-      return '$duration · $count participants';
+      return context.l10n.durationParticipants(duration, count);
     }
-    final type = cs.isVideo ? 'Vidéo' : 'Audio';
-    return '$duration · $type · Toucher pour revenir';
+    final type = cs.isVideo ? context.l10n.video2 : context.l10n.audio2;
+    return context.l10n.sessionBannerTapToReturn(duration, type);
   }
 }
 

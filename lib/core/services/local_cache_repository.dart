@@ -9,6 +9,7 @@ import '../utils/media_album.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'media_cache_service.dart';
+import '../theme/locale_controller.dart';
 
 /// Cache lecture-seule pour les modules secondaires (contacts préférés,
 /// historique d'appels, meetings, statuses). Patron commun :
@@ -314,7 +315,7 @@ class LocalCacheRepository {
     required int conversID,
     required Call call,
   }) async {
-    final preview = call.isVideo ? '📹 Appel vidéo' : '📞 Appel vocal';
+    final preview = call.isVideo ? LocaleController.instance.l10n.videoCallPreview : LocaleController.instance.l10n.voiceCallPreview;
     // 10/11 : aperçus d'appel locaux (évite collision avec message.type 5=location).
     final type = call.isVideo ? 11 : 10;
     final at = _parseDate(call.createdAt) ?? DateTime.now();

@@ -8,10 +8,10 @@ import '../../core/theme/app_theme.dart';
 /// Factorise les décorations recopiées dans `animated_search_bar.dart`,
 /// `country_picker_sheet.dart`, `add_contact_sheet.dart`, etc.
 class AppSearchField extends StatelessWidget {
-  const AppSearchField({
+  AppSearchField({
     super.key,
     this.controller,
-    this.hintText = 'Rechercher',
+    this.hintText,
     this.onChanged,
     this.onClear,
     this.autofocus = false,
@@ -21,7 +21,7 @@ class AppSearchField extends StatelessWidget {
   });
 
   final TextEditingController? controller;
-  final String hintText;
+  final String? hintText;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onClear;
   final bool autofocus;
@@ -46,7 +46,7 @@ class AppSearchField extends StatelessWidget {
       textInputAction: TextInputAction.search,
       style: context.text.bodyLarge,
       decoration: InputDecoration(
-        hintText: hintText,
+        hintText: hintText ?? context.l10n.commonSearch,
         prefixIcon: Icon(Icons.search_rounded,
             color: colors.onSurfaceVariant, size: AppIconSize.md),
         suffixIcon: onClear == null
@@ -55,7 +55,7 @@ class AppSearchField extends StatelessWidget {
                 icon: Icon(Icons.close_rounded,
                     color: colors.onSurfaceVariant, size: AppIconSize.sm),
                 onPressed: onClear,
-                tooltip: 'Effacer',
+                tooltip: context.l10n.clearAction,
               ),
         filled: fillColor != null ? true : null,
         fillColor: fillColor,

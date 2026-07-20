@@ -5,7 +5,6 @@ import '../../core/services/local_hidden_store.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/conversation_display.dart';
-import '../../core/utils/media_album.dart';
 import '../../core/utils/rich_text_parser.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -116,8 +115,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
             : null,
         title: Text(
           _selectionMode
-              ? '${_selectedConversationIDs.length} sélectionnée${_selectedConversationIDs.length > 1 ? 's' : ''}'
-              : 'Discussions',
+              ? context.l10n.selectedFeminineCount(_selectedConversationIDs.length)
+              : context.l10n.chats,
           style: _selectionMode
               ? context.text.titleLarge?.copyWith(fontWeight: FontWeight.w600)
               : context.text.headlineLarge,
@@ -146,27 +145,27 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     if (!hasConflict) ...[
                       if (_filter == 'archived')
                         IconButton(
-                          tooltip: 'Désarchiver',
+                          tooltip: context.l10n.unarchive,
                           icon: const Icon(Icons.unarchive_outlined),
                           onPressed: () => _applyBatchArchive(false),
                         )
                       else ...[
                         IconButton(
-                          tooltip: allPinned ? 'Désépingler' : 'Épingler',
+                          tooltip: allPinned ? context.l10n.unpin : context.l10n.pin,
                           icon: Icon(
                             allPinned ? Icons.push_pin_outlined : Icons.push_pin,
                           ),
                           onPressed: () => _applyBatchPin(!allPinned),
                         ),
                         IconButton(
-                          tooltip: 'Archiver',
+                          tooltip: context.l10n.archiveAction,
                           icon: const Icon(Icons.archive_outlined),
                           onPressed: () => _applyBatchArchive(true),
                         ),
                       ],
                     ],
                     IconButton(
-                      tooltip: 'Supprimer',
+                      tooltip: context.l10n.commonDelete,
                       icon: Icon(Icons.delete_outline, color: context.colors.error),
                       onPressed: _applyBatchDelete,
                     ),
@@ -177,7 +176,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           ] else ...[
             IconButton(
               icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded),
-              tooltip: _searchOpen ? 'Fermer la recherche' : 'Rechercher',
+              tooltip: _searchOpen ? context.l10n.closeSearch : context.l10n.commonSearch,
               onPressed: _toggleSearch,
             ),
             IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
@@ -201,15 +200,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
             ),
             child: Row(
               children: [
-                _buildFilterChip('Tous', 'all', Icons.apps_rounded),
+                _buildFilterChip(context.l10n.allFilter, 'all', Icons.apps_rounded),
                 AppSpacing.hGapSm,
-                _buildFilterChip('Discussions', 'discussions', Icons.person_outline),
+                _buildFilterChip(context.l10n.chats, 'discussions', Icons.person_outline),
                 AppSpacing.hGapSm,
-                _buildFilterChip('Groupes', 'groups', Icons.groups_rounded),
+                _buildFilterChip(context.l10n.groupsFilter, 'groups', Icons.groups_rounded),
                 AppSpacing.hGapSm,
-                _buildFilterChip('Non lus', 'unread', Icons.mark_email_unread_outlined),
+                _buildFilterChip(context.l10n.unread, 'unread', Icons.mark_email_unread_outlined),
                 AppSpacing.hGapSm,
-                _buildFilterChip('Archivés', 'archived', Icons.archive_outlined),
+                _buildFilterChip(context.l10n.archived, 'archived', Icons.archive_outlined),
               ],
             ),
           ),
@@ -243,13 +242,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         ? Icons.archive_outlined
                         : Icons.chat_bubble_outline_rounded,
                     title: _search.isNotEmpty
-                        ? 'Aucun résultat'
+                        ? context.l10n.noResults
                         : _filter == 'archived'
-                            ? 'Aucune conversation archivée'
-                            : 'Aucune discussion',
+                            ? context.l10n.noArchivedConversations
+                            : context.l10n.noChats,
                     message: _search.isNotEmpty
-                        ? 'Essayez un autre terme de recherche.'
-                        : 'Démarrez une nouvelle discussion avec le bouton +.',
+                        ? context.l10n.tryAnotherSearchTerm
+                        : context.l10n.startANewChatWithThe,
                   );
                 }
                 return RefreshIndicator(
@@ -283,8 +282,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   }
                 : () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Nouvelle discussion indisponible hors ligne'),
+                      SnackBar(
+                        content: Text(context.l10n.newChatUnavailableOffline),
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -372,7 +371,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   AppSpacing.hGapSm,
                   Expanded(
                     child: Text(
-                      conv.isGroup ? 'Quelqu\'un écrit…' : 'En train d\'écrire…',
+                      conv.isGroup ? context.l10n.someoneIsTyping : context.l10n.typing2,
                       style: context.text.bodyMedium?.copyWith(
                         color: colors.primary,
                         fontWeight: FontWeight.w500,
@@ -396,7 +395,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         ? Text.rich(
                             TextSpan(
                               children: parseRichSpans(
-                                normalizeConversationPreview(conv.lastMessage!),
+                                displayConversationPreview(
+                                  conv.lastMessage!,
+                                  context.l10n,
+                                ),
                                 context.text.bodyMedium!.copyWith(
                                   color: hasUnread ? colors.onSurface : colors.onSurfaceVariant,
                                   fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
@@ -407,7 +409,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                             overflow: TextOverflow.ellipsis,
                           )
                         : Text(
-                            'Aucun message',
+                            context.l10n.noMessages,
                             style: context.text.bodyMedium?.copyWith(
                               color: colors.onSurfaceVariant,
                             ),
@@ -552,7 +554,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     if (selected.isEmpty) return;
     if (pinned && selected.every((c) => c.isPinned)) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Les discussions sélectionnées sont déjà épinglées')),
+        SnackBar(content: Text(context.l10n.selectedChatsAreAlreadyPinned)),
       );
       return;
     }
@@ -563,7 +565,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
+      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
     }
   }
 
@@ -577,13 +579,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
     if (selected.isEmpty) return;
     if (archived && selected.every((c) => c.isArchived)) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Les discussions sélectionnées sont déjà archivées')),
+        SnackBar(content: Text(context.l10n.selectedChatsAreAlreadyArchived)),
       );
       return;
     }
     if (!archived && selected.every((c) => !c.isArchived)) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Les discussions sélectionnées ne sont pas archivées')),
+        SnackBar(content: Text(context.l10n.selectedChatsAreNotArchived)),
       );
       return;
     }
@@ -594,7 +596,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
+      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
     }
   }
 
@@ -608,7 +610,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       if (!mounted) return;
       _exitSelectionMode();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Échec : $e')));
+      messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
     }
   }
 }

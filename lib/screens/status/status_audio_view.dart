@@ -195,8 +195,8 @@ class _StatusAudioViewState extends State<StatusAudioView> {
           const SizedBox(height: 8),
           Text(
             preparing
-                ? 'Chargement…'
-                : (widget.paused ? 'En pause' : 'Message vocal'),
+                ? context.l10n.commonLoading
+                : (widget.paused ? context.l10n.paused : context.l10n.voiceMessage),
             style: context.text.bodyMedium?.copyWith(
               color: colors.onSurfaceVariant,
             ),
@@ -222,7 +222,7 @@ class _StatusAudioViewState extends State<StatusAudioView> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                tooltip: 'Reculer 10 s',
+                tooltip: context.l10n.rewind10S,
                 icon: const Icon(Icons.replay_10),
                 color: colors.onSurface,
                 iconSize: 32,
@@ -251,7 +251,7 @@ class _StatusAudioViewState extends State<StatusAudioView> {
                     ),
               const SizedBox(width: 8),
               IconButton(
-                tooltip: 'Avancer 10 s',
+                tooltip: context.l10n.forward10S,
                 icon: const Icon(Icons.forward_10),
                 color: colors.onSurface,
                 iconSize: 32,

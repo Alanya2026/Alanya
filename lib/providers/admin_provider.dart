@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
+import '../core/theme/locale_controller.dart';
 
 class AdminStats {
   final int totalUsers;
@@ -86,7 +87,7 @@ class AdminProvider extends ChangeNotifier {
           .toList();
       _totalUsers = (res['total'] as num?)?.toInt() ?? _users.length;
     } catch (e) {
-      _error = 'Erreur chargement utilisateurs: $e';
+      _error = LocaleController.instance.l10n.loadUsersError('$e');
       debugPrint('[AdminProvider] loadUsers error: $e');
     } finally {
       _isLoadingUsers = false;
@@ -118,7 +119,7 @@ class AdminProvider extends ChangeNotifier {
       }
       await loadUsers(search: _searchQuery, page: _page, limit: _limit);
     } catch (e) {
-      _error = 'Erreur ban/unban: $e';
+      _error = LocaleController.instance.l10n.banUnbanError('$e');
       notifyListeners();
     }
   }
@@ -128,7 +129,7 @@ class AdminProvider extends ChangeNotifier {
       await _api.adminSetAccountType(userId, typeCompte: typeCompte);
       await loadUsers(search: _searchQuery, page: _page, limit: _limit);
     } catch (e) {
-      _error = 'Erreur changement de rôle: $e';
+      _error = LocaleController.instance.l10n.roleChangeError('$e');
       notifyListeners();
     }
   }
@@ -140,7 +141,7 @@ class AdminProvider extends ChangeNotifier {
       _totalUsers = (_totalUsers - 1).clamp(0, 1 << 30);
       notifyListeners();
     } catch (e) {
-      _error = 'Erreur suppression: $e';
+      _error = LocaleController.instance.l10n.deleteErrorWithDetails('$e');
       notifyListeners();
     }
   }

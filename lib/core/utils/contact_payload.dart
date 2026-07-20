@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../db/app_database.dart';
+import '../theme/locale_controller.dart';
 
 /// Payload JSON d'un message contact partagé (`type = 7`).
 /// Instantané figé au moment de l'envoi (nom / tel / avatar).
@@ -24,7 +25,7 @@ class ContactPayload {
     if (n.isNotEmpty) return n;
     final p = pseudo?.trim();
     if (p != null && p.isNotEmpty) return p;
-    return 'Contact';
+    return LocaleController.instance.l10n.contact2;
   }
 
   String get previewLabel => '👤 $displayLabel';
@@ -86,5 +87,5 @@ class ContactPayload {
 /// Aperçu conversation / notif pour un message type 7.
 String contactPreviewLabel(String? content) {
   final c = ContactPayload.tryParse(content);
-  return c?.previewLabel ?? '👤 Contact';
+  return c?.previewLabel ?? LocaleController.instance.l10n.contact;
 }

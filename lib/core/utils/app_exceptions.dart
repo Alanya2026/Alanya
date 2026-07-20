@@ -1,3 +1,5 @@
+import '../theme/locale_controller.dart';
+
 class AppException implements Exception {
   final String message;
   final String? code;
@@ -18,5 +20,5 @@ class NetworkException extends AppException {
 }
 
 class TokenExpiredException extends AuthException {
-  TokenExpiredException() : super('Session expired', code: 'TOKEN_EXPIRED', statusCode: 401);
+  TokenExpiredException() : super(LocaleController.instance.l10n.sessionExpired, code: 'TOKEN_EXPIRED', statusCode: 401);
 }

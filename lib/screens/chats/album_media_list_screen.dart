@@ -125,7 +125,7 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
             if (canForward)
               ListTile(
                 leading: Icon(Icons.forward, color: primary),
-                title: const Text('Transférer'),
+                title: Text(context.l10n.forward),
                 onTap: () {
                   Navigator.pop(context);
                   _openForwardPicker(msg);
@@ -137,8 +137,8 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
                   Icons.forward,
                   color: context.colors.onSurfaceVariant,
                 ),
-                title: const Text('Transfert indisponible'),
-                subtitle: const Text('Le média n\'est pas encore prêt'),
+                title: Text(context.l10n.forwardUnavailable),
+                subtitle: Text(context.l10n.mediaIsNotReadyYet),
                 enabled: false,
               ),
             AppSpacing.vGapSm,
@@ -151,8 +151,8 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
   void _openForwardPicker(LocalMessage msg) {
     if (!canForwardMessage(msg)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ce média ne peut pas être transféré pour le moment'),
+        SnackBar(
+          content: Text(context.l10n.thisMediaCannotBeForwardedRight),
         ),
       );
       return;
@@ -224,7 +224,7 @@ class _AlbumListTile extends StatelessWidget {
         message.mediaUrl!.isNotEmpty;
 
     return Material(
-      color: Colors.transparent,
+      color: const Color(0x00000000),
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
@@ -277,19 +277,19 @@ class _AlbumListTile extends StatelessWidget {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
+                        color: AppColors.black.withValues(alpha: 0.55),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.download_rounded,
-                        color: Colors.white,
+                        color: AppColors.white,
                         size: 26,
                       ),
                     ),
                   ),
                 if (uploading)
                   Container(
-                    color: Colors.black26,
+                    color: AppColors.black.withValues(alpha: 0.26),
                     alignment: Alignment.center,
                     child: const CircularProgressIndicator(color: AppColors.white),
                   ),
@@ -302,7 +302,7 @@ class _AlbumListTile extends StatelessWidget {
                       vertical: AppSpacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black54,
+                      color: AppColors.black.withValues(alpha: 0.54),
                       borderRadius: AppRadius.brSm,
                     ),
                     child: Text(

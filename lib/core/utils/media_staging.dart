@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../theme/locale_controller.dart';
 
 /// Copie un média sélectionné vers un dossier outbox durable avant upload.
 ///
@@ -16,7 +17,7 @@ Future<File> stageMediaFile(
   Directory? outboxDirectory,
 }) async {
   if (!source.existsSync()) {
-    throw MediaStagingException('Fichier source introuvable : ${source.path}');
+    throw MediaStagingException(LocaleController.instance.l10n.sourceFileNotFound(source.path));
   }
 
   final outboxDir = outboxDirectory ?? await _outboxDirectory();
@@ -32,11 +33,11 @@ Future<File> stageMediaFile(
   try {
     await source.copy(dest.path);
   } on FileSystemException catch (e) {
-    throw MediaStagingException('Copie impossible : ${e.message}');
+    throw MediaStagingException(LocaleController.instance.l10n.copyImpossible('${e.message}'));
   }
 
   if (!dest.existsSync()) {
-    throw MediaStagingException('Copie échouée : ${dest.path}');
+    throw MediaStagingException(LocaleController.instance.l10n.copyFailedPath(dest.path));
   }
   return dest;
 }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/call_limits.dart';
 import '../../core/services/local_cache_repository.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/user_search.dart';
@@ -14,15 +13,15 @@ import '../../widgets/common/common.dart';
 
 class ParticipantPickerScreen extends StatefulWidget {
   final List<User> initialSelected;
-  final String confirmLabel;
+  final String? confirmLabel;
   final int? maxSelectable;
   final bool isVideo;
   final Set<int> excludeIds;
 
-  const ParticipantPickerScreen({
+  ParticipantPickerScreen({
     super.key,
     this.initialSelected = const [],
-    this.confirmLabel = 'Confirmer',
+    this.confirmLabel,
     this.maxSelectable,
     this.isVideo = true,
     this.excludeIds = const {},
@@ -196,8 +195,8 @@ class _ParticipantPickerScreenState
         if (!mounted) return;
         if (status.isBlocked || status.blockedByThem) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Impossible d\'inviter un contact bloqué'),
+            SnackBar(
+              content: Text(context.l10n.cannotInviteABlockedContact),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -206,7 +205,7 @@ class _ParticipantPickerScreenState
       } catch (_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de vérifier le contact')),
+          SnackBar(content: Text(context.l10n.unableToVerifyTheContact)),
         );
         return;
       }
@@ -233,9 +232,9 @@ class _ParticipantPickerScreenState
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Ajouter des participants'),
+            Text(context.l10n.addParticipants),
             Text(
-              '${_selected.length}/${widget.effectiveMaxSelectable} sélectionné${_selected.length > 1 ? 's' : ''}',
+              context.l10n.selectionRatio(_selected.length, widget.effectiveMaxSelectable),
               style: context.text.labelSmall?.copyWith(
                 color: _atLimit
                     ? context.semantic.warning
@@ -251,7 +250,7 @@ class _ParticipantPickerScreenState
             TextButton(
               onPressed: _confirm,
               child: Text(
-                widget.confirmLabel,
+                (widget.confirmLabel ?? context.l10n.commonConfirm),
                 style: TextStyle(
                   color: context.colors.primary,
                   fontWeight: FontWeight.bold,
@@ -274,19 +273,19 @@ class _ParticipantPickerScreenState
               width: double.infinity,
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              color: AppColors.warningContainer,
+              color: context.semantic.warningContainer,
               child: Row(
                 children: [
                   Icon(Icons.info_outline,
                       size: AppIconSize.sm,
-                      color: AppColors.warning),
+                      color: context.semantic.warning),
                   AppSpacing.hGapSm,
                   Expanded(
                     child: Text(
                       '${CallLimits.limitReachedMessage(isVideo: widget.isVideo)} '
-                      'Retirez un participant pour en ajouter un autre.',
+                      '${context.l10n.removeParticipantToAddAnother}',
                       style: context.text.labelSmall
-                          ?.copyWith(color: AppColors.warning),
+                          ?.copyWith(color: context.semantic.warning),
                     ),
                   ),
                 ],
@@ -299,7 +298,7 @@ class _ParticipantPickerScreenState
                 AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
             child: AppSearchField(
               controller: _searchController,
-              hintText: 'Rechercher par nom, pseudo…',
+              hintText: context.l10n.searchByNameUsername,
               onChanged: (_) {},
               onClear: () {
                 _searchController.clear();
@@ -314,7 +313,7 @@ class _ParticipantPickerScreenState
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                _showingContacts ? 'Contacts' : 'Résultats',
+                _showingContacts ? context.l10n.contactsLabel : context.l10n.results,
                 style: context.text.labelSmall?.copyWith(
                   color: context.colors.primary,
                   fontWeight: FontWeight.bold,
@@ -334,10 +333,10 @@ class _ParticipantPickerScreenState
                             ? Icons.group_outlined
                             : Icons.person_search,
                         title: _showingContacts
-                            ? 'Aucun contact pour le moment'
-                            : 'Aucun résultat pour "${_searchController.text}"',
+                            ? context.l10n.noContactsYet
+                            : context.l10n.noResultsFor(_searchController.text),
                         message: _showingContacts
-                            ? 'Recherchez un utilisateur par nom ou pseudo'
+                            ? context.l10n.searchUserByNameOrUsername
                             : null,
                       )
                     : ListView.builder(
@@ -374,7 +373,7 @@ class _ParticipantPickerScreenState
                     elevation: 0,
                   ),
                   child: Text(
-                    '${widget.confirmLabel} · ${_selected.length} participant${_selected.length > 1 ? 's' : ''}',
+                    context.l10n.confirmWithParticipants(widget.confirmLabel ?? context.l10n.commonConfirm, _selected.length),
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16),
                   ),
@@ -397,7 +396,7 @@ class _SelectedChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.brandContainer,
+      color: context.semantic.brandContainer,
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       child: Wrap(
@@ -410,8 +409,8 @@ class _SelectedChips extends StatelessWidget {
             avatar: CircleAvatar(
               backgroundColor: context.colors.primary,
               child: Text(initial,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 11)),
+                  style: TextStyle(
+                      color: context.colors.onPrimary, fontSize: 11)),
             ),
             label: Text(
               user.nom.isNotEmpty ? user.nom : user.pseudo,
@@ -474,7 +473,7 @@ class _UserTile extends StatelessWidget {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: AppColors.online,
+                          color: context.semantic.online,
                           shape: BoxShape.circle,
                           border: Border.all(
                               color: context.colors.surface, width: 1.5),
@@ -518,8 +517,8 @@ class _UserTile extends StatelessWidget {
                   ),
                 ),
                 child: selected
-                    ? const Icon(Icons.check,
-                        color: Colors.white, size: 16)
+                    ? Icon(Icons.check,
+                        color: context.colors.onPrimary, size: 16)
                     : null,
               ),
             ],

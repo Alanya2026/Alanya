@@ -10,6 +10,7 @@ import 'call/speaking_detector.dart';
 import 'call_session_guard.dart';
 import 'callkit_service.dart';
 import '../navigation/app_navigator.dart';
+import '../theme/locale_controller.dart';
 
 enum MeetingStatus { idle, joining, connected, ended }
 
@@ -517,7 +518,7 @@ class MeetingService extends ChangeNotifier {
       if (!kIsWeb) {
         final mic = await Permission.microphone.request();
         if (!mic.isGranted) {
-          throw Exception('Permission microphone refusée');
+          throw Exception(LocaleController.instance.l10n.microphonePermissionDenied);
         }
         if (video) {
           await Permission.camera.request();
@@ -742,7 +743,7 @@ class MeetingService extends ChangeNotifier {
       if (!kIsWeb) {
         final micStatus = await Permission.microphone.request();
         if (!micStatus.isGranted) {
-          throw Exception('Permission microphone refusée');
+          throw Exception(LocaleController.instance.l10n.microphonePermissionDenied);
         }
 
         if (isVideoMeeting) {
@@ -779,17 +780,17 @@ class MeetingService extends ChangeNotifier {
       debugPrint('[MeetingService] ** Erreur _initLocalStream: $e');
       debugPrint('[MeetingService] Type: ${e.runtimeType}');
 
-      String errorMsg = 'Erreur d\'accès aux médias';
+      String errorMsg = LocaleController.instance.l10n.mediaAccessError;
       final errorStr = e.toString().toLowerCase();
 
       if (errorStr.contains('permission')) {
-        errorMsg = 'Permission refusée pour le microphone/caméra';
+        errorMsg = LocaleController.instance.l10n.microphoneCameraPermissionDenied;
       } else if (errorStr.contains('navigator') || errorStr.contains('getusermedia')) {
-        errorMsg = 'Erreur d\'accès aux médias. Vérifiez HTTPS ou localhost.';
+        errorMsg = LocaleController.instance.l10n.mediaAccessErrorCheckHttpsOr;
       } else if (errorStr.contains('notfounderror')) {
-        errorMsg = 'Aucun appareil audio/vidéo trouvé';
+        errorMsg = LocaleController.instance.l10n.noAudioVideoDeviceFound;
       } else if (errorStr.contains('notreadableerror')) {
-        errorMsg = 'Impossible d\'accéder aux appareils. Vérifiez les permissions.';
+        errorMsg = LocaleController.instance.l10n.cannotAccessDevicesCheckPermissions;
       }
 
       debugPrint('[MeetingService] Message d\'erreur: $errorMsg');

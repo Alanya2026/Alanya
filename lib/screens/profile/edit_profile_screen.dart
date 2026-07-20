@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/countries_repository.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
+import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -27,6 +27,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isLoading = true;
   bool _uploadingAvatar = false;
 
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _pseudoController = TextEditingController();
   final _picker = ImagePicker();
@@ -87,7 +88,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
       setState(() => _savingCountry = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Impossible de mettre à jour le pays')),
+        SnackBar(content: Text(context.l10n.unableToUpdateTheCountry)),
       );
     }
   }
@@ -123,7 +124,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.outlineStrong,
+                color: context.colors.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -131,13 +132,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ListTile(
               leading: Icon(Icons.photo_camera_outlined,
                   color: context.colors.primary),
-              title: const Text('Prendre une photo'),
+              title: Text(context.l10n.takeAPhoto),
               onTap: () => Navigator.pop(context, _AvatarAction.camera),
             ),
             ListTile(
               leading: Icon(Icons.photo_library_outlined,
                   color: context.colors.primary),
-              title: const Text('Choisir depuis la galerie'),
+              title: Text(context.l10n.chooseFromGallery),
               onTap: () => Navigator.pop(context, _AvatarAction.gallery),
             ),
             if (hasPhoto)
@@ -145,7 +146,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 leading: Icon(Icons.delete_outline,
                     color: context.colors.error),
                 title: Text(
-                  'Supprimer la photo',
+                  context.l10n.deletePhotoAction,
                   style: TextStyle(color: context.colors.error),
                 ),
                 onTap: () => Navigator.pop(context, _AvatarAction.remove),
@@ -193,13 +194,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Photo de profil mise à jour')),
+        SnackBar(content: Text(context.l10n.profilePhotoUpdated)),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingAvatar = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec de l\'upload : $e')),
+        SnackBar(content: Text(context.l10n.uploadFailedWithError('$e'))),
       );
     }
   }
@@ -210,17 +211,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       builder: (_) => AlertDialog(
         shape:
             const RoundedRectangleBorder(borderRadius: AppRadius.brMd),
-        title: const Text('Supprimer la photo ?'),
-        content: const Text('Votre photo de profil sera retirée.'),
+        title: Text(context.l10n.deletePhoto),
+        content: Text(context.l10n.yourProfilePhotoWillBeRemoved),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: context.colors.error),
-            child: const Text('Supprimer'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -237,13 +238,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _uploadingAvatar = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Photo supprimée')),
+        SnackBar(content: Text(context.l10n.photoDeleted)),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingAvatar = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec : $e')),
+        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
       );
     }
   }
@@ -251,15 +252,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // ── Sauvegarde ──────────────────────────────────────────────────────
 
   Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
     final nom = _nameController.text.trim();
     final pseudo = _pseudoController.text.trim();
-
-    if (nom.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Le nom ne peut pas être vide')),
-      );
-      return;
-    }
 
     final nomChanged = nom != (_user?.nom ?? '');
     final pseudoChanged = pseudo != (_user?.pseudo ?? '');
@@ -281,7 +277,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Échec de l\'enregistrement : $e')),
+        SnackBar(content: Text(context.l10n.recordFailedWithError('$e'))),
       );
     }
   }
@@ -296,7 +292,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Modifier le profil'),
+        title: Text(context.l10n.editProfile),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -308,7 +304,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         strokeWidth: 2, color: context.colors.primary),
                   )
                 : Text(
-                    'Enregistrer',
+                    context.l10n.commonSave,
                     style: TextStyle(
                         color: context.colors.primary,
                         fontWeight: FontWeight.bold,
@@ -322,30 +318,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ? const LoadingState()
           : SingleChildScrollView(
               padding: AppSpacing.card,
-              child: Column(
+              child: Form(
+                key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: Column(
                 children: [
                   Center(child: _buildAvatar()),
                   const SizedBox(height: AppSpacing.xxxl + 8),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Nom',
+                  TextFormField(
+                    decoration: InputDecoration(
+                      labelText: context.l10n.name2,
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                     controller: _nameController,
+                    validator: Validators.required,
                   ),
                   AppSpacing.vGapXxl,
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Pseudo',
+                  TextFormField(
+                    decoration: InputDecoration(
+                      labelText: context.l10n.signupPseudoHint,
                       prefixIcon: Icon(Icons.alternate_email),
                     ),
                     controller: _pseudoController,
+                    validator: Validators.required,
                   ),
                   AppSpacing.vGapXxl,
                   TextField(
                     readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Téléphone (Téléphone Alanya)',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.phoneAlanyaPhone,
                       prefixIcon: Icon(Icons.phone_outlined),
                     ),
                     controller: TextEditingController(
@@ -370,6 +371,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                 ],
               ),
+              ),
             ),
     );
   }
@@ -387,13 +389,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           if (_uploadingAvatar)
             Positioned.fill(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
+                decoration: BoxDecoration(
+                  color: context.colors.scrim.withValues(alpha: 0.54),
                   shape: BoxShape.circle,
                 ),
-                child: const Center(
+                child: Center(
                   child: CircularProgressIndicator(
-                    color: AppColors.white,
+                    color: context.colors.onPrimary,
                     strokeWidth: 2.5,
                   ),
                 ),
@@ -409,7 +411,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(color: context.colors.surface, width: 3),
               ),
-              child: const Icon(Icons.camera_alt, color: AppColors.white,
+              child: Icon(Icons.camera_alt, color: context.colors.onPrimary,
                   size: AppIconSize.sm),
             ),
           ),

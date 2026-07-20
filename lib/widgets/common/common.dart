@@ -9,4 +9,5 @@ export 'app_badge.dart';
 export 'app_bottom_sheet.dart';
 export 'app_search_field.dart';
 export 'empty_state.dart';
+export 'offline_banner.dart';
 export 'status_chip.dart';

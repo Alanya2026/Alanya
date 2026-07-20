@@ -4,6 +4,7 @@ import '../db/app_database.dart';
 import 'contact_payload.dart';
 import 'location_payload.dart';
 import 'media_album.dart';
+import '../theme/locale_controller.dart';
 
 class ForwardResult {
   const ForwardResult({
@@ -84,28 +85,28 @@ String? resolveForwardCaption(LocalMessage source, String? userCaption) {
 String mediaLabelForType(int type, {String? mediaName}) {
   switch (type) {
     case 1:
-      return 'Photo';
+      return LocaleController.instance.l10n.photo2;
     case 2:
-      return 'Vidéo';
+      return LocaleController.instance.l10n.video2;
     case 3:
-      return 'Audio';
+      return LocaleController.instance.l10n.audio2;
     case 4:
-      return mediaName?.isNotEmpty == true ? mediaName! : 'Fichier';
+      return mediaName?.isNotEmpty == true ? mediaName! : LocaleController.instance.l10n.file2;
     case 5:
-      return 'Position';
+      return LocaleController.instance.l10n.location2;
     case 7:
-      return 'Contact';
+      return LocaleController.instance.l10n.contact2;
     default:
-      return 'Média';
+      return LocaleController.instance.l10n.mediaFallback;
   }
 }
 
 String previewTextForForward(LocalMessage message) {
-  if (message.isDeleted) return 'Message supprimé';
+  if (message.isDeleted) return LocaleController.instance.l10n.deletedMessage;
   if (message.type == 0) {
     return message.content?.trim().isNotEmpty == true
         ? message.content!.trim()
-        : 'Message vide';
+        : LocaleController.instance.l10n.emptyMessage;
   }
   if (message.type == 5) {
     return locationPreviewLabel(message.content);
@@ -125,7 +126,7 @@ String previewTextForForward(LocalMessage message) {
 }
 
 String previewTextForForwardAlbum(List<LocalMessage> items) {
-  if (items.isEmpty) return 'Album vide';
+  if (items.isEmpty) return LocaleController.instance.l10n.emptyAlbum;
   final caption = albumCaptionFromMessages(items);
   if (caption != null) return caption;
   return previewLabelForAlbumMessages(items);

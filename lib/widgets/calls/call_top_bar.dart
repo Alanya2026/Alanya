@@ -49,7 +49,7 @@ class CallTopBar extends StatelessWidget {
         children: [
           Semantics(
             button: true,
-            label: 'Réduire l\'appel',
+            label: context.l10n.minimizeCall,
             child: IconButton(
               icon: Icon(
                 CupertinoIcons.chevron_down,

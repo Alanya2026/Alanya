@@ -20,13 +20,16 @@ import '../../core/services/call_service.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/document_file_style.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
-import '../../core/utils/media_staging.dart';
 import '../../core/utils/media_viewer_items.dart';
 import '../../core/utils/rich_text_parser.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'view_once_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
@@ -34,9 +37,6 @@ import 'chat/link_preview_card.dart';
 import '../../core/services/pdf_thumbnail_service.dart';
 import '../../widgets/video_message_preview.dart';
 import '../../core/services/local_cache_repository.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_dimens.dart';
-import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
@@ -289,7 +289,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     if (widget.isGroup || widget.userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible d\'ouvrir la discussion')),
+          SnackBar(content: Text(context.l10n.unableToOpenTheConversation)),
         );
       }
       return null;
@@ -318,8 +318,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur lors de la création de la discussion'),
+          SnackBar(
+            content: Text(context.l10n.errorCreatingTheConversation),
           ),
         );
       }
@@ -353,12 +353,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         _blockedByThem = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contact débloqué')),
+        SnackBar(content: Text(context.l10n.contactUnblocked)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de débloquer : $e')),
+        SnackBar(content: Text(context.l10n.cannotUnblockWithError('$e'))),
       );
     }
   }
@@ -409,19 +409,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       appBar: _selectionMode ? _buildSelectionAppBar() : _buildChatAppBar(partnerTyping),
       body: Column(
         children: [
+          const OfflineBanner(wrapSafeArea: false),
           _buildPinnedBanner(),
           Expanded(
             child: convId == null
                 ? (widget.userId != null && !widget.isGroup
-                    ? const EmptyState(
+                    ? EmptyState(
                         icon: Icons.waving_hand_outlined,
-                        title: 'Aucun message',
+                        title: context.l10n.noMessages,
                         message:
-                            'Dites bonjour pour démarrer la conversation !',
+                            context.l10n.sayHelloToStartTheConversation,
                       )
-                    : const EmptyState(
+                    : EmptyState(
                         icon: Icons.chat_bubble_outline_rounded,
-                        title: 'Conversation introuvable',
+                        title: context.l10n.conversationNotFound,
                       ))
                 : StreamBuilder<List<LocalMessage>>(
                     stream: _chat.watchMessages(convId),
@@ -445,10 +446,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                               .toList();
 
                           if (messages.isEmpty && calls.isEmpty && !partnerTyping) {
-                            return const EmptyState(
+                            return EmptyState(
                               icon: Icons.waving_hand_outlined,
-                              title: 'Aucun message',
-                              message: 'Dites bonjour pour démarrer la conversation !',
+                              title: context.l10n.noMessages,
+                              message: context.l10n.sayHelloToStartTheConversation,
                             );
                           }
                           // Auto-scroll si déjà en bas (nouveau message, frappe…).
@@ -534,6 +535,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     );
   }
 
+
   PreferredSizeWidget _buildChatAppBar(bool partnerTyping) {
     return AppBar(
       titleSpacing: 0,
@@ -597,7 +599,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                     if (widget.isGroup) {
                       if (partnerTyping) {
                         return Text(
-                          'En train d\'écrire…',
+                          context.l10n.typing2,
                           style: context.text.bodySmall?.copyWith(
                             color: context.colors.primary,
                           ),
@@ -606,9 +608,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                       return _buildGroupMembersLine();
                     }
                     final label =
-                        partnerTyping ? 'en train d\'écrire…' : _presenceLabel();
+                        partnerTyping ? context.l10n.typing : _presenceLabel();
                     if (label.isEmpty) return const SizedBox.shrink();
-                    final online = !partnerTyping && label == 'En ligne';
+                    final online = !partnerTyping && label == context.l10n.online;
                     return Text(
                       label,
                       style: context.text.bodySmall?.copyWith(
@@ -656,18 +658,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         icon: const Icon(Icons.close),
         onPressed: _exitSelectionMode,
       ),
-      title: Text('$count sélectionné${count > 1 ? 's' : ''}'),
+      title: Text(context.l10n.selectedCount(count)),
       actions: [
         if (canForward)
           IconButton(
             icon: const Icon(Icons.forward),
-            tooltip: 'Transférer',
+            tooltip: context.l10n.forward,
             onPressed: _forwardSelected,
           ),
         if (canDelete)
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'Supprimer',
+            tooltip: context.l10n.commonDelete,
             onPressed: _showDeleteSelectedMenu,
           ),
       ],

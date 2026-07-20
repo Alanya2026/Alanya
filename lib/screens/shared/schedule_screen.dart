@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
-import '../../talky_api_client.dart';
 import '../../core/utils/app_log.dart';
+import '../../core/utils/validators.dart';
+import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../meetings/participant_picker_screen.dart';
+import 'package:intl/intl.dart';
+import '../../core/theme/locale_controller.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -16,6 +19,7 @@ class ScheduleScreen extends StatefulWidget {
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
@@ -25,7 +29,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   List<User> _selectedParticipants = [];
 
   static const _durations = [30, 60, 90, 120, 180];
-  static const _durationLabels = ['30 min', '1 h', '1 h 30', '2 h', '3 h'];
+
+  String _durationLabel(int minutes) {
+    final l10n = context.l10n;
+    if (minutes < 60) return l10n.minutesShort(minutes);
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return m == 0 ? l10n.hoursShort(h) : l10n.hoursAndMinutesShort(h, m);
+  }
 
   @override
   void dispose() {
@@ -41,7 +52,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(primary: context.colors.primary),
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(
+                primary: context.colors.primary,
+              ),
         ),
         child: child!,
       ),
@@ -55,7 +68,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       initialTime: _selectedTime,
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(primary: context.colors.primary),
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(
+                primary: context.colors.primary,
+              ),
         ),
         child: child!,
       ),
@@ -69,7 +84,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       MaterialPageRoute(
         builder: (_) => ParticipantPickerScreen(
           initialSelected: _selectedParticipants,
-          confirmLabel: 'Confirmer',
+          confirmLabel: context.l10n.commonConfirm,
           isVideo: _typeMedia == 0,
         ),
       ),
@@ -78,14 +93,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
     final title = _titleController.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Veuillez saisir un titre pour la réunion')),
-      );
-      return;
-    }
 
     final startDateTime = DateTime(
       _selectedDate.year,
@@ -97,7 +107,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     if (startDateTime.isBefore(DateTime.now())) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La date doit être dans le futur')),
+        SnackBar(content: Text(context.l10n.dateMustBeInTheFuture)),
       );
       return;
     }
@@ -131,7 +141,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de créer la réunion, réessayez')),
+          SnackBar(content: Text(context.l10n.unableToCreateTheMeetingTry)),
         );
       }
     }
@@ -143,29 +153,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (_selectedDate.year == now.year &&
         _selectedDate.month == now.month &&
         _selectedDate.day == now.day) {
-      return "Aujourd'hui";
+      return context.l10n.today;
     }
     if (_selectedDate.year == tomorrow.year &&
         _selectedDate.month == tomorrow.month &&
         _selectedDate.day == tomorrow.day) {
-      return 'Demain';
+      return context.l10n.tomorrow;
     }
-    const months = [
-      '',
-      'Jan',
-      'Fév',
-      'Mar',
-      'Avr',
-      'Mai',
-      'Jun',
-      'Jul',
-      'Aoû',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Déc',
-    ];
-    return '${_selectedDate.day} ${months[_selectedDate.month]} ${_selectedDate.year}';
+    final locale = LocaleController.instance.resolvedLocale.toLanguageTag();
+    final month = DateFormat.MMM(locale).format(_selectedDate);
+    return '${_selectedDate.day} $month ${_selectedDate.year}';
   }
 
   @override
@@ -176,7 +173,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Planifier une réunion'),
+        title: Text(context.l10n.scheduleAMeeting),
         actions: [
           _isLoading
               ? const Padding(
@@ -191,7 +188,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               : TextButton(
                   onPressed: _save,
                   child: Text(
-                    'Créer',
+                    context.l10n.create,
                     style: TextStyle(
                       color: context.colors.primary,
                       fontWeight: FontWeight.bold,
@@ -204,18 +201,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
       body: SingleChildScrollView(
         padding: AppSpacing.card,
-        child: Column(
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Titre
-            TextField(
+            TextFormField(
               controller: _titleController,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
+              validator: Validators.required,
               style: context.text.headlineSmall
                   ?.copyWith(fontWeight: FontWeight.w500),
               decoration: InputDecoration(
-                hintText: 'Titre de la réunion',
+                hintText: context.l10n.meetingTitle,
                 hintStyle: context.text.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w400,
                   color: context.colors.onSurfaceVariant,
@@ -226,19 +227,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             const Divider(height: 32),
 
             // Type de réunion
-            _SectionLabel(label: 'Type'),
+            _SectionLabel(label: context.l10n.typeLabel),
             AppSpacing.vGapSm,
             Row(
               children: [
                 _TypeChip(
-                  label: 'Vidéo',
+                  label: context.l10n.video2,
                   icon: CupertinoIcons.videocam_fill,
                   selected: _typeMedia == 0,
                   onTap: () => setState(() => _typeMedia = 0),
                 ),
                 AppSpacing.hGapMd,
                 _TypeChip(
-                  label: 'Audio',
+                  label: context.l10n.audio2,
                   icon: CupertinoIcons.phone_fill,
                   selected: _typeMedia == 1,
                   onTap: () => setState(() => _typeMedia = 1),
@@ -248,7 +249,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             const SizedBox(height: AppSpacing.xxl + 4),
 
             // Date et heure
-            _SectionLabel(label: 'Date et heure'),
+            _SectionLabel(label: context.l10n.dateAndTime),
             AppSpacing.vGapSm,
             Row(
               children: [
@@ -272,7 +273,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             const SizedBox(height: AppSpacing.xxl + 4),
 
             // Durée
-            _SectionLabel(label: 'Durée'),
+            _SectionLabel(label: context.l10n.duration),
             AppSpacing.vGapSm,
             Wrap(
               spacing: AppSpacing.sm,
@@ -293,7 +294,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       borderRadius: AppRadius.brSm,
                     ),
                     child: Text(
-                      _durationLabels[i],
+                      _durationLabel(_durations[i]),
                       style: TextStyle(
                         color: selected
                             ? context.colors.onPrimary
@@ -311,7 +312,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             const SizedBox(height: AppSpacing.xxl + 4),
 
             // Participants
-            _SectionLabel(label: 'Participants'),
+            _SectionLabel(label: context.l10n.participants),
             AppSpacing.vGapSm,
             GestureDetector(
               onTap: _openParticipantPicker,
@@ -331,8 +332,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Expanded(
                       child: Text(
                         _selectedParticipants.isEmpty
-                            ? 'Ajouter des participants'
-                            : '${_selectedParticipants.length} participant${_selectedParticipants.length > 1 ? 's' : ''} sélectionné${_selectedParticipants.length > 1 ? 's' : ''}',
+                            ? context.l10n.addParticipants
+                            : context.l10n.participantsSelected(_selectedParticipants.length),
                         style: context.text.bodyMedium?.copyWith(
                           color: _selectedParticipants.isEmpty
                               ? context.colors.onSurfaceVariant
@@ -361,8 +362,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     avatar: CircleAvatar(
                       backgroundColor: context.colors.primary,
                       child: Text(initial,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 11)),
+                          style: TextStyle(
+                              color: context.colors.onPrimary, fontSize: 11)),
                     ),
                     label: Text(
                       user.nom.isNotEmpty ? user.nom : user.pseudo,
@@ -388,11 +389,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             _SummaryCard(
               date: _formatDate(),
               time: _selectedTime.format(context),
-              duration:
-                  _durationLabels[_durations.indexOf(_selectedDuration)],
+              duration: _durationLabel(_selectedDuration),
               typeMedia: _typeMedia,
             ),
           ],
+          ),
         ),
       ),
     );
@@ -538,22 +539,22 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Résumé',
+            context.l10n.summaryLabel,
             style: context.text.labelMedium?.copyWith(
               color: context.colors.primary,
               fontWeight: FontWeight.bold,
             ),
           ),
           AppSpacing.vGapSm,
-          _SummaryRow(icon: Icons.calendar_today_outlined, text: '$date à $time'),
+          _SummaryRow(icon: Icons.calendar_today_outlined, text: context.l10n.dateAtTime(date, time)),
           AppSpacing.vGapXs,
-          _SummaryRow(icon: Icons.timelapse, text: 'Durée : $duration'),
+          _SummaryRow(icon: Icons.timelapse, text: context.l10n.durationLabel(duration)),
           AppSpacing.vGapXs,
           _SummaryRow(
             icon: typeMedia == 0
                 ? Icons.videocam_outlined
                 : Icons.phone_outlined,
-            text: typeMedia == 0 ? 'Réunion vidéo' : 'Appel audio',
+            text: typeMedia == 0 ? context.l10n.videoMeeting : context.l10n.audioCall,
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import '../theme/locale_controller.dart';
 
 /// Payload JSON d'un message localisation (`type = 5`).
 class LocationPayload {
@@ -21,7 +22,7 @@ class LocationPayload {
     if (n != null && n.isNotEmpty) return n;
     final a = address?.trim();
     if (a != null && a.isNotEmpty) return a;
-    return 'Position';
+    return LocaleController.instance.l10n.location2;
   }
 
   String get previewLabel => '📍 $displayLabel';
@@ -74,7 +75,7 @@ class LocationPayload {
 /// Aperçu conversation / notif pour un message type 5.
 String locationPreviewLabel(String? content) {
   final loc = LocationPayload.tryParse(content);
-  return loc?.previewLabel ?? '📍 Position';
+  return loc?.previewLabel ?? LocaleController.instance.l10n.location;
 }
 
 /// Reverse geocode Nominatim (timeout court, fallback silencieux).

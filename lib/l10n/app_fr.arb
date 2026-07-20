@@ -1,0 +1,1670 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Alanya",
+  "navChats": "Chats",
+  "navCalls": "Appels",
+  "navStatuses": "Statuts",
+  "navMeetings": "Réunions",
+  "navProfile": "Profil",
+  "offlineBanner": "Pas de connexion — les messages seront envoyés à la reconnexion",
+  "loginWelcome": "Bienvenue",
+  "loginSubtitle": "Connectez-vous pour continuer vers Alanya",
+  "loginPasswordHint": "Mot de passe",
+  "loginForgotPassword": "Mot de passe oublié ?",
+  "loginSubmit": "Se connecter",
+  "loginNoAccount": "Pas encore de compte ?",
+  "loginSignUp": "S'inscrire",
+  "signupTitle": "Créer un compte",
+  "signupSubtitle": "Rejoignez la communauté Alanya",
+  "signupNameHint": "Nom complet",
+  "signupPseudoHint": "Pseudo",
+  "signupEmailHint": "Adresse e-mail",
+  "signupPasswordHint": "Mot de passe",
+  "signupSubmit": "S'inscrire",
+  "signupHasAccount": "Déjà un compte ?",
+  "signupLogin": "Se connecter",
+  "validatorRequired": "Champ requis",
+  "validatorEmail": "Email invalide",
+  "validatorMinLength": "Au moins {n} caractères",
+  "@validatorMinLength": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "validatorOtp6": "Code OTP à 6 chiffres",
+  "validatorPasswordMatch": "Les mots de passe ne correspondent pas",
+  "unknownSender": "Inconnu",
+  "statusPending": "En attente",
+  "statusSent": "Envoyé",
+  "statusDelivered": "Livré",
+  "statusRead": "Lu",
+  "statusFailedRetry": "Échec — touchez pour réessayer",
+  "retry": "Réessayer",
+  "forgotPasswordTitle": "Récupération du mot de passe",
+  "forgotEmailTitle": "Entrez votre email",
+  "forgotEmailSubtitle": "Un code OTP sera envoyé à votre email",
+  "forgotEmailHint": "E-mail",
+  "forgotOtpTitle": "Vérification du code",
+  "forgotOtpSubtitle": "Entrez le code 6 chiffres envoyé à {email}",
+  "@forgotOtpSubtitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "forgotResendCode": "Renvoyer le code",
+  "forgotNewPasswordTitle": "Nouveau mot de passe",
+  "forgotNewPasswordSubtitle": "Entrez votre nouveau mot de passe",
+  "forgotNewPasswordHint": "Nouveau mot de passe",
+  "forgotConfirmPasswordHint": "Confirmer le mot de passe",
+  "settingsTitle": "Paramètres",
+  "settingsAppearance": "Apparence",
+  "settingsThemeLight": "Clair",
+  "settingsThemeDark": "Sombre",
+  "settingsThemeSystem": "Système",
+  "settingsLanguage": "Langue",
+  "settingsLangFr": "Français",
+  "settingsLangEn": "Anglais",
+  "settingsLangSystem": "Système",
+  "settingsMedia": "Médias",
+  "settingsAutoDownload": "Téléchargement automatique",
+  "settingsAutoDownloadSubtitle": "Photos, vidéos et fichiers reçus s’enregistrent dans Alanya",
+  "settingsPrivacy": "Confidentialité",
+  "settingsPrivacySubtitle": "Contacts bloqués",
+  "commonCancel": "Annuler",
+  "commonConfirm": "Confirmer",
+  "commonDelete": "Supprimer",
+  "commonSave": "Enregistrer",
+  "commonSend": "Envoyer",
+  "commonClose": "Fermer",
+  "commonRetry": "Réessayer",
+  "commonSearch": "Rechercher",
+  "commonLoading": "Chargement…",
+  "commonError": "Erreur",
+  "commonYes": "Oui",
+  "commonNo": "Non",
+  "commonOk": "OK",
+  "commonAccept": "Accepter",
+  "commonDecline": "Refuser",
+  "commonCallBack": "Rappeler",
+  "callMissed": "Appel manqué",
+  "callIncoming": "APPEL ENTRANT",
+  "errorWithDetails": "Échec : {error}",
+  "@errorWithDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "actionFailedWithError": "Action impossible : {error}",
+  "@actionFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotUnblockWithError": "Impossible de débloquer : {error}",
+  "@cannotUnblockWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadErrorWithDetails": "Erreur chargement : {error}",
+  "@loadErrorWithDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotOpenFileApp": "Aucune app pour ouvrir ce fichier ({message})",
+  "@cannotOpenFileApp": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotOpenFileAppAlt": "Aucune application pour ouvrir ce fichier ({message})",
+  "@cannotOpenFileAppAlt": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "membersCount": "Membres ({count})",
+  "@membersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupMembersCount": "Groupe • {count} membres",
+  "@groupMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pinnedMessagesCount": "Messages épinglés ({count})",
+  "@pinnedMessagesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectCount": "Sélectionner ({count})",
+  "@selectCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forwardAlbumCount": "Transférer l'album ({count})",
+  "@forwardAlbumCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maxMessages": "Maximum {count} messages",
+  "@maxMessages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maxVideos": "Maximum {count} vidéos.",
+  "@maxVideos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumFirstOnly": "Seules les {count} premières seront envoyées.",
+  "@albumFirstOnly": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoTooLarge": "Vidéo ignorée ({mb} Mo). Limite : 50 Mo.",
+  "@videoTooLarge": {
+    "placeholders": {
+      "mb": {
+        "type": "String"
+      }
+    }
+  },
+  "fileTooLarge": "Fichier trop volumineux ({mb} Mo). Limite : 50 Mo.",
+  "@fileTooLarge": {
+    "placeholders": {
+      "mb": {
+        "type": "String"
+      }
+    }
+  },
+  "minutesShort": "{minutes} min",
+  "@minutesShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "durationLabel": "Durée : {duration}",
+  "@durationLabel": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "todayAt": "Aujourd'hui · {time}",
+  "@todayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tomorrowAt": "Demain · {time}",
+  "@tomorrowAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "todayAtTime": "Aujourd'hui à {time}",
+  "@todayAtTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "seenAt": "Vu à {time}",
+  "@seenAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "seenYesterdayAt": "Vu hier à {time}",
+  "@seenYesterdayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "seenOnDate": "Vu le {day}/{month}",
+  "@seenOnDate": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "seenAtLower": "vu à {time}",
+  "@seenAtLower": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "seenYesterdayAtLower": "vu hier à {time}",
+  "@seenYesterdayAtLower": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "timeAgoDays": "il y a {count} j",
+  "@timeAgoDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeAgoHours": "il y a {count} h",
+  "@timeAgoHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeAgoMinutes": "il y a {count} min",
+  "@timeAgoMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pageOf": "Page {page} / {total}",
+  "@pageOf": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "usedByOwner": "Utilisé · {owner}",
+  "@usedByOwner": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "maxParticipants": "Maximum {count} participants",
+  "@maxParticipants": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectUpToVideo": "Sélectionnez jusqu'à {count} membres pour l'appel vidéo",
+  "@selectUpToVideo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectUpToVoice": "Sélectionnez jusqu'à {count} membres pour l'appel vocal",
+  "@selectUpToVoice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cannotLoadMeeting": "Impossible de charger la réunion : {error}",
+  "@cannotLoadMeeting": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotJoinMeeting": "Impossible de rejoindre : {error}",
+  "@cannotJoinMeeting": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotCreateMeeting": "Impossible de créer la réunion : {error}",
+  "@cannotCreateMeeting": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingConnectFailed": "Échec de la connexion à la réunion : {error}",
+  "@meetingConnectFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadFailedWithError": "Échec de l'upload : {error}",
+  "@uploadFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFailedWithError": "Échec de l'envoi : {error}",
+  "@sendFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "recordFailedWithError": "Échec de l'enregistrement : {error}",
+  "@recordFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "roleChangeError": "Erreur changement de rôle: {error}",
+  "@roleChangeError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noResultsFor": "Aucun résultat pour \"{query}\"",
+  "@noResultsFor": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "editedAt": "Modifié à {time}",
+  "@editedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "labelForwarded": "{label} transféré",
+  "@labelForwarded": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "labelForwardedTo": "{label} transféré vers {count} discussions",
+  "@labelForwardedTo": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forwardedToRatio": "Transféré vers {ok}/{total} discussions",
+  "@forwardedToRatio": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "callFrom": "Appel de {name}",
+  "@callFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "organizedBy": "Organisé par {name}",
+  "@organizedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "numberAssigned": "Numéro attribué : {number}",
+  "@numberAssigned": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "userIdLabel": "User {id}",
+  "@userIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "canContactAgain": "{name} pourra de nouveau vous contacter.",
+  "@canContactAgain": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "removePreferredContact": "Retirer {name} des contacts préférés",
+  "@removePreferredContact": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "videoMaxSelectable": "Vidéo : {count} max.",
+  "@videoMaxSelectable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "callBackName": "Rappeler {name}",
+  "@callBackName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaTitleNamed": "{name} — Médias",
+  "@mediaTitleNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "photosCount": "📷 {count} photos",
+  "@photosCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videosCount": "🎥 {count} vidéos",
+  "@videosCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "locationLabel": "📍 {label}",
+  "@locationLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "contactLabel": "👤 {label}",
+  "@contactLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "tapToOpenLabel": "{label} · appuyer pour ouvrir",
+  "@tapToOpenLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaAccessErrorMakeSureHttps": "Erreur d'accès aux médias. Vérifiez que HTTPS est activé ou que vous êtes sur localhost.",
+  "cannotAccessMicrophoneCameraCheckThat": "Impossible d'accéder au microphone/caméra. Vérifiez que l'application a les permissions.",
+  "thisActionCannotBeUndoneThe": "Cette action est irréversible. La réunion sera supprimée pour tous les participants.",
+  "ifYouReceivedAMeetingLink": "Si vous avez reçu un lien de réunion, vous pouvez cliquer sur le lien à la place.",
+  "microphoneErrorPleaseCheckYourPermissions": "Erreur microphone. Veuillez vérifier vos permissions et votre matériel audio.",
+  "permissionDeniedOpenSettingsOrPick": "Permission refusée. Ouvrez les réglages ou choisissez un point sur la carte.",
+  "statusesFromContactsWhoFavoritedYou": "Les statuts de vos contacts qui vous ont ajouté en favori s'afficheront ici.",
+  "enableLocationToUseYourPosition": "Activez la localisation pour utiliser votre position, ou déplacez la carte.",
+  "permissionDeniedYouCanStillPick": "Permission refusée. Vous pouvez quand même choisir un point sur la carte.",
+  "addContactsToFindThemQuickly": "Ajoutez des contacts pour les retrouver\nrapidement lors de vos réunions",
+  "editingIsOnlyPossibleWithin30": "La modification n'est possible que dans les 30 minutes suivant l'envoi",
+  "cameraErrorPleaseCheckYourPermissions": "Erreur caméra. Veuillez vérifier vos permissions et votre caméra.",
+  "saveTheseDetailsYouWillNeed": "Notez ces informations — elles vous serviront à vous connecter :",
+  "doYouWantToEndThe": "Voulez-vous mettre fin à la réunion pour tous les participants ?",
+  "freeEntryReservedPatternsOrStandard": "Saisie libre : patterns réservés ou numéros standard 8 chiffres",
+  "viewOnceMediaVisibleOnlyOnce": "Média à vue unique — visible une seule fois par le destinataire",
+  "youWillNoLongerSeeThis": "Vous ne verrez plus ce groupe dans votre liste de discussions.",
+  "cannotAccessDevicesCheckPermissions": "Impossible d'accéder aux appareils. Vérifiez les permissions.",
+  "permissionDeniedPleaseAllowMicrophoneCamera": "Permission refusée. Veuillez autoriser le microphone/caméra.",
+  "theyWillNoLongerBeAble": "Il ne pourra plus vous envoyer de messages ni vous appeler.",
+  "n8DigitsAutoGeneratedExcludingReserved": "8 chiffres (génération automatique, hors numéros réservés)",
+  "noMicrophoneCameraDeviceFoundOn": "Aucun appareil microphone/caméra trouvé sur votre système.",
+  "gpsUnavailableMoveTheMapTo": "GPS indisponible. Déplacez la carte pour choisir un point.",
+  "localMessagesInThisChatWill": "Les messages locaux de cette discussion seront supprimés.",
+  "oneOrMoreMessagesCannotBe": "Un ou plusieurs messages ne peuvent pas être transférés",
+  "mediaAccessErrorCheckHttpsOr": "Erreur d'accès aux médias. Vérifiez HTTPS ou localhost.",
+  "noResultsEnterAFullPattern": "Aucun résultat — saisissez un numéro pattern complet ",
+  "conversationDeletedLocallyServerUnreachable": "Discussion supprimée localement (serveur injoignable)",
+  "thisMessageCannotBeForwardedRight": "Ce message ne peut pas être transféré pour le moment",
+  "thisAlbumCannotBeForwardedRight": "Cet album ne peut pas être transféré pour le moment",
+  "selectedChatsAreNotArchived": "Les discussions sélectionnées ne sont pas archivées",
+  "enterTheMeetingCodeProvidedBy": "Entrez le code de réunion fourni par l'organisateur",
+  "startANewChatWithThe": "Démarrez une nouvelle discussion avec le bouton +.",
+  "thisMediaCannotBeForwardedRight": "Ce média ne peut pas être transféré pour le moment",
+  "reservationLimitedTo3Or4": "Réservation limitée aux numéros 3 ou 4 chiffres, ",
+  "selectedChatsAreAlreadyArchived": "Les discussions sélectionnées sont déjà archivées",
+  "selectedChatsAreAlreadyPinned": "Les discussions sélectionnées sont déjà épinglées",
+  "unableToAddParticipantsTryAgain": "Impossible d'ajouter les participants, réessayez",
+  "peopleYouBlockWillAppearHere": "Les personnes que vous bloquez apparaîtront ici.",
+  "unableToInviteParticipantsTryAgain": "Impossible d'inviter les participants, réessayez",
+  "pausedVoiceMessageTapToReturn": "En pause · Message vocal · Toucher pour revenir",
+  "sayHelloToStartTheConversation": "Dites bonjour pour démarrer la conversation !",
+  "noFreeNumberFoundInThe": "Aucun numéro libre trouvé dans la liste admin",
+  "unableToDeleteTheMeetingTry": "Impossible de supprimer la réunion, réessayez",
+  "yourPastAndReceivedCallsWill": "Vos appels passés et reçus apparaîtront ici.",
+  "microphoneCameraPermissionDenied": "Permission refusée pour le microphone/caméra",
+  "unableToRemoveThisContactTry": "Impossible de retirer ce contact, réessayez",
+  "newChatUnavailableOffline": "Nouvelle discussion indisponible hors ligne",
+  "messageNotFoundInThisConversation": "Message introuvable dans cette conversation",
+  "numberMustContainOnlyDigits": "Le numéro ne doit contenir que des chiffres",
+  "invalidNumber34Or8": "Numéro invalide : 3, 4 ou 8 chiffres requis",
+  "errorCreatingTheConversation": "Erreur lors de la création de la discussion",
+  "unableToLeaveTheGroupTry": "Impossible de quitter le groupe, réessayez",
+  "unableToPostTheStatusTry": "Impossible de publier le statut, réessayez",
+  "unableToAddThisContactTry": "Impossible d'ajouter ce contact, réessayez",
+  "canBeOpenedOnlyOnceThen": "Ouvrable une seule fois, puis inaccessible",
+  "unableToLoadBlockedContacts": "Impossible de charger les contacts bloqués",
+  "enterANumberOrChooseA": "Entrez un numéro ou choisissez un contact",
+  "unableToCreateTheMeetingTry": "Impossible de créer la réunion, réessayez",
+  "unableToCreateTheGroupTry": "Impossible de créer le groupe, réessayez",
+  "searchByNameUsernameOrPhone": "Rechercher par nom, pseudo ou téléphone…",
+  "assignAReservedNumberOptional": "Attribuer un numéro réservé (optionnel)",
+  "ajoutezDesContactsPourLesRetrouver": "Ajoutez des contacts pour les retrouver",
+  "unableToStartTheCallTry": "Impossible de lancer l'appel, réessayez",
+  "cannotInviteABlockedContact": "Impossible d'inviter un contact bloqué",
+  "manageUsersAndMonitoring": "Gérez les utilisateurs et surveillance",
+  "fromGalleryOrCamera": "Depuis la galerie ou l'appareil photo",
+  "passwordResetSuccessfully": "Mot de passe réinitialisé avec succès",
+  "reservedPatternDirectAssignment": "Pattern réservé (attribution directe)",
+  "unableToForwardTheMessages": "Impossible de transférer les messages",
+  "longPressToExitSelection": "Appui long pour quitter la sélection",
+  "unableToDownloadTheFile": "Impossible de télécharger le fichier",
+  "yourProfilePhotoWillBeRemoved": "Votre photo de profil sera retirée.",
+  "unableToForwardTheMessage": "Impossible de transférer le message",
+  "thisNumberCannotBeAssigned": "Ce numéro ne peut pas être attribué",
+  "unableToUpdateTheCountry": "Impossible de mettre à jour le pays",
+  "errorStartingTheCall": "Erreur lors du démarrage de l'appel",
+  "unableToDownloadTheMedia": "Impossible de télécharger le média",
+  "unableToUnblockThisContact": "Impossible de débloquer ce contact",
+  "unableToLoadNumbers": "Impossible de charger les numéros",
+  "searchByNameUsernameOr": "Rechercher par nom, pseudo ou ...",
+  "unableToCreateTheConversation": "Impossible de créer la discussion",
+  "noAudioVideoDeviceFound": "Aucun appareil audio/vidéo trouvé",
+  "unableToOpenTheConversation": "Impossible d'ouvrir la discussion",
+  "connectingTapToReturn": "Connexion… · Toucher pour revenir",
+  "unableToVerifyTheContact": "Impossible de vérifier le contact",
+  "meetingInvitationsAndReminders": "Invitations et rappels de réunion",
+  "errorGroupIdNotFound": "Erreur : ID du groupe introuvable",
+  "profileUnavailableTryAgain": "Profil non disponible, réessayez",
+  "cannotCallThisContact": "Appel impossible avec ce contact",
+  "unableToForwardTheAlbum": "Impossible de transférer l'album",
+  "thisGroupIsNoLongerAccessible": "Ce groupe n'est plus accessible.",
+  "youHaveBlockedThisUser": "Vous avez bloqué cet utilisateur",
+  "unableToDisplayTheMessage": "Impossible d'afficher le message",
+  "meetingInLessThan10Minutes": "Réunion dans moins de 10 minutes",
+  "addACaptionOptional": "Ajouter une légende (optionnel)",
+  "rapidementLorsDeVosReunions": "rapidement lors de vos réunions",
+  "alreadyInYourPreferredContacts": "Déjà dans vos contacts préférés",
+  "dateMustBeInTheFuture": "La date doit être dans le futur",
+  "longPressFailedTryAgain": "Échec appui long pour réessayer",
+  "eG112233441234OrLabel": "Ex. 11223344, 1234, ou libellé…",
+  "theOtherPartyIsBusy": "Votre correspondant est occupé.",
+  "viewAndUnblockContacts": "Voir et débloquer les contacts",
+  "thisActionCannotBeUndone": "Cette action est irréversible.",
+  "mediaIsNotReadyYet": "Le média n'est pas encore prêt",
+  "thisMediaIsNoLongerAvailable": "Ce média n'est plus disponible",
+  "yourSignInCredentials": "Vos identifiants de connexion",
+  "resetPassword": "Réinitialiser le mot de passe",
+  "microphonePermissionDenied": "Permission microphone refusée",
+  "noConversationToDelete": "Aucune discussion à supprimer",
+  "phoneAlanyaPhone": "Téléphone (Téléphone Alanya)",
+  "noOtherMembersToCall": "Aucun autre membre à appeler",
+  "actionFailedPleaseTryAgain": "Action impossible, réessayez",
+  "failedToAddParticipants": "Ajout de participants échoué",
+  "noArchivedConversations": "Aucune conversation archivée",
+  "noConnectionsRecorded": "Aucune connexion enregistrée",
+  "countryListUnavailable": "Liste des pays indisponible",
+  "profilePhotoUpdated": "Photo de profil mise à jour",
+  "searchByNameUsername": "Rechercher par nom, pseudo…",
+  "noConversationToClear": "Aucune discussion à effacer",
+  "historyWillBeDeleted": "L'historique sera supprimé.",
+  "addAtLeastOneMember": "Ajouter au moins un membre",
+  "searchChats": "Rechercher une discussion…",
+  "thisMediaHasAlreadyBeenOpened": "Ce média a déjà été ouvert",
+  "addAPreferredContact": "Ajouter un contact préféré",
+  "enterANumberToAdd": "Entrez un numéro à ajouter",
+  "noMeetingsToday": "Aucune réunion aujourd'hui",
+  "aCallIsAlreadyInProgress": "Un appel est déjà en cours",
+  "failedToCreateGroup": "Création du groupe échouée",
+  "turnOffSpeaker": "Désactiver le haut-parleur",
+  "noParticipantsConnected": "Aucun participant connecté",
+  "chooseFromGallery": "Choisir depuis la galerie",
+  "deleteConversation": "Supprimer la discussion ?",
+  "manualNumberEntry": "Saisie manuelle du numéro",
+  "thisMessageWasDeleted": "Ce message a été supprimé",
+  "deleteUser": "Supprimer l'utilisateur ?",
+  "mediaAccessError": "Erreur d'accès aux médias",
+  "addADescription": "Ajouter une description…",
+  "microphonePermissionDenied2": "Permission micro refusée",
+  "failedToLeaveGroup": "Quitter le groupe échoué",
+  "unableToOpenMaps": "Impossible d'ouvrir Maps",
+  "conversationNotFound": "Conversation introuvable",
+  "addParticipants": "Ajouter des participants",
+  "tapToDownload": "Appuyer pour télécharger",
+  "noUsersFound": "Aucun utilisateur trouvé",
+  "enterTheGroupName": "Entrez le nom du groupe",
+  "requiredExceptTier3": "Obligatoire sauf tier 3",
+  "deleteConversation2": "Supprimer la discussion",
+  "userNotFound": "Utilisateur introuvable",
+  "downloadFailed": "Échec du téléchargement",
+  "invalidUploadResponse": "Réponse upload invalide",
+  "enableLocation": "Activer la localisation",
+  "noUpcomingMeetings": "Aucune réunion à venir",
+  "exampleAbcDefgHij": "Exemple : abc-defg-hij",
+  "unblockThisContact": "Débloquer ce contact ?",
+  "clearMessages": "Effacer les messages ?",
+  "sendThisLocation": "Envoyer cette position",
+  "startVideoCall": "Démarrer l'appel vidéo",
+  "forwardUnavailable": "Transfert indisponible",
+  "startVoiceCall": "Démarrer l'appel vocal",
+  "noPastMeetings": "Aucune réunion passée",
+  "scheduleAMeeting": "Planifier une réunion",
+  "n34DigitsOrXxyyzztt": "3 / 4 ch. ou XXYYZZTT",
+  "groupCallInProgress": "Appel groupé en cours",
+  "deleteThisStatus": "Supprimer ce statut ?",
+  "mediaLinksAndDocs": "Médias, liens et docs",
+  "searchForACountry": "Rechercher un pays...",
+  "voiceMessageEnded": "Message vocal terminé",
+  "noPreferredContacts": "Aucun contact préféré",
+  "donTHaveAnAccount": "Pas encore de compte?",
+  "joinAMeeting": "Rejoindre une réunion",
+  "meetingDetails": "Détail de la réunion",
+  "noBlockedContacts": "Aucun contact bloqué",
+  "blockThisContact": "Bloquer ce contact ?",
+  "sendALocation": "Envoyer une position",
+  "createUser": "Créer un utilisateur",
+  "addACaption": "Ajouter une légende…",
+  "alanyaNumberRequired": "Numéro Alanya requis",
+  "selectACountry": "Sélectionnez un pays",
+  "noReservedNumbers": "Aucun numéro réservé",
+  "clearMessages2": "Effacer les messages",
+  "removeFromContacts": "Retirer des contacts",
+  "messageToForward": "Message à transférer",
+  "deletePhoto": "Supprimer la photo ?",
+  "unblockContact": "Débloquer le contact",
+  "loadingCountries": "Chargement des pays…",
+  "newChat": "Nouvelle discussion",
+  "typeYourStatus": "Tapez votre statut…",
+  "editMessage": "Modifier le message",
+  "noRecentStatus": "Aucun statut récent",
+  "closeSearch": "Fermer la recherche",
+  "sendLocation": "Envoyer la position",
+  "openSettings": "Ouvrir les réglages",
+  "statusReply": "Réponse à un statut",
+  "socketNotConnected": "Socket non connecté",
+  "deleteForEveryone": "Supprimer pour tous",
+  "meetingTitle": "Titre de la réunion",
+  "connecting": "Connexion en cours…",
+  "freeUnassigned": "Libre · non assigné",
+  "numberUnavailable": "Numéro indisponible",
+  "meetingNotFound": "Réunion introuvable",
+  "recentConnections": "Connexions récentes",
+  "replyToStatus": "Répondre au statut…",
+  "noSharedMedia": "Aucun média partagé",
+  "leaveGroup": "Quitter le groupe ?",
+  "typing": "en train d'écrire…",
+  "cancelMeeting": "Annuler la réunion",
+  "editProfile": "Modifier le profil",
+  "blockContact": "Bloquer le contact",
+  "groupNotFound": "Groupe introuvable",
+  "deleteForMe": "Supprimer pour moi",
+  "groupVideoCall": "Appel groupé vidéo",
+  "noRecentCalls": "Aucun appel récent",
+  "audioUnavailable": "Audio indisponible",
+  "typing2": "En train d'écrire…",
+  "numberOrLabel": "Numéro ou libellé…",
+  "albumToForward": "Album à transférer",
+  "mediaUnavailable": "Média indisponible",
+  "messageDetails": "Détails du message",
+  "endForEveryone": "Terminer pour tous",
+  "writeAMessage": "Écrire un message…",
+  "changeNumber": "Changer le numéro",
+  "countryUnavailable": "Pays indisponible",
+  "numberAvailable": "Numéro disponible",
+  "addAVideo": "Ajouter une vidéo",
+  "noCountryFound": "Aucun pays trouvé",
+  "addAPhoto": "Ajouter une photo",
+  "cameraDisabled": "Caméra désactivée",
+  "searchComingSoon": "Recherche à venir",
+  "takeAPhoto": "Prendre une photo",
+  "enableCamera": "Activer la caméra",
+  "switchCamera": "Changer de caméra",
+  "noChats": "Aucune discussion",
+  "callFailed": "Échec de l'appel.",
+  "retrySending": "Réessayer l'envoi",
+  "leaveGroup2": "Quitter le groupe",
+  "preferredContacts": "Contacts préférés",
+  "turnOffCamera": "Couper la caméra",
+  "messagesCleared": "Messages effacés",
+  "reservedNumbers": "Numéros réservés",
+  "meetingEnded": "Réunion terminée",
+  "newMeeting": "Nouvelle réunion",
+  "alanyaPhone": "Téléphone Alanya",
+  "deletedMessage": "Message supprimé",
+  "verifyCode": "Vérifier le code",
+  "notDeliveredYet": "Pas encore livré",
+  "someoneIsTyping": "Quelqu'un écrit…",
+  "lastWeek": "Dernière semaine",
+  "otherResults": "Autres résultats",
+  "changeMedia": "Changer le média",
+  "contactUnblocked": "Contact débloqué",
+  "downloading": "Téléchargement…",
+  "minimizeCall": "Réduire l'appel",
+  "createAGroup": "Créer un groupe",
+  "dashboard": "Tableau de bord",
+  "replySent": "Réponse envoyée",
+  "sessionExpired": "Session expirée",
+  "callInProgress": "Appel en cours…",
+  "createGroup": "Créer le groupe",
+  "newMessage": "Nouveau message",
+  "groupInfo": "Infos du groupe",
+  "placeACall": "Lancer un appel",
+  "newContact": "Nouveau contact",
+  "noAnswer": "Pas de réponse.",
+  "backgroundColor": "Couleur de fond",
+  "photoDeleted": "Photo supprimée",
+  "serverError": "Erreur serveur",
+  "noDocuments": "Aucun document",
+  "reservedNumber": "Numéro réservé",
+  "password": "Mot de passe *",
+  "notNow": "Pas maintenant",
+  "missedCalls": "Appels manqués",
+  "newStatus": "Nouveau statut",
+  "newGroup": "Nouveau groupe",
+  "noResults": "Aucun résultat",
+  "labelRequired": "Libellé requis",
+  "unlike": "Je n'aime plus",
+  "messages7d": "Messages (7j)",
+  "noContacts": "Aucun contact",
+  "callEnded": "Appel terminé",
+  "joinedOn": "Inscrit(e) le",
+  "uploadFailed": "Upload échoué",
+  "cameraOn": "Caméra active",
+  "cameraOff": "Caméra coupée",
+  "verifying": "Vérification…",
+  "reRecord": "Réenregistrer",
+  "videoComingSoon": "Vidéo à venir",
+  "dateAndTime": "Date et heure",
+  "noMessages": "Aucun message",
+  "lastCall": "Dernier appel",
+  "videoMeeting": "Réunion vidéo",
+  "groupName": "Nom du groupe",
+  "callComingSoon": "Appel à venir",
+  "noAnswer2": "Sans réponse",
+  "organizer": "Organisateur",
+  "noImages": "Aucune image",
+  "emptyMessage": "Message vide",
+  "rewind10S": "Reculer 10 s",
+  "pdfDocument": "Document PDF",
+  "speaker": "Haut-parleur",
+  "newCall": "Nouvel appel",
+  "lastView": "Dernière vue",
+  "receivedCalls": "Appels reçus",
+  "participants": "Participants",
+  "alreadyUsed": "Déjà utilisé",
+  "select": "Sélectionner",
+  "makeAdmin": "Rendre admin",
+  "statuses7d": "Statuts (7j)",
+  "forward10S": "Avancer 10 s",
+  "openWith": "Ouvrir avec…",
+  "groupCall": "Appel groupé",
+  "noVideos": "Aucune vidéo",
+  "chats": "Discussions",
+  "creating": "Création...",
+  "videoCall": "Appel vidéo",
+  "unpin": "Désépingler",
+  "micMuted": "Micro coupé",
+  "outgoingCalls": "Appels émis",
+  "micOn": "Micro actif",
+  "demote": "Rétrograder",
+  "audioCall": "Appel audio",
+  "description": "Description",
+  "unarchive": "Désarchiver",
+  "voiceCall": "Appel vocal",
+  "search": "Rechercher…",
+  "signOut": "Déconnexion",
+  "calls7d": "Appels (7j)",
+  "justNow": "à l'instant",
+  "notSet": "Non défini",
+  "myStatus": "Mon statut",
+  "noViews": "Aucune vue",
+  "connecting2": "Connexion…",
+  "forward": "Transférer",
+  "noLinks": "Aucun lien",
+  "emptyAlbum": "Album vide",
+  "message": "Message...",
+  "offline": "Hors ligne",
+  "viewOnce": "Vue unique",
+  "refresh": "Actualiser",
+  "location": "📍 Position",
+  "later": "Plus tard",
+  "warning": "Attention",
+  "seeAll": "Voir tout",
+  "forwarded": "Transféré",
+  "edited": "· modifié",
+  "unblock": "Débloquer",
+  "file": "📎 Fichier",
+  "results": "Résultats",
+  "join": "Rejoindre",
+  "allow": "Autoriser",
+  "recently": "Récemment",
+  "documents": "Documents",
+  "phone": "Téléphone",
+  "scheduled": "Planifiée",
+  "contact": "👤 Contact",
+  "gotIt": "J'ai noté",
+  "banReason": "Motif ban",
+  "used": "Utilisés",
+  "sentAt": "Envoyé à",
+  "pin": "Épingler",
+  "unpin2": "Détacher",
+  "username": "Pseudo *",
+  "reply": "Répondre",
+  "message2": "Message…",
+  "unban": "Débannir",
+  "online": "En ligne",
+  "edit": "Modifier",
+  "inProgress": "En cours",
+  "ended": "Terminée",
+  "location2": "Position",
+  "alreadyViewed": "Déjà vus",
+  "archived": "Archivés",
+  "files": "Fichiers",
+  "share": "Partager",
+  "document": "Document",
+  "activity": "Activité",
+  "album": "📷 Album",
+  "answered": "Répondu",
+  "upcoming": "À venir",
+  "generate": "Générer",
+  "audio": "🎵 Audio",
+  "photo": "📷 Photo",
+  "reply2": "Réponse",
+  "deliveredAt": "Livré à",
+  "gallery": "Galerie",
+  "meeting": "Réunion",
+  "next": "Suivant",
+  "dismiss": "Ignorer",
+  "file2": "Fichier",
+  "comingSoon": "Bientôt",
+  "recent": "Récents",
+  "label": "Libellé",
+  "invite": "Inviter",
+  "ended2": "Terminé",
+  "video": "🎥 Vidéo",
+  "contact2": "Contact",
+  "leave": "Quitter",
+  "favorites": "Favoris",
+  "gotIt2": "Compris",
+  "edited2": "Modifié",
+  "inactive": "Inactif",
+  "add": "Ajouter",
+  "member": "Membre",
+  "success": "Succès",
+  "ban": "Bannir",
+  "past": "Passés",
+  "videos": "Vidéos",
+  "copy": "Copier",
+  "camera": "Caméra",
+  "photos": "Photos",
+  "sending": "Envoi…",
+  "blocked": "Bloqué",
+  "added": "Ajouté",
+  "images": "Images",
+  "number": "Numéro",
+  "back": "Retour",
+  "missed": "Manqué",
+  "rejected": "Rejeté",
+  "links": "Liens",
+  "linkNoun": "Lien",
+  "timeZoneLabel": "Fuseau horaire",
+  "email": "Email",
+  "create": "Créer",
+  "name": "Nom *",
+  "title": "Titre",
+  "admin": "Admin",
+  "audio2": "Audio",
+  "active": "Actif",
+  "duration": "Durée",
+  "failure": "Échec",
+  "photo2": "Photo",
+  "copied": "Copié",
+  "video2": "Vidéo",
+  "theme": "Thème",
+  "all": "Tout",
+  "role": "Rôle",
+  "mute": "Muet",
+  "readAt": "Lu à",
+  "more": "Plus",
+  "country": "Pays",
+  "name2": "Nom",
+  "continueLabel": "Continuer",
+  "showLabel": "Afficher",
+  "hideLabel": "Masquer",
+  "selectedCount": "{count} sélectionné(s)",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "participantsAdded": "{count} participant(s) ajouté(s)",
+  "@participantsAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "participantsInvited": "{count} participant(s) invité(s)",
+  "@participantsInvited": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accepted": "Accepté",
+  "startAction": "Démarrer",
+  "likeAction": "J'aime",
+  "incomingCallsChannel": "Appels entrants",
+  "ongoingCallsChannel": "Appels en cours",
+  "viewsTitle": "Vues",
+  "keypadTitle": "Clavier",
+  "clearAction": "Effacer",
+  "scheduleAction": "Planifier",
+  "archiveAction": "Archiver",
+  "infoAction": "Infos",
+  "cannotPlaceCallCheckInternet": "Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.",
+  "connectionRequired": "Connexion requise",
+  "callImpossible": "Appel impossible.",
+  "errorAcceptingCall": "Erreur lors de l'acceptation de l'appel",
+  "userNotConnected": "Utilisateur non connecté",
+  "mediaUnavailableForTransfer": "Média indisponible pour le transfert",
+  "invalidPositionForTransfer": "Position invalide pour le transfert",
+  "invalidContactForTransfer": "Contact invalide pour le transfert",
+  "photoViewOnce": "📷 Photo · Vue unique",
+  "videoViewOnce": "🎥 Vidéo · Vue unique",
+  "videoCallPreview": "📹 Appel vidéo",
+  "voiceCallPreview": "📞 Appel vocal",
+  "anErrorOccurred": "Une erreur est survenue: {error}",
+  "@anErrorOccurred": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorColon": "Erreur: {error}",
+  "@errorColon": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePhotoAction": "Supprimer la photo",
+  "unavailableOffline": "Indisponible hors ligne",
+  "noParticipantsYet": "Aucun participant pour le moment",
+  "noMessagesYet": "Aucun message pour le moment",
+  "removeParticipantToAddAnother": "Retirez un participant pour en ajouter un autre.",
+  "noContactsYet": "Aucun contact pour le moment",
+  "voiceMessage": "Message vocal",
+  "paused": "En pause",
+  "recordOrImportAudio": "Enregistrez un vocal ou importez un fichier audio",
+  "unableToPostStatusWithError": "Impossible de publier le statut : {error}",
+  "@unableToPostStatusWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tapToAddYourStatus": "Appuyer pour ajouter votre statut",
+  "shareAContact": "Partager un contact",
+  "searchAContact": "Rechercher un contact",
+  "unmuteMic": "Activer le micro",
+  "muteMic": "Couper le micro",
+  "turnOnSpeaker": "Activer le haut-parleur",
+  "notAuthenticated": "Non authentifié",
+  "networkTimeout": "Timeout réseau",
+  "networkErrorWithDetails": "Erreur réseau: {error}",
+  "@networkErrorWithDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "invalidResponseWithCode": "Réponse invalide ({code})",
+  "@invalidResponseWithCode": {
+    "placeholders": {
+      "code": {
+        "type": "Object"
+      }
+    }
+  },
+  "noRefreshToken": "Pas de refresh token",
+  "refreshFailed": "Refresh échoué",
+  "addedToPreferredContacts": "{name} ajouté aux contacts préférés",
+  "@addedToPreferredContacts": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "approximateGpsSlow": "Position approximative (GPS lent).",
+  "notYetRead": "Pas encore lu",
+  "sentOnTapSend": "Appui sur envoyer",
+  "maxPhotos": "Maximum {count} photos.",
+  "@maxPhotos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "voiceViewOnce": "Vocal · vue unique",
+  "heCanContactYouAgain": "Il pourra de nouveau vous contacter.",
+  "unableToLoadNamed": "Impossible de charger {name}",
+  "@unableToLoadNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contactNotFound": "Contact introuvable",
+  "yesterday": "Hier",
+  "today": "Aujourd'hui",
+  "tomorrow": "Demain",
+  "nowLabel": "Maintenant",
+  "positionUnavailable": "Position indisponible",
+  "contactUnavailable": "Contact indisponible",
+  "tapToViewKind": "{kind} · Appuyer pour voir",
+  "@tapToViewKind": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "kindViewOnce": "{kind} · Vue unique",
+  "@kindViewOnce": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "viewOnceOpened": "Ouvert",
+  "recordingEllipsis": "Enregistrement…",
+  "unread": "Non lus",
+  "addAContact": "Ajouter un contact",
+  "meetingNamed": "Réunion {when}",
+  "@meetingNamed": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "dataUnavailable": "données indisponibles",
+  "sendCode": "Envoyer le code",
+  "unableToLoadCountryList": "Impossible de charger la liste des pays",
+  "maxAudioParticipantsHint": "Maximum {count} participants (appel audio). ",
+  "@maxAudioParticipantsHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "membersOnlyCount": "{count} membres",
+  "@membersOnlyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sendWithCount": "Envoyer ({count})",
+  "@sendWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "messagesCountLabel": "{count} messages",
+  "@messagesCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "messagesCountLabelOne": "{count} message",
+  "@messagesCountLabelOne": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deliveredAtTime": "Livré à {time}",
+  "@deliveredAtTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "readAtTime": "Lu à {time}",
+  "@readAtTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceMessageDurationTapToReturn": "{duration} · Message vocal · Toucher pour revenir",
+  "@voiceMessageDurationTapToReturn": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "durationTapToReturn": "{duration} · Toucher pour revenir",
+  "@durationTapToReturn": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionBannerTapToReturn": "{duration} · {type} · Toucher pour revenir",
+  "@sessionBannerTapToReturn": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "usedLabel": "Utilisé",
+  "banUnbanError": "Erreur ban/unban: {error}",
+  "@banUnbanError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteErrorWithDetails": "Erreur suppression: {error}",
+  "@deleteErrorWithDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadUsersError": "Erreur chargement utilisateurs: {error}",
+  "@loadUsersError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "limitReachedParticipants": "Maximum {total} participants en {media} (vous inclus)",
+  "@limitReachedParticipants": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "media": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaLabelVideo": "vidéo",
+  "mediaLabelAudio": "audio",
+  "activeStatusesTapToView": "{count} statut(s) actif(s) — appuyer pour voir",
+  "@activeStatusesTapToView": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewsCountLabel": "{count} vue(s)",
+  "@viewsCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dateAtTime": "{date} à {time}",
+  "@dateAtTime": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFeminineCount": "{count} sélectionnée(s)",
+  "@selectedFeminineCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectionRatio": "{count}/{max} sélectionné(s)",
+  "@selectionRatio": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "groupFallback": "Groupe",
+  "reservedPhoneSearchHelp": "Recherchez dans la liste admin ou saisissez un pattern complet (3 ch., 4 ch., ou 8 ch. XXYYZZTT). Les patterns peuvent être attribués directement sans être ajoutés à la liste.",
+  "reservedPhoneOnlyHint": "Uniquement 3 ou 4 chiffres, ou 8 chiffres XXYYZZTT (ex. 11 22 33 44). Ces formes sont exclus de l'inscription automatique.",
+  "messagesSummaryMulti": "{totalMessages} messages · {convCount} conversations",
+  "@messagesSummaryMulti": {
+    "placeholders": {
+      "totalMessages": {
+        "type": "int"
+      },
+      "convCount": {
+        "type": "int"
+      }
+    }
+  },
+  "messagesSummaryOne": "{count} nouveau message",
+  "@messagesSummaryOne": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "messagesSummaryMany": "{count} nouveaux messages",
+  "@messagesSummaryMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dateAtTimeFull": "{day}/{month}/{year} à {time}",
+  "@dateAtTimeFull": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      },
+      "year": {
+        "type": "int"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "todayTimeShort": "Aujourd'hui {time}",
+  "@todayTimeShort": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "sourceFileNotFound": "Fichier source introuvable : {path}",
+  "@sourceFileNotFound": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "copyImpossible": "Copie impossible : {error}",
+  "@copyImpossible": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "copyFailedPath": "Copie échouée : {path}",
+  "@copyFailedPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "albumCannotBeForwarded": "Cet album ne peut pas être transféré",
+  "userHashId": "Utilisateur #{id}",
+  "@userHashId": {
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
+  "listWithCount": "Liste ({count})",
+  "@listWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listLabel": "Liste",
+  "filterLabel": "Filtre",
+  "freePlural": "Libres",
+  "assignAction": "Attribuer",
+  "messagesChannelName": "Messages",
+  "searchEllipsis": "Rechercher...",
+  "callNoun": "Appel",
+  "allFilter": "Tous",
+  "audioViewOnce": "🎵 Audio · Vue unique",
+  "mediaFallback": "Média",
+  "fileWithName": "📎 {name}",
+  "@fileWithName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupsFilter": "Groupes",
+  "participantsSelected": "{count} participant(s) sélectionné(s)",
+  "@participantsSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "waitingForParticipants": "En attente des participants…",
+  "participantsCount": "{count} participants",
+  "@participantsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "durationParticipants": "{duration} · {count} participants",
+  "@durationParticipants": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "participantsRatio": "Participants ({current}/{max})",
+  "@participantsRatio": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "confirmWithParticipants": "{label} · {count} participant(s)",
+  "@confirmWithParticipants": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dotParticipantsCount": "· {count} participant(s)",
+  "@dotParticipantsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "text2": "Texte",
+  "publishAction": "Publier",
+  "importAction": "Importer",
+  "finishAction": "Terminer",
+  "recordAction": "Enregistrer",
+  "meLabel": "Moi",
+  "statusNoun": "Statut",
+  "youLabel": "Vous",
+  "hostLabel": "Hôte",
+  "guestLabel": "Invité",
+  "chatLabel": "Chat",
+  "summaryLabel": "Résumé",
+  "typeLabel": "Type",
+  "accountLabel": "Compte",
+  "adminDashboard": "Tableau de bord Admin",
+  "superAdmin": "Super Admin",
+  "inMinutes": "Dans {mins}min",
+  "@inMinutes": {
+    "placeholders": {
+      "mins": {
+        "type": "int"
+      }
+    }
+  },
+  "participantFallback": "Participant",
+  "userFallback": "Utilisateur",
+  "nameYouParen": "{name} (vous)",
+  "@nameYouParen": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contactsLabel": "Contacts",
+  "searchUserByNameOrUsername": "Recherchez un utilisateur par nom ou pseudo",
+  "endMeetingAction": "Terminer",
+  "hoursShort": "{hours} h",
+  "@hoursShort": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAndMinutesShort": "{hours} h {minutes}",
+  "@hoursAndMinutesShort": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "formatBold": "Gras",
+  "formatItalic": "Italique",
+  "formatUnderline": "Souligné",
+  "formatStrikethrough": "Barré",
+  "formatHandwriting": "Manuscrit",
+  "genderMale": "Homme",
+  "genderFemale": "Femme",
+  "avatarLabel": "Avatar",
+  "nameUsernamePasswordRequired": "Nom, pseudo et mot de passe requis",
+  "usersLabel": "Utilisateurs",
+  "bannedUsers": "Bannis",
+  "bannedLabel": "Banni",
+  "adminsLabel": "Admins",
+  "actionsLabel": "Actions",
+  "conversationsLabel": "Conversations",
+  "totalLabel": "Total",
+  "commonBlock": "Bloquer",
+  "messageNoun": "Message",
+  "albumNoun": "Album",
+  "favoriteSingular": "Favori",
+  "hangUp": "Raccrocher",
+  "viewAction": "Voir",
+  "invitationFrom": "Invitation de {name}",
+  "@invitationFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fileArchive": "Archive",
+  "reservationLimitedTo3Or4OrXxyyzztt": "Réservation limitée aux numéros 3 ou 4 chiffres, ou 8 chiffres au format XXYYZZTT (ex. 11 22 33 44)",
+  "discussionFallback": "Discussion",
+  "overviewSection": "Vue d'ensemble",
+  "rangeOfTotal": "{from}–{to} sur {total}",
+  "@rangeOfTotal": {
+    "placeholders": {
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "tryAnotherName": "Essayez un autre nom.",
+  "tryAnotherSearchTerm": "Essayez un autre terme de recherche.",
+  "andNOthers": "{count, plural, =1{… et 1 autre} other{… et {count} autres}}",
+  "@andNOthers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "voiceCallOutgoing": "Appel vocal sortant",
+  "voiceCallIncoming": "Appel vocal entrant",
+  "videoCallOutgoing": "Appel vidéo sortant",
+  "videoCallIncoming": "Appel vidéo entrant"
+}
