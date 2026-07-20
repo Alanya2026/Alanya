@@ -97,9 +97,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           .repository
           .syncPushSuppressionForLifecycle(true);
     } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
+      // Ne pas traiter `inactive` (ombre de notifs, transition iOS) comme
+      // background : sinon la suppression push est levée alors que le chat
+      // est encore ouvert → notif pour la conversation active.
       Provider.of<ChatProvider>(context, listen: false)
           .repository
           .syncPushSuppressionForLifecycle(false);

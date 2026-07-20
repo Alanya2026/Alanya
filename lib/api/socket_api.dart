@@ -125,6 +125,20 @@ extension SocketApi on TalkyApiClient {
     // Attache directement au socket s'il existe : `.on` accepte avant connect
     // et la livraison se déclenche dès qu'un event arrive (post auth:verified).
     _socket?.on(event, callback);
+
+    // Si auth:verified est déjà passé (connectSocket avant bind, appel, etc.),
+    // rejouer le catch-up pour ce listener — sinon flush/resync ne tournent
+    // qu'au prochain reconnect.
+    if (event == SocketEvents.authVerified && isSocketReady) {
+      debugPrint('[Socket] Replay auth:verified pour listener tardif');
+      scheduleMicrotask(() {
+        try {
+          callback({'replay': true});
+        } catch (e) {
+          debugPrint('[Socket] Replay auth:verified échoué: $e');
+        }
+      });
+    }
   }
 
   void offSocketEvent(String event) {
