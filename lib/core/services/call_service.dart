@@ -19,6 +19,7 @@ import 'connectivity_service.dart';
 import 'meeting_service.dart';
 import '../theme/locale_controller.dart';
 import 'call/ended_call_registry.dart';
+import 'call/pending_call_reject_store.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -113,10 +114,6 @@ class CallService extends ChangeNotifier {
   // callId déjà traités (acceptés/refusés) — évite de re-sonner sur un
   // incoming_call rejoué par le backend (auth replay).
   final Map<String, DateTime> _handledTerminalCallIds = {};
-
-  // File d'attente des refus émis avant que le socket soit prêt (cold start /
-  // decline depuis la notification). Rejoués à l'authentification du socket.
-  final Set<String> _pendingRejectCallerIds = {};
 
   // File d'attente des end_call perdus quand le socket n'est pas prêt.
   // Rejoués à l'authentification du socket (comme les rejects).

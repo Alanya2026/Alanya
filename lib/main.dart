@@ -448,6 +448,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
       debugPrint('[AuthWrapper] StatusProvider.bind échoué: $e');
     }
 
+    // Connecter le socket seulement après les listeners chat/status :
+    // sinon `message:received` / `auth:verified` peuvent être perdus.
+    apiClient.connectSocket();
+
     chatProvider.onSocketReadyHook = syncService.refreshStatuses;
 
     if (mounted) {

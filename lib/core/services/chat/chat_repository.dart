@@ -209,26 +209,37 @@ class ChatRepository {
     if (myId == 0) return;
     _myId = myId;
 
-    // Purges et éviction attendues au démarrage pour stabiliser la DB.
-    await _dao.purgeGhostMessages();
-    await _dao.purgeDuplicateOptimistics();
-    await _dao.purgeDuplicateByMsgId();
-    await _mediaCache.evictIfNeeded();
+    // Listeners AVANT toute I/O : sinon `message:received` / `auth:verified`
+    // tombés pendant les purges sont perdus (pas de buffer socket.io).
+    if (!_listenersBound) {
+      _listenersBound = true;
 
-    if (_listenersBound) return;
-    _listenersBound = true;
+      _api.onSocketEvent(SocketEvents.messageReceived, _handlers.onMessageReceived);
+      _api.onSocketEvent(SocketEvents.messageSent, _handlers.onMessageSent);
+      _api.onSocketEvent(SocketEvents.messageSendFailed, _handlers.onMessageSendFailed);
+      _api.onSocketEvent(SocketEvents.messageUpdated, _handlers.onMessageUpdated);
+      _api.onSocketEvent(SocketEvents.messageDeleted, _handlers.onMessageDeleted);
+      _api.onSocketEvent(SocketEvents.messagesDeleted, _handlers.onMessagesDeleted);
+      _api.onSocketEvent(SocketEvents.messagePinned, _handlers.onMessagePinned);
+      _api.onSocketEvent(SocketEvents.messageViewed, _handlers.onMessageViewed);
+      _api.onSocketEvent(SocketEvents.messageStatus, _handlers.onMessageStatus);
+      _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
+      _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
+    }
 
-    _api.onSocketEvent(SocketEvents.messageReceived, _handlers.onMessageReceived);
-    _api.onSocketEvent(SocketEvents.messageSent, _handlers.onMessageSent);
-    _api.onSocketEvent(SocketEvents.messageSendFailed, _handlers.onMessageSendFailed);
-    _api.onSocketEvent(SocketEvents.messageUpdated, _handlers.onMessageUpdated);
-    _api.onSocketEvent(SocketEvents.messageDeleted, _handlers.onMessageDeleted);
-    _api.onSocketEvent(SocketEvents.messagesDeleted, _handlers.onMessagesDeleted);
-    _api.onSocketEvent(SocketEvents.messagePinned, _handlers.onMessagePinned);
-    _api.onSocketEvent(SocketEvents.messageViewed, _handlers.onMessageViewed);
-    _api.onSocketEvent(SocketEvents.messageStatus, _handlers.onMessageStatus);
-    _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
-    _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
+    // Purges / éviction en arrière-plan : ne doivent pas retarder l'écoute.
+    unawaited(_runStartupPurges());
+  }
+
+  Future<void> _runStartupPurges() async {
+    try {
+      await _dao.purgeGhostMessages();
+      await _dao.purgeDuplicateOptimistics();
+      await _dao.purgeDuplicateByMsgId();
+      await _mediaCache.evictIfNeeded();
+    } catch (e) {
+      debugPrint('[ChatRepo] startup purges échouées: $e');
+    }
   }
 
   /// Détache les listeners socket et autorise un futur `bind` (cas logout/login

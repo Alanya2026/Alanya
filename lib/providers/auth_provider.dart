@@ -39,6 +39,8 @@ class AuthProvider extends ChangeNotifier {
         final cached = await _storage.getUser();
         if (cached != null) {
           _currentUser = cached;
+          // Tokens avant bind → connectSocket (sinon connect no-op sans JWT).
+          await _hydrateTokensFromStorage();
           _isInitialized = true;
           notifyListeners();
           unawaited(_checkAuthStatus());
@@ -58,16 +60,23 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Charge access/refresh token depuis le stockage vers le client API.
+  /// Ne connecte pas le socket : AuthWrapper le fait après `ChatProvider.bind`.
+  Future<bool> _hydrateTokensFromStorage() async {
+    final accessToken = await _storage.getAccessToken();
+    final refreshToken = await _storage.getRefreshToken();
+    if (accessToken == null) return false;
+    _apiClient.setToken(accessToken);
+    if (refreshToken != null) {
+      _apiClient.setRefreshToken(refreshToken);
+    }
+    return true;
+  }
+
   Future<void> _checkAuthStatus() async {
     try {
-      final accessToken = await _storage.getAccessToken();
-      final refreshToken = await _storage.getRefreshToken();
-      if (accessToken == null) return;
+      if (!await _hydrateTokensFromStorage()) return;
 
-      _apiClient.setToken(accessToken);
-      if (refreshToken != null) {
-        _apiClient.setRefreshToken(refreshToken);
-      }
       try {
         final userData = await _apiClient.getMe();
         _currentUser = User.fromJson(userData);
@@ -78,7 +87,8 @@ class AuthProvider extends ChangeNotifier {
         if (e.statusCode == 401 || e.statusCode == 403) rethrow;
         debugPrint('[AuthProvider] getMe offline, on garde le cache: ${e.message}');
       }
-      _apiClient.connectSocket();
+      // Pas de connectSocket ici : les listeners chat doivent être bindés
+      // avant, sinon `message:received` / `auth:verified` sont perdus.
     } catch (e) {
       debugPrint('[AuthProvider] ** _checkAuthStatus error: $e');
       try { await _storage.clearAll(); } catch (e2, st) {
@@ -110,7 +120,7 @@ class AuthProvider extends ChangeNotifier {
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
       await _storage.saveUser(_currentUser!);
-      _apiClient.connectSocket();
+      // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } on TalkyException catch (e) {
       _error = e.message;
       debugPrint('[AuthProvider] Login TalkyException: ${e.message} (Status: ${e.statusCode})');
@@ -149,7 +159,7 @@ class AuthProvider extends ChangeNotifier {
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
       await _storage.saveUser(_currentUser!);
-      _apiClient.connectSocket();
+      // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } on TalkyException catch (e) {
       _error = e.message;
       debugPrint('[AuthProvider] Register TalkyException: ${e.message} (Status: ${e.statusCode})');

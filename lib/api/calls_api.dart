@@ -34,4 +34,21 @@ extension CallsApi on TalkyApiClient {
       ),
     );
   }
+
+  /// Refus d'appel via HTTP (cold-start CallKit — pas besoin du socket).
+  Future<void> rejectCallHttp({
+    required int callerId,
+    String? callId,
+  }) async {
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/calls/reject'),
+        headers: _headers,
+        body: jsonEncode({
+          'callerId': callerId,
+          if (callId != null && callId.isNotEmpty) 'callId': callId,
+        }),
+      ),
+    );
+  }
 }
