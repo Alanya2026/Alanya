@@ -15,7 +15,6 @@ import '../../core/services/push_service.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
-import 'join_meet_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'participant_picker_screen.dart';
 import '../shared/schedule_screen.dart';
@@ -223,6 +222,45 @@ class _MeetsScreenState extends State<MeetsScreen>
     ).then((_) => _loadMeetings());
   }
 
+  Future<void> _showCreateActions() async {
+    await showAppBottomSheet<void>(
+      context: context,
+      isScrollControlled: false,
+      builder: (sheetCtx) => AppBottomSheet(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              leading: Icon(
+                CupertinoIcons.video_camera_solid,
+                color: context.colors.primary,
+              ),
+              title: Text(context.l10n.newMeeting),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _createNewMeeting();
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.calendar_month_outlined,
+                color: context.colors.primary,
+              ),
+              title: Text(context.l10n.scheduleAMeeting),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _openSchedule();
+              },
+            ),
+            AppSpacing.vGapSm,
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -257,35 +295,6 @@ class _MeetsScreenState extends State<MeetsScreen>
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _search = v.toLowerCase()),
             onClose: _toggleSearch,
-          ),
-          // Boutons d'action rapide
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.sm),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ActionCard(
-                    title: context.l10n.newMeeting,
-                    icon: CupertinoIcons.video_camera_solid,
-                    onTap: _createNewMeeting,
-                  ),
-                ),
-                AppSpacing.hGapMd,
-                Expanded(
-                  child: _ActionCard(
-                    title: context.l10n.join,
-                    icon: CupertinoIcons.keyboard,
-                    isOutline: true,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const JoinMeetScreen()),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
           Expanded(
             child: _isLoading
@@ -332,10 +341,10 @@ class _MeetsScreenState extends State<MeetsScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: 'meets_schedule_fab',
-        onPressed: _openSchedule,
+        heroTag: 'meets_create_fab',
+        onPressed: _showCreateActions,
         elevation: 4,
-        tooltip: context.l10n.scheduleAMeeting,
+        tooltip: context.l10n.newMeeting,
         child: const Icon(Icons.add),
       ),
     );
@@ -578,68 +587,3 @@ class _MeetingCard extends StatelessWidget {
   }
 }
 
-// ─── Carte d'action rapide ─────────────────────────────��──────────────────────
-
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({
-    required this.title,
-    required this.icon,
-    required this.onTap,
-    this.isOutline = false,
-  });
-
-  final String title;
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool isOutline;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 100,
-        padding: AppSpacing.card,
-        decoration: BoxDecoration(
-          color: isOutline ? context.colors.surface : context.colors.primary,
-          borderRadius: AppRadius.brLg,
-          border: isOutline
-              ? Border.all(color: context.colors.outline, width: 1.5)
-              : null,
-          boxShadow: isOutline ? null : AppShadows.brand,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.sm - 1),
-              decoration: BoxDecoration(
-                color: isOutline
-                    ? context.semantic.surfaceMuted
-                    : context.colors.onPrimary.withAlpha(51),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: isOutline
-                    ? context.colors.onSurface
-                    : context.colors.onPrimary,
-                size: AppIconSize.md - 2,
-              ),
-            ),
-            Text(
-              title,
-              style: context.text.labelLarge?.copyWith(
-                color: isOutline
-                    ? context.colors.onSurface
-                    : context.colors.onPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
