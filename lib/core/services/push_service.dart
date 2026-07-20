@@ -8,21 +8,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../firebase_options.dart';
-import '../../l10n/app_localizations.dart';
 import '../../talky_api_client.dart';
+import '../theme/locale_controller.dart';
 import 'callkit_service.dart';
 import 'local_notification_helper.dart';
 import 'notification_navigation.dart';
 import 'ringtone_service.dart';
-
-/// Locale pour l'isolate FCM (pas de [LocaleController] ici).
-AppLocalizations get _backgroundL10n {
-  final code =
-      WidgetsBinding.instance.platformDispatcher.locale.languageCode;
-  return lookupAppLocalizations(
-    code == 'en' ? const Locale('en') : const Locale('fr'),
-  );
-}
 
 const String _kDefaultFirebaseVapidKey =
     'BBde_uFKtUbLFwAQZ0Kd5ENuaPD1LuRf2ZvvHMPZ3wigioZpjIf7a9rh3pFcI2TRYRrC1YmoiRnAJ4n8io5QBTk';
@@ -68,7 +59,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         await CallKitService.instance.showIncoming(
           callId: (data['callId'] ?? data['roomId'] ?? '').toString(),
           callerId: (data['callerId'] ?? '').toString(),
-          callerName: (data['callerName'] ?? data['title'] ?? _backgroundL10n.callNoun).toString(),
+          callerName: (data['callerName'] ?? data['title'] ?? resolveL10n().callNoun).toString(),
           callerPhoto: data['photo']?.toString(),
           isVideo: data['isVideo'] == 'true',
           roomId: data['roomId']?.toString(),
@@ -90,9 +81,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
   if (kIsWeb) return;
-  // Filet de sécurité : si un jour un message arrive avec un bloc `notification`
-  // (affiché directement par le système), on n'en construit pas un doublon local.
-  // En fonctionnement normal les pushs sont data-only → cette garde ne bloque rien.
+  // Filet de sécurité : si le backend a inclus un bloc `notification`
+  // (affiché directement par le système Android app tuée), on n'en construit
+  // pas un doublon local. En foreground, onMessage affiche le MessagingStyle.
   if (message.notification != null) return;
   final data = Map<String, dynamic>.from(message.data);
   final type = data['type']?.toString();
@@ -247,20 +238,20 @@ class PushService {
     }
   }
 
-  /// Demande (une seule fois) l'exemption d'optimisation batterie sur Android.
-  /// Sans elle, le système peut empêcher le handler FCM de s'exécuter quand
-  /// l'app est fermée → notifications manquantes. Sur les versions récentes,
-  /// c'est le prérequis pour un comportement fiable façon WhatsApp.
+  /// Demande l'exemption d'optimisation batterie sur Android (nécessaire pour
+  /// réveiller CallKit via FCM quand l'app est tuée). Clé v2 : une nouvelle
+  /// proposition après le fix (l'ancien flag marquait aussi les refus).
   Future<void> _maybeRequestBatteryOptimizationExemption() async {
     if (kIsWeb || !Platform.isAndroid) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool('asked_battery_opt') == true) return;
+      if (prefs.getBool('asked_battery_opt_v2') == true) return;
       final status = await Permission.ignoreBatteryOptimizations.status;
       if (!status.isGranted) {
         await Permission.ignoreBatteryOptimizations.request();
       }
-      await prefs.setBool('asked_battery_opt', true);
+      // Une seule proposition pour cette génération de flag (pas de harcèlement).
+      await prefs.setBool('asked_battery_opt_v2', true);
     } catch (e) {
       debugPrint('[Push] exemption optimisation batterie: $e');
     }

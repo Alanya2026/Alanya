@@ -15,15 +15,35 @@ enum AppLocalePreference {
   english,
 }
 
+/// Locale plateforme FR/EN (FR par défaut) — utilisable hors [LocaleController]
+/// (ex. isolate FCM background).
+Locale platformResolvedLocale() {
+  final platform = WidgetsBinding.instance.platformDispatcher.locale;
+  if (platform.languageCode == 'en') return const Locale('en');
+  return const Locale('fr');
+}
+
+/// l10n safe pour CallKit / notifs / isolate FCM.
+///
+/// Utilise [LocaleController] s'il est prêt, sinon la locale plateforme.
+/// Ne lance jamais [StateError] — obligatoire dans
+/// [firebaseMessagingBackgroundHandler].
+AppLocalizations resolveL10n() {
+  final ctrl = LocaleController.maybeInstance;
+  if (ctrl != null) return ctrl.l10n;
+  return lookupAppLocalizations(platformResolvedLocale());
+}
+
 /// Contrôleur de locale persistant.
 ///
 /// Appeler [load] au démarrage. Passer [locale] à `MaterialApp.locale`
-/// (`null` = système). Utiliser [l10n] hors arbre de widgets (CallKit, notifs).
+/// (`null` = système). Utiliser [resolveL10n] hors arbre de widgets (CallKit, notifs).
 class LocaleController extends ChangeNotifier {
   static const _kKey = 'app_locale';
 
   /// Instance courante (services hors arbre : CallKit, notifs).
   static LocaleController? _instance;
+  static LocaleController? get maybeInstance => _instance;
   static LocaleController get instance =>
       _instance ?? (throw StateError('LocaleController not ready'));
 
@@ -56,10 +76,7 @@ class LocaleController extends ChangeNotifier {
       case AppLocalePreference.english:
         return const Locale('en');
       case AppLocalePreference.system:
-        final platform =
-            WidgetsBinding.instance.platformDispatcher.locale;
-        if (platform.languageCode == 'en') return const Locale('en');
-        return const Locale('fr');
+        return platformResolvedLocale();
     }
   }
 

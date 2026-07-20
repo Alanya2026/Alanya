@@ -11,13 +11,13 @@ import '../theme/locale_controller.dart';
 
 AndroidNotificationChannel get _kChannelMessages => AndroidNotificationChannel(
   'talky_messages',
-  LocaleController.instance.l10n.messagesChannelName,
+  resolveL10n().messagesChannelName,
   importance: Importance.high,
 );
 AndroidNotificationChannel get _kChannelMeetings => AndroidNotificationChannel(
   'talky_meetings',
-  LocaleController.instance.l10n.navMeetings,
-  description: LocaleController.instance.l10n.meetingInvitationsAndReminders,
+  resolveL10n().navMeetings,
+  description: resolveL10n().meetingInvitationsAndReminders,
   importance: Importance.max,
 );
 
@@ -128,7 +128,7 @@ class LocalNotificationHelper {
 
     if (suppressIfActive && await shouldSuppressMessage(conversationId)) return;
 
-    final senderName = title ?? data['title']?.toString() ?? LocaleController.instance.l10n.appTitle;
+    final senderName = title ?? data['title']?.toString() ?? resolveL10n().appTitle;
     final messageBody = body ?? bodyFromPayload(data);
     if (messageBody.isEmpty && senderName.isEmpty) return;
 
@@ -207,7 +207,7 @@ class LocalNotificationHelper {
 
     final type = data['type']?.toString() ?? '';
     final meetingId = int.tryParse(data['meetingId']?.toString() ?? '') ?? 0;
-    final title = data['title']?.toString() ?? LocaleController.instance.l10n.meeting;
+    final title = data['title']?.toString() ?? resolveL10n().meeting;
     final body = data['body']?.toString() ?? '';
     if (title.isEmpty && body.isEmpty) return;
 
@@ -259,7 +259,7 @@ class LocalNotificationHelper {
     if (kIsWeb) return;
     await ensureInitialized();
 
-    final notifTitle = title ?? data['title']?.toString() ?? LocaleController.instance.l10n.appTitle;
+    final notifTitle = title ?? data['title']?.toString() ?? resolveL10n().appTitle;
     final notifBody = body ?? data['body']?.toString() ?? '';
     if (notifTitle.isEmpty && notifBody.isEmpty) return;
 
@@ -335,29 +335,30 @@ class LocalNotificationHelper {
   }
 
   static String bodyFromPayload(Map<String, dynamic> data) {
+    final l10n = resolveL10n();
     final raw = data['body']?.toString();
     final normalized = displayConversationPreview(
       raw != null && raw.isNotEmpty ? raw : null,
-      LocaleController.instance.l10n,
+      l10n,
     );
     if (normalized.isNotEmpty) return normalized;
 
     final type = int.tryParse(data['msgType']?.toString() ?? '') ?? 0;
     switch (type) {
       case 1:
-        return LocaleController.instance.l10n.photo;
+        return l10n.photo;
       case 2:
-        return LocaleController.instance.l10n.video;
+        return l10n.video;
       case 3:
-        return LocaleController.instance.l10n.audio;
+        return l10n.audio;
       case 4:
-        return LocaleController.instance.l10n.file;
+        return l10n.file;
       case 5:
-        return LocaleController.instance.l10n.location;
+        return l10n.location;
       case 7:
-        return LocaleController.instance.l10n.contact;
+        return l10n.contact;
       default:
-        return LocaleController.instance.l10n.newMessage;
+        return l10n.newMessage;
     }
   }
 
@@ -500,7 +501,7 @@ class LocalNotificationHelper {
     }
 
     final convCount = liveIds.length;
-    final l10n = LocaleController.instance.l10n;
+    final l10n = resolveL10n();
     final summaryText = convCount > 1
         ? l10n.messagesSummaryMulti(totalMessages, convCount)
         : (totalMessages > 1
@@ -510,13 +511,13 @@ class LocalNotificationHelper {
     final inbox = InboxStyleInformation(
       lines,
       contentTitle: summaryText,
-      summaryText: LocaleController.instance.l10n.appTitle,
+      summaryText: resolveL10n().appTitle,
     );
 
     try {
       await _plugin.show(
         kMessagesSummaryId,
-        LocaleController.instance.l10n.appTitle,
+        resolveL10n().appTitle,
         summaryText,
         NotificationDetails(
           android: AndroidNotificationDetails(
@@ -551,11 +552,11 @@ class LocalNotificationHelper {
       return Message(
         m['body'] ?? '',
         ts,
-        Person(name: sender.isNotEmpty ? sender : LocaleController.instance.l10n.appTitle),
+        Person(name: sender.isNotEmpty ? sender : resolveL10n().appTitle),
       );
     }).toList();
 
-    final personName = latestSender.trim().isNotEmpty ? latestSender : LocaleController.instance.l10n.appTitle;
+    final personName = latestSender.trim().isNotEmpty ? latestSender : resolveL10n().appTitle;
     return MessagingStyleInformation(
       Person(name: personName),
       conversationTitle: isGroup && groupName.isNotEmpty ? groupName : null,

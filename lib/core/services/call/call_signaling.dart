@@ -77,14 +77,29 @@ extension CallSignaling on CallService {
         return;
       }
 
-      // Politique sonnerie (source unique) :
-      //  - auto-réponse depuis push → pas de sonnerie du tout.
-      //  - app en arrière-plan / fermée → CallKit gère déjà la sonnerie système.
-      //  - app au premier plan → RingtoneService (sonnerie système en boucle).
+      // Politique sonnerie / UI hors app :
+      //  - auto-réponse depuis push → pas de sonnerie.
+      //  - app en arrière-plan → CallKit (UI système + sonnerie), même si FCM
+      //    n'est pas encore arrivé / a échoué.
+      //  - app au premier plan → RingtoneService (IncomingCallScreen).
       if (_isAutoAnsweringFromPush) {
         debugPrint('[CallService] 🔇 Sonnerie entrante ignorée: auto-réponse en cours');
       } else if (!_isAppForeground) {
-        debugPrint('[CallService] 🔇 Sonnerie entrante déléguée à CallKit (app en arrière-plan)');
+        debugPrint('[CallService] 📲 CallKit depuis socket (app en arrière-plan)');
+        unawaited(
+          _callKit
+              .showIncoming(
+                callId: incomingCallId ?? '',
+                callerId: incomingCallerId,
+                callerName: _remoteUserName ?? resolveL10n().callNoun,
+                callerPhoto: _remoteUserPhoto,
+                isVideo: _isVideo,
+                silent: false,
+              )
+              .catchError((e) {
+            debugPrint('[CallService] ** CallKit showIncoming error: $e');
+          }),
+        );
       } else {
         _ringtone.startIncomingRingtone().catchError((e) {
           debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
@@ -226,12 +241,31 @@ extension CallSignaling on CallService {
           id: callerId,
           name: (_remoteUserName?.isNotEmpty == true)
               ? _remoteUserName!
-              : LocaleController.instance.l10n.participantFallback,
+              : resolveL10n().participantFallback,
           photo: _remoteUserPhoto,
         );
       }
       _status = CallStatus.incoming;
       notify();
+
+      if (!_isAppForeground) {
+        debugPrint('[CallService] 📲 CallKit groupe depuis socket (app en arrière-plan)');
+        unawaited(
+          _callKit
+              .showIncoming(
+                callId: _groupRoomId ?? '',
+                callerId: callerId ?? '',
+                callerName: _remoteUserName ?? resolveL10n().groupCall,
+                callerPhoto: _remoteUserPhoto,
+                isVideo: _isVideo,
+                roomId: _groupRoomId,
+                silent: false,
+              )
+              .catchError((e) {
+            debugPrint('[CallService] ** CallKit group showIncoming error: $e');
+          }),
+        );
+      }
     });
 
     // Nouveau participant dans le groupe

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import '../theme/locale_controller.dart';
+
 class IncomingCallAction {
   final String callId;
   final String callerId;
@@ -37,6 +38,10 @@ class CallKitService {
   StreamSubscription? _eventSub;
   IncomingCallAction? _pendingAction;
 
+  /// Dernier callId pour lequel [showIncoming] a été appelé (anti-doublon
+  /// FCM + socket en arrière-plan).
+  String? _lastShownCallId;
+
   Future<void> init() async {
     if (kIsWeb) return;
 
@@ -56,21 +61,29 @@ class CallKitService {
   }) async {
     if (kIsWeb) return;
 
+    final id = callId.trim();
+    if (id.isNotEmpty && id == _lastShownCallId) {
+      debugPrint('[CallKit] showIncoming ignoré (déjà affiché): $id');
+      return;
+    }
+    if (id.isNotEmpty) _lastShownCallId = id;
+
+    final l10n = resolveL10n();
     final params = CallKitParams(
       id: callId,
       nameCaller: callerName,
-      appName: LocaleController.instance.l10n.appTitle,
+      appName: l10n.appTitle,
       avatar: callerPhoto,
       handle: callerId,
       type: isVideo ? 1 : 0,
       duration: 30000,
-      textAccept: LocaleController.instance.l10n.commonAccept,
-      textDecline: LocaleController.instance.l10n.commonDecline,
+      textAccept: l10n.commonAccept,
+      textDecline: l10n.commonDecline,
       missedCallNotification: NotificationParams(
         showNotification: true,
         isShowCallback: false,
-        subtitle: LocaleController.instance.l10n.callMissed,
-        callbackText: LocaleController.instance.l10n.commonCallBack,
+        subtitle: l10n.callMissed,
+        callbackText: l10n.commonCallBack,
       ),
       extra: {
         'callId': callId,
@@ -86,8 +99,9 @@ class CallKitService {
         ringtonePath: silent ? '' : 'system_ringtone_default',
         backgroundColor: '#0955fa',
         actionColor: '#4CAF50',
-        incomingCallNotificationChannelName: LocaleController.instance.l10n.incomingCallsChannel,
-        missedCallNotificationChannelName: LocaleController.instance.l10n.missedCalls,
+        incomingCallNotificationChannelName: l10n.incomingCallsChannel,
+        missedCallNotificationChannelName: l10n.missedCalls,
+        isShowFullLockedScreen: true,
       ),
     );
 
@@ -103,10 +117,11 @@ class CallKitService {
   }) async {
     if (kIsWeb) return;
 
+    final l10n = resolveL10n();
     final params = CallKitParams(
       id: callId,
       nameCaller: displayName,
-      appName: LocaleController.instance.l10n.appTitle,
+      appName: l10n.appTitle,
       handle: handle,
       type: isVideo ? 1 : 0,
       duration: 0,
@@ -121,8 +136,8 @@ class CallKitService {
         ringtonePath: '',
         backgroundColor: '#0955fa',
         actionColor: '#4CAF50',
-        incomingCallNotificationChannelName: LocaleController.instance.l10n.ongoingCallsChannel,
-        missedCallNotificationChannelName: LocaleController.instance.l10n.missedCalls,
+        incomingCallNotificationChannelName: l10n.ongoingCallsChannel,
+        missedCallNotificationChannelName: l10n.missedCalls,
       ),
     );
 
@@ -145,6 +160,9 @@ class CallKitService {
 
   Future<void> endCall(String callId) async {
     if (kIsWeb) return;
+    if (callId.isNotEmpty && callId == _lastShownCallId) {
+      _lastShownCallId = null;
+    }
     try {
       await FlutterCallkitIncoming.endCall(callId);
     } catch (e) {
@@ -154,6 +172,7 @@ class CallKitService {
 
   Future<void> endAll() async {
     if (kIsWeb) return;
+    _lastShownCallId = null;
     try {
       await FlutterCallkitIncoming.endAllCalls();
     } catch (e) {
