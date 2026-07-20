@@ -93,6 +93,10 @@ dependencies:
   device_info_plus: ^10.1.2
   video_thumbnail: ^0.5.6
 
+  # Splash natif : doit être en dependencies (pas dev_dependencies), sinon
+  # GeneratedPluginRegistrant le référence en release sans module Android → build fail.
+  flutter_native_splash: ^2.4.4
+
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la
 # version Linux maintenue (l'app cible mobile, ceci débloque le build).
@@ -114,7 +118,6 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.3
-  flutter_native_splash: ^2.4.4
 
 flutter_launcher_icons:
   android: true

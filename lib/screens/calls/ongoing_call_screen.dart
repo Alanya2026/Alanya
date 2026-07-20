@@ -212,7 +212,11 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   }
 
   bool _isConnecting(CallService cs) {
-    return cs.status == CallStatus.outgoing || cs.status == CallStatus.connecting;
+    if (cs.status == CallStatus.outgoing || cs.status == CallStatus.connecting) {
+      return true;
+    }
+    // Cold-start : accepté depuis CallKit, en attente de l'offre SDP.
+    return cs.status == CallStatus.incoming && cs.isAutoAnsweringFromPush;
   }
 
   Widget? _buildPipChild(
@@ -252,12 +256,23 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     bool hasRemoteVideo, {
     required String localName,
     required String? localPhoto,
+    bool isConnecting = false,
   }) {
     if (isGroup) {
       return CallGroupGrid(
         streams: cs.groupRemoteStreams,
         roster: cs.groupRoster,
         activeSpeakers: cs.activeSpeakers,
+      );
+    }
+
+    // Pendant outgoing/connecting l'overlay affiche déjà l'avatar : pas de
+    // second portrait en dessous (sinon effet « double photo » floutée).
+    if (isConnecting && !cs.isVideo) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: context.callUi.audioBackdropGradient,
+        ),
       );
     }
 
@@ -307,6 +322,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
         return context.l10n.callInProgress;
       case CallStatus.connecting:
         return context.l10n.connecting2;
+      case CallStatus.incoming:
+        if (cs.isAutoAnsweringFromPush) return context.l10n.connecting2;
+        return '';
       case CallStatus.connected:
         return context.l10n.inProgress;
       case CallStatus.ended:
@@ -381,6 +399,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                       hasRemoteVideo,
                       localName: localName,
                       localPhoto: localPhoto,
+                      isConnecting: isConnecting,
                     ),
 
                     if (isConnecting)

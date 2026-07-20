@@ -328,6 +328,7 @@ class MessageSender {
         isStatusReply: isStatusReply,
         isForwarded: isForwarded,
         isViewOnce: isViewOnce,
+        clickSentAt: now,
       );
     } catch (e) {
       await handleUploadFailure(clientId, e, 'upload média échoué');
@@ -414,6 +415,7 @@ class MessageSender {
         mediaName: name,
         mediaDuration: item.duration,
         isForwarded: isForwarded,
+        clickSentAt: now,
       ));
     }
 
@@ -430,6 +432,7 @@ class MessageSender {
           mediaName: p.mediaName,
           mediaDuration: p.mediaDuration,
           isForwarded: p.isForwarded,
+          clickSentAt: p.clickSentAt,
         );
       } catch (e) {
         await handleUploadFailure(p.clientId, e, 'upload album item échoué');
@@ -481,6 +484,7 @@ class MessageSender {
     int? replyToID,
     String? replyToContent,
     int isStatusReply = 0,
+    DateTime? clickSentAt,
   }) async {
     if (!_inFlightUploads.add(clientId)) {
       debugPrint('[MessageSender] upload déjà en cours pour $clientId');
@@ -526,6 +530,12 @@ class MessageSender {
             isStatusReply: isStatusReply,
             isForwarded: isForwarded,
             isViewOnce: isViewOnce,
+            // Sans ce champ, les médias (photo/vidéo) envoyés via upload de
+            // fichier n'avaient jamais de clickSentAt : la ligne « Appui sur
+            // envoyer » restait vide côté destinataire. On retombe sur
+            // `row?.clickSentAt` (valeur locale déjà persistée à l'insertion)
+            // si l'appelant ne l'a pas fournie explicitement.
+            clickSentAt: clickSentAt ?? row?.clickSentAt,
           );
           return;
         } catch (e) {
@@ -558,6 +568,7 @@ class MessageSender {
       isStatusReply: m.isStatusReply,
       isForwarded: m.isForwarded,
       isViewOnce: m.isViewOnce,
+      clickSentAt: m.clickSentAt,
     );
   }
 
@@ -660,6 +671,7 @@ class _PendingAlbumUpload {
     required this.mediaName,
     this.mediaDuration,
     required this.isForwarded,
+    required this.clickSentAt,
   });
 
   final String clientId;
@@ -669,4 +681,5 @@ class _PendingAlbumUpload {
   final String mediaName;
   final int? mediaDuration;
   final bool isForwarded;
+  final DateTime clickSentAt;
 }

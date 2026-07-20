@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import '../theme/locale_controller.dart';
+import 'call/ended_call_registry.dart';
 
 class IncomingCallAction {
   final String callId;
@@ -62,6 +63,10 @@ class CallKitService {
     if (kIsWeb) return;
 
     final id = callId.trim();
+    if (id.isNotEmpty && await EndedCallRegistry.isEnded(id)) {
+      debugPrint('[CallKit] showIncoming ignoré (callId terminé): $id');
+      return;
+    }
     if (id.isNotEmpty && id == _lastShownCallId) {
       debugPrint('[CallKit] showIncoming ignoré (déjà affiché): $id');
       return;
@@ -152,7 +157,10 @@ class CallKitService {
   Future<void> setConnected(String callId) async {
     if (kIsWeb) return;
     try {
-      await FlutterCallkitIncoming.setCallConnected(callId);
+      await FlutterCallkitIncoming.setCallConnected(callId)
+          .timeout(const Duration(seconds: 3));
+    } on TimeoutException {
+      debugPrint('[CallKit] setCallConnected timeout callId=$callId');
     } catch (e) {
       debugPrint('[CallKit] setCallConnected error: $e');
     }
@@ -160,8 +168,12 @@ class CallKitService {
 
   Future<void> endCall(String callId) async {
     if (kIsWeb) return;
-    if (callId.isNotEmpty && callId == _lastShownCallId) {
-      _lastShownCallId = null;
+    final id = callId.trim();
+    if (id.isNotEmpty) {
+      await EndedCallRegistry.markEnded(id);
+      if (id == _lastShownCallId) {
+        _lastShownCallId = null;
+      }
     }
     try {
       await FlutterCallkitIncoming.endCall(callId);
@@ -170,8 +182,12 @@ class CallKitService {
     }
   }
 
-  Future<void> endAll() async {
+  Future<void> endAll({String? callId}) async {
     if (kIsWeb) return;
+    final id = callId?.trim() ?? '';
+    if (id.isNotEmpty) {
+      await EndedCallRegistry.markEnded(id);
+    }
     _lastShownCallId = null;
     try {
       await FlutterCallkitIncoming.endAllCalls();

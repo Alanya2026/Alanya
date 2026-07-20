@@ -55,6 +55,7 @@ class MessageOutbox {
             isStatusReply: m.isStatusReply,
             isForwarded: m.isForwarded,
             isViewOnce: m.isViewOnce,
+            clickSentAt: m.clickSentAt,
           );
         } catch (e) {
           await _sender.handleUploadFailure(m.clientId, e, 'flush upload échoué pour ${m.clientId}');
@@ -116,6 +117,7 @@ class MessageOutbox {
             isStatusReply: m.isStatusReply,
             isForwarded: m.isForwarded,
             isViewOnce: m.isViewOnce,
+            clickSentAt: m.clickSentAt,
           );
         } catch (e) {
           await _sender.handleUploadFailure(m.clientId, e, 'retry upload échoué pour ${m.clientId}');

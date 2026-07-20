@@ -157,8 +157,9 @@ extension CallGroup on CallService {
   /// reset l'état local pour ne pas rester bloqué en CallStatus.incoming.
   Future<void> rejectGroupCall() async {
     if (_groupRoomId == null && _status != CallStatus.incoming) return;
+    _markTerminalCallId(_groupRoomId);
     await _ringtone.stop();
-    await _callKit.endAll();
+    await _callKit.endAll(callId: _groupRoomId);
     _groupRoster.clear();
     _groupRoomId = null;
     _remoteUserId = null;
@@ -170,6 +171,7 @@ extension CallGroup on CallService {
 
   Future<void> _terminateGroupCall() async {
     speakingDetector.stop();
+    _markTerminalCallId(_groupRoomId);
     for (final pc in _groupPeerConnections.values) {
       await pc.close();
     }
@@ -180,7 +182,7 @@ extension CallGroup on CallService {
     _groupRemoteDescSet.clear();
     _groupRoster.clear();
     await _releaseCallSession();
-    await _callKit.endAll();
+    await _callKit.endAll(callId: _groupRoomId);
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _groupRoomId = null;

@@ -23,6 +23,7 @@ import 'core/theme/locale_controller.dart';
 import 'core/services/media_download_preferences.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
+import 'core/services/call/ended_call_registry.dart';
 import 'core/services/local_cache_repository.dart';
 import 'core/services/local_hidden_store.dart';
 import 'core/services/meeting_service.dart';
@@ -327,7 +328,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
           final callId = active['callId'] as String? ?? '';
           if (callId.startsWith('meeting_')) {
             debugPrint('[AuthWrapper] ℹ CallKit réunion ignoré au cold start: $callId');
-          } else {
+          } else if (callId.isNotEmpty && await EndedCallRegistry.isEnded(callId)) {
+            debugPrint('[AuthWrapper] 🛡 CallKit terminé ignoré au cold start: $callId');
+            await CallKitService.instance.endAll(callId: callId);
+          } else if (mounted) {
             final callService = Provider.of<CallService>(context, listen: false);
             final isAccepted = active['isAccepted'] == true;
             if (isAccepted) {

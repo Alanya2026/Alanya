@@ -45,7 +45,7 @@ class CallConnectingOverlay extends StatelessWidget {
     }
 
     return Container(
-      color: callUi.backgroundSolid.withValues(alpha: 0.92),
+      color: callUi.backgroundSolid,
       alignment: Alignment.center,
       child: Column(
         mainAxisSize: MainAxisSize.min,

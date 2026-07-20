@@ -134,25 +134,31 @@ extension CallSignaling on CallService {
         _status = CallStatus.connected;
         _startDurationTimer();
         _startSpeakingDetection(groupMode: false);
+        // UI « En cours » tout de suite ; CallKit setConnected en arrière-plan.
+        notify();
         if (!kIsWeb) {
           await _markCallSessionConnected();
         }
       } catch (e) {
         debugPrint('[CallService] ** Erreur handleAnswer: $e');
         _status = CallStatus.idle;
+        notify();
       }
-      notify();
     });
 
     // Appel rejeté par le destinataire
-    _apiClient.onSocketEvent(SocketEvents.callRejected, (_) async {
+    _apiClient.onSocketEvent(SocketEvents.callRejected, (data) async {
       debugPrint('[CallService] 📞 Appel rejeté');
+      final callId = (data is Map ? data['callId'] : null)?.toString();
+      _markTerminalCallId(callId ?? _currentCallId);
       await _terminateCall();
     });
 
     // Appel terminé par l'autre côté
-    _apiClient.onSocketEvent(SocketEvents.callEnded, (_) async {
+    _apiClient.onSocketEvent(SocketEvents.callEnded, (data) async {
       debugPrint('[CallService] 📞 Appel terminé par l\'autre côté');
+      final callId = (data is Map ? data['callId'] : null)?.toString();
+      _markTerminalCallId(callId ?? _currentCallId);
       await _terminateCall();
     });
 
@@ -196,13 +202,15 @@ extension CallSignaling on CallService {
         return;
       }
       _cancelOutgoingTimeout();
-      _markTerminalCallId(_currentCallId);
+      final callId = (data is Map ? data['callId'] : null)?.toString();
+      _markTerminalCallId(callId ?? _currentCallId);
       await _terminateCall();
       _showTransientMessage(LocaleController.instance.l10n.noAnswer);
     });
 
-    // Socket (ré)authentifié : rejoue les refus mis en file avant la connexion.
+    // Socket (ré)authentifié : rejoue les fins d'appel et refus mis en file.
     _apiClient.onSocketEvent(SocketEvents.authVerified, (_) {
+      _flushPendingEndCalls();
       _flushPendingRejects();
     });
 

@@ -18,6 +18,7 @@ import '../utils/backend_url.dart';
 import 'connectivity_service.dart';
 import 'meeting_service.dart';
 import '../theme/locale_controller.dart';
+import 'call/ended_call_registry.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -116,6 +117,10 @@ class CallService extends ChangeNotifier {
   // File d'attente des refus émis avant que le socket soit prêt (cold start /
   // decline depuis la notification). Rejoués à l'authentification du socket.
   final Set<String> _pendingRejectCallerIds = {};
+
+  // File d'attente des end_call perdus quand le socket n'est pas prêt.
+  // Rejoués à l'authentification du socket (comme les rejects).
+  final List<Map<String, dynamic>> _pendingEndCalls = [];
 
   /// Hook optionnel après fin d'appel local (ex. resync historique).
   Future<void> Function()? onCallTerminatedHook;
@@ -251,13 +256,15 @@ class CallService extends ChangeNotifier {
     return false;
   }
 
-  /// Mémorise un callId ayant atteint un état terminal (accepté/refusé) pour
-  /// ignorer un `incoming_call` rejoué par le backend.
+  /// Mémorise un callId ayant atteint un état terminal (accepté/refusé/terminé)
+  /// pour ignorer un `incoming_call` rejoué et un FCM `call` tardif.
   void _markTerminalCallId(String? callId) {
     if (callId == null || callId.isEmpty) return;
     final now = DateTime.now();
     _handledTerminalCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 120);
     _handledTerminalCallIds[callId] = now;
+    // Persisté pour l'isolate FCM background (course call vs call_ended).
+    unawaited(EndedCallRegistry.markEnded(callId));
   }
 
   bool _isTerminalCallId(String? callId) {

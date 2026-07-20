@@ -92,6 +92,7 @@ extension CallOneToOne on CallService {
       _outgoingTimeoutTimer = Timer(CallService._outgoingTimeout, () async {
         if (_status == CallStatus.outgoing || _status == CallStatus.connecting) {
           debugPrint('[CallService] ⏰ Timeout local appel sortant — abandon');
+          _markTerminalCallId(_currentCallId);
           await _terminateCall();
           _showTransientMessage(LocaleController.instance.l10n.noAnswer);
         }
@@ -217,6 +218,9 @@ extension CallOneToOne on CallService {
       _status = CallStatus.connected;
       _startDurationTimer();
       _startSpeakingDetection(groupMode: false);
+      // Notifier l'UI immédiatement : l'audio WebRTC est prêt. La session
+      // CallKit/FGS ne doit pas bloquer le passage à « En cours » (cold-start).
+      notify();
       if (!kIsWeb) {
         await _acquireCallSession(
           isVideo: _isVideo,
@@ -226,7 +230,6 @@ extension CallOneToOne on CallService {
         );
         await _markCallSessionConnected();
       }
-      notify();
     } catch (e) {
       debugPrint('[CallService] Erreur answerCall: $e');
       debugPrint('[CallService] Type d\'erreur: ${e.runtimeType}');
@@ -254,17 +257,17 @@ extension CallOneToOne on CallService {
 
   /// Rejette l'appel entrant.
   Future<void> rejectCall() async {
-    if (_remoteUserId == null) return;
-
-    // Mémorise le callId comme terminal pour ignorer un rejeu `incoming_call`.
+    // Toujours nettoyer CallKit/sonnerie même sans remoteUserId (écran fantôme).
     _markTerminalCallId(_currentCallId);
 
     await _ringtone.stop();
-    await _callKit.endAll();
+    await _callKit.endAll(callId: _currentCallId);
 
-    _apiClient.sendSocketEvent(SocketEvents.rejectCall, {
-      'callerId': _remoteUserId.toString(),
-    });
+    if (_remoteUserId != null) {
+      _apiClient.sendSocketEvent(SocketEvents.rejectCall, {
+        'callerId': _remoteUserId.toString(),
+      });
+    }
 
     _resetCallState();
     _status = CallStatus.idle;
@@ -275,23 +278,44 @@ extension CallOneToOne on CallService {
   Future<void> endCall() async {
     _callEndedByUs = true;
     debugPrint('[CallService] 📞 endCall() - Appel terminé par nous');
+    _markTerminalCallId(_currentCallId);
+
     if (_remoteUserId != null) {
       final mode = _status == CallStatus.connected
           ? await _webrtc.detectConnectionMode()
           : null;
-      _apiClient.sendSocketEvent(SocketEvents.endCall, {
+      final payload = <String, dynamic>{
         'targetUserId': _remoteUserId.toString(),
         if (mode != null) 'mode': mode,
-      });
+      };
+      _emitEndCallOrEnqueue(payload);
     }
     await _terminateCall();
   }
 
+  void _emitEndCallOrEnqueue(Map<String, dynamic> payload) {
+    if (_apiClient.isSocketReady) {
+      try {
+        _apiClient.sendSocketEvent(SocketEvents.endCall, payload);
+      } catch (e) {
+        debugPrint('[CallService] endCall socket error: $e');
+        _pendingEndCalls.add(payload);
+      }
+    } else {
+      debugPrint('[CallService] ⏳ Socket non prêt → end_call mis en file');
+      _pendingEndCalls.add(payload);
+      if (!_apiClient.isSocketConnected) {
+        _apiClient.connectSocket();
+      }
+    }
+  }
+
   Future<void> _terminateCall() async {
     speakingDetector.stop();
+    _markTerminalCallId(_currentCallId);
     await _ringtone.stop();
     await _releaseCallSession();
-    await _callKit.endAll();
+    await _callKit.endAll(callId: _currentCallId);
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _resetCallState();

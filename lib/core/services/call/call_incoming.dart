@@ -12,13 +12,20 @@ extension CallIncoming on CallService {
   }) async {
     debugPrint('[CallService] 📲 acceptIncomingCallFromPush callId=$callId caller=$callerId');
 
+    if (callId.isNotEmpty &&
+        (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
+      debugPrint('[CallService] 🛡 acceptIncoming ignoré (callId terminé): $callId');
+      await _callKit.endAll(callId: callId);
+      return;
+    }
+
     if (!_apiClient.isSocketConnected) {
       _apiClient.connectSocket();
     }
 
     _remoteUserId = int.tryParse(callerId);
     _remoteUserName = callerName;
-    _remoteUserPhoto = callerPhoto;
+    _remoteUserPhoto = normalizeBackendUrl(callerPhoto);
     _isVideo = isVideo;
     _currentCallId = callId.isNotEmpty ? callId : null;
     _autoAnswerOnNextIncoming = true;
@@ -50,10 +57,33 @@ extension CallIncoming on CallService {
     required bool isVideo,
     String? roomId,
   }) {
-    // Un appel est déjà en cours de traitement → ne pas écraser l'état.
+    unawaited(_prepareIncomingFromCallKitAsync(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      callerPhoto: callerPhoto,
+      isVideo: isVideo,
+      roomId: roomId,
+    ));
+  }
+
+  Future<void> _prepareIncomingFromCallKitAsync({
+    required String callId,
+    required String callerId,
+    required String callerName,
+    String? callerPhoto,
+    required bool isVideo,
+    String? roomId,
+  }) async {
     if (_status != CallStatus.idle) return;
     if (callId.startsWith('meeting_')) {
       debugPrint('[CallService] 🛡 ignore incoming CallKit meeting callId=$callId');
+      return;
+    }
+    if (callId.isNotEmpty &&
+        (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
+      debugPrint('[CallService] 🛡 ignore CallKit terminé: $callId');
+      await _callKit.endAll(callId: callId);
       return;
     }
     final isGroupCall = roomId != null && roomId.isNotEmpty;
@@ -66,11 +96,13 @@ extension CallIncoming on CallService {
       debugPrint('[CallService] 🛡 ignore incoming CallKit sans identité exploitable');
       return;
     }
+    if (_status != CallStatus.idle) return;
+
     debugPrint('[CallService] 📲 prepareIncomingFromCallKit callId=$callId caller=$callerId');
 
     _remoteUserId = parsedCallerId;
     _remoteUserName = callerName;
-    _remoteUserPhoto = callerPhoto;
+    _remoteUserPhoto = normalizeBackendUrl(callerPhoto);
     _isVideo = isVideo;
     _currentCallId = callId.isNotEmpty ? callId : null;
     _groupRoomId = (roomId != null && roomId.isNotEmpty) ? roomId : null;
@@ -92,13 +124,14 @@ extension CallIncoming on CallService {
   }) async {
     debugPrint('[CallService] 📲 rejectIncomingCallFromPush caller=$callerId callId=$callId');
 
-    _markTerminalCallId(callId ?? _currentCallId);
+    final resolvedCallId = callId ?? _currentCallId;
+    _markTerminalCallId(resolvedCallId);
     _autoAnswerOnNextIncoming = false;
     _autoAnswerCallerId = null;
     _isAutoAnsweringFromPush = false;
 
     await _ringtone.stop();
-    await _callKit.endAll();
+    await _callKit.endAll(callId: resolvedCallId);
 
     final cid = int.tryParse(callerId);
     if (cid != null) {
@@ -118,7 +151,10 @@ extension CallIncoming on CallService {
       }
     }
 
-    if (_status == CallStatus.incoming) {
+    if (_status == CallStatus.incoming ||
+        _status == CallStatus.connecting ||
+        _status == CallStatus.connected) {
+      _resetCallState();
       _status = CallStatus.idle;
       notify();
     }
@@ -140,6 +176,23 @@ extension CallIncoming on CallService {
       } catch (e) {
         debugPrint('[CallService] rejeu reject_call échoué: $e');
         _pendingRejectCallerIds.add(callerId);
+      }
+    }
+  }
+
+  /// Rejoue les end_call mis en file quand le socket n'était pas prêt.
+  void _flushPendingEndCalls() {
+    if (_pendingEndCalls.isEmpty) return;
+    if (!_apiClient.isSocketReady) return;
+    final pending = List<Map<String, dynamic>>.from(_pendingEndCalls);
+    _pendingEndCalls.clear();
+    for (final payload in pending) {
+      debugPrint('[CallService] 🔁 Rejeu end_call en file → $payload');
+      try {
+        _apiClient.sendSocketEvent(SocketEvents.endCall, payload);
+      } catch (e) {
+        debugPrint('[CallService] rejeu end_call échoué: $e');
+        _pendingEndCalls.add(payload);
       }
     }
   }

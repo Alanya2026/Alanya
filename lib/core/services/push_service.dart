@@ -14,6 +14,7 @@ import 'callkit_service.dart';
 import 'local_notification_helper.dart';
 import 'notification_navigation.dart';
 import 'ringtone_service.dart';
+import 'call/ended_call_registry.dart';
 
 const String _kDefaultFirebaseVapidKey =
     'BBde_uFKtUbLFwAQZ0Kd5ENuaPD1LuRf2ZvvHMPZ3wigioZpjIf7a9rh3pFcI2TRYRrC1YmoiRnAJ4n8io5QBTk';
@@ -56,8 +57,13 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
     if (type == 'call' || type == 'group_call') {
       if (!kIsWeb) {
+        final callId = (data['callId'] ?? data['roomId'] ?? '').toString();
+        if (await EndedCallRegistry.isEnded(callId)) {
+          debugPrint('[Push] background call ignoré (callId terminé): $callId');
+          return;
+        }
         await CallKitService.instance.showIncoming(
-          callId: (data['callId'] ?? data['roomId'] ?? '').toString(),
+          callId: callId,
           callerId: (data['callerId'] ?? '').toString(),
           callerName: (data['callerName'] ?? data['title'] ?? resolveL10n().callNoun).toString(),
           callerPhoto: data['photo']?.toString(),
@@ -68,7 +74,13 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       }
     } else if (type == 'call_ended') {
       if (!kIsWeb) {
-        await CallKitService.instance.endAll();
+        final callId = (data['callId'] ?? '').toString().trim();
+        if (callId.isNotEmpty) {
+          await EndedCallRegistry.markEnded(callId);
+          await CallKitService.instance.endCall(callId);
+        } else {
+          await CallKitService.instance.endAll();
+        }
         await RingtoneService.stopAll();
       }
     } else {
@@ -279,7 +291,19 @@ class PushService {
     final type = data['type']?.toString();
 
     debugPrint('[Push] foreground: type=$type');
-    if (type == 'call_ended') return;
+    if (type == 'call_ended') {
+      if (!kIsWeb) {
+        final callId = (data['callId'] ?? '').toString().trim();
+        if (callId.isNotEmpty) {
+          await EndedCallRegistry.markEnded(callId);
+          await CallKitService.instance.endCall(callId);
+        } else {
+          await CallKitService.instance.endAll();
+        }
+        await RingtoneService.stopAll();
+      }
+      return;
+    }
 
     if (type == 'meeting_invite' || type == 'meeting_reminder') {
       await LocalNotificationHelper.showMeetingNotification(data);
@@ -290,7 +314,12 @@ class PushService {
     }
 
     if (type == 'call' || type == 'group_call') {
-      debugPrint('[Push] Appel géré via CallKit (pas de notif locale)');
+      final callId = (data['callId'] ?? data['roomId'] ?? '').toString();
+      if (await EndedCallRegistry.isEnded(callId)) {
+        debugPrint('[Push] foreground call ignoré (callId terminé): $callId');
+        return;
+      }
+      debugPrint('[Push] Appel géré via CallKit/socket (pas de notif locale)');
       return;
     }
 
