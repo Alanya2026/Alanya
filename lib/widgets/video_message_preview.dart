@@ -161,17 +161,21 @@ class _VideoMessagePreviewState extends State<VideoMessagePreview> {
         else
           ColoredBox(color: fallback),
         if (bytes != null) const ColoredBox(color: Color(0x42000000)),
+        // Center : sous StackFit.expand le Container recevrait sinon des
+        // contraintes serrées → cercle aussi grand que la vignette.
         if (!generating && !widget.hidePlayIcon)
-          Container(
-            padding: EdgeInsets.all(widget.playPadding),
-            decoration: BoxDecoration(
-              color: AppColors.white.withAlpha(50),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.play_arrow,
-              color: AppColors.white,
-              size: widget.playIconSize,
+          Center(
+            child: Container(
+              padding: EdgeInsets.all(widget.playPadding),
+              decoration: BoxDecoration(
+                color: AppColors.white.withAlpha(50),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.play_arrow,
+                color: AppColors.white,
+                size: widget.playIconSize,
+              ),
             ),
           ),
         if (widget.showDuration &&

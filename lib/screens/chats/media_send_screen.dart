@@ -295,16 +295,19 @@ class _LocalVideoPreviewState extends State<_LocalVideoPreview> {
             child: AnimatedOpacity(
               opacity: playing ? 0 : 1,
               duration: const Duration(milliseconds: 150),
-              child: Container(
-                padding: const EdgeInsets.all(AppSpacing.sm + 2),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withAlpha(50),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow,
-                  color: AppColors.white,
-                  size: 36,
+              // Center : évite que StackFit.expand étire le cercle play.
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm + 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withAlpha(50),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    color: AppColors.white,
+                    size: 36,
+                  ),
                 ),
               ),
             ),
