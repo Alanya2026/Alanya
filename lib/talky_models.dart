@@ -129,6 +129,8 @@ class Message {
   final String? mediaUrl;
   final String? mediaName;
   final int? mediaDuration;
+  final int? mediaSize;
+  final int? mediaPageCount;
   final int? replyToID;
   final String? replyToContent;
   final bool isEdited;
@@ -160,6 +162,8 @@ class Message {
     this.mediaUrl,
     this.mediaName,
     this.mediaDuration,
+    this.mediaSize,
+    this.mediaPageCount,
     this.replyToID,
     this.replyToContent,
     required this.isEdited,
@@ -193,6 +197,12 @@ class Message {
         mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
         mediaName: json['mediaName'],
         mediaDuration: json['mediaDuration'],
+        mediaSize: json['mediaSize'] is int
+            ? json['mediaSize'] as int
+            : int.tryParse(json['mediaSize']?.toString() ?? ''),
+        mediaPageCount: json['mediaPageCount'] is int
+            ? json['mediaPageCount'] as int
+            : int.tryParse(json['mediaPageCount']?.toString() ?? ''),
         replyToID: json['replyToID'],
         replyToContent: json['replyToContent'],
         isEdited: json['isEdited'] == 1 || json['isEdited'] == true,

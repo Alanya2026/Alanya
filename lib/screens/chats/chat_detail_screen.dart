@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/document_file_style.dart';
+import '../../core/utils/file_metadata.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
 import '../../core/utils/media_viewer_items.dart';

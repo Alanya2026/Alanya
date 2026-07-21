@@ -10,9 +10,12 @@ import '../../theme/locale_controller.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
+import '../../utils/file_metadata.dart';
 import '../../utils/media_staging.dart';
 import '../../utils/upload_errors.dart';
+import '../../utils/document_file_style.dart';
 import '../image_thumbnail_service.dart';
+import '../pdf_thumbnail_service.dart';
 import '../video_thumbnail_service.dart';
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../../talky_models.dart';
@@ -205,6 +208,8 @@ class MessageSender {
     required String mediaUrl,
     String? mediaName,
     int? mediaDuration,
+    int? mediaSize,
+    int? mediaPageCount,
     String? mediaThumb,
     String? localMediaPath,
     String? content,
@@ -235,6 +240,8 @@ class MessageSender {
       mediaUrl: Value(mediaUrl),
       mediaName: Value(mediaName),
       mediaDuration: Value(mediaDuration),
+      mediaSize: Value(mediaSize),
+      mediaPageCount: Value(mediaPageCount),
       mediaThumb: Value(mediaThumb),
       localMediaPath: Value(localMediaPath),
       isForwarded: Value(isForwarded),
@@ -251,6 +258,8 @@ class MessageSender {
       mediaUrl: mediaUrl,
       mediaName: mediaName,
       mediaDuration: mediaDuration,
+      mediaSize: mediaSize,
+      mediaPageCount: mediaPageCount,
       mediaThumb: mediaThumb,
       isForwarded: isForwarded,
       isViewOnce: isViewOnce,
@@ -288,6 +297,14 @@ class MessageSender {
     }
     final name = mediaName ?? uploadFile.path.split('/').last;
 
+    int? fileMediaSize;
+    int? fileMediaPageCount;
+    if (type == 4) {
+      final meta = await fileMetadataForSend(uploadFile, mediaName: name);
+      if (meta.size > 0) fileMediaSize = meta.size;
+      fileMediaPageCount = meta.pageCount;
+    }
+
     // Image / vidéo : mini-vignette base64 pour l'aperçu destinataire (hors DL).
     final mediaThumb = await _mediaThumbFor(type, uploadFile.path);
 
@@ -302,6 +319,8 @@ class MessageSender {
       status: const Value(0),
       mediaName: Value(name),
       mediaDuration: Value(mediaDuration),
+      mediaSize: Value(fileMediaSize),
+      mediaPageCount: Value(fileMediaPageCount),
       mediaThumb: Value(mediaThumb),
       localMediaPath: Value(uploadFile.path),
       pendingUploadPath: Value(uploadFile.path),
@@ -524,6 +543,8 @@ class MessageSender {
             mediaUrl: url,
             mediaName: mediaName,
             mediaDuration: mediaDuration,
+            mediaSize: row?.mediaSize,
+            mediaPageCount: row?.mediaPageCount,
             mediaThumb: row?.mediaThumb,
             replyToID: replyToID,
             replyToContent: replyToContent,
@@ -562,6 +583,8 @@ class MessageSender {
       mediaUrl: m.mediaUrl,
       mediaName: m.mediaName,
       mediaDuration: m.mediaDuration,
+      mediaSize: m.mediaSize,
+      mediaPageCount: m.mediaPageCount,
       mediaThumb: m.mediaThumb,
       replyToID: m.replyToID,
       replyToContent: m.replyToContent,
@@ -604,11 +627,14 @@ class MessageSender {
     await Future.wait(List.generate(workers, (_) => worker()));
   }
 
-  /// Vignette base64 pour image (type 1) ou vidéo (type 2).
+  /// Vignette base64 : image (1), vidéo (2), PDF fichier (4).
   Future<String?> _mediaThumbFor(int type, String? path) async {
     if (path == null || path.isEmpty) return null;
     if (type == 1) return ImageThumbnailService.base64ForFile(path);
     if (type == 2) return VideoThumbnailService.base64ForFile(path);
+    if (type == 4 && DocumentFileStyle.fromFileName(path).isPdf) {
+      return PdfThumbnailService.base64ForFile(path);
+    }
     return null;
   }
 
@@ -620,6 +646,8 @@ class MessageSender {
     String? mediaUrl,
     String? mediaName,
     int? mediaDuration,
+    int? mediaSize,
+    int? mediaPageCount,
     String? mediaThumb,
     int? replyToID,
     String? replyToContent,
@@ -644,6 +672,8 @@ class MessageSender {
       if (mediaUrl != null) 'mediaUrl': mediaUrl,
       if (mediaName != null) 'mediaName': mediaName,
       if (mediaDuration != null) 'mediaDuration': mediaDuration,
+      if (mediaSize != null) 'mediaSize': mediaSize,
+      if (mediaPageCount != null) 'mediaPageCount': mediaPageCount,
       if (mediaThumb != null) 'mediaThumb': mediaThumb,
       if (replyToID != null && replyToID > 0) 'replyToID': replyToID,
       if (replyToContent != null) 'replyToContent': replyToContent,

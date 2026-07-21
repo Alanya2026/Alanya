@@ -283,6 +283,14 @@
   "conversationNotFound": "Conversation not found",
   "addParticipants": "Add participants",
   "tapToDownload": "Tap to download",
+  "pdfPageCount": "{count} pages",
+  "@pdfPageCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noUsersFound": "No users found",
   "enterTheGroupName": "Enter the group name",
   "requiredExceptTier3": "Required except tier 3",

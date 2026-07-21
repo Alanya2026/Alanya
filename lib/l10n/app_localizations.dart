@@ -1796,6 +1796,12 @@ abstract class AppLocalizations {
   /// **'Appuyer pour télécharger'**
   String get tapToDownload;
 
+  /// No description provided for @pdfPageCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} pages'**
+  String pdfPageCount(int count);
+
   /// No description provided for @noUsersFound.
   ///
   /// In fr, this message translates to:

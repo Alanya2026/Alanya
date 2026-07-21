@@ -1045,6 +1045,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tapToDownload => 'Tap to download';
 
   @override
+  String pdfPageCount(int count) {
+    return '$count pages';
+  }
+
+  @override
   String get noUsersFound => 'No users found';
 
   @override

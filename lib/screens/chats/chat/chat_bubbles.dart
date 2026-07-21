@@ -491,8 +491,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
       if (style.isPdf) {
         child = FutureBuilder<Uint8List?>(
           future: PdfThumbnailService.forMessage(
-            localPath: msg.localMediaPath,
+            localPath: msg.localMediaPath ?? msg.pendingUploadPath,
             url: msg.mediaUrl,
+            thumbBase64: msg.mediaThumb,
           ),
           builder: (context, snap) {
             final bytes = snap.data;
@@ -963,12 +964,49 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   bool _isPdf(LocalMessage msg) => _docStyle(msg).isPdf;
 
+  /// Sous-titre bulle fichier : pages (PDF), taille, puis hint télécharger/ouvrir.
+  String? _fileMediaSubtitle(LocalMessage msg, DocumentFileStyle style, bool needsDl) {
+    final parts = <String>[];
+
+    if (style.isPdf && msg.mediaPageCount != null && msg.mediaPageCount! > 0) {
+      parts.add(context.l10n.pdfPageCount(msg.mediaPageCount!));
+    }
+
+    final showSize = style.isPdf || needsDl;
+    if (showSize) {
+      var bytes = msg.mediaSize;
+      if ((bytes == null || bytes <= 0) && style.isPdf && !needsDl) {
+        final local = fileSizeOnDisk(msg.localMediaPath);
+        if (local > 0) bytes = local;
+      }
+      if (bytes != null && bytes > 0) {
+        parts.add(formatFileSize(bytes));
+      }
+    }
+
+    if (msg.status != 0) {
+      final hint = needsDl ? context.l10n.tapToDownload : style.openHint;
+      parts.add(hint);
+    }
+
+    if (parts.isEmpty) return null;
+    return parts.join(' · ');
+  }
+
   Widget _buildFileMedia(LocalMessage msg, bool isMe) {
     final style = _docStyle(msg);
     final color = isMe ? context.colors.onPrimary : context.colors.primary;
     final iconColor = msg.status != 0 ? style.color : color;
     final needsDl = _needsMediaDownload(msg);
     final downloading = _mediaDownloadingIds.contains(msg.msgID);
+    final fileSubtitle = _fileMediaSubtitle(msg, style, needsDl);
+    final localPath = msg.localMediaPath ?? msg.pendingUploadPath;
+    final hasLocal = localPath != null && File(localPath).existsSync();
+    final hasThumb =
+        msg.mediaThumb != null && msg.mediaThumb!.isNotEmpty;
+    // Preview dès que possible : fichier local (envoi) ou mediaThumb (reçu).
+    final showPdfPreview =
+        style.isPdf && (hasLocal || hasThumb || !needsDl);
 
     final row = Row(
       mainAxisSize: MainAxisSize.min,
@@ -1007,9 +1045,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (msg.status != 0)
+              if (fileSubtitle != null)
                 Text(
-                  needsDl ? context.l10n.tapToDownload : style.openHint,
+                  fileSubtitle,
                   style: context.text.labelSmall?.copyWith(
                     color: _bubbleText(isMe).withAlpha(170),
                   ),
@@ -1022,12 +1060,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
     return GestureDetector(
       onTap: msg.status == 0 ? null : () => _openFile(msg),
-      child: (style.isPdf && msg.status != 0 && !needsDl)
+      child: showPdfPreview
           ? Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildPdfThumbnail(msg),
+                _buildPdfThumbnail(msg, blur: needsDl && !hasLocal),
                 row,
               ],
             )
@@ -1037,22 +1075,32 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   /// Vignette de la première page du PDF (si générable), au-dessus de la carte.
   /// Tant qu'elle n'est pas prête (ou en cas d'échec), rien ne s'affiche.
-  Widget _buildPdfThumbnail(LocalMessage msg) {
+  /// [blur] : reçu non téléchargé → mediaThumb basse qualité floutée.
+  Widget _buildPdfThumbnail(LocalMessage msg, {bool blur = false}) {
     return FutureBuilder<Uint8List?>(
       future: PdfThumbnailService.forMessage(
-        localPath: msg.localMediaPath,
-        url: msg.mediaUrl,
+        localPath: msg.localMediaPath ?? msg.pendingUploadPath,
+        // Pas de fetch réseau tant que l'utilisateur n'a pas téléchargé.
+        url: blur ? null : msg.mediaUrl,
+        thumbBase64: msg.mediaThumb,
       ),
       builder: (context, snap) {
         final bytes = snap.data;
         if (bytes == null) return const SizedBox.shrink();
+        Widget image = Image.memory(bytes, fit: BoxFit.cover);
+        if (blur) {
+          image = ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+            child: image,
+          );
+        }
         return Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: ClipRRect(
             borderRadius: AppRadius.brSm,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 240, maxHeight: 300),
-              child: Image.memory(bytes, fit: BoxFit.cover),
+              child: image,
             ),
           ),
         );

@@ -736,6 +736,14 @@
   "conversationNotFound": "Conversation introuvable",
   "addParticipants": "Ajouter des participants",
   "tapToDownload": "Appuyer pour télécharger",
+  "pdfPageCount": "{count} pages",
+  "@pdfPageCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noUsersFound": "Aucun utilisateur trouvé",
   "enterTheGroupName": "Entrez le nom du groupe",
   "requiredExceptTier3": "Obligatoire sauf tier 3",

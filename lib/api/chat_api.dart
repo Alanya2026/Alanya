@@ -200,6 +200,8 @@ extension ChatHttpApi on TalkyApiClient {
     String? mediaUrl,
     String? mediaName,
     int? mediaDuration,
+    int? mediaSize,
+    int? mediaPageCount,
     int? replyToID,
     String? replyToContent,
   }) async {
@@ -213,6 +215,8 @@ extension ChatHttpApi on TalkyApiClient {
           if (mediaUrl != null) 'mediaUrl': mediaUrl,
           if (mediaName != null) 'mediaName': mediaName,
           if (mediaDuration != null) 'mediaDuration': mediaDuration,
+          if (mediaSize != null) 'mediaSize': mediaSize,
+          if (mediaPageCount != null) 'mediaPageCount': mediaPageCount,
           if (replyToID != null && replyToID > 0) 'replyToID': replyToID,
           if (replyToContent != null) 'replyToContent': replyToContent,
         }),

@@ -946,6 +946,28 @@ class $LocalMessagesTable extends LocalMessages
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _mediaSizeMeta = const VerificationMeta(
+    'mediaSize',
+  );
+  @override
+  late final GeneratedColumn<int> mediaSize = GeneratedColumn<int>(
+    'media_size',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _mediaPageCountMeta = const VerificationMeta(
+    'mediaPageCount',
+  );
+  @override
+  late final GeneratedColumn<int> mediaPageCount = GeneratedColumn<int>(
+    'media_page_count',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _mediaThumbMeta = const VerificationMeta(
     'mediaThumb',
   );
@@ -1242,6 +1264,8 @@ class $LocalMessagesTable extends LocalMessages
     mediaUrl,
     mediaName,
     mediaDuration,
+    mediaSize,
+    mediaPageCount,
     mediaThumb,
     localMediaPath,
     pendingUploadPath,
@@ -1370,6 +1394,21 @@ class $LocalMessagesTable extends LocalMessages
         mediaDuration.isAcceptableOrUnknown(
           data['media_duration']!,
           _mediaDurationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('media_size')) {
+      context.handle(
+        _mediaSizeMeta,
+        mediaSize.isAcceptableOrUnknown(data['media_size']!, _mediaSizeMeta),
+      );
+    }
+    if (data.containsKey('media_page_count')) {
+      context.handle(
+        _mediaPageCountMeta,
+        mediaPageCount.isAcceptableOrUnknown(
+          data['media_page_count']!,
+          _mediaPageCountMeta,
         ),
       );
     }
@@ -1611,6 +1650,14 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.int,
         data['${effectivePrefix}media_duration'],
       ),
+      mediaSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}media_size'],
+      ),
+      mediaPageCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}media_page_count'],
+      ),
       mediaThumb: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}media_thumb'],
@@ -1733,6 +1780,12 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   final String? mediaName;
   final int? mediaDuration;
 
+  /// Taille du fichier en octets (documents / médias type fichier).
+  final int? mediaSize;
+
+  /// Nombre de pages pour les PDF.
+  final int? mediaPageCount;
+
   /// Vignette vidéo (JPEG base64) transmise avec le message pour l'aperçu chez
   /// le destinataire, disponible immédiatement et hors ligne sans télécharger
   /// la vidéo complète.
@@ -1807,6 +1860,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     this.mediaUrl,
     this.mediaName,
     this.mediaDuration,
+    this.mediaSize,
+    this.mediaPageCount,
     this.mediaThumb,
     this.localMediaPath,
     this.pendingUploadPath,
@@ -1858,6 +1913,12 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     }
     if (!nullToAbsent || mediaDuration != null) {
       map['media_duration'] = Variable<int>(mediaDuration);
+    }
+    if (!nullToAbsent || mediaSize != null) {
+      map['media_size'] = Variable<int>(mediaSize);
+    }
+    if (!nullToAbsent || mediaPageCount != null) {
+      map['media_page_count'] = Variable<int>(mediaPageCount);
     }
     if (!nullToAbsent || mediaThumb != null) {
       map['media_thumb'] = Variable<String>(mediaThumb);
@@ -1942,6 +2003,12 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       mediaDuration: mediaDuration == null && nullToAbsent
           ? const Value.absent()
           : Value(mediaDuration),
+      mediaSize: mediaSize == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaSize),
+      mediaPageCount: mediaPageCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaPageCount),
       mediaThumb: mediaThumb == null && nullToAbsent
           ? const Value.absent()
           : Value(mediaThumb),
@@ -2017,6 +2084,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       mediaUrl: serializer.fromJson<String?>(json['mediaUrl']),
       mediaName: serializer.fromJson<String?>(json['mediaName']),
       mediaDuration: serializer.fromJson<int?>(json['mediaDuration']),
+      mediaSize: serializer.fromJson<int?>(json['mediaSize']),
+      mediaPageCount: serializer.fromJson<int?>(json['mediaPageCount']),
       mediaThumb: serializer.fromJson<String?>(json['mediaThumb']),
       localMediaPath: serializer.fromJson<String?>(json['localMediaPath']),
       pendingUploadPath: serializer.fromJson<String?>(
@@ -2061,6 +2130,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'mediaUrl': serializer.toJson<String?>(mediaUrl),
       'mediaName': serializer.toJson<String?>(mediaName),
       'mediaDuration': serializer.toJson<int?>(mediaDuration),
+      'mediaSize': serializer.toJson<int?>(mediaSize),
+      'mediaPageCount': serializer.toJson<int?>(mediaPageCount),
       'mediaThumb': serializer.toJson<String?>(mediaThumb),
       'localMediaPath': serializer.toJson<String?>(localMediaPath),
       'pendingUploadPath': serializer.toJson<String?>(pendingUploadPath),
@@ -2101,6 +2172,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     Value<String?> mediaUrl = const Value.absent(),
     Value<String?> mediaName = const Value.absent(),
     Value<int?> mediaDuration = const Value.absent(),
+    Value<int?> mediaSize = const Value.absent(),
+    Value<int?> mediaPageCount = const Value.absent(),
     Value<String?> mediaThumb = const Value.absent(),
     Value<String?> localMediaPath = const Value.absent(),
     Value<String?> pendingUploadPath = const Value.absent(),
@@ -2140,6 +2213,10 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     mediaDuration: mediaDuration.present
         ? mediaDuration.value
         : this.mediaDuration,
+    mediaSize: mediaSize.present ? mediaSize.value : this.mediaSize,
+    mediaPageCount: mediaPageCount.present
+        ? mediaPageCount.value
+        : this.mediaPageCount,
     mediaThumb: mediaThumb.present ? mediaThumb.value : this.mediaThumb,
     localMediaPath: localMediaPath.present
         ? localMediaPath.value
@@ -2195,6 +2272,10 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       mediaDuration: data.mediaDuration.present
           ? data.mediaDuration.value
           : this.mediaDuration,
+      mediaSize: data.mediaSize.present ? data.mediaSize.value : this.mediaSize,
+      mediaPageCount: data.mediaPageCount.present
+          ? data.mediaPageCount.value
+          : this.mediaPageCount,
       mediaThumb: data.mediaThumb.present
           ? data.mediaThumb.value
           : this.mediaThumb,
@@ -2267,6 +2348,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('mediaUrl: $mediaUrl, ')
           ..write('mediaName: $mediaName, ')
           ..write('mediaDuration: $mediaDuration, ')
+          ..write('mediaSize: $mediaSize, ')
+          ..write('mediaPageCount: $mediaPageCount, ')
           ..write('mediaThumb: $mediaThumb, ')
           ..write('localMediaPath: $localMediaPath, ')
           ..write('pendingUploadPath: $pendingUploadPath, ')
@@ -2309,6 +2392,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     mediaUrl,
     mediaName,
     mediaDuration,
+    mediaSize,
+    mediaPageCount,
     mediaThumb,
     localMediaPath,
     pendingUploadPath,
@@ -2350,6 +2435,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.mediaUrl == this.mediaUrl &&
           other.mediaName == this.mediaName &&
           other.mediaDuration == this.mediaDuration &&
+          other.mediaSize == this.mediaSize &&
+          other.mediaPageCount == this.mediaPageCount &&
           other.mediaThumb == this.mediaThumb &&
           other.localMediaPath == this.localMediaPath &&
           other.pendingUploadPath == this.pendingUploadPath &&
@@ -2389,6 +2476,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<String?> mediaUrl;
   final Value<String?> mediaName;
   final Value<int?> mediaDuration;
+  final Value<int?> mediaSize;
+  final Value<int?> mediaPageCount;
   final Value<String?> mediaThumb;
   final Value<String?> localMediaPath;
   final Value<String?> pendingUploadPath;
@@ -2427,6 +2516,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.mediaUrl = const Value.absent(),
     this.mediaName = const Value.absent(),
     this.mediaDuration = const Value.absent(),
+    this.mediaSize = const Value.absent(),
+    this.mediaPageCount = const Value.absent(),
     this.mediaThumb = const Value.absent(),
     this.localMediaPath = const Value.absent(),
     this.pendingUploadPath = const Value.absent(),
@@ -2466,6 +2557,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.mediaUrl = const Value.absent(),
     this.mediaName = const Value.absent(),
     this.mediaDuration = const Value.absent(),
+    this.mediaSize = const Value.absent(),
+    this.mediaPageCount = const Value.absent(),
     this.mediaThumb = const Value.absent(),
     this.localMediaPath = const Value.absent(),
     this.pendingUploadPath = const Value.absent(),
@@ -2508,6 +2601,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<String>? mediaUrl,
     Expression<String>? mediaName,
     Expression<int>? mediaDuration,
+    Expression<int>? mediaSize,
+    Expression<int>? mediaPageCount,
     Expression<String>? mediaThumb,
     Expression<String>? localMediaPath,
     Expression<String>? pendingUploadPath,
@@ -2547,6 +2642,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (mediaUrl != null) 'media_url': mediaUrl,
       if (mediaName != null) 'media_name': mediaName,
       if (mediaDuration != null) 'media_duration': mediaDuration,
+      if (mediaSize != null) 'media_size': mediaSize,
+      if (mediaPageCount != null) 'media_page_count': mediaPageCount,
       if (mediaThumb != null) 'media_thumb': mediaThumb,
       if (localMediaPath != null) 'local_media_path': localMediaPath,
       if (pendingUploadPath != null) 'pending_upload_path': pendingUploadPath,
@@ -2588,6 +2685,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<String?>? mediaUrl,
     Value<String?>? mediaName,
     Value<int?>? mediaDuration,
+    Value<int?>? mediaSize,
+    Value<int?>? mediaPageCount,
     Value<String?>? mediaThumb,
     Value<String?>? localMediaPath,
     Value<String?>? pendingUploadPath,
@@ -2627,6 +2726,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       mediaUrl: mediaUrl ?? this.mediaUrl,
       mediaName: mediaName ?? this.mediaName,
       mediaDuration: mediaDuration ?? this.mediaDuration,
+      mediaSize: mediaSize ?? this.mediaSize,
+      mediaPageCount: mediaPageCount ?? this.mediaPageCount,
       mediaThumb: mediaThumb ?? this.mediaThumb,
       localMediaPath: localMediaPath ?? this.localMediaPath,
       pendingUploadPath: pendingUploadPath ?? this.pendingUploadPath,
@@ -2695,6 +2796,12 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     }
     if (mediaDuration.present) {
       map['media_duration'] = Variable<int>(mediaDuration.value);
+    }
+    if (mediaSize.present) {
+      map['media_size'] = Variable<int>(mediaSize.value);
+    }
+    if (mediaPageCount.present) {
+      map['media_page_count'] = Variable<int>(mediaPageCount.value);
     }
     if (mediaThumb.present) {
       map['media_thumb'] = Variable<String>(mediaThumb.value);
@@ -2787,6 +2894,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('mediaUrl: $mediaUrl, ')
           ..write('mediaName: $mediaName, ')
           ..write('mediaDuration: $mediaDuration, ')
+          ..write('mediaSize: $mediaSize, ')
+          ..write('mediaPageCount: $mediaPageCount, ')
           ..write('mediaThumb: $mediaThumb, ')
           ..write('localMediaPath: $localMediaPath, ')
           ..write('pendingUploadPath: $pendingUploadPath, ')
@@ -5952,6 +6061,8 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<String?> mediaUrl,
       Value<String?> mediaName,
       Value<int?> mediaDuration,
+      Value<int?> mediaSize,
+      Value<int?> mediaPageCount,
       Value<String?> mediaThumb,
       Value<String?> localMediaPath,
       Value<String?> pendingUploadPath,
@@ -5992,6 +6103,8 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<String?> mediaUrl,
       Value<String?> mediaName,
       Value<int?> mediaDuration,
+      Value<int?> mediaSize,
+      Value<int?> mediaPageCount,
       Value<String?> mediaThumb,
       Value<String?> localMediaPath,
       Value<String?> pendingUploadPath,
@@ -6089,6 +6202,16 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<int> get mediaDuration => $composableBuilder(
     column: $table.mediaDuration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mediaSize => $composableBuilder(
+    column: $table.mediaSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mediaPageCount => $composableBuilder(
+    column: $table.mediaPageCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6282,6 +6405,16 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get mediaSize => $composableBuilder(
+    column: $table.mediaSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get mediaPageCount => $composableBuilder(
+    column: $table.mediaPageCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get mediaThumb => $composableBuilder(
     column: $table.mediaThumb,
     builder: (column) => ColumnOrderings(column),
@@ -6452,6 +6585,14 @@ class $$LocalMessagesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get mediaSize =>
+      $composableBuilder(column: $table.mediaSize, builder: (column) => column);
+
+  GeneratedColumn<int> get mediaPageCount => $composableBuilder(
+    column: $table.mediaPageCount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get mediaThumb => $composableBuilder(
     column: $table.mediaThumb,
     builder: (column) => column,
@@ -6596,6 +6737,8 @@ class $$LocalMessagesTableTableManager
                 Value<String?> mediaUrl = const Value.absent(),
                 Value<String?> mediaName = const Value.absent(),
                 Value<int?> mediaDuration = const Value.absent(),
+                Value<int?> mediaSize = const Value.absent(),
+                Value<int?> mediaPageCount = const Value.absent(),
                 Value<String?> mediaThumb = const Value.absent(),
                 Value<String?> localMediaPath = const Value.absent(),
                 Value<String?> pendingUploadPath = const Value.absent(),
@@ -6634,6 +6777,8 @@ class $$LocalMessagesTableTableManager
                 mediaUrl: mediaUrl,
                 mediaName: mediaName,
                 mediaDuration: mediaDuration,
+                mediaSize: mediaSize,
+                mediaPageCount: mediaPageCount,
                 mediaThumb: mediaThumb,
                 localMediaPath: localMediaPath,
                 pendingUploadPath: pendingUploadPath,
@@ -6674,6 +6819,8 @@ class $$LocalMessagesTableTableManager
                 Value<String?> mediaUrl = const Value.absent(),
                 Value<String?> mediaName = const Value.absent(),
                 Value<int?> mediaDuration = const Value.absent(),
+                Value<int?> mediaSize = const Value.absent(),
+                Value<int?> mediaPageCount = const Value.absent(),
                 Value<String?> mediaThumb = const Value.absent(),
                 Value<String?> localMediaPath = const Value.absent(),
                 Value<String?> pendingUploadPath = const Value.absent(),
@@ -6712,6 +6859,8 @@ class $$LocalMessagesTableTableManager
                 mediaUrl: mediaUrl,
                 mediaName: mediaName,
                 mediaDuration: mediaDuration,
+                mediaSize: mediaSize,
+                mediaPageCount: mediaPageCount,
                 mediaThumb: mediaThumb,
                 localMediaPath: localMediaPath,
                 pendingUploadPath: pendingUploadPath,

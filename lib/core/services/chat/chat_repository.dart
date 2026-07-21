@@ -359,6 +359,8 @@ class ChatRepository {
     required String mediaUrl,
     String? mediaName,
     int? mediaDuration,
+    int? mediaSize,
+    int? mediaPageCount,
     String? mediaThumb,
     String? localMediaPath,
     String? content,
@@ -371,6 +373,8 @@ class ChatRepository {
         mediaUrl: mediaUrl,
         mediaName: mediaName,
         mediaDuration: mediaDuration,
+        mediaSize: mediaSize,
+        mediaPageCount: mediaPageCount,
         mediaThumb: mediaThumb,
         localMediaPath: localMediaPath,
         content: content,
@@ -524,6 +528,8 @@ class ChatRepository {
           mediaUrl: url,
           mediaName: source.mediaName,
           mediaDuration: source.mediaDuration,
+          mediaSize: source.mediaSize,
+          mediaPageCount: source.mediaPageCount,
           mediaThumb: source.mediaThumb,
           localMediaPath: source.localMediaPath,
           content: marker,
@@ -691,6 +697,8 @@ class ChatRepository {
         mediaUrl: url,
         mediaName: source.mediaName,
         mediaDuration: source.mediaDuration,
+        mediaSize: source.mediaSize,
+        mediaPageCount: source.mediaPageCount,
         mediaThumb: source.mediaThumb,
         localMediaPath: source.localMediaPath,
         content: effectiveCaption,
@@ -996,10 +1004,14 @@ class ChatRepository {
       wasNew = candidates.every((m) => m.msgID != msgID);
 
       String? carriedMediaThumb;
+      int? carriedMediaSize;
+      int? carriedMediaPageCount;
       for (final m in candidates) {
         carriedLocalPath ??= m.localMediaPath;
         carriedClickSentAt ??= m.clickSentAt;
         carriedMediaThumb ??= m.mediaThumb;
+        carriedMediaSize ??= m.mediaSize;
+        carriedMediaPageCount ??= m.mediaPageCount;
         await (_db.delete(_db.localMessages)
               ..where((x) => x.clientId.equals(m.clientId)))
             .go();
@@ -1017,6 +1029,12 @@ class ChatRepository {
       // Préserve la vignette locale si le serveur (non migré) ne l'a pas renvoyée.
       if (carriedMediaThumb != null && !companion.mediaThumb.present) {
         companion = companion.copyWith(mediaThumb: Value(carriedMediaThumb));
+      }
+      if (carriedMediaSize != null && !companion.mediaSize.present) {
+        companion = companion.copyWith(mediaSize: Value(carriedMediaSize));
+      }
+      if (carriedMediaPageCount != null && !companion.mediaPageCount.present) {
+        companion = companion.copyWith(mediaPageCount: Value(carriedMediaPageCount));
       }
 
       debugPrint(
@@ -1263,6 +1281,12 @@ class ChatRepository {
       mediaUrl: Value(normalizeBackendUrl(j['mediaUrl']?.toString())),
       mediaName: Value(j['mediaName']?.toString()),
       mediaDuration: Value(j['mediaDuration'] == null ? null : _toInt(j['mediaDuration'])),
+      mediaSize: j['mediaSize'] == null
+          ? const Value.absent()
+          : Value(_toInt(j['mediaSize'])),
+      mediaPageCount: j['mediaPageCount'] == null
+          ? const Value.absent()
+          : Value(_toInt(j['mediaPageCount'])),
       // Vignette base64 : on ne l'écrase que si le serveur en fournit une
       // (backend non migré ⇒ champ absent ⇒ on préserve la valeur locale).
       mediaThumb: j['mediaThumb'] == null
