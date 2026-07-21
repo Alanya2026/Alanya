@@ -177,7 +177,7 @@ class AuthWrapper extends StatefulWidget {
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
-class _AuthWrapperState extends State<AuthWrapper> {
+class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   AuthProvider? _authProvider;
   int? _boundUserId;
   VoidCallback? _onBackOnline;
@@ -188,6 +188,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     debugPrint('[AuthWrapper] initState - Lancement de init()');
     _authProvider = Provider.of<AuthProvider>(context, listen: false);
     _authProvider!.addListener(_onAuthChanged);
@@ -196,12 +197,29 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authProvider?.removeListener(_onAuthChanged);
     _clearCallLogBindings();
     if (_onBackOnline != null && _connectivityForListener != null) {
       _connectivityForListener!.removeBackOnlineListener(_onBackOnline!);
     }
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final auth = _authProvider;
+    if (auth == null || !auth.isLoggedIn) return;
+    unawaited(_ensureSocketReadyOnResume());
+  }
+
+  Future<void> _ensureSocketReadyOnResume() async {
+    if (!mounted) return;
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    if (apiClient.isSocketReady) return;
+    final ready = await apiClient.ensureSocketReady();
+    debugPrint('[AuthWrapper] Resume socket ready=$ready');
   }
 
   void _removeBackOnlineListener() {
@@ -469,9 +487,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _connectivityForListener = connectivity;
       _onBackOnline = () {
         debugPrint('[AuthWrapper] Réseau revenu → catch-up + caches');
-        if (!apiClient.isSocketConnected) {
-          apiClient.connectSocket();
-        }
+        unawaited(apiClient.ensureSocketReady());
         unawaited(syncService.catchUp());
         cache.syncPreferredContacts();
         cache.syncCalls(myId: myId);
