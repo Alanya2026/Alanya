@@ -18,6 +18,7 @@ import 'package:mime/mime.dart' show lookupMimeType;
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'talky_models.dart';
 import 'core/theme/locale_controller.dart';
+import 'core/services/storage_service.dart';
 
 part 'api/auth_api.dart';
 part 'api/users_api.dart';
@@ -52,8 +53,13 @@ class TalkyApiClient {
   /// TOKEN_EXPIRED (évite d'empiler plusieurs refresh sur des events répétés).
   bool _socketReauthInFlight = false;
 
+  /// Reconnect forcé en cours (outbox stale / resume pending).
+  Future<bool>? _forceReconnectInFlight;
+
   /// Reconnect manuel après `onDisconnect` si l'auto-reconnect Socket.IO est épuisé.
   Timer? _socketReconnectWatchdog;
+
+  Future<String>? _stableDeviceIdFuture;
 
   // Cache TURN/ICE (voir fetchIceServers dans misc_api.dart)
   List<Map<String, dynamic>>? _cachedIceServers;
@@ -65,6 +71,12 @@ class TalkyApiClient {
   bool   get isSocketReady       => isSocketConnected && _isSocketAuthVerified;
 
   TalkyApiClient({http.Client? client}) : _client = client ?? http.Client();
+
+  /// ID d'installation stable (FCM multi-appareil + auth socket).
+  Future<String> ensureStableDeviceId() {
+    _stableDeviceIdFuture ??= StorageService().getOrCreateDeviceId();
+    return _stableDeviceIdFuture!;
+  }
 
   void setToken(String token) => _accessToken = token;
   void setRefreshToken(String token) => _refreshToken = token;

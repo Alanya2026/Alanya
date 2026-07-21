@@ -181,6 +181,21 @@ class SocketMessageHandlers {
     await _recompute(convID);
   }
 
+  /// Aligne le badge non-lus sur les autres appareils du même compte.
+  /// Ne propage pas de accusé de lecture au correspondant.
+  Future<void> onInboxSync(dynamic data) async {
+    if (data is! Map) return;
+    final json = Map<String, dynamic>.from(data);
+    final convID = _toInt(json['conversationID']);
+    if (convID == 0) return;
+    final unread = json['unreadCount'];
+    if (unread == 0 || unread == '0') {
+      await _dao.markConversationReadAtomic(convID, _myId());
+    } else {
+      await _recompute(convID);
+    }
+  }
+
   Future<void> onMessageSendFailed(dynamic data) async {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);

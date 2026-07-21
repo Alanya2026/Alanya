@@ -130,12 +130,13 @@ extension AuthApi on TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
-  Future<void> updateFcmToken(String fcmToken) async {
+  Future<void> updateFcmToken(String fcmToken, {String? deviceId}) async {
+    final did = deviceId ?? await ensureStableDeviceId();
     await _handleRequest(
       () => _client.put(
         Uri.parse('${TalkyApiClient.baseUrl}/auth/fcm-token'),
         headers: _headers,
-        body: jsonEncode({'fcmToken': fcmToken}),
+        body: jsonEncode({'fcmToken': fcmToken, 'deviceId': did}),
       ),
     );
   }

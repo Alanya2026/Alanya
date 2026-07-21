@@ -40,7 +40,7 @@ extension SocketApi on TalkyApiClient {
     }
 
     _socket = io.io(TalkyApiClient.socketUrl, <String, dynamic>{
-      'transports': ['websocket'],
+      'transports': ['websocket', 'polling'],
       'autoConnect': false,
       'reconnection': true,
       'reconnectionDelay': 2000,
@@ -49,9 +49,7 @@ extension SocketApi on TalkyApiClient {
     });
 
     _socket!.onConnect((_) {
-      debugPrint('[Socket] Connecté — envoi auth:login');
-      // !! AUTH SOCKET obligatoire — sinon tous les handlers ignorent les events
-      _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
+      unawaited(_emitSocketAuthLogin());
     });
 
     _socket!.on(SocketEvents.authVerified, (data) {
@@ -80,8 +78,7 @@ extension SocketApi on TalkyApiClient {
     });
 
     _socket!.on(SocketEvents.authConflict, (data) {
-      debugPrint('[Socket] Conflit connexion: ${data['message']}');
-      _isSocketAuthVerified = false;
+      debugPrint('[Socket] Info multi-appareil: ${data is Map ? data['message'] : data}');
     });
 
     _socket!.onDisconnect((_) {
@@ -93,7 +90,7 @@ extension SocketApi on TalkyApiClient {
     _socket!.onReconnect((_) {
       debugPrint('[Socket] Reconnecté — ré-auth');
       _isSocketAuthVerified = false;
-      _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
+      unawaited(_emitSocketAuthLogin());
     });
 
     // Ré-attache au socket fraîchement créé les listeners externes déjà
@@ -142,6 +139,29 @@ extension SocketApi on TalkyApiClient {
     return ready;
   }
 
+  /// Teardown + reconnect même si [isSocketReady] est true (socket zombie TCP).
+  /// Un seul appel concurrent à la fois.
+  Future<bool> forceReconnect() {
+    if (_accessToken == null) return Future.value(false);
+    return _forceReconnectInFlight ??= () async {
+      try {
+        debugPrint('[Socket] forceReconnect → teardown + connect');
+        _teardownSocketInstance();
+        connectSocket();
+        final ready = await _waitUntilSocketReady();
+        if (!ready) {
+          debugPrint(
+            '[Socket] forceReconnect échoué '
+            '(connected=$isSocketConnected, auth=$_isSocketAuthVerified)',
+          );
+        }
+        return ready;
+      } finally {
+        _forceReconnectInFlight = null;
+      }
+    }();
+  }
+
   /// Rafraîchit le JWT (refresh token) suite à un `auth:error` TOKEN_EXPIRED,
   /// puis ré-authentifie le socket. `_refreshAccessToken` appelle déjà
   /// `reauthSocketIfConnected()` en cas de succès (ré-émet `auth:login`).
@@ -162,8 +182,18 @@ extension SocketApi on TalkyApiClient {
     if (_socket?.connected == true && _accessToken != null) {
       debugPrint('[Socket] Re-auth après refresh token');
       _isSocketAuthVerified = false;
-      _socket!.emit(SocketEvents.authLogin, {'token': _accessToken});
+      unawaited(_emitSocketAuthLogin());
     }
+  }
+
+  Future<void> _emitSocketAuthLogin() async {
+    if (_socket == null || _accessToken == null) return;
+    debugPrint('[Socket] Connecté — envoi auth:login');
+    final deviceId = await ensureStableDeviceId();
+    _socket!.emit(SocketEvents.authLogin, {
+      'token': _accessToken,
+      'deviceId': deviceId,
+    });
   }
 
   void disconnectSocket() {

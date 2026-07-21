@@ -62,6 +62,29 @@ void main() {
       expect(after.where((m) => m.content == 'retry-me'), hasLength(1));
       expect(after.single.msgID, 4242);
     });
+
+    test('double message:sent (echo autre appareil) → 1 ligne', () async {
+      h.api.autoAckSend = false;
+      await h.repo.sendText(conversationID: ChatTestHarness.convId, content: 'multi');
+      await h.pumpEventQueue();
+      final clientId = (await h.messages()).single.clientId;
+      final payload = {
+        'msgID': 9001,
+        'clientId': clientId,
+        'conversationID': ChatTestHarness.convId,
+        'senderID': ChatTestHarness.myId,
+        'content': 'multi',
+        'type': 0,
+        'status': 1,
+        'sendAt': DateTime.now().toUtc().toIso8601String(),
+      };
+      h.api.emit('message:sent', payload);
+      await h.pumpEventQueue();
+      h.api.emit('message:sent', payload);
+      await h.pumpEventQueue();
+      expect(await h.messages(), hasLength(1));
+      expect((await h.messages()).single.msgID, 9001);
+    });
   });
 
   group('non-lus lifecycle', () {

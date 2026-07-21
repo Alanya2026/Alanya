@@ -223,6 +223,7 @@ class ChatRepository {
       _api.onSocketEvent(SocketEvents.messagePinned, _handlers.onMessagePinned);
       _api.onSocketEvent(SocketEvents.messageViewed, _handlers.onMessageViewed);
       _api.onSocketEvent(SocketEvents.messageStatus, _handlers.onMessageStatus);
+      _api.onSocketEvent(SocketEvents.inboxSync, _handlers.onInboxSync);
       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
       _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
     }
@@ -260,6 +261,7 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.messagePinned, _handlers.onMessagePinned);
     _api.removeSocketListener(SocketEvents.messageViewed, _handlers.onMessageViewed);
     _api.removeSocketListener(SocketEvents.messageStatus, _handlers.onMessageStatus);
+    _api.removeSocketListener(SocketEvents.inboxSync, _handlers.onInboxSync);
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
     _activeConversationID = 0;
@@ -728,6 +730,9 @@ class ChatRepository {
   /// message porte `pendingUploadPath` sans `mediaUrl`, on relance l'upload
   /// avant l'émission du message:send.
   Future<void> flushOutbox() => _outbox.flushOutbox();
+
+  /// True s'il reste des messages en outbox (horloge).
+  Future<bool> hasSyncPending() => _dao.hasSyncPending();
 
   Future<void> editMessage(int msgID, String content) async {
     await _dao.updateContentByServerId(msgID, content);

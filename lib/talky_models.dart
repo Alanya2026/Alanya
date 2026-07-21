@@ -714,6 +714,8 @@ class SocketEvents {
   static const messageDelivered  = 'message:delivered';
   static const messageRead       = 'message:read';
   static const messageStatus     = 'message:status';
+  /// Sync badge non-lus entre appareils du même compte (local uniquement).
+  static const inboxSync         = 'inbox:sync';
   static const conversationCreated = 'conversation:created';
   static const typingStart       = 'typing:start';
   static const typingStop        = 'typing:stop';
