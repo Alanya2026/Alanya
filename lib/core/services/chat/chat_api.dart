@@ -12,6 +12,9 @@ abstract class ChatApi {
   void sendSocketEvent(String event, dynamic data);
   void removeSocketListener(String event, void Function(dynamic) callback);
 
+  /// Teardown + reconnect même si le socket paraît prêt (zombie TCP).
+  Future<bool> forceReconnect();
+
   Future<List<dynamic>> getConversations();
 
   Future<List<dynamic>> getMessages(

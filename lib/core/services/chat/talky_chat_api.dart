@@ -18,6 +18,9 @@ class TalkyChatApi implements ChatApi {
   bool get isSocketReady => _client.isSocketReady;
 
   @override
+  Future<bool> forceReconnect() => _client.forceReconnect();
+
+  @override
   void onSocketEvent(String event, void Function(dynamic) callback) =>
       _client.onSocketEvent(event, callback);
 

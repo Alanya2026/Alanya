@@ -441,22 +441,48 @@ class ChatDao {
         .write(const LocalMessagesCompanion(status: Value(4), syncPending: Value(false)));
   }
 
+  /// True s'il existe au moins un message encore en outbox (horloge).
+  Future<bool> hasSyncPending() async {
+    final row = await (db.select(db.localMessages)
+          ..where((m) =>
+              m.syncPending.equals(true) &
+              m.isDeleted.equals(false) &
+              m.status.equals(0))
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  /// True si un pending est dans l'outbox depuis plus de [olderThan]
+  /// (basé sur [sendAt], indépendant de [lastEmittedAt]).
+  Future<bool> hasStalePending({
+    Duration olderThan = const Duration(seconds: 25),
+  }) async {
+    final sendThreshold = DateTime.now().toUtc().subtract(olderThan);
+    final row = await (db.select(db.localMessages)
+          ..where((m) =>
+              m.syncPending.equals(true) &
+              m.isDeleted.equals(false) &
+              m.status.equals(0) &
+              m.sendAt.isSmallerThanValue(sendThreshold))
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
+  }
+
   /// Messages syncPending depuis trop longtemps (horloge coincée).
-  /// Exige aussi un dernier emit ancien pour ne pas fail juste après un retry.
+  /// Basé uniquement sur l'âge [sendAt] — pas sur [lastEmittedAt], sinon le
+  /// flush périodique qui rafraîchit lastEmittedAt empêche à jamais le fail.
   Future<List<LocalMessage>> stuckPendingMessages({
-    Duration olderThan = const Duration(minutes: 5),
-    Duration sinceLastEmit = const Duration(seconds: 90),
+    Duration olderThan = const Duration(minutes: 2),
   }) {
     final sendThreshold = DateTime.now().toUtc().subtract(olderThan);
-    final emitThreshold = DateTime.now().subtract(sinceLastEmit);
     return (db.select(db.localMessages)
           ..where((m) =>
               m.syncPending.equals(true) &
               m.isDeleted.equals(false) &
               m.status.equals(0) &
-              m.sendAt.isSmallerThanValue(sendThreshold) &
-              m.lastEmittedAt.isNotNull() &
-              m.lastEmittedAt.isSmallerThanValue(emitThreshold)))
+              m.sendAt.isSmallerThanValue(sendThreshold)))
         .get();
   }
 

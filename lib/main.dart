@@ -217,6 +217,20 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   Future<void> _ensureSocketReadyOnResume() async {
     if (!mounted) return;
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+
+    // Pending outbox : ne pas faire confiance à isSocketReady (zombie TCP).
+    final hasPending = await chat.repository.hasSyncPending();
+    if (!mounted) return;
+    if (hasPending) {
+      debugPrint('[AuthWrapper] Resume pending outbox → forceReconnect + flush');
+      final ready = await apiClient.forceReconnect();
+      if (!mounted) return;
+      await chat.repository.flushOutbox();
+      debugPrint('[AuthWrapper] Resume reconnect ready=$ready');
+      return;
+    }
+
     if (apiClient.isSocketReady) return;
     final ready = await apiClient.ensureSocketReady();
     debugPrint('[AuthWrapper] Resume socket ready=$ready');

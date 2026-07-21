@@ -27,7 +27,29 @@ class MessageOutbox {
   final MessageSender _sender;
   final Set<int> _pendingReads;
 
+  /// Évite le flush imbriqué quand `forceReconnect` déclenche `auth:verified`.
+  bool _flushInFlight = false;
+
+  static const Duration _stalePendingBeforeReconnect = Duration(seconds: 25);
+
   Future<void> flushOutbox() async {
+    if (_flushInFlight) return;
+    _flushInFlight = true;
+    try {
+      await _flushOutboxBody();
+    } finally {
+      _flushInFlight = false;
+    }
+  }
+
+  Future<void> _flushOutboxBody() async {
+    // Pending sans ack depuis > 25s : socket probablement zombie → vrai
+    // reconnect avant de ré-émettre (sinon touchEmitted tourne dans le vide).
+    if (await _dao.hasStalePending(olderThan: _stalePendingBeforeReconnect)) {
+      debugPrint('[MessageOutbox] pending stale → forceReconnect');
+      await _api.forceReconnect();
+    }
+
     final pending = await _dao.pendingMessages();
     for (final m in pending) {
       final needsUpload = m.pendingUploadPath != null &&
@@ -68,9 +90,8 @@ class MessageOutbox {
       }
     }
 
-    // Horloge coincée : pending depuis > 5 min malgré des retries → failed
-    // (l'utilisateur peut relancer via le menu). Avec idempotence serveur,
-    // les retries antérieurs n'ont pas créé de doublons.
+    // Horloge coincée : pending depuis > 2 min (âge sendAt) → failed.
+    // Indépendant de lastEmittedAt pour ne pas être annulé par le flush périodique.
     final stuck = await _dao.stuckPendingMessages();
     for (final m in stuck) {
       debugPrint('[MessageOutbox] stuck pending → failed ${m.clientId}');

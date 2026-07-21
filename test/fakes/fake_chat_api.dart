@@ -33,6 +33,14 @@ class FakeChatApi implements ChatApi {
   @override
   bool get isSocketReady => socketReady;
 
+  int forceReconnectCalls = 0;
+
+  @override
+  Future<bool> forceReconnect() async {
+    forceReconnectCalls++;
+    return socketReady;
+  }
+
   @override
   void onSocketEvent(String event, void Function(dynamic) callback) {
     _listeners.putIfAbsent(event, () => []).add(callback);
