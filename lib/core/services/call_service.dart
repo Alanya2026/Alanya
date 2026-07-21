@@ -58,6 +58,9 @@ class CallService extends ChangeNotifier {
   static String get _offlineCallMessage =>
       LocaleController.instance.l10n.cannotPlaceCallCheckInternet;
 
+  static String get _serverCallMessage =>
+      LocaleController.instance.l10n.cannotPlaceCallServerFailed;
+
   CallStatus _status = CallStatus.idle;
   int? _remoteUserId;
   String? _remoteUserName;
@@ -303,28 +306,34 @@ class CallService extends ChangeNotifier {
       debugPrint('[CallService] Lecture réseau échouée: $e');
       hasNetwork = false;
     }
-    final fullyConnected = hasNetwork && _apiClient.isSocketConnected;
-    if (fullyConnected) return true;
+    if (!hasNetwork) {
+      debugPrint('[CallService] Appel bloqué (pas de réseau OS)');
+      await _showCallBlockedDialog(_offlineCallMessage);
+      return false;
+    }
+
+    final socketReady = await _apiClient.ensureSocketReady();
+    if (socketReady) return true;
 
     debugPrint(
       '[CallService] Appel bloqué (réseau=$hasNetwork '
-      'socket=${_apiClient.isSocketConnected})',
+      'socketReady=${_apiClient.isSocketReady})',
     );
-    await _showOfflineCallDialog();
+    await _showCallBlockedDialog(_serverCallMessage);
     return false;
   }
 
-  Future<void> _showOfflineCallDialog() async {
+  Future<void> _showCallBlockedDialog(String message) async {
     final context = appNavigatorKey.currentContext;
     if (context == null || !context.mounted) {
-      _showTransientMessage(_offlineCallMessage);
+      _showTransientMessage(message);
       return;
     }
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(LocaleController.instance.l10n.connectionRequired),
-        content: Text(_offlineCallMessage),
+        content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),

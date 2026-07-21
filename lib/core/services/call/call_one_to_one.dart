@@ -153,15 +153,8 @@ extension CallOneToOne on CallService {
 
     await _ringtone.stop();
     _errorMessage = null;
-    if (!_apiClient.isSocketConnected) {
-      _apiClient.connectSocket();
-    }
-    int retries = 0;
-    while (!_apiClient.isSocketReady && retries < 50) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      retries++;
-    }
-    if (!_apiClient.isSocketReady) {
+    final socketReady = await _apiClient.ensureSocketReady();
+    if (!socketReady) {
       debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
       _errorMessage = LocaleController.instance.l10n.socketNotConnected;
       _status = CallStatus.idle;
