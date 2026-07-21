@@ -2019,6 +2019,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.';
 
   @override
+  String get cannotPlaceCallServerFailed =>
+      'Impossible de passer un appel, la connexion au serveur a échoué. Réessayez.';
+
+  @override
   String get connectionRequired => 'Connexion requise';
 
   @override

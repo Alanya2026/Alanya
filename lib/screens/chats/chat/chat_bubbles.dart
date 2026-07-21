@@ -964,8 +964,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   bool _isPdf(LocalMessage msg) => _docStyle(msg).isPdf;
 
-  /// Sous-titre bulle fichier : pages (PDF), taille, puis hint télécharger/ouvrir.
-  String? _fileMediaSubtitle(LocalMessage msg, DocumentFileStyle style, bool needsDl) {
+  /// Sous-titre méta fichier : pages (PDF) · taille (sans hint ouvrir/télécharger).
+  String? _fileMetaLine(LocalMessage msg, DocumentFileStyle style, bool needsDl) {
     final parts = <String>[];
 
     if (style.isPdf && msg.mediaPageCount != null && msg.mediaPageCount! > 0) {
@@ -984,9 +984,18 @@ extension _ChatBubbles on _ChatDetailScreenState {
       }
     }
 
+    if (parts.isEmpty) return null;
+    return parts.join(' · ');
+  }
+
+  /// Sous-titre bulle fichier classique : méta + hint télécharger/ouvrir.
+  String? _fileMediaSubtitle(LocalMessage msg, DocumentFileStyle style, bool needsDl) {
+    final parts = <String>[];
+    final meta = _fileMetaLine(msg, style, needsDl);
+    if (meta != null) parts.add(meta);
+
     if (msg.status != 0) {
-      final hint = needsDl ? context.l10n.tapToDownload : style.openHint;
-      parts.add(hint);
+      parts.add(needsDl ? context.l10n.tapToDownload : style.openHint);
     }
 
     if (parts.isEmpty) return null;
@@ -995,116 +1004,296 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   Widget _buildFileMedia(LocalMessage msg, bool isMe) {
     final style = _docStyle(msg);
-    final color = isMe ? context.colors.onPrimary : context.colors.primary;
-    final iconColor = msg.status != 0 ? style.color : color;
     final needsDl = _needsMediaDownload(msg);
-    final downloading = _mediaDownloadingIds.contains(msg.msgID);
-    final fileSubtitle = _fileMediaSubtitle(msg, style, needsDl);
     final localPath = msg.localMediaPath ?? msg.pendingUploadPath;
     final hasLocal = localPath != null && File(localPath).existsSync();
     final hasThumb =
         msg.mediaThumb != null && msg.mediaThumb!.isNotEmpty;
-    // Preview dès que possible : fichier local (envoi) ou mediaThumb (reçu).
-    final showPdfPreview =
+    // Layout A (carte document) dès qu'une source d'aperçu est dispo.
+    final showPdfCard =
         style.isPdf && (hasLocal || hasThumb || !needsDl);
 
-    final row = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (needsDl)
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.sm),
-            child: downloading
-                ? SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: color,
-                    ),
-                  )
-                : Icon(Icons.download_rounded, color: color, size: 26),
-          )
-        else
-          Icon(
-            msg.status == 0 ? Icons.upload_file : style.icon,
-            color: iconColor,
-          ),
-        if (!needsDl) const SizedBox(width: AppSpacing.sm),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                msg.mediaName ?? context.l10n.file2,
-                style: context.text.bodyLarge?.copyWith(
-                  color: _bubbleText(isMe),
-                  decoration: TextDecoration.underline,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (fileSubtitle != null)
-                Text(
-                  fileSubtitle,
-                  style: context.text.labelSmall?.copyWith(
-                    color: _bubbleText(isMe).withAlpha(170),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
+    if (showPdfCard) {
+      return _buildPdfFileCard(
+        msg,
+        isMe: isMe,
+        style: style,
+        needsDl: needsDl,
+        blurThumb: needsDl && !hasLocal,
+      );
+    }
+
+    return _buildGenericFileRow(msg, isMe: isMe, style: style, needsDl: needsDl);
+  }
+
+  /// Fichier non-PDF (ou PDF sans aperçu) : ligne icône + nom + sous-titre.
+  Widget _buildGenericFileRow(
+    LocalMessage msg, {
+    required bool isMe,
+    required DocumentFileStyle style,
+    required bool needsDl,
+  }) {
+    final color = isMe ? context.colors.onPrimary : context.colors.primary;
+    final iconColor = msg.status != 0 ? style.color : color;
+    final downloading = _mediaDownloadingIds.contains(msg.msgID);
+    final fileSubtitle = _fileMediaSubtitle(msg, style, needsDl);
 
     return GestureDetector(
       onTap: msg.status == 0 ? null : () => _openFile(msg),
-      child: showPdfPreview
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildPdfThumbnail(msg, blur: needsDl && !hasLocal),
-                row,
-              ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (needsDl)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: downloading
+                  ? SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: color,
+                      ),
+                    )
+                  : Icon(Icons.download_rounded, color: color, size: 26),
             )
-          : row,
+          else
+            Icon(
+              msg.status == 0 ? Icons.upload_file : style.icon,
+              color: iconColor,
+            ),
+          if (!needsDl) const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  msg.mediaName ?? context.l10n.file2,
+                  style: context.text.bodyLarge?.copyWith(
+                    color: _bubbleText(isMe),
+                    decoration: TextDecoration.underline,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (fileSubtitle != null)
+                  Text(
+                    fileSubtitle,
+                    style: context.text.labelSmall?.copyWith(
+                      color: _bubbleText(isMe).withAlpha(170),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  /// Vignette de la première page du PDF (si générable), au-dessus de la carte.
-  /// Tant qu'elle n'est pas prête (ou en cas d'échec), rien ne s'affiche.
-  /// [blur] : reçu non téléchargé → mediaThumb basse qualité floutée.
-  Widget _buildPdfThumbnail(LocalMessage msg, {bool blur = false}) {
-    return FutureBuilder<Uint8List?>(
-      future: PdfThumbnailService.forMessage(
-        localPath: msg.localMediaPath ?? msg.pendingUploadPath,
-        // Pas de fetch réseau tant que l'utilisateur n'a pas téléchargé.
-        url: blur ? null : msg.mediaUrl,
-        thumbBase64: msg.mediaThumb,
-      ),
-      builder: (context, snap) {
-        final bytes = snap.data;
-        if (bytes == null) return const SizedBox.shrink();
-        Widget image = Image.memory(bytes, fit: BoxFit.cover);
-        if (blur) {
-          image = ImageFiltered(
-            imageFilter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-            child: image,
-          );
-        }
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: ClipRRect(
-            borderRadius: AppRadius.brSm,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 240, maxHeight: 300),
-              child: image,
+  /// Layout A — carte document (style WhatsApp) :
+  /// preview page 1 coupée en haut + badge PDF, pied icône + nom + méta.
+  Widget _buildPdfFileCard(
+    LocalMessage msg, {
+    required bool isMe,
+    required DocumentFileStyle style,
+    required bool needsDl,
+    required bool blurThumb,
+  }) {
+    final textColor = _bubbleText(isMe);
+    final accent = isMe ? context.colors.onPrimary : context.colors.primary;
+    final downloading = _mediaDownloadingIds.contains(msg.msgID);
+    final uploading = msg.status == 0;
+    final meta = _fileMetaLine(msg, style, needsDl);
+    final hint = uploading
+        ? null
+        : (needsDl ? context.l10n.tapToDownload : style.openHint);
+    final subtitleParts = <String>[
+      if (meta != null) meta,
+      if (hint != null) hint,
+    ];
+    final subtitle =
+        subtitleParts.isEmpty ? null : subtitleParts.join(' · ');
+
+    return GestureDetector(
+      onTap: uploading ? null : () => _openFile(msg),
+      child: SizedBox(
+        width: 220,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildPdfPreviewBanner(
+              msg,
+              style: style,
+              blur: blurThumb,
             ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _pdfFooterIcon(
+                  style: style,
+                  uploading: uploading,
+                  needsDl: needsDl,
+                  downloading: downloading,
+                  accent: accent,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        msg.mediaName ?? context.l10n.file2,
+                        style: context.text.bodyMedium?.copyWith(
+                          color: textColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (subtitle != null)
+                        Text(
+                          subtitle,
+                          style: context.text.labelSmall?.copyWith(
+                            color: textColor.withAlpha(170),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pdfFooterIcon({
+    required DocumentFileStyle style,
+    required bool uploading,
+    required bool needsDl,
+    required bool downloading,
+    required Color accent,
+  }) {
+    if (uploading || (needsDl && downloading)) {
+      return SizedBox(
+        width: 28,
+        height: 28,
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: CircularProgressIndicator(
+            strokeWidth: 2.2,
+            color: accent,
           ),
-        );
-      },
+        ),
+      );
+    }
+    if (needsDl) {
+      return Icon(Icons.download_rounded, color: accent, size: 28);
+    }
+    return Icon(style.icon, color: style.color, size: 28);
+  }
+
+  Widget _pdfTypeBadge(DocumentFileStyle style) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: style.color,
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 3,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        style.extension,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          height: 1.1,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+
+  /// Bandeau preview : haut de page (crop), badge PDF en overlay.
+  Widget _buildPdfPreviewBanner(
+    LocalMessage msg, {
+    required DocumentFileStyle style,
+    bool blur = false,
+  }) {
+    const height = 148.0;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.brSm,
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+      ),
+      child: ClipRRect(
+        borderRadius: AppRadius.brSm,
+        child: SizedBox(
+          height: height,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              FutureBuilder<Uint8List?>(
+                future: PdfThumbnailService.forMessage(
+                  localPath: msg.localMediaPath ?? msg.pendingUploadPath,
+                  url: blur ? null : msg.mediaUrl,
+                  thumbBase64: msg.mediaThumb,
+                ),
+                builder: (context, snap) {
+                  final bytes = snap.data;
+                  if (bytes == null) {
+                    return ColoredBox(
+                      color: context.colors.surfaceContainerHighest,
+                      child: Center(
+                        child: Icon(
+                          Icons.picture_as_pdf,
+                          size: 36,
+                          color: style.color,
+                        ),
+                      ),
+                    );
+                  }
+                  Widget image = Image.memory(
+                    bytes,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    width: double.infinity,
+                    height: height,
+                    gaplessPlayback: true,
+                  );
+                  if (blur) {
+                    image = ImageFiltered(
+                      imageFilter:
+                          ui.ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+                      child: image,
+                    );
+                  }
+                  return ColoredBox(color: Colors.white, child: image);
+                },
+              ),
+              Positioned(
+                top: AppSpacing.sm,
+                left: AppSpacing.sm,
+                child: _pdfTypeBadge(style),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

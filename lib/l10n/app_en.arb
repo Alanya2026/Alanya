@@ -606,6 +606,7 @@
   "archiveAction": "Archive",
   "infoAction": "Info",
   "cannotPlaceCallCheckInternet": "Unable to place a call, check your internet connection and try again.",
+  "cannotPlaceCallServerFailed": "Unable to place a call. Connection to the server failed. Please try again.",
   "connectionRequired": "Connection required",
   "callImpossible": "Call not possible.",
   "errorAcceptingCall": "Error accepting the call",

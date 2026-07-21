@@ -3692,6 +3692,12 @@ abstract class AppLocalizations {
   /// **'Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.'**
   String get cannotPlaceCallCheckInternet;
 
+  /// No description provided for @cannotPlaceCallServerFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de passer un appel, la connexion au serveur a échoué. Réessayez.'**
+  String get cannotPlaceCallServerFailed;
+
   /// No description provided for @connectionRequired.
   ///
   /// In fr, this message translates to:

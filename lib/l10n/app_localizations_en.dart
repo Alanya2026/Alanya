@@ -2002,6 +2002,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to place a call, check your internet connection and try again.';
 
   @override
+  String get cannotPlaceCallServerFailed =>
+      'Unable to place a call. Connection to the server failed. Please try again.';
+
+  @override
   String get connectionRequired => 'Connection required';
 
   @override

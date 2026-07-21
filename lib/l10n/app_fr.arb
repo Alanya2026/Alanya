@@ -1080,6 +1080,7 @@
   "archiveAction": "Archiver",
   "infoAction": "Infos",
   "cannotPlaceCallCheckInternet": "Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.",
+  "cannotPlaceCallServerFailed": "Impossible de passer un appel, la connexion au serveur a échoué. Réessayez.",
   "connectionRequired": "Connexion requise",
   "callImpossible": "Appel impossible.",
   "errorAcceptingCall": "Erreur lors de l'acceptation de l'appel",
