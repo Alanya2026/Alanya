@@ -52,6 +52,9 @@ class TalkyApiClient {
   /// TOKEN_EXPIRED (évite d'empiler plusieurs refresh sur des events répétés).
   bool _socketReauthInFlight = false;
 
+  /// Reconnect manuel après `onDisconnect` si l'auto-reconnect Socket.IO est épuisé.
+  Timer? _socketReconnectWatchdog;
+
   // Cache TURN/ICE (voir fetchIceServers dans misc_api.dart)
   List<Map<String, dynamic>>? _cachedIceServers;
   DateTime? _iceServersExpiresAt;

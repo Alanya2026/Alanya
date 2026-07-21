@@ -2,16 +2,50 @@
 part of '../talky_api_client.dart';
 
 extension SocketApi on TalkyApiClient {
+  static const Duration _socketReadyPollInterval = Duration(milliseconds: 100);
+  static const int _socketReadyMaxPolls = 50;
+  static const Duration _disconnectReconnectDebounce = Duration(seconds: 2);
+
+  void _cancelSocketReconnectWatchdog() {
+    _socketReconnectWatchdog?.cancel();
+    _socketReconnectWatchdog = null;
+  }
+
+  void _scheduleSocketReconnectWatchdog() {
+    if (_accessToken == null) return;
+    _cancelSocketReconnectWatchdog();
+    _socketReconnectWatchdog = Timer(_disconnectReconnectDebounce, () {
+      _socketReconnectWatchdog = null;
+      if (_accessToken == null || isSocketReady) return;
+      debugPrint('[Socket] Watchdog → ensureSocketReady après disconnect');
+      unawaited(ensureSocketReady());
+    });
+  }
+
+  /// Détruit l'instance socket sans vider les listeners externes.
+  void _teardownSocketInstance() {
+    _cancelSocketReconnectWatchdog();
+    _socket?.disconnect();
+    _socket?.dispose();
+    _socket = null;
+    _isSocketAuthVerified = false;
+  }
+
   void connectSocket() {
     if (_accessToken == null) return;
     if (_socket?.connected == true) return;
+
+    if (_socket != null) {
+      _teardownSocketInstance();
+    }
 
     _socket = io.io(TalkyApiClient.socketUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
       'reconnection': true,
       'reconnectionDelay': 2000,
-      'reconnectionAttempts': 10,
+      'reconnectionDelayMax': 30000,
+      'reconnectionAttempts': 999999,
     });
 
     _socket!.onConnect((_) {
@@ -23,6 +57,7 @@ extension SocketApi on TalkyApiClient {
     _socket!.on(SocketEvents.authVerified, (data) {
       debugPrint('[Socket] Authentifié: ${data['alanyaID']}');
       _isSocketAuthVerified = true;
+      _cancelSocketReconnectWatchdog();
       final external = _socketListeners[SocketEvents.authVerified];
       if (external == null || external.isEmpty) {
         debugPrint('[Socket] ⚠ auth:verified sans listeners externes enregistrés');
@@ -52,6 +87,7 @@ extension SocketApi on TalkyApiClient {
     _socket!.onDisconnect((_) {
       debugPrint('[Socket] Déconnecté');
       _isSocketAuthVerified = false;
+      _scheduleSocketReconnectWatchdog();
     });
     _socket!.onError((err) => debugPrint('[Socket] Erreur: $err'));
     _socket!.onReconnect((_) {
@@ -71,6 +107,39 @@ extension SocketApi on TalkyApiClient {
     });
 
     _socket!.connect();
+  }
+
+  Future<bool> _waitUntilSocketReady() async {
+    if (isSocketReady) return true;
+    for (var i = 0; i < _socketReadyMaxPolls; i++) {
+      if (isSocketReady) return true;
+      await Future<void>.delayed(_socketReadyPollInterval);
+    }
+    return isSocketReady;
+  }
+
+  /// Connecte / recrée le socket si besoin et attend `auth:verified` (court délai).
+  Future<bool> ensureSocketReady() async {
+    if (_accessToken == null) return false;
+    if (isSocketReady) return true;
+
+    if (_socket != null && !isSocketConnected) {
+      debugPrint('[Socket] Instance morte → recreate');
+      _teardownSocketInstance();
+    }
+
+    if (!isSocketConnected) {
+      connectSocket();
+    }
+
+    final ready = await _waitUntilSocketReady();
+    if (!ready) {
+      debugPrint(
+        '[Socket] ensureSocketReady échoué '
+        '(connected=$isSocketConnected, auth=$_isSocketAuthVerified)',
+      );
+    }
+    return ready;
   }
 
   /// Rafraîchit le JWT (refresh token) suite à un `auth:error` TOKEN_EXPIRED,
@@ -98,6 +167,7 @@ extension SocketApi on TalkyApiClient {
   }
 
   void disconnectSocket() {
+    _cancelSocketReconnectWatchdog();
     _isSocketAuthVerified = false;
     _socket?.disconnect();
     _socket?.dispose();
