@@ -232,7 +232,8 @@ extension _ChatActions on _ChatDetailScreenState {
     if (m.type == 7) return contactPreviewLabel(m.content);
     // Item d'album : aperçu du média seul (pas du groupe).
     if (isAlbumMarkerContent(m.content)) return _mediaLabel(m.type);
-    if (m.content != null && m.content!.isNotEmpty) return stripMarkers(m.content!);
+    // Conserver les marqueurs (*gras*, etc.) : la citation les rend via parseRichSpans.
+    if (m.content != null && m.content!.isNotEmpty) return m.content!;
     // Fichier : préférer le nom (ex. document.pdf) au libellé générique.
     if (m.type == 4) {
       final name = m.mediaName?.trim();

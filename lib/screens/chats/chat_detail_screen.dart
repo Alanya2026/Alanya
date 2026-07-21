@@ -65,6 +65,7 @@ import '../../core/utils/location_payload.dart';
 import '../../widgets/chat/contact_message_preview.dart';
 import '../../widgets/chat/location_message_preview.dart';
 import '../../widgets/chat/reply_quote_bar.dart';
+import '../../widgets/chat/styled_preview_text.dart';
 import '../../widgets/chat/status_reply_quote.dart';
 import '../../widgets/chat/share_preferred_contact_sheet.dart';
 

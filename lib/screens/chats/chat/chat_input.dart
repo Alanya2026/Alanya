@@ -65,10 +65,10 @@ extension _ChatInput on _ChatDetailScreenState {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                StyledPreviewText(
                   _previewOf(reply),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  linkColor: colors.primary,
                   style: context.text.bodySmall?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
@@ -147,10 +147,10 @@ extension _ChatInput on _ChatDetailScreenState {
                   Icon(Icons.push_pin, size: 15, color: colors.primary),
                   AppSpacing.hGapSm,
                   Expanded(
-                    child: Text(
+                    child: StyledPreviewText(
                       _previewOf(msg),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      linkColor: colors.primary,
                       style: context.text.bodySmall,
                     ),
                   ),
@@ -211,8 +211,11 @@ extension _ChatInput on _ChatDetailScreenState {
                 ...list.map((m) => ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: Icon(Icons.push_pin, size: 18, color: context.colors.primary),
-                      title: Text(_previewOf(m),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      title: StyledPreviewText(
+                        _previewOf(m),
+                        maxLines: 1,
+                        linkColor: context.colors.primary,
+                      ),
                       trailing: IconButton(
                         icon: Icon(Icons.close_rounded,
                             size: 20, color: context.colors.onSurfaceVariant),

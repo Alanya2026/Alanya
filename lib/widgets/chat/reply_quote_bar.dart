@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_dimens.dart';
+import 'styled_preview_text.dart';
 
 /// Barre de citation compacte (direction A) : accent + texte + vignette.
 ///
-/// Sans [Expanded] glouton : la largeur suit le contenu (plafonnée), pour que
-/// la bulle puisse faire `max(citation, message)` via [IntrinsicWidth].
+/// Conçue pour vivre sous un [IntrinsicWidth] : pas de [LayoutBuilder]
+/// (largeur intrinsèque = 0 → texte tronqué), [Expanded] OK une fois la
+/// largeur de bulle fixée à max(citation, message).
 class ReplyQuoteBar extends StatelessWidget {
   const ReplyQuoteBar({
     super.key,
@@ -58,10 +60,10 @@ class ReplyQuoteBar extends StatelessWidget {
             ),
             const SizedBox(height: 1),
           ],
-          Text(
+          StyledPreviewText(
             body,
             maxLines: title != null ? 1 : 2,
-            overflow: TextOverflow.ellipsis,
+            linkColor: titleColor ?? accent,
             style: textStyle?.copyWith(
               color: bodyColor,
               height: 1.2,
@@ -76,61 +78,32 @@ class ReplyQuoteBar extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // Après IntrinsicWidth + stretch : largeur serrée → on remplit.
-            final tight = constraints.hasBoundedWidth &&
-                (constraints.maxWidth - constraints.minWidth).abs() < 0.5;
-            final maxText = _maxTextWidth(context, constraints, hasThumb);
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              decoration: BoxDecoration(
-                color: accent.withAlpha(28),
-                borderRadius: BorderRadius.circular(6),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          decoration: BoxDecoration(
+            color: accent.withAlpha(28),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 3,
+                height: hasThumb ? thumbSize : 34,
+                color: accent,
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Row(
-                mainAxisSize: tight ? MainAxisSize.max : MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 3,
-                    height: hasThumb ? thumbSize : 34,
-                    color: accent,
-                  ),
-                  if (tight)
-                    Expanded(child: textBlock)
-                  else
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: maxText),
-                      child: textBlock,
-                    ),
-                  if (hasThumb)
-                    SizedBox(
-                      width: thumbSize,
-                      height: thumbSize,
-                      child: thumb,
-                    ),
-                ],
-              ),
-            );
-          },
+              Expanded(child: textBlock),
+              if (hasThumb)
+                SizedBox(
+                  width: thumbSize,
+                  height: thumbSize,
+                  child: thumb,
+                ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  double _maxTextWidth(
-    BuildContext context,
-    BoxConstraints constraints,
-    bool hasThumb,
-  ) {
-    final screenCap = MediaQuery.sizeOf(context).width * 0.75;
-    final reserved = 3.0 + (hasThumb ? thumbSize : 0.0);
-    final raw = constraints.maxWidth.isFinite
-        ? constraints.maxWidth
-        : screenCap;
-    return (raw - reserved).clamp(48.0, screenCap);
   }
 }
