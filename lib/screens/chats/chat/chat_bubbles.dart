@@ -132,20 +132,33 @@ extension _ChatBubbles on _ChatDetailScreenState {
                   bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              // Largeur = max(citation, corps), plafonnée par maxWidth du Container.
+              child: IntrinsicWidth(
+                child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (msg.isStatusReply != 0)
                     _buildStatusReplyChip(isMe),
                   if (msg.isForwarded)
                     _buildForwardedChip(isMe),
                   if (msg.replyToContent != null &&
-                      msg.replyToContent!.isNotEmpty)
-                    _buildReplyQuote(
-                      msg.replyToContent!,
-                      isMe,
-                      replyToID: msg.replyToID,
-                    ),
+                      msg.replyToContent!.isNotEmpty) ...[
+                    if (parseStatusReplyContent(msg.replyToContent)
+                        case final statusPayload?)
+                      StatusReplyQuote(
+                        payload: statusPayload,
+                        accent: isMe
+                            ? context.colors.onPrimary
+                            : context.colors.primary,
+                        textColor: _bubbleMuted(isMe),
+                      )
+                    else
+                      _buildReplyQuote(
+                        msg.replyToContent!,
+                        isMe,
+                        replyToID: msg.replyToID,
+                      ),
+                  ],
                   if (msg.isDeleted)
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -197,7 +210,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     ],
                   ],
                   const SizedBox(height: AppSpacing.xs),
-                  Row(
+                  Align(
+                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
@@ -233,7 +248,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       ],
                     ],
                   ),
+                  ),
                 ],
+              ),
               ),
             ),
           ),
@@ -416,56 +433,25 @@ extension _ChatBubbles on _ChatDetailScreenState {
   Widget _buildReplyQuote(String content, bool isMe, {int? replyToID}) {
     final accent = isMe ? context.colors.onPrimary : context.colors.primary;
     final target = _messageById(replyToID);
-    final thumb = target != null ? _buildReplyMediaThumb(target, size: 44) : null;
-    return Material(
-      color: const Color(0x00000000),
-      child: InkWell(
-        onTap: (replyToID != null && replyToID > 0)
-            ? () => _scrollToReply(replyToID)
-            : null,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          decoration: BoxDecoration(
-            color: accent.withAlpha(30),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 3,
-                height: thumb != null ? 44 : 32,
-                color: accent,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.sm + 2,
-                    6,
-                    thumb != null ? AppSpacing.sm : AppSpacing.sm + 2,
-                    6,
-                  ),
-                  child: Text(
-                    content,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.text.bodySmall?.copyWith(
-                      color: _bubbleMuted(isMe),
-                    ),
-                  ),
-                ),
-              ),
-              if (thumb != null) thumb,
-            ],
-          ),
-        ),
-      ),
+    final thumb = target != null ? _buildReplyMediaThumb(target, size: 40) : null;
+    final title = target == null
+        ? null
+        : (target.senderNom?.trim().isNotEmpty == true
+            ? target.senderNom!.trim()
+            : target.senderPseudo?.trim());
+    return ReplyQuoteBar(
+      accent: accent,
+      title: title,
+      titleColor: accent,
+      body: content,
+      bodyColor: _bubbleMuted(isMe),
+      thumb: thumb,
+      onTap: (replyToID != null && replyToID > 0)
+          ? () => _scrollToReply(replyToID)
+          : null,
     );
   }
 
-  /// Message d'origine d'une réponse, s'il est déjà chargé dans le fil.
   LocalMessage? _messageById(int? msgID) {
     if (msgID == null || msgID <= 0) return null;
     for (final m in _currentMessages) {
@@ -477,8 +463,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
   bool _canShowReplyThumb(LocalMessage msg) =>
       !msg.isViewOnce && (msg.type == 1 || msg.type == 2 || msg.type == 4);
 
-  /// Mini-vignette réponse (photo / vidéo / fichier). Carré borné obligatoire.
-  Widget? _buildReplyMediaThumb(LocalMessage msg, {double size = 44}) {
+  Widget? _buildReplyMediaThumb(LocalMessage msg, {double size = 40}) {
     if (!_canShowReplyThumb(msg)) return null;
 
     final fallback = context.colors.surfaceContainerHighest;
@@ -493,7 +478,6 @@ extension _ChatBubbles on _ChatDetailScreenState {
           future: PdfThumbnailService.forMessage(
             localPath: msg.localMediaPath ?? msg.pendingUploadPath,
             url: msg.mediaUrl,
-            thumbBase64: msg.mediaThumb,
           ),
           builder: (context, snap) {
             final bytes = snap.data;
@@ -592,11 +576,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  // Chip context.l10n.statusReply affichée au sommet du bubble.
+  // Chip « Réponse à un statut » + icône (conservée, direction A).
   Widget _buildStatusReplyChip(bool isMe) {
     final fg = isMe ? context.colors.onPrimary.withAlpha(200) : context.colors.primary;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -608,6 +592,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
               color: fg,
               fontWeight: FontWeight.w600,
               fontStyle: FontStyle.italic,
+              fontSize: 11,
             ),
           ),
         ],

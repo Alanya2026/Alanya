@@ -2102,6 +2102,12 @@ abstract class AppLocalizations {
   /// **'Réponse à un statut'**
   String get statusReply;
 
+  /// No description provided for @statusNoLongerAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce statut n\'est plus disponible'**
+  String get statusNoLongerAvailable;
+
   /// No description provided for @socketNotConnected.
   ///
   /// In fr, this message translates to:

@@ -43,6 +43,23 @@ class StatusProvider extends ChangeNotifier {
 
   int totalCount(int authorId) => _byAuthor[authorId]?.length ?? 0;
 
+  /// Retrouve un statut actif (mien ou contact) par id.
+  Statut? findById(int statusId) {
+    if (statusId <= 0) return null;
+    for (final s in _mine) {
+      if (s.id == statusId && !s.isExpired) return s;
+    }
+    for (final list in _byAuthor.values) {
+      for (final s in list) {
+        if (s.id == statusId && !s.isExpired) return s;
+      }
+    }
+    return null;
+  }
+
+  bool isMine(Statut status) =>
+      status.alanyaID == _myId || _mine.any((s) => s.id == status.id);
+
   /// Initialise les listeners socket et restaure la liste des "vus" persistée.
   Future<void> bind(int myId) async {
     _myId = myId;

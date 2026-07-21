@@ -28,6 +28,7 @@ import '../../core/utils/document_file_style.dart';
 import '../../core/utils/file_metadata.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
+import '../../core/utils/status_reply_payload.dart';
 import '../../core/utils/media_viewer_items.dart';
 import '../../core/utils/rich_text_parser.dart';
 import '../../l10n/app_localizations.dart';
@@ -63,6 +64,8 @@ import '../../core/utils/contact_payload.dart';
 import '../../core/utils/location_payload.dart';
 import '../../widgets/chat/contact_message_preview.dart';
 import '../../widgets/chat/location_message_preview.dart';
+import '../../widgets/chat/reply_quote_bar.dart';
+import '../../widgets/chat/status_reply_quote.dart';
 import '../../widgets/chat/share_preferred_contact_sheet.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :

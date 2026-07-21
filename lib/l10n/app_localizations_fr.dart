@@ -1217,6 +1217,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get statusReply => 'Réponse à un statut';
 
   @override
+  String get statusNoLongerAvailable => 'Ce statut n\'est plus disponible';
+
+  @override
   String get socketNotConnected => 'Socket non connecté';
 
   @override

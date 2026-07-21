@@ -341,6 +341,7 @@
   "sendLocation": "Send location",
   "openSettings": "Open settings",
   "statusReply": "Status reply",
+  "statusNoLongerAvailable": "This status is no longer available",
   "socketNotConnected": "Socket not connected",
   "deleteForEveryone": "Delete for everyone",
   "meetingTitle": "Meeting title",

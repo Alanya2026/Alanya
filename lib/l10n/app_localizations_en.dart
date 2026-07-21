@@ -1200,6 +1200,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusReply => 'Status reply';
 
   @override
+  String get statusNoLongerAvailable => 'This status is no longer available';
+
+  @override
   String get socketNotConnected => 'Socket not connected';
 
   @override

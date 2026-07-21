@@ -36,7 +36,7 @@ extension _ChatInput on _ChatDetailScreenState {
   Widget _buildReplyBanner() {
     final colors = context.colors;
     final reply = _replyTo!;
-    final thumb = _buildReplyMediaThumb(reply, size: 44);
+    final thumb = _buildReplyMediaThumb(reply, size: 40);
     return Container(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, 4, AppSpacing.sm),
       color: context.semantic.brandContainer,
@@ -45,7 +45,7 @@ extension _ChatInput on _ChatDetailScreenState {
         children: [
           Container(
             width: 3,
-            height: 44,
+            height: thumb != null ? 40 : 36,
             decoration: BoxDecoration(
               color: colors.primary,
               borderRadius: BorderRadius.circular(2),

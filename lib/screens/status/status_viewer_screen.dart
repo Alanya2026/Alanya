@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/services/media_cache_service.dart';
+import '../../core/utils/status_reply_payload.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -346,7 +347,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
     }
   }
 
-  String _statusPreview() {
+  String _statusPreviewLabel() {
     final s = _current;
     if (s.text != null && s.text!.trim().isNotEmpty) return s.text!.trim();
     switch (s.type) {
@@ -359,6 +360,19 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       default:
         return context.l10n.statusNoun;
     }
+  }
+
+  /// Citation persistée : libellé + métadonnées média pour la vignette en chat.
+  String _statusReplyContent() {
+    final s = _current;
+    return encodeStatusReplyContent(
+      type: s.type,
+      preview: _statusPreviewLabel(),
+      mediaUrl: s.mediaUrl,
+      backgroundColor: s.backgroundColor,
+      statusId: s.id,
+      authorId: s.alanyaID,
+    );
   }
 
   Future<void> _sendReply() async {
@@ -378,7 +392,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       await chat.repository.sendText(
         conversationID: convId,
         content: text,
-        replyToContent: _statusPreview(),
+        replyToContent: _statusReplyContent(),
         isStatusReply: 1,
       );
 
@@ -472,7 +486,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
         file: file,
         mediaName: context.l10n.voiceMessage,
         mediaDuration: seconds,
-        replyToContent: _statusPreview(),
+        replyToContent: _statusReplyContent(),
         isStatusReply: 1,
       );
 

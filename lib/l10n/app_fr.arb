@@ -794,6 +794,7 @@
   "sendLocation": "Envoyer la position",
   "openSettings": "Ouvrir les réglages",
   "statusReply": "Réponse à un statut",
+  "statusNoLongerAvailable": "Ce statut n'est plus disponible",
   "socketNotConnected": "Socket non connecté",
   "deleteForEveryone": "Supprimer pour tous",
   "meetingTitle": "Titre de la réunion",
