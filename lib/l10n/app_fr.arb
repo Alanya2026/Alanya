@@ -180,6 +180,15 @@
       }
     }
   },
+  "downloadAlbumCount": "Télécharger l'album ({count})",
+  "@downloadAlbumCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumMediaAlreadyDownloaded": "Tous les médias de l'album sont déjà téléchargés",
   "maxMessages": "Maximum {count} messages",
   "@maxMessages": {
     "placeholders": {
@@ -975,6 +984,19 @@
   "archived": "Archivés",
   "files": "Fichiers",
   "share": "Partager",
+  "shareToConversation": "Envoyer via Alanya",
+  "sharedContentSent": "Contenu envoyé",
+  "sharedContentSentTo": "Contenu envoyé vers {count} discussions",
+  "@sharedContentSentTo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unableToShareTheContent": "Impossible d'envoyer le contenu",
+  "unableToShareTheMessage": "Impossible de partager le message",
+  "thisMessageCannotBeSharedRight": "Ce message ne peut pas être partagé pour le moment",
   "document": "Document",
   "activity": "Activité",
   "album": "📷 Album",

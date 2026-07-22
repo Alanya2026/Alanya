@@ -17,6 +17,7 @@ import '../../core/call_limits.dart';
 import '../../core/db/chat_dao.dart' show decodeParticipants;
 import '../../core/navigation/app_navigator.dart';
 import '../../core/services/call_service.dart';
+import '../../core/services/message_share_service.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
@@ -145,6 +146,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   final Set<int> _selectedMsgIDs = {};
   /// msgID en cours de téléchargement manuel (overlay WhatsApp).
   final Set<int> _mediaDownloadingIds = {};
+  /// Chemins résolus avant que le flux Drift ne rafraîchisse l'UI.
+  final Map<int, String> _localMediaPathOverrides = {};
   List<LocalMessage> _currentMessages = const [];
 
   /// Pont public vers `setState()` (lui-même `@protected`), afin que les
@@ -679,9 +682,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   PreferredSizeWidget _buildSelectionAppBar() {
     final count = _selectedMsgIDs.length;
     final selected = _resolveSelectedMessages();
+    final single = selected.length == 1 ? selected.first : null;
     final canForward =
         selected.isNotEmpty && selected.every(canForwardMessage);
+    final canShare = canForward;
     final canDelete = selected.isNotEmpty;
+    final canReply = single != null;
+    final canPin = single != null && single.msgID != 0 && !single.isDeleted;
+    final canInfo = single != null && single.msgID != 0;
 
     return AppBar(
       leading: IconButton(
@@ -690,11 +698,37 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       ),
       title: Text(context.l10n.selectedCount(count)),
       actions: [
+        if (canReply)
+          IconButton(
+            icon: const Icon(Icons.reply),
+            tooltip: context.l10n.reply,
+            onPressed: _replyToSelected,
+          ),
         if (canForward)
           IconButton(
             icon: const Icon(Icons.forward),
             tooltip: context.l10n.forward,
             onPressed: _forwardSelected,
+          ),
+        if (canShare)
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: context.l10n.share,
+            onPressed: _shareSelected,
+          ),
+        if (canPin)
+          IconButton(
+            icon: Icon(
+              single.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            ),
+            tooltip: single.isPinned ? context.l10n.unpin2 : context.l10n.pin,
+            onPressed: _togglePinSelected,
+          ),
+        if (canInfo)
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: context.l10n.infoAction,
+            onPressed: _showInfoSelected,
           ),
         if (canDelete)
           IconButton(

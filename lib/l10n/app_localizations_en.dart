@@ -304,6 +304,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String downloadAlbumCount(int count) {
+    return 'Download album ($count)';
+  }
+
+  @override
+  String get albumMediaAlreadyDownloaded =>
+      'All album media are already downloaded';
+
+  @override
   String maxMessages(int count) {
     return 'Maximum $count messages';
   }
@@ -1741,6 +1750,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get share => 'Share';
+
+  @override
+  String get shareToConversation => 'Send via Alanya';
+
+  @override
+  String get sharedContentSent => 'Content sent';
+
+  @override
+  String sharedContentSentTo(int count) {
+    return 'Content sent to $count chats';
+  }
+
+  @override
+  String get unableToShareTheContent => 'Unable to send the content';
+
+  @override
+  String get unableToShareTheMessage => 'Unable to share the message';
+
+  @override
+  String get thisMessageCannotBeSharedRight =>
+      'This message cannot be shared right now';
 
   @override
   String get document => 'Document';

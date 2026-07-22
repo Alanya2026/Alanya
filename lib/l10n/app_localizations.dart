@@ -632,6 +632,18 @@ abstract class AppLocalizations {
   /// **'Transférer l\'album ({count})'**
   String forwardAlbumCount(int count);
 
+  /// No description provided for @downloadAlbumCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger l\'album ({count})'**
+  String downloadAlbumCount(int count);
+
+  /// No description provided for @albumMediaAlreadyDownloaded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les médias de l\'album sont déjà téléchargés'**
+  String get albumMediaAlreadyDownloaded;
+
   /// No description provided for @maxMessages.
   ///
   /// In fr, this message translates to:
@@ -3187,6 +3199,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Partager'**
   String get share;
+
+  /// No description provided for @shareToConversation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer via Alanya'**
+  String get shareToConversation;
+
+  /// No description provided for @sharedContentSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contenu envoyé'**
+  String get sharedContentSent;
+
+  /// No description provided for @sharedContentSentTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contenu envoyé vers {count} discussions'**
+  String sharedContentSentTo(int count);
+
+  /// No description provided for @unableToShareTheContent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'envoyer le contenu'**
+  String get unableToShareTheContent;
+
+  /// No description provided for @unableToShareTheMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de partager le message'**
+  String get unableToShareTheMessage;
+
+  /// No description provided for @thisMessageCannotBeSharedRight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce message ne peut pas être partagé pour le moment'**
+  String get thisMessageCannotBeSharedRight;
 
   /// No description provided for @document.
   ///

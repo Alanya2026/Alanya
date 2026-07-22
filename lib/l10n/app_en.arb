@@ -89,6 +89,8 @@
   "pinnedMessagesCount": "Pinned messages ({count})",
   "selectCount": "Select ({count})",
   "forwardAlbumCount": "Forward album ({count})",
+  "downloadAlbumCount": "Download album ({count})",
+  "albumMediaAlreadyDownloaded": "All album media are already downloaded",
   "maxMessages": "Maximum {count} messages",
   "maxVideos": "Maximum {count} videos.",
   "albumFirstOnly": "Only the first {count} will be sent.",
@@ -522,6 +524,19 @@
   "archived": "Archived",
   "files": "Files",
   "share": "Share",
+  "shareToConversation": "Send via Alanya",
+  "sharedContentSent": "Content sent",
+  "sharedContentSentTo": "Content sent to {count} chats",
+  "@sharedContentSentTo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unableToShareTheContent": "Unable to send the content",
+  "unableToShareTheMessage": "Unable to share the message",
+  "thisMessageCannotBeSharedRight": "This message cannot be shared right now",
   "document": "Document",
   "activity": "Activity",
   "album": "📷 Album",

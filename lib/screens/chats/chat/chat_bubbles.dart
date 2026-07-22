@@ -893,7 +893,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
           alignment: Alignment.center,
           children: [
             ImageMessagePreview(
-              localPath: msg.localMediaPath,
+              localPath: _effectiveLocalPath(msg),
               networkUrl: msg.mediaUrl,
               thumbBase64: msg.mediaThumb,
               useBlurredThumb: needsDl,
@@ -925,7 +925,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
         children: [
           VideoMessagePreview(
             pendingPath: msg.pendingUploadPath,
-            localPath: msg.localMediaPath,
+            localPath: _effectiveLocalPath(msg),
             thumbBase64: msg.mediaThumb,
             durationSeconds: msg.mediaDuration,
             width: 240,
@@ -1291,7 +1291,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
       });
     final first = sorted.first;
     final last = sorted.last;
-    final selected = _isMessageSelected(first);
+    final selected = _isAlbumPartiallySelected(sorted);
     final selectable = sorted.any(_isSelectableMessage);
     final anyDeleted = sorted.any((m) => m.isDeleted);
     // Pire statut de l'album (min) : pas de ✓✓ bleu tant que tous ne le sont pas.
@@ -1319,9 +1319,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
           child: _wrapSelectableBubble(
             isMe: isMe,
             selected: selected,
-            selectable: selectable,
+            selectable: _selectionMode ? false : selectable,
             onLongPress: () => _showAlbumMenu(sorted, isMe),
-            onTap: () => _toggleSelection(sorted.first),
+            onTap: _selectionMode ? null : () => _toggleSelection(sorted.first),
             bubble: Container(
               margin: const EdgeInsets.only(bottom: AppSpacing.md),
               padding: const EdgeInsets.symmetric(
@@ -1510,6 +1510,21 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
+  Widget _albumCellSelectionBadge(bool selected) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: selected ? context.colors.primary : AppColors.black.withValues(alpha: 0.45),
+        border: Border.all(color: AppColors.white, width: 2),
+      ),
+      child: selected
+          ? const Icon(Icons.check, size: 14, color: AppColors.white)
+          : null,
+    );
+  }
+
   Widget _albumCell(
     LocalMessage msg,
     bool isMe,
@@ -1521,9 +1536,20 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final isVideo = msg.type == 2;
     final needsDl = _needsMediaDownload(msg);
     final downloading = _mediaDownloadingIds.contains(msg.msgID);
+    final cellSelected = _isMessageSelected(msg);
+    final cellSelectable = _isSelectableMessage(msg);
 
     return GestureDetector(
       onTap: () async {
+        if (_selectionMode) {
+          if (!cellSelectable) return;
+          if (overlayExtra != null && overlayExtra > 0) {
+            _openAlbumMediaList(all, initialIndex: index);
+            return;
+          }
+          _toggleSelection(msg);
+          return;
+        }
         if (needsDl) {
           final path = await _downloadReceivedMedia(msg);
           if (path == null) return;
@@ -1531,7 +1557,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
         if (!mounted) return;
         _openAlbumMediaList(all, initialIndex: index);
       },
-      onLongPress: () => _showMessageMenu(msg, isMe),
+      onLongPress: () {
+        if (_selectionMode) {
+          if (cellSelectable) _toggleSelection(msg);
+          return;
+        }
+        _showMessageMenu(msg, isMe);
+      },
       child: ClipRRect(
         borderRadius: AppRadius.brSm,
         child: Stack(
@@ -1540,7 +1572,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
             if (isVideo)
               VideoMessagePreview(
                 pendingPath: msg.pendingUploadPath,
-                localPath: msg.localMediaPath,
+                localPath: _effectiveLocalPath(msg),
                 thumbBase64: msg.mediaThumb,
                 durationSeconds: msg.mediaDuration,
                 playIconSize: 24,
@@ -1551,7 +1583,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
               )
             else
               ImageMessagePreview(
-                localPath: msg.localMediaPath,
+                localPath: _effectiveLocalPath(msg),
                 networkUrl: msg.mediaUrl,
                 thumbBase64: msg.mediaThumb,
                 useBlurredThumb: needsDl,
@@ -1562,7 +1594,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
             if (needsDl)
               Center(child: _mediaDownloadBadge(downloading: downloading)),
             if (uploading) _buildUploadProgressOverlay(msg),
-            if (overlayExtra != null && overlayExtra > 0)
+            if (_selectionMode && cellSelected)
+              Container(
+                color: context.colors.primary.withValues(alpha: 0.28),
+              ),
+            if (overlayExtra != null && overlayExtra > 0 && !_selectionMode)
               Container(
                 color: AppColors.black.withValues(alpha: 0.54),
                 alignment: Alignment.center,
@@ -1574,6 +1610,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+              ),
+            if (_selectionMode && cellSelectable)
+              Positioned(
+                top: AppSpacing.xs,
+                right: AppSpacing.xs,
+                child: _albumCellSelectionBadge(cellSelected),
               ),
           ],
         ),

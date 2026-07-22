@@ -5,21 +5,11 @@ part of '../chat_detail_screen.dart';
 extension _ChatActions on _ChatDetailScreenState {
   bool _isSelectableMessage(LocalMessage msg) => msg.msgID > 0 && !msg.isDeleted;
 
-  List<LocalMessage> _albumSiblings(LocalMessage msg) {
-    final marker = parseAlbumMarker(msg.content);
-    if (marker == null) return [msg];
-    return _currentMessages
-        .where((m) => parseAlbumMarker(m.content)?.albumId == marker.albumId)
-        .toList();
-  }
+  bool _isMessageSelected(LocalMessage msg) =>
+      _selectedMsgIDs.contains(msg.msgID);
 
-  bool _isMessageSelected(LocalMessage msg) {
-    final siblings = _albumSiblings(msg);
-    if (siblings.length > 1) {
-      return siblings.every((m) => _selectedMsgIDs.contains(m.msgID));
-    }
-    return _selectedMsgIDs.contains(msg.msgID);
-  }
+  bool _isAlbumPartiallySelected(List<LocalMessage> items) =>
+      items.any((m) => _selectedMsgIDs.contains(m.msgID));
 
   List<LocalMessage> _resolveSelectedMessages() {
     return _currentMessages
@@ -30,16 +20,11 @@ extension _ChatActions on _ChatDetailScreenState {
 
   void _enterSelectionMode(LocalMessage seed) {
     if (!_isSelectableMessage(seed)) return;
-    final ids = _albumSiblings(seed)
-        .map((m) => m.msgID)
-        .where((id) => id > 0)
-        .toSet();
-    if (ids.isEmpty) return;
     rebuild(() {
       _selectionMode = true;
       _selectedMsgIDs
         ..clear()
-        ..addAll(ids);
+        ..add(seed.msgID);
     });
   }
 
@@ -66,29 +51,74 @@ extension _ChatActions on _ChatDetailScreenState {
 
   void _toggleSelection(LocalMessage msg) {
     if (!_selectionMode || !_isSelectableMessage(msg)) return;
-    final ids = _albumSiblings(msg)
-        .map((m) => m.msgID)
-        .where((id) => id > 0)
-        .toList();
-    final allSelected = ids.every(_selectedMsgIDs.contains);
+    final id = msg.msgID;
 
-    if (allSelected) {
+    if (_selectedMsgIDs.contains(id)) {
       rebuild(() {
-        _selectedMsgIDs.removeAll(ids);
+        _selectedMsgIDs.remove(id);
         if (_selectedMsgIDs.isEmpty) _selectionMode = false;
       });
       return;
     }
 
-    final newIds = ids.where((id) => !_selectedMsgIDs.contains(id)).toList();
-    if (_selectedMsgIDs.length + newIds.length > _maxSelectionCount) {
+    if (_selectedMsgIDs.length >= _maxSelectionCount) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.maxMessages(_maxSelectionCount))),
       );
       return;
     }
 
-    rebuild(() => _selectedMsgIDs.addAll(newIds));
+    rebuild(() => _selectedMsgIDs.add(id));
+  }
+
+  void _replyToSelected() {
+    final selected = _resolveSelectedMessages();
+    if (selected.length != 1) return;
+    rebuild(() => _replyTo = selected.first);
+    _exitSelectionMode();
+    _inputFocus.requestFocus();
+  }
+
+  Future<void> _shareSelected() async {
+    final selected = _resolveSelectedMessages();
+    if (selected.isEmpty) return;
+    if (!selected.every(canForwardMessage)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.oneOrMoreMessagesCannotBe),
+        ),
+      );
+      return;
+    }
+
+    for (final msg in selected) {
+      final ok = await MessageShareService.instance.shareMessage(
+        message: msg,
+        repository: _chat.repository,
+      );
+      if (!mounted) return;
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.unableToShareTheMessage)),
+        );
+        return;
+      }
+    }
+    _exitSelectionMode();
+  }
+
+  Future<void> _togglePinSelected() async {
+    final selected = _resolveSelectedMessages();
+    if (selected.length != 1) return;
+    await _togglePin(selected.first);
+    if (mounted) _exitSelectionMode();
+  }
+
+  void _showInfoSelected() {
+    final selected = _resolveSelectedMessages();
+    if (selected.length != 1) return;
+    _showMessageInfo(selected.first);
+    _exitSelectionMode();
   }
 
   Future<void> _deleteSelected({required bool forAll}) async {
@@ -331,6 +361,15 @@ extension _ChatActions on _ChatDetailScreenState {
                   _openForwardPicker(msg);
                 },
               ),
+            if (canForwardMessage(msg))
+              ListTile(
+                leading: Icon(Icons.share_outlined, color: primary),
+                title: Text(context.l10n.share),
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareMessage(msg);
+                },
+              ),
             if (msg.msgID != 0 && !msg.isDeleted)
               ListTile(
                 leading: Icon(
@@ -536,6 +575,28 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  Future<void> _shareMessage(LocalMessage msg) async {
+    if (!canForwardMessage(msg)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.thisMessageCannotBeSharedRight),
+        ),
+      );
+      return;
+    }
+
+    final ok = await MessageShareService.instance.shareMessage(
+      message: msg,
+      repository: _chat.repository,
+    );
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.unableToShareTheMessage)),
+      );
+    }
+  }
+
   void _openForwardAlbumPicker(List<LocalMessage> items) {
     if (!canForwardAlbum(items)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -556,10 +617,27 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  Future<void> _downloadAlbumMedia(List<LocalMessage> items) async {
+    final pending = items.where(_needsMediaDownload).toList();
+    if (pending.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.albumMediaAlreadyDownloaded)),
+      );
+      return;
+    }
+
+    for (final msg in pending) {
+      final path = await _downloadReceivedMedia(msg);
+      if (!mounted) return;
+      if (path == null) return;
+    }
+  }
+
   void _showAlbumMenu(List<LocalMessage> items, bool isMe) {
     final primary = context.colors.primary;
     final error = context.colors.error;
     final muted = context.colors.onSurfaceVariant;
+    final downloadableCount = items.where(_needsMediaDownload).length;
     showAppBottomSheet(
       context: context,
       builder: (_) => AppBottomSheet(
@@ -576,6 +654,15 @@ extension _ChatActions on _ChatDetailScreenState {
                 _enterSelectionModeAlbum(items);
               },
             ),
+            if (downloadableCount > 0)
+              ListTile(
+                leading: Icon(Icons.download_rounded, color: primary),
+                title: Text(context.l10n.downloadAlbumCount(downloadableCount)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _downloadAlbumMedia(items);
+                },
+              ),
             if (canForwardAlbum(items))
               ListTile(
                 leading: Icon(Icons.forward, color: primary),
@@ -1374,8 +1461,17 @@ extension _ChatActions on _ChatDetailScreenState {
     return _chat.presenceLabel(uid);
   }
 
-  bool _hasLocal(LocalMessage msg) =>
-      msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
+  bool _hasLocal(LocalMessage msg) {
+    final override = _localMediaPathOverrides[msg.msgID];
+    if (override != null && File(override).existsSync()) return true;
+    return msg.localMediaPath != null && File(msg.localMediaPath!).existsSync();
+  }
+
+  String? _effectiveLocalPath(LocalMessage msg) {
+    final override = _localMediaPathOverrides[msg.msgID];
+    if (override != null && File(override).existsSync()) return override;
+    return msg.localMediaPath;
+  }
 
   /// Média reçu non view-once sans fichier local → téléchargement manuel requis.
   bool _needsMediaDownload(LocalMessage msg) {
@@ -1410,6 +1506,8 @@ extension _ChatActions on _ChatDetailScreenState {
             backgroundColor: AppColors.error,
           ),
         );
+      } else if (path != null && mounted) {
+        rebuild(() => _localMediaPathOverrides[msg.msgID] = path);
       }
       return path;
     } finally {
@@ -1502,20 +1600,38 @@ extension _ChatActions on _ChatDetailScreenState {
 
   void _openAlbumMediaList(List<LocalMessage> items, {required int initialIndex}) {
     final sorted = sortAlbumMessages(items);
-    if (_selectionMode && sorted.isNotEmpty) {
-      _toggleSelection(sorted[initialIndex.clamp(0, sorted.length - 1)]);
-      return;
-    }
-    Navigator.push(
+    final albumMsgIds = sorted.map((m) => m.msgID).toSet();
+    final inheritedSelection = _selectionMode
+        ? _selectedMsgIDs.where(albumMsgIds.contains).toSet()
+        : null;
+    final startInSelection = inheritedSelection != null &&
+        inheritedSelection.isNotEmpty;
+
+    Navigator.push<Set<int>>(
       context,
       MaterialPageRoute(
         builder: (_) => AlbumMediaListScreen(
           messages: sorted,
           initialIndex: initialIndex.clamp(0, sorted.length - 1),
           excludeConversationId: _convId,
+          conversationId: _convId,
+          initialSelectionMode: startInSelection,
+          initialSelectedIds: inheritedSelection,
+          onReply: (msg) {
+            rebuild(() => _replyTo = msg);
+            _inputFocus.requestFocus();
+          },
+          onShowInfo: _showMessageInfo,
         ),
       ),
-    );
+    ).then((returnedSelection) {
+      if (!mounted || returnedSelection == null) return;
+      rebuild(() {
+        _selectedMsgIDs.removeWhere(albumMsgIds.contains);
+        _selectedMsgIDs.addAll(returnedSelection);
+        _selectionMode = _selectedMsgIDs.isNotEmpty;
+      });
+    });
   }
 
   /// Ouvre un média à vue unique. Le média n'est jamais mis en cache : on
