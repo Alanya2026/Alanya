@@ -5,12 +5,12 @@ Branches : `feat/notifications-v2-whatsapp-like` (Talky + Alanya-Backend)
 
 ## Branches et SHAs (état au rapport)
 
-| Dépôt | Branche | Dernier commit (Talky) |
-|-------|---------|------------------------|
-| Talky | `feat/notifications-v2-whatsapp-like` | voir `git log -1` |
-| Alanya-Backend | `feat/notifications-v2-whatsapp-like` | voir `git log -1` |
+| Dépôt | Branche | HEAD |
+|-------|---------|------|
+| Talky | `feat/notifications-v2-whatsapp-like` | `ee80d23` |
+| Alanya-Backend | `feat/notifications-v2-whatsapp-like` | `182cbd2` |
 
-> Exécuter `git log -1 --oneline` dans chaque dépôt pour les SHAs exacts après les commits finaux.
+Base : Talky `149d146` / Backend `5204e08` (main)
 
 ## Statut des 26 itérations
 
