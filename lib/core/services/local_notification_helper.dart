@@ -9,6 +9,7 @@ import '../utils/conversation_display.dart';
 import 'notification_navigation.dart';
 import 'notifications/notification_dedup_store.dart';
 import 'notifications/notification_diagnostics.dart';
+import 'notifications/notification_identity.dart';
 import '../theme/locale_controller.dart';
 
 AndroidNotificationChannel get _kChannelMessages => AndroidNotificationChannel(
@@ -193,13 +194,16 @@ class LocalNotificationHelper {
       subtitle: isGroup ? senderName : null,
     );
 
+    final notifId = NotificationIdentity.notificationIdForConversation(conversationId);
+    final convTag = NotificationIdentity.tagForConversation(conversationId);
+
     try {
       await _plugin.show(
-        conversationId,
+        notifId,
         displayTitle,
         displayBody,
         NotificationDetails(
-          android: _androidMessageDetails(conversationId, style),
+          android: _androidMessageDetails(conversationId, convTag, style),
           iOS: iosDetails,
         ),
         payload: payload,
@@ -217,12 +221,13 @@ class LocalNotificationHelper {
       // MessagingStyle peut échouer sur certains appareils en background.
       try {
         await _plugin.show(
-          conversationId,
+          notifId,
           displayTitle,
           displayBody,
           NotificationDetails(
             android: _androidMessageDetails(
               conversationId,
+              convTag,
               BigTextStyleInformation(fallbackBody),
             ),
             iOS: iosDetails,
@@ -348,11 +353,17 @@ class LocalNotificationHelper {
 
   static Future<void> cancelConversation(int conversationId) async {
     if (kIsWeb || conversationId == 0) return;
+    final notifId = NotificationIdentity.notificationIdForConversation(conversationId);
+    final tag = NotificationIdentity.tagForConversation(conversationId);
     try {
-      await _plugin.cancel(conversationId, tag: _convTag(conversationId));
+      await _plugin.cancel(notifId, tag: tag);
     } catch (_) {
       // Plugin absent (tests unitaires / plateforme non supportée).
     }
+    NotificationDiagnostics.cancelled(
+      conversationId: conversationId,
+      reason: 'read_or_open',
+    );
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_bufferKey(conversationId));
   }
@@ -412,10 +423,11 @@ class LocalNotificationHelper {
   // ── Internals ────────────────────────────────────────────────────────
 
   static String _convTag(int conversationId) =>
-      '$kConvTagPrefix$conversationId';
+      NotificationIdentity.tagForConversation(conversationId);
 
   static AndroidNotificationDetails _androidMessageDetails(
     int conversationId,
+    String tag,
     StyleInformation styleInformation,
   ) {
     // Pas de groupKey / résumé global : chaque conversation = une bulle
@@ -429,7 +441,7 @@ class LocalNotificationHelper {
       icon: kNotificationIcon,
       color: kNotificationAccentColor,
       largeIcon: kNotificationLargeIcon,
-      tag: _convTag(conversationId),
+      tag: tag,
       styleInformation: styleInformation,
     );
   }

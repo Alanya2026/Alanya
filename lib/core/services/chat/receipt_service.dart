@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../db/chat_dao.dart';
 import '../../../talky_models.dart';
 import '../local_notification_helper.dart';
+import '../notifications/notification_dedup_store.dart';
 import 'chat_api.dart';
 
 /// Accusés de lecture / livraison + catch-up hors ligne.
@@ -41,9 +42,13 @@ class ReceiptService {
   /// Marque les incoming à status=3 puis dérive unread via recompute.
   Future<void> markAsReadLocal(int conversationID) async {
     final myId = _myId();
+    final unreadMsgIds = await _dao.unreadIncomingMsgIds(conversationID, myId);
     await _dao.markConversationRead(conversationID, myId);
     await _recompute(conversationID);
     await LocalNotificationHelper.cancelConversation(conversationID);
+    for (final msgID in unreadMsgIds) {
+      await NotificationDedupStore.markCancelled(msgID: msgID);
+    }
   }
 
   Future<void> _propagateRead(int conversationID) async {

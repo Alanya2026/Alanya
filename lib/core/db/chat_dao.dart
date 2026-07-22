@@ -230,6 +230,20 @@ class ChatDao {
     );
   }
 
+  /// IDs serveur des messages entrants non lus (< status 3).
+  Future<List<int>> unreadIncomingMsgIds(int conversationID, int myId) async {
+    final rows = await (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversationID) &
+              m.senderID.equals(myId).not() &
+              m.status.isSmallerThanValue(3)))
+        .get();
+    return rows
+        .map((m) => m.msgID)
+        .where((id) => id > 0)
+        .toList();
+  }
+
   /// Marque comme lus tous les messages reçus d'une conversation.
   Future<void> markConversationRead(int conversationID, int myId) {
     return (db.update(db.localMessages)

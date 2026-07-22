@@ -14,6 +14,7 @@ import 'callkit_service.dart';
 import 'local_notification_helper.dart';
 import 'notification_navigation.dart';
 import 'notifications/notification_diagnostics.dart';
+import 'notifications/notification_dedup_store.dart';
 import 'ringtone_service.dart';
 import 'call/ended_call_registry.dart';
 
@@ -85,6 +86,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         }
         await RingtoneService.stopAll();
       }
+    } else if (type == 'message_read_sync') {
+      await _handleMessageReadSync(Map<String, dynamic>.from(data));
     } else {
       await _showBackgroundNotification(message);
     }
@@ -93,10 +96,30 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
+Future<void> _handleMessageReadSync(Map<String, dynamic> data) async {
+  final convId = int.tryParse(data['conversationId']?.toString() ?? '') ?? 0;
+  if (convId <= 0) return;
+  await LocalNotificationHelper.cancelConversation(convId);
+  final msgID = int.tryParse(data['msgID']?.toString() ?? '') ?? 0;
+  if (msgID > 0) {
+    await NotificationDedupStore.markCancelled(msgID: msgID);
+  }
+  NotificationDiagnostics.cancelled(
+    conversationId: convId,
+    reason: 'read_sync',
+  );
+}
+
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
   if (kIsWeb) return;
   final data = Map<String, dynamic>.from(message.data);
   final type = data['type']?.toString();
+
+  if (type == 'message_read_sync') {
+    await _handleMessageReadSync(data);
+    return;
+  }
+
   final title = (data['title'] ?? message.notification?.title ?? '').toString();
   final body = (data['body'] ?? message.notification?.body ?? '').toString();
   if (title.isEmpty && body.isEmpty) return;
@@ -323,6 +346,11 @@ class PushService {
         return;
       }
       debugPrint('[Push] Appel géré via CallKit/socket (pas de notif locale)');
+      return;
+    }
+
+    if (type == 'message_read_sync') {
+      await _handleMessageReadSync(data);
       return;
     }
 

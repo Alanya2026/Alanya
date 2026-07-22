@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/services/local_notification_helper.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('LocalNotificationHelper.bodyFromPayload', () {
     test('normalizes album marker in body', () {
       const data = {
