@@ -1163,7 +1163,7 @@ class ChatRepository {
   }
 
   /// Télécharge un média reçu vers le cache app, met à jour [localMediaPath],
-  /// puis exporte vers l'album/dossier Alanya (sauf vue unique / message mien).
+  /// puis exporte vers le stockage interne si la visibilité est activée.
   Future<String?> ensureReceivedMediaLocal({
     required int msgID,
     required String mediaUrl,

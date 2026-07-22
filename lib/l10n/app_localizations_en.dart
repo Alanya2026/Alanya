@@ -186,7 +186,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadSubtitle =>
-      'Received photos, videos and files are saved to Alanya';
+      'Automatically download received photos, videos and files in the app';
+
+  @override
+  String get settingsMediaVisibility => 'Media visibility';
+
+  @override
+  String get settingsMediaVisibilitySubtitle =>
+      'Save received media to internal storage (Gallery and Downloads)';
 
   @override
   String get settingsPrivacy => 'Privacy';

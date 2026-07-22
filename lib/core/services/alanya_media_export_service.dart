@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/app_log.dart';
+import 'media_download_preferences.dart';
 
 /// Exporte les médias reçus vers le stockage partagé, structure type WhatsApp :
 ///
@@ -81,6 +82,7 @@ class AlanyaMediaExportService {
     required bool isMine,
     String? mediaName,
   }) async {
+    if (!MediaDownloadPreferences.isMediaVisibilityEnabled) return;
     if (msgID == 0 || isViewOnce || isMine) return;
     if (type != 1 && type != 2 && type != 4) return;
 

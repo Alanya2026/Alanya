@@ -98,37 +98,73 @@ class SettingsScreen extends StatelessWidget {
           _SettingsGroup(
             title: l10n.settingsMedia,
             child: Consumer<MediaDownloadPreferences>(
-              builder: (_, prefs, __) => SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.sm,
-                ),
-                secondary: Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: context.semantic.surfaceMuted,
-                    shape: BoxShape.circle,
+              builder: (_, prefs, __) => Column(
+                children: [
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.sm,
+                    ),
+                    secondary: Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: context.semantic.surfaceMuted,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.download_rounded,
+                        color: context.colors.onSurfaceVariant,
+                        size: AppIconSize.md,
+                      ),
+                    ),
+                    title: Text(
+                      l10n.settingsAutoDownload,
+                      style: context.text.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      l10n.settingsAutoDownloadSubtitle,
+                      style: context.text.bodySmall?.copyWith(
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                    value: prefs.autoDownload,
+                    onChanged: prefs.setAutoDownload,
                   ),
-                  child: Icon(
-                    Icons.download_rounded,
-                    color: context.colors.onSurfaceVariant,
-                    size: AppIconSize.md,
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.sm,
+                    ),
+                    secondary: Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: context.semantic.surfaceMuted,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.photo_library_outlined,
+                        color: context.colors.onSurfaceVariant,
+                        size: AppIconSize.md,
+                      ),
+                    ),
+                    title: Text(
+                      l10n.settingsMediaVisibility,
+                      style: context.text.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      l10n.settingsMediaVisibilitySubtitle,
+                      style: context.text.bodySmall?.copyWith(
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                    value: prefs.mediaVisibility,
+                    onChanged: prefs.setMediaVisibility,
                   ),
-                ),
-                title: Text(
-                  l10n.settingsAutoDownload,
-                  style: context.text.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                subtitle: Text(
-                  l10n.settingsAutoDownloadSubtitle,
-                  style: context.text.bodySmall?.copyWith(
-                    color: context.colors.onSurfaceVariant,
-                  ),
-                ),
-                value: prefs.autoDownload,
-                onChanged: prefs.setAutoDownload,
+                ],
               ),
             ),
           ),

@@ -443,8 +443,20 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAutoDownloadSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Photos, vidéos et fichiers reçus s’enregistrent dans Alanya'**
+  /// **'Télécharge automatiquement les photos, vidéos et fichiers reçus dans l’app'**
   String get settingsAutoDownloadSubtitle;
+
+  /// No description provided for @settingsMediaVisibility.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visibilité des médias'**
+  String get settingsMediaVisibility;
+
+  /// No description provided for @settingsMediaVisibilitySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistre les médias reçus dans le stockage interne (Galerie et Téléchargements)'**
+  String get settingsMediaVisibilitySubtitle;
 
   /// No description provided for @settingsPrivacy.
   ///
