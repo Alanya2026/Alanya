@@ -711,6 +711,36 @@ class ChatDao {
     });
   }
 
+  /// Fusionne les réactions serveur sans effacer les écritures locales en cours
+  /// ([preserveKeys] = `"msgID:userID"` pendant un PUT/DELETE HTTP).
+  Future<void> mergeReactionsFromServer(
+    int conversationID,
+    List<LocalMessageReactionsCompanion> reactions, {
+    Set<String> preserveKeys = const {},
+  }) async {
+    await db.transaction(() async {
+      final serverKeys = <String>{};
+      for (final reaction in reactions) {
+        final msgID = reaction.msgID.value;
+        final userID = reaction.userID.value;
+        if (msgID == 0 || userID == 0 || reaction.emoji.value.isEmpty) continue;
+        serverKeys.add('$msgID:$userID');
+        await db.into(db.localMessageReactions).insertOnConflictUpdate(reaction);
+      }
+
+      final local = await (db.select(db.localMessageReactions)
+            ..where((r) => r.conversationID.equals(conversationID)))
+          .get();
+      for (final row in local) {
+        final key = '${row.msgID}:${row.userID}';
+        if (serverKeys.contains(key) || preserveKeys.contains(key)) continue;
+        await (db.delete(db.localMessageReactions)
+              ..where((r) => r.msgID.equals(row.msgID) & r.userID.equals(row.userID)))
+            .go();
+      }
+    });
+  }
+
   Future<void> clearAll() async {
     await db.delete(db.localMessages).go();
     await db.delete(db.localConversations).go();

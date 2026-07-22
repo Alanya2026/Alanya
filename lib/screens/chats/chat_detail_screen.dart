@@ -172,6 +172,35 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     return byMsg;
   }
 
+  /// Mise à jour immédiate de l'UI avant l'écriture Drift (ressenti instantané).
+  /// [emoji] null ou vide = retrait de ma réaction sur [msgID].
+  void _applyOptimisticReaction(int msgID, String? emoji) {
+    final myId = _myId;
+    final convId = _convId;
+    if (myId == null || convId == null || msgID == 0) return;
+
+    final updated = Map<int, List<LocalMessageReaction>>.from(_currentReactionsByMsg);
+    final list = List<LocalMessageReaction>.from(updated[msgID] ?? const []);
+    list.removeWhere((r) => r.userID == myId);
+    if (emoji != null && emoji.isNotEmpty) {
+      list.add(
+        LocalMessageReaction(
+          msgID: msgID,
+          userID: myId,
+          conversationID: convId,
+          emoji: emoji,
+          reactedAt: DateTime.now(),
+        ),
+      );
+    }
+    if (list.isEmpty) {
+      updated.remove(msgID);
+    } else {
+      updated[msgID] = list;
+    }
+    setState(() => _currentReactionsByMsg = updated);
+  }
+
   /// Pont public vers `setState()` (lui-même `@protected`), afin que les
   /// extensions de cette librairie puissent déclencher un rebuild.
   void rebuild(VoidCallback fn) => setState(fn);

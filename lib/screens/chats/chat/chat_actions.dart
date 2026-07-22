@@ -466,8 +466,8 @@ extension _ChatActions on _ChatDetailScreenState {
               emoji: emoji,
               selected: emoji == myEmoji,
               onTap: () {
-                Navigator.pop(context);
                 _toggleReaction(msg, emoji);
+                Navigator.pop(context);
               },
             ),
           Semantics(
@@ -498,13 +498,23 @@ extension _ChatActions on _ChatDetailScreenState {
         ?.where((r) => r.userID == _myId)
         .toList();
     final currentEmoji = (mine != null && mine.isNotEmpty) ? mine.first.emoji : null;
+    final removing = currentEmoji == emoji;
+    _applyOptimisticReaction(msg.msgID, removing ? null : emoji);
     try {
-      if (currentEmoji == emoji) {
-        await _chat.repository.removeReaction(msg.msgID);
+      if (removing) {
+        await _chat.repository.removeReaction(
+          msg.msgID,
+          conversationID: _convId,
+        );
       } else {
-        await _chat.repository.setReaction(msg.msgID, emoji);
+        await _chat.repository.setReaction(
+          msg.msgID,
+          emoji,
+          conversationID: _convId,
+        );
       }
     } catch (_) {
+      _applyOptimisticReaction(msg.msgID, currentEmoji);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.actionFailedPleaseTryAgain)),
@@ -522,8 +532,8 @@ extension _ChatActions on _ChatDetailScreenState {
           height: 280,
           child: EmojiPicker(
             onEmojiSelected: (category, emoji) {
-              Navigator.pop(context);
               _toggleReaction(msg, emoji.emoji);
+              Navigator.pop(context);
             },
             config: const Config(height: 280),
           ),
