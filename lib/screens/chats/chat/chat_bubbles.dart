@@ -1390,8 +1390,6 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     )
                   else ...[
                     _buildAlbumGrid(sorted, isMe),
-                    if (!_selectionMode)
-                      _buildAlbumDownloadBar(sorted, isMe),
                     if (albumCaptionFromMessages(sorted) case final caption?)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
@@ -1453,90 +1451,63 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildAlbumDownloadBar(List<LocalMessage> items, bool isMe) {
+  Widget _buildAlbumGridDownloadOverlay(List<LocalMessage> items) {
     final downloadableCount = items.where(_needsMediaDownload).length;
-    if (downloadableCount == 0) return const SizedBox.shrink();
+    if (downloadableCount == 0 || _selectionMode) {
+      return const SizedBox.shrink();
+    }
 
     final albumKey = _albumDownloadKey(items);
     final downloading =
         albumKey != null && _downloadingAlbumIds.contains(albumKey);
-    final accent = isMe ? context.colors.onPrimary : context.colors.primary;
-    final bg = isMe
-        ? context.colors.onPrimary.withValues(alpha: 0.14)
-        : context.colors.primaryContainer.withValues(alpha: 0.55);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.sm,
-        AppSpacing.sm,
-        AppSpacing.sm,
-        0,
-      ),
-      child: Material(
-        color: bg,
-        borderRadius: AppRadius.brSm,
-        child: InkWell(
-          onTap: downloading ? null : () => _downloadAlbumMedia(items),
-          borderRadius: AppRadius.brSm,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (downloading)
-                  SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: accent,
-                    ),
-                  )
-                else
-                  Icon(Icons.download_rounded, size: 18, color: accent),
-                AppSpacing.hGapSm,
-                Flexible(
-                  child: Text(
-                    context.l10n.downloadAlbumCount(downloadableCount),
-                    style: context.text.labelMedium?.copyWith(
-                      color: accent,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    return Center(
+      child: GestureDetector(
+        onTap: downloading ? null : () => _downloadAlbumMedia(items),
+        child: _mediaDownloadBadge(downloading: downloading),
       ),
     );
   }
 
   Widget _buildAlbumGrid(List<LocalMessage> items, bool isMe) {
+    final hideCellDownloadBadge =
+        items.any(_needsMediaDownload) && !_selectionMode;
     final count = items.length;
     const gap = 2.0;
     const cellSize = 110.0;
     final gridWidth = count >= 2 ? cellSize * 2 + gap : cellSize;
 
+    Widget grid;
     if (count == 2) {
-      return SizedBox(
+      grid = SizedBox(
         width: gridWidth,
         height: cellSize,
         child: Row(
           children: [
-            Expanded(child: _albumCell(items[0], isMe, 0, items)),
+            Expanded(
+              child: _albumCell(
+                items[0],
+                isMe,
+                0,
+                items,
+                hideDownloadBadge: hideCellDownloadBadge,
+              ),
+            ),
             const SizedBox(width: gap),
-            Expanded(child: _albumCell(items[1], isMe, 1, items)),
+            Expanded(
+              child: _albumCell(
+                items[1],
+                isMe,
+                1,
+                items,
+                hideDownloadBadge: hideCellDownloadBadge,
+              ),
+            ),
           ],
         ),
       );
-    }
-
-    if (count == 3) {
-      return SizedBox(
+    } else if (count == 3) {
+      grid = SizedBox(
         width: gridWidth,
         height: cellSize * 2 + gap,
         child: Column(
@@ -1545,66 +1516,118 @@ extension _ChatBubbles on _ChatDetailScreenState {
               height: cellSize,
               child: Row(
                 children: [
-                  Expanded(child: _albumCell(items[0], isMe, 0, items)),
+                  Expanded(
+                    child: _albumCell(
+                      items[0],
+                      isMe,
+                      0,
+                      items,
+                      hideDownloadBadge: hideCellDownloadBadge,
+                    ),
+                  ),
                   const SizedBox(width: gap),
-                  Expanded(child: _albumCell(items[1], isMe, 1, items)),
+                  Expanded(
+                    child: _albumCell(
+                      items[1],
+                      isMe,
+                      1,
+                      items,
+                      hideDownloadBadge: hideCellDownloadBadge,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: gap),
             SizedBox(
               height: cellSize,
-              child: _albumCell(items[2], isMe, 2, items),
+              child: _albumCell(
+                items[2],
+                isMe,
+                2,
+                items,
+                hideDownloadBadge: hideCellDownloadBadge,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      final displayCount = count > 4 ? 4 : count;
+      grid = SizedBox(
+        width: gridWidth,
+        height: cellSize * 2 + gap,
+        child: Column(
+          children: [
+            SizedBox(
+              height: cellSize,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _albumCell(
+                      items[0],
+                      isMe,
+                      0,
+                      items,
+                      hideDownloadBadge: hideCellDownloadBadge,
+                    ),
+                  ),
+                  const SizedBox(width: gap),
+                  Expanded(
+                    child: _albumCell(
+                      items[1],
+                      isMe,
+                      1,
+                      items,
+                      hideDownloadBadge: hideCellDownloadBadge,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: gap),
+            SizedBox(
+              height: cellSize,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: displayCount > 2
+                        ? _albumCell(
+                            items[2],
+                            isMe,
+                            2,
+                            items,
+                            hideDownloadBadge: hideCellDownloadBadge,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  const SizedBox(width: gap),
+                  Expanded(
+                    child: displayCount > 3
+                        ? _albumCell(
+                            items[3],
+                            isMe,
+                            3,
+                            items,
+                            overlayExtra: count > 4 ? count - 4 : null,
+                            hideDownloadBadge: hideCellDownloadBadge,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       );
     }
 
-    // 4+ : grille 2×2, overlay +N sur la 4e si > 4
-    final displayCount = count > 4 ? 4 : count;
-    return SizedBox(
-      width: gridWidth,
-      height: cellSize * 2 + gap,
-      child: Column(
-        children: [
-          SizedBox(
-            height: cellSize,
-            child: Row(
-              children: [
-                Expanded(child: _albumCell(items[0], isMe, 0, items)),
-                const SizedBox(width: gap),
-                Expanded(child: _albumCell(items[1], isMe, 1, items)),
-              ],
-            ),
-          ),
-          const SizedBox(height: gap),
-          SizedBox(
-            height: cellSize,
-            child: Row(
-              children: [
-                Expanded(
-                  child: displayCount > 2
-                      ? _albumCell(items[2], isMe, 2, items)
-                      : const SizedBox.shrink(),
-                ),
-                const SizedBox(width: gap),
-                Expanded(
-                  child: displayCount > 3
-                      ? _albumCell(
-                          items[3],
-                          isMe,
-                          3,
-                          items,
-                          overlayExtra: count > 4 ? count - 4 : null,
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        grid,
+        _buildAlbumGridDownloadOverlay(items),
+      ],
     );
   }
 
@@ -1629,6 +1652,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     int index,
     List<LocalMessage> all, {
     int? overlayExtra,
+    bool hideDownloadBadge = false,
   }) {
     final uploading = msg.status == 0;
     final isVideo = msg.type == 2;
@@ -1689,7 +1713,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 expandToFill: true,
                 fallbackColor: context.semantic.surfaceMuted,
               ),
-            if (needsDl)
+            if (needsDl && !hideDownloadBadge)
               Center(child: _mediaDownloadBadge(downloading: downloading)),
             if (uploading) _buildUploadProgressOverlay(msg),
             if (_selectionMode && cellSelected)

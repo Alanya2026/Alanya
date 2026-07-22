@@ -57,9 +57,6 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
   StreamSubscription<List<LocalMessage>>? _messagesSub;
   bool _openingViewer = false;
   bool _selectionMode = false;
-  bool _downloadingAll = false;
-  int _downloadAllDone = 0;
-  int _downloadAllTotal = 0;
   final Set<int> _selectedMsgIDs = {};
   final Set<int> _mediaDownloadingIds = {};
   final Map<int, String> _localPathOverrides = {};
@@ -87,8 +84,6 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
     final url = msg.mediaUrl;
     return url != null && url.isNotEmpty;
   }
-
-  int get _downloadableCount => _messages.where(_needsMediaDownload).length;
 
   List<LocalMessage> _resolveSelected() {
     return _messages
@@ -181,39 +176,6 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
         setState(() => _mediaDownloadingIds.remove(msg.msgID));
       } else {
         _mediaDownloadingIds.remove(msg.msgID);
-      }
-    }
-  }
-
-  Future<void> _downloadAllMedia() async {
-    final pending = _messages.where(_needsMediaDownload).toList();
-    if (pending.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.albumMediaAlreadyDownloaded)),
-      );
-      return;
-    }
-    if (_downloadingAll) return;
-
-    setState(() {
-      _downloadingAll = true;
-      _downloadAllDone = 0;
-      _downloadAllTotal = pending.length;
-    });
-    try {
-      for (var i = 0; i < pending.length; i++) {
-        final path = await _downloadMedia(pending[i]);
-        if (!mounted) return;
-        if (path == null) return;
-        setState(() => _downloadAllDone = i + 1);
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _downloadingAll = false;
-          _downloadAllDone = 0;
-          _downloadAllTotal = 0;
-        });
       }
     }
   }
@@ -722,100 +684,6 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
     );
   }
 
-  Widget _buildDownloadBanner() {
-    final downloadableCount = _downloadableCount;
-    if (downloadableCount == 0) return const SizedBox.shrink();
-
-    final primary = context.colors.primary;
-    final muted = context.colors.onSurfaceVariant;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.sm,
-      ),
-      child: Material(
-        color: context.colors.primaryContainer.withValues(alpha: 0.42),
-        borderRadius: AppRadius.brMd,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: _downloadingAll ? null : _downloadAllMedia,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: primary.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: _downloadingAll
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: primary,
-                                ),
-                              )
-                            : Icon(Icons.download_rounded, color: primary),
-                      ),
-                    ),
-                    AppSpacing.hGapMd,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.l10n.downloadAlbumCount(downloadableCount),
-                            style: context.text.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          AppSpacing.vGapXs,
-                          Text(
-                            _downloadingAll && _downloadAllTotal > 0
-                                ? context.l10n.downloadAlbumProgress(
-                                    _downloadAllDone.clamp(0, _downloadAllTotal),
-                                    _downloadAllTotal,
-                                  )
-                                : context.l10n.downloadAlbumHint,
-                            style: context.text.bodySmall?.copyWith(color: muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (!_downloadingAll)
-                      Icon(Icons.chevron_right_rounded, color: muted),
-                  ],
-                ),
-                if (_downloadingAll && _downloadAllTotal > 0) ...[
-                  AppSpacing.vGapSm,
-                  ClipRRect(
-                    borderRadius: AppRadius.brSm,
-                    child: LinearProgressIndicator(
-                      value: _downloadAllDone / _downloadAllTotal,
-                      minHeight: 4,
-                      backgroundColor: primary.withValues(alpha: 0.12),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final title = previewLabelForAlbumMessages(_messages);
@@ -831,60 +699,47 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
         appBar: _selectionMode
             ? _buildSelectionAppBar()
             : _buildNormalAppBar(title),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (!_selectionMode) _buildDownloadBanner(),
-            Expanded(
-              child: ListView.separated(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  0,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
-                itemCount: _messages.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AlbumMediaListScreen.itemSpacing),
-                itemBuilder: (context, index) {
-                  final msg = _messages[index];
-                  final selected = _selectedMsgIDs.contains(msg.msgID);
-                  final needsDl = _needsMediaDownload(msg);
-                  final downloading = _mediaDownloadingIds.contains(msg.msgID);
-                  return _AlbumListTile(
-                    message: msg,
-                    index: index,
-                    selectionMode: _selectionMode,
-                    selected: selected,
-                    selectable: _isSelectableMessage(msg),
-                    localPath: _effectiveLocalPath(msg),
-                    needsDownload: needsDl,
-                    downloading: downloading,
-                    onTap: () async {
-                      if (_selectionMode) {
-                        _toggleSelection(msg);
-                        return;
-                      }
-                      if (needsDl) {
-                        final path = await _downloadMedia(msg);
-                        if (path == null) return;
-                      }
-                      if (!mounted) return;
-                      _openViewer(index);
-                    },
-                    onLongPress: () {
-                      if (_selectionMode) {
-                        if (_isSelectableMessage(msg)) _toggleSelection(msg);
-                        return;
-                      }
-                      _showItemMenu(msg);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+        body: ListView.separated(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          itemCount: _messages.length,
+          separatorBuilder: (_, __) =>
+              const SizedBox(height: AlbumMediaListScreen.itemSpacing),
+          itemBuilder: (context, index) {
+            final msg = _messages[index];
+            final selected = _selectedMsgIDs.contains(msg.msgID);
+            final needsDl = _needsMediaDownload(msg);
+            final downloading = _mediaDownloadingIds.contains(msg.msgID);
+            return _AlbumListTile(
+              message: msg,
+              index: index,
+              selectionMode: _selectionMode,
+              selected: selected,
+              selectable: _isSelectableMessage(msg),
+              localPath: _effectiveLocalPath(msg),
+              needsDownload: needsDl,
+              downloading: downloading,
+              onTap: () async {
+                if (_selectionMode) {
+                  _toggleSelection(msg);
+                  return;
+                }
+                if (needsDl) {
+                  final path = await _downloadMedia(msg);
+                  if (path == null) return;
+                }
+                if (!mounted) return;
+                _openViewer(index);
+              },
+              onLongPress: () {
+                if (_selectionMode) {
+                  if (_isSelectableMessage(msg)) _toggleSelection(msg);
+                  return;
+                }
+                _showItemMenu(msg);
+              },
+            );
+          },
         ),
       ),
     );
