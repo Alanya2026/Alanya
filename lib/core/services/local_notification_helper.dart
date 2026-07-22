@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/conversation_display.dart';
 import 'notification_navigation.dart';
+import 'notifications/notification_dedup_store.dart';
+import 'notifications/notification_diagnostics.dart';
 import '../theme/locale_controller.dart';
 
 AndroidNotificationChannel get _kChannelMessages => AndroidNotificationChannel(
@@ -126,6 +128,34 @@ class LocalNotificationHelper {
 
     if (suppressIfActive && await shouldSuppressMessage(conversationId)) return;
 
+    final msgID = int.tryParse(data['msgID']?.toString() ?? '') ?? 0;
+    final eventId = data['eventId']?.toString() ?? '';
+
+    if (await NotificationDedupStore.isAlreadyHandled(
+      msgID: msgID > 0 ? msgID : null,
+      eventId: eventId.isNotEmpty ? eventId : null,
+    )) {
+      NotificationDiagnostics.deduplicated(
+        reason: 'already_handled',
+        msgID: msgID > 0 ? msgID : null,
+        eventId: eventId.isNotEmpty ? eventId : null,
+      );
+      return;
+    }
+
+    final reserved = await NotificationDedupStore.tryReserve(
+      msgID: msgID > 0 ? msgID : null,
+      eventId: eventId.isNotEmpty ? eventId : null,
+    );
+    if (!reserved) {
+      NotificationDiagnostics.deduplicated(
+        reason: 'reserved_or_shown',
+        msgID: msgID > 0 ? msgID : null,
+        eventId: eventId.isNotEmpty ? eventId : null,
+      );
+      return;
+    }
+
     final senderName = title ?? data['title']?.toString() ?? resolveL10n().appTitle;
     final messageBody = body ?? bodyFromPayload(data);
     if (messageBody.isEmpty && senderName.isEmpty) return;
@@ -174,21 +204,47 @@ class LocalNotificationHelper {
         ),
         payload: payload,
       );
+      await NotificationDedupStore.markShown(
+        msgID: msgID > 0 ? msgID : null,
+        eventId: eventId.isNotEmpty ? eventId : null,
+      );
+      NotificationDiagnostics.displayed(
+        conversationId: conversationId,
+        msgID: msgID > 0 ? msgID : null,
+        eventId: eventId.isNotEmpty ? eventId : null,
+      );
     } catch (e) {
       // MessagingStyle peut échouer sur certains appareils en background.
-      await _plugin.show(
-        conversationId,
-        displayTitle,
-        displayBody,
-        NotificationDetails(
-          android: _androidMessageDetails(
-            conversationId,
-            BigTextStyleInformation(fallbackBody),
+      try {
+        await _plugin.show(
+          conversationId,
+          displayTitle,
+          displayBody,
+          NotificationDetails(
+            android: _androidMessageDetails(
+              conversationId,
+              BigTextStyleInformation(fallbackBody),
+            ),
+            iOS: iosDetails,
           ),
-          iOS: iosDetails,
-        ),
-        payload: payload,
-      );
+          payload: payload,
+        );
+        await NotificationDedupStore.markShown(
+          msgID: msgID > 0 ? msgID : null,
+          eventId: eventId.isNotEmpty ? eventId : null,
+        );
+        NotificationDiagnostics.displayed(
+          conversationId: conversationId,
+          msgID: msgID > 0 ? msgID : null,
+          eventId: eventId.isNotEmpty ? eventId : null,
+        );
+      } catch (e2) {
+        await NotificationDedupStore.releaseReservation(
+          msgID: msgID > 0 ? msgID : null,
+          eventId: eventId.isNotEmpty ? eventId : null,
+        );
+        rethrow;
+      }
     }
   }
 
