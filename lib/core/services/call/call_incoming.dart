@@ -90,10 +90,12 @@ extension CallIncoming on CallService {
     final parsedCallerId = int.tryParse(callerId);
     if (!isGroupCall && parsedCallerId == null) {
       debugPrint('[CallService] 🛡 ignore incoming CallKit invalide: callerId=$callerId');
+      if (callId.isNotEmpty) await _callKit.endAll(callId: callId);
       return;
     }
     if (callerName.trim().isEmpty && parsedCallerId == null) {
       debugPrint('[CallService] 🛡 ignore incoming CallKit sans identité exploitable');
+      if (callId.isNotEmpty) await _callKit.endAll(callId: callId);
       return;
     }
     if (_status != CallStatus.idle) return;
@@ -145,12 +147,75 @@ extension CallIncoming on CallService {
     }
 
     if (_status == CallStatus.incoming ||
+        _status == CallStatus.outgoing ||
         _status == CallStatus.connecting ||
         _status == CallStatus.connected) {
       _resetCallState();
       _status = CallStatus.idle;
       notify();
     }
+  }
+
+  /// Dispatch centralisé des actions CallKit (accept / decline / ended).
+  Future<void> handleCallKitAction(IncomingCallAction action) async {
+    switch (action.action) {
+      case IncomingCallActionType.accept:
+        await acceptIncomingCallFromPush(
+          callId: action.callId,
+          callerId: action.callerId,
+          callerName: action.callerName,
+          callerPhoto: action.callerPhoto,
+          isVideo: action.isVideo,
+          roomId: action.roomId,
+        );
+        break;
+      case IncomingCallActionType.decline:
+      case IncomingCallActionType.timeout:
+        await rejectIncomingCallFromPush(
+          callerId: action.callerId,
+          callId: action.callId,
+        );
+        break;
+      case IncomingCallActionType.ended:
+        await _handleCallKitEnded(action);
+        break;
+    }
+  }
+
+  /// Raccrochage depuis CallKit : fin d'appel actif ou nettoyage si déjà terminé.
+  Future<void> _handleCallKitEnded(IncomingCallAction action) async {
+    final callId = action.callId.trim();
+    debugPrint(
+      '[CallService] 📲 handleCallKitEnded callId=$callId '
+      'status=$_status isOutgoing=${action.isOutgoing}',
+    );
+
+    if (callId.isNotEmpty &&
+        (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
+      debugPrint('[CallService] 🛡 handleCallKitEnded ignoré (callId terminé): $callId');
+      await _callKit.endAll(callId: callId);
+      return;
+    }
+
+    if (_status == CallStatus.outgoing ||
+        _status == CallStatus.connecting ||
+        _status == CallStatus.connected) {
+      await endCall();
+      return;
+    }
+
+    if (_status == CallStatus.incoming) {
+      await rejectIncomingCallFromPush(
+        callerId: action.callerId,
+        callId: action.callId,
+      );
+      return;
+    }
+
+    // idle / ended / joining : nettoyage CallKit uniquement (pas de rejet entrant).
+    if (callId.isNotEmpty) _markTerminalCallId(callId);
+    await _ringtone.stop();
+    await _callKit.endAll(callId: callId.isNotEmpty ? callId : null);
   }
 
   /// Envoie le refus via HTTP puis socket. Retire de la file si au moins

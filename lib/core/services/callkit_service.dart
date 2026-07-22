@@ -12,6 +12,7 @@ class IncomingCallAction {
   final String? callerPhoto;
   final bool isVideo;
   final String? roomId;
+  final bool isOutgoing;
   final IncomingCallActionType action;
 
   IncomingCallAction({
@@ -21,6 +22,7 @@ class IncomingCallAction {
     required this.callerPhoto,
     required this.isVideo,
     required this.roomId,
+    this.isOutgoing = false,
     required this.action,
   });
 }
@@ -132,8 +134,10 @@ class CallKitService {
       duration: 0,
       extra: {
         'callId': callId,
+        'callerId': handle,
         'callerName': displayName,
         'isVideo': isVideo,
+        'isOutgoing': true,
       },
       android: AndroidParams(
         isCustomNotification: true,
@@ -205,8 +209,10 @@ class CallKitService {
         actionType = IncomingCallActionType.accept;
         break;
       case Event.actionCallDecline:
-      case Event.actionCallEnded:
         actionType = IncomingCallActionType.decline;
+        break;
+      case Event.actionCallEnded:
+        actionType = IncomingCallActionType.ended;
         break;
       case Event.actionCallTimeout:
         actionType = IncomingCallActionType.timeout;
@@ -224,6 +230,7 @@ class CallKitService {
       callerPhoto: extra['callerPhoto']?.toString(),
       isVideo:     extra['isVideo'] == true || extra['isVideo'] == 'true',
       roomId:      extra['roomId']?.toString(),
+      isOutgoing:  extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
       action:      actionType,
     );
     _pendingAction = action;
@@ -256,6 +263,7 @@ class CallKitService {
           'callerPhoto': extra['callerPhoto']?.toString(),
           'isVideo':     extra['isVideo'] == true || extra['isVideo'] == 'true',
           'roomId':      extra['roomId']?.toString(),
+          'isOutgoing':  extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
           'isAccepted':  c['isAccepted'] == true || c['isAccepted'] == 'true',
         };
       }

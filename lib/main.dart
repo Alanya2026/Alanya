@@ -333,26 +333,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       void dispatch(IncomingCallAction action) {
         if (!mounted) return;
         final callService = Provider.of<CallService>(context, listen: false);
-        switch (action.action) {
-          case IncomingCallActionType.accept:
-            callService.acceptIncomingCallFromPush(
-              callId:      action.callId,
-              callerId:    action.callerId,
-              callerName:  action.callerName,
-              callerPhoto: action.callerPhoto,
-              isVideo:     action.isVideo,
-              roomId:      action.roomId,
-            );
-            break;
-          case IncomingCallActionType.decline:
-          case IncomingCallActionType.timeout:
-          case IncomingCallActionType.ended:
-            callService.rejectIncomingCallFromPush(
-              callerId: action.callerId,
-              callId: action.callId,
-            );
-            break;
-        }
+        unawaited(callService.handleCallKitAction(action));
       }
 
       CallKitService.instance.actions.listen(dispatch);
@@ -374,6 +355,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
             debugPrint('[AuthWrapper] ℹ CallKit réunion ignoré au cold start: $callId');
           } else if (callId.isNotEmpty && await EndedCallRegistry.isEnded(callId)) {
             debugPrint('[AuthWrapper] 🛡 CallKit terminé ignoré au cold start: $callId');
+            await CallKitService.instance.endAll(callId: callId);
+          } else if (active['isOutgoing'] == true) {
+            debugPrint('[AuthWrapper] 🛡 CallKit sortant résiduel → nettoyage: $callId');
+            if (callId.isNotEmpty) await EndedCallRegistry.markEnded(callId);
             await CallKitService.instance.endAll(callId: callId);
           } else if (mounted) {
             final callService = Provider.of<CallService>(context, listen: false);

@@ -11,6 +11,8 @@ import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/realtime_sync_service.dart';
 import '../../core/services/call_service.dart';
+import '../../core/services/call/ended_call_registry.dart';
+import '../../core/services/callkit_service.dart';
 import '../../core/services/notification_navigation.dart';
 import '../../core/services/push_service.dart';
 import '../chats/chats_screen.dart';
@@ -205,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         NotificationNavigation.openConversation(context, action.data);
       }
     } else if (type == 'call' || type == 'group_call') {
-      if (action.fromTap) _handleCallNotification(action.data);
+      if (action.fromTap) unawaited(_handleCallNotification(action.data));
     } else if (type == 'meeting_invite' || type == 'meeting_reminder') {
       _handleMeetingNotification(action);
     } else if (type == 'status_view') {
@@ -213,10 +215,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _handleCallNotification(Map<String, String> data) {
+  Future<void> _handleCallNotification(Map<String, String> data) async {
+    final callId = (data['callId'] ?? data['roomId'] ?? '').trim();
+    if (callId.isEmpty) {
+      debugPrint('[HomeScreen] Notification appel ignorée : callId vide');
+      return;
+    }
+
+    if (await EndedCallRegistry.isEnded(callId)) {
+      debugPrint('[HomeScreen] Notification ignorée : appel déjà terminé $callId');
+      await CallKitService.instance.endAll(callId: callId);
+      return;
+    }
+
+    if (!mounted) return;
+
     final callService = Provider.of<CallService>(context, listen: false);
     callService.prepareIncomingFromCallKit(
-      callId: data['callId'] ?? data['roomId'] ?? '',
+      callId: callId,
       callerId: data['callerId'] ?? '',
       callerName: data['callerName'] ?? data['title'] ?? context.l10n.callNoun,
       callerPhoto: data['photo'],
