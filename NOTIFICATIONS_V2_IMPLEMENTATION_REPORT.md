@@ -12,46 +12,67 @@ Dépôts : Talky + Alanya-Backend
 | **4** | 🟡 Android natif livré — **désactivé par défaut** |
 | **5** | 🟡 iOS catégories + APNs — NSE template (target Xcode manuel) |
 | **6** | 🟡 6.1–6.4 livrés (code) — validation appareil requise |
-| **7** | ⚠️ Matrice E2E non faite |
+| **7** | 🟡 Livré (tests + docs) — **E2E Android à cocher manuellement** |
 
-## Phase 6 — Appels (livré code)
+## Phase 7 — Performance, E2E, rollout
 
-### 6.1 PushKit iOS
-- Token VoIP → backend (`user_push_devices.voipToken`)
-- Push entrant → CallKit natif immédiat
+### 7.1 Tests automatisés
 
-### 6.2 Provider APNs VoIP
-- `apnsVoipProvider.js` + `sendCallToUser`
-- Fallback FCM si VoIP indisponible
+**Backend** (`npm run test:notifications:full`) :
 
-### 6.3 Cycle CallKit
-- `actionCallIncoming` → sync état Flutter (`handleIncomingCallKitPreview`)
-- Collision : fin de l'appel CallKit précédent avant le suivant
-- `call_ended` multi-appareil + push VoIP dismiss iOS (`sendCallEndedToUser`)
-- Cold start : repli `activeCalls()` + pending actions (existant, renforcé)
+- Suite existante + `notificationCallRouting`, `notificationIdempotence`, `notificationTokenStale`
+- `test:calls` (glare / stale ringing)
+- Bench mock : `scripts/bench/push-queue-bench.js` (P50/P95/P99)
 
-### 6.4 Android 13–15
-- `CallPermissionsHelper` : POST_NOTIFICATIONS + full-screen intent (API 34+)
-- MethodChannel `com.alanya/call_permissions` → réglages système si refusé
-- Manifest : `USE_FULL_SCREEN_INTENT`, `FOREGROUND_SERVICE_PHONE_CALL` (déjà présents)
+**Flutter** (`test/notifications/`) :
 
-## Activation
+- Suppression foreground, prefs cache, glare client (`call_glare_test.dart`, `foreground_suppression_test.dart`)
+- Exécution locale : `flutter test test/notifications/` (bloquée ici : snap/root + téléchargement sqlite3)
+
+### 7.2 Matrice E2E Android
+
+- Document : [docs/notifications_e2e_matrix.md](docs/notifications_e2e_matrix.md)
+- 11 scénarios Android staging ; iOS / flags avancés en section différée
+- Statut exécution : **à cocher sur appareil** (environnement agent sans téléphone)
+
+### 7.3 Rollout
+
+- Guide : [docs/notifications_rollout.md](docs/notifications_rollout.md)
+- Ordre flags, SQL migrations, métriques logs, rollback
+- Migrations staging : **à appliquer depuis le réseau autorisé** (MySQL distant injoignable depuis l’agent)
+
+## Phase 6 — rappel
+
+- PushKit + APNs VoIP + CallKit glare / collision
+- `call_ended` multi-appareil + dismiss VoIP
+- Full-screen intent Android 14+
+
+## Flags (état)
+
+| Variable | Défaut | Staging | Prod |
+|----------|--------|---------|------|
+| `DEVICE_REGISTRY_V2` | `true` | à confirmer | à confirmer |
+| `NOTIFICATION_ANDROID_NATIVE_V2` | `false` | off jusqu’à E2E #2–5 | off |
+| `IOS_VOIP_V2` | `false` | off (iOS différé) | off |
+| `IOS_RICH_NSE` | `false` | off | off |
+
+## Migrations SQL
+
+020 `user_push_devices` · 021 `user_notification_prefs` · 022 `conv_participants_mute`
+
+## Risques résiduels
+
+- E2E Android non encore coché sur téléphone réel
+- iOS PushKit / NSE non validés
+- OEM (Xiaomi/Samsung) non couverts
+- Commit Backend Phase 6.3–7 partiel si `.git` non inscriptible depuis l’agent — vérifier `git status` sur Alanya-Backend
+
+## Commandes
 
 ```bash
-# Backend VoIP
-IOS_VOIP_V2=true
-APNS_KEY_ID=... APNS_TEAM_ID=... APNS_BUNDLE_ID=com.example.talkyFlutter
-
-# Android natif messages (Phase 4)
-NOTIFICATION_ANDROID_NATIVE_V2=true
+cd Alanya-Backend && npm run test:notifications:full
+cd Talky && flutter test test/notifications/
 ```
-
-## Prochaines étapes
-
-1. **Phase 7** : matrice E2E (`docs/notifications_e2e_matrix.md`) + tests charge
-2. Validation appareil iOS : PushKit entrant app tuée, accept/refuse/timeout
-3. Validation Android 14+ : full-screen intent + appel tuée
-4. Target Xcode NSE (Phase 5.3) si avatars lockscreen requis
 
 ---
 
