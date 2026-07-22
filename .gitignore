@@ -47,7 +47,10 @@ app.*.map.json
 DIAGNOSTIC_APPELS_ANDROID.md
 PLAN_ACTION_ANDROID_CALLS.md
 lib.zip
-docs/
+# docs/ historiques (gitpulse, manuels…) — versionner seulement les guides notifications
+docs/*
+!docs/notifications_e2e_matrix.md
+!docs/notifications_rollout.md
 # E2E captures locales (pas de secrets)
 docs/e2e_evidence/
 *.dumpsys.txt
