@@ -68,8 +68,12 @@ class ChatRepository {
   /// au premier plan** (sinon écran encore sur la pile mais téléphone verrouillé).
   int _activeConversationID = 0;
 
+  int get activeConversationId => _activeConversationID;
+
   /// False dès que l'app passe en arrière-plan / inactive.
   bool _appInForeground = true;
+
+  bool get appInForeground => _appInForeground;
 
   /// True seulement si le chat est ouvert ET visible (pas en veille).
   bool get _isChatVisiblyActive =>

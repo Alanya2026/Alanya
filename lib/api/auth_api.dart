@@ -139,6 +139,63 @@ extension AuthApi on TalkyApiClient {
         body: jsonEncode({'fcmToken': fcmToken, 'deviceId': did}),
       ),
     );
+    await registerPushDevice(fcmToken: fcmToken, deviceId: did);
+  }
+
+  Future<void> registerPushDevice({
+    required String fcmToken,
+    String? deviceId,
+    String? platform,
+    String? voipToken,
+    String? locale,
+  }) async {
+    final did = deviceId ?? await ensureStableDeviceId();
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/push-devices/register'),
+        headers: _headers,
+        body: jsonEncode({
+          'deviceId': did,
+          if (platform != null) 'platform': platform,
+          'fcmToken': fcmToken,
+          if (voipToken != null) 'voipToken': voipToken,
+          if (locale != null) 'locale': locale,
+        }),
+      ),
+    );
+  }
+
+  Future<void> updatePushDeviceState({
+    String? deviceId,
+    required String appState,
+    int? activeConversationId,
+    bool? notificationsEnabled,
+  }) async {
+    final did = deviceId ?? await ensureStableDeviceId();
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/push-devices/state'),
+        headers: _headers,
+        body: jsonEncode({
+          'deviceId': did,
+          'appState': appState,
+          if (activeConversationId != null)
+            'activeConversationId': activeConversationId,
+          if (notificationsEnabled != null)
+            'notificationsEnabled': notificationsEnabled,
+        }),
+      ),
+    );
+  }
+
+  Future<void> deletePushDevice({String? deviceId}) async {
+    final did = deviceId ?? await ensureStableDeviceId();
+    await _handleRequest(
+      () => _client.delete(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/push-devices/$did'),
+        headers: _headers,
+      ),
+    );
   }
 
   void logout() {

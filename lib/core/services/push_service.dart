@@ -15,6 +15,7 @@ import 'local_notification_helper.dart';
 import 'notification_navigation.dart';
 import 'notifications/notification_diagnostics.dart';
 import 'notifications/notification_dedup_store.dart';
+import 'notifications/push_device_coordinator.dart';
 import 'ringtone_service.dart';
 import 'call/ended_call_registry.dart';
 
@@ -168,6 +169,8 @@ class PushService {
 
   final TalkyApiClient _apiClient;
   final GlobalKey<NavigatorState>? _navKey;
+  late final PushDeviceCoordinator _deviceCoordinator =
+      PushDeviceCoordinator(_apiClient);
 
   final FirebaseMessaging _fm = FirebaseMessaging.instance;
 
@@ -266,6 +269,17 @@ class PushService {
       debugPrint('[Push] cold start via FCM: type=${initial.data['type']}');
       _handleOpenedApp(initial);
     }
+  }
+
+  Future<void> syncDeviceLifecycle({
+    required bool appInForeground,
+    int activeConversationId = 0,
+  }) async {
+    _deviceCoordinator.scheduleStateUpdate(
+      appInForeground: appInForeground,
+      activeConversationId:
+          activeConversationId > 0 ? activeConversationId : null,
+    );
   }
 
   Future<void> _safeUpdateToken(String token) async {

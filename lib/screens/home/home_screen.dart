@@ -98,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Provider.of<ChatProvider>(context, listen: false)
           .repository
           .syncPushSuppressionForLifecycle(true);
+      _syncPushDeviceState(foreground: true);
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
@@ -107,7 +108,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Provider.of<ChatProvider>(context, listen: false)
           .repository
           .syncPushSuppressionForLifecycle(false);
+      _syncPushDeviceState(foreground: false);
     }
+  }
+
+  void _syncPushDeviceState({required bool foreground}) {
+    final repo = Provider.of<ChatProvider>(context, listen: false).repository;
+    PushService.instance.syncDeviceLifecycle(
+      appInForeground: foreground,
+      activeConversationId: repo.activeConversationId,
+    );
   }
 
   void _scheduleResumeCatchUp() {
