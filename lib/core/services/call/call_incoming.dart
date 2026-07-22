@@ -126,6 +126,52 @@ extension CallIncoming on CallService {
     notify();
   }
 
+  /// Synchronise l'état Flutter quand CallKit/PushKit affiche un entrant
+  /// (app au premier plan ou réveil) avant l'arrivée du socket WebRTC.
+  Future<void> handleIncomingCallKitPreview({
+    required String callId,
+    required String callerId,
+    required String callerName,
+    String? callerPhoto,
+    required bool isVideo,
+    String? roomId,
+  }) async {
+    if (callId.isNotEmpty &&
+        (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
+      debugPrint(
+        '[CallService] 🛡 PushKit preview ignoré (callId terminé): $callId',
+      );
+      await _callKit.endAll(callId: callId);
+      return;
+    }
+
+    if (!await canPrepareIncomingFromCallKit(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      roomId: roomId,
+    )) {
+      debugPrint(
+        '[CallService] 🛡 PushKit preview refusé (occupé ou invalide): $callId',
+      );
+      await _callKit.endAll(callId: callId);
+      return;
+    }
+
+    if (!_apiClient.isSocketConnected) {
+      _apiClient.connectSocket();
+    }
+
+    await _prepareIncomingFromCallKitAsync(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      callerPhoto: callerPhoto,
+      isVideo: isVideo,
+      roomId: roomId,
+    );
+  }
+
   /// Appelée depuis main.dart quand l'utilisateur refuse un appel via CallKit.
   ///
   /// On coupe immédiatement CallKit + sonnerie, on mémorise le callId comme
@@ -173,6 +219,16 @@ extension CallIncoming on CallService {
   /// Dispatch centralisé des actions CallKit (accept / decline / ended).
   Future<void> handleCallKitAction(IncomingCallAction action) async {
     switch (action.action) {
+      case IncomingCallActionType.incomingPreview:
+        await handleIncomingCallKitPreview(
+          callId: action.callId,
+          callerId: action.callerId,
+          callerName: action.callerName,
+          callerPhoto: action.callerPhoto,
+          isVideo: action.isVideo,
+          roomId: action.roomId,
+        );
+        break;
       case IncomingCallActionType.accept:
         await acceptIncomingCallFromPush(
           callId: action.callId,

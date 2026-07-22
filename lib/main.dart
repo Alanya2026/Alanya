@@ -338,6 +338,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         unawaited(callService.handleCallKitAction(action));
       }
 
+      CallKitService.instance.setIncomingCallPreviewListener(dispatch);
       CallKitService.instance.actions.listen(dispatch);
 
       final pending = CallKitService.instance.consumePendingAction();

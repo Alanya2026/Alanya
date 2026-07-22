@@ -146,6 +146,10 @@ private enum VoipCallHandler {
 
   static func buildCallData(from payload: PKPushPayload) -> flutter_callkit_incoming.Data? {
     let dict = payload.dictionaryPayload
+    let pushType = stringValue(dict, "type")
+    if pushType == "call_ended" {
+      return nil
+    }
     let callId = stringValue(dict, "callId")
     let roomId = stringValue(dict, "roomId")
     let id = !callId.isEmpty ? callId : (!roomId.isEmpty ? roomId : UUID().uuidString)
@@ -178,6 +182,22 @@ private enum VoipCallHandler {
       "roomId": roomId,
     ] as NSDictionary
     return data
+  }
+
+  static func endCall(from payload: PKPushPayload) {
+    let dict = payload.dictionaryPayload
+    let callId = stringValue(dict, "callId")
+    let roomId = stringValue(dict, "roomId")
+    let id = !callId.isEmpty ? callId : roomId
+    guard !id.isEmpty else { return }
+    let data = flutter_callkit_incoming.Data(
+      id: id,
+      nameCaller: "",
+      handle: "",
+      type: 0
+    )
+    SwiftFlutterCallkitIncomingPlugin.sharedInstance?.endCall(data)
+    NSLog("[PushKit] call_ended voip dismiss id=%@", id)
   }
 }
 
@@ -227,6 +247,16 @@ private enum VoipCallHandler {
     completion: @escaping () -> Void
   ) {
     guard type == .voIP else {
+      completion()
+      return
+    }
+
+    let pushType = VoipCallHandler.stringValue(
+      payload.dictionaryPayload,
+      "type"
+    )
+    if pushType == "call_ended" {
+      VoipCallHandler.endCall(from: payload)
       completion()
       return
     }

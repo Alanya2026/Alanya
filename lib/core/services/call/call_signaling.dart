@@ -19,9 +19,28 @@ extension CallSignaling on CallService {
       final callerMatches = incomingCallerId.isNotEmpty &&
           (incomingCallerId == _remoteUserId?.toString() ||
               (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId));
-      if (_status != CallStatus.idle && !(waitingForOffer && callerMatches)) {
+      // Glare : les deux correspondent se appellent — basculer sortant → entrant.
+      final outgoingGlare = (_status == CallStatus.outgoing ||
+              _status == CallStatus.connecting) &&
+          incomingCallerId.isNotEmpty &&
+          incomingCallerId == _remoteUserId?.toString();
+      if (_status != CallStatus.idle &&
+          !(waitingForOffer && callerMatches) &&
+          !outgoingGlare) {
         debugPrint('[CallService] 🛡 incoming_call ignoré: status=$_status');
         return;
+      }
+      if (outgoingGlare) {
+        debugPrint(
+          '[CallService] 🔀 Glare: abandon sortant vers $incomingCallerId → entrant',
+        );
+        _cancelOutgoingTimeout();
+        await _ringtone.stop();
+        await _releaseCallSession();
+        await _webrtc.dispose();
+        await _callKit.endAll();
+        _resetCallState();
+        _status = CallStatus.idle;
       }
       if (_isMeetingActive()) {
         debugPrint('[CallService] 🛡 incoming_call ignoré: réunion active');
@@ -177,6 +196,8 @@ extension CallSignaling on CallService {
       await _terminateCall();
       if (code == 'CALL_BLOCKED') {
         _showTransientMessage(LocaleController.instance.l10n.callImpossible);
+      } else if (code == 'CALLER_BUSY') {
+        _showTransientMessage(LocaleController.instance.l10n.aCallIsAlreadyInProgress);
       } else if (reason != null && reason.isNotEmpty) {
         _showTransientMessage(reason);
       } else {

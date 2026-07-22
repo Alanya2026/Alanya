@@ -19,6 +19,7 @@ import 'notifications/notification_dedup_store.dart';
 import 'notifications/push_device_coordinator.dart';
 import 'ringtone_service.dart';
 import 'call/ended_call_registry.dart';
+import 'call/call_permissions_helper.dart';
 
 const String _kDefaultFirebaseVapidKey =
     'BBde_uFKtUbLFwAQZ0Kd5ENuaPD1LuRf2ZvvHMPZ3wigioZpjIf7a9rh3pFcI2TRYRrC1YmoiRnAJ4n8io5QBTk';
@@ -238,6 +239,7 @@ class PushService {
       );
 
       await _maybeRequestBatteryOptimizationExemption();
+      await CallPermissionsHelper.ensureCallDisplayPermissions();
 
       final launchDetails =
           await LocalNotificationHelper.plugin.getNotificationAppLaunchDetails();

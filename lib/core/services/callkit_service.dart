@@ -27,7 +27,7 @@ class IncomingCallAction {
   });
 }
 
-enum IncomingCallActionType { accept, decline, timeout, ended }
+enum IncomingCallActionType { incomingPreview, accept, decline, timeout, ended }
 
 class CallKitService {
   CallKitService._();
@@ -41,6 +41,7 @@ class CallKitService {
   StreamSubscription? _eventSub;
   IncomingCallAction? _pendingAction;
   void Function(String token)? _onVoipTokenUpdated;
+  void Function(IncomingCallAction action)? _onIncomingCallPreview;
 
   /// Dernier callId pour lequel [showIncoming] a été appelé (anti-doublon
   /// FCM + socket en arrière-plan).
@@ -48,6 +49,33 @@ class CallKitService {
 
   void setVoipTokenListener(void Function(String token)? listener) {
     _onVoipTokenUpdated = listener;
+  }
+
+  void setIncomingCallPreviewListener(
+    void Function(IncomingCallAction action)? listener,
+  ) {
+    _onIncomingCallPreview = listener;
+  }
+
+  IncomingCallAction _parseCallAction(
+    CallEvent event,
+    IncomingCallActionType actionType,
+  ) {
+    final extra = event.body['extra'] as Map? ?? const {};
+    return IncomingCallAction(
+      callId: (extra['callId'] ?? event.body['id'] ?? '').toString(),
+      callerId: (extra['callerId'] ?? event.body['handle'] ?? '').toString(),
+      callerName: (extra['callerName'] ?? event.body['nameCaller'] ?? '')
+          .toString(),
+      callerPhoto: extra['callerPhoto']?.toString(),
+      isVideo: extra['isVideo'] == true ||
+          extra['isVideo'] == 'true' ||
+          event.body['type'] == 1,
+      roomId: extra['roomId']?.toString(),
+      isOutgoing:
+          extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
+      action: actionType,
+    );
   }
 
   Future<void> init() async {
@@ -77,6 +105,15 @@ class CallKitService {
     if (id.isNotEmpty && id == _lastShownCallId) {
       debugPrint('[CallKit] showIncoming ignoré (déjà affiché): $id');
       return;
+    }
+    if (id.isNotEmpty &&
+        _lastShownCallId != null &&
+        _lastShownCallId!.isNotEmpty &&
+        _lastShownCallId != id) {
+      debugPrint(
+        '[CallKit] collision appels: fin de $_lastShownCallId avant $id',
+      );
+      await endCall(_lastShownCallId!);
     }
     if (id.isNotEmpty) _lastShownCallId = id;
 
@@ -215,7 +252,13 @@ class CallKitService {
       return;
     }
 
-    final extra = event.body['extra'] as Map? ?? const {};
+    if (event.event == Event.actionCallIncoming) {
+      final action = _parseCallAction(event, IncomingCallActionType.incomingPreview);
+      debugPrint('[CallKit] incoming preview callId=${action.callId}');
+      _onIncomingCallPreview?.call(action);
+      return;
+    }
+
     IncomingCallActionType? actionType;
 
     switch (event.event) {
@@ -235,18 +278,9 @@ class CallKitService {
         return;
     }
 
-    debugPrint('[CallKit] event=$actionType callId=${extra['callId']}');
+    debugPrint('[CallKit] event=$actionType callId=${event.body['id']}');
 
-    final action = IncomingCallAction(
-      callId:      (extra['callId'] ?? event.body['id'] ?? '').toString(),
-      callerId:    (extra['callerId'] ?? '').toString(),
-      callerName:  (extra['callerName'] ?? '').toString(),
-      callerPhoto: extra['callerPhoto']?.toString(),
-      isVideo:     extra['isVideo'] == true || extra['isVideo'] == 'true',
-      roomId:      extra['roomId']?.toString(),
-      isOutgoing:  extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
-      action:      actionType,
-    );
+    final action = _parseCallAction(event, actionType);
     _pendingAction = action;
     _actions.add(action);
   }
