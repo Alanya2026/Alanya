@@ -69,27 +69,59 @@ extension _ChatBubbles on _ChatDetailScreenState {
     required bool selectable,
     required VoidCallback? onLongPress,
     required VoidCallback? onTap,
+    LocalMessage? message,
+    bool swipeEnabled = false,
   }) {
-    if (!_selectionMode) {
+    if (_selectionMode) {
       return GestureDetector(
+        onTap: selectable ? onTap : null,
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          mainAxisAlignment:
+              isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!isMe && selectable) _selectionCheckbox(selected),
+            Flexible(child: bubble),
+            if (isMe && selectable) _selectionCheckbox(selected),
+          ],
+        ),
+      );
+    }
+
+    if (swipeEnabled && message != null) {
+      return SwipeableMessageBubble(
+        message: message,
+        isMe: isMe,
+        enabled: true,
         onLongPress: onLongPress,
+        onReply: () {
+          rebuild(() => _replyTo = message);
+          _inputFocus.requestFocus();
+        },
+        onCopy: () {
+          final text = message.content;
+          if (text == null || text.isEmpty) return;
+          Clipboard.setData(ClipboardData(text: text));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.copied)),
+          );
+        },
+        onDelete: ({required bool forAll}) {
+          _chat.repository.deleteMessage(
+            message.msgID,
+            forAll: forAll,
+            conversationID: _convId,
+            clientId: message.msgID == 0 ? message.clientId : null,
+          );
+        },
         child: bubble,
       );
     }
 
     return GestureDetector(
-      onTap: selectable ? onTap : null,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isMe && selectable) _selectionCheckbox(selected),
-          Flexible(child: bubble),
-          if (isMe && selectable) _selectionCheckbox(selected),
-        ],
-      ),
+      onLongPress: onLongPress,
+      child: bubble,
     );
   }
 
@@ -114,6 +146,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
             isMe: isMe,
             selected: selected,
             selectable: selectable,
+            message: msg,
+            swipeEnabled: !msg.isDeleted,
             onLongPress: () => _showMessageMenu(msg, isMe),
             onTap: () => _toggleSelection(msg),
             bubble: Container(
@@ -1356,6 +1390,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     )
                   else ...[
                     _buildAlbumGrid(sorted, isMe),
+                    if (!_selectionMode)
+                      _buildAlbumDownloadBar(sorted, isMe),
                     if (albumCaptionFromMessages(sorted) case final caption?)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
@@ -1414,6 +1450,68 @@ extension _ChatBubbles on _ChatDetailScreenState {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAlbumDownloadBar(List<LocalMessage> items, bool isMe) {
+    final downloadableCount = items.where(_needsMediaDownload).length;
+    if (downloadableCount == 0) return const SizedBox.shrink();
+
+    final albumKey = _albumDownloadKey(items);
+    final downloading =
+        albumKey != null && _downloadingAlbumIds.contains(albumKey);
+    final accent = isMe ? context.colors.onPrimary : context.colors.primary;
+    final bg = isMe
+        ? context.colors.onPrimary.withValues(alpha: 0.14)
+        : context.colors.primaryContainer.withValues(alpha: 0.55);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.sm,
+        0,
+      ),
+      child: Material(
+        color: bg,
+        borderRadius: AppRadius.brSm,
+        child: InkWell(
+          onTap: downloading ? null : () => _downloadAlbumMedia(items),
+          borderRadius: AppRadius.brSm,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (downloading)
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: accent,
+                    ),
+                  )
+                else
+                  Icon(Icons.download_rounded, size: 18, color: accent),
+                AppSpacing.hGapSm,
+                Flexible(
+                  child: Text(
+                    context.l10n.downloadAlbumCount(downloadableCount),
+                    style: context.text.labelMedium?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

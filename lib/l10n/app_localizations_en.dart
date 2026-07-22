@@ -309,6 +309,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get downloadAlbumHint => 'Save all media to your device';
+
+  @override
+  String downloadAlbumProgress(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
   String get albumMediaAlreadyDownloaded =>
       'All album media are already downloaded';
 
@@ -2026,6 +2034,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get archiveAction => 'Archive';
+
+  @override
+  String get markAsRead => 'Mark as read';
 
   @override
   String get infoAction => 'Info';

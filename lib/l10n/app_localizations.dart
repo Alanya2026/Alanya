@@ -638,6 +638,18 @@ abstract class AppLocalizations {
   /// **'Télécharger l\'album ({count})'**
   String downloadAlbumCount(int count);
 
+  /// No description provided for @downloadAlbumHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer tous les médias sur l\'appareil'**
+  String get downloadAlbumHint;
+
+  /// No description provided for @downloadAlbumProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'{current} sur {total}'**
+  String downloadAlbumProgress(int current, int total);
+
   /// No description provided for @albumMediaAlreadyDownloaded.
   ///
   /// In fr, this message translates to:
@@ -3733,6 +3745,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Archiver'**
   String get archiveAction;
+
+  /// No description provided for @markAsRead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Marquer lu'**
+  String get markAsRead;
 
   /// No description provided for @infoAction.
   ///

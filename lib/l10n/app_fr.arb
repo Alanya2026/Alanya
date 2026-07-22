@@ -188,6 +188,18 @@
       }
     }
   },
+  "downloadAlbumHint": "Enregistrer tous les médias sur l'appareil",
+  "downloadAlbumProgress": "{current} sur {total}",
+  "@downloadAlbumProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "albumMediaAlreadyDownloaded": "Tous les médias de l'album sont déjà téléchargés",
   "maxMessages": "Maximum {count} messages",
   "@maxMessages": {
@@ -1101,6 +1113,7 @@
   "clearAction": "Effacer",
   "scheduleAction": "Planifier",
   "archiveAction": "Archiver",
+  "markAsRead": "Marquer lu",
   "infoAction": "Infos",
   "cannotPlaceCallCheckInternet": "Impossible de passer un appel, vérifiez votre connexion à internet et réessayez.",
   "cannotPlaceCallServerFailed": "Impossible de passer un appel, la connexion au serveur a échoué. Réessayez.",

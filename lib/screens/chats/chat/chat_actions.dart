@@ -626,18 +626,34 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
 
-    for (final msg in pending) {
-      final path = await _downloadReceivedMedia(msg);
-      if (!mounted) return;
-      if (path == null) return;
+    final marker = parseAlbumMarker(items.first.content);
+    final albumKey = marker?.albumId ?? items.first.msgID.toString();
+    rebuild(() => _downloadingAlbumIds.add(albumKey));
+    try {
+      for (final msg in pending) {
+        final path = await _downloadReceivedMedia(msg);
+        if (!mounted) return;
+        if (path == null) return;
+      }
+    } finally {
+      if (mounted) {
+        rebuild(() => _downloadingAlbumIds.remove(albumKey));
+      } else {
+        _downloadingAlbumIds.remove(albumKey);
+      }
     }
+  }
+
+  String? _albumDownloadKey(List<LocalMessage> items) {
+    if (items.isEmpty) return null;
+    final marker = parseAlbumMarker(items.first.content);
+    return marker?.albumId ?? items.first.msgID.toString();
   }
 
   void _showAlbumMenu(List<LocalMessage> items, bool isMe) {
     final primary = context.colors.primary;
     final error = context.colors.error;
     final muted = context.colors.onSurfaceVariant;
-    final downloadableCount = items.where(_needsMediaDownload).length;
     showAppBottomSheet(
       context: context,
       builder: (_) => AppBottomSheet(
@@ -654,15 +670,6 @@ extension _ChatActions on _ChatDetailScreenState {
                 _enterSelectionModeAlbum(items);
               },
             ),
-            if (downloadableCount > 0)
-              ListTile(
-                leading: Icon(Icons.download_rounded, color: primary),
-                title: Text(context.l10n.downloadAlbumCount(downloadableCount)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _downloadAlbumMedia(items);
-                },
-              ),
             if (canForwardAlbum(items))
               ListTile(
                 leading: Icon(Icons.forward, color: primary),

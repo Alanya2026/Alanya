@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_dimens.dart';
+
 /// Palette shimmer alignée sur le web (clair / sombre).
 class _SkeletonPalette {
   const _SkeletonPalette({
@@ -450,6 +452,139 @@ class ReservedPhoneSearchSkeleton extends StatelessWidget {
           const SizedBox(height: 8),
           ReservedPhoneListSkeleton(count: count, compact: true),
         ],
+      ),
+    );
+  }
+}
+
+/// Placeholder d'une tuile de conversation (avatar + titre + aperçu + badge).
+class ConversationSkeleton extends StatelessWidget {
+  const ConversationSkeleton({super.key});
+
+  static final BorderRadius _lineRadius = BorderRadius.circular(AppRadius.sm);
+  static final BorderRadius _avatarRadius =
+      BorderRadius.circular(AppSizes.avatarLg / 2);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          AppSkeleton(
+            width: AppSizes.avatarLg,
+            height: AppSizes.avatarLg,
+            borderRadius: _avatarRadius,
+          ),
+          AppSpacing.hGapMd,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSkeleton(
+                  width: 120,
+                  height: 14,
+                  borderRadius: _lineRadius,
+                ),
+                AppSpacing.vGapSm,
+                AppSkeleton(
+                  width: 180,
+                  height: 12,
+                  borderRadius: _lineRadius,
+                ),
+              ],
+            ),
+          ),
+          AppSpacing.hGapSm,
+          const AppSkeleton(
+            width: 20,
+            height: 20,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Liste de 8 [ConversationSkeleton] synchronisés via [ShimmerScope].
+class ConversationSkeletonList extends StatelessWidget {
+  const ConversationSkeletonList({super.key, this.count = 8});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerScope(
+      child: ListView.builder(
+        itemCount: count,
+        itemBuilder: (_, __) => const RepaintBoundary(
+          child: ConversationSkeleton(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Placeholder d'une bulle de message (alignée gauche ou droite).
+class MessageSkeleton extends StatelessWidget {
+  const MessageSkeleton({
+    super.key,
+    this.isMe = false,
+    this.widthFactor = 0.55,
+  });
+
+  final bool isMe;
+  final double widthFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxW = MediaQuery.of(context).size.width * 0.75;
+    final width = (maxW * widthFactor).clamp(96.0, maxW);
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        child: AppSkeleton(
+          width: width,
+          height: 44,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(AppRadius.lg),
+            topRight: const Radius.circular(AppRadius.lg),
+            bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
+            bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Liste de 6 [MessageSkeleton] alternés gauche/droite.
+class MessageSkeletonList extends StatelessWidget {
+  const MessageSkeletonList({super.key, this.count = 6});
+
+  final int count;
+
+  static const _widths = [0.62, 0.48, 0.70, 0.40, 0.58, 0.52];
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerScope(
+      child: ListView.builder(
+        reverse: true,
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        itemCount: count,
+        itemBuilder: (_, index) {
+          final isMe = index.isOdd;
+          final factor = _widths[index % _widths.length];
+          return RepaintBoundary(
+            child: MessageSkeleton(isMe: isMe, widthFactor: factor),
+          );
+        },
       ),
     );
   }

@@ -89,6 +89,9 @@ dependencies:
   # ── Connectivité (offline detection au niveau OS) ────────────────
   connectivity_plus: ^6.1.0
 
+  # ── UI : swipe actions sur listes / bulles ───────────────────────
+  flutter_slidable: ^3.0.0
+
   # ── Identification appareil (marque + modèle pour userAccess) ────
   device_info_plus: ^10.1.2
   video_thumbnail: ^0.5.6

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_hidden_store.dart';
@@ -34,12 +35,28 @@ class _ChatsScreenState extends State<ChatsScreen> {
   bool _selectionMode = false;
   final Set<int> _selectedConversationIDs = {};
   List<LocalConversation> _latestConversations = const [];
+  /// True tant que le premier refresh serveur n'a pas fini.
+  /// Drift émet `[]` immédiatement (active) → sans ce flag, l'empty state
+  /// s'affiche pendant que le sync HTTP tourne encore.
+  bool _awaitingInitialConversations = true;
 
   @override
   void initState() {
     super.initState();
-    // Rafraîchit depuis le serveur en arrière-plan (l'UI s'affiche déjà du cache).
-    Provider.of<ChatProvider>(context, listen: false).refreshConversations();
+    _bootstrapConversations();
+  }
+
+  Future<void> _bootstrapConversations() async {
+    try {
+      await Provider.of<ChatProvider>(context, listen: false)
+          .refreshConversations();
+    } catch (_) {
+      // Offline / erreur : on laisse l'UI sortir du skeleton (empty ou cache).
+    } finally {
+      if (mounted) {
+        setState(() => _awaitingInitialConversations = false);
+      }
+    }
   }
 
   @override
@@ -233,8 +250,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 // afficher les conv archivées ; les autres chips les excluent.
                 convs = _applyFilter(convs);
 
-                if (snapshot.connectionState == ConnectionState.waiting && all.isEmpty) {
-                  return const LoadingState();
+                // Skeleton seulement si le cache local est vide ET que le
+                // premier sync n'a pas encore répondu. Si Drift a déjà des
+                // données, on affiche la liste tout de suite (cache-first).
+                if (all.isEmpty &&
+                    (_awaitingInitialConversations ||
+                        snapshot.connectionState == ConnectionState.waiting)) {
+                  return const ConversationSkeletonList();
                 }
                 if (convs.isEmpty) {
                   return EmptyState(
@@ -253,11 +275,25 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 }
                 return RefreshIndicator(
                   onRefresh: () => chat.refreshConversations(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
-                    itemCount: convs.length,
-                    itemBuilder: (context, index) =>
-                        _buildTile(context, chat, convs[index], myId),
+                  child: SlidableAutoCloseBehavior(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
+                      itemCount: convs.length,
+                      itemBuilder: (context, index) {
+                        final conv = convs[index];
+                        final tile = _buildTile(context, chat, conv, myId);
+                        if (_selectionMode) return tile;
+                        return SwipeableConversationTile(
+                          conversation: conv,
+                          enabled: !_selectionMode,
+                          onArchive: () => _swipeArchive(chat, conv),
+                          onPin: () => _swipePin(chat, conv),
+                          onDelete: () => _swipeDelete(chat, conv),
+                          onMarkRead: () => _swipeMarkRead(chat, conv),
+                          child: tile,
+                        );
+                      },
+                    ),
                   ),
                 );
               },
@@ -611,6 +647,54 @@ class _ChatsScreenState extends State<ChatsScreen> {
       _exitSelectionMode();
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(context.l10n.errorWithDetails('$e'))));
+    }
+  }
+
+  Future<void> _swipeArchive(ChatProvider chat, LocalConversation conv) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await chat.setConversationsArchived([conv.conversID], !conv.isArchived);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+      );
+    }
+  }
+
+  Future<void> _swipePin(ChatProvider chat, LocalConversation conv) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await chat.setConversationsPinned([conv.conversID], !conv.isPinned);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+      );
+    }
+  }
+
+  Future<void> _swipeDelete(ChatProvider chat, LocalConversation conv) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await chat.deleteConversations([conv.conversID]);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+      );
+    }
+  }
+
+  Future<void> _swipeMarkRead(ChatProvider chat, LocalConversation conv) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await chat.repository.markAsRead(conv.conversID);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.errorWithDetails('$e'))),
+      );
     }
   }
 }
