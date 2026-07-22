@@ -183,6 +183,9 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   AuthProvider? _authProvider;
   int? _boundUserId;
+  /// Sérialise logout → login : évite qu'un re-login rapide (même compte)
+  /// soit ignoré pendant que le vidage local est encore en cours.
+  Future<void> _sessionBindingsChain = Future.value();
   VoidCallback? _onBackOnline;
   ConnectivityProvider? _connectivityForListener;
   void Function(dynamic)? _onCallLogUpdated;
@@ -408,7 +411,12 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   /// Appelé sur chaque changement d'AuthProvider (login, logout, refresh user).
   /// Déclenche un bind/unbind des providers dépendants de l'identité.
   void _onAuthChanged() {
-    unawaited(_syncSessionBindings());
+    _sessionBindingsChain = _sessionBindingsChain.then((_) async {
+      if (!mounted) return;
+      await _syncSessionBindings();
+    }).catchError((Object e, StackTrace st) {
+      debugPrint('[AuthWrapper] _syncSessionBindings échoué: $e');
+    });
   }
 
   /// Aligne l'état des providers (chat, status, admin) sur l'utilisateur
@@ -442,8 +450,17 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       return;
     }
 
-    // Déjà bind sur le même utilisateur, rien à faire.
-    if (myId == _boundUserId) return;
+    // Déjà bind sur le même utilisateur, rien à faire — sauf si le chat a été
+    // débindé entre-temps (logout/re-login rapide pendant le vidage local).
+    if (myId == _boundUserId) {
+      final chatBound = Provider.of<ChatProvider>(context, listen: false)
+          .repository
+          .myId;
+      if (chatBound != 0) return;
+      debugPrint(
+        '[AuthWrapper] myId=$_boundUserId mais chat débindé → re-bind',
+      );
+    }
 
     // Changement d'utilisateur : on libère l'ancien bind avant le neuf.
     if (_boundUserId != null && _boundUserId != myId) {

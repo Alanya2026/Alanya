@@ -43,18 +43,43 @@ int? conversationOtherUserId(LocalConversation conv, int myId) {
 }
 
 /// Retrouve l'ID d'une conversation 1-1 locale avec [peerUserId], ou null.
+/// En cas de doublons (legacy backend), prend la plus récente.
 int? findLocalDirectConversationId(
   Iterable<LocalConversation> convs,
   int myId,
   int peerUserId,
 ) {
+  LocalConversation? best;
+  for (final c in convs) {
+    if (c.isGroup) continue;
+    if (conversationOtherUserId(c, myId) != peerUserId) continue;
+    if (best == null) {
+      best = c;
+      continue;
+    }
+    final bestAt = best.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final curAt = c.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    if (curAt.isAfter(bestAt) || (curAt == bestAt && c.conversID > best.conversID)) {
+      best = c;
+    }
+  }
+  return best?.conversID;
+}
+
+/// Toutes les conversations 1-1 locales avec [peerUserId] (doublons legacy).
+List<int> findAllDirectConversationIds(
+  Iterable<LocalConversation> convs,
+  int myId,
+  int peerUserId,
+) {
+  final ids = <int>[];
   for (final c in convs) {
     if (c.isGroup) continue;
     if (conversationOtherUserId(c, myId) == peerUserId) {
-      return c.conversID;
+      ids.add(c.conversID);
     }
   }
-  return null;
+  return ids;
 }
 
 bool conversationMatchesSearch(LocalConversation conv, int myId, String query) {

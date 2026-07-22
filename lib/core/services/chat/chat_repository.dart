@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
 import '../../utils/forward_message.dart';
+import '../../utils/conversation_display.dart';
 import '../../utils/backend_url.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
@@ -296,6 +297,10 @@ class ChatRepository {
   /// garanti et sans trou des messages manqués par le WebSocket.
   Future<void> syncGlobalDelta() => _sync.syncGlobalDelta();
 
+  /// Précharge les messages des conversations sans historique local.
+  Future<void> bootstrapEmptyConversationMessages() =>
+      _sync.bootstrapEmptyConversationMessages();
+
   /// Charge l'historique d'une conversation.
   /// Si `delta == true`, ne récupère que les messages plus récents que le
   /// dernier confirmé en local (curseur `after` côté API).
@@ -305,6 +310,41 @@ class ChatRepository {
   /// Charge une page d'anciens messages
   Future<int> loadOlderMessages(int conversationID, {int limit = 30}) =>
       _sync.loadOlderMessages(conversationID, limit: limit);
+
+  /// Doublons 1-1 legacy : l'aperçu peut être sur une conv vide (ex. après un
+  /// appel) alors que l'historique texte est sur une autre. Tente chaque conv
+  /// locale avec le même interlocuteur et retourne celle qui a des messages.
+  Future<int?> resolveDirectConversationWithHistory({
+    required int myId,
+    required int peerUserId,
+    required int currentConvId,
+  }) async {
+    if (myId == 0 || peerUserId == 0) return null;
+    final convs = await _dao.getAllConversations();
+    final candidateIds = findAllDirectConversationIds(convs, myId, peerUserId);
+    if (candidateIds.isEmpty) return null;
+
+    // Conv courante d'abord, puis les autres (doublons).
+    candidateIds.sort((a, b) {
+      if (a == currentConvId) return -1;
+      if (b == currentConvId) return 1;
+      return b.compareTo(a);
+    });
+
+    for (final id in candidateIds) {
+      await syncMessages(id);
+      if (await _dao.maxServerMsgId(id) > 0) {
+        if (id != currentConvId) {
+          debugPrint(
+            '[ChatRepo] conv 1-1 doublon: historique sur conv=$id '
+            '(ouverte conv=$currentConvId)',
+          );
+        }
+        return id;
+      }
+    }
+    return null;
+  }
 
 
   static const int maxAlbumItems = MessageSender.maxAlbumItems;

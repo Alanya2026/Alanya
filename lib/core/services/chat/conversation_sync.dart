@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../db/app_database.dart';
@@ -76,9 +78,68 @@ class ConversationSync {
       // curseur par conversation). Garantit badge + aperçu + fil corrects
       // sans dépendre de la fiabilité du WebSocket.
       await syncGlobalDelta();
+      // Sur DB fraîche (install / logout), syncGlobalDelta ne fait rien
+      // (aucun curseur local). Précharge les fils en arrière-plan pour que
+      // l'ouverture d'une conv ne dépende pas d'un seul sync à l'écran.
+      unawaited(bootstrapEmptyConversationMessages());
     } catch (e) {
       debugPrint('[ConversationSync] syncConversations échouée: $e');
     }
+  }
+
+  /// Précharge les messages des conversations qui ont un aperçu serveur mais
+  /// aucun message local confirmé (install fraîche, logout, sync à l'ouverture
+  /// manqué). Utilise POST /messages/sync avec curseur 0 (= msgID > 0).
+  Future<void> bootstrapEmptyConversationMessages() async {
+    if (_myId() == 0) return;
+    var guard = 0;
+    while (guard++ < 20) {
+      final cursors = await _emptyConversationBootstrapCursors();
+      if (cursors.isEmpty) return;
+      debugPrint(
+        '[ConversationSync] bootstrap ${cursors.length} conv(s) sans messages locaux',
+      );
+      try {
+        final resp = await _api.syncMessagesGlobal(cursors);
+        final msgs = (resp['messages'] as List?) ?? const [];
+        if (msgs.isNotEmpty) {
+          final affected = <int>{};
+          for (final raw in msgs) {
+            if (raw is! Map) continue;
+            final j = Map<String, dynamic>.from(raw);
+            await _upsertServerMsg(j, prefetchMedia: true);
+            final cid = _toInt(j['conversationID']);
+            if (cid != 0) affected.add(cid);
+          }
+          for (final c in affected) {
+            await _recompute(c);
+          }
+        }
+        if (resp['hasMore'] != true) break;
+      } catch (e) {
+        debugPrint('[ConversationSync] bootstrap global échoué: $e');
+        break;
+      }
+    }
+
+    // Filet : sync individuel pour les conv encore vides (API globale saturée).
+    final convs = await _dao.getAllConversations();
+    for (final c in convs) {
+      if (c.lastMessageAt == null) continue;
+      if (await _dao.maxServerMsgId(c.conversID) > 0) continue;
+      await syncMessages(c.conversID);
+    }
+  }
+
+  Future<Map<int, int>> _emptyConversationBootstrapCursors() async {
+    final out = <int, int>{};
+    final convs = await _dao.getAllConversations();
+    for (final c in convs) {
+      if (c.lastMessageAt == null) continue;
+      if (await _dao.maxServerMsgId(c.conversID) > 0) continue;
+      out[c.conversID] = 0;
+    }
+    return out;
   }
 
   /// Sync delta GLOBALE, server-authoritative, basée sur un curseur PAR
@@ -125,32 +186,50 @@ class ConversationSync {
     return int.tryParse(v?.toString() ?? '') ?? 0;
   }
 
-  Future<void> syncMessages(int conversationID, {bool delta = false}) async {
-    try {
-      List<dynamic> raw;
-      if (delta) {
-        final last = await _dao.maxServerMsgId(conversationID);
-        raw = await _api.getMessages(
-          conversationID,
-          limit: 50,
-          after: last > 0 ? last : null,
+  Future<void> syncMessages(
+    int conversationID, {
+    bool delta = false,
+    int maxAttempts = 3,
+  }) async {
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        List<dynamic> raw;
+        if (delta) {
+          final last = await _dao.maxServerMsgId(conversationID);
+          raw = await _api.getMessages(
+            conversationID,
+            limit: 50,
+            after: last > 0 ? last : null,
+          );
+        } else {
+          raw = await _api.getMessages(conversationID, limit: 50);
+        }
+        for (final j in raw.whereType<Map<String, dynamic>>()) {
+          await _upsertServerMsg(j, prefetchMedia: true);
+        }
+        await _recompute(conversationID);
+        return;
+      } catch (e) {
+        debugPrint(
+          '[ConversationSync] syncMessages($conversationID) échouée '
+          '(tentative $attempt/$maxAttempts): $e',
         );
-      } else {
-        raw = await _api.getMessages(conversationID, limit: 50);
+        if (attempt == maxAttempts) return;
+        await Future<void>.delayed(Duration(milliseconds: 350 * attempt));
       }
-      for (final j in raw.whereType<Map<String, dynamic>>()) {
-        await _upsertServerMsg(j, prefetchMedia: true);
-      }
-      await _recompute(conversationID);
-    } catch (e) {
-      debugPrint('[ConversationSync] syncMessages($conversationID) échouée: $e');
     }
   }
 
   Future<int> loadOlderMessages(int conversationID, {int limit = 30}) async {
     try {
       final oldest = await _dao.minServerMsgId(conversationID);
-      if (oldest == 0) return 0;
+      if (oldest == 0) {
+        // Après logout/re-login la DB est vide ; si le sync initial a échoué,
+        // le scroll vers le haut doit quand même déclencher un premier fetch.
+        await syncMessages(conversationID);
+        final loaded = await _dao.minServerMsgId(conversationID);
+        return loaded == 0 ? 0 : 1;
+      }
       final raw = await _api.getMessages(
         conversationID,
         limit: limit,

@@ -6,6 +6,7 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -124,6 +125,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   Timer? _typingTimer;
 
   bool _loadingOlder = false;
+  bool _historySyncInFlight = false;
+  /// True si la conv a un aperçu serveur (lastMessageAt) → le fil ne devrait pas rester vide.
+  bool _expectMessages = false;
   bool _atBottom = true;
   bool _suppressAutoScroll = false;
   int? _highlightMsgId;
@@ -146,6 +150,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   final Set<int> _selectedMsgIDs = {};
   /// msgID en cours de téléchargement manuel (overlay WhatsApp).
   final Set<int> _mediaDownloadingIds = {};
+  /// albumId en cours de téléchargement groupé depuis la bulle.
+  final Set<String> _downloadingAlbumIds = {};
   /// Chemins résolus avant que le flux Drift ne rafraîchisse l'UI.
   final Map<int, String> _localMediaPathOverrides = {};
   List<LocalMessage> _currentMessages = const [];
@@ -294,9 +300,74 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     // 3) Room temps réel : messages poussés pendant l'écran = actifs / lus.
     _apiClient.sendSocketEvent(SocketEvents.joinConversation, {'conversationID': convId});
 
-    // 4) Sync historique + vocaux (ne bloque pas l'UI / le badge).
-    unawaited(_chat.repository.syncMessages(convId));
-    unawaited(_chat.repository.reconcileVoiceLocalPaths(convId));
+    // 4) Sync historique + vocaux (ne bloque pas le badge, mais l'UI attend
+    // tant qu'un aperçu serveur existe et que le fil est encore vide).
+    final convMeta =
+        await _chat.repository.dao.watchConversation(convId).first;
+    if (!mounted || _convId != convId) return;
+    final expectMessages = convMeta?.lastMessageAt != null;
+    setState(() {
+      _expectMessages = expectMessages;
+      _historySyncInFlight = expectMessages;
+    });
+    unawaited(_syncConversationHistory(convId));
+  }
+
+  Future<void> _syncConversationHistory(int convId) async {
+    try {
+      var activeConvId = convId;
+      for (var attempt = 0; attempt < 4; attempt++) {
+        await _chat.repository.syncMessages(activeConvId);
+        if (!mounted || _convId != activeConvId) return;
+        var stillEmpty = (await _chat.repository.dao
+                .watchMessages(activeConvId, _myId ?? 0)
+                .first)
+            .isEmpty;
+        if (!stillEmpty) break;
+
+        // Doublon 1-1 : aperçu sur conv vide, messages sur une autre conv.
+        if (stillEmpty &&
+            !widget.isGroup &&
+            widget.userId != null &&
+            _myId != null &&
+            attempt >= 1) {
+          final resolved = await _chat.repository.resolveDirectConversationWithHistory(
+            myId: _myId!,
+            peerUserId: widget.userId!,
+            currentConvId: activeConvId,
+          );
+          if (resolved != null && resolved != activeConvId) {
+            activeConvId = resolved;
+            if (mounted) setState(() => _convId = resolved);
+            _chat.repository.setActiveConversation(resolved);
+            _apiClient.sendSocketEvent(
+              SocketEvents.joinConversation,
+              {'conversationID': resolved},
+            );
+            continue;
+          }
+        }
+
+        if (!_expectMessages) break;
+        if (attempt < 3) {
+          await Future<void>.delayed(Duration(milliseconds: 600 * (attempt + 1)));
+        }
+      }
+      if (!mounted) return;
+      final finalConvId = _convId;
+      if (finalConvId == null) return;
+      await _chat.repository.reconcileVoiceLocalPaths(finalConvId);
+      // Appels : l'aperçu « Appel vocal » n'est pas dans la table message.
+      if (!widget.isGroup && _myId != null && mounted) {
+        unawaited(
+          context.read<LocalCacheRepository>().syncCalls(myId: _myId!),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _historySyncInFlight = false);
+      }
+    }
   }
 
   Future<int?> _ensureConversation() async {
@@ -467,6 +538,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                         .toList();
 
                                     if (messages.isEmpty && calls.isEmpty && !partnerTyping) {
+                                      if (_historySyncInFlight ||
+                                          (_expectMessages &&
+                                              snapshot.connectionState !=
+                                                  ConnectionState.active)) {
+                                        return const LoadingState();
+                                      }
                                       return EmptyState(
                                         icon: Icons.waving_hand_outlined,
                                         title: context.l10n.noMessages,
@@ -488,57 +565,59 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                     // les récents près de la zone de saisie.
                                     final reversedFeed = feed.reversed.toList();
 
-                                    return ListView.builder(
-                                      controller: _scrollController,
-                                      reverse: true,
-                                      padding: const EdgeInsets.all(AppSpacing.lg),
-                                      itemCount: reversedFeed.length + 1,
-                                      itemBuilder: (context, index) {
-                                        if (index == 0) {
-                                          return TypingBubbleSlot(visible: partnerTyping);
-                                        }
-                                        final feedIndex = index - 1;
-                                        final item = reversedFeed[feedIndex];
-                                        final itemTime = _feedTime(item);
-                                        final olderTime = feedIndex < reversedFeed.length - 1
-                                            ? _feedTime(reversedFeed[feedIndex + 1])
-                                            : null;
-                                        final showDate = olderTime == null ||
-                                            !_sameDay(olderTime.toLocal(), itemTime.toLocal());
+                                    return SlidableAutoCloseBehavior(
+                                      child: ListView.builder(
+                                        controller: _scrollController,
+                                        reverse: true,
+                                        padding: const EdgeInsets.all(AppSpacing.lg),
+                                        itemCount: reversedFeed.length + 1,
+                                        itemBuilder: (context, index) {
+                                          if (index == 0) {
+                                            return TypingBubbleSlot(visible: partnerTyping);
+                                          }
+                                          final feedIndex = index - 1;
+                                          final item = reversedFeed[feedIndex];
+                                          final itemTime = _feedTime(item);
+                                          final olderTime = feedIndex < reversedFeed.length - 1
+                                              ? _feedTime(reversedFeed[feedIndex + 1])
+                                              : null;
+                                          final showDate = olderTime == null ||
+                                              !_sameDay(olderTime.toLocal(), itemTime.toLocal());
 
-                                        // Entrée d'appel (journal type WhatsApp).
-                                        if (item is LocalCall) {
+                                          // Entrée d'appel (journal type WhatsApp).
+                                          if (item is LocalCall) {
+                                            return Column(
+                                              children: [
+                                                if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                                _buildCallBubble(item),
+                                              ],
+                                            );
+                                          }
+
+                                          final chatItem = item as ChatListItem;
+                                          final msg = switch (chatItem) {
+                                            ChatListSingle(:final message) => message,
+                                            ChatListAlbum(:final messages) => messages.last,
+                                          };
+                                          if (msg.msgID == _pendingScrollMsgId) {
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              _tryRevealMessage(msg.msgID);
+                                            });
+                                          }
                                           return Column(
+                                            key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
                                             children: [
                                               if (showDate) _buildDateSeparator(itemTime.toLocal()),
-                                              _buildCallBubble(item),
+                                              switch (chatItem) {
+                                                ChatListSingle(:final message) =>
+                                                  _buildMessageBubble(message, message.senderID == _myId),
+                                                ChatListAlbum(:final messages) =>
+                                                  _buildAlbumBubble(messages, messages.first.senderID == _myId),
+                                              },
                                             ],
                                           );
-                                        }
-
-                                        final chatItem = item as ChatListItem;
-                                        final msg = switch (chatItem) {
-                                          ChatListSingle(:final message) => message,
-                                          ChatListAlbum(:final messages) => messages.last,
-                                        };
-                                        if (msg.msgID == _pendingScrollMsgId) {
-                                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                                            _tryRevealMessage(msg.msgID);
-                                          });
-                                        }
-                                        return Column(
-                                          key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
-                                          children: [
-                                            if (showDate) _buildDateSeparator(itemTime.toLocal()),
-                                            switch (chatItem) {
-                                              ChatListSingle(:final message) =>
-                                                _buildMessageBubble(message, message.senderID == _myId),
-                                              ChatListAlbum(:final messages) =>
-                                                _buildAlbumBubble(messages, messages.first.senderID == _myId),
-                                            },
-                                          ],
-                                        );
-                                      },
+                                        },
+                                      ),
                                     );
                                   },
                                 );
