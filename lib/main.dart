@@ -349,17 +349,33 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         // Repli cold start : l'événement CallKit est souvent perdu avant que Flutter
         // soit prêt. activeCalls() conserve isAccepted côté natif.
         final active = await CallKitService.instance.getActiveCall();
-        if (active != null && mounted) {
+        if (!mounted) return;
+        if (active != null) {
           final callId = active['callId'] as String? ?? '';
           if (callId.startsWith('meeting_')) {
             debugPrint('[AuthWrapper] ℹ CallKit réunion ignoré au cold start: $callId');
           } else if (callId.isNotEmpty && await EndedCallRegistry.isEnded(callId)) {
             debugPrint('[AuthWrapper] 🛡 CallKit terminé ignoré au cold start: $callId');
             await CallKitService.instance.endAll(callId: callId);
+          } else if (!mounted) {
+            return;
           } else if (active['isOutgoing'] == true) {
-            debugPrint('[AuthWrapper] 🛡 CallKit sortant résiduel → nettoyage: $callId');
-            if (callId.isNotEmpty) await EndedCallRegistry.markEnded(callId);
-            await CallKitService.instance.endAll(callId: callId);
+            final callService = Provider.of<CallService>(context, listen: false);
+            if (callService.matchesActiveOutgoingSession(callId)) {
+              debugPrint(
+                '[AuthWrapper] Appel sortant local actif — conservation CallKit: $callId',
+              );
+            } else if (await callService.restoreOutgoingFromColdStart(active)) {
+              debugPrint(
+                '[AuthWrapper] Appel sortant restauré depuis snapshot: $callId',
+              );
+            } else {
+              debugPrint(
+                '[AuthWrapper] 🛡 CallKit sortant résiduel → nettoyage: $callId',
+              );
+              if (callId.isNotEmpty) await EndedCallRegistry.markEnded(callId);
+              await CallKitService.instance.endAll(callId: callId);
+            }
           } else if (mounted) {
             final callService = Provider.of<CallService>(context, listen: false);
             final isAccepted = active['isAccepted'] == true;

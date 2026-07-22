@@ -20,6 +20,7 @@ import 'meeting_service.dart';
 import '../theme/locale_controller.dart';
 import 'call/ended_call_registry.dart';
 import 'call/pending_call_reject_store.dart';
+import 'call/pending_outgoing_call_store.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -29,6 +30,7 @@ part 'call/call_group.dart';      // appels de groupe
 part 'call/call_controls.dart';   // contrôles médias + timer
 part 'call/call_session.dart';    // session audio / foreground en veille
 part 'call/call_ui.dart';         // bannière / minimiser l'écran d'appel
+part 'call/call_outgoing_restore.dart'; // restauration appel sortant après kill
 
 enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
 
@@ -108,6 +110,8 @@ class CallService extends ChangeNotifier {
   // Auto-réponse depuis une notification/CallKit : on saute l'écran d'appel
   // entrant (IncomingCallScreen) et on ouvre directement l'écran d'appel actif.
   bool _isAutoAnsweringFromPush = false;
+  bool _isRestoringOutgoing = false;
+  Timer? _outgoingRestoreTimer;
 
   // Filet de sécurité local : si aucun état terminal serveur (call_answered,
   // call_busy, call_no_answer, call_rejected…) n'arrive, on abandonne l'appel.
@@ -246,6 +250,16 @@ class CallService extends ChangeNotifier {
   }
 
   bool get isAutoAnsweringFromPush => _isAutoAnsweringFromPush;
+
+  String? get currentCallId => _currentCallId;
+
+  /// Vrai si une session d'appel sortant/en cours correspond au [callId] CallKit.
+  bool matchesActiveOutgoingSession(String callId) {
+    if (callId.isEmpty || _currentCallId != callId) return false;
+    return _status == CallStatus.outgoing ||
+        _status == CallStatus.connecting ||
+        _status == CallStatus.connected;
+  }
 
   bool _alreadyHandledIncomingCallId(String? callId) {
     if (callId == null || callId.isEmpty) return false;

@@ -134,6 +134,11 @@ extension CallSignaling on CallService {
         _status = CallStatus.connected;
         _startDurationTimer();
         _startSpeakingDetection(groupMode: false);
+        final serverCallId = data['callId']?.toString();
+        unawaited(persistOutgoingSnapshot(
+          phase: 'connected',
+          serverCallId: serverCallId,
+        ));
         // UI « En cours » tout de suite ; CallKit setConnected en arrière-plan.
         notify();
         if (!kIsWeb) {
@@ -212,6 +217,18 @@ extension CallSignaling on CallService {
     _apiClient.onSocketEvent(SocketEvents.authVerified, (_) {
       _flushPendingEndCalls();
       _flushPendingRejects();
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callResume, (data) async {
+      if (data is Map) await _handleCallResume(Map<String, dynamic>.from(data));
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callRejoinOffer, (data) async {
+      if (data is Map) await _handleCallRejoinOffer(Map<String, dynamic>.from(data));
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callRejoinAnswer, (data) async {
+      if (data is Map) await _handleCallRejoinAnswer(Map<String, dynamic>.from(data));
     });
 
     // ICE candidate 1-à-1

@@ -45,6 +45,25 @@ extension CallIncoming on CallService {
     }
   }
 
+  /// Vérifie qu'une notification d'appel entrant peut préparer l'écran entrant.
+  Future<bool> canPrepareIncomingFromCallKit({
+    required String callId,
+    required String callerId,
+    required String callerName,
+    String? roomId,
+  }) async {
+    if (_status != CallStatus.idle) return false;
+    if (callId.isEmpty || callId.startsWith('meeting_')) return false;
+    if (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId)) {
+      return false;
+    }
+    final isGroupCall = roomId != null && roomId.isNotEmpty;
+    final parsedCallerId = int.tryParse(callerId);
+    if (!isGroupCall && parsedCallerId == null) return false;
+    if (callerName.trim().isEmpty && parsedCallerId == null) return false;
+    return true;
+  }
+
   /// Prépare l'état d'appel entrant à partir d'un appel CallKit encore actif,
   /// SANS armer l'auto-réponse. Utilisé au démarrage à froid quand l'utilisateur
   /// a tapé le corps de la notif (pas le bouton « Accepter ») : on affiche l'écran
@@ -75,30 +94,25 @@ extension CallIncoming on CallService {
     required bool isVideo,
     String? roomId,
   }) async {
+    if (!await canPrepareIncomingFromCallKit(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      roomId: roomId,
+    )) {
+      if (callId.isNotEmpty) {
+        if (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId)) {
+          debugPrint('[CallService] 🛡 ignore CallKit terminé: $callId');
+        } else {
+          debugPrint('[CallService] 🛡 ignore incoming CallKit invalide: callerId=$callerId');
+        }
+        await _callKit.endAll(callId: callId);
+      }
+      return;
+    }
     if (_status != CallStatus.idle) return;
-    if (callId.startsWith('meeting_')) {
-      debugPrint('[CallService] 🛡 ignore incoming CallKit meeting callId=$callId');
-      return;
-    }
-    if (callId.isNotEmpty &&
-        (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
-      debugPrint('[CallService] 🛡 ignore CallKit terminé: $callId');
-      await _callKit.endAll(callId: callId);
-      return;
-    }
-    final isGroupCall = roomId != null && roomId.isNotEmpty;
+
     final parsedCallerId = int.tryParse(callerId);
-    if (!isGroupCall && parsedCallerId == null) {
-      debugPrint('[CallService] 🛡 ignore incoming CallKit invalide: callerId=$callerId');
-      if (callId.isNotEmpty) await _callKit.endAll(callId: callId);
-      return;
-    }
-    if (callerName.trim().isEmpty && parsedCallerId == null) {
-      debugPrint('[CallService] 🛡 ignore incoming CallKit sans identité exploitable');
-      if (callId.isNotEmpty) await _callKit.endAll(callId: callId);
-      return;
-    }
-    if (_status != CallStatus.idle) return;
 
     debugPrint('[CallService] 📲 prepareIncomingFromCallKit callId=$callId caller=$callerId');
 

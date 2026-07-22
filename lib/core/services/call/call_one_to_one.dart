@@ -80,6 +80,7 @@ extension CallOneToOne on CallService {
           displayName: targetUserName ?? LocaleController.instance.l10n.callNoun,
           handle: targetUserId.toString(),
         );
+        await persistOutgoingSnapshot(phase: 'connecting');
       }
 
       // Ringback côté appelant
@@ -306,6 +307,9 @@ extension CallOneToOne on CallService {
   Future<void> _terminateCall() async {
     speakingDetector.stop();
     _markTerminalCallId(_currentCallId);
+    _cancelOutgoingRestoreTimeout();
+    _isRestoringOutgoing = false;
+    await _clearOutgoingSnapshot();
     await _ringtone.stop();
     await _releaseCallSession();
     await _callKit.endAll(callId: _currentCallId);
@@ -343,5 +347,7 @@ extension CallOneToOne on CallService {
     _autoAnswerOnNextIncoming = false;
     _autoAnswerCallerId = null;
     _isAutoAnsweringFromPush = false;
+    _isRestoringOutgoing = false;
+    _cancelOutgoingRestoreTimeout();
   }
 }

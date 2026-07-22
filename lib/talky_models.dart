@@ -728,6 +728,8 @@ class SocketEvents {
   static const rejectCall  = 'reject_call';
   static const iceCandidate = 'ice_candidate';
   static const endCall     = 'end_call';
+  static const callRejoin  = 'call_rejoin';
+  static const callRejoinAnswer = 'call_rejoin_answer';
 
   // Appels 1-1 (Backend → Flutter)
   static const incomingCall  = 'incoming_call';
@@ -737,6 +739,8 @@ class SocketEvents {
   static const callFailed    = 'call_failed';
   static const callBusy      = 'call_busy';       // cible occupée (ringing/in_call)
   static const callNoAnswer  = 'call_no_answer';  // timeout serveur sans réponse
+  static const callResume    = 'call_resume';
+  static const callRejoinOffer = 'call_rejoin_offer';
   static const callLogUpdated = 'call_log_updated';
 
   // Appels groupe (Flutter → Backend)

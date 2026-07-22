@@ -230,14 +230,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (!mounted) return;
 
+    final callerId = data['callerId'] ?? '';
+    final callerName = data['callerName'] ?? data['title'] ?? context.l10n.callNoun;
+    final roomId = data['roomId'];
+
     final callService = Provider.of<CallService>(context, listen: false);
+    if (!await callService.canPrepareIncomingFromCallKit(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      roomId: roomId,
+    )) {
+      debugPrint(
+        '[HomeScreen] Notification ignorée : identité ou état invalide $callId',
+      );
+      await CallKitService.instance.endAll(callId: callId);
+      return;
+    }
+
+    if (!mounted) return;
+
     callService.prepareIncomingFromCallKit(
       callId: callId,
-      callerId: data['callerId'] ?? '',
-      callerName: data['callerName'] ?? data['title'] ?? context.l10n.callNoun,
+      callerId: callerId,
+      callerName: callerName,
       callerPhoto: data['photo'],
       isVideo: data['isVideo'] == 'true',
-      roomId: data['roomId'],
+      roomId: roomId,
     );
     _switchToTab(_tabCalls);
   }
