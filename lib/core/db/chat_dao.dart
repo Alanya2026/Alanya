@@ -76,6 +76,12 @@ class ChatDao {
     return row?.read(countExp) ?? 0;
   }
 
+  /// Total non lus toutes conversations (badge launcher).
+  Future<int> countTotalUnread() async {
+    final rows = await db.select(db.localConversations).get();
+    return rows.fold<int>(0, (sum, c) => sum + c.unreadCount);
+  }
+
   Future<void> setPinned(int conversID, bool pinned) {
     return (db.update(db.localConversations)..where((c) => c.conversID.equals(conversID)))
         .write(LocalConversationsCompanion(isPinned: Value(pinned)));
