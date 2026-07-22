@@ -250,7 +250,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -317,7 +317,10 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
+        onCreate: (m) async {
+          await m.createAll();
+          await _createLocalMessagesIndexes(m.database);
+        },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(localUsers);
@@ -365,8 +368,30 @@ class AppDatabase extends _$AppDatabase {
           if (from < 13) {
             await m.createTable(localMessageReactions);
           }
+          if (from < 14) {
+            await _createLocalMessagesIndexes(m.database);
+          }
         },
       );
+
+  static Future<void> _createLocalMessagesIndexes(GeneratedDatabase db) async {
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_local_messages_conv_send '
+      'ON local_messages (conversation_i_d, send_at)',
+    );
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_local_messages_msg_id '
+      'ON local_messages (msg_i_d)',
+    );
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_local_messages_outbox '
+      'ON local_messages (sync_pending, last_emitted_at, send_at)',
+    );
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_local_messages_conv_status_sender '
+      'ON local_messages (conversation_i_d, status, sender_i_d)',
+    );
+  }
 }
 
 LazyDatabase _openConnection() {

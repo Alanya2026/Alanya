@@ -129,21 +129,30 @@ class VideoThumbnailService {
   static Future<String?> base64ForFile(String path) async {
     try {
       if (!File(path).existsSync()) return null;
-      var bytes = await VideoThumbnail.thumbnailData(
-        video: path,
-        imageFormat: ImageFormat.JPEG,
-        maxWidth: 320,
-        quality: 45,
-        timeMs: 0,
-      );
-      if (bytes == null || bytes.isEmpty) {
+      const maxWidth = 240;
+      const maxBytes = 28 * 1024;
+      var quality = 40;
+      Uint8List? bytes;
+      for (var attempt = 0; attempt < 3; attempt++) {
         bytes = await VideoThumbnail.thumbnailData(
           video: path,
           imageFormat: ImageFormat.JPEG,
-          maxWidth: 320,
-          quality: 45,
-          timeMs: 1000,
+          maxWidth: maxWidth,
+          quality: quality,
+          timeMs: 0,
         );
+        if (bytes == null || bytes.isEmpty) {
+          bytes = await VideoThumbnail.thumbnailData(
+            video: path,
+            imageFormat: ImageFormat.JPEG,
+            maxWidth: maxWidth,
+            quality: quality,
+            timeMs: 1000,
+          );
+        }
+        if (bytes == null || bytes.isEmpty) return null;
+        if (bytes.lengthInBytes <= maxBytes) break;
+        quality = (quality - 10).clamp(20, 40);
       }
       if (bytes == null || bytes.isEmpty) return null;
       return base64Encode(bytes);

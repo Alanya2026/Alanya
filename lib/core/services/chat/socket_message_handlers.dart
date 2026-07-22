@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
@@ -7,6 +9,8 @@ import '../alanya_media_export_service.dart';
 import '../media_cache_service.dart';
 import '../media_download_preferences.dart';
 import 'chat_api.dart';
+import 'message_ack_watchdog.dart';
+import 'message_path_tracer.dart';
 import 'receipt_service.dart';
 
 typedef UpsertServerMsgFn = Future<bool> Function(
@@ -28,6 +32,7 @@ class SocketMessageHandlers {
     required ReceiptService receipts,
     required MediaCacheService mediaCache,
     required void Function() scheduleListCatchUp,
+    MessageAckWatchdog? ackWatchdog,
   })  : _api = api,
         _dao = dao,
         _db = db,
@@ -38,10 +43,18 @@ class SocketMessageHandlers {
         _upsertServerMsg = upsertServerMsg,
         _receipts = receipts,
         _mediaCache = mediaCache,
-        _scheduleListCatchUp = scheduleListCatchUp;
+        _scheduleListCatchUp = scheduleListCatchUp,
+        _ackWatchdog = ackWatchdog;
 
   final ChatApi _api;
   final ChatDao _dao;
+
+  /// Réactions en attente de confirmation HTTP (`msgID:userID`).
+  final Set<String> _pendingReactionKeys = {};
+
+  Set<String> get pendingReactionKeys => Set.unmodifiable(_pendingReactionKeys);
+
+  String _reactionKey(int msgID, int userID) => '$msgID:$userID';
   final AppDatabase _db;
   final int Function() _myId;
   final int Function() _activeConversationID;
@@ -51,6 +64,7 @@ class SocketMessageHandlers {
   final ReceiptService _receipts;
   final MediaCacheService _mediaCache;
   final void Function() _scheduleListCatchUp;
+  final MessageAckWatchdog? _ackWatchdog;
 
   static int _toInt(dynamic v, {int fallback = 0}) {
     if (v is int) return v;
@@ -75,8 +89,11 @@ class SocketMessageHandlers {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
     final senderID0 = _toInt(json['senderID']);
+    final clientId = _clientIdFromJson(json) ?? 'srv_${_toInt(json['msgID'])}';
+    MessagePathTracer.mark(clientId, 'event_received', role: 'receiver', startIfMissing: true);
 
     final isNew = await _upsertServerMsg(json);
+    MessagePathTracer.mark(clientId, 'local_upsert_done', role: 'receiver');
     // Si le même événement est reçu plusieurs fois, on évite de regonfler
     // unread/accusés/notifications. Le message est déjà à jour via l'upsert.
     if (!isNew) return;
@@ -92,7 +109,15 @@ class SocketMessageHandlers {
     if (isActive) {
       await _dao.markConversationRead(convID, _myId());
     }
-    await _recompute(convID);
+
+    // Accusé avant le recalcul d'aperçu (chemin critique).
+    if (convID != 0 && _api.isSocketReady) {
+      _receipts.emitDeliveredOrRead(convID, isActive: isActive);
+      MessagePathTracer.mark(clientId, 'receipt_emit', role: 'receiver');
+    }
+    unawaited(_recompute(convID).then((_) {
+      MessagePathTracer.mark(clientId, 'recompute_done', role: 'receiver');
+    }));
 
     // Filet de sécurité : si la conversation n'existe pas encore en local,
     // `recompute` n'a rien pu faire (message orphelin) — on rattrape la liste
@@ -101,9 +126,6 @@ class SocketMessageHandlers {
     // resynchroniser après un éventuel event manqué (micro-déconnexion).
     _scheduleListCatchUp();
 
-    if (convID != 0 && _api.isSocketReady) {
-      _receipts.emitDeliveredOrRead(convID, isActive: isActive);
-    }
     final mtype = _toInt(json['type']);
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
@@ -168,7 +190,16 @@ class SocketMessageHandlers {
       status,
       at: at,
     );
-    await _recompute(convID);
+    // Trace status pour les messages confirmés de cette conv (best-effort).
+    if (status == 2 || status == 3) {
+      MessagePathTracer.mark(
+        'conv_$convID',
+        status == 2 ? 'status_delivered' : 'status_read',
+        role: 'sender',
+        startIfMissing: true,
+      );
+    }
+    unawaited(_recompute(convID));
   }
 
   Future<void> onMessageSent(dynamic data) async {
@@ -176,10 +207,15 @@ class SocketMessageHandlers {
     final json = Map<String, dynamic>.from(data);
     final msgID = _toInt(json['msgID']);
     if (msgID == 0) return;
+    final clientId = _clientIdFromJson(json);
+    if (clientId != null) {
+      MessagePathTracer.ackReceived(clientId);
+      _ackWatchdog?.cancel(clientId);
+    }
     await _upsertServerMsg(json);
     final convID = _toInt(json['conversationID']);
     if (convID == 0) return;
-    await _recompute(convID);
+    unawaited(_recompute(convID));
   }
 
   /// Aligne le badge non-lus sur les autres appareils du même compte.
@@ -234,20 +270,29 @@ class SocketMessageHandlers {
   /// [setMessagePinned] : écriture locale immédiate, confirmation serveur,
   /// rollback vers l'état précédent (réaction antérieure ou aucune) en cas
   /// d'échec réseau.
-  Future<void> setReaction(int msgID, String emoji) async {
+  Future<void> setReaction(
+    int msgID,
+    String emoji, {
+    int? conversationID,
+  }) async {
     if (msgID == 0 || emoji.isEmpty) return;
-    final convID = await _conversationIdForMsg(msgID);
-    if (convID == null) return;
     final myId = _myId();
+    final convID = conversationID ?? await _conversationIdForMsg(msgID);
+    if (convID == null) return;
+
     final previous = await (_db.select(_db.localMessageReactions)
           ..where((r) => r.msgID.equals(msgID) & r.userID.equals(myId)))
         .getSingleOrNull();
+
     await _dao.upsertReaction(
       msgID: msgID,
       userID: myId,
       conversationID: convID,
       emoji: emoji,
     );
+
+    final pendingKey = _reactionKey(msgID, myId);
+    _pendingReactionKeys.add(pendingKey);
     try {
       await _api.setReaction(msgID, emoji);
     } catch (e) {
@@ -263,18 +308,24 @@ class SocketMessageHandlers {
         await _dao.deleteReaction(msgID, myId);
       }
       rethrow;
+    } finally {
+      _pendingReactionKeys.remove(pendingKey);
     }
   }
 
   /// Retire ma réaction. Optimistic avec rollback si le serveur refuse.
-  Future<void> removeReaction(int msgID) async {
+  Future<void> removeReaction(int msgID, {int? conversationID}) async {
     if (msgID == 0) return;
     final myId = _myId();
     final previous = await (_db.select(_db.localMessageReactions)
           ..where((r) => r.msgID.equals(msgID) & r.userID.equals(myId)))
         .getSingleOrNull();
     if (previous == null) return;
+
     await _dao.deleteReaction(msgID, myId);
+
+    final pendingKey = _reactionKey(msgID, myId);
+    _pendingReactionKeys.add(pendingKey);
     try {
       await _api.removeReaction(msgID);
     } catch (e) {
@@ -286,6 +337,8 @@ class SocketMessageHandlers {
         reactedAt: previous.reactedAt,
       );
       rethrow;
+    } finally {
+      _pendingReactionKeys.remove(pendingKey);
     }
   }
 

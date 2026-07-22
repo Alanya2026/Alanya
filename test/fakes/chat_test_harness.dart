@@ -84,6 +84,8 @@ class ChatTestHarness {
   }
 
   Future<void> pumpEventQueue({int times = 8}) async {
+    // Laisse le debounce recompute (30 ms) + microtasks Drift se vider.
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     for (var i = 0; i < times; i++) {
       await Future<void>.delayed(Duration.zero);
     }

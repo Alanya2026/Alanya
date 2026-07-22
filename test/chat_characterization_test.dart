@@ -272,4 +272,46 @@ void main() {
       expect(read, isNotEmpty);
     });
   });
+
+  group('latence chemin critique', () {
+    test('sendText émet message:send avant fin du recompute aperçu', () async {
+      h.api.autoAckSend = false;
+      // Avant envoi : pas d'aperçu.
+      expect((await h.conv())?.lastMessage, isNull);
+
+      await h.repo.sendText(
+        conversationID: ChatTestHarness.convId,
+        content: 'fast-path',
+      );
+
+      // Emit socket déjà fait (ne bloque plus sur recompute).
+      final sends = h.api.eventsNamed(SocketEvents.messageSend);
+      expect(sends, isNotEmpty);
+      expect(sends.first.data['content'], 'fast-path');
+
+      // Message local présent immédiatement.
+      final msgs = await h.messages();
+      expect(msgs, hasLength(1));
+      expect(msgs.single.syncPending, isTrue);
+
+      // Après fenêtre debounce (30 ms) + marge : aperçu recalculé.
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      await h.pumpEventQueue();
+      expect((await h.conv())?.lastMessage, 'fast-path');
+    });
+
+    test('message:received émet receipt avant aperçu finalisé', () async {
+      h.api.sentEvents.clear();
+      await h.receiveIncoming(msgID: 77, content: 'incoming-fast');
+
+      final delivered = h.api.eventsNamed(SocketEvents.messageDelivered);
+      expect(delivered, isNotEmpty);
+
+      // Unread / aperçu finissent via recompute debounced.
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      await h.pumpEventQueue();
+      expect((await h.conv())?.unreadCount, greaterThan(0));
+      expect((await h.conv())?.lastMessage, 'incoming-fast');
+    });
+  });
 }

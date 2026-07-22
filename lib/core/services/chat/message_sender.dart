@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -21,6 +22,8 @@ import '../../../talky_api_client.dart' show TalkyException;
 import '../../../talky_models.dart';
 import 'chat_api.dart';
 import 'conversation_merge.dart';
+import 'message_path_tracer.dart';
+import 'message_ack_watchdog.dart';
 
 /// Envoi de messages (texte, média, album) + emit/upload.
 class MessageSender {
@@ -32,12 +35,14 @@ class MessageSender {
     required Future<void> Function(int conversationID) recompute,
     required this.uploadProgress,
     required Set<String> inFlightUploads,
+    MessageAckWatchdog? ackWatchdog,
   })  : _api = api,
         _dao = dao,
         _db = db,
         _myId = myId,
         _recompute = recompute,
-        _inFlightUploads = inFlightUploads;
+        _inFlightUploads = inFlightUploads,
+        _ackWatchdog = ackWatchdog;
 
   final ChatApi _api;
   final ChatDao _dao;
@@ -46,6 +51,7 @@ class MessageSender {
   final Future<void> Function(int conversationID) _recompute;
   final ValueNotifier<Map<String, double>> uploadProgress;
   final Set<String> _inFlightUploads;
+  final MessageAckWatchdog? _ackWatchdog;
 
   static const int maxAlbumItems = 30;
 
@@ -64,6 +70,7 @@ class MessageSender {
     final clientId = _newClientId();
     final localNow = DateTime.now();
     final now = localNow.toUtc();
+    MessagePathTracer.start(clientId);
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -80,7 +87,7 @@ class MessageSender {
       isForwarded: Value(isForwarded),
       syncPending: const Value(true),
     ));
-    await _recompute(conversationID);
+    MessagePathTracer.mark(clientId, 'local_insert');
 
     emitSend(
       clientId: clientId,
@@ -93,6 +100,7 @@ class MessageSender {
       isForwarded: isForwarded,
       clickSentAt: now,
     );
+    unawaited(_recompute(conversationID));
   }
 
   /// Envoi d'une position géographique (`type = 5`, JSON dans content, pas d'upload).
@@ -111,6 +119,7 @@ class MessageSender {
     final now = DateTime.now().toUtc();
     final content = location.encode();
 
+    MessagePathTracer.start(clientId);
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
       conversationID: conversationID,
@@ -125,7 +134,7 @@ class MessageSender {
       isForwarded: Value(isForwarded),
       syncPending: const Value(true),
     ));
-    await _recompute(conversationID);
+    MessagePathTracer.mark(clientId, 'local_insert');
 
     emitSend(
       clientId: clientId,
@@ -137,6 +146,7 @@ class MessageSender {
       isForwarded: isForwarded,
       clickSentAt: now,
     );
+    unawaited(_recompute(conversationID));
   }
 
   /// Envoi d'un contact partagé (`type = 7`, JSON dans content, pas d'upload).
@@ -155,6 +165,7 @@ class MessageSender {
     final now = DateTime.now().toUtc();
     final content = contact.encode();
 
+    MessagePathTracer.start(clientId);
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
       conversationID: conversationID,
@@ -169,7 +180,7 @@ class MessageSender {
       isForwarded: Value(isForwarded),
       syncPending: const Value(true),
     ));
-    await _recompute(conversationID);
+    MessagePathTracer.mark(clientId, 'local_insert');
 
     emitSend(
       clientId: clientId,
@@ -181,6 +192,7 @@ class MessageSender {
       isForwarded: isForwarded,
       clickSentAt: now,
     );
+    unawaited(_recompute(conversationID));
   }
 
   /// Aperçu canonique pour les messages média : on respecte le `content` saisi
@@ -227,6 +239,7 @@ class MessageSender {
     // Image / vidéo : réutilise la vignette fournie (transfert) sinon la génère
     // depuis le fichier local si disponible (aperçu destinataire hors DL).
     mediaThumb ??= await _mediaThumbFor(type, localMediaPath);
+    MessagePathTracer.start(clientId);
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -248,7 +261,7 @@ class MessageSender {
       isViewOnce: Value(isViewOnce),
       syncPending: const Value(true),
     ));
-    await _recompute(conversationID);
+    MessagePathTracer.mark(clientId, 'local_insert');
 
     emitSend(
       clientId: clientId,
@@ -265,6 +278,7 @@ class MessageSender {
       isViewOnce: isViewOnce,
       clickSentAt: now,
     );
+    unawaited(_recompute(conversationID));
   }
 
   Future<void> sendMediaFile({
@@ -307,6 +321,7 @@ class MessageSender {
 
     // Image / vidéo : mini-vignette base64 pour l'aperçu destinataire (hors DL).
     final mediaThumb = await _mediaThumbFor(type, uploadFile.path);
+    MessagePathTracer.start(clientId);
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
       clientId: clientId,
@@ -331,7 +346,8 @@ class MessageSender {
       isViewOnce: Value(isViewOnce),
       syncPending: const Value(true),
     ));
-    await _recompute(conversationID);
+    MessagePathTracer.mark(clientId, 'local_insert');
+    unawaited(_recompute(conversationID));
 
     try {
       await uploadAndEmit(
@@ -407,6 +423,7 @@ class MessageSender {
       );
 
       final mediaThumb = await _mediaThumbFor(item.type, item.file.path);
+      MessagePathTracer.start(clientId);
 
       await _dao.upsertMessage(LocalMessagesCompanion.insert(
         clientId: clientId,
@@ -425,6 +442,7 @@ class MessageSender {
         isForwarded: Value(isForwarded),
         syncPending: const Value(true),
       ));
+      MessagePathTracer.mark(clientId, 'local_insert');
 
       pending.add(_PendingAlbumUpload(
         clientId: clientId,
@@ -438,7 +456,7 @@ class MessageSender {
       ));
     }
 
-    await _recompute(conversationID);
+    unawaited(_recompute(conversationID));
 
     await _runConcurrent(pending, 3, (p) async {
       try {
@@ -664,6 +682,7 @@ class MessageSender {
       debugPrint('[MessageSender] _emitSend différé (socket non prêt) clientId=$clientId');
       return;
     }
+    MessagePathTracer.mark(clientId, 'socket_emit');
     _api.sendSocketEvent(SocketEvents.messageSend, {
       'clientId': clientId,
       'conversationID': conversationID,
@@ -684,6 +703,7 @@ class MessageSender {
     });
     // Marque la ligne comme « tout juste émise » → backoff outbox.
     _dao.touchEmitted(clientId);
+    _ackWatchdog?.arm(clientId, conversationID);
   }
 
 

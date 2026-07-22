@@ -21,7 +21,9 @@ import '../../../talky_models.dart';
 import 'chat_api.dart';
 import 'conversation_summary_reducer.dart';
 import 'conversation_sync.dart';
+import 'debounced_recompute.dart';
 import 'receipt_service.dart';
+import 'message_ack_watchdog.dart';
 import 'message_outbox.dart';
 import 'message_sender.dart';
 import 'socket_message_handlers.dart';
@@ -35,6 +37,8 @@ class ChatRepository {
   final ChatApi _api;
   final MediaCacheService _mediaCache = MediaCacheService();
   late final ConversationSummaryReducer _reducer;
+  late final DebouncedRecompute _debouncedRecompute;
+  late final MessageAckWatchdog _ackWatchdog;
   late final ConversationSync _sync;
   late final ReceiptService _receipts;
   late final MessageSender _sender;
@@ -104,6 +108,18 @@ class ChatRepository {
 
   ChatRepository._(this._api, this._db) : _dao = ChatDao(_db) {
     _reducer = ConversationSummaryReducer(_db, _dao);
+    _debouncedRecompute = DebouncedRecompute(
+      (convId) => _reducer.recompute(convId, _myId),
+    );
+    Future<void> scheduleRecompute(int convId) =>
+        _debouncedRecompute.schedule(convId);
+
+    _ackWatchdog = MessageAckWatchdog(
+      api: _api,
+      dao: _dao,
+      recompute: scheduleRecompute,
+    );
+
     _sync = ConversationSync(
       api: _api,
       dao: _dao,
@@ -121,7 +137,7 @@ class ChatRepository {
       activeConversationID: () =>
           _isChatVisiblyActive ? _activeConversationID : 0,
       pendingReadsRetry: _pendingReadsRetry,
-      recompute: (convId) => _reducer.recompute(convId, _myId),
+      recompute: scheduleRecompute,
     );
 
     _sender = MessageSender(
@@ -129,9 +145,10 @@ class ChatRepository {
       dao: _dao,
       db: _db,
       myId: () => _myId,
-      recompute: (id) => _reducer.recompute(id, _myId),
+      recompute: scheduleRecompute,
       uploadProgress: uploadProgress,
       inFlightUploads: _inFlightUploads,
+      ackWatchdog: _ackWatchdog,
     );
     _outbox = MessageOutbox(
       api: _api,
@@ -139,7 +156,7 @@ class ChatRepository {
       db: _db,
       sender: _sender,
       pendingReads: _pendingReads,
-      recompute: (id) => _reducer.recompute(id, _myId),
+      recompute: scheduleRecompute,
     );
     _handlers = SocketMessageHandlers(
       api: _api,
@@ -148,11 +165,12 @@ class ChatRepository {
       myId: () => _myId,
       activeConversationID: () => _activeConversationID,
       appInForeground: () => _appInForeground,
-      recompute: (id) => _reducer.recompute(id, _myId),
+      recompute: scheduleRecompute,
       upsertServerMsg: _upsertServerMsg,
       receipts: _receipts,
       mediaCache: _mediaCache,
       scheduleListCatchUp: scheduleListCatchUp,
+      ackWatchdog: _ackWatchdog,
     );
   }
 
@@ -253,6 +271,8 @@ class ChatRepository {
   void unbind() {
     _listCatchUpTimer?.cancel();
     _listCatchUpTimer = null;
+    _debouncedRecompute.dispose();
+    _ackWatchdog.dispose();
     if (!_listenersBound) return;
     _listenersBound = false;
     _api.removeSocketListener(SocketEvents.messageReceived, _handlers.onMessageReceived);
@@ -279,6 +299,8 @@ class ChatRepository {
   Future<void> clearLocalSession() async {
     _listCatchUpTimer?.cancel();
     _listCatchUpTimer = null;
+    _debouncedRecompute.dispose();
+    _ackWatchdog.dispose();
     _activeConversationID = 0;
     LocalNotificationHelper.setActiveConversationId(null);
     _pendingReads.clear();
@@ -1283,11 +1305,16 @@ class ChatRepository {
   /// Pose/remplace ma réaction sur [msgID]. Optimistic avec rollback — logique
   /// portée par [SocketMessageHandlers] pour rester la source unique de vérité
   /// partagée avec l'événement socket entrant.
-  Future<void> setReaction(int msgID, String emoji) =>
-      _handlers.setReaction(msgID, emoji);
+  Future<void> setReaction(
+    int msgID,
+    String emoji, {
+    int? conversationID,
+  }) =>
+      _handlers.setReaction(msgID, emoji, conversationID: conversationID);
 
   /// Retire ma réaction sur [msgID].
-  Future<void> removeReaction(int msgID) => _handlers.removeReaction(msgID);
+  Future<void> removeReaction(int msgID, {int? conversationID}) =>
+      _handlers.removeReaction(msgID, conversationID: conversationID);
 
   /// Hydratation initiale des réactions d'une conversation à l'ouverture du
   /// chat (les mises à jour suivantes arrivent en direct par socket).
@@ -1312,7 +1339,11 @@ class ChatRepository {
           .where((c) =>
               c.msgID.value != 0 && c.userID.value != 0 && c.emoji.value.isNotEmpty)
           .toList();
-      await _dao.replaceReactionsForConversation(conversationID, companions);
+      await _dao.mergeReactionsFromServer(
+        conversationID,
+        companions,
+        preserveKeys: _handlers.pendingReactionKeys,
+      );
     } catch (e) {
       debugPrint('[ChatRepo] syncReactions échouée: $e');
     }
