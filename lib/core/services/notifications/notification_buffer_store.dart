@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -11,6 +12,8 @@ class NotificationBufferStore {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
   static const _maxMessages = 7;
+
+  static Future<void> _appendChain = Future<void>.value();
 
   static String _key(int conversationId) => 'notif_buf_$conversationId';
 
@@ -32,6 +35,29 @@ class NotificationBufferStore {
     required String sender,
     required String body,
   }) async {
+    final completer = Completer<List<Map<String, String>>>();
+    final previous = _appendChain;
+    _appendChain = previous.then((_) async {
+      try {
+        completer.complete(
+          await _appendUnlocked(
+            conversationId: conversationId,
+            sender: sender,
+            body: body,
+          ),
+        );
+      } catch (e, st) {
+        completer.completeError(e, st);
+      }
+    });
+    return completer.future;
+  }
+
+  static Future<List<Map<String, String>>> _appendUnlocked({
+    required int conversationId,
+    required String sender,
+    required String body,
+  }) async {
     final messages = await read(conversationId);
     messages.add({
       'sender': sender,
@@ -49,7 +75,11 @@ class NotificationBufferStore {
   }
 
   static Future<void> clear(int conversationId) async {
-    await _storage.delete(key: _key(conversationId));
+    final previous = _appendChain;
+    _appendChain = previous.then((_) async {
+      await _storage.delete(key: _key(conversationId));
+    });
+    await _appendChain;
   }
 
   /// Supprime les anciens buffers SharedPreferences en clair (migration 3.4).
@@ -71,5 +101,10 @@ class NotificationBufferStore {
     try {
       await purgeLegacySharedPreferences();
     } catch (_) {}
+  }
+
+  /// Réinitialise la chaîne de verrou (tests uniquement).
+  static void resetAppendChainForTest() {
+    _appendChain = Future<void>.value();
   }
 }

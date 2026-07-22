@@ -31,6 +31,9 @@ const String kConvTagPrefix = 'conv_';
 const int kMeetingNotifOffset = 1000000000;
 const int kMaxBufferedMessages = 7;
 
+/// Utilisateur local dans MessagingStyle (aligné sur MessageNotificationHelper Kotlin).
+const String _kMessagingStyleLocalUser = 'Moi';
+
 /// Id de la notification résumé (legacy — annulée au démarrage).
 const int kMessagesSummaryId = 2147483646;
 
@@ -187,7 +190,6 @@ class LocalNotificationHelper {
       messages: buffer,
       isGroup: isGroup,
       groupName: groupName,
-      latestSender: senderName,
     );
 
     final fallbackBody = bufferedDisplayBody(buffer, isGroup: isGroup);
@@ -464,21 +466,24 @@ class LocalNotificationHelper {
     required List<Map<String, String>> messages,
     required bool isGroup,
     required String groupName,
-    required String latestSender,
   }) {
     final styleMessages = messages.map((m) {
       final ts = DateTime.tryParse(m['ts'] ?? '') ?? DateTime.now();
       final sender = (m['sender'] ?? '').trim();
+      final isLocalUser = sender == _kMessagingStyleLocalUser;
       return Message(
         m['body'] ?? '',
         ts,
-        Person(name: sender.isNotEmpty ? sender : resolveL10n().appTitle),
+        isLocalUser
+            ? null
+            : Person(
+                name: sender.isNotEmpty ? sender : resolveL10n().appTitle,
+              ),
       );
     }).toList();
 
-    final personName = latestSender.trim().isNotEmpty ? latestSender : resolveL10n().appTitle;
     return MessagingStyleInformation(
-      Person(name: personName),
+      Person(name: _kMessagingStyleLocalUser),
       conversationTitle: isGroup && groupName.isNotEmpty ? groupName : null,
       groupConversation: isGroup,
       messages: styleMessages,

@@ -54,3 +54,4 @@ docs/*
 # E2E captures locales (pas de secrets)
 docs/e2e_evidence/
 *.dumpsys.txt
+android/.kotlin/

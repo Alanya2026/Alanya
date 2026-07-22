@@ -28,6 +28,18 @@ const String _kFirebaseVapidKey = String.fromEnvironment(
   defaultValue: _kDefaultFirebaseVapidKey,
 );
 
+/// Aligné sur `talkyNotificationNativeV2` (build.gradle.kts). Les messages
+/// Android passent par TalkyFirebaseMessagingService — éviter le doublon Dart.
+const bool _kAndroidNativeMessageNotifications = bool.fromEnvironment(
+  'TALKY_ANDROID_NATIVE_NOTIF_V2',
+  defaultValue: true,
+);
+
+bool get _androidNativeMessagesHandlePush =>
+    !kIsWeb &&
+    Platform.isAndroid &&
+    _kAndroidNativeMessageNotifications;
+
 /// Données d'une notification meeting diffusées sur [PushService.meetingNotifications].
 class MeetingNotifData {
   final String type;
@@ -146,6 +158,7 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
   await LocalNotificationHelper.ensureInitialized();
 
   if (type == 'message') {
+    if (_androidNativeMessagesHandlePush) return;
     await LocalNotificationHelper.showMessageNotification(
       data,
       title: title.isNotEmpty ? title : null,
@@ -399,6 +412,8 @@ class PushService {
       if (convId > 0 && await isConversationActive(convId)) {
         return;
       }
+
+      if (_androidNativeMessagesHandlePush) return;
 
       final title =
           (data['title'] ?? message.notification?.title ?? '').toString();

@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
@@ -18,9 +19,13 @@ import org.json.JSONObject
  */
 object MessageNotificationHelper {
 
+    private const val TAG = "TalkyNativeNotif"
     private const val PREFS = "talky_native_notif"
     private const val KEY_BUFFER_PREFIX = "buf_"
     private const val MAX_BUFFER = 7
+    private const val LOCAL_USER_NAME = "Moi"
+
+    private val bufferLock = Any()
 
     const val CHANNEL_ID = "talky_messages_v2"
     const val ACTION_REPLY = "com.example.talky_flutter.NOTIF_REPLY"
@@ -46,23 +51,25 @@ object MessageNotificationHelper {
         val groupName = data["groupName"] ?: ""
 
         val displayBody = if (isGroup) "$senderName: $body" else body
-        appendBuffer(context, convId, senderName, displayBody)
-        postNotification(context, convId, isGroup, groupName, senderName, displayBody)
+        val buffer = appendBuffer(context, convId, senderName, displayBody)
+        postNotification(context, convId, isGroup, groupName, senderName, displayBody, buffer)
     }
 
     fun appendOutgoing(context: Context, convId: Int, text: String) {
-        appendBuffer(context, convId, "Moi", text)
-        postNotification(context, convId, false, "", "Moi", text)
+        val buffer = appendBuffer(context, convId, LOCAL_USER_NAME, text)
+        postNotification(context, convId, false, "", LOCAL_USER_NAME, text, buffer)
     }
 
     fun cancelConversation(context: Context, conversationId: Int) {
         val tag = "conv_$conversationId"
         val notifId = notificationIdForConversation(conversationId)
         NotificationManagerCompat.from(context).cancel(tag, notifId)
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .remove(KEY_BUFFER_PREFIX + conversationId)
-            .apply()
+        synchronized(bufferLock) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .remove(KEY_BUFFER_PREFIX + conversationId)
+                .commit()
+        }
     }
 
     private fun postNotification(
@@ -72,14 +79,15 @@ object MessageNotificationHelper {
         groupName: String,
         senderName: String,
         latestLine: String,
+        buffer: List<BufferEntry>,
     ) {
         ensureChannel(context)
         val notifId = notificationIdForConversation(convId)
         val tag = "conv_$convId"
-        val buffer = readBuffer(context, convId)
 
-        val selfPerson = Person.Builder().setName("Moi").build()
+        val selfPerson = Person.Builder().setName(LOCAL_USER_NAME).build()
         val style = NotificationCompat.MessagingStyle(selfPerson)
+            .setGroupConversation(isGroup)
             .setConversationTitle(if (isGroup && groupName.isNotEmpty()) groupName else null)
 
         for (entry in buffer) {
@@ -113,11 +121,13 @@ object MessageNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(contentPending)
-            .setGroup("talky_messages")
+            // Pas de setGroup : évite le bundle Android qui n'affiche que le dernier message.
             .addAction(buildReplyAction(context, convId, isGroup, groupName, senderName))
             .addAction(buildMarkReadAction(context, convId))
 
+        cancelNotificationsWithTag(context, tag)
         NotificationManagerCompat.from(context).notify(tag, notifId, builder.build())
+        Log.d(TAG, "posted conv=$convId messages=${buffer.size} tag=$tag id=$notifId")
     }
 
     private fun buildReplyAction(
@@ -200,12 +210,75 @@ object MessageNotificationHelper {
         convId: Int,
         sender: String,
         body: String,
+    ): List<BufferEntry> {
+        synchronized(bufferLock) {
+            val list = loadBufferIncludingActive(context, convId)
+            list.add(BufferEntry(sender, body, System.currentTimeMillis()))
+            val trimmed = if (list.size > MAX_BUFFER) list.takeLast(MAX_BUFFER) else list
+            persistBufferUnlocked(context, convId, trimmed)
+            Log.d(TAG, "buffer conv=$convId size=${trimmed.size}")
+            return trimmed
+        }
+    }
+
+    private fun loadBufferIncludingActive(
+        context: Context,
+        convId: Int,
+    ): MutableList<BufferEntry> {
+        val list = readBufferUnlocked(context, convId).toMutableList()
+        mergeActiveNotificationMessages(context, convId, list)
+        return list
+    }
+
+    private fun mergeActiveNotificationMessages(
+        context: Context,
+        convId: Int,
+        list: MutableList<BufferEntry>,
     ) {
-        val list = readBuffer(context, convId).toMutableList()
-        list.add(BufferEntry(sender, body, System.currentTimeMillis()))
-        val trimmed = if (list.size > MAX_BUFFER) list.takeLast(MAX_BUFFER) else list
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val tag = "conv_$convId"
+        val notifId = notificationIdForConversation(convId)
+        val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        for (sbn in nm.activeNotifications) {
+            if (sbn.tag != tag) continue
+            val extracted = NotificationCompat.MessagingStyle
+                .extractMessagingStyleFromNotification(sbn.notification)
+                ?: continue
+            for (msg in extracted.messages) {
+                val body = msg.text?.toString()?.trim().orEmpty()
+                if (body.isEmpty()) continue
+                val sender = msg.person?.name?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: LOCAL_USER_NAME
+                val ts = msg.timestamp
+                val duplicate = list.any {
+                    it.body == body && kotlin.math.abs(it.timestamp - ts) < 2000L
+                }
+                if (!duplicate) {
+                    list.add(BufferEntry(sender, body, ts))
+                }
+            }
+            list.sortBy { it.timestamp }
+            if (sbn.id == notifId) break
+        }
+    }
+
+    private fun cancelNotificationsWithTag(context: Context, tag: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        for (sbn in nm.activeNotifications) {
+            if (sbn.tag == tag) {
+                NotificationManagerCompat.from(context).cancel(sbn.tag, sbn.id)
+            }
+        }
+    }
+
+    private fun persistBufferUnlocked(
+        context: Context,
+        convId: Int,
+        entries: List<BufferEntry>,
+    ) {
         val arr = JSONArray()
-        for (e in trimmed) {
+        for (e in entries) {
             val o = JSONObject()
             o.put("sender", e.sender)
             o.put("body", e.body)
@@ -215,10 +288,10 @@ object MessageNotificationHelper {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_BUFFER_PREFIX + convId, arr.toString())
-            .apply()
+            .commit()
     }
 
-    private fun readBuffer(context: Context, convId: Int): List<BufferEntry> {
+    private fun readBufferUnlocked(context: Context, convId: Int): List<BufferEntry> {
         val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_BUFFER_PREFIX + convId, null) ?: return emptyList()
         return try {

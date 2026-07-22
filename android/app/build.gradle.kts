@@ -32,8 +32,9 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
-        manifestPlaceholders["talkyNotificationNativeV2"] = "false"
-        manifestPlaceholders["talkyFlutterFcmEnabled"] = "true"
+        // Phase 4 — MessagingStyle natif + actions (data-only FCM côté backend).
+        manifestPlaceholders["talkyNotificationNativeV2"] = "true"
+        manifestPlaceholders["talkyFlutterFcmEnabled"] = "false"
     }
 
     buildTypes {

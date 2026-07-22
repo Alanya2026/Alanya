@@ -35,6 +35,7 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
                     Log.d(TAG, "message suppressed (active conv)")
                     return
                 }
+                Log.d(TAG, "message native show conv=${data["conversationId"]} msgID=${data["msgID"]}")
                 MessageNotificationHelper.showMessage(this, data)
             }
             "message_read_sync" -> {

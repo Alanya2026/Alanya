@@ -9,7 +9,7 @@ Dépôts : Talky + Alanya-Backend
 |-------|--------|
 | **0–2** | ✅ Complet (code) |
 | **3** | ✅ Badge, prefs, mute, buffer chiffré |
-| **4** | 🟡 Android natif livré — **désactivé par défaut** |
+| **4** | ✅ Android natif MessagingStyle — **activé** (Gradle + flag backend) |
 | **5** | 🟡 iOS catégories + APNs — NSE template (target Xcode manuel) |
 | **6** | 🟡 6.1–6.4 livrés (code) — validation appareil requise |
 | **7** | 🟡 Livré (tests + docs) — **E2E Android à cocher manuellement** |
@@ -52,7 +52,7 @@ Dépôts : Talky + Alanya-Backend
 | Variable | Défaut | Staging | Prod |
 |----------|--------|---------|------|
 | `DEVICE_REGISTRY_V2` | `true` | à confirmer | à confirmer |
-| `NOTIFICATION_ANDROID_NATIVE_V2` | `false` | off jusqu’à E2E #2–5 | off |
+| `NOTIFICATION_ANDROID_NATIVE_V2` | `true` | on | à activer après E2E |
 | `IOS_VOIP_V2` | `false` | off (iOS différé) | off |
 | `IOS_RICH_NSE` | `false` | off | off |
 
