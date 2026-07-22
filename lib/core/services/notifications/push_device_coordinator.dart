@@ -3,7 +3,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 
-import '../../talky_api_client.dart';
+import '../../../talky_api_client.dart';
 
 /// Synchronise l'état push de l'appareil avec le backend (throttle).
 class PushDeviceCoordinator {

@@ -1,0 +1,908 @@
+diff --git a/lib/api/chat_api.dart b/lib/api/chat_api.dart
+index 7a4232e..4305f82 100644
+--- a/lib/api/chat_api.dart
++++ b/lib/api/chat_api.dart
+@@ -304,4 +304,40 @@ extension ChatHttpApi on TalkyApiClient {
+       ),
+     );
+   }
++
++  // ── RÉACTIONS ─────────────────────────────────────────────────────
++
++  /// Pose/remplace ma réaction sur un message. Le backend diffuse
++  /// `message:reaction` (avec `emoji`) aux participants connectés.
++  Future<void> setReaction(int msgID, String emoji) async {
++    await _handleRequest(
++      () => _client.put(
++        Uri.parse('${TalkyApiClient.baseUrl}/messages/$msgID/reactions'),
++        headers: _headers,
++        body: jsonEncode({'emoji': emoji}),
++      ),
++    );
++  }
++
++  /// Retire ma réaction. Le backend diffuse `message:reaction` (sans `emoji`).
++  Future<void> removeReaction(int msgID) async {
++    await _handleRequest(
++      () => _client.delete(
++        Uri.parse('${TalkyApiClient.baseUrl}/messages/$msgID/reactions'),
++        headers: _headers,
++      ),
++    );
++  }
++
++  /// Toutes les réactions d'une conversation (hydratation initiale à
++  /// l'ouverture du chat ; les mises à jour suivantes arrivent par socket).
++  Future<List<dynamic>> getReactions(int conversID) async {
++    final data = await _handleRequest(
++      () => _client.get(
++        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/reactions'),
++        headers: _headers,
++      ),
++    );
++    return data is List ? data : [];
++  }
+ }
+diff --git a/lib/core/db/app_database.dart b/lib/core/db/app_database.dart
+index 761cc13..3f49d23 100644
+--- a/lib/core/db/app_database.dart
++++ b/lib/core/db/app_database.dart
+@@ -209,6 +209,31 @@ class LocalStatuses extends Table {
+   Set<Column> get primaryKey => {idStatut};
+ }
+ 
++/// Réactions emoji sur les messages — une seule réaction par utilisateur et
++/// par message (comme WhatsApp/Telegram) : PK composite (msgID, userID), un
++/// nouvel upsert avec un emoji différent remplace l'ancien.
++class LocalMessageReactions extends Table {
++  /// `msgID` serveur du message réagi (pas de réaction sur un message encore
++  /// en attente d'envoi : msgID > 0 garanti côté DAO).
++  IntColumn get msgID => integer()();
++
++  /// alanyaID de l'auteur de la réaction.
++  IntColumn get userID => integer()();
++
++  /// Dénormalisé (comme `senderNom` sur [LocalMessages]) pour permettre une
++  /// requête directe par conversation sans jointure.
++  IntColumn get conversationID => integer()();
++
++  /// Emoji unique (ex. "👍"). Jamais vide : une ligne sans réaction est
++  /// supprimée plutôt que stockée avec un emoji vide.
++  TextColumn get emoji => text()();
++
++  DateTimeColumn get reactedAt => dateTime().withDefault(currentDateAndTime)();
++
++  @override
++  Set<Column> get primaryKey => {msgID, userID};
++}
++
+ @DriftDatabase(
+   tables: [
+     LocalConversations,
+@@ -217,6 +242,7 @@ class LocalStatuses extends Table {
+     LocalCalls,
+     LocalMeetings,
+     LocalStatuses,
++    LocalMessageReactions,
+   ],
+ )
+ class AppDatabase extends _$AppDatabase {
+@@ -224,7 +250,7 @@ class AppDatabase extends _$AppDatabase {
+   AppDatabase.forTesting(super.executor);
+ 
+   @override
+-  int get schemaVersion => 12;
++  int get schemaVersion => 13;
+ 
+   static const _legacyHttps = 'https://158.220.107.211';
+   static const _httpHost = 'http://158.220.107.211';
+@@ -336,6 +362,9 @@ class AppDatabase extends _$AppDatabase {
+             await m.addColumn(localMessages, localMessages.mediaSize);
+             await m.addColumn(localMessages, localMessages.mediaPageCount);
+           }
++          if (from < 13) {
++            await m.createTable(localMessageReactions);
++          }
+         },
+       );
+ }
+diff --git a/lib/core/db/chat_dao.dart b/lib/core/db/chat_dao.dart
+index a6664a0..e200a62 100644
+--- a/lib/core/db/chat_dao.dart
++++ b/lib/core/db/chat_dao.dart
+@@ -42,6 +42,7 @@ class ChatDao {
+   Future<void> deleteConversation(int conversID) async {
+     await (db.delete(db.localConversations)..where((c) => c.conversID.equals(conversID))).go();
+     await (db.delete(db.localMessages)..where((m) => m.conversationID.equals(conversID))).go();
++    await (db.delete(db.localMessageReactions)..where((r) => r.conversationID.equals(conversID))).go();
+   }
+ 
+   Future<void> deleteConversations(List<int> conversIDs) async {
+@@ -49,6 +50,7 @@ class ChatDao {
+     if (conversIDs.length == 1) return deleteConversation(conversIDs.first);
+     await (db.delete(db.localConversations)..where((c) => c.conversID.isIn(conversIDs))).go();
+     await (db.delete(db.localMessages)..where((m) => m.conversationID.isIn(conversIDs))).go();
++    await (db.delete(db.localMessageReactions)..where((r) => r.conversationID.isIn(conversIDs))).go();
+   }
+ 
+   /// @Deprecated('Unread dérivé via ConversationSummaryReducer / countUnread')
+@@ -649,9 +651,70 @@ class ChatDao {
+         .watch();
+   }
+ 
++  // RÉACTIONS 
++
++  /// Réactions de toute la conversation (pas de stream par message : on
++  /// regroupe côté écran via un `Map<msgID, List<LocalMessageReaction>>`,
++  /// comme la présence/typing qui sont aussi tenues en mémoire par le
++  /// provider plutôt qu'interrogées message par message).
++  Stream<List<LocalMessageReaction>> watchReactions(int conversationID) {
++    return (db.select(db.localMessageReactions)
++          ..where((r) => r.conversationID.equals(conversationID)))
++        .watch();
++  }
++
++  /// Pose/replace la réaction d'un utilisateur sur un message (upsert par PK
++  /// composite `(msgID, userID)` : un nouvel emoji remplace l'ancien).
++  Future<void> upsertReaction({
++    required int msgID,
++    required int userID,
++    required int conversationID,
++    required String emoji,
++    DateTime? reactedAt,
++  }) {
++    return db.into(db.localMessageReactions).insertOnConflictUpdate(
++          LocalMessageReactionsCompanion.insert(
++            msgID: msgID,
++            userID: userID,
++            conversationID: conversationID,
++            emoji: emoji,
++            reactedAt: Value(reactedAt ?? DateTime.now()),
++          ),
++        );
++  }
++
++  Future<void> deleteReaction(int msgID, int userID) {
++    return (db.delete(db.localMessageReactions)
++          ..where((r) => r.msgID.equals(msgID) & r.userID.equals(userID)))
++        .go();
++  }
++
++  /// Supprime toutes les réactions connues d'un message (utilisé quand le
++  /// serveur renvoie l'état complet des réactions restantes après un retrait).
++  Future<void> deleteReactionsForMessage(int msgID) {
++    return (db.delete(db.localMessageReactions)..where((r) => r.msgID.equals(msgID))).go();
++  }
++
++  /// Remplace l'intégralité des réactions connues d'une conversation par
++  /// [reactions] (hydratation initiale via `GET /conversations/:id/reactions`).
++  /// Écrit dans une transaction pour ne jamais laisser un état partiel visible.
++  Future<void> replaceReactionsForConversation(
++    int conversationID,
++    List<LocalMessageReactionsCompanion> reactions,
++  ) async {
++    await db.transaction(() async {
++      await (db.delete(db.localMessageReactions)
++            ..where((r) => r.conversationID.equals(conversationID)))
++          .go();
++      if (reactions.isEmpty) return;
++      await db.batch((b) => b.insertAll(db.localMessageReactions, reactions));
++    });
++  }
++
+   Future<void> clearAll() async {
+     await db.delete(db.localMessages).go();
+     await db.delete(db.localConversations).go();
++    await db.delete(db.localMessageReactions).go();
+   }
+ 
+   /// Supprime les conversations (et leurs messages) absentes de [keepIds].
+diff --git a/lib/core/services/chat/chat_api.dart b/lib/core/services/chat/chat_api.dart
+index ac2aa7a..336404f 100644
+--- a/lib/core/services/chat/chat_api.dart
++++ b/lib/core/services/chat/chat_api.dart
+@@ -53,6 +53,12 @@ abstract class ChatApi {
+ 
+   Future<void> markViewed(int msgID);
+ 
++  Future<void> setReaction(int msgID, String emoji);
++
++  Future<void> removeReaction(int msgID);
++
++  Future<List<dynamic>> getReactions(int conversID);
++
+   Future<void> deleteConversations(List<int> conversationIDs);
+ 
+   Future<void> updateConversation(
+diff --git a/lib/core/services/chat/chat_repository.dart b/lib/core/services/chat/chat_repository.dart
+index 02a929b..159cb79 100644
+--- a/lib/core/services/chat/chat_repository.dart
++++ b/lib/core/services/chat/chat_repository.dart
+@@ -222,6 +222,7 @@ class ChatRepository {
+       _api.onSocketEvent(SocketEvents.messagesDeleted, _handlers.onMessagesDeleted);
+       _api.onSocketEvent(SocketEvents.messagePinned, _handlers.onMessagePinned);
+       _api.onSocketEvent(SocketEvents.messageViewed, _handlers.onMessageViewed);
++      _api.onSocketEvent(SocketEvents.messageReaction, _handlers.onMessageReaction);
+       _api.onSocketEvent(SocketEvents.messageStatus, _handlers.onMessageStatus);
+       _api.onSocketEvent(SocketEvents.inboxSync, _handlers.onInboxSync);
+       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
+@@ -260,6 +261,7 @@ class ChatRepository {
+     _api.removeSocketListener(SocketEvents.messagesDeleted, _handlers.onMessagesDeleted);
+     _api.removeSocketListener(SocketEvents.messagePinned, _handlers.onMessagePinned);
+     _api.removeSocketListener(SocketEvents.messageViewed, _handlers.onMessageViewed);
++    _api.removeSocketListener(SocketEvents.messageReaction, _handlers.onMessageReaction);
+     _api.removeSocketListener(SocketEvents.messageStatus, _handlers.onMessageStatus);
+     _api.removeSocketListener(SocketEvents.inboxSync, _handlers.onInboxSync);
+     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
+@@ -1232,6 +1234,50 @@ class ChatRepository {
+   }
+ 
+ 
++  /// Toutes les réactions d'une conversation, regroupées côté écran par
++  /// `msgID` (voir [ReactionsByMessage] côté UI).
++  Stream<List<LocalMessageReaction>> watchReactions(int conversationID) =>
++      _dao.watchReactions(conversationID);
++
++  /// Pose/remplace ma réaction sur [msgID]. Optimistic avec rollback — logique
++  /// portée par [SocketMessageHandlers] pour rester la source unique de vérité
++  /// partagée avec l'événement socket entrant.
++  Future<void> setReaction(int msgID, String emoji) =>
++      _handlers.setReaction(msgID, emoji);
++
++  /// Retire ma réaction sur [msgID].
++  Future<void> removeReaction(int msgID) => _handlers.removeReaction(msgID);
++
++  /// Hydratation initiale des réactions d'une conversation à l'ouverture du
++  /// chat (les mises à jour suivantes arrivent en direct par socket).
++  Future<void> syncReactions(int conversationID) async {
++    try {
++      final raw = await _api.getReactions(conversationID);
++      final companions = raw
++          .whereType<Map>()
++          .map((r) => Map<String, dynamic>.from(r))
++          .map((json) {
++        final msgID = _toInt(json['msgID']);
++        final userID = _toInt(json['userID']);
++        final emoji = json['emoji']?.toString() ?? '';
++        return LocalMessageReactionsCompanion.insert(
++          msgID: msgID,
++          userID: userID,
++          conversationID: conversationID,
++          emoji: emoji,
++          reactedAt: Value(_parseDate(json['reactedAt']) ?? DateTime.now()),
++        );
++      })
++          .where((c) =>
++              c.msgID.value != 0 && c.userID.value != 0 && c.emoji.value.isNotEmpty)
++          .toList();
++      await _dao.replaceReactionsForConversation(conversationID, companions);
++    } catch (e) {
++      debugPrint('[ChatRepo] syncReactions échouée: $e');
++    }
++  }
++
++
+   Future<void> _recomputeSummary(int conversID) {
+     return _reducer.recompute(conversID, _myId);
+   }
+diff --git a/lib/core/services/chat/socket_message_handlers.dart b/lib/core/services/chat/socket_message_handlers.dart
+index 859d0e3..9ea8a10 100644
+--- a/lib/core/services/chat/socket_message_handlers.dart
++++ b/lib/core/services/chat/socket_message_handlers.dart
+@@ -229,6 +229,93 @@ class SocketMessageHandlers {
+     _dao.setMessagePinnedByServerId(id, pinned);
+   }
+ 
++  /// Pose/remplace ma réaction sur un message. Optimistic comme
++  /// [setMessagePinned] : écriture locale immédiate, confirmation serveur,
++  /// rollback vers l'état précédent (réaction antérieure ou aucune) en cas
++  /// d'échec réseau.
++  Future<void> setReaction(int msgID, String emoji) async {
++    if (msgID == 0 || emoji.isEmpty) return;
++    final convID = await _conversationIdForMsg(msgID);
++    if (convID == null) return;
++    final myId = _myId();
++    final previous = await (_db.select(_db.localMessageReactions)
++          ..where((r) => r.msgID.equals(msgID) & r.userID.equals(myId)))
++        .getSingleOrNull();
++    await _dao.upsertReaction(
++      msgID: msgID,
++      userID: myId,
++      conversationID: convID,
++      emoji: emoji,
++    );
++    try {
++      await _api.setReaction(msgID, emoji);
++    } catch (e) {
++      if (previous != null) {
++        await _dao.upsertReaction(
++          msgID: msgID,
++          userID: myId,
++          conversationID: convID,
++          emoji: previous.emoji,
++          reactedAt: previous.reactedAt,
++        );
++      } else {
++        await _dao.deleteReaction(msgID, myId);
++      }
++      rethrow;
++    }
++  }
++
++  /// Retire ma réaction. Optimistic avec rollback si le serveur refuse.
++  Future<void> removeReaction(int msgID) async {
++    if (msgID == 0) return;
++    final myId = _myId();
++    final previous = await (_db.select(_db.localMessageReactions)
++          ..where((r) => r.msgID.equals(msgID) & r.userID.equals(myId)))
++        .getSingleOrNull();
++    if (previous == null) return;
++    await _dao.deleteReaction(msgID, myId);
++    try {
++      await _api.removeReaction(msgID);
++    } catch (e) {
++      await _dao.upsertReaction(
++        msgID: msgID,
++        userID: myId,
++        conversationID: previous.conversationID,
++        emoji: previous.emoji,
++        reactedAt: previous.reactedAt,
++      );
++      rethrow;
++    }
++  }
++
++  /// Événement socket entrant : une réaction a été posée ou retirée par un
++  /// participant (moi y compris, depuis un autre appareil). `emoji`
++  /// absent/vide signifie un retrait.
++  Future<void> onMessageReaction(dynamic data) async {
++    if (data is! Map) return;
++    final json = Map<String, dynamic>.from(data);
++    final msgID = _toInt(json['msgID']);
++    final userID = _toInt(json['userID']);
++    if (msgID == 0 || userID == 0) return;
++    final emoji = json['emoji']?.toString() ?? '';
++    if (emoji.isEmpty) {
++      await _dao.deleteReaction(msgID, userID);
++      return;
++    }
++    var convID = _toInt(json['conversationID']);
++    if (convID == 0) {
++      convID = await _conversationIdForMsg(msgID) ?? 0;
++      if (convID == 0) return;
++    }
++    await _dao.upsertReaction(
++      msgID: msgID,
++      userID: userID,
++      conversationID: convID,
++      emoji: emoji,
++      reactedAt: _parseDate(json['reactedAt']),
++    );
++  }
++
+   /// Signale au serveur qu'un média à vue unique a été consulté, puis marque
+   /// le message consommé localement (efface toute trace ré-ouvrable).
+   Future<void> markViewed(int msgID) async {
+diff --git a/lib/core/services/chat/talky_chat_api.dart b/lib/core/services/chat/talky_chat_api.dart
+index a459d4b..b12808d 100644
+--- a/lib/core/services/chat/talky_chat_api.dart
++++ b/lib/core/services/chat/talky_chat_api.dart
+@@ -94,6 +94,17 @@ class TalkyChatApi implements ChatApi {
+   @override
+   Future<void> markViewed(int msgID) => _client.markViewed(msgID);
+ 
++  @override
++  Future<void> setReaction(int msgID, String emoji) =>
++      _client.setReaction(msgID, emoji);
++
++  @override
++  Future<void> removeReaction(int msgID) => _client.removeReaction(msgID);
++
++  @override
++  Future<List<dynamic>> getReactions(int conversID) =>
++      _client.getReactions(conversID);
++
+   @override
+   Future<void> deleteConversations(List<int> conversationIDs) =>
+       _client.deleteConversations(conversationIDs);
+diff --git a/lib/l10n/app_en.arb b/lib/l10n/app_en.arb
+index c7fff9e..b572ebc 100644
+--- a/lib/l10n/app_en.arb
++++ b/lib/l10n/app_en.arb
+@@ -840,5 +840,18 @@
+   "voiceCallOutgoing": "Outgoing voice call",
+   "voiceCallIncoming": "Incoming voice call",
+   "videoCallOutgoing": "Outgoing video call",
+-  "videoCallIncoming": "Incoming video call"
++  "videoCallIncoming": "Incoming video call",
++  "reactionChipLabel": "{emoji}, {count, plural, =1{1 reaction} other{{count} reactions}}",
++  "@reactionChipLabel": {
++    "placeholders": {
++      "emoji": {
++        "type": "String"
++      },
++      "count": {
++        "type": "int"
++      }
++    }
++  },
++  "reactToMessage": "React",
++  "moreReactions": "More reactions"
+ }
+diff --git a/lib/l10n/app_fr.arb b/lib/l10n/app_fr.arb
+index a2cc26a..4be4bc8 100644
+--- a/lib/l10n/app_fr.arb
++++ b/lib/l10n/app_fr.arb
+@@ -1676,5 +1676,18 @@
+   "voiceCallOutgoing": "Appel vocal sortant",
+   "voiceCallIncoming": "Appel vocal entrant",
+   "videoCallOutgoing": "Appel vidéo sortant",
+-  "videoCallIncoming": "Appel vidéo entrant"
++  "videoCallIncoming": "Appel vidéo entrant",
++  "reactionChipLabel": "{emoji}, {count, plural, =1{1 réaction} other{{count} réactions}}",
++  "@reactionChipLabel": {
++    "placeholders": {
++      "emoji": {
++        "type": "String"
++      },
++      "count": {
++        "type": "int"
++      }
++    }
++  },
++  "reactToMessage": "Réagir",
++  "moreReactions": "Plus de réactions"
+ }
+diff --git a/lib/providers/chat_provider.dart b/lib/providers/chat_provider.dart
+index 898d4a5..aa6a969 100644
+--- a/lib/providers/chat_provider.dart
++++ b/lib/providers/chat_provider.dart
+@@ -76,6 +76,8 @@ class ChatProvider extends ChangeNotifier {
+   Stream<List<LocalConversation>> watchConversations() => repository.watchConversations();
+   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
+       repository.watchMessages(conversationID);
++  Stream<List<LocalMessageReaction>> watchReactions(int conversationID) =>
++      repository.watchReactions(conversationID);
+ 
+   Future<void> bind(int myId) async {
+     await repository.bind(myId);
+diff --git a/lib/screens/chats/chat/chat_actions.dart b/lib/screens/chats/chat/chat_actions.dart
+index 0ec1d37..15fb98b 100644
+--- a/lib/screens/chats/chat/chat_actions.dart
++++ b/lib/screens/chats/chat/chat_actions.dart
+@@ -2,6 +2,10 @@
+ // part of chat_detail_screen.dart.
+ part of '../chat_detail_screen.dart';
+ 
++/// Barre de réaction rapide (menu long-press) — mêmes emojis que
++/// WhatsApp/Messenger pour rester dans les habitudes des utilisateurs.
++const List<String> _quickReactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
++
+ extension _ChatActions on _ChatDetailScreenState {
+   bool _isSelectableMessage(LocalMessage msg) => msg.msgID > 0 && !msg.isDeleted;
+ 
+@@ -294,6 +298,7 @@ extension _ChatActions on _ChatDetailScreenState {
+           mainAxisSize: MainAxisSize.min,
+           crossAxisAlignment: CrossAxisAlignment.stretch,
+           children: [
++            if (msg.msgID != 0 && !msg.isDeleted) _buildQuickReactionBar(msg),
+             if (_isSelectableMessage(msg))
+               ListTile(
+                 leading: Icon(Icons.check_circle_outline, color: primary),
+@@ -404,6 +409,90 @@ extension _ChatActions on _ChatDetailScreenState {
+     );
+   }
+ 
++  /// Rangée d'emojis rapides + bouton « plus » en haut du menu long-press.
++  /// L'emoji déjà utilisé par l'utilisateur (le cas échéant) est mis en avant.
++  Widget _buildQuickReactionBar(LocalMessage msg) {
++    final mine = _currentReactionsByMsg[msg.msgID]
++        ?.where((r) => r.userID == _myId)
++        .map((r) => r.emoji)
++        .toList();
++    final myEmoji = (mine != null && mine.isNotEmpty) ? mine.first : null;
++    return Padding(
++      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
++      child: Row(
++        mainAxisAlignment: MainAxisAlignment.spaceBetween,
++        children: [
++          for (final emoji in _quickReactionEmojis)
++            _QuickReactionButton(
++              emoji: emoji,
++              selected: emoji == myEmoji,
++              onTap: () {
++                Navigator.pop(context);
++                _toggleReaction(msg, emoji);
++              },
++            ),
++          Semantics(
++            button: true,
++            label: context.l10n.moreReactions,
++            child: InkWell(
++              customBorder: const CircleBorder(),
++              onTap: () {
++                Navigator.pop(context);
++                _openReactionPicker(msg);
++              },
++              child: Padding(
++                padding: const EdgeInsets.all(AppSpacing.xs),
++                child: Icon(Icons.add_circle_outline, color: context.colors.onSurfaceVariant),
++              ),
++            ),
++          ),
++        ],
++      ),
++    );
++  }
++
++  /// Pose/retire ma réaction sur [msg] (une seule réaction par utilisateur :
++  /// un nouvel emoji remplace le précédent, le même emoji le retire).
++  Future<void> _toggleReaction(LocalMessage msg, String emoji) async {
++    if (msg.msgID == 0 || _myId == null) return;
++    final mine = _currentReactionsByMsg[msg.msgID]
++        ?.where((r) => r.userID == _myId)
++        .toList();
++    final currentEmoji = (mine != null && mine.isNotEmpty) ? mine.first.emoji : null;
++    try {
++      if (currentEmoji == emoji) {
++        await _chat.repository.removeReaction(msg.msgID);
++      } else {
++        await _chat.repository.setReaction(msg.msgID, emoji);
++      }
++    } catch (_) {
++      if (!mounted) return;
++      ScaffoldMessenger.of(context).showSnackBar(
++        SnackBar(content: Text(context.l10n.actionFailedPleaseTryAgain)),
++      );
++    }
++  }
++
++  /// Sélecteur d'emoji complet (« + » de la barre rapide), pour réagir avec
++  /// un emoji hors des 6 choix par défaut.
++  void _openReactionPicker(LocalMessage msg) {
++    showAppBottomSheet(
++      context: context,
++      builder: (_) => AppBottomSheet(
++        child: SizedBox(
++          height: 280,
++          child: EmojiPicker(
++            onEmojiSelected: (category, emoji) {
++              Navigator.pop(context);
++              _toggleReaction(msg, emoji.emoji);
++            },
++            config: const Config(height: 280),
++          ),
++        ),
++      ),
++    );
++  }
++
+   /// Feuille « Détails du message ».
+   ///
+   /// Vue EXPÉDITEUR (mes messages) : Livré à (deliveredAt), Lu à (readAt)
+@@ -1688,3 +1777,42 @@ extension _ChatActions on _ChatDetailScreenState {
+   bool _sameDay(DateTime a, DateTime b) =>
+       a.year == b.year && a.month == b.month && a.day == b.day;
+ }
++
++/// Bouton emoji de la barre de réaction rapide — grossit et se met en
++/// évidence quand c'est déjà la réaction active de l'utilisateur.
++class _QuickReactionButton extends StatelessWidget {
++  const _QuickReactionButton({
++    required this.emoji,
++    required this.selected,
++    required this.onTap,
++  });
++
++  final String emoji;
++  final bool selected;
++  final VoidCallback onTap;
++
++  @override
++  Widget build(BuildContext context) {
++    return Semantics(
++      button: true,
++      label: '${context.l10n.reactToMessage} $emoji',
++      child: InkWell(
++        customBorder: const CircleBorder(),
++        onTap: onTap,
++        child: AnimatedContainer(
++          duration: AppDurations.fast,
++          padding: const EdgeInsets.all(AppSpacing.xs),
++          decoration: BoxDecoration(
++            shape: BoxShape.circle,
++            color: selected ? context.colors.primaryContainer : Colors.transparent,
++          ),
++          child: Text(
++            emoji,
++            style: TextStyle(fontSize: selected ? 26 : 22),
++          ),
++        ),
++      ),
++    );
++  }
++}
++
+diff --git a/lib/screens/chats/chat/chat_bubbles.dart b/lib/screens/chats/chat/chat_bubbles.dart
+index ec9d17f..6f2bb54 100644
+--- a/lib/screens/chats/chat/chat_bubbles.dart
++++ b/lib/screens/chats/chat/chat_bubbles.dart
+@@ -93,9 +93,14 @@ extension _ChatBubbles on _ChatDetailScreenState {
+     );
+   }
+ 
+-  Widget _buildMessageBubble(LocalMessage msg, bool isMe) {
++  Widget _buildMessageBubble(
++    LocalMessage msg,
++    bool isMe, {
++    List<LocalMessageReaction> reactions = const [],
++  }) {
+     final selected = _isMessageSelected(msg);
+     final selectable = _isSelectableMessage(msg);
++    final reactionGroups = groupReactions(reactions, _myId ?? 0);
+     return Column(
+       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+       children: [
+@@ -117,7 +122,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
+             onLongPress: () => _showMessageMenu(msg, isMe),
+             onTap: () => _toggleSelection(msg),
+             bubble: Container(
+-              margin: const EdgeInsets.only(bottom: AppSpacing.md),
++              margin: EdgeInsets.only(bottom: reactionGroups.isEmpty ? AppSpacing.md : AppSpacing.xs),
+               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+               decoration: _bubbleDecoration(
+@@ -255,6 +260,21 @@ extension _ChatBubbles on _ChatDetailScreenState {
+             ),
+           ),
+         ),
++        if (reactionGroups.isNotEmpty)
++          Padding(
++            padding: EdgeInsets.only(
++              bottom: AppSpacing.md,
++              left: isMe ? 0 : AppSpacing.lg,
++              right: isMe ? AppSpacing.lg : 0,
++            ),
++            child: Align(
++              alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
++              child: ReactionChipsRow(
++                groups: reactionGroups,
++                onToggle: (emoji) => _toggleReaction(msg, emoji),
++              ),
++            ),
++          ),
+       ],
+     );
+   }
+diff --git a/lib/screens/chats/chat_detail_screen.dart b/lib/screens/chats/chat_detail_screen.dart
+index a155908..116ddf8 100644
+--- a/lib/screens/chats/chat_detail_screen.dart
++++ b/lib/screens/chats/chat_detail_screen.dart
+@@ -49,6 +49,7 @@ import '../../widgets/profile_avatar.dart';
+ import '../../widgets/typing_indicator.dart';
+ import '../../widgets/chat/chat_wallpaper.dart';
+ import '../../widgets/chat/message_status_icon.dart';
++import '../../widgets/chat/reaction_chips.dart';
+ import '../calls/group_participants_picker_screen.dart';
+ import 'contact_detail_screen.dart';
+ import 'group_detail_screen.dart';
+@@ -146,6 +147,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
+   /// msgID en cours de téléchargement manuel (overlay WhatsApp).
+   final Set<int> _mediaDownloadingIds = {};
+   List<LocalMessage> _currentMessages = const [];
++  /// Réactions de la conversation active, regroupées par `msgID` — alimenté
++  /// par le `StreamBuilder` de réactions et lu par la barre de réaction
++  /// rapide (`chat_actions.dart`) et les bulles (`chat_bubbles.dart`).
++  Map<int, List<LocalMessageReaction>> _currentReactionsByMsg = const {};
++  StreamSubscription<List<LocalMessageReaction>>? _reactionsSub;
++
++  Map<int, List<LocalMessageReaction>> _groupReactionsByMsg(
++    List<LocalMessageReaction> reactions,
++  ) {
++    final byMsg = <int, List<LocalMessageReaction>>{};
++    for (final r in reactions) {
++      (byMsg[r.msgID] ??= []).add(r);
++    }
++    return byMsg;
++  }
+ 
+   /// Pont public vers `setState()` (lui-même `@protected`), afin que les
+   /// extensions de cette librairie puissent déclencher un rebuild.
+@@ -293,7 +309,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
+ 
+     // 4) Sync historique + vocaux (ne bloque pas l'UI / le badge).
+     unawaited(_chat.repository.syncMessages(convId));
++    unawaited(_chat.repository.syncReactions(convId));
+     unawaited(_chat.repository.reconcileVoiceLocalPaths(convId));
++
++    // 5) Réactions : abonnement dédié plutôt qu'un StreamBuilder imbriqué —
++    //    une réaction qui arrive une frame plus tard que les messages n'a pas
++    //    besoin de geler l'affichage de la conversation.
++    _reactionsSub?.cancel();
++    _reactionsSub = _chat.repository.watchReactions(convId).listen((reactions) {
++      if (!mounted) return;
++      setState(() => _currentReactionsByMsg = _groupReactionsByMsg(reactions));
++    });
+   }
+ 
+   Future<int?> _ensureConversation() async {
+@@ -390,6 +416,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
+     _typingTimer?.cancel();
+     _recordTimer?.cancel();
+     _highlightTimer?.cancel();
++    _reactionsSub?.cancel();
+     _recorder.dispose();
+     context.read<VoicePlaybackService>().leaveChat();
+     final convId = _convId;
+@@ -529,7 +556,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
+                                             if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                             switch (chatItem) {
+                                               ChatListSingle(:final message) =>
+-                                                _buildMessageBubble(message, message.senderID == _myId),
++                                                _buildMessageBubble(
++                                                  message,
++                                                  message.senderID == _myId,
++                                                  reactions: _currentReactionsByMsg[message.msgID] ?? const [],
++                                                ),
+                                               ChatListAlbum(:final messages) =>
+                                                 _buildAlbumBubble(messages, messages.first.senderID == _myId),
+                                             },
+diff --git a/lib/talky_models.dart b/lib/talky_models.dart
+index 54c2d8f..74b2203 100644
+--- a/lib/talky_models.dart
++++ b/lib/talky_models.dart
+@@ -244,6 +244,42 @@ class Message {
+   }
+ }
+ 
++// ── RÉACTION ──────────────────────────────────────────────────────────
++// Table: message_reaction
++// PK: (msgID, userID) — une seule réaction par utilisateur et par message.
++
++class MessageReaction {
++  final int msgID;
++  final int userID;
++  final String emoji;
++  final String? reactedAt;
++  // Jointure users (utile pour un futur détail « qui a réagi »)
++  final String? userNom;
++  final String? userPseudo;
++
++  const MessageReaction({
++    required this.msgID,
++    required this.userID,
++    required this.emoji,
++    this.reactedAt,
++    this.userNom,
++    this.userPseudo,
++  });
++
++  factory MessageReaction.fromJson(Map<String, dynamic> json) => MessageReaction(
++        msgID: json['msgID'] is int
++            ? json['msgID'] as int
++            : int.tryParse(json['msgID']?.toString() ?? '') ?? 0,
++        userID: json['userID'] is int
++            ? json['userID'] as int
++            : int.tryParse(json['userID']?.toString() ?? '') ?? 0,
++        emoji: json['emoji']?.toString() ?? '',
++        reactedAt: json['reactedAt']?.toString(),
++        userNom: json['user_nom'],
++        userPseudo: json['user_pseudo'],
++      );
++}
++
+ // ── CONVERSATION ─────────────────────────────────────────────────────
+ // Table: conversation
+ // PK: conversID | isGroup | GroupName | groupPhoto | lastMessage | lastMessageAt
+@@ -711,6 +747,9 @@ class SocketEvents {
+   static const messagesDeleted   = 'messages:deleted';
+   static const messagePinned     = 'message:pinned';
+   static const messageViewed     = 'message:viewed';
++  /// Réaction posée/retirée sur un message. Payload : { msgID, conversationID,
++  /// userID, emoji }. `emoji` absent/vide = réaction retirée.
++  static const messageReaction   = 'message:reaction';
+   static const messageDelivered  = 'message:delivered';
+   static const messageRead       = 'message:read';
+   static const messageStatus     = 'message:status';
+diff --git a/lib/widgets/chat/reaction_chips.dart b/lib/widgets/chat/reaction_chips.dart
+new file mode 100644
+index 0000000..b23c8d9
+--- /dev/null
++++ b/lib/widgets/chat/reaction_chips.dart
+@@ -0,0 +1,96 @@
++import 'package:flutter/material.dart';
++
++import '../../core/db/app_database.dart';
++import '../../core/theme/app_theme.dart';
++
++/// Une réaction agrégée : un emoji, son nombre d'occurrences, et si
++/// l'utilisateur courant en fait partie (pour la mise en évidence + le tap
++/// « toggle »).
++class ReactionGroup {
++  const ReactionGroup({required this.emoji, required this.count, required this.mine});
++
++  final String emoji;
++  final int count;
++  final bool mine;
++}
++
++/// Regroupe les réactions brutes par emoji, dans l'ordre de première
++/// apparition (comme Telegram/Discord — pas de tri par popularité, pour éviter
++/// que les pastilles ne « sautent » de place à chaque nouvelle réaction).
++List<ReactionGroup> groupReactions(List<LocalMessageReaction> reactions, int myId) {
++  if (reactions.isEmpty) return const [];
++  final order = <String>[];
++  final counts = <String, int>{};
++  final mine = <String, bool>{};
++  for (final r in reactions) {
++    if (!counts.containsKey(r.emoji)) order.add(r.emoji);
++    counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
++    if (r.userID == myId) mine[r.emoji] = true;
++  }
++  return order
++      .map((e) => ReactionGroup(emoji: e, count: counts[e]!, mine: mine[e] ?? false))
++      .toList();
++}
++
++/// Rangée de pastilles de réaction, pensée pour chevaucher légèrement le bord
++/// inférieur d'une bulle de message (voir `chat_bubbles.dart`).
++///
++/// Un tap sur une pastille bascule ma propre réaction : je rejoins ce groupe
++/// si je n'y suis pas, ou je retire ma réaction si j'en fais déjà partie.
++class ReactionChipsRow extends StatelessWidget {
++  const ReactionChipsRow({
++    super.key,
++    required this.groups,
++    required this.onToggle,
++  });
++
++  final List<ReactionGroup> groups;
++  final ValueChanged<String> onToggle;
++
++  @override
++  Widget build(BuildContext context) {
++    if (groups.isEmpty) return const SizedBox.shrink();
++    return Wrap(
++      spacing: AppSpacing.xs,
++      runSpacing: AppSpacing.xs,
++      children: [
++        for (final g in groups)
++          _ReactionChip(group: g, onTap: () => onToggle(g.emoji)),
++      ],
++    );
++  }
++}
++
++class _ReactionChip extends StatelessWidget {
++  const _ReactionChip({required this.group, required this.onTap});
++
++  final ReactionGroup group;
++  final VoidCallback onTap;
++
++  @override
++  Widget build(BuildContext context) {
++    final colors = context.colors;
++    final background = group.mine ? colors.primaryContainer : colors.surface;
++    final border = group.mine ? colors.primary : colors.outlineVariant;
++    final label = group.count > 1 ? '${group.emoji} ${group.count}' : group.emoji;
++
++    return Semantics(
++      button: true,
++      label: context.l10n.reactionChipLabel(group.emoji, group.count),
++      child: Material(
++        color: background,
++        shape: StadiumBorder(side: BorderSide(color: border, width: group.mine ? 1.5 : 1)),
++        elevation: 1,
++        shadowColor: colors.shadow.withAlpha(40),
++        child: InkWell(
++          customBorder: const StadiumBorder(),
++          onTap: onTap,
++          child: Padding(
++            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
++            child: Text(label, style: const TextStyle(fontSize: 13, height: 1.2)),
++          ),
++        ),
++      ),
++    );
++  }
++}
