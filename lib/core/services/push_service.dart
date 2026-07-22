@@ -13,6 +13,7 @@ import '../theme/locale_controller.dart';
 import 'callkit_service.dart';
 import 'local_notification_helper.dart';
 import 'notification_navigation.dart';
+import 'notifications/notification_diagnostics.dart';
 import 'ringtone_service.dart';
 import 'call/ended_call_registry.dart';
 
@@ -54,6 +55,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     final data = message.data;
     final type = data['type']?.toString();
+    NotificationDiagnostics.pushBackground(Map<String, dynamic>.from(data));
 
     if (type == 'call' || type == 'group_call') {
       if (!kIsWeb) {
@@ -290,6 +292,7 @@ class PushService {
     final data = message.data;
     final type = data['type']?.toString();
 
+    NotificationDiagnostics.pushForeground(Map<String, dynamic>.from(data));
     debugPrint('[Push] foreground: type=$type');
     if (type == 'call_ended') {
       if (!kIsWeb) {
@@ -365,6 +368,10 @@ class PushService {
 
   void _handleOpenedApp(RemoteMessage message) {
     final data = message.data;
+    NotificationDiagnostics.tapAction(
+      type: data['type']?.toString() ?? '',
+      conversationId: int.tryParse(data['conversationId']?.toString() ?? ''),
+    );
     debugPrint('[Push] opened from notif: type=${data['type']}');
     if (data.isEmpty) return;
     _dispatchNotificationAction(NotificationAction.fromMap(data));
@@ -373,6 +380,10 @@ class PushService {
   static void _onLocalNotifTap(NotificationResponse response) {
     final action = decodeNotificationPayload(response.payload);
     if (action == null) return;
+    NotificationDiagnostics.tapAction(
+      type: action.type,
+      conversationId: int.tryParse(action.data['conversationId'] ?? ''),
+    );
     debugPrint('[Push] tap notif locale: type=${action.type}');
     _instance?._dispatchNotificationAction(action);
   }
