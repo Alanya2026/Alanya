@@ -858,5 +858,18 @@
   "voiceCallOutgoing": "Outgoing voice call",
   "voiceCallIncoming": "Incoming voice call",
   "videoCallOutgoing": "Outgoing video call",
-  "videoCallIncoming": "Incoming video call"
+  "videoCallIncoming": "Incoming video call",
+  "reactionChipLabel": "{emoji}, {count, plural, =1{1 reaction} other{{count} reactions}}",
+  "@reactionChipLabel": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reactToMessage": "React",
+  "moreReactions": "More reactions"
 }

@@ -209,6 +209,31 @@ class LocalStatuses extends Table {
   Set<Column> get primaryKey => {idStatut};
 }
 
+/// Réactions emoji sur les messages — une seule réaction par utilisateur et
+/// par message (comme WhatsApp/Telegram) : PK composite (msgID, userID), un
+/// nouvel upsert avec un emoji différent remplace l'ancien.
+class LocalMessageReactions extends Table {
+  /// `msgID` serveur du message réagi (pas de réaction sur un message encore
+  /// en attente d'envoi : msgID > 0 garanti côté DAO).
+  IntColumn get msgID => integer()();
+
+  /// alanyaID de l'auteur de la réaction.
+  IntColumn get userID => integer()();
+
+  /// Dénormalisé (comme `senderNom` sur [LocalMessages]) pour permettre une
+  /// requête directe par conversation sans jointure.
+  IntColumn get conversationID => integer()();
+
+  /// Emoji unique (ex. "👍"). Jamais vide : une ligne sans réaction est
+  /// supprimée plutôt que stockée avec un emoji vide.
+  TextColumn get emoji => text()();
+
+  DateTimeColumn get reactedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {msgID, userID};
+}
+
 @DriftDatabase(
   tables: [
     LocalConversations,
@@ -217,6 +242,7 @@ class LocalStatuses extends Table {
     LocalCalls,
     LocalMeetings,
     LocalStatuses,
+    LocalMessageReactions,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -224,7 +250,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -335,6 +361,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 12) {
             await m.addColumn(localMessages, localMessages.mediaSize);
             await m.addColumn(localMessages, localMessages.mediaPageCount);
+          }
+          if (from < 13) {
+            await m.createTable(localMessageReactions);
           }
         },
       );

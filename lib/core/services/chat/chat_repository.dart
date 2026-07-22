@@ -224,6 +224,7 @@ class ChatRepository {
       _api.onSocketEvent(SocketEvents.messagesDeleted, _handlers.onMessagesDeleted);
       _api.onSocketEvent(SocketEvents.messagePinned, _handlers.onMessagePinned);
       _api.onSocketEvent(SocketEvents.messageViewed, _handlers.onMessageViewed);
+      _api.onSocketEvent(SocketEvents.messageReaction, _handlers.onMessageReaction);
       _api.onSocketEvent(SocketEvents.messageStatus, _handlers.onMessageStatus);
       _api.onSocketEvent(SocketEvents.inboxSync, _handlers.onInboxSync);
       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
@@ -262,6 +263,7 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.messagesDeleted, _handlers.onMessagesDeleted);
     _api.removeSocketListener(SocketEvents.messagePinned, _handlers.onMessagePinned);
     _api.removeSocketListener(SocketEvents.messageViewed, _handlers.onMessageViewed);
+    _api.removeSocketListener(SocketEvents.messageReaction, _handlers.onMessageReaction);
     _api.removeSocketListener(SocketEvents.messageStatus, _handlers.onMessageStatus);
     _api.removeSocketListener(SocketEvents.inboxSync, _handlers.onInboxSync);
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
@@ -1269,6 +1271,50 @@ class ChatRepository {
       await _api.markViewed(msgID);
     } catch (e) {
       debugPrint('[ChatRepo] markViewed échouée: $e');
+    }
+  }
+
+
+  /// Toutes les réactions d'une conversation, regroupées côté écran par
+  /// `msgID` (voir [ReactionsByMessage] côté UI).
+  Stream<List<LocalMessageReaction>> watchReactions(int conversationID) =>
+      _dao.watchReactions(conversationID);
+
+  /// Pose/remplace ma réaction sur [msgID]. Optimistic avec rollback — logique
+  /// portée par [SocketMessageHandlers] pour rester la source unique de vérité
+  /// partagée avec l'événement socket entrant.
+  Future<void> setReaction(int msgID, String emoji) =>
+      _handlers.setReaction(msgID, emoji);
+
+  /// Retire ma réaction sur [msgID].
+  Future<void> removeReaction(int msgID) => _handlers.removeReaction(msgID);
+
+  /// Hydratation initiale des réactions d'une conversation à l'ouverture du
+  /// chat (les mises à jour suivantes arrivent en direct par socket).
+  Future<void> syncReactions(int conversationID) async {
+    try {
+      final raw = await _api.getReactions(conversationID);
+      final companions = raw
+          .whereType<Map>()
+          .map((r) => Map<String, dynamic>.from(r))
+          .map((json) {
+        final msgID = _toInt(json['msgID']);
+        final userID = _toInt(json['userID']);
+        final emoji = json['emoji']?.toString() ?? '';
+        return LocalMessageReactionsCompanion.insert(
+          msgID: msgID,
+          userID: userID,
+          conversationID: conversationID,
+          emoji: emoji,
+          reactedAt: Value(_parseDate(json['reactedAt']) ?? DateTime.now()),
+        );
+      })
+          .where((c) =>
+              c.msgID.value != 0 && c.userID.value != 0 && c.emoji.value.isNotEmpty)
+          .toList();
+      await _dao.replaceReactionsForConversation(conversationID, companions);
+    } catch (e) {
+      debugPrint('[ChatRepo] syncReactions échouée: $e');
     }
   }
 

@@ -95,6 +95,17 @@ class TalkyChatApi implements ChatApi {
   Future<void> markViewed(int msgID) => _client.markViewed(msgID);
 
   @override
+  Future<void> setReaction(int msgID, String emoji) =>
+      _client.setReaction(msgID, emoji);
+
+  @override
+  Future<void> removeReaction(int msgID) => _client.removeReaction(msgID);
+
+  @override
+  Future<List<dynamic>> getReactions(int conversID) =>
+      _client.getReactions(conversID);
+
+  @override
   Future<void> deleteConversations(List<int> conversationIDs) =>
       _client.deleteConversations(conversationIDs);
 

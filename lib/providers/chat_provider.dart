@@ -76,6 +76,8 @@ class ChatProvider extends ChangeNotifier {
   Stream<List<LocalConversation>> watchConversations() => repository.watchConversations();
   Stream<List<LocalMessage>> watchMessages(int conversationID) =>
       repository.watchMessages(conversationID);
+  Stream<List<LocalMessageReaction>> watchReactions(int conversationID) =>
+      repository.watchReactions(conversationID);
 
   Future<void> bind(int myId) async {
     await repository.bind(myId);

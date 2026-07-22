@@ -4819,6 +4819,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Appel vidéo entrant'**
   String get videoCallIncoming;
+
+  /// No description provided for @reactionChipLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'{emoji}, {count, plural, =1{1 réaction} other{{count} réactions}}'**
+  String reactionChipLabel(String emoji, int count);
+
+  /// No description provided for @reactToMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réagir'**
+  String get reactToMessage;
+
+  /// No description provided for @moreReactions.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus de réactions'**
+  String get moreReactions;
 }
 
 class _AppLocalizationsDelegate

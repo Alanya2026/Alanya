@@ -331,4 +331,47 @@ extension ChatHttpApi on TalkyApiClient {
     }
     return const [];
   }
+
+  // ── RÉACTIONS ─────────────────────────────────────────────────────
+  //
+  // Contrat backend (Alanya-Backend, à implémenter côté serveur) :
+  // - PUT    /messages/:msgID/reactions     body { emoji } → pose/remplace,
+  //          diffuse socket `message:reaction` { msgID, conversationID, userID, emoji }
+  // - DELETE /messages/:msgID/reactions   → retire ma réaction,
+  //          diffuse `message:reaction` avec emoji absent/vide
+  // - GET    /conversations/:conversID/reactions → [{ msgID, userID, emoji, reactedAt }, …]
+
+  /// Pose/remplace ma réaction sur un message. Le backend diffuse
+  /// `message:reaction` (avec `emoji`) aux participants connectés.
+  Future<void> setReaction(int msgID, String emoji) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/$msgID/reactions'),
+        headers: _headers,
+        body: jsonEncode({'emoji': emoji}),
+      ),
+    );
+  }
+
+  /// Retire ma réaction. Le backend diffuse `message:reaction` (sans `emoji`).
+  Future<void> removeReaction(int msgID) async {
+    await _handleRequest(
+      () => _client.delete(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/$msgID/reactions'),
+        headers: _headers,
+      ),
+    );
+  }
+
+  /// Toutes les réactions d'une conversation (hydratation initiale à
+  /// l'ouverture du chat ; les mises à jour suivantes arrivent par socket).
+  Future<List<dynamic>> getReactions(int conversID) async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/reactions'),
+        headers: _headers,
+      ),
+    );
+    return data is List ? data : [];
+  }
 }

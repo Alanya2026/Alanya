@@ -53,6 +53,12 @@ abstract class ChatApi {
 
   Future<void> markViewed(int msgID);
 
+  Future<void> setReaction(int msgID, String emoji);
+
+  Future<void> removeReaction(int msgID);
+
+  Future<List<dynamic>> getReactions(int conversID);
+
   Future<void> deleteConversations(List<int> conversationIDs);
 
   Future<void> updateConversation(

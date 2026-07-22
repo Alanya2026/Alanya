@@ -5645,6 +5645,383 @@ class LocalStatusesCompanion extends UpdateCompanion<LocalStatuse> {
   }
 }
 
+class $LocalMessageReactionsTable extends LocalMessageReactions
+    with TableInfo<$LocalMessageReactionsTable, LocalMessageReaction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalMessageReactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _msgIDMeta = const VerificationMeta('msgID');
+  @override
+  late final GeneratedColumn<int> msgID = GeneratedColumn<int>(
+    'msg_i_d',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userIDMeta = const VerificationMeta('userID');
+  @override
+  late final GeneratedColumn<int> userID = GeneratedColumn<int>(
+    'user_i_d',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _conversationIDMeta = const VerificationMeta(
+    'conversationID',
+  );
+  @override
+  late final GeneratedColumn<int> conversationID = GeneratedColumn<int>(
+    'conversation_i_d',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _emojiMeta = const VerificationMeta('emoji');
+  @override
+  late final GeneratedColumn<String> emoji = GeneratedColumn<String>(
+    'emoji',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reactedAtMeta = const VerificationMeta(
+    'reactedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> reactedAt = GeneratedColumn<DateTime>(
+    'reacted_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    msgID,
+    userID,
+    conversationID,
+    emoji,
+    reactedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_message_reactions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalMessageReaction> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('msg_i_d')) {
+      context.handle(
+        _msgIDMeta,
+        msgID.isAcceptableOrUnknown(data['msg_i_d']!, _msgIDMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_msgIDMeta);
+    }
+    if (data.containsKey('user_i_d')) {
+      context.handle(
+        _userIDMeta,
+        userID.isAcceptableOrUnknown(data['user_i_d']!, _userIDMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIDMeta);
+    }
+    if (data.containsKey('conversation_i_d')) {
+      context.handle(
+        _conversationIDMeta,
+        conversationID.isAcceptableOrUnknown(
+          data['conversation_i_d']!,
+          _conversationIDMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_conversationIDMeta);
+    }
+    if (data.containsKey('emoji')) {
+      context.handle(
+        _emojiMeta,
+        emoji.isAcceptableOrUnknown(data['emoji']!, _emojiMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_emojiMeta);
+    }
+    if (data.containsKey('reacted_at')) {
+      context.handle(
+        _reactedAtMeta,
+        reactedAt.isAcceptableOrUnknown(data['reacted_at']!, _reactedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {msgID, userID};
+  @override
+  LocalMessageReaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalMessageReaction(
+      msgID: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}msg_i_d'],
+      )!,
+      userID: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_i_d'],
+      )!,
+      conversationID: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}conversation_i_d'],
+      )!,
+      emoji: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}emoji'],
+      )!,
+      reactedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}reacted_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalMessageReactionsTable createAlias(String alias) {
+    return $LocalMessageReactionsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalMessageReaction extends DataClass
+    implements Insertable<LocalMessageReaction> {
+  /// `msgID` serveur du message réagi (pas de réaction sur un message encore
+  /// en attente d'envoi : msgID > 0 garanti côté DAO).
+  final int msgID;
+
+  /// alanyaID de l'auteur de la réaction.
+  final int userID;
+
+  /// Dénormalisé (comme `senderNom` sur [LocalMessages]) pour permettre une
+  /// requête directe par conversation sans jointure.
+  final int conversationID;
+
+  /// Emoji unique (ex. "👍"). Jamais vide : une ligne sans réaction est
+  /// supprimée plutôt que stockée avec un emoji vide.
+  final String emoji;
+  final DateTime reactedAt;
+  const LocalMessageReaction({
+    required this.msgID,
+    required this.userID,
+    required this.conversationID,
+    required this.emoji,
+    required this.reactedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['msg_i_d'] = Variable<int>(msgID);
+    map['user_i_d'] = Variable<int>(userID);
+    map['conversation_i_d'] = Variable<int>(conversationID);
+    map['emoji'] = Variable<String>(emoji);
+    map['reacted_at'] = Variable<DateTime>(reactedAt);
+    return map;
+  }
+
+  LocalMessageReactionsCompanion toCompanion(bool nullToAbsent) {
+    return LocalMessageReactionsCompanion(
+      msgID: Value(msgID),
+      userID: Value(userID),
+      conversationID: Value(conversationID),
+      emoji: Value(emoji),
+      reactedAt: Value(reactedAt),
+    );
+  }
+
+  factory LocalMessageReaction.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalMessageReaction(
+      msgID: serializer.fromJson<int>(json['msgID']),
+      userID: serializer.fromJson<int>(json['userID']),
+      conversationID: serializer.fromJson<int>(json['conversationID']),
+      emoji: serializer.fromJson<String>(json['emoji']),
+      reactedAt: serializer.fromJson<DateTime>(json['reactedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'msgID': serializer.toJson<int>(msgID),
+      'userID': serializer.toJson<int>(userID),
+      'conversationID': serializer.toJson<int>(conversationID),
+      'emoji': serializer.toJson<String>(emoji),
+      'reactedAt': serializer.toJson<DateTime>(reactedAt),
+    };
+  }
+
+  LocalMessageReaction copyWith({
+    int? msgID,
+    int? userID,
+    int? conversationID,
+    String? emoji,
+    DateTime? reactedAt,
+  }) => LocalMessageReaction(
+    msgID: msgID ?? this.msgID,
+    userID: userID ?? this.userID,
+    conversationID: conversationID ?? this.conversationID,
+    emoji: emoji ?? this.emoji,
+    reactedAt: reactedAt ?? this.reactedAt,
+  );
+  LocalMessageReaction copyWithCompanion(LocalMessageReactionsCompanion data) {
+    return LocalMessageReaction(
+      msgID: data.msgID.present ? data.msgID.value : this.msgID,
+      userID: data.userID.present ? data.userID.value : this.userID,
+      conversationID: data.conversationID.present
+          ? data.conversationID.value
+          : this.conversationID,
+      emoji: data.emoji.present ? data.emoji.value : this.emoji,
+      reactedAt: data.reactedAt.present ? data.reactedAt.value : this.reactedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalMessageReaction(')
+          ..write('msgID: $msgID, ')
+          ..write('userID: $userID, ')
+          ..write('conversationID: $conversationID, ')
+          ..write('emoji: $emoji, ')
+          ..write('reactedAt: $reactedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(msgID, userID, conversationID, emoji, reactedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalMessageReaction &&
+          other.msgID == this.msgID &&
+          other.userID == this.userID &&
+          other.conversationID == this.conversationID &&
+          other.emoji == this.emoji &&
+          other.reactedAt == this.reactedAt);
+}
+
+class LocalMessageReactionsCompanion
+    extends UpdateCompanion<LocalMessageReaction> {
+  final Value<int> msgID;
+  final Value<int> userID;
+  final Value<int> conversationID;
+  final Value<String> emoji;
+  final Value<DateTime> reactedAt;
+  final Value<int> rowid;
+  const LocalMessageReactionsCompanion({
+    this.msgID = const Value.absent(),
+    this.userID = const Value.absent(),
+    this.conversationID = const Value.absent(),
+    this.emoji = const Value.absent(),
+    this.reactedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalMessageReactionsCompanion.insert({
+    required int msgID,
+    required int userID,
+    required int conversationID,
+    required String emoji,
+    this.reactedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : msgID = Value(msgID),
+       userID = Value(userID),
+       conversationID = Value(conversationID),
+       emoji = Value(emoji);
+  static Insertable<LocalMessageReaction> custom({
+    Expression<int>? msgID,
+    Expression<int>? userID,
+    Expression<int>? conversationID,
+    Expression<String>? emoji,
+    Expression<DateTime>? reactedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (msgID != null) 'msg_i_d': msgID,
+      if (userID != null) 'user_i_d': userID,
+      if (conversationID != null) 'conversation_i_d': conversationID,
+      if (emoji != null) 'emoji': emoji,
+      if (reactedAt != null) 'reacted_at': reactedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalMessageReactionsCompanion copyWith({
+    Value<int>? msgID,
+    Value<int>? userID,
+    Value<int>? conversationID,
+    Value<String>? emoji,
+    Value<DateTime>? reactedAt,
+    Value<int>? rowid,
+  }) {
+    return LocalMessageReactionsCompanion(
+      msgID: msgID ?? this.msgID,
+      userID: userID ?? this.userID,
+      conversationID: conversationID ?? this.conversationID,
+      emoji: emoji ?? this.emoji,
+      reactedAt: reactedAt ?? this.reactedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (msgID.present) {
+      map['msg_i_d'] = Variable<int>(msgID.value);
+    }
+    if (userID.present) {
+      map['user_i_d'] = Variable<int>(userID.value);
+    }
+    if (conversationID.present) {
+      map['conversation_i_d'] = Variable<int>(conversationID.value);
+    }
+    if (emoji.present) {
+      map['emoji'] = Variable<String>(emoji.value);
+    }
+    if (reactedAt.present) {
+      map['reacted_at'] = Variable<DateTime>(reactedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalMessageReactionsCompanion(')
+          ..write('msgID: $msgID, ')
+          ..write('userID: $userID, ')
+          ..write('conversationID: $conversationID, ')
+          ..write('emoji: $emoji, ')
+          ..write('reactedAt: $reactedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5655,6 +6032,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalCallsTable localCalls = $LocalCallsTable(this);
   late final $LocalMeetingsTable localMeetings = $LocalMeetingsTable(this);
   late final $LocalStatusesTable localStatuses = $LocalStatusesTable(this);
+  late final $LocalMessageReactionsTable localMessageReactions =
+      $LocalMessageReactionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5666,6 +6045,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localCalls,
     localMeetings,
     localStatuses,
+    localMessageReactions,
   ];
 }
 
@@ -8203,6 +8583,227 @@ typedef $$LocalStatusesTableProcessedTableManager =
       LocalStatuse,
       PrefetchHooks Function()
     >;
+typedef $$LocalMessageReactionsTableCreateCompanionBuilder =
+    LocalMessageReactionsCompanion Function({
+      required int msgID,
+      required int userID,
+      required int conversationID,
+      required String emoji,
+      Value<DateTime> reactedAt,
+      Value<int> rowid,
+    });
+typedef $$LocalMessageReactionsTableUpdateCompanionBuilder =
+    LocalMessageReactionsCompanion Function({
+      Value<int> msgID,
+      Value<int> userID,
+      Value<int> conversationID,
+      Value<String> emoji,
+      Value<DateTime> reactedAt,
+      Value<int> rowid,
+    });
+
+class $$LocalMessageReactionsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalMessageReactionsTable> {
+  $$LocalMessageReactionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get msgID => $composableBuilder(
+    column: $table.msgID,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get userID => $composableBuilder(
+    column: $table.userID,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get conversationID => $composableBuilder(
+    column: $table.conversationID,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get emoji => $composableBuilder(
+    column: $table.emoji,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get reactedAt => $composableBuilder(
+    column: $table.reactedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalMessageReactionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalMessageReactionsTable> {
+  $$LocalMessageReactionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get msgID => $composableBuilder(
+    column: $table.msgID,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get userID => $composableBuilder(
+    column: $table.userID,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get conversationID => $composableBuilder(
+    column: $table.conversationID,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get emoji => $composableBuilder(
+    column: $table.emoji,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get reactedAt => $composableBuilder(
+    column: $table.reactedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalMessageReactionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalMessageReactionsTable> {
+  $$LocalMessageReactionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get msgID =>
+      $composableBuilder(column: $table.msgID, builder: (column) => column);
+
+  GeneratedColumn<int> get userID =>
+      $composableBuilder(column: $table.userID, builder: (column) => column);
+
+  GeneratedColumn<int> get conversationID => $composableBuilder(
+    column: $table.conversationID,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get emoji =>
+      $composableBuilder(column: $table.emoji, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get reactedAt =>
+      $composableBuilder(column: $table.reactedAt, builder: (column) => column);
+}
+
+class $$LocalMessageReactionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalMessageReactionsTable,
+          LocalMessageReaction,
+          $$LocalMessageReactionsTableFilterComposer,
+          $$LocalMessageReactionsTableOrderingComposer,
+          $$LocalMessageReactionsTableAnnotationComposer,
+          $$LocalMessageReactionsTableCreateCompanionBuilder,
+          $$LocalMessageReactionsTableUpdateCompanionBuilder,
+          (
+            LocalMessageReaction,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalMessageReactionsTable,
+              LocalMessageReaction
+            >,
+          ),
+          LocalMessageReaction,
+          PrefetchHooks Function()
+        > {
+  $$LocalMessageReactionsTableTableManager(
+    _$AppDatabase db,
+    $LocalMessageReactionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalMessageReactionsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalMessageReactionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalMessageReactionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> msgID = const Value.absent(),
+                Value<int> userID = const Value.absent(),
+                Value<int> conversationID = const Value.absent(),
+                Value<String> emoji = const Value.absent(),
+                Value<DateTime> reactedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalMessageReactionsCompanion(
+                msgID: msgID,
+                userID: userID,
+                conversationID: conversationID,
+                emoji: emoji,
+                reactedAt: reactedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int msgID,
+                required int userID,
+                required int conversationID,
+                required String emoji,
+                Value<DateTime> reactedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalMessageReactionsCompanion.insert(
+                msgID: msgID,
+                userID: userID,
+                conversationID: conversationID,
+                emoji: emoji,
+                reactedAt: reactedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalMessageReactionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalMessageReactionsTable,
+      LocalMessageReaction,
+      $$LocalMessageReactionsTableFilterComposer,
+      $$LocalMessageReactionsTableOrderingComposer,
+      $$LocalMessageReactionsTableAnnotationComposer,
+      $$LocalMessageReactionsTableCreateCompanionBuilder,
+      $$LocalMessageReactionsTableUpdateCompanionBuilder,
+      (
+        LocalMessageReaction,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalMessageReactionsTable,
+          LocalMessageReaction
+        >,
+      ),
+      LocalMessageReaction,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8219,4 +8820,6 @@ class $AppDatabaseManager {
       $$LocalMeetingsTableTableManager(_db, _db.localMeetings);
   $$LocalStatusesTableTableManager get localStatuses =>
       $$LocalStatusesTableTableManager(_db, _db.localStatuses);
+  $$LocalMessageReactionsTableTableManager get localMessageReactions =>
+      $$LocalMessageReactionsTableTableManager(_db, _db.localMessageReactions);
 }

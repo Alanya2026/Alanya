@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../db/app_database.dart';
@@ -227,6 +228,93 @@ class SocketMessageHandlers {
     if (id == 0) return;
     final pinned = data['isPinned'] == 1 || data['isPinned'] == true;
     _dao.setMessagePinnedByServerId(id, pinned);
+  }
+
+  /// Pose/remplace ma réaction sur un message. Optimistic comme
+  /// [setMessagePinned] : écriture locale immédiate, confirmation serveur,
+  /// rollback vers l'état précédent (réaction antérieure ou aucune) en cas
+  /// d'échec réseau.
+  Future<void> setReaction(int msgID, String emoji) async {
+    if (msgID == 0 || emoji.isEmpty) return;
+    final convID = await _conversationIdForMsg(msgID);
+    if (convID == null) return;
+    final myId = _myId();
+    final previous = await (_db.select(_db.localMessageReactions)
+          ..where((r) => r.msgID.equals(msgID) & r.userID.equals(myId)))
+        .getSingleOrNull();
+    await _dao.upsertReaction(
+      msgID: msgID,
+      userID: myId,
+      conversationID: convID,
+      emoji: emoji,
+    );
+    try {
+      await _api.setReaction(msgID, emoji);
+    } catch (e) {
+      if (previous != null) {
+        await _dao.upsertReaction(
+          msgID: msgID,
+          userID: myId,
+          conversationID: convID,
+          emoji: previous.emoji,
+          reactedAt: previous.reactedAt,
+        );
+      } else {
+        await _dao.deleteReaction(msgID, myId);
+      }
+      rethrow;
+    }
+  }
+
+  /// Retire ma réaction. Optimistic avec rollback si le serveur refuse.
+  Future<void> removeReaction(int msgID) async {
+    if (msgID == 0) return;
+    final myId = _myId();
+    final previous = await (_db.select(_db.localMessageReactions)
+          ..where((r) => r.msgID.equals(msgID) & r.userID.equals(myId)))
+        .getSingleOrNull();
+    if (previous == null) return;
+    await _dao.deleteReaction(msgID, myId);
+    try {
+      await _api.removeReaction(msgID);
+    } catch (e) {
+      await _dao.upsertReaction(
+        msgID: msgID,
+        userID: myId,
+        conversationID: previous.conversationID,
+        emoji: previous.emoji,
+        reactedAt: previous.reactedAt,
+      );
+      rethrow;
+    }
+  }
+
+  /// Événement socket entrant : une réaction a été posée ou retirée par un
+  /// participant (moi y compris, depuis un autre appareil). `emoji`
+  /// absent/vide signifie un retrait.
+  Future<void> onMessageReaction(dynamic data) async {
+    if (data is! Map) return;
+    final json = Map<String, dynamic>.from(data);
+    final msgID = _toInt(json['msgID']);
+    final userID = _toInt(json['userID']);
+    if (msgID == 0 || userID == 0) return;
+    final emoji = json['emoji']?.toString() ?? '';
+    if (emoji.isEmpty) {
+      await _dao.deleteReaction(msgID, userID);
+      return;
+    }
+    var convID = _toInt(json['conversationID']);
+    if (convID == 0) {
+      convID = await _conversationIdForMsg(msgID) ?? 0;
+      if (convID == 0) return;
+    }
+    await _dao.upsertReaction(
+      msgID: msgID,
+      userID: userID,
+      conversationID: convID,
+      emoji: emoji,
+      reactedAt: _parseDate(json['reactedAt']),
+    );
   }
 
   /// Signale au serveur qu'un média à vue unique a été consulté, puis marque

@@ -51,6 +51,7 @@ import '../../widgets/profile_avatar.dart';
 import '../../widgets/typing_indicator.dart';
 import '../../widgets/chat/chat_wallpaper.dart';
 import '../../widgets/chat/message_status_icon.dart';
+import '../../widgets/chat/reaction_chips.dart';
 import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'group_detail_screen.dart';
@@ -155,6 +156,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// Chemins résolus avant que le flux Drift ne rafraîchisse l'UI.
   final Map<int, String> _localMediaPathOverrides = {};
   List<LocalMessage> _currentMessages = const [];
+  /// Réactions de la conversation active, regroupées par `msgID` — alimenté
+  /// par l'abonnement dédié et lu par la barre de réaction rapide
+  /// (`chat_actions.dart`) et les bulles (`chat_bubbles.dart`).
+  Map<int, List<LocalMessageReaction>> _currentReactionsByMsg = const {};
+  StreamSubscription<List<LocalMessageReaction>>? _reactionsSub;
+
+  Map<int, List<LocalMessageReaction>> _groupReactionsByMsg(
+    List<LocalMessageReaction> reactions,
+  ) {
+    final byMsg = <int, List<LocalMessageReaction>>{};
+    for (final r in reactions) {
+      (byMsg[r.msgID] ??= []).add(r);
+    }
+    return byMsg;
+  }
 
   /// Pont public vers `setState()` (lui-même `@protected`), afin que les
   /// extensions de cette librairie puissent déclencher un rebuild.
@@ -311,6 +327,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       _historySyncInFlight = expectMessages;
     });
     unawaited(_syncConversationHistory(convId));
+
+    // 5) Réactions : abonnement dédié plutôt qu'un StreamBuilder imbriqué —
+    //    une réaction qui arrive une frame plus tard que les messages n'a pas
+    //    besoin de geler l'affichage de la conversation.
+    _bindReactionsStream(convId);
+  }
+
+  void _bindReactionsStream(int convId) {
+    _reactionsSub?.cancel();
+    _reactionsSub = _chat.repository.watchReactions(convId).listen((reactions) {
+      if (!mounted) return;
+      setState(() => _currentReactionsByMsg = _groupReactionsByMsg(reactions));
+    });
   }
 
   Future<void> _syncConversationHistory(int convId) async {
@@ -318,6 +347,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       var activeConvId = convId;
       for (var attempt = 0; attempt < 4; attempt++) {
         await _chat.repository.syncMessages(activeConvId);
+        await _chat.repository.syncReactions(activeConvId);
         if (!mounted || _convId != activeConvId) return;
         var stillEmpty = (await _chat.repository.dao
                 .watchMessages(activeConvId, _myId ?? 0)
@@ -340,6 +370,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
             activeConvId = resolved;
             if (mounted) setState(() => _convId = resolved);
             _chat.repository.setActiveConversation(resolved);
+            _bindReactionsStream(resolved);
             _apiClient.sendSocketEvent(
               SocketEvents.joinConversation,
               {'conversationID': resolved},
@@ -464,6 +495,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _typingTimer?.cancel();
     _recordTimer?.cancel();
     _highlightTimer?.cancel();
+    _reactionsSub?.cancel();
     _recorder.dispose();
     context.read<VoicePlaybackService>().leaveChat();
     final convId = _convId;
@@ -610,7 +642,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                               if (showDate) _buildDateSeparator(itemTime.toLocal()),
                                               switch (chatItem) {
                                                 ChatListSingle(:final message) =>
-                                                  _buildMessageBubble(message, message.senderID == _myId),
+                                                  _buildMessageBubble(
+                                                    message,
+                                                    message.senderID == _myId,
+                                                    reactions: _currentReactionsByMsg[message.msgID] ?? const [],
+                                                  ),
                                                 ChatListAlbum(:final messages) =>
                                                   _buildAlbumBubble(messages, messages.first.senderID == _myId),
                                               },

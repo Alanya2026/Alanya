@@ -2694,4 +2694,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoCallIncoming => 'Incoming video call';
+
+  @override
+  String reactionChipLabel(String emoji, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reactions',
+      one: '1 reaction',
+    );
+    return '$emoji, $_temp0';
+  }
+
+  @override
+  String get reactToMessage => 'React';
+
+  @override
+  String get moreReactions => 'More reactions';
 }

@@ -2,6 +2,10 @@
 // part of chat_detail_screen.dart.
 part of '../chat_detail_screen.dart';
 
+/// Barre de réaction rapide (menu long-press) — mêmes emojis que
+/// WhatsApp/Messenger pour rester dans les habitudes des utilisateurs.
+const List<String> _quickReactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
 extension _ChatActions on _ChatDetailScreenState {
   bool _isSelectableMessage(LocalMessage msg) => msg.msgID > 0 && !msg.isDeleted;
 
@@ -324,6 +328,7 @@ extension _ChatActions on _ChatDetailScreenState {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (msg.msgID != 0 && !msg.isDeleted) _buildQuickReactionBar(msg),
             if (_isSelectableMessage(msg))
               ListTile(
                 leading: Icon(Icons.check_circle_outline, color: primary),
@@ -438,6 +443,90 @@ extension _ChatActions on _ChatDetailScreenState {
               ),
             AppSpacing.vGapSm,
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Rangée d'emojis rapides + bouton « plus » en haut du menu long-press.
+  /// L'emoji déjà utilisé par l'utilisateur (le cas échéant) est mis en avant.
+  Widget _buildQuickReactionBar(LocalMessage msg) {
+    final mine = _currentReactionsByMsg[msg.msgID]
+        ?.where((r) => r.userID == _myId)
+        .map((r) => r.emoji)
+        .toList();
+    final myEmoji = (mine != null && mine.isNotEmpty) ? mine.first : null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          for (final emoji in _quickReactionEmojis)
+            _QuickReactionButton(
+              emoji: emoji,
+              selected: emoji == myEmoji,
+              onTap: () {
+                Navigator.pop(context);
+                _toggleReaction(msg, emoji);
+              },
+            ),
+          Semantics(
+            button: true,
+            label: context.l10n.moreReactions,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () {
+                Navigator.pop(context);
+                _openReactionPicker(msg);
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                child: Icon(Icons.add_circle_outline, color: context.colors.onSurfaceVariant),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Pose/retire ma réaction sur [msg] (une seule réaction par utilisateur :
+  /// un nouvel emoji remplace le précédent, le même emoji le retire).
+  Future<void> _toggleReaction(LocalMessage msg, String emoji) async {
+    if (msg.msgID == 0 || _myId == null) return;
+    final mine = _currentReactionsByMsg[msg.msgID]
+        ?.where((r) => r.userID == _myId)
+        .toList();
+    final currentEmoji = (mine != null && mine.isNotEmpty) ? mine.first.emoji : null;
+    try {
+      if (currentEmoji == emoji) {
+        await _chat.repository.removeReaction(msg.msgID);
+      } else {
+        await _chat.repository.setReaction(msg.msgID, emoji);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.actionFailedPleaseTryAgain)),
+      );
+    }
+  }
+
+  /// Sélecteur d'emoji complet (« + » de la barre rapide), pour réagir avec
+  /// un emoji hors des 6 choix par défaut.
+  void _openReactionPicker(LocalMessage msg) {
+    showAppBottomSheet(
+      context: context,
+      builder: (_) => AppBottomSheet(
+        child: SizedBox(
+          height: 280,
+          child: EmojiPicker(
+            onEmojiSelected: (category, emoji) {
+              Navigator.pop(context);
+              _toggleReaction(msg, emoji.emoji);
+            },
+            config: const Config(height: 280),
+          ),
         ),
       ),
     );
@@ -1811,3 +1900,42 @@ extension _ChatActions on _ChatDetailScreenState {
   bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 }
+
+/// Bouton emoji de la barre de réaction rapide — grossit et se met en
+/// évidence quand c'est déjà la réaction active de l'utilisateur.
+class _QuickReactionButton extends StatelessWidget {
+  const _QuickReactionButton({
+    required this.emoji,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String emoji;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '${context.l10n.reactToMessage} $emoji',
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: AppDurations.fast,
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: selected ? context.colors.primaryContainer : Colors.transparent,
+          ),
+          child: Text(
+            emoji,
+            style: TextStyle(fontSize: selected ? 26 : 22),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

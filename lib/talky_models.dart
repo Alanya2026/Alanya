@@ -244,6 +244,42 @@ class Message {
   }
 }
 
+// ── RÉACTION ──────────────────────────────────────────────────────────
+// Table: message_reaction
+// PK: (msgID, userID) — une seule réaction par utilisateur et par message.
+
+class MessageReaction {
+  final int msgID;
+  final int userID;
+  final String emoji;
+  final String? reactedAt;
+  // Jointure users (utile pour un futur détail « qui a réagi »)
+  final String? userNom;
+  final String? userPseudo;
+
+  const MessageReaction({
+    required this.msgID,
+    required this.userID,
+    required this.emoji,
+    this.reactedAt,
+    this.userNom,
+    this.userPseudo,
+  });
+
+  factory MessageReaction.fromJson(Map<String, dynamic> json) => MessageReaction(
+        msgID: json['msgID'] is int
+            ? json['msgID'] as int
+            : int.tryParse(json['msgID']?.toString() ?? '') ?? 0,
+        userID: json['userID'] is int
+            ? json['userID'] as int
+            : int.tryParse(json['userID']?.toString() ?? '') ?? 0,
+        emoji: json['emoji']?.toString() ?? '',
+        reactedAt: json['reactedAt']?.toString(),
+        userNom: json['user_nom'],
+        userPseudo: json['user_pseudo'],
+      );
+}
+
 // ── CONVERSATION ─────────────────────────────────────────────────────
 // Table: conversation
 // PK: conversID | isGroup | GroupName | groupPhoto | lastMessage | lastMessageAt
@@ -711,6 +747,9 @@ class SocketEvents {
   static const messagesDeleted   = 'messages:deleted';
   static const messagePinned     = 'message:pinned';
   static const messageViewed     = 'message:viewed';
+  /// Réaction posée/retirée sur un message. Payload : { msgID, conversationID,
+  /// userID, emoji }. `emoji` absent/vide = réaction retirée.
+  static const messageReaction   = 'message:reaction';
   static const messageDelivered  = 'message:delivered';
   static const messageRead       = 'message:read';
   static const messageStatus     = 'message:status';

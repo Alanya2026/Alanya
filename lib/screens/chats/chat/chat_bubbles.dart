@@ -125,9 +125,14 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildMessageBubble(LocalMessage msg, bool isMe) {
+  Widget _buildMessageBubble(
+    LocalMessage msg,
+    bool isMe, {
+    List<LocalMessageReaction> reactions = const [],
+  }) {
     final selected = _isMessageSelected(msg);
     final selectable = _isSelectableMessage(msg);
+    final reactionGroups = groupReactions(reactions, _myId ?? 0);
     return Column(
       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
@@ -151,7 +156,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
             onLongPress: () => _showMessageMenu(msg, isMe),
             onTap: () => _toggleSelection(msg),
             bubble: Container(
-              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              margin: EdgeInsets.only(bottom: reactionGroups.isEmpty ? AppSpacing.md : AppSpacing.xs),
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
               decoration: _bubbleDecoration(
@@ -289,6 +294,21 @@ extension _ChatBubbles on _ChatDetailScreenState {
             ),
           ),
         ),
+        if (reactionGroups.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(
+              bottom: AppSpacing.md,
+              left: isMe ? 0 : AppSpacing.lg,
+              right: isMe ? AppSpacing.lg : 0,
+            ),
+            child: Align(
+              alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+              child: ReactionChipsRow(
+                groups: reactionGroups,
+                onToggle: (emoji) => _toggleReaction(msg, emoji),
+              ),
+            ),
+          ),
       ],
     );
   }

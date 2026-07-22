@@ -42,6 +42,7 @@ class ChatDao {
   Future<void> deleteConversation(int conversID) async {
     await (db.delete(db.localConversations)..where((c) => c.conversID.equals(conversID))).go();
     await (db.delete(db.localMessages)..where((m) => m.conversationID.equals(conversID))).go();
+    await (db.delete(db.localMessageReactions)..where((r) => r.conversationID.equals(conversID))).go();
   }
 
   Future<void> deleteConversations(List<int> conversIDs) async {
@@ -49,6 +50,7 @@ class ChatDao {
     if (conversIDs.length == 1) return deleteConversation(conversIDs.first);
     await (db.delete(db.localConversations)..where((c) => c.conversID.isIn(conversIDs))).go();
     await (db.delete(db.localMessages)..where((m) => m.conversationID.isIn(conversIDs))).go();
+    await (db.delete(db.localMessageReactions)..where((r) => r.conversationID.isIn(conversIDs))).go();
   }
 
   /// @Deprecated('Unread dérivé via ConversationSummaryReducer / countUnread')
@@ -649,9 +651,70 @@ class ChatDao {
         .watch();
   }
 
+  // RÉACTIONS
+
+  /// Réactions de toute la conversation (pas de stream par message : on
+  /// regroupe côté écran via un `Map<msgID, List<LocalMessageReaction>>`,
+  /// comme la présence/typing qui sont aussi tenues en mémoire par le
+  /// provider plutôt qu'interrogées message par message).
+  Stream<List<LocalMessageReaction>> watchReactions(int conversationID) {
+    return (db.select(db.localMessageReactions)
+          ..where((r) => r.conversationID.equals(conversationID)))
+        .watch();
+  }
+
+  /// Pose/replace la réaction d'un utilisateur sur un message (upsert par PK
+  /// composite `(msgID, userID)` : un nouvel emoji remplace l'ancien).
+  Future<void> upsertReaction({
+    required int msgID,
+    required int userID,
+    required int conversationID,
+    required String emoji,
+    DateTime? reactedAt,
+  }) {
+    return db.into(db.localMessageReactions).insertOnConflictUpdate(
+          LocalMessageReactionsCompanion.insert(
+            msgID: msgID,
+            userID: userID,
+            conversationID: conversationID,
+            emoji: emoji,
+            reactedAt: Value(reactedAt ?? DateTime.now()),
+          ),
+        );
+  }
+
+  Future<void> deleteReaction(int msgID, int userID) {
+    return (db.delete(db.localMessageReactions)
+          ..where((r) => r.msgID.equals(msgID) & r.userID.equals(userID)))
+        .go();
+  }
+
+  /// Supprime toutes les réactions connues d'un message (utilisé quand le
+  /// serveur renvoie l'état complet des réactions restantes après un retrait).
+  Future<void> deleteReactionsForMessage(int msgID) {
+    return (db.delete(db.localMessageReactions)..where((r) => r.msgID.equals(msgID))).go();
+  }
+
+  /// Remplace l'intégralité des réactions connues d'une conversation par
+  /// [reactions] (hydratation initiale via `GET /conversations/:id/reactions`).
+  /// Écrit dans une transaction pour ne jamais laisser un état partiel visible.
+  Future<void> replaceReactionsForConversation(
+    int conversationID,
+    List<LocalMessageReactionsCompanion> reactions,
+  ) async {
+    await db.transaction(() async {
+      await (db.delete(db.localMessageReactions)
+            ..where((r) => r.conversationID.equals(conversationID)))
+          .go();
+      if (reactions.isEmpty) return;
+      await db.batch((b) => b.insertAll(db.localMessageReactions, reactions));
+    });
+  }
+
   Future<void> clearAll() async {
     await db.delete(db.localMessages).go();
     await db.delete(db.localConversations).go();
+    await db.delete(db.localMessageReactions).go();
   }
 
   /// Supprime les conversations (et leurs messages) absentes de [keepIds].

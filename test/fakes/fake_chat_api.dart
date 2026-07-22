@@ -187,6 +187,22 @@ class FakeChatApi implements ChatApi {
   }
 
   @override
+  Future<void> setReaction(int msgID, String emoji) async {
+    httpLog.add('setReaction:$msgID:$emoji');
+  }
+
+  @override
+  Future<void> removeReaction(int msgID) async {
+    httpLog.add('removeReaction:$msgID');
+  }
+
+  @override
+  Future<List<dynamic>> getReactions(int conversID) async {
+    httpLog.add('getReactions:$conversID');
+    return const [];
+  }
+
+  @override
   Future<void> deleteConversations(List<int> conversationIDs) async {
     httpLog.add('deleteConversations');
   }

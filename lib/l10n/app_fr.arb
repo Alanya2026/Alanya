@@ -1711,5 +1711,18 @@
   "voiceCallOutgoing": "Appel vocal sortant",
   "voiceCallIncoming": "Appel vocal entrant",
   "videoCallOutgoing": "Appel vidéo sortant",
-  "videoCallIncoming": "Appel vidéo entrant"
+  "videoCallIncoming": "Appel vidéo entrant",
+  "reactionChipLabel": "{emoji}, {count, plural, =1{1 réaction} other{{count} réactions}}",
+  "@reactionChipLabel": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reactToMessage": "Réagir",
+  "moreReactions": "Plus de réactions"
 }
