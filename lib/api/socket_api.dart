@@ -5,6 +5,51 @@ extension SocketApi on TalkyApiClient {
   static const Duration _socketReadyPollInterval = Duration(milliseconds: 100);
   static const int _socketReadyMaxPolls = 50;
   static const Duration _disconnectReconnectDebounce = Duration(seconds: 2);
+  static const Duration _healthCheckStaleGrace = Duration(seconds: 15);
+  static const Duration _healthCheckInterval = Duration(seconds: 30);
+
+  DateTime? get lastEventReceivedAt => _lastEventReceivedAt;
+
+  void setPendingMessagesCallback(Future<bool> Function() callback) {
+    _pendingMessagesCallback = callback;
+    if (_accessToken != null) _startConditionalHealthCheck();
+  }
+
+  void _recordEvent() {
+    _lastEventReceivedAt = DateTime.now();
+  }
+
+  void _stopConditionalHealthCheck() {
+    _healthCheckTimer?.cancel();
+    _healthCheckTimer = null;
+  }
+
+  void _startConditionalHealthCheck() {
+    _stopConditionalHealthCheck();
+    if (_accessToken == null) return;
+    _healthCheckTimer = Timer.periodic(SocketApi._healthCheckInterval, (_) async {
+      final hasPending = await _pendingMessagesCallback?.call() ?? false;
+      if (!hasPending) return;
+
+      if (!isSocketReady) {
+        debugPrint('[Socket] Health check → reconnect (socket non prêt, outbox pending)');
+        _teardownSocketInstance();
+        connectSocket();
+        return;
+      }
+
+      final lastEvent = _lastEventReceivedAt;
+      final noRecent = lastEvent == null ||
+          DateTime.now().difference(lastEvent) >
+              SocketApi._healthCheckInterval + _healthCheckStaleGrace;
+
+      if (noRecent) {
+        debugPrint('[Socket] Health check → reconnect (aucun event récent, outbox pending)');
+        _teardownSocketInstance();
+        connectSocket();
+      }
+    });
+  }
 
   void _cancelSocketReconnectWatchdog() {
     _socketReconnectWatchdog?.cancel();
@@ -25,6 +70,7 @@ extension SocketApi on TalkyApiClient {
   /// Détruit l'instance socket sans vider les listeners externes.
   void _teardownSocketInstance() {
     _cancelSocketReconnectWatchdog();
+    _stopConditionalHealthCheck();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
@@ -49,10 +95,12 @@ extension SocketApi on TalkyApiClient {
     });
 
     _socket!.onConnect((_) {
+      _recordEvent();
       unawaited(_emitSocketAuthLogin());
     });
 
     _socket!.on(SocketEvents.authVerified, (data) {
+      _recordEvent();
       debugPrint('[Socket] Authentifié: ${data['alanyaID']}');
       _isSocketAuthVerified = true;
       _cancelSocketReconnectWatchdog();
@@ -99,11 +147,13 @@ extension SocketApi on TalkyApiClient {
     // été détruit puis recréé).
     _socketListeners.forEach((event, callbacks) {
       for (final cb in callbacks) {
-        _socket!.on(event, cb);
+        final wrapped = _socketCallbackWrappers[cb];
+        _socket!.on(event, wrapped ?? cb);
       }
     });
 
     _socket!.connect();
+    _startConditionalHealthCheck();
   }
 
   Future<bool> _waitUntilSocketReady() async {
@@ -198,7 +248,10 @@ extension SocketApi on TalkyApiClient {
 
   void disconnectSocket() {
     _cancelSocketReconnectWatchdog();
+    _stopConditionalHealthCheck();
     _isSocketAuthVerified = false;
+    _pendingMessagesCallback = null;
+    _socketCallbackWrappers.clear();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
@@ -213,18 +266,25 @@ extension SocketApi on TalkyApiClient {
     _socket!.emit(event, data);
   }
 
-  void onSocketEvent(String event, Function(dynamic) callback) {
+  void onSocketEvent(String event, void Function(dynamic) callback) {
     // Registre pour ré-attacher au prochain `connectSocket()` (cas logout/login
     // où `_socket` est recréé). socket.io conserve ses listeners au travers des
     // reconnexions auto donc on n'a pas besoin de re-binder à chaque fois.
     final listeners = _socketListeners.putIfAbsent(event, () => []);
     if (listeners.contains(callback)) return;
+
+    void wrapped(dynamic data) {
+      _recordEvent();
+      callback(data);
+    }
+    _socketCallbackWrappers[callback] = wrapped;
+
     listeners.add(callback);
     debugPrint('[Socket] 📌 Listener enregistré pour "$event"');
 
     // Attache directement au socket s'il existe : `.on` accepte avant connect
     // et la livraison se déclenche dès qu'un event arrive (post auth:verified).
-    _socket?.on(event, callback);
+    _socket?.on(event, wrapped);
 
     // Si auth:verified est déjà passé (connectSocket avant bind, appel, etc.),
     // rejouer le catch-up pour ce listener — sinon flush/resync ne tournent
@@ -250,12 +310,13 @@ extension SocketApi on TalkyApiClient {
   /// listeners du même event. Utilisé par les écrans (chat_detail) qui ne
   /// doivent pas évincer les listeners globaux (chat_repository, etc.) en se
   /// fermant.
-  void removeSocketListener(String event, Function(dynamic) callback) {
+  void removeSocketListener(String event, void Function(dynamic) callback) {
     final list = _socketListeners[event];
     if (list != null) {
       list.remove(callback);
       if (list.isEmpty) _socketListeners.remove(event);
     }
-    _socket?.off(event, callback);
+    final wrapped = _socketCallbackWrappers.remove(callback);
+    _socket?.off(event, wrapped ?? callback);
   }
 }

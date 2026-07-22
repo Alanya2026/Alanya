@@ -138,6 +138,7 @@ class ChatRepository {
       db: _db,
       sender: _sender,
       pendingReads: _pendingReads,
+      recompute: (id) => _reducer.recompute(id, _myId),
     );
     _handlers = SocketMessageHandlers(
       api: _api,

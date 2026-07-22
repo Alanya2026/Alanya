@@ -304,4 +304,31 @@ extension ChatHttpApi on TalkyApiClient {
       ),
     );
   }
+
+  /// Rattrapage outbox : le serveur a-t-il déjà persisté ce clientId ?
+  Future<Map<String, dynamic>> getMessageStatusByClientId(String clientId) async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse(
+          '${TalkyApiClient.baseUrl}/messages/status?clientId=${Uri.encodeQueryComponent(clientId)}',
+        ),
+        headers: _headers,
+      ),
+    );
+    return data is Map ? Map<String, dynamic>.from(data) : {'found': false};
+  }
+
+  /// Messages sortants récents encore au statut « envoyé » côté serveur.
+  Future<List<dynamic>> getPendingOutgoingMessages() async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/pending'),
+        headers: _headers,
+      ),
+    );
+    if (data is Map && data['messages'] is List) {
+      return List<dynamic>.from(data['messages'] as List);
+    }
+    return const [];
+  }
 }

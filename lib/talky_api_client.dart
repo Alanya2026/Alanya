@@ -42,7 +42,7 @@ class TalkyApiClient {
   final http.Client _client;
 
   // Callbacks Socket globaux (pour CallService, MeetingService)
-  final Map<String, List<Function(dynamic)>> _socketListeners = {};
+  final Map<String, List<void Function(dynamic)>> _socketListeners = {};
 
   /// Vrai uniquement après que le serveur a confirmé `auth:verified`. Le simple
   /// `_socket.connected` ne suffit pas : émettre avant l'auth fait silencieusement
@@ -58,6 +58,14 @@ class TalkyApiClient {
 
   /// Reconnect manuel après `onDisconnect` si l'auto-reconnect Socket.IO est épuisé.
   Timer? _socketReconnectWatchdog;
+
+  /// Health check périodique tant qu'il reste des messages en outbox.
+  DateTime? _lastEventReceivedAt;
+  Timer? _healthCheckTimer;
+  Future<bool> Function()? _pendingMessagesCallback;
+
+  /// Enveloppes pour [onSocketEvent] afin de [removeSocketListener] avec la bonne ref.
+  final Map<void Function(dynamic), void Function(dynamic)> _socketCallbackWrappers = {};
 
   Future<String>? _stableDeviceIdFuture;
 

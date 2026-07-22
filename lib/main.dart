@@ -20,6 +20,7 @@ import 'core/utils/app_log.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/theme/locale_controller.dart';
+import 'core/services/incoming_share_service.dart';
 import 'core/services/media_download_preferences.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
@@ -93,6 +94,8 @@ void main() async {
 
   // Charger avant runApp : le prefetch socket/sync lit ce flag de façon sync.
   await MediaDownloadPreferences.preload();
+
+  await IncomingShareService.instance.init();
 
   runApp(const TalkyApp());
 }
@@ -419,6 +422,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     if (myId == null) {
       if (_boundUserId != null) {
         debugPrint('[AuthWrapper] Logout détecté → unbind providers');
+        IncomingShareService.instance.onSessionEnded();
         _removeBackOnlineListener();
         _clearCallLogBindings();
         try {
@@ -488,6 +492,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
     // Connecter le socket seulement après les listeners chat/status :
     // sinon `message:received` / `auth:verified` peuvent être perdus.
+    apiClient.setPendingMessagesCallback(
+      () => chatProvider.repository.hasSyncPending(),
+    );
     apiClient.connectSocket();
 
     chatProvider.onSocketReadyHook = syncService.refreshStatuses;
@@ -515,6 +522,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     } catch (e) {
       debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e');
     }
+
+    IncomingShareService.instance.onSessionReady();
   }
 
   /// Efface toutes les données locales liées à la session utilisateur.

@@ -66,4 +66,10 @@ abstract class ChatApi {
     bool? isPinned,
     bool? isArchived,
   });
+
+  /// Rattrapage outbox HTTP (clientId → msgID serveur).
+  Future<Map<String, dynamic>> getMessageStatusByClientId(String clientId);
+
+  /// Messages sortants status=1 côté serveur (réconciliation).
+  Future<List<dynamic>> getPendingOutgoingMessages();
 }

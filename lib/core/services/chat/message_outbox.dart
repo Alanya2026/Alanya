@@ -15,17 +15,20 @@ class MessageOutbox {
     required AppDatabase db,
     required MessageSender sender,
     required Set<int> pendingReads,
+    required Future<void> Function(int conversationID) recompute,
   })  : _api = api,
         _dao = dao,
         _db = db,
         _sender = sender,
-        _pendingReads = pendingReads;
+        _pendingReads = pendingReads,
+        _recompute = recompute;
 
   final ChatApi _api;
   final ChatDao _dao;
   final AppDatabase _db;
   final MessageSender _sender;
   final Set<int> _pendingReads;
+  final Future<void> Function(int conversationID) _recompute;
 
   /// Évite le flush imbriqué quand `forceReconnect` déclenche `auth:verified`.
   bool _flushInFlight = false;
@@ -49,6 +52,8 @@ class MessageOutbox {
       debugPrint('[MessageOutbox] pending stale → forceReconnect');
       await _api.forceReconnect();
     }
+
+    await _reconcilePendingViaHttp();
 
     final pending = await _dao.pendingMessages();
     for (final m in pending) {
@@ -156,5 +161,42 @@ class MessageOutbox {
     if (_api.isSocketReady) {
       await flushOutbox();
     }
+  }
+
+  /// Confirme localement les pending déjà persistés côté serveur (ack socket perdu).
+  Future<void> _reconcilePendingViaHttp() async {
+    final pending = await _dao.pendingMessages();
+    if (pending.isEmpty) return;
+
+    for (final m in pending) {
+      try {
+        final st = await _api.getMessageStatusByClientId(m.clientId);
+        if (st['found'] != true) continue;
+        final msgID = _toInt(st['msgID']);
+        if (msgID == 0) continue;
+        await _dao.confirmMessage(
+          clientId: m.clientId,
+          msgID: msgID,
+          status: _toInt(st['status'], fallback: 1),
+          sendAt: _parseDate(st['sendAt']),
+        );
+        await _recompute(m.conversationID);
+        debugPrint('[MessageOutbox] HTTP ack clientId=${m.clientId} msgID=$msgID');
+      } catch (e) {
+        debugPrint('[MessageOutbox] reconcile HTTP ${m.clientId}: $e');
+      }
+    }
+  }
+
+  static int _toInt(dynamic v, {int fallback = 0}) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '') ?? fallback;
+  }
+
+  static DateTime? _parseDate(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    return DateTime.tryParse(v.toString());
   }
 }

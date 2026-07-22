@@ -30,6 +30,9 @@ class FakeChatApi implements ChatApi {
   /// un ack `message:sent` (idempotence clientId).
   bool autoAckSend = false;
 
+  /// Statuts HTTP simulés par clientId (tests reconcile outbox).
+  final Map<String, Map<String, dynamic>> messageStatusByClientId = {};
+
   @override
   bool get isSocketReady => socketReady;
 
@@ -204,5 +207,19 @@ class FakeChatApi implements ChatApi {
     bool? isArchived,
   }) async {
     httpLog.add('updateConversationsBatch');
+  }
+
+  @override
+  Future<Map<String, dynamic>> getMessageStatusByClientId(String clientId) async {
+    httpLog.add('getMessageStatusByClientId:$clientId');
+    final st = messageStatusByClientId[clientId];
+    if (st == null) return {'found': false};
+    return {'found': true, ...st};
+  }
+
+  @override
+  Future<List<dynamic>> getPendingOutgoingMessages() async {
+    httpLog.add('getPendingOutgoingMessages');
+    return messageStatusByClientId.values.toList();
   }
 }

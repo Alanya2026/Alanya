@@ -121,4 +121,12 @@ class TalkyChatApi implements ChatApi {
         isPinned: isPinned,
         isArchived: isArchived,
       );
+
+  @override
+  Future<Map<String, dynamic>> getMessageStatusByClientId(String clientId) =>
+      _client.getMessageStatusByClientId(clientId);
+
+  @override
+  Future<List<dynamic>> getPendingOutgoingMessages() =>
+      _client.getPendingOutgoingMessages();
 }
