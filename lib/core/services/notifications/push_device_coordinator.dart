@@ -15,6 +15,7 @@ class PushDeviceCoordinator {
   String? _lastAppState;
   int? _lastActiveConversationId;
   DateTime? _lastStateSentAt;
+  String? _lastVoipToken;
 
   static const _minStateInterval = Duration(seconds: 15);
 
@@ -33,6 +34,19 @@ class PushDeviceCoordinator {
       );
     } catch (e) {
       debugPrint('[PushDevice] registerToken failed: $e');
+    }
+  }
+
+  Future<void> registerVoipToken(String voipToken) async {
+    if (kIsWeb || !Platform.isIOS) return;
+    final token = voipToken.trim();
+    if (token.isEmpty || token == _lastVoipToken) return;
+    try {
+      await _api.updateVoipToken(token);
+      _lastVoipToken = token;
+      debugPrint('[PushDevice] voip token enregistré côté backend');
+    } catch (e) {
+      debugPrint('[PushDevice] registerVoipToken failed: $e');
     }
   }
 
@@ -77,6 +91,7 @@ class PushDeviceCoordinator {
   }
 
   Future<void> onLogout() async {
+    _lastVoipToken = null;
     try {
       await _api.deletePushDevice();
     } catch (e) {

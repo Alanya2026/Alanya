@@ -24,6 +24,7 @@ import '../../widgets/video_message_preview.dart';
 import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
+import '../../widgets/conversation_mute_sheet.dart';
 
 /// Fiche détaillée d'un contact, réutilisable depuis :
 /// — l'en-tête d'une discussion 1-1
@@ -411,6 +412,15 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           onClear: _clearMessages,
         ),
         AppSpacing.vGapLg,
+        if (_effectiveConvId != null)
+          _Card(
+            padding: EdgeInsets.zero,
+            child: ConversationMuteListTile(
+              conversationId: _effectiveConvId!,
+              conversationName: u.nom.isNotEmpty ? u.nom : u.pseudo,
+            ),
+          ),
+        if (_effectiveConvId != null) AppSpacing.vGapLg,
         _MediaCard(
           key: ValueKey('media-${_effectiveConvId ?? 'none'}'),
           conversationId: _effectiveConvId,

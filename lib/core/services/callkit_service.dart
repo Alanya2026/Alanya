@@ -40,10 +40,15 @@ class CallKitService {
 
   StreamSubscription? _eventSub;
   IncomingCallAction? _pendingAction;
+  void Function(String token)? _onVoipTokenUpdated;
 
   /// Dernier callId pour lequel [showIncoming] a été appelé (anti-doublon
   /// FCM + socket en arrière-plan).
   String? _lastShownCallId;
+
+  void setVoipTokenListener(void Function(String token)? listener) {
+    _onVoipTokenUpdated = listener;
+  }
 
   Future<void> init() async {
     if (kIsWeb) return;
@@ -201,6 +206,15 @@ class CallKitService {
   }
 
   void _handleEvent(CallEvent event) {
+    if (event.event == Event.actionDidUpdateDevicePushTokenVoip) {
+      final token = event.body['deviceTokenVoIP']?.toString().trim() ?? '';
+      if (token.isNotEmpty) {
+        debugPrint('[CallKit] voip token reçu len=${token.length}');
+        _onVoipTokenUpdated?.call(token);
+      }
+      return;
+    }
+
     final extra = event.body['extra'] as Map? ?? const {};
     IncomingCallActionType? actionType;
 

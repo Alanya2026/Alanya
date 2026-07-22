@@ -110,6 +110,22 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_accent" />
+        <!-- Phase 4 : couche FCM native (désactivée par défaut — voir build.gradle placeholders) -->
+        <service
+            android:name=".TalkyFirebaseMessagingService"
+            android:exported="false"
+            android:enabled="${talkyNotificationNativeV2}">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:exported="false" />
+        <service
+            android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingService"
+            tools:node="merge"
+            android:enabled="${talkyFlutterFcmEnabled}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

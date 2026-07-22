@@ -2711,4 +2711,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moreReactions => 'More reactions';
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsNotificationsSubtitle => 'Messages, calls, privacy';
+
+  @override
+  String get notifPrefsSectionAlerts => 'Alerts';
+
+  @override
+  String get notifPrefsSectionBehavior => 'Behavior';
+
+  @override
+  String get notifPrefMessages => 'Direct messages';
+
+  @override
+  String get notifPrefGroupMessages => 'Group messages';
+
+  @override
+  String get notifPrefCalls => 'Calls';
+
+  @override
+  String get notifPrefMeetings => 'Meetings';
+
+  @override
+  String get notifPrefStatusView => 'Status views';
+
+  @override
+  String get notifPrefSound => 'Sound';
+
+  @override
+  String get notifPrefVibration => 'Vibration';
+
+  @override
+  String get notifPrefPreviewTitle => 'Lock screen preview';
+
+  @override
+  String get notifPrefPreviewFull => 'Name + content';
+
+  @override
+  String get notifPrefPreviewNameOnly => 'Name only';
+
+  @override
+  String get notifPrefPreviewGeneric => 'Generic';
+
+  @override
+  String get notifPrefsSaveFailed => 'Could not save notification preferences';
+
+  @override
+  String get convMuteAction => 'Notifications';
+
+  @override
+  String get convMuteSubtitle => 'Mute alerts for this conversation';
+
+  @override
+  String convMuteTitle(String name) {
+    return 'Notifications — $name';
+  }
+
+  @override
+  String get convMute8h => 'Mute for 8 hours';
+
+  @override
+  String get convMute1w => 'Mute for 1 week';
+
+  @override
+  String get convMuteForever => 'Mute always';
+
+  @override
+  String get convUnmute => 'Unmute notifications';
+
+  @override
+  String convMuteDone(String name) {
+    return 'Muted notifications for $name';
+  }
+
+  @override
+  String convUnmuteDone(String name) {
+    return 'Unmuted notifications for $name';
+  }
+
+  @override
+  String get convMuteFailed => 'Could not update mute settings';
 }

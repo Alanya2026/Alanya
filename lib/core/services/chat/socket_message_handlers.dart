@@ -8,6 +8,7 @@ import '../../db/chat_dao.dart';
 import '../alanya_media_export_service.dart';
 import '../media_cache_service.dart';
 import '../media_download_preferences.dart';
+import '../notifications/badge_sync_service.dart';
 import 'chat_api.dart';
 import 'message_ack_watchdog.dart';
 import 'message_path_tracer.dart';
@@ -230,6 +231,9 @@ class SocketMessageHandlers {
       await _dao.markConversationReadAtomic(convID, _myId());
     } else {
       await _recompute(convID);
+    }
+    if (_myId() != 0) {
+      await BadgeSyncService.syncFromDao(_dao);
     }
   }
 

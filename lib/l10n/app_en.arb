@@ -871,5 +871,52 @@
     }
   },
   "reactToMessage": "React",
-  "moreReactions": "More reactions"
+  "moreReactions": "More reactions",
+  "settingsNotifications": "Notifications",
+  "settingsNotificationsSubtitle": "Messages, calls, privacy",
+  "notifPrefsSectionAlerts": "Alerts",
+  "notifPrefsSectionBehavior": "Behavior",
+  "notifPrefMessages": "Direct messages",
+  "notifPrefGroupMessages": "Group messages",
+  "notifPrefCalls": "Calls",
+  "notifPrefMeetings": "Meetings",
+  "notifPrefStatusView": "Status views",
+  "notifPrefSound": "Sound",
+  "notifPrefVibration": "Vibration",
+  "notifPrefPreviewTitle": "Lock screen preview",
+  "notifPrefPreviewFull": "Name + content",
+  "notifPrefPreviewNameOnly": "Name only",
+  "notifPrefPreviewGeneric": "Generic",
+  "notifPrefsSaveFailed": "Could not save notification preferences",
+  "convMuteAction": "Notifications",
+  "convMuteSubtitle": "Mute alerts for this conversation",
+  "convMuteTitle": "Notifications — {name}",
+  "@convMuteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "convMute8h": "Mute for 8 hours",
+  "convMute1w": "Mute for 1 week",
+  "convMuteForever": "Mute always",
+  "convUnmute": "Unmute notifications",
+  "convMuteDone": "Muted notifications for {name}",
+  "@convMuteDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "convUnmuteDone": "Unmuted notifications for {name}",
+  "@convUnmuteDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "convMuteFailed": "Could not update mute settings"
 }

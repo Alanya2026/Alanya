@@ -32,6 +32,8 @@ import 'core/services/realtime_sync_service.dart';
 import 'core/services/voice_message_coordinator.dart';
 import 'core/services/voice_playback_service.dart';
 import 'core/services/push_service.dart';
+import 'core/services/notifications/notification_prefs_cache.dart';
+import 'core/services/notifications/badge_sync_service.dart';
 import 'firebase_options.dart';
 import 'screens/authentification/login_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -479,14 +481,15 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     _boundUserId = myId;
     debugPrint('[AuthWrapper] Bind providers pour userID=$myId');
 
-    unawaited(PushService.syncTokenWithBackend());
-
     if (!mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final statusProvider = Provider.of<StatusProvider>(context, listen: false);
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final syncService = Provider.of<RealtimeSyncService>(context, listen: false);
+
+    unawaited(PushService.syncTokenWithBackend());
+    unawaited(_loadNotificationPrefs(apiClient));
 
     try {
       await chatProvider.bind(myId);
@@ -571,6 +574,23 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       await status.clearSessionPreferences();
     } catch (e) {
       debugPrint('[AuthWrapper] clearSessionPreferences statuts échoué: $e');
+    }
+    try {
+      await BadgeSyncService.clear();
+      await NotificationPrefsCache.clear();
+      await PushService.onSessionEnded();
+    } catch (e) {
+      debugPrint('[AuthWrapper] clear notification session échoué: $e');
+    }
+  }
+
+  Future<void> _loadNotificationPrefs(TalkyApiClient api) async {
+    try {
+      await NotificationPrefsCache.load();
+      final prefs = await api.getNotificationPrefs();
+      await NotificationPrefsCache.applyFromServer(prefs);
+    } catch (e) {
+      debugPrint('[AuthWrapper] loadNotificationPrefs échoué: $e');
     }
   }
 

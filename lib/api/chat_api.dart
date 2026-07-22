@@ -118,6 +118,33 @@ extension ChatHttpApi on TalkyApiClient {
     );
   }
 
+  /// Mute / unmute une conversation pour l'utilisateur courant.
+  Future<Map<String, dynamic>> updateConversationMute(
+    int conversID, {
+    bool unmute = false,
+    bool muteForever = false,
+    DateTime? mutedUntil,
+    bool? mentionsOnly,
+  }) async {
+    final body = <String, dynamic>{};
+    if (unmute) {
+      body['unmute'] = true;
+    } else if (muteForever) {
+      body['muteForever'] = true;
+    } else if (mutedUntil != null) {
+      body['mutedUntil'] = mutedUntil.toUtc().toIso8601String();
+    }
+    if (mentionsOnly != null) body['mentionsOnly'] = mentionsOnly ? 1 : 0;
+    final data = await _handleRequest(
+      () => _client.patch(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/mute'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<void> updateConversationsBatch(
     List<int> conversationIDs, {
     bool? isPinned,

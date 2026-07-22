@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../talky_models.dart';
 import 'call/pending_call_reject_store.dart';
+import 'notifications/notification_native_credentials_store.dart';
 
 class StorageService {
   static const String _accessTokenKey = 'access_token';
@@ -25,6 +26,7 @@ class StorageService {
     await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
     // Miroir pour le BroadcastReceiver Android (refus CallKit app tuée).
     await PendingCallRejectStore.syncNativeCredentials(accessToken);
+    await NotificationNativeCredentialsStore.syncNativeCredentials(accessToken);
   }
 
   Future<String?> getAccessToken() => _secureStorage.read(key: _accessTokenKey);
@@ -49,6 +51,7 @@ class StorageService {
     await _secureStorage.delete(key: _refreshTokenKey);
     await _secureStorage.delete(key: _userKey);
     await PendingCallRejectStore.clearNativeCredentials();
+    await NotificationNativeCredentialsStore.clearNativeCredentials();
   }
 
   Future<bool> isLoggedIn() async => (await getAccessToken()) != null;

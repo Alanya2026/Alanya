@@ -6,6 +6,7 @@ import '../core/db/app_database.dart';
 import '../core/db/chat_dao.dart';
 import '../core/services/chat_repository.dart';
 import '../core/services/chat_sync_timer.dart';
+import '../core/services/notifications/badge_sync_service.dart';
 import '../core/utils/forward_message.dart';
 import '../talky_api_client.dart';
 import '../talky_models.dart';
@@ -151,6 +152,9 @@ class ChatProvider extends ChangeNotifier {
   Future<void> refreshConversations() async {
     await repository.syncConversations();
     await _seedPresenceFromCache();
+    if (repository.myId != 0) {
+      await BadgeSyncService.syncFromDao(repository.dao);
+    }
   }
 
   Future<ForwardResult> forwardMessage({

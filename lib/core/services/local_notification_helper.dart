@@ -10,6 +10,8 @@ import 'notification_navigation.dart';
 import 'notifications/notification_dedup_store.dart';
 import 'notifications/notification_diagnostics.dart';
 import 'notifications/notification_identity.dart';
+import 'notifications/notification_buffer_store.dart';
+import 'notifications/notification_prefs_cache.dart';
 import '../theme/locale_controller.dart';
 
 AndroidNotificationChannel get _kChannelMessages => AndroidNotificationChannel(
@@ -83,6 +85,7 @@ class LocalNotificationHelper {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('notif_active_conv_ids');
     await prefs.remove(kGroupConvIdsKey);
+    await NotificationBufferStore.purgeLegacySharedPreferences();
 
     _initialized = true;
   }
@@ -164,10 +167,17 @@ class LocalNotificationHelper {
     final isGroup = data['isGroup'] == '1' || data['isGroup'] == true;
     final groupName = data['groupName']?.toString() ?? '';
 
-    final buffer = await _appendToBuffer(
-      conversationId,
+    final displayTitle = isGroup && groupName.isNotEmpty
+        ? groupName
+        : senderName;
+    final displayBody = isGroup
+        ? NotificationPrefsCache.sanitizeBodyForDisplay('$senderName: $messageBody')
+        : NotificationPrefsCache.sanitizeBodyForDisplay(messageBody);
+
+    final buffer = await NotificationBufferStore.append(
+      conversationId: conversationId,
       sender: senderName,
-      body: messageBody,
+      body: displayBody,
     );
 
     final payload = encodeNotificationPayload(data);
@@ -180,10 +190,6 @@ class LocalNotificationHelper {
       latestSender: senderName,
     );
 
-    final displayTitle = isGroup && groupName.isNotEmpty
-        ? groupName
-        : senderName;
-    final displayBody = isGroup ? '$senderName: $messageBody' : messageBody;
     final fallbackBody = bufferedDisplayBody(buffer, isGroup: isGroup);
 
     final iosDetails = DarwinNotificationDetails(
@@ -194,6 +200,10 @@ class LocalNotificationHelper {
       subtitle: isGroup ? senderName : null,
     );
 
+    final visibility = NotificationPrefsCache.hideContentOnLockscreen
+        ? NotificationVisibility.private
+        : NotificationVisibility.public;
+
     final notifId = NotificationIdentity.notificationIdForConversation(conversationId);
     final convTag = NotificationIdentity.tagForConversation(conversationId);
 
@@ -203,7 +213,7 @@ class LocalNotificationHelper {
         displayTitle,
         displayBody,
         NotificationDetails(
-          android: _androidMessageDetails(conversationId, convTag, style),
+          android: _androidMessageDetails(conversationId, convTag, style, visibility: visibility),
           iOS: iosDetails,
         ),
         payload: payload,
@@ -229,6 +239,7 @@ class LocalNotificationHelper {
               conversationId,
               convTag,
               BigTextStyleInformation(fallbackBody),
+              visibility: visibility,
             ),
             iOS: iosDetails,
           ),
@@ -364,8 +375,7 @@ class LocalNotificationHelper {
       conversationId: conversationId,
       reason: 'read_or_open',
     );
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_bufferKey(conversationId));
+    await NotificationBufferStore.clear(conversationId);
   }
 
   static Future<void> cancelMeeting(int meetingId) async {
@@ -428,8 +438,9 @@ class LocalNotificationHelper {
   static AndroidNotificationDetails _androidMessageDetails(
     int conversationId,
     String tag,
-    StyleInformation styleInformation,
-  ) {
+    StyleInformation styleInformation, {
+    NotificationVisibility visibility = NotificationVisibility.public,
+  }) {
     // Pas de groupKey / résumé global : chaque conversation = une bulle
     // indépendante (évite qu'un résumé unique « écrase » les autres notifs).
     return AndroidNotificationDetails(
@@ -442,45 +453,12 @@ class LocalNotificationHelper {
       color: kNotificationAccentColor,
       largeIcon: kNotificationLargeIcon,
       tag: tag,
+      visibility: visibility,
       styleInformation: styleInformation,
     );
   }
 
-  static String _bufferKey(int conversationId) => 'notif_msgs_$conversationId';
-
-  static Future<List<Map<String, String>>> _appendToBuffer(
-    int conversationId, {
-    required String sender,
-    required String body,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = _bufferKey(conversationId);
-    final existing = prefs.getString(key);
-    List<Map<String, String>> messages;
-    if (existing != null) {
-      try {
-        final decoded = jsonDecode(existing) as List;
-        messages = decoded
-            .map((e) => Map<String, String>.from(e as Map))
-            .toList();
-      } catch (_) {
-        messages = [];
-      }
-    } else {
-      messages = [];
-    }
-
-    messages.add({
-      'sender': sender,
-      'body': body,
-      'ts': DateTime.now().toUtc().toIso8601String(),
-    });
-    if (messages.length > kMaxBufferedMessages) {
-      messages = messages.sublist(messages.length - kMaxBufferedMessages);
-    }
-    await prefs.setString(key, jsonEncode(messages));
-    return messages;
-  }
+  // Legacy buffer helpers removed — voir NotificationBufferStore.
 
   static MessagingStyleInformation _buildMessagingStyle({
     required List<Map<String, String>> messages,

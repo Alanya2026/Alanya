@@ -13,6 +13,7 @@ import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
 import '../alanya_media_export_service.dart';
 import '../local_notification_helper.dart';
+import '../notifications/badge_sync_service.dart';
 import '../media_cache_service.dart';
 import '../media_download_preferences.dart';
 import '../voice_asset_resolver.dart';
@@ -113,7 +114,12 @@ class ChatRepository {
   ChatRepository._(this._api, this._db) : _dao = ChatDao(_db) {
     _reducer = ConversationSummaryReducer(_db, _dao);
     _debouncedRecompute = DebouncedRecompute(
-      (convId) => _reducer.recompute(convId, _myId),
+      (convId) async {
+        await _reducer.recompute(convId, _myId);
+        if (_myId != 0) {
+          await BadgeSyncService.syncFromDao(_dao);
+        }
+      },
     );
     Future<void> scheduleRecompute(int convId) =>
         _debouncedRecompute.schedule(convId);
@@ -311,6 +317,7 @@ class ChatRepository {
     _pendingReadsRetry.clear();
     await _dao.clearAll();
     await _mediaCache.clearAll();
+    await BadgeSyncService.clear();
   }
 
   void _onConversationCreated(dynamic data) {

@@ -1724,5 +1724,52 @@
     }
   },
   "reactToMessage": "Réagir",
-  "moreReactions": "Plus de réactions"
+  "moreReactions": "Plus de réactions",
+  "settingsNotifications": "Notifications",
+  "settingsNotificationsSubtitle": "Messages, appels, confidentialité",
+  "notifPrefsSectionAlerts": "Alertes",
+  "notifPrefsSectionBehavior": "Comportement",
+  "notifPrefMessages": "Messages privés",
+  "notifPrefGroupMessages": "Messages de groupe",
+  "notifPrefCalls": "Appels",
+  "notifPrefMeetings": "Réunions",
+  "notifPrefStatusView": "Vues de statut",
+  "notifPrefSound": "Son",
+  "notifPrefVibration": "Vibration",
+  "notifPrefPreviewTitle": "Aperçu sur l'écran verrouillé",
+  "notifPrefPreviewFull": "Nom + contenu",
+  "notifPrefPreviewNameOnly": "Nom seulement",
+  "notifPrefPreviewGeneric": "Générique",
+  "notifPrefsSaveFailed": "Impossible d'enregistrer les préférences",
+  "convMuteAction": "Notifications",
+  "convMuteSubtitle": "Couper les alertes pour cette conversation",
+  "convMuteTitle": "Notifications — {name}",
+  "@convMuteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "convMute8h": "Couper 8 heures",
+  "convMute1w": "Couper 1 semaine",
+  "convMuteForever": "Toujours couper",
+  "convUnmute": "Réactiver les notifications",
+  "convMuteDone": "Notifications coupées pour {name}",
+  "@convMuteDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "convUnmuteDone": "Notifications réactivées pour {name}",
+  "@convUnmuteDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "convMuteFailed": "Impossible de modifier le mute"
 }

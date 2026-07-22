@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -213,6 +214,12 @@ class PushService {
   }
 
   Future<void> _setup() async {
+    if (!kIsWeb && Platform.isIOS) {
+      CallKitService.instance.setVoipTokenListener((token) {
+        unawaited(_deviceCoordinator.registerVoipToken(token));
+      });
+    }
+
     final settings = await _fm.requestPermission(
       alert: true,
       badge: true,
@@ -320,9 +327,21 @@ class PushService {
         svc._token = token;
         await svc._safeUpdateToken(token);
       }
+      if (!kIsWeb && Platform.isIOS) {
+        final voipToken =
+            await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+        if (voipToken != null && voipToken.trim().isNotEmpty) {
+          await svc._deviceCoordinator.registerVoipToken(voipToken.trim());
+        }
+      }
     } catch (e) {
       debugPrint('[Push] syncTokenWithBackend failed: $e');
     }
+  }
+
+  /// Détache l'appareil push côté serveur (logout).
+  static Future<void> onSessionEnded() async {
+    await _instance?._deviceCoordinator.onLogout();
   }
 
   void _handleForeground(RemoteMessage message) async {

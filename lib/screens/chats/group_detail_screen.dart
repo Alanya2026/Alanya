@@ -25,6 +25,7 @@ import '../meetings/participant_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
+import '../../widgets/conversation_mute_sheet.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final int conversationId;
@@ -299,6 +300,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                     _MembersCard(
                       participants: _group?.participants ?? [],
                       onAddParticipants: _addParticipants,
+                    ),
+                    AppSpacing.vGapLg,
+                    _Card(
+                      padding: EdgeInsets.zero,
+                      child: ConversationMuteListTile(
+                        conversationId: widget.conversationId,
+                        conversationName: widget.groupName,
+                      ),
                     ),
                     AppSpacing.vGapLg,
                     _DangerCard(onLeave: _leaveGroup),

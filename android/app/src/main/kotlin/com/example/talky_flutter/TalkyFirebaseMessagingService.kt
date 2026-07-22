@@ -1,29 +1,107 @@
 package com.example.talky_flutter
 
+import android.app.ActivityManager
+import android.app.KeyguardManager
+import android.content.Context
+import android.content.Intent
+import android.os.Parcel
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import io.flutter.plugins.firebase.messaging.ContextHolder
+import io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingBackgroundService
+import io.flutter.plugins.firebase.messaging.FlutterFirebaseRemoteMessageLiveData
 
 /**
- * Couche Android propriétaire (Phase 4) — derrière NOTIFICATION_ANDROID_NATIVE_V2.
- * Pour l'instant : log + délégation au handler Flutter existant.
- * MessagingStyle / RemoteInput / Person : itération 4.2–4.4.
+ * Couche Android propriétaire (Phase 4) — activée via manifest placeholder
+ * `talkyNotificationNativeV2=true`.
+ *
+ * Messages : MessagingStyle natif. Appels / meetings : délégués à Flutter FCM.
  */
 class TalkyFirebaseMessagingService : FirebaseMessagingService() {
-    companion object {
-        private const val TAG = "TalkyFcmService"
-        const val NATIVE_V2_ENABLED = false
-    }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        if (!NATIVE_V2_ENABLED) {
-            Log.d(TAG, "native v2 disabled — Flutter handler expected type=${message.data["type"]}")
+        ensureFlutterContext()
+
+        val data = message.data
+        val type = data["type"] ?: run {
+            forwardToFlutter(message)
             return
         }
-        // TODO Phase 4.2: NotificationCompat.MessagingStyle + Person + ShortcutInfoCompat
+
+        when (type) {
+            "message" -> {
+                if (MessageNotificationHelper.shouldSuppress(this, data)) {
+                    Log.d(TAG, "message suppressed (active conv)")
+                    return
+                }
+                MessageNotificationHelper.showMessage(this, data)
+            }
+            "message_read_sync" -> {
+                val convId = data["conversationId"]?.toIntOrNull() ?: return
+                MessageNotificationHelper.cancelConversation(this, convId)
+            }
+            "call", "group_call", "call_ended",
+            "meeting_invite", "meeting_reminder", "status_view",
+            -> forwardToFlutter(message)
+            else -> forwardToFlutter(message)
+        }
     }
 
     override fun onNewToken(token: String) {
-        Log.d(TAG, "onNewToken (native layer)")
+        Log.d(TAG, "onNewToken — Flutter syncTokenWithBackend expected")
+    }
+
+    private fun ensureFlutterContext() {
+        if (ContextHolder.getApplicationContext() == null) {
+            ContextHolder.setApplicationContext(applicationContext)
+        }
+    }
+
+    private fun forwardToFlutter(message: RemoteMessage) {
+        val context: Context = applicationContext
+        if (isApplicationForeground(context)) {
+            FlutterFirebaseRemoteMessageLiveData.getInstance().postRemoteMessage(message)
+            return
+        }
+        val intent = Intent(context, FlutterFirebaseMessagingBackgroundService::class.java)
+        val parcel = Parcel.obtain()
+        try {
+            message.writeToParcel(parcel, 0)
+            // Même clé que FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE ("notification").
+            intent.putExtra(FLUTTER_REMOTE_MESSAGE_EXTRA, parcel.marshall())
+        } finally {
+            parcel.recycle()
+        }
+        FlutterFirebaseMessagingBackgroundService.enqueueMessageProcessing(
+            context,
+            intent,
+            message.originalPriority == RemoteMessage.PRIORITY_HIGH,
+        )
+    }
+
+    /** Copie de la logique FlutterFirebaseMessagingUtils (classe package-private). */
+    private fun isApplicationForeground(context: Context): Boolean {
+        val keyguardManager =
+            context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        if (keyguardManager?.isKeyguardLocked == true) return false
+
+        val activityManager =
+            context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return false
+        val processes = activityManager.runningAppProcesses ?: return false
+        val packageName = context.packageName
+        for (process in processes) {
+            if (process.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
+                process.processName == packageName
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    companion object {
+        private const val TAG = "TalkyFcmService"
+        private const val FLUTTER_REMOTE_MESSAGE_EXTRA = "notification"
     }
 }

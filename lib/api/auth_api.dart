@@ -143,7 +143,7 @@ extension AuthApi on TalkyApiClient {
   }
 
   Future<void> registerPushDevice({
-    required String fcmToken,
+    String? fcmToken,
     String? deviceId,
     String? platform,
     String? voipToken,
@@ -157,11 +157,19 @@ extension AuthApi on TalkyApiClient {
         body: jsonEncode({
           'deviceId': did,
           if (platform != null) 'platform': platform,
-          'fcmToken': fcmToken,
+          if (fcmToken != null) 'fcmToken': fcmToken,
           if (voipToken != null) 'voipToken': voipToken,
           if (locale != null) 'locale': locale,
         }),
       ),
+    );
+  }
+
+  Future<void> updateVoipToken(String voipToken, {String? deviceId}) async {
+    await registerPushDevice(
+      deviceId: deviceId,
+      platform: 'ios',
+      voipToken: voipToken,
     );
   }
 
@@ -196,6 +204,29 @@ extension AuthApi on TalkyApiClient {
         headers: _headers,
       ),
     );
+  }
+
+  Future<Map<String, dynamic>> getNotificationPrefs() async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/notification-prefs'),
+        headers: _headers,
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> patchNotificationPrefs(
+    Map<String, dynamic> patch,
+  ) async {
+    final data = await _handleRequest(
+      () => _client.patch(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/notification-prefs'),
+        headers: _headers,
+        body: jsonEncode(patch),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
   }
 
   void logout() {

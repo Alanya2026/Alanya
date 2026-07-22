@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../db/chat_dao.dart';
 import '../../../talky_models.dart';
 import '../local_notification_helper.dart';
-import '../notifications/launcher_badge_service.dart';
+import '../notifications/badge_sync_service.dart';
 import '../notifications/notification_dedup_store.dart';
 import 'chat_api.dart';
 
@@ -50,8 +50,7 @@ class ReceiptService {
     for (final msgID in unreadMsgIds) {
       await NotificationDedupStore.markCancelled(msgID: msgID);
     }
-    final totalUnread = await _dao.countTotalUnread();
-    await LauncherBadgeService.setCount(totalUnread);
+    await BadgeSyncService.syncFromDao(_dao);
   }
 
   Future<void> _propagateRead(int conversationID) async {

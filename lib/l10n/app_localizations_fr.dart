@@ -2731,4 +2731,90 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get moreReactions => 'Plus de réactions';
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsNotificationsSubtitle =>
+      'Messages, appels, confidentialité';
+
+  @override
+  String get notifPrefsSectionAlerts => 'Alertes';
+
+  @override
+  String get notifPrefsSectionBehavior => 'Comportement';
+
+  @override
+  String get notifPrefMessages => 'Messages privés';
+
+  @override
+  String get notifPrefGroupMessages => 'Messages de groupe';
+
+  @override
+  String get notifPrefCalls => 'Appels';
+
+  @override
+  String get notifPrefMeetings => 'Réunions';
+
+  @override
+  String get notifPrefStatusView => 'Vues de statut';
+
+  @override
+  String get notifPrefSound => 'Son';
+
+  @override
+  String get notifPrefVibration => 'Vibration';
+
+  @override
+  String get notifPrefPreviewTitle => 'Aperçu sur l\'écran verrouillé';
+
+  @override
+  String get notifPrefPreviewFull => 'Nom + contenu';
+
+  @override
+  String get notifPrefPreviewNameOnly => 'Nom seulement';
+
+  @override
+  String get notifPrefPreviewGeneric => 'Générique';
+
+  @override
+  String get notifPrefsSaveFailed =>
+      'Impossible d\'enregistrer les préférences';
+
+  @override
+  String get convMuteAction => 'Notifications';
+
+  @override
+  String get convMuteSubtitle => 'Couper les alertes pour cette conversation';
+
+  @override
+  String convMuteTitle(String name) {
+    return 'Notifications — $name';
+  }
+
+  @override
+  String get convMute8h => 'Couper 8 heures';
+
+  @override
+  String get convMute1w => 'Couper 1 semaine';
+
+  @override
+  String get convMuteForever => 'Toujours couper';
+
+  @override
+  String get convUnmute => 'Réactiver les notifications';
+
+  @override
+  String convMuteDone(String name) {
+    return 'Notifications coupées pour $name';
+  }
+
+  @override
+  String convUnmuteDone(String name) {
+    return 'Notifications réactivées pour $name';
+  }
+
+  @override
+  String get convMuteFailed => 'Impossible de modifier le mute';
 }

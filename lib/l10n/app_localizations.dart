@@ -4837,6 +4837,162 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Plus de réactions'**
   String get moreReactions;
+
+  /// No description provided for @settingsNotifications.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications'**
+  String get settingsNotifications;
+
+  /// No description provided for @settingsNotificationsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages, appels, confidentialité'**
+  String get settingsNotificationsSubtitle;
+
+  /// No description provided for @notifPrefsSectionAlerts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alertes'**
+  String get notifPrefsSectionAlerts;
+
+  /// No description provided for @notifPrefsSectionBehavior.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comportement'**
+  String get notifPrefsSectionBehavior;
+
+  /// No description provided for @notifPrefMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages privés'**
+  String get notifPrefMessages;
+
+  /// No description provided for @notifPrefGroupMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages de groupe'**
+  String get notifPrefGroupMessages;
+
+  /// No description provided for @notifPrefCalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels'**
+  String get notifPrefCalls;
+
+  /// No description provided for @notifPrefMeetings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réunions'**
+  String get notifPrefMeetings;
+
+  /// No description provided for @notifPrefStatusView.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vues de statut'**
+  String get notifPrefStatusView;
+
+  /// No description provided for @notifPrefSound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Son'**
+  String get notifPrefSound;
+
+  /// No description provided for @notifPrefVibration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vibration'**
+  String get notifPrefVibration;
+
+  /// No description provided for @notifPrefPreviewTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu sur l\'écran verrouillé'**
+  String get notifPrefPreviewTitle;
+
+  /// No description provided for @notifPrefPreviewFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom + contenu'**
+  String get notifPrefPreviewFull;
+
+  /// No description provided for @notifPrefPreviewNameOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom seulement'**
+  String get notifPrefPreviewNameOnly;
+
+  /// No description provided for @notifPrefPreviewGeneric.
+  ///
+  /// In fr, this message translates to:
+  /// **'Générique'**
+  String get notifPrefPreviewGeneric;
+
+  /// No description provided for @notifPrefsSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer les préférences'**
+  String get notifPrefsSaveFailed;
+
+  /// No description provided for @convMuteAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications'**
+  String get convMuteAction;
+
+  /// No description provided for @convMuteSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couper les alertes pour cette conversation'**
+  String get convMuteSubtitle;
+
+  /// No description provided for @convMuteTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications — {name}'**
+  String convMuteTitle(String name);
+
+  /// No description provided for @convMute8h.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couper 8 heures'**
+  String get convMute8h;
+
+  /// No description provided for @convMute1w.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couper 1 semaine'**
+  String get convMute1w;
+
+  /// No description provided for @convMuteForever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toujours couper'**
+  String get convMuteForever;
+
+  /// No description provided for @convUnmute.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réactiver les notifications'**
+  String get convUnmute;
+
+  /// No description provided for @convMuteDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications coupées pour {name}'**
+  String convMuteDone(String name);
+
+  /// No description provided for @convUnmuteDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications réactivées pour {name}'**
+  String convUnmuteDone(String name);
+
+  /// No description provided for @convMuteFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de modifier le mute'**
+  String get convMuteFailed;
 }
 
 class _AppLocalizationsDelegate
