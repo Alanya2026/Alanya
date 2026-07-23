@@ -19,6 +19,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'talky_models.dart';
 import 'core/theme/locale_controller.dart';
 import 'core/services/storage_service.dart';
+import 'core/utils/app_log.dart';
 
 part 'api/auth_api.dart';
 part 'api/users_api.dart';
@@ -52,6 +53,10 @@ class TalkyApiClient {
   /// Garde anti-réentrance : refresh JWT en cours suite à un `auth:error`
   /// TOKEN_EXPIRED (évite d'empiler plusieurs refresh sur des events répétés).
   bool _socketReauthInFlight = false;
+
+  /// Un seul refresh HTTP à la fois — le backend rotate le refresh token et
+  /// révoque l'ancien ; des appels concurrents provoquaient des 401 en cascade.
+  Future<void>? _refreshInFlight;
 
   /// Reconnect forcé en cours (outbox stale / resume pending).
   Future<bool>? _forceReconnectInFlight;
@@ -154,22 +159,139 @@ class TalkyApiClient {
     if (_refreshToken == null) {
       throw TalkyException(LocaleController.instance.l10n.noRefreshToken, 401);
     }
-    final response = await _client.post(
-      Uri.parse('$baseUrl/auth/refresh'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'refreshToken': _refreshToken}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      _accessToken  = data['accessToken'];
-      _refreshToken = data['refreshToken'];
-      await StorageService().saveTokens(
-        accessToken: _accessToken!,
-        refreshToken: _refreshToken!,
+    if (_refreshInFlight != null) {
+      return _refreshInFlight!;
+    }
+    _refreshInFlight = _performRefreshAccessToken();
+    try {
+      await _refreshInFlight;
+    } finally {
+      _refreshInFlight = null;
+    }
+  }
+
+  Future<void> _performRefreshAccessToken() async {
+    var refreshTokenUsed = _refreshToken;
+    if (refreshTokenUsed == null) {
+      final stored = await StorageService().getRefreshToken();
+      if (stored == null) {
+        throw TalkyException(LocaleController.instance.l10n.noRefreshToken, 401);
+      }
+      _refreshToken = stored;
+      refreshTokenUsed = stored;
+    }
+    final response = await _client
+        .post(
+          Uri.parse('$baseUrl/auth/refresh'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'refreshToken': refreshTokenUsed}),
+        )
+        .timeout(const Duration(seconds: 15));
+    Map<String, dynamic> data;
+    try {
+      data = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+    } catch (_) {
+      throw TalkyException(
+        LocaleController.instance.l10n.refreshFailed,
+        response.statusCode,
       );
+    }
+    if (response.statusCode == 200) {
+      _accessToken = data['accessToken'] as String?;
+      _refreshToken = data['refreshToken'] as String?;
+      if (_accessToken == null || _refreshToken == null) {
+        throw TalkyException(LocaleController.instance.l10n.refreshFailed, 500);
+      }
+      await _persistTokensAfterRefresh();
       reauthSocketIfConnected();
-    } else {
-      throw TalkyException(data['error'] ?? LocaleController.instance.l10n.refreshFailed, response.statusCode);
+      return;
+    }
+    // Token en mémoire périmé (rotation concurrente) → relire le stockage une fois.
+    if (response.statusCode == 401) {
+      final stored = await StorageService().getRefreshToken();
+      if (stored != null && stored != refreshTokenUsed) {
+        _refreshToken = stored;
+        return _performRefreshAccessTokenRetry(stored);
+      }
+    }
+    throw TalkyException(
+      data['error']?.toString() ?? LocaleController.instance.l10n.refreshFailed,
+      response.statusCode,
+    );
+  }
+
+  Future<void> _performRefreshAccessTokenRetry(String refreshTokenUsed) async {
+    final response = await _client
+        .post(
+          Uri.parse('$baseUrl/auth/refresh'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'refreshToken': refreshTokenUsed}),
+        )
+        .timeout(const Duration(seconds: 15));
+    Map<String, dynamic> data;
+    try {
+      data = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+    } catch (_) {
+      throw TalkyException(
+        LocaleController.instance.l10n.refreshFailed,
+        response.statusCode,
+      );
+    }
+    if (response.statusCode != 200) {
+      throw TalkyException(
+        data['error']?.toString() ?? LocaleController.instance.l10n.refreshFailed,
+        response.statusCode,
+      );
+    }
+    _accessToken = data['accessToken'] as String?;
+    _refreshToken = data['refreshToken'] as String?;
+    if (_accessToken == null || _refreshToken == null) {
+      throw TalkyException(LocaleController.instance.l10n.refreshFailed, 500);
+    }
+    await _persistTokensAfterRefresh();
+    reauthSocketIfConnected();
+  }
+
+  Future<void> _persistTokensAfterRefresh() async {
+    Object? lastError;
+    StackTrace? lastStack;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        await StorageService().saveTokens(
+          accessToken: _accessToken!,
+          refreshToken: _refreshToken!,
+        );
+        return;
+      } catch (e, st) {
+        lastError = e;
+        lastStack = st;
+        if (attempt < 2) {
+          await Future<void>.delayed(Duration(milliseconds: 80 * (attempt + 1)));
+        }
+      }
+    }
+    AppLog.e(
+      'TalkyApiClient',
+      'Persistance tokens après refresh échouée (3 tentatives)',
+      lastError,
+      lastStack,
+    );
+  }
+
+  /// Recharge access/refresh depuis le stockage puis renouvelle la session HTTP.
+  Future<bool> refreshSessionFromStorage() async {
+    final access = await StorageService().getAccessToken();
+    final refresh = await StorageService().getRefreshToken();
+    if (access == null && refresh == null) return false;
+    if (access != null) _accessToken = access;
+    if (refresh != null) _refreshToken = refresh;
+    if (_refreshToken == null) return _accessToken != null;
+    try {
+      await _refreshAccessToken();
+      return _accessToken != null;
+    } on TalkyException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) return false;
+      rethrow;
     }
   }
 

@@ -95,6 +95,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _scheduleResumeCatchUp();
+      unawaited(
+        Provider.of<CallService>(context, listen: false).syncWithEndedRegistry(),
+      );
       Provider.of<ChatProvider>(context, listen: false)
           .repository
           .syncPushSuppressionForLifecycle(true);

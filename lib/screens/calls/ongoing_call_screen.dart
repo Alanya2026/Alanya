@@ -105,11 +105,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
       }
     });
 
-    if (cs.status == CallStatus.ended && !cs.callEndedByUs) {
-      _closeAndPop();
-      return;
-    }
-    if (cs.status == CallStatus.idle) {
+    if (cs.status == CallStatus.ended || cs.status == CallStatus.idle) {
       _closeAndPop();
     }
   }
@@ -119,6 +115,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     _closing = true;
     final cs = Provider.of<CallService>(context, listen: false);
     cs.removeListener(_onCallChanged);
+    cs.markCallUiClosed();
     if (_renderersReady) {
       _localRenderer.srcObject = null;
       _remoteRenderer.srcObject = null;

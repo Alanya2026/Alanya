@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
+import '../core/services/session_end_reason.dart';
 import '../core/services/call/pending_call_reject_store.dart';
 import '../core/utils/app_log.dart';
 import '../core/utils/alanya_phone_formatter.dart';
@@ -28,36 +29,65 @@ class AuthProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isLoggedIn => _currentUser != null;
   bool get isInitialized => _isInitialized;
+  bool get sessionExpired =>
+      currentSessionEndReason == SessionEndReason.tokenExpired;
 
   Future<void> init() async {
     try {
       await _storage.init();
-      // Hydrate immédiatement depuis le cache : si on a un user, on marque
-      // l'app initialisée TOUT DE SUITE pour éviter le spinner pendant le
-      // getMe réseau (jusqu'à 15s). Le rafraîchissement serveur tourne en
-      // tâche de fond et notifyListeners() rebuilde la UI si le user a changé.
-      try {
-        final cached = await _storage.getUser();
-        if (cached != null) {
-          _currentUser = cached;
-          // Tokens avant bind → connectSocket (sinon connect no-op sans JWT).
-          await _hydrateTokensFromStorage();
-          _isInitialized = true;
-          notifyListeners();
-          unawaited(_checkAuthStatus());
-          return;
-        }
-      } catch (e, st) {
-        AppLog.w('AuthProvider', 'Hydratation user (cache) échouée', e, st);
-      }
-      // Pas de cache → on doit attendre la décision réseau pour savoir si
-      // on affiche le Login ou le Home.
-      await _checkAuthStatus();
-    } catch (e) {
+      _currentUser = await _storage.getUser();
+      await _hydrateTokensFromStorage();
+      await _restoreSessionAtLaunch();
+    } catch (e, st) {
       debugPrint('[AuthProvider] ** init() error: $e');
+      AppLog.w('AuthProvider', 'init() error', e, st);
     } finally {
       _isInitialized = true;
       notifyListeners();
+    }
+  }
+
+  /// Restaure la session au cold start — attendu avant d'afficher Login/Home.
+  Future<void> _restoreSessionAtLaunch() async {
+    final hasAccess = _apiClient.accessToken != null;
+    final hasRefresh = _apiClient.currentRefreshToken != null;
+    debugPrint(
+      '[AuthProvider] restore launch: cachedUser=${_currentUser != null} '
+      'access=$hasAccess refresh=$hasRefresh',
+    );
+
+    if (!hasAccess && !hasRefresh) {
+      if (_currentUser != null) {
+        debugPrint('[AuthProvider] profil en cache mais tokens absents');
+        await _invalidateSession(reason: SessionEndReason.tokenExpired);
+      }
+      return;
+    }
+
+    if (hasRefresh) {
+      if (await _tryRecoverSessionFromStorage()) {
+        debugPrint(
+          '[AuthProvider] session restaurée (userID=${_currentUser?.alanyaID})',
+        );
+        return;
+      }
+      debugPrint('[AuthProvider] refresh au lancement échoué → login');
+      await _invalidateSession(reason: SessionEndReason.tokenExpired);
+      return;
+    }
+
+    try {
+      final userData = await _apiClient.getMe();
+      _currentUser = User.fromJson(userData);
+      await _storage.saveUser(_currentUser!);
+      currentSessionEndReason = SessionEndReason.none;
+    } on TalkyException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        debugPrint('[AuthProvider] session invalid (${e.statusCode}): ${e.message}');
+        await _invalidateSession(reason: SessionEndReason.tokenExpired);
+      } else {
+        debugPrint('[AuthProvider] getMe offline, cache conservé: ${e.message}');
+      }
     }
   }
 
@@ -66,47 +96,92 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> _hydrateTokensFromStorage() async {
     final accessToken = await _storage.getAccessToken();
     final refreshToken = await _storage.getRefreshToken();
-    if (accessToken == null) return false;
-    _apiClient.setToken(accessToken);
+    if (accessToken == null && refreshToken == null) return false;
+    if (accessToken != null) {
+      _apiClient.setToken(accessToken);
+    }
     if (refreshToken != null) {
       _apiClient.setRefreshToken(refreshToken);
     }
     // Miroir pour CallDeclineReceiver Android (refus app tuée).
-    await PendingCallRejectStore.syncNativeCredentials(accessToken);
+    if (accessToken != null) {
+      await PendingCallRejectStore.syncNativeCredentials(accessToken);
+    }
     return true;
   }
 
-  Future<void> _checkAuthStatus() async {
+  /// Tente de restaurer la session depuis le stockage (refresh + getMe).
+  /// Retourne true si la session est valide ou récupérée.
+  Future<bool> _tryRecoverSessionFromStorage() async {
     try {
-      if (!await _hydrateTokensFromStorage()) return;
-
-      try {
-        final userData = await _apiClient.getMe();
-        _currentUser = User.fromJson(userData);
-        await _storage.saveUser(_currentUser!);
-      } on TalkyException catch (e) {
-        // Offline ou erreur transitoire : on garde le user caché.
-        // 401/403 après échec refresh = session réellement expirée.
-        if (e.statusCode == 401 || e.statusCode == 403) {
-          debugPrint('[AuthProvider] session invalid (${e.statusCode}): ${e.message}');
-          try {
-            await _storage.clearAll();
-          } catch (e2, st) {
-            AppLog.w('AuthProvider', 'clearAll après session expirée échoué', e2, st);
-          }
-          _apiClient.logout();
-          _currentUser = null;
-        } else {
-          debugPrint('[AuthProvider] getMe offline, on garde le cache: ${e.message}');
-        }
+      if (!await _hydrateTokensFromStorage()) return false;
+      if (_apiClient.currentRefreshToken != null) {
+        final refreshed = await _apiClient.refreshSessionFromStorage();
+        if (!refreshed) return false;
       }
-      // Pas de connectSocket ici : les listeners chat doivent être bindés
-      // avant, sinon `message:received` / `auth:verified` sont perdus.
-    } catch (e) {
-      debugPrint('[AuthProvider] ** _checkAuthStatus error: $e');
-      // Erreur inattendue (storage, etc.) — ne pas effacer la session.
-    } finally {
+      final userData = await _apiClient.getMe();
+      _currentUser = User.fromJson(userData);
+      await _storage.saveUser(_currentUser!);
+      currentSessionEndReason = SessionEndReason.none;
+      if (_apiClient.accessToken != null) {
+        await PendingCallRejectStore.syncNativeCredentials(_apiClient.accessToken!);
+      }
+      return true;
+    } on TalkyException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) return false;
+      debugPrint('[AuthProvider] recoverSession transitoire, on garde le cache: ${e.message}');
+      return _currentUser != null;
+    } catch (e, st) {
+      AppLog.w('AuthProvider', 'recoverSession error', e, st);
+      return _currentUser != null;
+    }
+  }
+
+  Future<void> _invalidateSession({required SessionEndReason reason}) async {
+    currentSessionEndReason = reason;
+    _apiClient.logout();
+    _currentUser = null;
+  }
+
+  /// Au retour au premier plan : réhydrate et valide sans déconnecter offline.
+  Future<void> refreshSessionOnResume() async {
+    if (_currentUser == null) {
+      _currentUser = await _storage.getUser();
+    }
+    await _hydrateTokensFromStorage();
+    if (_currentUser == null &&
+        _apiClient.accessToken == null &&
+        _apiClient.currentRefreshToken == null) {
+      return;
+    }
+
+    if (_apiClient.currentRefreshToken != null) {
+      if (await _tryRecoverSessionFromStorage()) {
+        notifyListeners();
+        return;
+      }
+    }
+
+    try {
+      final userData = await _apiClient.getMe();
+      _currentUser = User.fromJson(userData);
+      await _storage.saveUser(_currentUser!);
+      currentSessionEndReason = SessionEndReason.none;
       notifyListeners();
+    } on TalkyException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        if (await _tryRecoverSessionFromStorage()) {
+          notifyListeners();
+          return;
+        }
+        debugPrint('[AuthProvider] session invalid au resume (${e.statusCode})');
+        await _invalidateSession(reason: SessionEndReason.tokenExpired);
+        notifyListeners();
+        return;
+      }
+      debugPrint('[AuthProvider] refreshSessionOnResume offline: ${e.message}');
+    } catch (e, st) {
+      AppLog.w('AuthProvider', 'refreshSessionOnResume error', e, st);
     }
   }
 
@@ -131,6 +206,7 @@ class AuthProvider extends ChangeNotifier {
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
       await _storage.saveUser(_currentUser!);
+      currentSessionEndReason = SessionEndReason.none;
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } on TalkyException catch (e) {
       _error = e.message;
@@ -170,6 +246,7 @@ class AuthProvider extends ChangeNotifier {
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
       await _storage.saveUser(_currentUser!);
+      currentSessionEndReason = SessionEndReason.none;
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } on TalkyException catch (e) {
       _error = e.message;
@@ -233,6 +310,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    currentSessionEndReason = SessionEndReason.explicitLogout;
     _apiClient.logout();
     await _storage.clearAll();
     _currentUser = null;

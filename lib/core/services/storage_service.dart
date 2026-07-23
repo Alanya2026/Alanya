@@ -1,20 +1,40 @@
 import 'dart:convert';
 import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../../talky_models.dart';
 import 'call/pending_call_reject_store.dart';
 import 'notifications/notification_native_credentials_store.dart';
 
+/// Stockage chiffré session (tokens + profil). Instance unique pour garantir
+/// que AuthProvider et TalkyApiClient lisent/écrivent le même fichier.
 class StorageService {
+  StorageService._({FlutterSecureStorage? secureStorage})
+      : _secureStorage = secureStorage ?? _defaultSecureStorage;
+
+  static final StorageService instance = StorageService._();
+
+  factory StorageService({FlutterSecureStorage? secureStorage}) {
+    if (secureStorage != null) {
+      return StorageService._(secureStorage: secureStorage);
+    }
+    return instance;
+  }
+
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userKey = 'user_data';
   static const String _deviceIdKey = 'talky_device_id';
 
-  final FlutterSecureStorage _secureStorage;
+  static const FlutterSecureStorage _defaultSecureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
 
-  StorageService({FlutterSecureStorage? secureStorage})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage;
 
   Future<void> init() async {}
 
@@ -24,7 +44,6 @@ class StorageService {
   }) async {
     await _secureStorage.write(key: _accessTokenKey, value: accessToken);
     await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
-    // Miroir pour le BroadcastReceiver Android (refus CallKit app tuée).
     await PendingCallRejectStore.syncNativeCredentials(accessToken);
     await NotificationNativeCredentialsStore.syncNativeCredentials(accessToken);
   }
@@ -41,7 +60,10 @@ class StorageService {
     if (userStr == null) return null;
     try {
       return User.fromJson(jsonDecode(userStr) as Map<String, dynamic>);
-    } catch (_) {
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[StorageService] getUser parse error: $e\n$st');
+      }
       return null;
     }
   }

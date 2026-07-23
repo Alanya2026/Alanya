@@ -39,7 +39,7 @@ object MessageNotificationHelper {
     fun shouldSuppress(context: Context, data: Map<String, String>): Boolean {
         val convId = data["conversationId"]?.toIntOrNull() ?: return false
         val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-        val active = prefs.getString("flutter.push_active_conv_id", null)?.toIntOrNull()
+        val active = FlutterSharedPreferencesCompat.readInt(prefs, "push_active_conv_id")
         return active != null && active == convId
     }
 

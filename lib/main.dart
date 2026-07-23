@@ -32,6 +32,7 @@ import 'core/services/realtime_sync_service.dart';
 import 'core/services/voice_message_coordinator.dart';
 import 'core/services/voice_playback_service.dart';
 import 'core/services/push_service.dart';
+import 'core/services/session_end_reason.dart';
 import 'core/services/notifications/notification_prefs_cache.dart';
 import 'core/services/notifications/badge_sync_service.dart';
 import 'firebase_options.dart';
@@ -61,7 +62,7 @@ void main() async {
   // Capture centralisée des erreurs non interceptées (UI + asynchrones).
   // Sans ça, une exception dans un build/callback partait dans le vide.
   FlutterError.onError = (details) {
-    FlutterError.presentError(details);
+    FlutterError.dumpErrorToConsole(details, forceReport: true);
     AppLog.e('FlutterError', details.exceptionAsString(),
         details.exception, details.stack);
   };
@@ -76,8 +77,7 @@ void main() async {
   // règle le HandshakeException sans ouvrir la porte au MITM. Couvre http,
   // uploads, socket.io et cached_network_image via HttpOverrides.global.
   //
-  // DÉSACTIVÉ : le serveur ne fait plus de HTTPS (HTTP simple sur 158.220.107.211),
-  // donc plus de TLS à valider — réactiver ce bloc si le backend repasse en HTTPS.
+  // DÉSACTIVÉ : réactiver avec PinnedCertHttpOverrides si besoin de pinning.
   // try {
   //   HttpOverrides.global = await PinnedCertHttpOverrides.load();
   //   debugPrint('[Main] Certificate pinning activé');
@@ -102,15 +102,23 @@ void main() async {
   runApp(const TalkyApp());
 }
 
-class TalkyApp extends StatelessWidget {
+class TalkyApp extends StatefulWidget {
   const TalkyApp({super.key});
 
   @override
+  State<TalkyApp> createState() => _TalkyAppState();
+}
+
+class _TalkyAppState extends State<TalkyApp> {
+  late final TalkyApiClient _apiClient = TalkyApiClient();
+  late final AppDatabase _database = AppDatabase();
+  late final ChatProvider _chatProvider =
+      ChatProvider(api: _apiClient, database: _database);
+  late final LocalCacheRepository _localCache =
+      LocalCacheRepository(db: _database, api: _apiClient);
+
+  @override
   Widget build(BuildContext context) {
-    final apiClient = TalkyApiClient();
-    final database = AppDatabase();
-    final chatProvider = ChatProvider(api: apiClient, database: database);
-    final localCache = LocalCacheRepository(db: database, api: apiClient);
     return MultiProvider(
       providers: [
         // ThemeController en tête : MaterialApp en dépend via Consumer.
@@ -118,17 +126,22 @@ class TalkyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LocaleController()..load()),
         ChangeNotifierProvider(
             create: (_) => MediaDownloadPreferences()..load()),
-        Provider<TalkyApiClient>.value(value: apiClient),
-        Provider<AppDatabase>.value(value: database),
-        Provider<LocalCacheRepository>.value(value: localCache),
-        ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => CallService(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => MeetingService(apiClient: apiClient)),
-        ChangeNotifierProvider.value(value: chatProvider),
+        Provider<TalkyApiClient>.value(value: _apiClient),
+        Provider<AppDatabase>.value(value: _database),
+        Provider<LocalCacheRepository>.value(value: _localCache),
         ChangeNotifierProvider(
-            create: (_) => StatusProvider(api: apiClient, cache: localCache)),
-        ChangeNotifierProvider(create: (_) => AdminProvider(api: apiClient)),
-        ChangeNotifierProvider(create: (_) => ConnectivityProvider(api: apiClient)),
+            create: (_) => AuthProvider(apiClient: _apiClient)),
+        ChangeNotifierProvider(
+            create: (_) => CallService(apiClient: _apiClient)),
+        ChangeNotifierProvider(
+            create: (_) => MeetingService(apiClient: _apiClient)),
+        ChangeNotifierProvider.value(value: _chatProvider),
+        ChangeNotifierProvider(
+            create: (_) =>
+                StatusProvider(api: _apiClient, cache: _localCache)),
+        ChangeNotifierProvider(create: (_) => AdminProvider(api: _apiClient)),
+        ChangeNotifierProvider(
+            create: (_) => ConnectivityProvider(api: _apiClient)),
         ChangeNotifierProvider(create: (_) => LocalHiddenStore()..load()),
         ChangeNotifierProvider(create: (_) => VoicePlaybackService()),
         ChangeNotifierProvider(
@@ -218,8 +231,12 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
     final auth = _authProvider;
-    if (auth == null || !auth.isLoggedIn) return;
-    unawaited(_ensureSocketReadyOnResume());
+    if (auth == null) return;
+    unawaited(() async {
+      await auth.refreshSessionOnResume();
+      if (!mounted || !auth.isLoggedIn) return;
+      await _ensureSocketReadyOnResume();
+    }());
   }
 
   Future<void> _ensureSocketReadyOnResume() async {
@@ -328,6 +345,14 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
       try {
         await PushService.init(apiClient, navKey: navigatorKey);
+        onCallEndedNotification = ({callId, callerId}) async {
+          if (!mounted) return;
+          await Provider.of<CallService>(context, listen: false)
+              .notifyCallEndedFromExternal(
+            callId: callId,
+            callerId: callerId,
+          );
+        };
       } catch (e) {
         debugPrint('[AuthWrapper] PushService init failed: $e');
       }
@@ -433,7 +458,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     // Logout : on était bind, plus d'utilisateur → libère les listeners.
     if (myId == null) {
       if (_boundUserId != null) {
-        debugPrint('[AuthWrapper] Logout détecté → unbind providers');
+        final endReason = currentSessionEndReason;
+        currentSessionEndReason = SessionEndReason.none;
+        debugPrint(
+          '[AuthWrapper] Logout détecté (reason=$endReason) → unbind providers',
+        );
         IncomingShareService.instance.onSessionEnded();
         _removeBackOnlineListener();
         _clearCallLogBindings();
@@ -448,7 +477,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         } catch (e) {
           debugPrint('[AuthWrapper] StatusProvider.unbind échoué: $e');
         }
-        await _clearLocalSession();
+        if (endReason == SessionEndReason.explicitLogout) {
+          await _clearLocalSession();
+        }
         _boundUserId = null;
       }
       return;

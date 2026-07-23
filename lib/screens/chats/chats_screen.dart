@@ -39,33 +39,35 @@ class _ChatsScreenState extends State<ChatsScreen> {
   /// pas fini. Drift émet `[]` immédiatement (active) → sans ce flag,
   /// l'empty state s'affiche pendant que le sync HTTP tourne encore.
   bool _awaitingInitialConversations = true;
+  ChatProvider? _chatProvider;
 
   @override
   void initState() {
     super.initState();
-    final chat = Provider.of<ChatProvider>(context, listen: false);
-    if (chat.initialSyncComplete) {
+    _chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    if (_chatProvider!.initialSyncComplete) {
       _awaitingInitialConversations = false;
     } else {
-      chat.addListener(_onChatProviderChanged);
+      _chatProvider!.addListener(_onChatProviderChanged);
     }
   }
 
   void _onChatProviderChanged() {
-    final chat = Provider.of<ChatProvider>(context, listen: false);
+    final chat = _chatProvider;
+    if (chat == null) return;
+    if (!mounted) {
+      chat.removeListener(_onChatProviderChanged);
+      return;
+    }
     if (!chat.initialSyncComplete) return;
     chat.removeListener(_onChatProviderChanged);
-    if (mounted) {
-      setState(() => _awaitingInitialConversations = false);
-    }
+    setState(() => _awaitingInitialConversations = false);
   }
 
   @override
   void dispose() {
-    try {
-      Provider.of<ChatProvider>(context, listen: false)
-          .removeListener(_onChatProviderChanged);
-    } catch (_) {}
+    _chatProvider?.removeListener(_onChatProviderChanged);
+    _chatProvider = null;
     _searchCtrl.dispose();
     super.dispose();
   }

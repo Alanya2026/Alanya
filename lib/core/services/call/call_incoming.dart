@@ -247,45 +247,67 @@ extension CallIncoming on CallService {
         );
         break;
       case IncomingCallActionType.ended:
-        await _handleCallKitEnded(action);
+        await notifyCallEndedFromExternal(
+          callId: action.callId,
+          callerId: action.callerId,
+        );
         break;
     }
   }
 
-  /// Raccrochage depuis CallKit : fin d'appel actif ou nettoyage si déjà terminé.
-  Future<void> _handleCallKitEnded(IncomingCallAction action) async {
-    final callId = action.callId.trim();
+  /// Fermeture UI + teardown quand l'appel se termine depuis CallKit, FCM
+  /// `call_ended` ou le listener natif ACTIVE_CALLS.
+  Future<void> notifyCallEndedFromExternal({
+    String? callId,
+    String? callerId,
+  }) async {
+    final id = (callId ?? '').trim();
     debugPrint(
-      '[CallService] 📲 handleCallKitEnded callId=$callId '
-      'status=$_status isOutgoing=${action.isOutgoing}',
+      '[CallService] notifyCallEndedFromExternal callId=$id status=$_status',
     );
 
-    if (callId.isNotEmpty &&
-        (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
-      debugPrint('[CallService] 🛡 handleCallKitEnded ignoré (callId terminé): $callId');
-      await _callKit.endAll(callId: callId);
-      return;
+    if (id.isNotEmpty) {
+      await EndedCallRegistry.markEnded(id);
     }
 
     if (_status == CallStatus.outgoing ||
         _status == CallStatus.connecting ||
         _status == CallStatus.connected) {
-      await endCall();
+      if (id.isEmpty || id == _currentCallId) {
+        await endCall();
+      } else {
+        _markTerminalCallId(id);
+        await _terminateCall();
+      }
       return;
     }
 
     if (_status == CallStatus.incoming) {
       await rejectIncomingCallFromPush(
-        callerId: action.callerId,
-        callId: action.callId,
+        callerId: callerId ?? _remoteUserId?.toString() ?? '',
+        callId: id.isNotEmpty ? id : _currentCallId,
       );
       return;
     }
 
-    // idle / ended / joining : nettoyage CallKit uniquement (pas de rejet entrant).
-    if (callId.isNotEmpty) _markTerminalCallId(callId);
+    if (id.isNotEmpty) _markTerminalCallId(id);
     await _ringtone.stop();
-    await _callKit.endAll(callId: callId.isNotEmpty ? callId : null);
+    await _callKit.endAll(callId: id.isNotEmpty ? id : null);
+    if (_status != CallStatus.idle) {
+      _resetCallState();
+      _status = CallStatus.idle;
+      notify();
+    }
+  }
+
+  /// Au resume : si FCM a marqué l'appel terminé pendant que l'UI était ouverte.
+  Future<void> syncWithEndedRegistry() async {
+    final id = _currentCallId;
+    if (id == null || id.isEmpty) return;
+    if (_status == CallStatus.idle || _status == CallStatus.ended) return;
+    if (!await EndedCallRegistry.isEnded(id)) return;
+    debugPrint('[CallService] syncWithEndedRegistry → terminate $id');
+    await notifyCallEndedFromExternal(callId: id);
   }
 
   /// Envoie le refus via HTTP puis socket. Retire de la file si au moins

@@ -11,15 +11,14 @@ class MediaDownloadPreferences extends ChangeNotifier {
   /// Instance liée au Provider (lecture synchrone depuis ChatRepository).
   static MediaDownloadPreferences? _bound;
 
-  /// Valeurs lues depuis SharedPreferences (via [preload]) — évite le défaut
-  /// `true` pendant la fenêtre avant que `load()` du Provider ne finisse,
-  /// qui faisait préfetcher les médias malgré un réglage désactivé.
+  /// Valeurs lues depuis SharedPreferences (via [preload]) — évite un défaut
+  /// incorrect pendant la fenêtre avant que `load()` du Provider ne finisse.
   static bool _prefsLoaded = false;
-  static bool _cachedAutoDownload = true;
-  static bool _cachedMediaVisibility = true;
+  static bool _cachedAutoDownload = false;
+  static bool _cachedMediaVisibility = false;
 
-  bool _autoDownload = true;
-  bool _mediaVisibility = true;
+  bool _autoDownload = false;
+  bool _mediaVisibility = false;
 
   bool get autoDownload => _autoDownload;
   bool get mediaVisibility => _mediaVisibility;
@@ -49,8 +48,8 @@ class MediaDownloadPreferences extends ChangeNotifier {
   static Future<void> preload() async {
     if (_prefsLoaded) return;
     final prefs = await SharedPreferences.getInstance();
-    _cachedAutoDownload = prefs.getBool(_kAutoDownloadKey) ?? true;
-    _cachedMediaVisibility = prefs.getBool(_kMediaVisibilityKey) ?? true;
+    _cachedAutoDownload = prefs.getBool(_kAutoDownloadKey) ?? false;
+    _cachedMediaVisibility = prefs.getBool(_kMediaVisibilityKey) ?? false;
     _prefsLoaded = true;
   }
 

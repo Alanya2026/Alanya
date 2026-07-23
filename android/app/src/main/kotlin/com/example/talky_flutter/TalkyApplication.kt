@@ -54,20 +54,23 @@ class TalkyApplication : Application() {
             }
             if (stillThere) continue
 
+            val callerId = extractCallerId(prev)
+            val callId = extractCallId(prev)
             val wasAccepted = prev.optBoolean("isAccepted", false)
+
             if (wasAccepted) {
-                Log.i(TAG, "ACTIVE_CALLS: appel accepté retiré id=$id — ignore")
+                Log.i(TAG, "ACTIVE_CALLS: raccrochage notif id=$id callId=$callId")
+                CallNativeBridge.notifyCallEnded(callId, callerId)
                 continue
             }
 
-            val callerId = extractCallerId(prev)
-            val callId = extractCallId(prev)
             if (callerId.isNullOrBlank()) {
                 Log.w(TAG, "ACTIVE_CALLS: retrait sans callerId id=$id")
                 continue
             }
             Log.i(TAG, "ACTIVE_CALLS: refus/timeout détecté caller=$callerId callId=$callId")
             CallRejectHelper.enqueueAndPost(this, callerId, callId)
+            CallNativeBridge.notifyCallEnded(callId, callerId)
         }
     }
 

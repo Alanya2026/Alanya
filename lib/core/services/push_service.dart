@@ -92,16 +92,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         );
       }
     } else if (type == 'call_ended') {
-      if (!kIsWeb) {
-        final callId = (data['callId'] ?? '').toString().trim();
-        if (callId.isNotEmpty) {
-          await EndedCallRegistry.markEnded(callId);
-          await CallKitService.instance.endCall(callId);
-        } else {
-          await CallKitService.instance.endAll();
-        }
-        await RingtoneService.stopAll();
-      }
+      await dispatchCallEndedPush(
+        callId: (data['callId'] ?? '').toString().trim(),
+      );
     } else if (type == 'message_read_sync') {
       await _handleMessageReadSync(Map<String, dynamic>.from(data));
     } else {
@@ -124,6 +117,31 @@ Future<void> _handleMessageReadSync(Map<String, dynamic> data) async {
     conversationId: convId,
     reason: 'read_sync',
   );
+}
+
+/// Callback main-isolate : fermeture écran d'appel (CallService).
+Future<void> Function({String? callId, String? callerId})?
+    onCallEndedNotification;
+
+Future<void> dispatchCallEndedPush({
+  String? callId,
+  String? callerId,
+}) async {
+  if (!kIsWeb) {
+    final id = (callId ?? '').trim();
+    if (id.isNotEmpty) {
+      await EndedCallRegistry.markEnded(id);
+      await CallKitService.instance.endCall(id);
+    } else {
+      await CallKitService.instance.endAll();
+    }
+    await RingtoneService.stopAll();
+  }
+  try {
+    await onCallEndedNotification?.call(callId: callId, callerId: callerId);
+  } catch (e) {
+    debugPrint('[Push] onCallEndedNotification error: $e');
+  }
 }
 
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
@@ -184,6 +202,7 @@ class PushService {
   static PushService get instance => _instance!;
 
   static const _nativeOpenChannel = MethodChannel('com.alanya/notification_open');
+  static const _nativeCallChannel = MethodChannel('com.alanya/call_native');
 
   final TalkyApiClient _apiClient;
   final GlobalKey<NavigatorState>? _navKey;
@@ -255,6 +274,7 @@ class PushService {
       );
 
       await _bindNativeNotificationOpens();
+      await _bindNativeCallEvents();
 
       await _maybeRequestBatteryOptimizationExemption();
       await CallPermissionsHelper.ensureCallDisplayPermissions();
@@ -371,16 +391,9 @@ class PushService {
     NotificationDiagnostics.pushForeground(Map<String, dynamic>.from(data));
     debugPrint('[Push] foreground: type=$type');
     if (type == 'call_ended') {
-      if (!kIsWeb) {
-        final callId = (data['callId'] ?? '').toString().trim();
-        if (callId.isNotEmpty) {
-          await EndedCallRegistry.markEnded(callId);
-          await CallKitService.instance.endCall(callId);
-        } else {
-          await CallKitService.instance.endAll();
-        }
-        await RingtoneService.stopAll();
-      }
+      await dispatchCallEndedPush(
+        callId: (data['callId'] ?? '').toString().trim(),
+      );
       return;
     }
 
@@ -529,6 +542,30 @@ class PushService {
       }
     } catch (e) {
       debugPrint('[Push] bindNativeNotificationOpens: $e');
+    }
+  }
+
+  /// Raccrochage / refus depuis notification CallKit native (ACTIVE_CALLS).
+  Future<void> _bindNativeCallEvents() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      _nativeCallChannel.setMethodCallHandler((call) async {
+        if (call.method != 'onCallEnded') return;
+        final raw = call.arguments;
+        if (raw is! Map) return;
+        final args = raw.map(
+          (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
+        );
+        debugPrint(
+          '[Push] native call ended: callId=${args['callId']} caller=${args['callerId']}',
+        );
+        await dispatchCallEndedPush(
+          callId: args['callId'],
+          callerId: args['callerId'],
+        );
+      });
+    } catch (e) {
+      debugPrint('[Push] bindNativeCallEvents: $e');
     }
   }
 
