@@ -196,6 +196,48 @@ class AppLocalizationsEn extends AppLocalizations {
       'Save received media to internal storage (Gallery and Downloads)';
 
   @override
+  String get settingsCalls => 'Calls';
+
+  @override
+  String get settingsRingtone => 'Call ringtone';
+
+  @override
+  String get ringtoneScreenTitle => 'Call ringtone';
+
+  @override
+  String get ringtoneSectionSystem => 'System';
+
+  @override
+  String get ringtoneSectionApp => 'Provided by the app';
+
+  @override
+  String get ringtoneSectionCustom => 'Custom';
+
+  @override
+  String get ringtoneSystemDefaultLabel => 'Device default ringtone';
+
+  @override
+  String get ringtoneAddCustomAction => 'Add a ringtone';
+
+  @override
+  String get ringtoneAddCustomHint => 'Audio files (MP3, WAV, M4A…), 5 MB max';
+
+  @override
+  String get ringtoneDeleteConfirmTitle => 'Delete this ringtone?';
+
+  @override
+  String get ringtoneDeleteConfirmMessage => 'This action cannot be undone.';
+
+  @override
+  String get ringtoneImportSuccess => 'Ringtone added and selected';
+
+  @override
+  String get ringtoneImportError => 'Couldn\'t import this file';
+
+  @override
+  String get ringtonePreviewError => 'Couldn\'t play this ringtone';
+
+  @override
   String get settingsPrivacy => 'Privacy';
 
   @override

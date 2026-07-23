@@ -6,8 +6,10 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/locale_controller.dart';
 import '../../core/theme/theme_controller.dart';
 import '../../core/services/media_download_preferences.dart';
+import '../../core/services/ringtone_preferences.dart';
 import 'privacy_screen.dart';
 import 'notification_settings_screen.dart';
+import 'ringtone_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -208,6 +210,52 @@ class SettingsScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (_) => const NotificationSettingsScreen(),
+                ),
+              ),
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          _SettingsGroup(
+            title: l10n.settingsCalls,
+            child: Consumer<RingtonePreferences>(
+              builder: (_, prefs, __) => ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.sm,
+                ),
+                leading: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: context.semantic.surfaceMuted,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.music_note_outlined,
+                    color: context.colors.onSurfaceVariant,
+                    size: AppIconSize.md,
+                  ),
+                ),
+                title: Text(
+                  l10n.settingsRingtone,
+                  style: context.text.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                subtitle: Text(
+                  prefs.selectedId == RingtoneOption.systemId
+                      ? l10n.ringtoneSystemDefaultLabel
+                      : prefs.selected.label,
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: context.colors.outlineVariant,
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RingtoneSettingsScreen()),
                 ),
               ),
             ),

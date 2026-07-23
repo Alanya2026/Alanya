@@ -7,6 +7,8 @@ import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:vibration/vibration.dart';
 
+import 'ringtone_preferences.dart';
+
 /// Centralise les sons d'appel.
 
 class RingtoneService {
@@ -21,6 +23,7 @@ class RingtoneService {
 
   final FlutterRingtonePlayer _systemRingtone = FlutterRingtonePlayer();
   AudioPlayer? _ringbackPlayer;
+  AudioPlayer? _incomingCustomPlayer;
   AudioSession? _audioSession;
 
   _ActiveSound _active = _ActiveSound.none;
@@ -29,6 +32,7 @@ class RingtoneService {
   Future<void> init() async {
     if (kIsWeb) return;
     _ringbackPlayer ??= AudioPlayer();
+    _incomingCustomPlayer ??= AudioPlayer();
     _audioSession ??= await AudioSession.instance;
   } 
 
@@ -37,14 +41,45 @@ class RingtoneService {
     if (_active == _ActiveSound.incoming) return;
     if (_active != _ActiveSound.none) await stop();
     _active = _ActiveSound.incoming;
-    debugPrint('[RingtoneService] 🔔 Sonnerie système (appelé)');
 
+    final selection = RingtonePreferences.currentSelection;
+
+    if (selection.type == RingtoneSourceType.system) {
+      debugPrint('[RingtoneService] 🔔 Sonnerie système (appelé)');
+      try {
+        await _systemRingtone.playRingtone(looping: true, volume: 1.0, asAlarm: false);
+        _startVibrationLoop();
+      } catch (e) {
+        debugPrint('[RingtoneService] ** Sonnerie système échouée: $e');
+        _active = _ActiveSound.none;
+      }
+      return;
+    }
+
+    debugPrint('[RingtoneService] 🔔 Sonnerie personnalisée: ${selection.label}');
     try {
-      await _systemRingtone.playRingtone(looping: true, volume: 1.0, asAlarm: false);
+      await _configureCallAudioSession();
+      final player = _incomingCustomPlayer!;
+      if (selection.type == RingtoneSourceType.bundled) {
+        await player.setAsset(selection.assetPath!);
+      } else {
+        await player.setFilePath(selection.filePath!);
+      }
+      await player.setLoopMode(LoopMode.one);
+      await player.setVolume(1.0);
+      await player.play();
       _startVibrationLoop();
     } catch (e) {
-      debugPrint('[RingtoneService] ** Sonnerie système échouée: $e');
-      _active = _ActiveSound.none;
+      debugPrint('[RingtoneService] ** Sonnerie personnalisée échouée, repli système: $e');
+      // Repli sur la sonnerie système si le fichier custom est illisible
+      // (ex. supprimé manuellement du stockage entre deux sessions).
+      try {
+        await _systemRingtone.playRingtone(looping: true, volume: 1.0, asAlarm: false);
+        _startVibrationLoop();
+      } catch (e2) {
+        debugPrint('[RingtoneService] ** Repli système également échoué: $e2');
+        _active = _ActiveSound.none;
+      }
     }
   }
 
@@ -81,6 +116,7 @@ class RingtoneService {
     try {
       if (wasActive == _ActiveSound.incoming) {
         await _systemRingtone.stop();
+        await _incomingCustomPlayer?.stop();
         try { await Vibration.cancel(); } catch (_) { /* vibration non supportée — ignoré */ }
       } else if (wasActive == _ActiveSound.outgoing) {
         await _ringbackPlayer?.stop();
@@ -94,6 +130,8 @@ class RingtoneService {
     await stop();
     await _ringbackPlayer?.dispose();
     _ringbackPlayer = null;
+    await _incomingCustomPlayer?.dispose();
+    _incomingCustomPlayer = null;
   }
 
   Future<void> _configureCallAudioSession() async {
