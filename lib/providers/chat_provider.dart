@@ -35,6 +35,11 @@ class ChatProvider extends ChangeNotifier {
   bool _bound = false;
   Timer? _refreshDebounce;
 
+  /// True une fois le premier `refreshConversations` de [bind] terminé
+  /// (succès ou erreur). Permet à ChatsScreen d'afficher le skeleton sans
+  /// relancer un 2e sync complet.
+  bool _initialSyncComplete = false;
+
   /// Hook optionnel après reconnexion socket (ex. refresh statuts).
   Future<void> Function()? onSocketReadyHook;
 
@@ -42,6 +47,8 @@ class ChatProvider extends ChangeNotifier {
     repository = ChatRepository(api: _api, database: database);
     _syncTimer = ChatSyncTimer(repository);
   }
+
+  bool get initialSyncComplete => _initialSyncComplete;
 
   PresenceInfo? presenceOf(int userID) => _presence[userID];
 
@@ -92,7 +99,14 @@ class ChatProvider extends ChangeNotifier {
       _api.onSocketEvent(SocketEvents.typingStarted, _onTypingStarted);
       _api.onSocketEvent(SocketEvents.typingStopped, _onTypingStopped);
     }
-    await refreshConversations();
+    try {
+      await refreshConversations(force: true);
+    } finally {
+      if (!_initialSyncComplete) {
+        _initialSyncComplete = true;
+        notifyListeners();
+      }
+    }
     await repository.flushOutbox();
     _syncTimer?.start();
   }
@@ -118,6 +132,7 @@ class ChatProvider extends ChangeNotifier {
     repository.unbind();
     _presence.clear();
     _typing.clear();
+    _initialSyncComplete = false;
     notifyListeners();
   }
 
@@ -132,7 +147,8 @@ class ChatProvider extends ChangeNotifier {
       // Ordre critique : outbox + accusés AVANT re-fetch liste.
       await repository.flushOutbox();
       await repository.flushReceiptsCatchUp();
-      await refreshConversations();
+      // Cooldown : skip si bind vient de syncer (évite le double pipeline).
+      await refreshConversations(force: false);
       await repository.resyncActiveConversation();
       repository.rejoinActiveRoom();
       await onSocketReadyHook?.call();
@@ -145,12 +161,12 @@ class ChatProvider extends ChangeNotifier {
     // Nouvelle conversation : un catch-up liste est légitime.
     _refreshDebounce?.cancel();
     _refreshDebounce = Timer(const Duration(milliseconds: 200), () {
-      refreshConversations();
+      refreshConversations(force: true);
     });
   }
  
-  Future<void> refreshConversations() async {
-    await repository.syncConversations();
+  Future<void> refreshConversations({bool force = false}) async {
+    await repository.syncConversations(force: force);
     await _seedPresenceFromCache();
     if (repository.myId != 0) {
       await BadgeSyncService.syncFromDao(repository.dao);

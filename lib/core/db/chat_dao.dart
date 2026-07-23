@@ -436,6 +436,39 @@ class ChatDao {
     return pending.sendAt.isAfter(serverLastAt);
   }
 
+  /// Batch de [hasPendingNewerThan] : 1 SELECT pour toutes les conversations.
+  /// Retourne les conversID dont un pending local est plus récent que
+  /// [serverLastAtByConv].
+  Future<Set<int>> conversationIdsWithPendingNewerThan(
+    Map<int, DateTime?> serverLastAtByConv,
+  ) async {
+    if (serverLastAtByConv.isEmpty) return {};
+    final pending = await (db.select(db.localMessages)
+          ..where((m) =>
+              m.syncPending.equals(true) &
+              m.isDeleted.equals(false) &
+              m.conversationID.isIn(serverLastAtByConv.keys)))
+        .get();
+    if (pending.isEmpty) return {};
+
+    final maxPendingAt = <int, DateTime>{};
+    for (final m in pending) {
+      final prev = maxPendingAt[m.conversationID];
+      if (prev == null || m.sendAt.isAfter(prev)) {
+        maxPendingAt[m.conversationID] = m.sendAt;
+      }
+    }
+
+    final out = <int>{};
+    for (final e in maxPendingAt.entries) {
+      final serverAt = serverLastAtByConv[e.key];
+      if (serverAt == null || e.value.isAfter(serverAt)) {
+        out.add(e.key);
+      }
+    }
+    return out;
+  }
+
   /// Conversations où j'ai des messages entrants pas encore livrés (status &lt; 2).
   Future<List<int>> conversationIdsNeedingDelivery(int myId) async {
     final rows = await (db.selectOnly(db.localMessages)

@@ -288,7 +288,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       await cache.upsertCallFromPayload(
         data,
         myId: myId,
-        onMissingConversation: () => chatProvider.refreshConversations(),
+        onMissingConversation: () => chatProvider.refreshConversations(force: true),
       );
       if (!mounted) return;
       _scheduleCallSyncFallback(cache, myId);

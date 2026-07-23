@@ -96,6 +96,41 @@ class ConversationMerge {
     return companion;
   }
 
+  /// True si l'aperçu / unread / statut serveur diffère du cache local
+  /// (nouvelle conv, ou catch-up HTTP qui a quelque chose à dire).
+  static bool previewOrUnreadDiffers({
+    required LocalConversation? local,
+    required Conversation server,
+    required DateTime? Function(dynamic) parseDate,
+  }) {
+    if (local == null) return true;
+    if (local.unreadCount != server.unreadCount) return true;
+    if (local.lastMessage != server.lastMessage) return true;
+    if (local.lastMessageSenderID != server.lastMessageSenderID) return true;
+    if (local.lastMessageType != server.lastMessageType) return true;
+    if (local.lastMessageStatus != server.lastMessageStatus) return true;
+    final serverAt = parseDate(server.lastMessageAt);
+    final localAt = local.lastMessageAt;
+    if (localAt == null && serverAt == null) return false;
+    if (localAt == null || serverAt == null) return true;
+    return localAt.toUtc().millisecondsSinceEpoch !=
+        serverAt.toUtc().millisecondsSinceEpoch;
+  }
+
+  /// Serveur a un aperçu strictement plus récent que le local (pas de pending).
+  /// Dans ce cas le recompute pré-delta écraserait l'aperçu serveur avec un
+  /// message local plus vieux — on attend le delta messages.
+  static bool serverPreviewAhead({
+    required LocalConversation? local,
+    required DateTime? serverAt,
+    required bool hasLocalPendingNewer,
+  }) {
+    if (hasLocalPendingNewer || local == null) return false;
+    final localAt = local.lastMessageAt;
+    if (localAt == null || serverAt == null) return false;
+    return serverAt.isAfter(localAt);
+  }
+
   static String previewForMedia(
     int type,
     String? content,

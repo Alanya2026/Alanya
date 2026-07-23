@@ -13,6 +13,12 @@ typedef UpsertServerMsg = Future<bool> Function(
   bool prefetchMedia,
 });
 
+/// Upsert batch de messages entrants. Retourne les conversID affectées.
+typedef UpsertIncomingBatch = Future<Set<int>> Function(
+  List<Map<String, dynamic>> jsons, {
+  bool prefetchMedia,
+});
+
 typedef ConvToCompanion = LocalConversationsCompanion Function(
   Conversation c,
   Map<String, dynamic> raw,
@@ -27,27 +33,30 @@ class ConversationSync {
     required ChatDao dao,
     required int Function() myId,
     required UpsertServerMsg upsertServerMsg,
+    required UpsertIncomingBatch upsertIncomingBatch,
     required ConvToCompanion convToCompanion,
     required ParseDate parseDate,
     required Future<void> Function(int convId) recompute,
-    required Future<void> Function() recomputeAll,
+    required Future<void> Function(Set<int> convIds) recomputeMany,
   })  : _api = api,
         _dao = dao,
         _myId = myId,
         _upsertServerMsg = upsertServerMsg,
+        _upsertIncomingBatch = upsertIncomingBatch,
         _convToCompanion = convToCompanion,
         _parseDate = parseDate,
         _recompute = recompute,
-        _recomputeAll = recomputeAll;
+        _recomputeMany = recomputeMany;
 
   final ChatApi _api;
   final ChatDao _dao;
   final int Function() _myId;
   final UpsertServerMsg _upsertServerMsg;
+  final UpsertIncomingBatch _upsertIncomingBatch;
   final ConvToCompanion _convToCompanion;
   final ParseDate _parseDate;
   final Future<void> Function(int convId) _recompute;
-  final Future<void> Function() _recomputeAll;
+  final Future<void> Function(Set<int> convIds) _recomputeMany;
 
   Future<void> syncConversations() async {
     try {
@@ -55,33 +64,76 @@ class ConversationSync {
       final localById = {
         for (final c in await _dao.getAllConversations()) c.conversID: c,
       };
-      final companions = <LocalConversationsCompanion>[];
+
+      final entries = <({Conversation conv, Map<String, dynamic> json})>[];
+      final serverAts = <int, DateTime?>{};
       for (final j in raw.whereType<Map<String, dynamic>>()) {
         final conv = Conversation.fromJson(j);
-        final local = localById[conv.conversID];
-        final serverAt = _parseDate(conv.lastMessageAt);
-        final pendingNewer = local != null &&
-            await _dao.hasPendingNewerThan(conv.conversID, serverAt);
+        entries.add((conv: conv, json: j));
+        serverAts[conv.conversID] = _parseDate(conv.lastMessageAt);
+      }
+
+      final pendingIds =
+          await _dao.conversationIdsWithPendingNewerThan(serverAts);
+
+      // Convs dont l'aperçu/unread serveur ≠ local (candidats recompute).
+      final mergeChangedIds = <int>{};
+      // Serveur en avance : recompute pré-delta interdit (écraserait l'aperçu).
+      final serverAheadIds = <int>{};
+
+      final companions = <LocalConversationsCompanion>[];
+      for (final e in entries) {
+        final local = localById[e.conv.conversID];
+        final pending = pendingIds.contains(e.conv.conversID);
+        final serverAt = serverAts[e.conv.conversID];
+
+        if (ConversationMerge.previewOrUnreadDiffers(
+          local: local,
+          server: e.conv,
+          parseDate: _parseDate,
+        )) {
+          mergeChangedIds.add(e.conv.conversID);
+        }
+        if (ConversationMerge.serverPreviewAhead(
+          local: local,
+          serverAt: serverAt,
+          hasLocalPendingNewer: pending,
+        )) {
+          serverAheadIds.add(e.conv.conversID);
+        }
+
         companions.add(ConversationMerge.mergeConversation(
-          server: conv,
-          fromServer: _convToCompanion(conv, j),
+          server: e.conv,
+          fromServer: _convToCompanion(e.conv, e.json),
           local: local,
           myId: _myId(),
-          hasLocalPendingNewer: pendingNewer,
+          hasLocalPendingNewer: pending,
         ));
       }
       final serverIds = companions.map((c) => c.conversID.value).toSet();
       await _dao.upsertConversations(companions);
       await _dao.deleteConversationsNotIn(serverIds);
-      await _recomputeAll();
-      // Rapatrie les corps de messages manqués (source unique de vérité :
-      // curseur par conversation). Garantit badge + aperçu + fil corrects
-      // sans dépendre de la fiabilité du WebSocket.
-      await syncGlobalDelta();
-      // Sur DB fraîche (install / logout), syncGlobalDelta ne fait rien
-      // (aucun curseur local). Précharge les fils en arrière-plan pour que
-      // l'ouverture d'une conv ne dépende pas d'un seul sync à l'écran.
+
+      // Pré-delta : recompute ciblé (pas recomputeAll) — convs modifiées
+      // par le merge, hors celles où le serveur est en avance sur le local.
+      final preDeltaRecompute = <int>{
+        ...mergeChangedIds.difference(serverAheadIds),
+        ...pendingIds,
+      };
+      if (preDeltaRecompute.isNotEmpty) {
+        await _recomputeMany(preDeltaRecompute);
+      }
+
+      // Delta : syncGlobalDelta recalcule déjà les convs touchées par page.
+      // Couvre le cas « aperçu serveur plus récent » une fois les msgs ingestés.
+      final deltaAffected = await syncGlobalDelta();
+      // Sur DB fraîche, syncGlobalDelta ne fait rien. Précharge en arrière-plan.
       unawaited(bootstrapEmptyConversationMessages());
+
+      final pendingOnly = pendingIds.difference(deltaAffected);
+      if (pendingOnly.isNotEmpty) {
+        await _recomputeMany(pendingOnly);
+      }
     } catch (e) {
       debugPrint('[ConversationSync] syncConversations échouée: $e');
     }
@@ -103,16 +155,15 @@ class ConversationSync {
         final resp = await _api.syncMessagesGlobal(cursors);
         final msgs = (resp['messages'] as List?) ?? const [];
         if (msgs.isNotEmpty) {
-          final affected = <int>{};
+          final maps = <Map<String, dynamic>>[];
           for (final raw in msgs) {
             if (raw is! Map) continue;
-            final j = Map<String, dynamic>.from(raw);
-            await _upsertServerMsg(j, prefetchMedia: true);
-            final cid = _toInt(j['conversationID']);
-            if (cid != 0) affected.add(cid);
+            maps.add(Map<String, dynamic>.from(raw));
           }
-          for (final c in affected) {
-            await _recompute(c);
+          final affected =
+              await _ingestSyncMessages(maps, prefetchMedia: true);
+          if (affected.isNotEmpty) {
+            await _recomputeMany(affected);
           }
         }
         if (resp['hasMore'] != true) break;
@@ -142,42 +193,65 @@ class ConversationSync {
     return out;
   }
 
-  /// Sync delta GLOBALE, server-authoritative, basée sur un curseur PAR
-  /// conversation. Récupère en une requête (paginée) tous les messages
-  /// `msgID > curseur_local` de toutes les conversations connues, les upsert et
-  /// recalcule l'état dérivé (aperçu, non-lus, statut).
-  ///
-  /// C'est LE filet de correction : quel que soit l'état du socket
-  /// (arrière-plan, micro-déconnexion, event perdu), un passage ici remet le
-  /// client à jour, sans trou. Le push socket `message:received` reste, mais
-  /// n'est plus qu'une optimisation de latence.
-  ///
-  /// Idempotent, borné : uniquement les conversations ayant déjà des messages
-  /// locaux (le premier chargement d'une conv se fait à l'ouverture). La
-  /// pagination reconstruit les curseurs depuis le local à chaque tour → aucun
-  /// message n'est sauté même si un seul tour ne suffit pas.
-  Future<void> syncGlobalDelta() async {
-    if (_myId() == 0) return;
+  /// Sync delta GLOBALE. Retourne les conversID dont des messages ont été
+  /// upsertés (pour un recompute ciblé côté appelant).
+  Future<Set<int>> syncGlobalDelta() async {
+    final allAffected = <int>{};
+    if (_myId() == 0) return allAffected;
     var guard = 0;
     while (guard++ < 20) {
       final cursors = await _dao.conversationCursors();
-      if (cursors.isEmpty) return;
+      if (cursors.isEmpty) return allAffected;
       final resp = await _api.syncMessagesGlobal(cursors);
       final msgs = (resp['messages'] as List?) ?? const [];
-      if (msgs.isEmpty) return;
-      final affected = <int>{};
+      if (msgs.isEmpty) return allAffected;
+      final maps = <Map<String, dynamic>>[];
       for (final raw in msgs) {
         if (raw is! Map) continue;
-        final j = Map<String, dynamic>.from(raw);
-        await _upsertServerMsg(j, prefetchMedia: true);
-        final cid = _toInt(j['conversationID']);
-        if (cid != 0) affected.add(cid);
+        maps.add(Map<String, dynamic>.from(raw));
       }
-      for (final c in affected) {
-        await _recompute(c);
+      final affected = await _ingestSyncMessages(maps, prefetchMedia: true);
+      allAffected.addAll(affected);
+      // Recompute par page pour que l'UI (watch) avance pendant la pagination.
+      if (affected.isNotEmpty) {
+        await _recomputeMany(affected);
       }
-      if (resp['hasMore'] != true) return;
+      if (resp['hasMore'] != true) return allAffected;
     }
+    return allAffected;
+  }
+
+  /// Partition incoming (batch) / outgoing (upsert individuel pour matching
+  /// optimiste). Retourne les conversID touchées.
+  Future<Set<int>> _ingestSyncMessages(
+    List<Map<String, dynamic>> maps, {
+    bool prefetchMedia = false,
+  }) async {
+    if (maps.isEmpty) return {};
+    final myId = _myId();
+    final incoming = <Map<String, dynamic>>[];
+    final outgoing = <Map<String, dynamic>>[];
+    for (final j in maps) {
+      final sender = _toInt(j['senderID']);
+      if (myId != 0 && sender == myId) {
+        outgoing.add(j);
+      } else {
+        incoming.add(j);
+      }
+    }
+
+    final affected = <int>{};
+    if (incoming.isNotEmpty) {
+      affected.addAll(
+        await _upsertIncomingBatch(incoming, prefetchMedia: prefetchMedia),
+      );
+    }
+    for (final j in outgoing) {
+      await _upsertServerMsg(j, prefetchMedia: false);
+      final cid = _toInt(j['conversationID']);
+      if (cid != 0) affected.add(cid);
+    }
+    return affected;
   }
 
   static int _toInt(dynamic v) {
@@ -204,9 +278,8 @@ class ConversationSync {
         } else {
           raw = await _api.getMessages(conversationID, limit: 50);
         }
-        for (final j in raw.whereType<Map<String, dynamic>>()) {
-          await _upsertServerMsg(j, prefetchMedia: true);
-        }
+        final maps = raw.whereType<Map<String, dynamic>>().toList();
+        await _ingestSyncMessages(maps, prefetchMedia: true);
         await _recompute(conversationID);
         return;
       } catch (e) {
@@ -236,9 +309,7 @@ class ConversationSync {
         before: oldest,
       );
       final list = raw.whereType<Map<String, dynamic>>().toList();
-      for (final j in list) {
-        await _upsertServerMsg(j, prefetchMedia: true);
-      }
+      await _ingestSyncMessages(list, prefetchMedia: true);
       return list.length;
     } catch (e) {
       debugPrint('[ConversationSync] loadOlderMessages échouée: $e');

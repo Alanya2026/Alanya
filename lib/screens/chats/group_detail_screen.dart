@@ -191,7 +191,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         widget.conversationId,
         picked.map((u) => u.alanyaID).toList(),
       );
-      await chat.refreshConversations();
+      await chat.refreshConversations(force: true);
       if (!mounted) return;
       await _loadGroup();
       messenger.showSnackBar(SnackBar(
@@ -235,7 +235,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       final chat = Provider.of<ChatProvider>(context, listen: false);
       await api.leaveGroup(widget.conversationId);
       if (!mounted) return;
-      await chat.refreshConversations();
+      await chat.refreshConversations(force: true);
       if (mounted) Navigator.pop(context);
     } catch (e, st) {
       AppLog.e('GroupDetail', context.l10n.failedToLeaveGroup, e, st);

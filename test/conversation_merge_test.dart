@@ -132,5 +132,66 @@ void main() {
       expect(merged.lastMessage.value, 'pending');
       expect(merged.unreadCount.value, 0);
     });
+
+    test('previewOrUnreadDiffers détecte unread / aperçu / nouvelle conv', () {
+      DateTime? parse(dynamic v) =>
+          v == null ? null : DateTime.tryParse(v.toString());
+
+      expect(
+        ConversationMerge.previewOrUnreadDiffers(
+          local: null,
+          server: serverConv(unread: 1),
+          parseDate: parse,
+        ),
+        isTrue,
+      );
+      expect(
+        ConversationMerge.previewOrUnreadDiffers(
+          local: localConv(unread: 0),
+          server: serverConv(unread: 2),
+          parseDate: parse,
+        ),
+        isTrue,
+      );
+      expect(
+        ConversationMerge.previewOrUnreadDiffers(
+          local: localConv(unread: 1, preview: 'same', senderId: 9),
+          server: serverConv(unread: 1, preview: 'same', senderId: 9),
+          parseDate: parse,
+        ),
+        isFalse,
+      );
+    });
+
+    test('serverPreviewAhead true seulement si serveur strictement plus récent', () {
+      final local = localConv(
+        unread: 0,
+        at: DateTime.utc(2026, 1, 1, 12),
+      );
+      expect(
+        ConversationMerge.serverPreviewAhead(
+          local: local,
+          serverAt: DateTime.utc(2026, 1, 1, 13),
+          hasLocalPendingNewer: false,
+        ),
+        isTrue,
+      );
+      expect(
+        ConversationMerge.serverPreviewAhead(
+          local: local,
+          serverAt: DateTime.utc(2026, 1, 1, 11),
+          hasLocalPendingNewer: false,
+        ),
+        isFalse,
+      );
+      expect(
+        ConversationMerge.serverPreviewAhead(
+          local: local,
+          serverAt: DateTime.utc(2026, 1, 1, 13),
+          hasLocalPendingNewer: true,
+        ),
+        isFalse,
+      );
+    });
   });
 }

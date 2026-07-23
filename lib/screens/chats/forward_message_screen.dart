@@ -148,7 +148,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
       final convId = result['conversID'] as int?;
       if (convId == null) return;
 
-      await chat.refreshConversations();
+      await chat.refreshConversations(force: true);
       if (!mounted) return;
       setState(() => _selectedIds.add(convId));
     } catch (_) {

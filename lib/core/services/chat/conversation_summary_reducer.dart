@@ -114,4 +114,13 @@ class ConversationSummaryReducer {
       await recompute(conv.conversID, myId);
     }
   }
+
+  /// Recalcule uniquement les conversations listées (évite O(n) systématique).
+  Future<void> recomputeMany(Set<int> conversIDs, int myId) async {
+    if (myId == 0 || conversIDs.isEmpty) return;
+    for (final id in conversIDs) {
+      if (id == 0) continue;
+      await recompute(id, myId);
+    }
+  }
 }

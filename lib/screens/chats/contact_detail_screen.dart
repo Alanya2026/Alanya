@@ -298,7 +298,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     final dao = context.read<ChatProvider>().repository.dao;
     await dao.deleteConversation(convId);
     if (!mounted) return;
-    await context.read<ChatProvider>().refreshConversations();
+    await context.read<ChatProvider>().refreshConversations(force: true);
     if (!mounted) return;
     Navigator.pop(context);
   }

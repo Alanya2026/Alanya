@@ -123,7 +123,7 @@ class NotificationNavigation {
     var conv =
         await chat.repository.dao.watchConversation(conversationId).first;
     if (conv != null) return conv;
-    await chat.refreshConversations();
+    await chat.refreshConversations(force: true);
     return chat.repository.dao.watchConversation(conversationId).first;
   }
 

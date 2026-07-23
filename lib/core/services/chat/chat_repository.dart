@@ -63,6 +63,22 @@ class ChatRepository {
   /// Débouncé pour coalescer les rafales (une seule sync par fenêtre courte).
   Timer? _listCatchUpTimer;
 
+  /// Sync liste en cours : les appelants concurrents attendent le même Future.
+  Future<void>? _syncInFlight;
+
+  /// Fin du dernier `syncConversations` réussi (pour cooldown / timer).
+  DateTime? _lastSyncCompletedAt;
+
+  /// Fenêtre pendant laquelle un 2e sync non forcé est ignoré.
+  static const Duration syncCooldown = Duration(seconds: 8);
+
+  /// Au-delà de cet âge, le timer périodique peut relancer un sync liste.
+  static const Duration fullListSyncInterval = Duration(minutes: 5);
+
+  DateTime? get lastSyncCompletedAt => _lastSyncCompletedAt;
+
+  bool get isSocketReady => _api.isSocketReady;
+
   /// Conversation actuellement ouverte à l'écran (0 = aucune). Un message reçu
   /// pour cette conversation est marqué lu immédiatement et n'incrémente pas
   /// l'unread (l'utilisateur le voit en direct) — **uniquement si l'app est
@@ -135,10 +151,11 @@ class ChatRepository {
       dao: _dao,
       myId: () => _myId,
       upsertServerMsg: _upsertServerMsg,
+      upsertIncomingBatch: _upsertIncomingServerMessagesBatch,
       convToCompanion: _convToCompanion,
       parseDate: _parseDate,
       recompute: (convId) => _reducer.recompute(convId, _myId),
-      recomputeAll: () => _reducer.recomputeAll(_myId),
+      recomputeMany: (ids) => _reducer.recomputeMany(ids, _myId),
     );
     _receipts = ReceiptService(
       api: _api,
@@ -191,7 +208,7 @@ class ChatRepository {
     _listCatchUpTimer?.cancel();
     _listCatchUpTimer = Timer(const Duration(milliseconds: 600), () {
       if (_myId == 0) return;
-      _sync.syncConversations();
+      unawaited(syncConversations());
     });
   }
 
@@ -281,6 +298,8 @@ class ChatRepository {
   void unbind() {
     _listCatchUpTimer?.cancel();
     _listCatchUpTimer = null;
+    _syncInFlight = null;
+    _lastSyncCompletedAt = null;
     _debouncedRecompute.dispose();
     _ackWatchdog.dispose();
     if (!_listenersBound) return;
@@ -309,6 +328,8 @@ class ChatRepository {
   Future<void> clearLocalSession() async {
     _listCatchUpTimer?.cancel();
     _listCatchUpTimer = null;
+    _syncInFlight = null;
+    _lastSyncCompletedAt = null;
     _debouncedRecompute.dispose();
     _ackWatchdog.dispose();
     _activeConversationID = 0;
@@ -326,7 +347,44 @@ class ChatRepository {
     _dao.upsertConversation(_convToCompanion(Conversation.fromJson(json), json));
   }
  
-  Future<void> syncConversations() => _sync.syncConversations();
+  /// Sync liste HTTP + delta messages.
+  ///
+  /// [force] ignore le cooldown (pull-to-refresh, nouvelle conversation…).
+  /// Les appels concurrents partagent le même Future (pas de double pipeline).
+  Future<void> syncConversations({bool force = false}) async {
+    if (_myId == 0) return;
+    final inFlight = _syncInFlight;
+    if (inFlight != null) return inFlight;
+
+    if (!force &&
+        _lastSyncCompletedAt != null &&
+        DateTime.now().difference(_lastSyncCompletedAt!) < syncCooldown) {
+      return;
+    }
+
+    final future = _runSyncConversations();
+    _syncInFlight = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_syncInFlight, future)) {
+        _syncInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _runSyncConversations() async {
+    await _sync.syncConversations();
+    _lastSyncCompletedAt = DateTime.now();
+  }
+
+  /// True si le dernier sync liste est plus vieux que [fullListSyncInterval]
+  /// (ou jamais fait).
+  bool get needsPeriodicListSync {
+    final last = _lastSyncCompletedAt;
+    if (last == null) return true;
+    return DateTime.now().difference(last) >= fullListSyncInterval;
+  }
 
   /// Sync delta globale des messages (curseur par conversation). Rattrapage
   /// garanti et sans trou des messages manqués par le WebSocket.
@@ -929,7 +987,7 @@ class ChatRepository {
       await _api.updateConversationsBatch(ids, isPinned: pinned);
     } catch (e) {
       debugPrint('[ChatRepo] setConversationsPinned échouée: $e');
-      await syncConversations();
+      await syncConversations(force: true);
       rethrow;
     }
   }
@@ -952,7 +1010,7 @@ class ChatRepository {
       await _api.updateConversationsBatch(ids, isArchived: archived);
     } catch (e) {
       debugPrint('[ChatRepo] setConversationsArchived échouée: $e');
-      await syncConversations();
+      await syncConversations(force: true);
       rethrow;
     }
   }
@@ -965,7 +1023,7 @@ class ChatRepository {
       await _api.deleteConversations(ids);
     } catch (e) {
       debugPrint('[ChatRepo] deleteConversations échouée: $e');
-      await syncConversations();
+      await syncConversations(force: true);
       rethrow;
     }
   }
@@ -1004,6 +1062,101 @@ class ChatRepository {
 
   Future<void> flushReceiptsCatchUp() => _receipts.flushReceiptsCatchUp();
 
+
+  /// Batch upsert pour messages **entrants** (pas de matching optimiste).
+  /// Une seule transaction Drift + prefetch média hors transaction.
+  Future<Set<int>> _upsertIncomingServerMessagesBatch(
+    List<Map<String, dynamic>> jsons, {
+    bool prefetchMedia = false,
+  }) async {
+    if (jsons.isEmpty) return {};
+
+    final companions = <LocalMessagesCompanion>[];
+    final toPrefetch = <Map<String, dynamic>>[];
+    final affected = <int>{};
+    final existingKeys = <String>{};
+
+    // Précharge les clés déjà présentes pour savoir quoi prefetch.
+    final msgIds = <int>[];
+    for (final j in jsons) {
+      final msgID = _toInt(j['msgID']);
+      if (msgID > 0) msgIds.add(msgID);
+    }
+    if (msgIds.isNotEmpty) {
+      final existing = await (_db.select(_db.localMessages)
+            ..where((m) => m.msgID.isIn(msgIds)))
+          .get();
+      for (final m in existing) {
+        if (m.msgID > 0) existingKeys.add('srv_${m.msgID}');
+      }
+    }
+
+    for (final json in jsons) {
+      final msgID = _toInt(json['msgID']);
+      final convID = _toInt(json['conversationID']);
+      if (convID != 0) affected.add(convID);
+
+      if (msgID == 0) {
+        companions.add(_msgJsonToCompanion(json));
+        continue;
+      }
+
+      final srvKey = 'srv_$msgID';
+      companions.add(
+        _msgJsonToCompanion(json).copyWith(clientId: Value(srvKey)),
+      );
+
+      if (prefetchMedia && !existingKeys.contains(srvKey)) {
+        toPrefetch.add(json);
+      }
+    }
+
+    if (companions.isNotEmpty) {
+      await _dao.upsertMessages(companions);
+    }
+
+    if (prefetchMedia && toPrefetch.isNotEmpty) {
+      for (final json in toPrefetch) {
+        _maybePrefetchIncomingMedia(json);
+      }
+    }
+
+    return affected;
+  }
+
+  void _maybePrefetchIncomingMedia(Map<String, dynamic> json) {
+    if (!MediaDownloadPreferences.isAutoDownloadEnabled) return;
+    final isViewOnce = json['isViewOnce'] == 1 || json['isViewOnce'] == true;
+    if (isViewOnce) return;
+    final senderID = _toInt(json['senderID']);
+    if (senderID != 0 && senderID == _myId) return;
+
+    final msgID = _toInt(json['msgID']);
+    final mtype = _toInt(json['type']);
+    final mediaUrl = json['mediaUrl']?.toString();
+    if (mediaUrl == null || mediaUrl.isEmpty) return;
+    final mediaName = json['mediaName']?.toString();
+    if (mtype == 1 || mtype == 2) {
+      _cacheMedia(
+        msgID,
+        mediaUrl,
+        type: mtype,
+        isMine: false,
+        isViewOnce: false,
+        mediaName: mediaName,
+      );
+    } else if (mtype == 4) {
+      _cacheMedia(
+        msgID,
+        mediaUrl,
+        maxBytes: 5 * 1024 * 1024,
+        type: 4,
+        isMine: false,
+        isViewOnce: false,
+        mediaName: mediaName,
+      );
+    }
+  }
 
   /// Upsert un message serveur et renvoie `true` s'il était nouveau en local.
   Future<bool> _upsertServerMsg(
@@ -1125,39 +1278,8 @@ class ChatRepository {
 
     // Préfetch médias reçus si auto-download activé (images, vidéos, fichiers < 5 Mo).
     // Les vues uniques ne sont jamais mises en cache. Les vocaux restent manuels.
-    final isViewOnce = json['isViewOnce'] == 1 || json['isViewOnce'] == true;
-    final senderID = _toInt(json['senderID']);
-    final isMine = senderID != 0 && senderID == _myId;
-    if (prefetchMedia &&
-        wasNew &&
-        !isViewOnce &&
-        !isMine &&
-        MediaDownloadPreferences.isAutoDownloadEnabled) {
-      final mtype = _toInt(json['type']);
-      final mediaUrl = json['mediaUrl']?.toString();
-      if (mediaUrl != null && mediaUrl.isNotEmpty) {
-        final mediaName = json['mediaName']?.toString();
-        if (mtype == 1 || mtype == 2) {
-          _cacheMedia(
-            msgID,
-            mediaUrl,
-            type: mtype,
-            isMine: false,
-            isViewOnce: false,
-            mediaName: mediaName,
-          );
-        } else if (mtype == 4) {
-          _cacheMedia(
-            msgID,
-            mediaUrl,
-            maxBytes: 5 * 1024 * 1024,
-            type: 4,
-            isMine: false,
-            isViewOnce: false,
-            mediaName: mediaName,
-          );
-        }
-      }
+    if (prefetchMedia && wasNew) {
+      _maybePrefetchIncomingMedia(json);
     }
     return wasNew;
   }

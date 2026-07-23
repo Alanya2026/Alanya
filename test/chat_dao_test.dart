@@ -221,5 +221,34 @@ void main() {
       expect(msg.status, 3);
       expect(msg.readAt, isNot(isNull));
     });
+
+    test('conversationIdsWithPendingNewerThan batch', () async {
+      final now = DateTime.now().toUtc();
+      final older = now.subtract(const Duration(minutes: 5));
+
+      await db.into(db.localMessages).insert(LocalMessagesCompanion.insert(
+        clientId: 'pend_1',
+        conversationID: 1,
+        senderID: 7,
+        content: const Value('pending newer'),
+        sendAt: now,
+        syncPending: const Value(true),
+      ));
+      await db.into(db.localMessages).insert(LocalMessagesCompanion.insert(
+        clientId: 'pend_2',
+        conversationID: 2,
+        senderID: 7,
+        content: const Value('pending older'),
+        sendAt: older,
+        syncPending: const Value(true),
+      ));
+
+      final ids = await dao.conversationIdsWithPendingNewerThan({
+        1: older,
+        2: now,
+        3: now,
+      });
+      expect(ids, {1});
+    });
   });
 }

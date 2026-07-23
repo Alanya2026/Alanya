@@ -374,7 +374,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   Future<void> _syncConversationHistory(int convId) async {
     try {
       var activeConvId = convId;
-      for (var attempt = 0; attempt < 4; attempt++) {
+      for (var attempt = 0; attempt < 2; attempt++) {
         await _chat.repository.syncMessages(activeConvId);
         await _chat.repository.syncReactions(activeConvId);
         if (!mounted || _convId != activeConvId) return;
@@ -389,7 +389,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
             !widget.isGroup &&
             widget.userId != null &&
             _myId != null &&
-            attempt >= 1) {
+            attempt >= 0) {
           final resolved = await _chat.repository.resolveDirectConversationWithHistory(
             myId: _myId!,
             peerUserId: widget.userId!,
@@ -409,8 +409,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         }
 
         if (!_expectMessages) break;
-        if (attempt < 3) {
-          await Future<void>.delayed(Duration(milliseconds: 600 * (attempt + 1)));
+        if (attempt < 1) {
+          await Future<void>.delayed(Duration(milliseconds: 400 * (attempt + 1)));
         }
       }
       if (!mounted) return;
@@ -457,7 +457,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       if (conversationId == null || !mounted) return null;
 
       setState(() => _convId = conversationId);
-      await _chat.refreshConversations();
+      await _chat.refreshConversations(force: true);
       if (!mounted) return conversationId;
       await _attachToConversation(conversationId);
       return conversationId;

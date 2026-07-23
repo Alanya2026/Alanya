@@ -81,7 +81,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         groupPhoto: photoUrl,
       );
 
-      await chat.refreshConversations();
+      await chat.refreshConversations(force: true);
       if (!mounted) return;
       Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e, st) {

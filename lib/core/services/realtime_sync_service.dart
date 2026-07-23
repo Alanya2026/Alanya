@@ -15,11 +15,14 @@ class RealtimeSyncService {
         _status = status;
 
   /// Synchronise conversations, messages (delta) et statuts depuis l'API.
-  Future<void> catchUp({int? conversationId}) async {
+  ///
+  /// Respecte le cooldown de [ChatRepository.syncConversations] sauf si
+  /// [force] est true (évite le 4e pipeline au resume immédiat après bind).
+  Future<void> catchUp({int? conversationId, bool force = false}) async {
     try {
       await _chat.repository.flushOutbox();
       await _chat.repository.flushReceiptsCatchUp();
-      await _chat.refreshConversations();
+      await _chat.refreshConversations(force: force);
       if (conversationId != null && conversationId > 0) {
         await _chat.repository.syncMessages(conversationId, delta: true);
       }

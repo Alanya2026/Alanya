@@ -35,32 +35,37 @@ class _ChatsScreenState extends State<ChatsScreen> {
   bool _selectionMode = false;
   final Set<int> _selectedConversationIDs = {};
   List<LocalConversation> _latestConversations = const [];
-  /// True tant que le premier refresh serveur n'a pas fini.
-  /// Drift émet `[]` immédiatement (active) → sans ce flag, l'empty state
-  /// s'affiche pendant que le sync HTTP tourne encore.
+  /// True tant que le premier sync serveur (via [ChatProvider.bind]) n'a
+  /// pas fini. Drift émet `[]` immédiatement (active) → sans ce flag,
+  /// l'empty state s'affiche pendant que le sync HTTP tourne encore.
   bool _awaitingInitialConversations = true;
 
   @override
   void initState() {
     super.initState();
-    _bootstrapConversations();
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+    if (chat.initialSyncComplete) {
+      _awaitingInitialConversations = false;
+    } else {
+      chat.addListener(_onChatProviderChanged);
+    }
   }
 
-  Future<void> _bootstrapConversations() async {
-    try {
-      await Provider.of<ChatProvider>(context, listen: false)
-          .refreshConversations();
-    } catch (_) {
-      // Offline / erreur : on laisse l'UI sortir du skeleton (empty ou cache).
-    } finally {
-      if (mounted) {
-        setState(() => _awaitingInitialConversations = false);
-      }
+  void _onChatProviderChanged() {
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+    if (!chat.initialSyncComplete) return;
+    chat.removeListener(_onChatProviderChanged);
+    if (mounted) {
+      setState(() => _awaitingInitialConversations = false);
     }
   }
 
   @override
   void dispose() {
+    try {
+      Provider.of<ChatProvider>(context, listen: false)
+          .removeListener(_onChatProviderChanged);
+    } catch (_) {}
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -274,7 +279,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   );
                 }
                 return RefreshIndicator(
-                  onRefresh: () => chat.refreshConversations(),
+                  onRefresh: () => chat.refreshConversations(force: true),
                   child: SlidableAutoCloseBehavior(
                     child: ListView.builder(
                       padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
