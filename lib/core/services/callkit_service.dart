@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import '../theme/locale_controller.dart';
@@ -46,6 +49,13 @@ class CallKitService {
   /// Dernier callId pour lequel [showIncoming] a été appelé (anti-doublon
   /// FCM + socket en arrière-plan).
   String? _lastShownCallId;
+
+  static const _nativeCallChannel = MethodChannel('com.alanya/call_native');
+
+  bool _isAppForeground() {
+    final state = WidgetsBinding.instance.lifecycleState;
+    return state == null || state == AppLifecycleState.resumed;
+  }
 
   void setVoipTokenListener(void Function(String token)? listener) {
     _onVoipTokenUpdated = listener;
@@ -96,6 +106,11 @@ class CallKitService {
     bool silent = false,
   }) async {
     if (kIsWeb) return;
+
+    if (_isAppForeground()) {
+      debugPrint('[CallKit] showIncoming ignoré (app au premier plan)');
+      return;
+    }
 
     final id = callId.trim();
     if (id.isNotEmpty && await EndedCallRegistry.isEnded(id)) {
@@ -155,6 +170,30 @@ class CallKitService {
     );
 
     await FlutterCallkitIncoming.showCallkitIncoming(params);
+  }
+
+  /// Retire la notif CallKit sans marquer l'appel terminé ni déclencher un refus
+  /// côté natif (voir [CallDismissRegistry]).
+  Future<void> dismissIncomingUiSilently({String? callId}) async {
+    if (kIsWeb) return;
+    final id = (callId ?? _lastShownCallId ?? '').trim();
+    if (id.isEmpty) return;
+    if (Platform.isAndroid) {
+      try {
+        await _nativeCallChannel.invokeMethod<void>(
+          'dismissIncomingSilently',
+          {'callId': id},
+        );
+      } catch (e) {
+        debugPrint('[CallKit] dismissIncomingSilently native: $e');
+      }
+    }
+    if (id == _lastShownCallId) _lastShownCallId = null;
+    try {
+      await FlutterCallkitIncoming.endCall(id);
+    } catch (e) {
+      debugPrint('[CallKit] dismissIncomingUiSilently error: $e');
+    }
   }
 
   /// Démarre un appel sortant / réunion — active le foreground service Android.

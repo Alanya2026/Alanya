@@ -54,6 +54,11 @@ class TalkyApplication : Application() {
             }
             if (stillThere) continue
 
+            if (CallDismissRegistry.consumeIfProgrammatic(id)) {
+                Log.i(TAG, "ACTIVE_CALLS: dismiss programmatique id=$id (pas de reject)")
+                continue
+            }
+
             val callerId = extractCallerId(prev)
             val callId = extractCallId(prev)
             val wasAccepted = prev.optBoolean("isAccepted", false)

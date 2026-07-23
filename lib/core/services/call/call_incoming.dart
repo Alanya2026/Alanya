@@ -145,6 +145,41 @@ extension CallIncoming on CallService {
       return;
     }
 
+    // Premier plan : Flutter gère l'UI — retirer CallKit sans refuser l'appel.
+    if (_isAppForeground) {
+      await _dismissStrayIncomingCallKit(callId);
+      if (_status == CallStatus.incoming &&
+          (_currentCallId == null || _currentCallId == callId)) {
+        debugPrint('[CallService] preview ignoré (déjà entrant via socket): $callId');
+        return;
+      }
+      if (_status != CallStatus.idle) {
+        debugPrint('[CallService] 🛡 preview foreground refusé (occupé): $callId');
+        return;
+      }
+      if (!await canPrepareIncomingFromCallKit(
+        callId: callId,
+        callerId: callerId,
+        callerName: callerName,
+        roomId: roomId,
+      )) {
+        return;
+      }
+      if (!_apiClient.isSocketConnected) {
+        _apiClient.connectSocket();
+      }
+      debugPrint('[CallService] preview foreground → préparer avant socket: $callId');
+      await _prepareIncomingFromCallKitAsync(
+        callId: callId,
+        callerId: callerId,
+        callerName: callerName,
+        callerPhoto: callerPhoto,
+        isVideo: isVideo,
+        roomId: roomId,
+      );
+      return;
+    }
+
     if (!await canPrepareIncomingFromCallKit(
       callId: callId,
       callerId: callerId,

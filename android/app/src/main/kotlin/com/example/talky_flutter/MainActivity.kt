@@ -101,7 +101,7 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
-        CallNativeBridge.attach(flutterEngine.dartExecutor.binaryMessenger)
+        CallNativeBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
 
         notificationOpenChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,

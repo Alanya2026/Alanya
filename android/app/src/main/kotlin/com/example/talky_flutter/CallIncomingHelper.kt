@@ -49,6 +49,13 @@ object CallIncomingHelper {
         }
     }
 
+    fun dismissIncomingSilently(context: Context, callId: String) {
+        val id = callId.trim()
+        if (id.isEmpty()) return
+        CallDismissRegistry.markProgrammaticDismiss(id)
+        endCall(context, mapOf("callId" to id))
+    }
+
     fun endCall(context: Context, data: Map<String, String>) {
         ensureInitialized(context)
         lastShownCallId = null

@@ -104,22 +104,30 @@ extension CallSignaling on CallService {
       if (_isAutoAnsweringFromPush) {
         debugPrint('[CallService] 🔇 Sonnerie entrante ignorée: auto-réponse en cours');
       } else if (!_isAppForeground) {
-        debugPrint('[CallService] 📲 CallKit depuis socket (app en arrière-plan)');
-        unawaited(
-          _callKit
-              .showIncoming(
-                callId: incomingCallId ?? '',
-                callerId: incomingCallerId,
-                callerName: _remoteUserName ?? resolveL10n().callNoun,
-                callerPhoto: _remoteUserPhoto,
-                isVideo: _isVideo,
-                silent: false,
-              )
-              .catchError((e) {
-            debugPrint('[CallService] ** CallKit showIncoming error: $e');
-          }),
-        );
+        if (_nativeAndroidHandlesIncomingCallUi) {
+          debugPrint(
+            '[CallService] 📲 CallKit natif Android (socket ignoré pour UI): '
+            'callId=$incomingCallId',
+          );
+        } else {
+          debugPrint('[CallService] 📲 CallKit depuis socket (app en arrière-plan)');
+          unawaited(
+            _callKit
+                .showIncoming(
+                  callId: incomingCallId ?? '',
+                  callerId: incomingCallerId,
+                  callerName: _remoteUserName ?? resolveL10n().callNoun,
+                  callerPhoto: _remoteUserPhoto,
+                  isVideo: _isVideo,
+                  silent: false,
+                )
+                .catchError((e) {
+              debugPrint('[CallService] ** CallKit showIncoming error: $e');
+            }),
+          );
+        }
       } else {
+        unawaited(_dismissStrayIncomingCallKit(incomingCallId));
         _ringtone.startIncomingRingtone().catchError((e) {
           debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
         });
@@ -295,22 +303,28 @@ extension CallSignaling on CallService {
       notify();
 
       if (!_isAppForeground) {
-        debugPrint('[CallService] 📲 CallKit groupe depuis socket (app en arrière-plan)');
-        unawaited(
-          _callKit
-              .showIncoming(
-                callId: _groupRoomId ?? '',
-                callerId: callerId ?? '',
-                callerName: _remoteUserName ?? resolveL10n().groupCall,
-                callerPhoto: _remoteUserPhoto,
-                isVideo: _isVideo,
-                roomId: _groupRoomId,
-                silent: false,
-              )
-              .catchError((e) {
-            debugPrint('[CallService] ** CallKit group showIncoming error: $e');
-          }),
-        );
+        if (_nativeAndroidHandlesIncomingCallUi) {
+          debugPrint(
+            '[CallService] 📲 CallKit natif Android groupe (socket ignoré pour UI)',
+          );
+        } else {
+          debugPrint('[CallService] 📲 CallKit groupe depuis socket (app en arrière-plan)');
+          unawaited(
+            _callKit
+                .showIncoming(
+                  callId: _groupRoomId ?? '',
+                  callerId: callerId ?? '',
+                  callerName: _remoteUserName ?? resolveL10n().groupCall,
+                  callerPhoto: _remoteUserPhoto,
+                  isVideo: _isVideo,
+                  roomId: _groupRoomId,
+                  silent: false,
+                )
+                .catchError((e) {
+              debugPrint('[CallService] ** CallKit group showIncoming error: $e');
+            }),
+          );
+        }
       }
     });
 

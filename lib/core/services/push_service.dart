@@ -41,6 +41,9 @@ bool get _androidNativeMessagesHandlePush =>
     Platform.isAndroid &&
     _kAndroidNativeMessageNotifications;
 
+/// Android V2 : TalkyFirebaseMessagingService affiche CallKit en arrière-plan.
+bool get _androidNativeCallsHandlePush => _androidNativeMessagesHandlePush;
+
 /// Données d'une notification meeting diffusées sur [PushService.meetingNotifications].
 class MeetingNotifData {
   final String type;
@@ -75,8 +78,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     NotificationDiagnostics.pushBackground(Map<String, dynamic>.from(data));
 
     if (type == 'call' || type == 'group_call') {
+      final callId = (data['callId'] ?? data['roomId'] ?? '').toString();
+      if (_androidNativeCallsHandlePush) {
+        debugPrint('[Push] background call ignoré (natif Android): $callId');
+        return;
+      }
       if (!kIsWeb) {
-        final callId = (data['callId'] ?? data['roomId'] ?? '').toString();
         if (await EndedCallRegistry.isEnded(callId)) {
           debugPrint('[Push] background call ignoré (callId terminé): $callId');
           return;
@@ -411,15 +418,11 @@ class PushService {
         debugPrint('[Push] foreground call ignoré (callId terminé): $callId');
         return;
       }
-      await CallKitService.instance.showIncoming(
-        callId: callId,
-        callerId: (data['callerId'] ?? '').toString(),
-        callerName: (data['callerName'] ?? data['title'] ?? resolveL10n().callNoun).toString(),
-        callerPhoto: data['photo']?.toString(),
-        isVideo: data['isVideo'] == 'true',
-        roomId: data['roomId']?.toString(),
-        silent: false,
-      );
+      // Premier plan : pas de CallKit — socket → IncomingCallScreen + sonnerie.
+      if (!_apiClient.isSocketConnected) {
+        _apiClient.connectSocket();
+      }
+      debugPrint('[Push] foreground call → socket (pas de CallKit): $callId');
       return;
     }
 

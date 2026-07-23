@@ -43,8 +43,14 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
                 MessageNotificationHelper.cancelConversation(this, convId)
             }
             "call", "group_call" -> {
-                Log.d(TAG, "call native show callId=${data["callId"] ?: data["roomId"]}")
-                CallIncomingHelper.showIncoming(this, data)
+                if (isApplicationForeground(this)) {
+                    // Premier plan : Flutter + socket (IncomingCallScreen + sonnerie).
+                    Log.d(TAG, "call foreground → forward Flutter callId=${data["callId"] ?: data["roomId"]}")
+                    forwardToFlutter(message)
+                } else {
+                    Log.d(TAG, "call native show callId=${data["callId"] ?: data["roomId"]}")
+                    CallIncomingHelper.showIncoming(this, data)
+                }
             }
             "call_ended" -> {
                 Log.d(TAG, "call native end callId=${data["callId"]}")

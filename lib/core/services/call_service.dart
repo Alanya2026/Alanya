@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +32,12 @@ part 'call/call_controls.dart';   // contrôles médias + timer
 part 'call/call_session.dart';    // session audio / foreground en veille
 part 'call/call_ui.dart';         // bannière / minimiser l'écran d'appel
 part 'call/call_outgoing_restore.dart'; // restauration appel sortant après kill
+
+/// Aligné sur TalkyFirebaseMessagingService (Android V2).
+const bool _kAndroidNativeCallNotifications = bool.fromEnvironment(
+  'TALKY_ANDROID_NATIVE_NOTIF_V2',
+  defaultValue: true,
+);
 
 enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
 
@@ -237,6 +244,27 @@ class CallService extends ChangeNotifier {
   bool get _isAppForeground {
     final state = WidgetsBinding.instance.lifecycleState;
     return state == null || state == AppLifecycleState.resumed;
+  }
+
+  bool get isAppInForeground => _isAppForeground;
+
+  /// Android V2 : CallKit entrant affiché côté natif en arrière-plan.
+  bool get _nativeAndroidHandlesIncomingCallUi =>
+      !kIsWeb &&
+      Platform.isAndroid &&
+      _kAndroidNativeCallNotifications;
+
+  /// Retire l'UI CallKit sans refuser l'appel (migration premier plan).
+  Future<void> dismissIncomingCallKitForForeground() async {
+    if (kIsWeb || !_isAppForeground) return;
+    final id = _currentCallId;
+    if (id == null || id.isEmpty) return;
+    await _callKit.dismissIncomingUiSilently(callId: id);
+  }
+
+  Future<void> _dismissStrayIncomingCallKit(String? callId) async {
+    if (kIsWeb || callId == null || callId.isEmpty) return;
+    await _callKit.dismissIncomingUiSilently(callId: callId);
   }
 
   bool _isMeetingActive() {
