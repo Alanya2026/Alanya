@@ -9,6 +9,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
 import android.app.NotificationManager
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -16,8 +17,19 @@ import java.io.File
 import java.io.FileInputStream
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        const val EXTRA_NOTIFICATION_OPEN = "talky_notification_open"
+        private const val TAG = "TalkyMainActivity"
+        private const val NOTIFICATION_OPEN_CHANNEL = "com.alanya/notification_open"
+    }
+
     private val mediaExportChannel = "com.alanya/media_export"
     private val callPermissionsChannel = "com.alanya/call_permissions"
+
+    private var notificationOpenChannel: MethodChannel? = null
+    private var pendingNotificationOpen: Map<String, String>? = null
+    /** True une fois que Dart a appelé getInitialOpen (handler onOpen prêt). */
+    private var flutterNotificationOpenReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +39,13 @@ class MainActivity : FlutterActivity() {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
         }
+        handleNotificationIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNotificationIntent(intent)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -81,6 +100,65 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        notificationOpenChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NOTIFICATION_OPEN_CHANNEL,
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getInitialOpen" -> {
+                        flutterNotificationOpenReady = true
+                        result.success(pendingNotificationOpen)
+                        pendingNotificationOpen = null
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
+    }
+
+    /**
+     * Tap sur notif MessagingStyle native : extras → Flutter (PushService).
+     * Cold start : stocké jusqu'à getInitialOpen.
+     * App déjà vivante (handler prêt) : push immédiat via onOpen.
+     */
+    private fun handleNotificationIntent(intent: Intent?) {
+        if (intent == null) return
+        val isOpen = intent.getBooleanExtra(EXTRA_NOTIFICATION_OPEN, false)
+        val convId = intent.getIntExtra(MessageNotificationHelper.EXTRA_CONVERSATION_ID, 0)
+            .takeIf { it > 0 }
+            ?: intent.getStringExtra(MessageNotificationHelper.EXTRA_CONVERSATION_ID)
+                ?.toIntOrNull()
+            ?: 0
+        if (!isOpen && convId <= 0) return
+        if (convId <= 0) return
+
+        val payload = linkedMapOf(
+            "type" to (intent.getStringExtra("type") ?: "message"),
+            "conversationId" to convId.toString(),
+        )
+        for (key in listOf(
+            "title",
+            "senderName",
+            "isGroup",
+            "groupName",
+            "msgID",
+            "senderId",
+        )) {
+            intent.getStringExtra(key)?.let { payload[key] = it }
+        }
+
+        // Évite de rejouer le même Intent (rotation / recreate).
+        intent.removeExtra(EXTRA_NOTIFICATION_OPEN)
+        intent.removeExtra(MessageNotificationHelper.EXTRA_CONVERSATION_ID)
+
+        Log.d(TAG, "notification open conv=$convId ready=$flutterNotificationOpenReady")
+        if (flutterNotificationOpenReady) {
+            notificationOpenChannel?.invokeMethod("onOpen", payload)
+        } else {
+            pendingNotificationOpen = payload
+        }
     }
 
     private fun saveToDownloads(

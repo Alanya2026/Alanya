@@ -42,7 +42,15 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
                 val convId = data["conversationId"]?.toIntOrNull() ?: return
                 MessageNotificationHelper.cancelConversation(this, convId)
             }
-            "call", "group_call", "call_ended",
+            "call", "group_call" -> {
+                Log.d(TAG, "call native show callId=${data["callId"] ?: data["roomId"]}")
+                CallIncomingHelper.showIncoming(this, data)
+            }
+            "call_ended" -> {
+                Log.d(TAG, "call native end callId=${data["callId"]}")
+                CallIncomingHelper.endCall(this, data)
+                forwardToFlutter(message)
+            }
             "meeting_invite", "meeting_reminder", "status_view",
             -> forwardToFlutter(message)
             else -> forwardToFlutter(message)

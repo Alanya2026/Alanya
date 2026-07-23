@@ -109,8 +109,11 @@ class TalkyApiClient {
             await _refreshAccessToken();
             final retried = await request().timeout(timeout);
             return _parseResponse(retried);
-          } catch (_) {
-            throw TalkyException(LocaleController.instance.l10n.sessionExpired, 401);
+          } on TalkyException catch (e) {
+            if (e.statusCode == 401 || e.statusCode == 403) {
+              throw TalkyException(LocaleController.instance.l10n.sessionExpired, 401);
+            }
+            rethrow;
           }
         }
         throw TalkyException(LocaleController.instance.l10n.notAuthenticated, 401);
@@ -160,6 +163,10 @@ class TalkyApiClient {
     if (response.statusCode == 200) {
       _accessToken  = data['accessToken'];
       _refreshToken = data['refreshToken'];
+      await StorageService().saveTokens(
+        accessToken: _accessToken!,
+        refreshToken: _refreshToken!,
+      );
       reauthSocketIfConnected();
     } else {
       throw TalkyException(data['error'] ?? LocaleController.instance.l10n.refreshFailed, response.statusCode);

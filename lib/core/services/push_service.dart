@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -182,6 +183,8 @@ class PushService {
   static PushService? _instance;
   static PushService get instance => _instance!;
 
+  static const _nativeOpenChannel = MethodChannel('com.alanya/notification_open');
+
   final TalkyApiClient _apiClient;
   final GlobalKey<NavigatorState>? _navKey;
   late final PushDeviceCoordinator _deviceCoordinator =
@@ -250,6 +253,8 @@ class PushService {
       await LocalNotificationHelper.ensureInitialized(
         onTap: _onLocalNotifTap,
       );
+
+      await _bindNativeNotificationOpens();
 
       await _maybeRequestBatteryOptimizationExemption();
       await CallPermissionsHelper.ensureCallDisplayPermissions();
@@ -393,7 +398,15 @@ class PushService {
         debugPrint('[Push] foreground call ignoré (callId terminé): $callId');
         return;
       }
-      debugPrint('[Push] Appel géré via CallKit/socket (pas de notif locale)');
+      await CallKitService.instance.showIncoming(
+        callId: callId,
+        callerId: (data['callerId'] ?? '').toString(),
+        callerName: (data['callerName'] ?? data['title'] ?? resolveL10n().callNoun).toString(),
+        callerPhoto: data['photo']?.toString(),
+        isVideo: data['isVideo'] == 'true',
+        roomId: data['roomId']?.toString(),
+        silent: false,
+      );
       return;
     }
 
@@ -478,6 +491,44 @@ class PushService {
 
     if (action.fromTap) {
       _navKey?.currentState?.popUntil((route) => route.isFirst);
+    }
+  }
+
+  /// Tap sur notification MessagingStyle native (Android Phase 4).
+  Future<void> _bindNativeNotificationOpens() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      _nativeOpenChannel.setMethodCallHandler((call) async {
+        if (call.method != 'onOpen') return;
+        final raw = call.arguments;
+        if (raw is! Map) return;
+        final data = raw.map(
+          (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
+        );
+        debugPrint(
+          '[Push] native notif open: type=${data['type']} conv=${data['conversationId']}',
+        );
+        _dispatchNotificationAction(
+          NotificationAction.fromMap(data, fromTap: true),
+        );
+      });
+
+      final initial = await _nativeOpenChannel.invokeMethod<dynamic>('getInitialOpen');
+      if (initial is Map) {
+        final data = initial.map(
+          (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
+        );
+        if ((data['conversationId'] ?? '').isNotEmpty) {
+          debugPrint(
+            '[Push] native notif cold start: conv=${data['conversationId']}',
+          );
+          _dispatchNotificationAction(
+            NotificationAction.fromMap(data, fromTap: true),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[Push] bindNativeNotificationOpens: $e');
     }
   }
 

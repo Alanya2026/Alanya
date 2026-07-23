@@ -37,6 +37,7 @@ class TalkyApplication : Application() {
         activeCallsSnapshot = readActiveCalls()
         callkitPrefs.registerOnSharedPreferenceChangeListener(activeCallsListener)
         Log.i(TAG, "CallKit ACTIVE_CALLS listener armé (snapshot=${activeCallsSnapshot.length()})")
+        CallIncomingHelper.ensureInitialized(this)
     }
 
     private fun onActiveCallsChanged() {

@@ -85,20 +85,28 @@ class AuthProvider extends ChangeNotifier {
         _currentUser = User.fromJson(userData);
         await _storage.saveUser(_currentUser!);
       } on TalkyException catch (e) {
-        // Offline ou erreur transitoire : on garde le user caché. Sinon
-        // 401/403 = token invalide → clear et déconnexion.
-        if (e.statusCode == 401 || e.statusCode == 403) rethrow;
-        debugPrint('[AuthProvider] getMe offline, on garde le cache: ${e.message}');
+        // Offline ou erreur transitoire : on garde le user caché.
+        // 401/403 après échec refresh = session réellement expirée.
+        if (e.statusCode == 401 || e.statusCode == 403) {
+          debugPrint('[AuthProvider] session invalid (${e.statusCode}): ${e.message}');
+          try {
+            await _storage.clearAll();
+          } catch (e2, st) {
+            AppLog.w('AuthProvider', 'clearAll après session expirée échoué', e2, st);
+          }
+          _apiClient.logout();
+          _currentUser = null;
+        } else {
+          debugPrint('[AuthProvider] getMe offline, on garde le cache: ${e.message}');
+        }
       }
       // Pas de connectSocket ici : les listeners chat doivent être bindés
       // avant, sinon `message:received` / `auth:verified` sont perdus.
     } catch (e) {
       debugPrint('[AuthProvider] ** _checkAuthStatus error: $e');
-      try { await _storage.clearAll(); } catch (e2, st) {
-        AppLog.w('AuthProvider', 'clearAll après erreur auth échoué', e2, st);
-      }
-      _apiClient.logout();
-      _currentUser = null;
+      // Erreur inattendue (storage, etc.) — ne pas effacer la session.
+    } finally {
+      notifyListeners();
     }
   }
 

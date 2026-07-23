@@ -45,19 +45,63 @@ object MessageNotificationHelper {
 
     fun showMessage(context: Context, data: Map<String, String>) {
         val convId = data["conversationId"]?.toIntOrNull() ?: return
+        val msgID = data["msgID"]?.toIntOrNull() ?: 0
+        val eventId = data["eventId"]?.trim().orEmpty()
+
+        if (NotificationDedupHelper.isAlreadyHandled(context, msgID, eventId)) {
+            Log.d(TAG, "skip duplicate msgID=$msgID eventId=$eventId")
+            return
+        }
+        if (!NotificationDedupHelper.tryReserve(context, msgID, eventId)) {
+            Log.d(TAG, "skip reserved msgID=$msgID eventId=$eventId")
+            return
+        }
+
         val senderName = data["senderName"] ?: data["title"] ?: "Alanya"
         val body = data["body"] ?: ""
         val isGroup = data["isGroup"] == "1"
         val groupName = data["groupName"] ?: ""
 
         val displayBody = if (isGroup) "$senderName: $body" else body
-        val buffer = appendBuffer(context, convId, senderName, displayBody)
-        postNotification(context, convId, isGroup, groupName, senderName, displayBody, buffer)
+        val buffer = appendBuffer(context, convId, senderName, displayBody, msgID)
+        val openExtras = mapOf(
+            "type" to (data["type"] ?: "message"),
+            EXTRA_CONVERSATION_ID to convId.toString(),
+            "title" to (data["title"] ?: senderName),
+            "senderName" to senderName,
+            "isGroup" to if (isGroup) "1" else "0",
+            "groupName" to groupName,
+            "msgID" to (data["msgID"] ?: ""),
+            "senderId" to (data["senderId"] ?: ""),
+        )
+        postNotification(
+            context,
+            convId,
+            isGroup,
+            groupName,
+            senderName,
+            displayBody,
+            buffer,
+            openExtras,
+        )
+        NotificationDedupHelper.markShown(context, msgID, eventId)
     }
 
     fun appendOutgoing(context: Context, convId: Int, text: String) {
         val buffer = appendBuffer(context, convId, LOCAL_USER_NAME, text)
-        postNotification(context, convId, false, "", LOCAL_USER_NAME, text, buffer)
+        postNotification(
+            context,
+            convId,
+            false,
+            "",
+            LOCAL_USER_NAME,
+            text,
+            buffer,
+            mapOf(
+                "type" to "message",
+                EXTRA_CONVERSATION_ID to convId.toString(),
+            ),
+        )
     }
 
     fun cancelConversation(context: Context, conversationId: Int) {
@@ -80,6 +124,7 @@ object MessageNotificationHelper {
         senderName: String,
         latestLine: String,
         buffer: List<BufferEntry>,
+        openExtras: Map<String, String> = emptyMap(),
     ) {
         ensureChannel(context)
         val notifId = notificationIdForConversation(convId)
@@ -97,12 +142,21 @@ object MessageNotificationHelper {
 
         val title = if (isGroup && groupName.isNotEmpty()) groupName else senderName
 
-        val launchIntent = context.packageManager
-            .getLaunchIntentForPackage(context.packageName)
-            ?.apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(EXTRA_CONVERSATION_ID, convId)
+        // Intent explicite MainActivity : Flutter lit les extras au tap
+        // (getLaunchIntentForPackage ne suffit pas pour la navigation).
+        val launchIntent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(MainActivity.EXTRA_NOTIFICATION_OPEN, true)
+            putExtra(EXTRA_CONVERSATION_ID, convId)
+            putExtra("type", openExtras["type"] ?: "message")
+            for ((k, v) in openExtras) {
+                if (k != EXTRA_CONVERSATION_ID) putExtra(k, v)
             }
+        }
 
         val contentPending = PendingIntent.getActivity(
             context,
@@ -203,6 +257,7 @@ object MessageNotificationHelper {
         val sender: String,
         val body: String,
         val timestamp: Long,
+        val msgID: Int = 0,
     )
 
     private fun appendBuffer(
@@ -210,56 +265,37 @@ object MessageNotificationHelper {
         convId: Int,
         sender: String,
         body: String,
+        msgID: Int = 0,
     ): List<BufferEntry> {
         synchronized(bufferLock) {
-            val list = loadBufferIncludingActive(context, convId)
-            list.add(BufferEntry(sender, body, System.currentTimeMillis()))
-            val trimmed = if (list.size > MAX_BUFFER) list.takeLast(MAX_BUFFER) else list
+            val list = readBufferUnlocked(context, convId).toMutableList()
+            if (msgID > 0 && list.any { it.msgID == msgID }) {
+                Log.d(TAG, "buffer skip duplicate msgID=$msgID conv=$convId")
+                return list
+            }
+            list.add(BufferEntry(sender, body, System.currentTimeMillis(), msgID))
+            val deduped = dedupeBufferEntries(list)
+            val trimmed = if (deduped.size > MAX_BUFFER) deduped.takeLast(MAX_BUFFER) else deduped
             persistBufferUnlocked(context, convId, trimmed)
             Log.d(TAG, "buffer conv=$convId size=${trimmed.size}")
             return trimmed
         }
     }
 
-    private fun loadBufferIncludingActive(
-        context: Context,
-        convId: Int,
-    ): MutableList<BufferEntry> {
-        val list = readBufferUnlocked(context, convId).toMutableList()
-        mergeActiveNotificationMessages(context, convId, list)
-        return list
-    }
-
-    private fun mergeActiveNotificationMessages(
-        context: Context,
-        convId: Int,
-        list: MutableList<BufferEntry>,
-    ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
-        val tag = "conv_$convId"
-        val notifId = notificationIdForConversation(convId)
-        val nm = context.getSystemService(NotificationManager::class.java) ?: return
-        for (sbn in nm.activeNotifications) {
-            if (sbn.tag != tag) continue
-            val extracted = NotificationCompat.MessagingStyle
-                .extractMessagingStyleFromNotification(sbn.notification)
-                ?: continue
-            for (msg in extracted.messages) {
-                val body = msg.text?.toString()?.trim().orEmpty()
-                if (body.isEmpty()) continue
-                val sender = msg.person?.name?.toString()?.trim()?.takeIf { it.isNotEmpty() }
-                    ?: LOCAL_USER_NAME
-                val ts = msg.timestamp
-                val duplicate = list.any {
-                    it.body == body && kotlin.math.abs(it.timestamp - ts) < 2000L
-                }
-                if (!duplicate) {
-                    list.add(BufferEntry(sender, body, ts))
-                }
+    /** Retire les doublons (ex. ancienne fusion notif active + buffer). */
+    private fun dedupeBufferEntries(entries: List<BufferEntry>): List<BufferEntry> {
+        if (entries.size < 2) return entries
+        val result = mutableListOf<BufferEntry>()
+        for (entry in entries) {
+            val duplicate = result.any { existing ->
+                (entry.msgID > 0 && existing.msgID == entry.msgID) ||
+                    (existing.sender == entry.sender &&
+                        existing.body == entry.body &&
+                        kotlin.math.abs(existing.timestamp - entry.timestamp) < 5000L)
             }
-            list.sortBy { it.timestamp }
-            if (sbn.id == notifId) break
+            if (!duplicate) result.add(entry)
         }
+        return result
     }
 
     private fun cancelNotificationsWithTag(context: Context, tag: String) {
@@ -283,6 +319,7 @@ object MessageNotificationHelper {
             o.put("sender", e.sender)
             o.put("body", e.body)
             o.put("ts", e.timestamp)
+            if (e.msgID > 0) o.put("msgID", e.msgID)
             arr.put(o)
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -296,7 +333,7 @@ object MessageNotificationHelper {
             .getString(KEY_BUFFER_PREFIX + convId, null) ?: return emptyList()
         return try {
             val arr = JSONArray(raw)
-            buildList {
+            val parsed = buildList {
                 for (i in 0 until arr.length()) {
                     val o = arr.optJSONObject(i) ?: continue
                     add(
@@ -304,10 +341,12 @@ object MessageNotificationHelper {
                             sender = o.optString("sender", ""),
                             body = o.optString("body", ""),
                             timestamp = o.optLong("ts", System.currentTimeMillis()),
+                            msgID = o.optInt("msgID", 0),
                         ),
                     )
                 }
             }
+            dedupeBufferEntries(parsed)
         } catch (_: Exception) {
             emptyList()
         }
