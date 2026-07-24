@@ -44,7 +44,10 @@ class StorageService {
   }) async {
     await _secureStorage.write(key: _accessTokenKey, value: accessToken);
     await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
-    await PendingCallRejectStore.syncNativeCredentials(accessToken);
+    await PendingCallRejectStore.syncNativeCredentials(
+      accessToken,
+      refreshToken: refreshToken,
+    );
     await NotificationNativeCredentialsStore.syncNativeCredentials(accessToken);
   }
 

@@ -14,10 +14,16 @@ class PendingCallRejectStore {
 
   static const prefsKey = 'pending_call_rejects_v1';
   static const tokenKey = 'call_reject_access_token';
+  static const refreshTokenKey = 'call_reject_refresh_token';
   static const apiBaseKey = 'call_reject_api_base';
 
-  /// Miroir du JWT + base URL pour le receiver Android (app tuée).
-  static Future<void> syncNativeCredentials(String? accessToken) async {
+  /// Miroir du JWT (access + refresh) + base URL pour le receiver Android (app
+  /// tuée). Le refresh token permet au refus natif de rafraîchir un access token
+  /// expiré et de POST /calls/reject sans attendre la réouverture de l'app.
+  static Future<void> syncNativeCredentials(
+    String? accessToken, {
+    String? refreshToken,
+  }) async {
     if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -25,6 +31,11 @@ class PendingCallRejectStore {
         await prefs.remove(tokenKey);
       } else {
         await prefs.setString(tokenKey, accessToken);
+      }
+      if (refreshToken == null || refreshToken.isEmpty) {
+        await prefs.remove(refreshTokenKey);
+      } else {
+        await prefs.setString(refreshTokenKey, refreshToken);
       }
       await prefs.setString(apiBaseKey, TalkyApiClient.baseUrl);
     } catch (e) {
@@ -37,6 +48,7 @@ class PendingCallRejectStore {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(tokenKey);
+      await prefs.remove(refreshTokenKey);
       await prefs.remove(apiBaseKey);
     } catch (e) {
       debugPrint('[PendingCallRejectStore] clearNativeCredentials error: $e');

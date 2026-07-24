@@ -105,7 +105,10 @@ class AuthProvider extends ChangeNotifier {
     }
     // Miroir pour CallDeclineReceiver Android (refus app tuée).
     if (accessToken != null) {
-      await PendingCallRejectStore.syncNativeCredentials(accessToken);
+      await PendingCallRejectStore.syncNativeCredentials(
+        accessToken,
+        refreshToken: refreshToken,
+      );
     }
     return true;
   }
@@ -124,7 +127,10 @@ class AuthProvider extends ChangeNotifier {
       await _storage.saveUser(_currentUser!);
       currentSessionEndReason = SessionEndReason.none;
       if (_apiClient.accessToken != null) {
-        await PendingCallRejectStore.syncNativeCredentials(_apiClient.accessToken!);
+        await PendingCallRejectStore.syncNativeCredentials(
+          _apiClient.accessToken!,
+          refreshToken: _apiClient.currentRefreshToken,
+        );
       }
       return true;
     } on TalkyException catch (e) {
