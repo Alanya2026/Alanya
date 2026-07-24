@@ -44,7 +44,9 @@ extension CallIncoming on CallService {
     if (_pendingOffer != null) {
       debugPrint('[CallService] ⚡ Offer déjà présente → réponse immédiate');
       await answerCall();
-    } else {
+    } else if (roomId == null || roomId.isEmpty) {
+      // 1-à-1 uniquement : borne l'attente de l'offre (le groupe n'utilise pas
+      // _pendingOffer, il ne faut donc pas déclencher un teardown à tort).
       _armAwaitingOfferTimeout();
     }
   }
@@ -129,6 +131,12 @@ extension CallIncoming on CallService {
     _status = CallStatus.incoming;
     _ensureRemoteIdentityResolved();
     notify();
+    // Filet anti-fantôme (1-à-1) : si l'offre WebRTC de confirmation n'arrive
+    // jamais via le socket, on démonte au lieu de laisser un écran d'appel entrant
+    // pour un appel déjà terminé (ex. appelant a raccroché, app tuée → « Inconnu »).
+    if (_groupRoomId == null) {
+      _armAwaitingOfferTimeout();
+    }
   }
 
   /// Synchronise l'état Flutter quand CallKit/PushKit affiche un entrant

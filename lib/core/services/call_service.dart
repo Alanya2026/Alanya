@@ -130,7 +130,9 @@ class CallService extends ChangeNotifier {
   // « connexion en cours » peut rester figé indéfiniment si l'offre n'arrive
   // jamais (appel périmé / rejeu fantôme).
   Timer? _awaitingOfferTimer;
-  static const Duration _awaitingOfferTimeout = Duration(seconds: 35);
+  // Aligné sur la durée de sonnerie CallKit native (30 s) : au-delà, un entrant
+  // sans offre socket est considéré périmé/terminé.
+  static const Duration _awaitingOfferTimeout = Duration(seconds: 30);
 
   // Filet anti sonnerie infinie : borne la durée d'un entrant qui sonne au
   // premier plan (RingtoneService) si aucun événement terminal n'arrive
@@ -405,14 +407,23 @@ class CallService extends ChangeNotifier {
   void _armAwaitingOfferTimeout() {
     _cancelAwaitingOfferTimeout();
     _awaitingOfferTimer = Timer(_awaitingOfferTimeout, () async {
-      final stillWaiting = _status == CallStatus.incoming &&
-          _pendingOffer == null &&
-          (_isAutoAnsweringFromPush || _autoAnswerOnNextIncoming);
+      // Un entrant en status=incoming SANS offre bufferisée n'a jamais été
+      // confirmé vivant par le socket (l'offre WebRTC arrive avec incoming_call).
+      // Passé le délai, on démonte : soit l'appel est périmé/terminé (écran
+      // fantôme « Inconnu » après un appel manqué), soit l'auto-réponse ne pourra
+      // jamais aboutir. Couvre le cold-start CallKit (prepare/accept) et le rejeu.
+      final stillWaiting =
+          _status == CallStatus.incoming && _pendingOffer == null;
       if (!stillWaiting) return;
-      debugPrint('[CallService] ⏰ Offre entrante jamais reçue → teardown');
-      _errorMessage = LocaleController.instance.l10n.callFailed;
+      final wasAnswering = _isAutoAnsweringFromPush || _autoAnswerOnNextIncoming;
+      debugPrint(
+        '[CallService] ⏰ Offre entrante jamais reçue → teardown (answering=$wasAnswering)',
+      );
+      if (wasAnswering) _errorMessage = LocaleController.instance.l10n.callFailed;
       await _terminateCall();
-      _showTransientMessage(LocaleController.instance.l10n.callFailed);
+      if (wasAnswering) {
+        _showTransientMessage(LocaleController.instance.l10n.callFailed);
+      }
     });
   }
 

@@ -147,7 +147,7 @@ class SwipeableMessageBubble extends StatelessWidget {
         children: [
           CustomSlidableAction(
             onPressed: (_) => _hapticThen(onReply),
-            backgroundColor: colors.surface,
+            backgroundColor: Colors.transparent,
             foregroundColor: colors.primary,
             padding: EdgeInsets.zero,
             child: Semantics(

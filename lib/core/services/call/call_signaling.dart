@@ -79,6 +79,8 @@ extension CallSignaling on CallService {
       _remoteUserPhoto = normalizeBackendUrl(data['callerPhoto']?.toString());
       _isVideo = data['isVideo'] == true;
       _pendingOffer = Map<String, dynamic>.from(offer);
+      // Appel confirmé vivant par le socket → plus besoin du filet d'attente d'offre.
+      _cancelAwaitingOfferTimeout();
       _currentCallId = incomingCallId;
       _status = CallStatus.incoming;
       debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
