@@ -3,6 +3,7 @@ package com.example.talky_flutter
 import android.app.Application
 import android.content.SharedPreferences
 import android.util.Log
+import com.hiennv.flutter_callkit_incoming.CallkitNotificationService
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -45,6 +46,31 @@ class TalkyApplication : Application() {
         val after = readActiveCalls()
         activeCallsSnapshot = after
 
+        // La sonnerie native (soundManager de CallIncomingHelper) ne doit sonner
+        // que tant qu'un entrant NON accepté est présent. Dès qu'un appel est
+        // accepté (isAccepted=true) OU retiré (refus/timeout/dismiss), on la coupe.
+        // Le receiver du plugin ne le fait pas pour cette instance (il utilise
+        // celle du plugin, ou rien quand l'app est tuée) → sinon la sonnerie
+        // continue après un appui sur la notification (décrocher ET raccrocher).
+        val hasRingingIncoming = (0 until after.length()).any { j ->
+            val c = after.optJSONObject(j)
+            c != null && !c.optBoolean("isAccepted", false)
+        }
+        if (!hasRingingIncoming) {
+            CallIncomingHelper.stopSound()
+        }
+        // Plus AUCUN appel actif → couper aussi le service d'appel en cours
+        // (notification chronomètre + raccrocher). Le plugin ne le fait pas quand
+        // getInstance() est null (app tuée), d'où une notification fantôme qui
+        // persiste après l'appel avec des boutons morts.
+        if (after.length() == 0) {
+            try {
+                CallkitNotificationService.stopService(this)
+            } catch (e: Exception) {
+                Log.e(TAG, "stopService (ACTIVE_CALLS vide) failed", e)
+            }
+        }
+
         for (i in 0 until before.length()) {
             val prev = before.optJSONObject(i) ?: continue
             val id = prev.optString("id", "")
@@ -53,6 +79,10 @@ class TalkyApplication : Application() {
                 after.optJSONObject(j)?.optString("id") == id
             }
             if (stillThere) continue
+
+            // Appel retiré : annuler sa notification d'appel en cours si elle
+            // existe (accepté puis terminé) — évite la notif fantôme.
+            CallIncomingHelper.cancelOngoingNotification(this, id)
 
             if (CallDismissRegistry.consumeIfProgrammatic(id)) {
                 Log.i(TAG, "ACTIVE_CALLS: dismiss programmatique id=$id (pas de reject)")

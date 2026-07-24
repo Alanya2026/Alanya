@@ -2,7 +2,9 @@ package com.example.talky_flutter
 
 import android.content.Context
 import android.util.Log
+import androidx.core.app.NotificationManagerCompat
 import com.hiennv.flutter_callkit_incoming.CallkitNotificationManager
+import com.hiennv.flutter_callkit_incoming.CallkitNotificationService
 import com.hiennv.flutter_callkit_incoming.CallkitSoundPlayerManager
 import com.hiennv.flutter_callkit_incoming.Data
 import com.hiennv.flutter_callkit_incoming.addCall
@@ -56,9 +58,48 @@ object CallIncomingHelper {
         endCall(context, mapOf("callId" to id))
     }
 
+    /**
+     * Coupe la sonnerie native jouée par CETTE instance (soundManager propre).
+     * Nécessaire car le BroadcastReceiver du plugin arrête le soundManager du
+     * plugin (ou rien si l'app est tuée : FlutterCallkitIncomingPlugin.getInstance()
+     * est null), jamais celui-ci → sinon la sonnerie continue après refus/accept.
+     */
+    fun stopSound() {
+        try {
+            soundManager?.stop()
+        } catch (e: Exception) {
+            Log.e(TAG, "stopSound failed", e)
+        }
+    }
+
+    /**
+     * Annule explicitement la notification d'appel EN COURS d'un [callId] (id
+     * calqué sur le plugin : `("ongoing_$callId").hashCode()`). Complète
+     * stopService : sur certains OEM la notif de service au premier plan ne
+     * disparaît pas toujours à l'arrêt du service.
+     */
+    fun cancelOngoingNotification(context: Context, callId: String) {
+        val id = callId.trim()
+        if (id.isEmpty()) return
+        try {
+            NotificationManagerCompat.from(context.applicationContext)
+                .cancel("ongoing_$id".hashCode())
+        } catch (e: Exception) {
+            Log.e(TAG, "cancelOngoingNotification failed", e)
+        }
+    }
+
     fun endCall(context: Context, data: Map<String, String>) {
         ensureInitialized(context)
         lastShownCallId = null
+        // Coupe aussi le service/notification d'appel EN COURS (chronomètre +
+        // raccrocher). Le plugin ne le fait pas quand getInstance() est null
+        // (app tuée) → sinon notification fantôme aux boutons morts après l'appel.
+        try {
+            CallkitNotificationService.stopService(context.applicationContext)
+        } catch (e: Exception) {
+            Log.e(TAG, "stopService (endCall) failed", e)
+        }
         val callId = (data["callId"] ?: "").trim()
         try {
             if (callId.isEmpty()) {
@@ -67,6 +108,7 @@ object CallIncomingHelper {
                 Log.d(TAG, "endCall all")
                 return
             }
+            cancelOngoingNotification(context, callId)
             val bundle = Data(hashMapOf<String, Any?>("id" to callId)).toBundle()
             notificationManager?.clearIncomingNotification(bundle, false)
             removeCall(context.applicationContext, Data.fromBundle(bundle))
