@@ -512,6 +512,18 @@ abstract class AppLocalizations {
   /// **'Fichiers audio (MP3, WAV, M4A…), 5 Mo max'**
   String get ringtoneAddCustomHint;
 
+  /// No description provided for @ringtoneLimitReached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nombre maximal de sonneries atteint (10)'**
+  String get ringtoneLimitReached;
+
+  /// No description provided for @ringtoneCustomEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune sonnerie importée pour l\'instant'**
+  String get ringtoneCustomEmpty;
+
   /// No description provided for @ringtoneDeleteConfirmTitle.
   ///
   /// In fr, this message translates to:

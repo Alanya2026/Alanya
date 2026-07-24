@@ -223,6 +223,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ringtoneAddCustomHint => 'Audio files (MP3, WAV, M4A…), 5 MB max';
 
   @override
+  String get ringtoneLimitReached => 'Maximum number of ringtones reached (10)';
+
+  @override
+  String get ringtoneCustomEmpty => 'No imported ringtones yet';
+
+  @override
   String get ringtoneDeleteConfirmTitle => 'Delete this ringtone?';
 
   @override

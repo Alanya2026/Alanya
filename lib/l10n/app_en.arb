@@ -69,6 +69,8 @@
   "ringtoneSystemDefaultLabel": "Device default ringtone",
   "ringtoneAddCustomAction": "Add a ringtone",
   "ringtoneAddCustomHint": "Audio files (MP3, WAV, M4A…), 5 MB max",
+  "ringtoneLimitReached": "Maximum number of ringtones reached (10)",
+  "ringtoneCustomEmpty": "No imported ringtones yet",
   "ringtoneDeleteConfirmTitle": "Delete this ringtone?",
   "ringtoneDeleteConfirmMessage": "This action cannot be undone.",
   "ringtoneImportSuccess": "Ringtone added and selected",

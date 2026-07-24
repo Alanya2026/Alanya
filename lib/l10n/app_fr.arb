@@ -83,6 +83,8 @@
   "ringtoneSystemDefaultLabel": "Sonnerie par défaut de l'appareil",
   "ringtoneAddCustomAction": "Ajouter une sonnerie",
   "ringtoneAddCustomHint": "Fichiers audio (MP3, WAV, M4A…), 5 Mo max",
+  "ringtoneLimitReached": "Nombre maximal de sonneries atteint (10)",
+  "ringtoneCustomEmpty": "Aucune sonnerie importée pour l'instant",
   "ringtoneDeleteConfirmTitle": "Supprimer cette sonnerie ?",
   "ringtoneDeleteConfirmMessage": "Cette action est irréversible.",
   "ringtoneImportSuccess": "Sonnerie ajoutée et sélectionnée",

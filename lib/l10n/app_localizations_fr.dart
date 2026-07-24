@@ -224,6 +224,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Fichiers audio (MP3, WAV, M4A…), 5 Mo max';
 
   @override
+  String get ringtoneLimitReached => 'Nombre maximal de sonneries atteint (10)';
+
+  @override
+  String get ringtoneCustomEmpty => 'Aucune sonnerie importée pour l\'instant';
+
+  @override
   String get ringtoneDeleteConfirmTitle => 'Supprimer cette sonnerie ?';
 
   @override
