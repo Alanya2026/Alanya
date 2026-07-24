@@ -125,6 +125,19 @@ class CallService extends ChangeNotifier {
   Timer? _outgoingTimeoutTimer;
   static const Duration _outgoingTimeout = Duration(seconds: 50);
 
+  // Filet côté destinataire : attente BORNÉE de l'offre WebRTC après acceptation
+  // (cold-start CallKit ou accept avant réception de l'offre). Sans ça, un écran
+  // « connexion en cours » peut rester figé indéfiniment si l'offre n'arrive
+  // jamais (appel périmé / rejeu fantôme).
+  Timer? _awaitingOfferTimer;
+  static const Duration _awaitingOfferTimeout = Duration(seconds: 35);
+
+  // Filet anti sonnerie infinie : borne la durée d'un entrant qui sonne au
+  // premier plan (RingtoneService) si aucun événement terminal n'arrive
+  // (secours au call_ended socket/FCM du serveur).
+  Timer? _incomingRingSafetyTimer;
+  static const Duration _incomingRingSafety = Duration(seconds: 55);
+
   // callId déjà traités (acceptés/refusés) — évite de re-sonner sur un
   // incoming_call rejoué par le backend (auth replay).
   final Map<String, DateTime> _handledTerminalCallIds = {};
@@ -319,6 +332,109 @@ class CallService extends ChangeNotifier {
   void _cancelOutgoingTimeout() {
     _outgoingTimeoutTimer?.cancel();
     _outgoingTimeoutTimer = null;
+  }
+
+  void _cancelAwaitingOfferTimeout() {
+    _awaitingOfferTimer?.cancel();
+    _awaitingOfferTimer = null;
+  }
+
+  void _cancelIncomingRingSafety() {
+    _incomingRingSafetyTimer?.cancel();
+    _incomingRingSafetyTimer = null;
+  }
+
+  /// Borne la durée d'un entrant qui sonne au premier plan : si aucun événement
+  /// terminal n'arrête l'appel, on coupe la sonnerie et on refuse proprement
+  /// (secours au call_ended serveur si socket/FCM ont échoué).
+  void _armIncomingRingSafety() {
+    _cancelIncomingRingSafety();
+    _incomingRingSafetyTimer = Timer(_incomingRingSafety, () async {
+      if (_status != CallStatus.incoming) return;
+      debugPrint('[CallService] ⏰ Sonnerie entrante sans réponse → arrêt de sécurité');
+      await _ringtone.stop();
+      await notifyCallEndedFromExternal(callId: _currentCallId);
+    });
+  }
+
+  /// App envoyée en arrière-plan pendant un entrant qui sonne au premier plan :
+  /// on coupe la sonnerie Dart et on bascule sur CallKit pour que l'OS continue
+  /// de sonner et que l'appel reste décrochable depuis la notification/lockscreen
+  /// (comportement WhatsApp) — sinon la sonnerie tournerait sans UI.
+  Future<void> handleForegroundIncomingBackgrounded() async {
+    if (kIsWeb) return;
+    if (_status != CallStatus.incoming || _isAutoAnsweringFromPush) return;
+    await _ringtone.stop();
+    final callerId = _remoteUserId?.toString() ?? '';
+    final isGroup = _groupRoomId != null && _groupRoomId!.isNotEmpty;
+    if (!isGroup && callerId.isEmpty) return;
+    unawaited(
+      _callKit
+          .showIncoming(
+            callId: isGroup ? _groupRoomId! : (_currentCallId ?? ''),
+            callerId: callerId,
+            callerName: _remoteUserName ??
+                (isGroup ? resolveL10n().groupCall : resolveL10n().callNoun),
+            callerPhoto: _remoteUserPhoto,
+            isVideo: _isVideo,
+            roomId: isGroup ? _groupRoomId : null,
+          )
+          .catchError((Object e) {
+        debugPrint('[CallService] handoff CallKit (background) échoué: $e');
+      }),
+    );
+  }
+
+  /// Retour au premier plan pendant un entrant : retire l'UI CallKit et relance
+  /// la sonnerie Dart (l'écran d'appel entrant Flutter reprend la main).
+  Future<void> resumeForegroundIncoming() async {
+    if (kIsWeb) return;
+    if (_status != CallStatus.incoming || _isAutoAnsweringFromPush) return;
+    await dismissIncomingCallKitForForeground();
+    if (_status == CallStatus.incoming && !_isAutoAnsweringFromPush) {
+      unawaited(_ringtone.startIncomingRingtone().catchError((Object e) {
+        debugPrint('[CallService] reprise sonnerie (foreground) échouée: $e');
+      }));
+      _armIncomingRingSafety();
+    }
+  }
+
+  /// Borne l'attente de l'offre WebRTC après acceptation d'un appel entrant : si
+  /// aucune offre n'arrive (appel périmé / rejeu fantôme), on démonte proprement
+  /// au lieu de laisser « connexion en cours » tourner indéfiniment.
+  void _armAwaitingOfferTimeout() {
+    _cancelAwaitingOfferTimeout();
+    _awaitingOfferTimer = Timer(_awaitingOfferTimeout, () async {
+      final stillWaiting = _status == CallStatus.incoming &&
+          _pendingOffer == null &&
+          (_isAutoAnsweringFromPush || _autoAnswerOnNextIncoming);
+      if (!stillWaiting) return;
+      debugPrint('[CallService] ⏰ Offre entrante jamais reçue → teardown');
+      _errorMessage = LocaleController.instance.l10n.callFailed;
+      await _terminateCall();
+      _showTransientMessage(LocaleController.instance.l10n.callFailed);
+    });
+  }
+
+  /// Résout le nom (et la photo) du correspondant 1-à-1 quand le payload d'appel
+  /// ne les fournit pas, pour éviter un écran « Inconnu » (miroir du fallback
+  /// roster de groupe). No-op si le nom est déjà connu ou l'id absent.
+  void _ensureRemoteIdentityResolved() {
+    final id = _remoteUserId;
+    if (id == null) return;
+    if (_remoteUserName != null && _remoteUserName!.trim().isNotEmpty) return;
+    _apiClient.getUserById(id).then((u) {
+      if (_remoteUserId != id) return; // l'appel a changé entre-temps
+      final nom = (u['nom'] as String?)?.trim() ?? '';
+      final pseudo = (u['pseudo'] as String?)?.trim() ?? '';
+      final resolved = nom.isNotEmpty ? nom : pseudo;
+      if (resolved.isEmpty) return;
+      _remoteUserName = resolved;
+      _remoteUserPhoto ??= normalizeBackendUrl(u['avatar_url'] as String?);
+      notify();
+    }).catchError((Object e) {
+      debugPrint('[CallService] _ensureRemoteIdentityResolved($id) échec: $e');
+    });
   }
 
   /// Affiche un message transitoire (occupé / pas de réponse / échec) via le

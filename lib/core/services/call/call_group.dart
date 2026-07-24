@@ -162,9 +162,9 @@ extension CallGroup on CallService {
     await _callKit.endAll(callId: _groupRoomId);
     _groupRoster.clear();
     _groupRoomId = null;
-    _remoteUserId = null;
-    _remoteUserName = null;
-    _remoteUserPhoto = null;
+    // Reset canonique complet (identité, offre, flags, timers) pour ne pas
+    // laisser d'état résiduel qui contaminerait le prochain appel.
+    _resetCallState();
     _status = CallStatus.idle;
     notify();
   }
@@ -186,8 +186,10 @@ extension CallGroup on CallService {
     await _webrtc.dispose();
     _durationTimer?.cancel();
     _groupRoomId = null;
-    _callDuration = 0;
-    _resetCallUiState();
+    // Converge sur le reset 1-à-1 canonique : nettoie aussi _currentCallId
+    // (sinon 'group_<room>' serait réutilisé comme id du prochain appel 1-à-1),
+    // _pendingOffer, _remoteUser*, flags média/auto-réponse et timers.
+    _resetCallState();
     _status = CallStatus.idle;
     notify();
   }

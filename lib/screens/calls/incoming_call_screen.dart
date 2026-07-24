@@ -56,6 +56,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   void _onStatusChanged() {
     if (!mounted || _navigated) return;
+    // Ne pas verrouiller la navigation si un écran/dialog est empilé au-dessus :
+    // sinon un pop qui ne retire pas CET écran laisserait les deux boutons inertes.
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return;
     final cs = Provider.of<CallService>(context, listen: false);
 
     if (cs.status == CallStatus.connecting || cs.status == CallStatus.connected) {

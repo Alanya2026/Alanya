@@ -139,11 +139,23 @@ extension CallOneToOne on CallService {
       return;
     }
     if (_pendingOffer == null) {
-      debugPrint('[CallService] ⏳ answerCall: offer pas encore reçue, auto-answer armé');
+      debugPrint('[CallService] ⏳ answerCall: offre pas encore reçue → attente bornée');
+      // Ne PAS revenir en silence (bouton mort). On arme l'auto-réponse pour la
+      // vraie offre, on coupe la sonnerie puisque l'utilisateur a accepté, on
+      // affiche « connexion en cours » et on borne l'attente (teardown si l'offre
+      // n'arrive jamais — appel périmé / rejeu fantôme).
       _autoAnswerOnNextIncoming = true;
-      _autoAnswerCallerId = _remoteUserId.toString();
+      _autoAnswerCallerId = _remoteUserId!.toString();
+      _isAutoAnsweringFromPush = true;
+      await _ringtone.stop();
+      notify();
+      _armAwaitingOfferTimeout();
       return;
     }
+
+    // L'offre est là : plus besoin des filets d'attente/sonnerie entrante.
+    _cancelAwaitingOfferTimeout();
+    _cancelIncomingRingSafety();
 
     // Verrouille immédiatement pour bloquer un éventuel double-appel.
     _status = CallStatus.connecting;
@@ -158,8 +170,10 @@ extension CallOneToOne on CallService {
     if (!socketReady) {
       debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
       _errorMessage = LocaleController.instance.l10n.socketNotConnected;
-      _status = CallStatus.idle;
-      notify();
+      // Teardown complet (au lieu d'un simple idle) : ferme CallKit, coupe la
+      // sonnerie et réinitialise l'état pour ne pas laisser d'écran/état fantôme.
+      // Le nettoyage côté appelant est assuré par le timeout serveur (no-answer).
+      await _terminateCall();
       return;
     }
     debugPrint('[CallService] !! Socket connecté, envoi answer');
@@ -331,6 +345,8 @@ extension CallOneToOne on CallService {
   void _resetCallState() {
     _resetCallUiState();
     _cancelOutgoingTimeout();
+    _cancelAwaitingOfferTimeout();
+    _cancelIncomingRingSafety();
     _remoteUserId = null;
     _remoteUserName = null;
     _remoteUserPhoto = null;

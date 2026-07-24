@@ -51,8 +51,13 @@ extension CallSignaling on CallService {
         return;
       }
       final incomingCallId = data['callId']?.toString();
-      // Idempotence : appel déjà accepté/refusé → ignorer le rejeu (auth replay).
-      if (_isTerminalCallId(incomingCallId)) {
+      // Idempotence : appel déjà accepté/refusé/terminé → ignorer le rejeu (auth
+      // replay). On consulte AUSSI le registre persistant (EndedCallRegistry),
+      // comme tous les points d'entrée push/CallKit : sinon au cold-start (map
+      // mémoire vidée) un appel déjà terminé — marqué par l'isolate FCM ou une
+      // session précédente — ré-afficherait un écran/sonnerie fantôme.
+      if (_isTerminalCallId(incomingCallId) ||
+          await EndedCallRegistry.isEnded(incomingCallId)) {
         debugPrint('[CallService] 🛡 incoming_call ignoré: callId=$incomingCallId déjà traité (terminal)');
         return;
       }
@@ -78,6 +83,7 @@ extension CallSignaling on CallService {
       _status = CallStatus.incoming;
       debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
+      _ensureRemoteIdentityResolved();
       notify();
 
       if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
@@ -131,6 +137,7 @@ extension CallSignaling on CallService {
         _ringtone.startIncomingRingtone().catchError((e) {
           debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
         });
+        _armIncomingRingSafety();
       }
     });
 
@@ -172,9 +179,11 @@ extension CallSignaling on CallService {
           await _markCallSessionConnected();
         }
       } catch (e) {
-        debugPrint('[CallService] ** Erreur handleAnswer: $e');
-        _status = CallStatus.idle;
-        notify();
+        debugPrint('[CallService] ** Erreur handleAnswer: $e — teardown + notif du pair');
+        // L'appel a été décroché mais la négociation locale échoue : on termine
+        // proprement ET on prévient le pair (end_call), au lieu de juste repasser
+        // idle — ce qui laissait fuiter CallSessionGuard / WebRTC / CallKit.
+        await endCall();
       }
     });
 

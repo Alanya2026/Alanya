@@ -99,7 +99,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       unawaited(callService.syncWithEndedRegistry());
       if (callService.status == CallStatus.incoming &&
           !callService.isAutoAnsweringFromPush) {
-        unawaited(callService.dismissIncomingCallKitForForeground());
+        // Retour au premier plan : retire CallKit et relance la sonnerie Dart.
+        unawaited(callService.resumeForegroundIncoming());
       }
       Provider.of<ChatProvider>(context, listen: false)
           .repository
@@ -115,6 +116,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           .repository
           .syncPushSuppressionForLifecycle(false);
       _syncPushDeviceState(foreground: false);
+      // Entrant qui sonne au premier plan : basculer sur CallKit pour rester
+      // décrochable en arrière-plan et ne pas laisser la sonnerie Dart tourner.
+      unawaited(
+        Provider.of<CallService>(context, listen: false)
+            .handleForegroundIncomingBackgrounded(),
+      );
     }
   }
 

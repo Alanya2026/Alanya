@@ -34,14 +34,18 @@ extension CallIncoming on CallService {
     // ouvre directement l'écran d'appel actif (voir HomeScreen + call_ui).
     _isAutoAnsweringFromPush = true;
     _status = CallStatus.incoming;
+    _ensureRemoteIdentityResolved();
     notify();
 
     debugPrint('[CallService] !! Status = incoming, auto-answer armé (from push)');
 
-    // Si l'offer est déjà arrivée, répondre immédiatement
+    // Si l'offer est déjà arrivée, répondre immédiatement ; sinon on borne
+    // l'attente de l'offre pour ne pas rester figé sur « connexion en cours ».
     if (_pendingOffer != null) {
       debugPrint('[CallService] ⚡ Offer déjà présente → réponse immédiate');
       await answerCall();
+    } else {
+      _armAwaitingOfferTimeout();
     }
   }
 
@@ -123,6 +127,7 @@ extension CallIncoming on CallService {
     _currentCallId = callId.isNotEmpty ? callId : null;
     _groupRoomId = (roomId != null && roomId.isNotEmpty) ? roomId : null;
     _status = CallStatus.incoming;
+    _ensureRemoteIdentityResolved();
     notify();
   }
 
