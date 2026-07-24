@@ -458,6 +458,90 @@ abstract class AppLocalizations {
   /// **'Enregistre les médias reçus dans le stockage interne (Galerie et Téléchargements)'**
   String get settingsMediaVisibilitySubtitle;
 
+  /// No description provided for @settingsCalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels'**
+  String get settingsCalls;
+
+  /// No description provided for @settingsRingtone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sonnerie d\'appel'**
+  String get settingsRingtone;
+
+  /// No description provided for @ringtoneScreenTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sonnerie d\'appel'**
+  String get ringtoneScreenTitle;
+
+  /// No description provided for @ringtoneSectionSystem.
+  ///
+  /// In fr, this message translates to:
+  /// **'Système'**
+  String get ringtoneSectionSystem;
+
+  /// No description provided for @ringtoneSectionApp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fournies par l\'application'**
+  String get ringtoneSectionApp;
+
+  /// No description provided for @ringtoneSectionCustom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnalisées'**
+  String get ringtoneSectionCustom;
+
+  /// No description provided for @ringtoneSystemDefaultLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sonnerie par défaut de l\'appareil'**
+  String get ringtoneSystemDefaultLabel;
+
+  /// No description provided for @ringtoneAddCustomAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter une sonnerie'**
+  String get ringtoneAddCustomAction;
+
+  /// No description provided for @ringtoneAddCustomHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers audio (MP3, WAV, M4A…), 5 Mo max'**
+  String get ringtoneAddCustomHint;
+
+  /// No description provided for @ringtoneDeleteConfirmTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer cette sonnerie ?'**
+  String get ringtoneDeleteConfirmTitle;
+
+  /// No description provided for @ringtoneDeleteConfirmMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est irréversible.'**
+  String get ringtoneDeleteConfirmMessage;
+
+  /// No description provided for @ringtoneImportSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sonnerie ajoutée et sélectionnée'**
+  String get ringtoneImportSuccess;
+
+  /// No description provided for @ringtoneImportError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'importer ce fichier'**
+  String get ringtoneImportError;
+
+  /// No description provided for @ringtonePreviewError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire cette sonnerie'**
+  String get ringtonePreviewError;
+
   /// No description provided for @settingsPrivacy.
   ///
   /// In fr, this message translates to:

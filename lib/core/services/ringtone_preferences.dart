@@ -73,6 +73,9 @@ class RingtoneOption {
       label: 'Sonnerie Alanya',
       type: RingtoneSourceType.bundled,
       assetPath: 'assets/sounds/ringback.wav',
+      // Copie compilée pour CallKit/natif (app tuée) :
+      // android/app/src/main/res/raw/ringback.ogg.
+      androidRawResource: 'ringback',
     ),
   ];
 
@@ -118,6 +121,22 @@ class RingtoneImportException implements Exception {
 class RingtonePreferences extends ChangeNotifier {
   static const _kSelectedKey = 'call_ringtone_selected_id';
   static const _kCustomListKey = 'call_ringtone_custom_list';
+
+  /// Chemin du fichier de la sonnerie *importée* actuellement sélectionnée,
+  /// ou chaîne vide si l'utilisateur est sur la sonnerie système / fournie.
+  ///
+  /// Clé plate (String simple) lisible par le code natif Android — qui ne peut
+  /// pas décoder la liste `_kCustomListKey` du plugin shared_preferences — pour
+  /// jouer la sonnerie importée quand l'app est tuée (voir
+  /// `CallIncomingHelper.resolveCustomRingtonePath`).
+  static const _kActivePathKey = 'call_ringtone_active_path';
+
+  /// Nom de la ressource `res/raw` (sans extension) que le chemin natif app
+  /// tuée doit passer à CallKit pour la sélection courante — `'ringback'`
+  /// (Sonnerie Alanya), `'system_ringtone_default'` (système), etc. Distinct
+  /// de [_kActivePathKey] : ici CallKit joue lui-même une ressource compilée ;
+  /// là, on lui demande le silence et on joue un fichier importé.
+  static const _kNativeNameKey = 'call_ringtone_native_name';
 
   static RingtonePreferences? _bound;
 
@@ -209,6 +228,9 @@ class RingtonePreferences extends ChangeNotifier {
     _selectedId = _cachedSelectedId;
     _custom = _cachedCustom;
     notifyListeners();
+    // Backfill / resynchronise la clé plate lue par le natif (utile pour une
+    // sélection faite avant l'introduction de `_kActivePathKey`).
+    await _persistActivePath();
   }
 
   Future<void> select(String id) async {
@@ -218,6 +240,22 @@ class RingtonePreferences extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kSelectedKey, id);
+    await _persistActivePath(prefs);
+  }
+
+  /// Écrit le chemin natif-lisible de la sonnerie importée sélectionnée (ou ''
+  /// pour système / fournie). À garder synchronisé avec toute mutation de la
+  /// sélection ou de la liste des sonneries importées.
+  Future<void> _persistActivePath([SharedPreferences? prefsArg]) async {
+    final prefs = prefsArg ?? await SharedPreferences.getInstance();
+    final sel = selected;
+    final path = sel.type == RingtoneSourceType.custom ? (sel.filePath ?? '') : '';
+    await prefs.setString(_kActivePathKey, path);
+    // Sonnerie fournie/système : CallKit joue lui-même une ressource compilée.
+    await prefs.setString(
+      _kNativeNameKey,
+      sel.androidRawResource ?? 'system_ringtone_default',
+    );
   }
 
   /// Copie le fichier choisi par l'utilisateur dans le dossier documents de

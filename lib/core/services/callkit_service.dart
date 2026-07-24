@@ -161,7 +161,11 @@ class CallKitService {
       android: AndroidParams(
         isCustomNotification: true,
         isShowLogo: false,
-        ringtonePath: silent ? '' : RingtonePreferences.resolveAndroidCallKitRingtone(),
+        // 'silence' = res/raw/silence.wav → CallKit reste muet (le plugin
+        // interprète '' comme « sonnerie système par défaut », pas comme muet).
+        // La sonnerie importée est alors jouée par RingtoneService (Flutter) ou
+        // CustomRingtonePlayer (natif) selon le cycle de vie de l'app.
+        ringtonePath: silent ? 'silence' : RingtonePreferences.resolveAndroidCallKitRingtone(),
         backgroundColor: '#0955fa',
         actionColor: '#4CAF50',
         incomingCallNotificationChannelName: l10n.incomingCallsChannel,

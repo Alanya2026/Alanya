@@ -39,13 +39,68 @@ object CallIncomingHelper {
         if (callId.isNotEmpty()) lastShownCallId = callId
 
         ensureInitialized(context)
-        val bundle = buildIncomingBundle(data)
+
+        // Sonnerie importée par l'utilisateur : le plugin CallKit ne sait pas
+        // jouer un fichier arbitraire, on la joue nous-mêmes et on rend CallKit
+        // muet (voir [CustomRingtonePlayer]).
+        val customPath = resolveCustomRingtonePath(context)
+        // Fichier importé → CallKit muet + on joue le fichier. Sinon CallKit
+        // joue lui-même la ressource compilée résolue par Flutter ('ringback'
+        // pour la Sonnerie Alanya, 'system_ringtone_default', ...).
+        val ringtonePath =
+            if (customPath != null) "silence" else resolveNativeRingtoneName(context)
+        val bundle = buildIncomingBundle(data, ringtonePath)
         try {
             notificationManager?.showIncomingNotification(bundle)
             addCall(context.applicationContext, Data.fromBundle(bundle))
-            Log.d(TAG, "showIncoming callId=$callId caller=${data["callerId"]}")
+            if (customPath != null) {
+                CustomRingtonePlayer.start(context, customPath)
+            }
+            Log.d(TAG, "showIncoming callId=$callId caller=${data["callerId"]} custom=${customPath != null}")
         } catch (e: Exception) {
             Log.e(TAG, "showIncoming failed", e)
+        }
+    }
+
+    /**
+     * Chemin du fichier de sonnerie importé actuellement sélectionné, ou null
+     * si l'utilisateur est sur la sonnerie système / fournie par l'app (dans
+     * ces cas CallKit joue son propre son). Écrit par Flutter
+     * (`RingtonePreferences`) dans les SharedPreferences du plugin
+     * shared_preferences.
+     */
+    private fun resolveCustomRingtonePath(context: Context): String? {
+        return try {
+            val prefs = context.getSharedPreferences(
+                "FlutterSharedPreferences", Context.MODE_PRIVATE,
+            )
+            val path = prefs.getString("flutter.call_ringtone_active_path", null)
+                ?.trim()
+                .orEmpty()
+            if (path.isNotEmpty() && java.io.File(path).exists()) path else null
+        } catch (e: Exception) {
+            Log.e(TAG, "resolveCustomRingtonePath failed", e)
+            null
+        }
+    }
+
+    /**
+     * Nom de ressource `res/raw` que CallKit doit jouer pour la sonnerie
+     * fournie/système sélectionnée (écrit par Flutter `RingtonePreferences`).
+     * Défaut : sonnerie système.
+     */
+    private fun resolveNativeRingtoneName(context: Context): String {
+        return try {
+            val prefs = context.getSharedPreferences(
+                "FlutterSharedPreferences", Context.MODE_PRIVATE,
+            )
+            prefs.getString("flutter.call_ringtone_native_name", null)
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: "system_ringtone_default"
+        } catch (e: Exception) {
+            Log.e(TAG, "resolveNativeRingtoneName failed", e)
+            "system_ringtone_default"
         }
     }
 
@@ -59,6 +114,7 @@ object CallIncomingHelper {
     fun endCall(context: Context, data: Map<String, String>) {
         ensureInitialized(context)
         lastShownCallId = null
+        CustomRingtonePlayer.stop()
         val callId = (data["callId"] ?: "").trim()
         try {
             if (callId.isEmpty()) {
@@ -76,7 +132,10 @@ object CallIncomingHelper {
         }
     }
 
-    private fun buildIncomingBundle(data: Map<String, String>): android.os.Bundle {
+    private fun buildIncomingBundle(
+        data: Map<String, String>,
+        ringtonePath: String = "system_ringtone_default",
+    ): android.os.Bundle {
         val callId = (data["callId"] ?: data["roomId"] ?: "").trim()
         val callerId = data["callerId"] ?: ""
         val callerName = data["callerName"] ?: data["title"] ?: "Alanya"
@@ -107,7 +166,12 @@ object CallIncomingHelper {
             "android" to hashMapOf(
                 "isCustomNotification" to true,
                 "isShowLogo" to false,
-                "ringtonePath" to "system_ringtone_default",
+                // Résolu par l'appelant : nom de ressource res/raw compilée
+                // ('ringback', 'system_ringtone_default'), ou 'silence' quand on
+                // joue nous-mêmes un fichier importé (voir CustomRingtonePlayer).
+                // NB : passer "" ne rend PAS muet — le plugin retombe alors sur
+                // la sonnerie système.
+                "ringtonePath" to ringtonePath,
                 "backgroundColor" to "#0955fa",
                 "actionColor" to "#4CAF50",
                 "incomingCallNotificationChannelName" to "Appels entrants",

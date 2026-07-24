@@ -220,7 +220,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ringtoneAddCustomAction => 'Ajouter une sonnerie';
 
   @override
-  String get ringtoneAddCustomHint => 'Fichiers audio (MP3, WAV, M4A…), 5 Mo max';
+  String get ringtoneAddCustomHint =>
+      'Fichiers audio (MP3, WAV, M4A…), 5 Mo max';
 
   @override
   String get ringtoneDeleteConfirmTitle => 'Supprimer cette sonnerie ?';

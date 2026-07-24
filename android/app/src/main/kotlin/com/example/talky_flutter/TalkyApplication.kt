@@ -45,6 +45,13 @@ class TalkyApplication : Application() {
         val after = readActiveCalls()
         activeCallsSnapshot = after
 
+        // Un appel a disparu de ACTIVE_CALLS (accept / decline / timeout / ended,
+        // y compris depuis la notification CallKit dont l'action ne passe pas par
+        // CallIncomingHelper.endCall) → couper la sonnerie importée.
+        if (after.length() < before.length()) {
+            CustomRingtonePlayer.stop()
+        }
+
         for (i in 0 until before.length()) {
             val prev = before.optJSONObject(i) ?: continue
             val id = prev.optString("id", "")
