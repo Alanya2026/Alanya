@@ -7,6 +7,7 @@ import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import '../theme/locale_controller.dart';
 import 'call/ended_call_registry.dart';
+import 'ringtone_preferences.dart';
 
 class IncomingCallAction {
   final String callId;
@@ -160,12 +161,22 @@ class CallKitService {
       android: AndroidParams(
         isCustomNotification: true,
         isShowLogo: false,
-        ringtonePath: silent ? '' : 'system_ringtone_default',
+        // 'silence' = res/raw/silence.wav → CallKit reste muet (le plugin
+        // interprète '' comme « sonnerie système par défaut », pas comme muet).
+        // La sonnerie importée est alors jouée par RingtoneService (Flutter) ou
+        // CustomRingtonePlayer (natif) selon le cycle de vie de l'app.
+        ringtonePath: silent ? 'silence' : RingtonePreferences.resolveAndroidCallKitRingtone(),
         backgroundColor: '#0955fa',
         actionColor: '#4CAF50',
         incomingCallNotificationChannelName: l10n.incomingCallsChannel,
         missedCallNotificationChannelName: l10n.missedCalls,
         isShowFullLockedScreen: true,
+      ),
+      ios: IOSParams(
+        // null → CallKit garde sa sonnerie par défaut (seules les sonneries
+        // "bundled" déclarées côté natif peuvent être résolues ici, voir
+        // RingtoneOption.iosCafResource).
+        ringtonePath: silent ? null : RingtonePreferences.resolveIosCallKitRingtone(),
       ),
     );
 

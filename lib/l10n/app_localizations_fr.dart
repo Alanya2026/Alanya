@@ -196,6 +196,49 @@ class AppLocalizationsFr extends AppLocalizations {
       'Enregistre les médias reçus dans le stockage interne (Galerie et Téléchargements)';
 
   @override
+  String get settingsCalls => 'Appels';
+
+  @override
+  String get settingsRingtone => 'Sonnerie d\'appel';
+
+  @override
+  String get ringtoneScreenTitle => 'Sonnerie d\'appel';
+
+  @override
+  String get ringtoneSectionSystem => 'Système';
+
+  @override
+  String get ringtoneSectionApp => 'Fournies par l\'application';
+
+  @override
+  String get ringtoneSectionCustom => 'Personnalisées';
+
+  @override
+  String get ringtoneSystemDefaultLabel => 'Sonnerie par défaut de l\'appareil';
+
+  @override
+  String get ringtoneAddCustomAction => 'Ajouter une sonnerie';
+
+  @override
+  String get ringtoneAddCustomHint =>
+      'Fichiers audio (MP3, WAV, M4A…), 5 Mo max';
+
+  @override
+  String get ringtoneDeleteConfirmTitle => 'Supprimer cette sonnerie ?';
+
+  @override
+  String get ringtoneDeleteConfirmMessage => 'Cette action est irréversible.';
+
+  @override
+  String get ringtoneImportSuccess => 'Sonnerie ajoutée et sélectionnée';
+
+  @override
+  String get ringtoneImportError => 'Impossible d\'importer ce fichier';
+
+  @override
+  String get ringtonePreviewError => 'Impossible de lire cette sonnerie';
+
+  @override
   String get settingsPrivacy => 'Confidentialité';
 
   @override

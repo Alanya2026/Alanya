@@ -48,6 +48,14 @@ class MainActivity : FlutterActivity() {
         handleNotificationIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // L'app passe au premier plan : Flutter (RingtoneService) reprend la
+        // sonnerie entrante via le socket. On coupe la sonnerie importée jouée
+        // nativement pour éviter le doublon (voir CustomRingtonePlayer).
+        CustomRingtonePlayer.stop()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaExportChannel)

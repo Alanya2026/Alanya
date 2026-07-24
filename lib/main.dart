@@ -22,6 +22,7 @@ import 'core/theme/theme_controller.dart';
 import 'core/theme/locale_controller.dart';
 import 'core/services/incoming_share_service.dart';
 import 'core/services/media_download_preferences.dart';
+import 'core/services/ringtone_preferences.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/call/ended_call_registry.dart';
@@ -97,6 +98,10 @@ void main() async {
   // Charger avant runApp : le prefetch socket/sync lit ce flag de façon sync.
   await MediaDownloadPreferences.preload();
 
+  // Charger avant runApp : CallService/RingtoneService/CallKitService lisent
+  // la sonnerie sélectionnée de façon synchrone dès le premier appel entrant.
+  await RingtonePreferences.preload();
+
   await IncomingShareService.instance.init();
 
   runApp(const TalkyApp());
@@ -129,6 +134,8 @@ class _TalkyAppState extends State<TalkyApp> {
         Provider<TalkyApiClient>.value(value: _apiClient),
         Provider<AppDatabase>.value(value: _database),
         Provider<LocalCacheRepository>.value(value: _localCache),
+        ChangeNotifierProvider(
+            create: (_) => RingtonePreferences()..load()),
         ChangeNotifierProvider(
             create: (_) => AuthProvider(apiClient: _apiClient)),
         ChangeNotifierProvider(

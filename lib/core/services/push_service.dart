@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,6 +19,7 @@ import 'notification_navigation.dart';
 import 'notifications/notification_diagnostics.dart';
 import 'notifications/notification_dedup_store.dart';
 import 'notifications/push_device_coordinator.dart';
+import 'ringtone_preferences.dart';
 import 'ringtone_service.dart';
 import 'call/ended_call_registry.dart';
 import 'call/call_permissions_helper.dart';
@@ -88,6 +90,22 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           debugPrint('[Push] background call ignoré (callId terminé): $callId');
           return;
         }
+
+        // CallKit (Android/iOS natif) ne sait jouer que la sonnerie système
+        // ou une ressource compilée dans l'app — jamais un fichier choisi
+        // par l'utilisateur au runtime (voir RingtonePreferences). Sur
+        // Android uniquement, ce handler tourne dans un vrai isolate Dart :
+        // on peut donc jouer nous-mêmes le fichier personnalisé avec
+        // RingtoneService (lecteur audio générique), en demandant à CallKit
+        // de rester silencieux pour éviter que les deux sons se superposent.
+        // Sur iOS, ce handler Dart n'est pas fiable pour réveiller l'app à
+        // l'arrivée d'un appel (pas de PushKit) : on laisse CallKit gérer
+        // son propre son, inchangé.
+        await RingtonePreferences.preload();
+        final selection = RingtonePreferences.currentSelection;
+        final playCustomRingtoneOurselves =
+            Platform.isAndroid && selection.type != RingtoneSourceType.system;
+
         await CallKitService.instance.showIncoming(
           callId: callId,
           callerId: (data['callerId'] ?? '').toString(),
@@ -95,8 +113,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           callerPhoto: data['photo']?.toString(),
           isVideo: data['isVideo'] == 'true',
           roomId: data['roomId']?.toString(),
-          silent: false,
+          silent: playCustomRingtoneOurselves,
         );
+
+        if (playCustomRingtoneOurselves) {
+          await _playCustomRingtoneUntilCallResolved(callId);
+        }
       }
     } else if (type == 'call_ended') {
       await dispatchCallEndedPush(
@@ -199,6 +221,66 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
       title: title.isNotEmpty ? title : null,
       body: body.isNotEmpty ? body : null,
     );
+  }
+}
+
+/// Joue la sonnerie personnalisée (fournie par l'app ou importée) directement
+/// depuis cet isolate d'arrière-plan Android, et attend que l'appel soit
+/// résolu (décroché, refusé, expiré, terminé côté serveur) pour l'arrêter.
+///
+/// N'est appelée que quand CallKit a été mis en silencieux côté Android
+/// (voir [firebaseMessagingBackgroundHandler]) : sans ça les deux sonneries
+/// se superposeraient.
+Future<void> _playCustomRingtoneUntilCallResolved(String callId) async {
+  StreamSubscription<CallEvent?>? sub;
+  Timer? safetyTimer;
+  final resolved = Completer<void>();
+
+  void resolveOnce() {
+    if (!resolved.isCompleted) resolved.complete();
+  }
+
+  try {
+    await RingtoneService.instance.init();
+    await RingtoneService.instance.startIncomingRingtone();
+
+    sub = FlutterCallkitIncoming.onEvent.listen((event) {
+      if (event == null) return;
+      switch (event.event) {
+        case Event.actionCallAccept:
+        case Event.actionCallDecline:
+        case Event.actionCallEnded:
+        case Event.actionCallTimeout:
+          final extra = event.body['extra'] as Map? ?? const {};
+          final eventCallId = (extra['callId'] ?? event.body['id'] ?? '').toString();
+          // Un id vide peut survenir selon la version du plugin : dans le
+          // doute on considère que ça nous concerne plutôt que de laisser
+          // la sonnerie tourner indéfiniment.
+          if (eventCallId.isEmpty || eventCallId == callId) resolveOnce();
+          break;
+        default:
+          break;
+      }
+    });
+
+    // Filet de sécurité : si jamais aucun événement CallKit n'arrive (perte
+    // réseau, plugin qui ne remonte rien...), on ne bloque pas l'isolate
+    // indéfiniment. La notification d'appel CallKit expire elle-même après
+    // `duration: 30000` (voir CallKitService.showIncoming) ; on arrête donc
+    // légèrement après pour rester cohérent avec ce qui s'affiche à l'écran.
+    safetyTimer = Timer(const Duration(seconds: 33), resolveOnce);
+
+    await resolved.future;
+  } catch (e) {
+    debugPrint('[Push] custom background ringtone error: $e');
+  } finally {
+    safetyTimer?.cancel();
+    await sub?.cancel();
+    try {
+      await RingtoneService.stopAll();
+    } catch (e) {
+      debugPrint('[Push] stopAll after background ringtone error: $e');
+    }
   }
 }
 

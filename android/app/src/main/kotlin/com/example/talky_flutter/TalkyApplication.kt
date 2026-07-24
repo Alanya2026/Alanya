@@ -58,6 +58,12 @@ class TalkyApplication : Application() {
         }
         if (!hasRingingIncoming) {
             CallIncomingHelper.stopSound()
+            // Même condition que la sonnerie native : couper aussi la sonnerie
+            // importée jouée nativement (accept / decline / timeout / ended, y
+            // compris depuis la notification CallKit). Plus fiable que de se baser
+            // sur la seule diminution de ACTIVE_CALLS, qui ne se déclenche PAS à
+            // l'acceptation (l'appel reste présent avec isAccepted=true).
+            CustomRingtonePlayer.stop()
         }
         // Plus AUCUN appel actif → couper aussi le service d'appel en cours
         // (notification chronomètre + raccrocher). Le plugin ne le fait pas quand
