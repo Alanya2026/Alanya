@@ -11,6 +11,7 @@ import '../media_download_preferences.dart';
 import '../notifications/badge_sync_service.dart';
 import 'chat_api.dart';
 import 'message_ack_watchdog.dart';
+import 'message_sound_service.dart';
 import 'message_path_tracer.dart';
 import 'receipt_service.dart';
 
@@ -99,6 +100,12 @@ class SocketMessageHandlers {
     // unread/accusés/notifications. Le message est déjà à jour via l'upsert.
     if (!isNew) return;
     if (senderID0 == _myId()) return;
+
+    // Retour sonore de réception : uniquement app au premier plan (en
+    // arrière-plan c'est la notification système qui joue son propre son).
+    if (_appInForeground()) {
+      MessageSoundService.instance.playReceived();
+    }
 
     final convID = _toInt(json['conversationID']);
     final isViewOnce =

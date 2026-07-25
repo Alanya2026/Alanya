@@ -168,6 +168,7 @@ flutter:
   assets:
     - assets/sounds/
     - assets/sounds/ringtones/   # Sonneries fournies avec l'app (aperçu/foreground)
+    - assets/sounds/ui/          # Sons d'interface (envoi/réception de message)
     - assets/server_cert.pem   # Certificat backend épinglé (cert pinning)
     - assets/images/
 

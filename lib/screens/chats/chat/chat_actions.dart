@@ -247,6 +247,7 @@ extension _ChatActions on _ChatDetailScreenState {
       replyToID: replyId,
       replyToContent: replyContent,
     );
+    MessageSoundService.instance.playSent();
 
     _messageController.clear();
     rebuild(() {
@@ -1109,6 +1110,7 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
 
+    MessageSoundService.instance.playSent();
     _chat.repository.sendMediaAlbum(
       conversationID: convId,
       items: items,
@@ -1146,6 +1148,7 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
 
+    MessageSoundService.instance.playSent();
     await _chat.repository.sendMediaFile(
       conversationID: convId,
       type: type,

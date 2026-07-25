@@ -20,6 +20,7 @@ import 'core/utils/app_log.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/theme/locale_controller.dart';
+import 'core/services/chat/message_sound_service.dart';
 import 'core/services/incoming_share_service.dart';
 import 'core/services/media_download_preferences.dart';
 import 'core/services/ringtone_preferences.dart';
@@ -103,6 +104,10 @@ void main() async {
   await RingtonePreferences.preload();
 
   await IncomingShareService.instance.init();
+
+  // Précharge les sons de messagerie (envoi/réception). Non bloquant : assets
+  // embarqués, aucune dépendance réseau.
+  unawaited(MessageSoundService.instance.init());
 
   runApp(const TalkyApp());
 }
