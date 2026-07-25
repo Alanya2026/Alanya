@@ -2013,6 +2013,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get audio2 => 'Audio';
 
   @override
+  String get music => 'Musique';
+
+  @override
+  String musicPreview(String name) {
+    return '🎵 $name';
+  }
+
+  @override
   String get active => 'Actif';
 
   @override

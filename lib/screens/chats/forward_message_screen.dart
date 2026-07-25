@@ -9,6 +9,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/document_file_style.dart';
+import '../../core/utils/audio_message_kind.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/media_album.dart';
 import '../../providers/auth_provider.dart';
@@ -167,7 +168,9 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
       case 2:
         return Icons.videocam_outlined;
       case 3:
-        return Icons.mic_outlined;
+        return audioKindFromName(msg.mediaName) == AudioMessageKind.music
+            ? Icons.music_note
+            : Icons.mic_outlined;
       case 4:
         return DocumentFileStyle.fromMessage(
           mediaName: msg.mediaName,

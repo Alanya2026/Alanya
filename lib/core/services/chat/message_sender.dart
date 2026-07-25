@@ -16,8 +16,10 @@ import '../../utils/media_staging.dart';
 import '../../utils/upload_errors.dart';
 import '../../utils/document_file_style.dart';
 import '../image_thumbnail_service.dart';
+import '../music_metadata_service.dart';
 import '../pdf_thumbnail_service.dart';
 import '../video_thumbnail_service.dart';
+import '../../utils/audio_message_kind.dart';
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../../talky_models.dart';
 import 'chat_api.dart';
@@ -311,16 +313,22 @@ class MessageSender {
     }
     final name = mediaName ?? uploadFile.path.split('/').last;
 
+    final isMusic =
+        type == 3 && audioKindFromName(name) == AudioMessageKind.music;
+
     int? fileMediaSize;
     int? fileMediaPageCount;
-    if (type == 4) {
+    // La musique affiche sa taille en sous-titre de bulle, comme un document.
+    if (type == 4 || isMusic) {
       final meta = await fileMetadataForSend(uploadFile, mediaName: name);
       if (meta.size > 0) fileMediaSize = meta.size;
       fileMediaPageCount = meta.pageCount;
     }
 
-    // Image / vidéo : mini-vignette base64 pour l'aperçu destinataire (hors DL).
-    final mediaThumb = await _mediaThumbFor(type, uploadFile.path);
+    // Image / vidéo / pochette : mini-vignette base64 pour l'aperçu
+    // destinataire (hors téléchargement).
+    final mediaThumb =
+        await _mediaThumbFor(type, uploadFile.path, mediaName: name);
     MessagePathTracer.start(clientId);
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
@@ -645,11 +653,23 @@ class MessageSender {
     await Future.wait(List.generate(workers, (_) => worker()));
   }
 
-  /// Vignette base64 : image (1), vidéo (2), PDF fichier (4).
-  Future<String?> _mediaThumbFor(int type, String? path) async {
+  /// Vignette base64 : image (1), vidéo (2), PDF fichier (4), pochette d'un
+  /// morceau (3 + nom de fichier musical).
+  ///
+  /// [mediaName] et non [path] décide du sort d'un audio : un vocal est stagé
+  /// en `voice_<timestamp>.m4a` et son extension le ferait passer pour de la
+  /// musique.
+  Future<String?> _mediaThumbFor(
+    int type,
+    String? path, {
+    String? mediaName,
+  }) async {
     if (path == null || path.isEmpty) return null;
     if (type == 1) return ImageThumbnailService.base64ForFile(path);
     if (type == 2) return VideoThumbnailService.base64ForFile(path);
+    if (type == 3 && audioKindFromName(mediaName) == AudioMessageKind.music) {
+      return MusicMetadataService.coverBase64(path);
+    }
     if (type == 4 && DocumentFileStyle.fromFileName(path).isPdf) {
       return PdfThumbnailService.base64ForFile(path);
     }

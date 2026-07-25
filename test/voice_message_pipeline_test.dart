@@ -177,7 +177,17 @@ void main() {
       if (tmp.existsSync()) await tmp.delete(recursive: true);
     });
 
-    test('fichier local → ready sans download', () async {
+    Future<void> waitUntil(
+      bool Function() condition, {
+      Duration timeout = const Duration(seconds: 5),
+    }) async {
+      final deadline = DateTime.now().add(timeout);
+      while (!condition() && DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    }
+
+    test('fichier local → ready sans download ni attente de waveform', () async {
       final file = File(p.join(tmp.path, 'mine.m4a'))..writeAsStringSync('audio');
       final ref = VoiceMessageRef(
         clientId: 'srv_1',
@@ -189,6 +199,27 @@ void main() {
 
       final snap = await coordinator.ensureReady(ref);
 
+      // La lecture ne doit jamais attendre la waveform : le snapshot est
+      // jouable dès que le fichier local est résolu.
+      expect(snap.phase, VoiceUiPhase.ready);
+      expect(snap.localPath, file.path);
+      expect(snap.waveform, isNull);
+    });
+
+    test('la waveform arrive après coup, sans quitter la phase ready', () async {
+      final file = File(p.join(tmp.path, 'late.m4a'))..writeAsStringSync('audio');
+      final ref = VoiceMessageRef(
+        clientId: 'srv_5',
+        serverMsgId: 5,
+        isMe: true,
+        pendingPath: file.path,
+        durationSeconds: 8,
+      );
+
+      await coordinator.ensureReady(ref);
+      await waitUntil(() => coordinator.snapshotFor('srv_5')?.waveform != null);
+
+      final snap = coordinator.snapshotFor('srv_5')!;
       expect(snap.phase, VoiceUiPhase.ready);
       expect(snap.localPath, file.path);
       expect(snap.waveform, isNotNull);

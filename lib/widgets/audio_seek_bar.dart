@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// Barre de progression audio interactive : tap pour sauter, drag pour scrubber.
-class VoiceSeekBar extends StatefulWidget {
+class AudioSeekBar extends StatefulWidget {
   final double value;
   final Color foregroundColor;
   final bool enabled;
   final ValueChanged<double> onSeek;
 
-  const VoiceSeekBar({
+  const AudioSeekBar({
     super.key,
     required this.value,
     required this.foregroundColor,
@@ -16,10 +16,10 @@ class VoiceSeekBar extends StatefulWidget {
   });
 
   @override
-  State<VoiceSeekBar> createState() => _VoiceSeekBarState();
+  State<AudioSeekBar> createState() => _AudioSeekBarState();
 }
 
-class _VoiceSeekBarState extends State<VoiceSeekBar> {
+class _AudioSeekBarState extends State<AudioSeekBar> {
   double? _dragValue;
 
   double get _displayValue => (_dragValue ?? widget.value).clamp(0.0, 1.0);

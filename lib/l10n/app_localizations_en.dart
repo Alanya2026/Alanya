@@ -1995,6 +1995,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audio2 => 'Audio';
 
   @override
+  String get music => 'Music';
+
+  @override
+  String musicPreview(String name) {
+    return '🎵 $name';
+  }
+
+  @override
   String get active => 'Active';
 
   @override

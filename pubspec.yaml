@@ -42,7 +42,7 @@ dependencies:
   socket_io_client: ^2.0.3+1
   http: ^1.6.0
   http_parser: ^4.0.2                  # MediaType pour les uploads multipart
-  mime: ^1.0.6                         # Détection du type MIME des fichiers
+  mime: ^2.0.0                         # Détection du type MIME des fichiers
   shared_preferences: ^2.2.0
   flutter_secure_storage: ^9.0.0
   provider: ^6.1.0
@@ -105,6 +105,7 @@ dependencies:
   # Kotlin 2.4.0 (non stables) et casse avec le toolchain du projet
   # (AGP 8.9.1 / Kotlin 2.1.0 / Gradle 8.12) — « Could not find method kotlin() ».
   receive_sharing_intent: 1.8.1
+  audio_metadata_reader: ^1.6.0
 
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la

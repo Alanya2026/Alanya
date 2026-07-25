@@ -14,6 +14,9 @@ class VoicePlaybackService extends ChangeNotifier {
   String? _activeMessageId;
   String? _loadedMessageId;
   String? _loadingMessageId;
+
+  /// Message dont le démarrage a été annulé par un tap pendant le chargement.
+  String? _cancelledLoadId;
   VoicePlaybackSource? _source;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -94,7 +97,12 @@ class VoicePlaybackService extends ChangeNotifier {
     VoiceChatContext? chatContext,
   }) async {
     if (chatContext != null) _chatContext = chatContext;
-    if (_loadingMessageId == messageId) return;
+    // Chargement en cours : le tap annule le démarrage au lieu d'être ignoré.
+    // Sans ça le bouton reste bloqué jusqu'à la fin du décodage.
+    if (_loadingMessageId == messageId) {
+      cancelPendingStart(messageId);
+      return;
+    }
     if (_activeMessageId == messageId && _playing) {
       await pause();
       return;
@@ -126,8 +134,8 @@ class VoicePlaybackService extends ChangeNotifier {
         await _player.seek(Duration.zero);
         _position = Duration.zero;
       }
-      await _player.play();
       _playing = true;
+      _startPlayback();
       notifyListeners();
       return;
     }
@@ -155,24 +163,33 @@ class VoicePlaybackService extends ChangeNotifier {
         await _player.seek(Duration.zero);
         _position = Duration.zero;
       }
-      await _player.play();
       _playing = true;
+      _startPlayback();
       notifyListeners();
       return;
     }
 
     _loadingMessageId = messageId;
+    _cancelledLoadId = null;
     notifyListeners();
 
     try {
       await _loadSource(messageId, localPath, networkUrl, fallbackDuration);
-      _activeMessageId = messageId;
       if (_player.processingState == ProcessingState.completed) {
         await _player.seek(Duration.zero);
         _position = Duration.zero;
       }
-      await _player.play();
+      // Annulé pendant le décodage : la source reste chargée et prête, on
+      // s'abstient simplement de démarrer. Aucun await entre ce test et le
+      // démarrage, pour ne pas rouvrir la fenêtre de course.
+      if (_cancelledLoadId == messageId) {
+        _cancelledLoadId = null;
+        _playing = false;
+        return;
+      }
+      _activeMessageId = messageId;
       _playing = true;
+      _startPlayback();
     } catch (e) {
       if (_activeMessageId == messageId) _activeMessageId = null;
       rethrow;
@@ -182,8 +199,32 @@ class VoicePlaybackService extends ChangeNotifier {
     }
   }
 
+  /// Démarre la lecture sans l'attendre.
+  ///
+  /// `AudioPlayer.play()` ne complète qu'à la fin de la lecture (ou à la pause,
+  /// ou à l'arrêt) — c'est documenté dans just_audio. L'attendre laissait
+  /// `_loadingMessageId` armé pendant tout le morceau : bouton figé en
+  /// chargement, et tap de pause détourné vers l'annulation de démarrage.
+  void _startPlayback() {
+    unawaited(_player.play().catchError((Object e) {
+      debugPrint('[VoicePlayback] play() échoué: $e');
+    }));
+  }
+
   Future<void> pause() async {
     await _player.pause();
+    _playing = false;
+    notifyListeners();
+  }
+
+  /// Annule un démarrage en cours de chargement. On ne touche pas au player :
+  /// le décodage va au bout (il est court), mais la lecture ne démarrera pas.
+  /// Éviter un `stop()` concurrent au `setFilePath` évite une exception qui
+  /// remonterait à l'UI en « audio indisponible ».
+  void cancelPendingStart(String messageId) {
+    if (_loadingMessageId != messageId) return;
+    _cancelledLoadId = messageId;
+    _loadingMessageId = null;
     _playing = false;
     notifyListeners();
   }
@@ -250,8 +291,8 @@ class VoicePlaybackService extends ChangeNotifier {
     await _player.seek(target);
     _position = target;
     if (!_playing) {
-      await _player.play();
       _playing = true;
+      _startPlayback();
     }
     notifyListeners();
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -6,12 +7,12 @@ import 'chat_repository.dart';
 import 'voice_asset_resolver.dart';
 import 'voice_waveform_store.dart';
 import '../theme/locale_controller.dart';
+import '../utils/audio_message_kind.dart';
 
 enum VoiceUiPhase {
   resolving,
   needsDownload,
   downloading,
-  extracting,
   ready,
   error,
 }
@@ -25,6 +26,10 @@ class VoiceMessageRef {
   final String? mediaUrl;
   final int durationSeconds;
 
+  /// Vocal ou musique : conditionne l'extraction de waveform et le plafond
+  /// de téléchargement.
+  final AudioMessageKind kind;
+
   const VoiceMessageRef({
     required this.clientId,
     required this.serverMsgId,
@@ -33,6 +38,7 @@ class VoiceMessageRef {
     this.pendingPath,
     this.mediaUrl,
     required this.durationSeconds,
+    this.kind = AudioMessageKind.voiceNote,
   });
 
   @override
@@ -44,7 +50,8 @@ class VoiceMessageRef {
         other.dbPath == dbPath &&
         other.pendingPath == pendingPath &&
         other.mediaUrl == mediaUrl &&
-        other.durationSeconds == durationSeconds;
+        other.durationSeconds == durationSeconds &&
+        other.kind == kind;
   }
 
   @override
@@ -56,6 +63,7 @@ class VoiceMessageRef {
         pendingPath,
         mediaUrl,
         durationSeconds,
+        kind,
       );
 }
 
@@ -114,17 +122,23 @@ class VoiceMessageCoordinator extends ChangeNotifier {
   final Map<String, VoiceMessageSnapshot> _snapshots = {};
   final Map<String, Future<VoiceMessageSnapshot>> _inFlight = {};
 
+  /// Extractions de waveform en cours, par clientId. La waveform étant
+  /// purement décorative, elle est calculée hors du chemin critique.
+  final Set<String> _waveformJobs = {};
+
   VoiceMessageSnapshot? snapshotFor(String clientId) => _snapshots[clientId];
 
   void invalidate(String clientId) {
     _snapshots.remove(clientId);
     _inFlight.remove(clientId);
+    _waveformJobs.remove(clientId);
     notifyListeners();
   }
 
   void invalidateAll() {
     _snapshots.clear();
     _inFlight.clear();
+    _waveformJobs.clear();
     notifyListeners();
   }
 
@@ -134,12 +148,17 @@ class VoiceMessageCoordinator extends ChangeNotifier {
         cached.phase == VoiceUiPhase.ready &&
         cached.ref.clientId == ref.clientId &&
         cached.localPath != null &&
-        File(cached.localPath!).existsSync() &&
-        cached.waveform != null) {
+        File(cached.localPath!).existsSync()) {
       if (cached.ref != ref) {
         _setSnapshot(cached.copyWith(ref: ref));
       }
-      return Future.value(_snapshots[ref.clientId]!);
+      final current = _snapshots[ref.clientId]!;
+      // Snapshot jouable mais waveform absente (extraction échouée ou
+      // jamais lancée) : on relance sans bloquer la lecture.
+      if (current.waveform == null) {
+        _scheduleWaveform(current.ref, current.localPath!);
+      }
+      return Future.value(current);
     }
 
     final pending = _inFlight[ref.clientId];
@@ -170,6 +189,11 @@ class VoiceMessageCoordinator extends ChangeNotifier {
       final path = await _repository.downloadVoiceMessage(
         msgID: ref.serverMsgId,
         mediaUrl: url,
+        // Un morceau pèse couramment plus que le plafond vocal de 15 Mo,
+        // alors que l'app en autorise l'envoi jusqu'à 50 Mo.
+        maxBytes: ref.kind == AudioMessageKind.music
+            ? 50 * 1024 * 1024
+            : 15 * 1024 * 1024,
         onProgress: (p) {
           onProgress?.call(p);
           final current = _snapshots[ref.clientId];
@@ -225,26 +249,17 @@ class VoiceMessageCoordinator extends ChangeNotifier {
         return snap;
       }
 
-      _setSnapshot(
-        VoiceMessageSnapshot(
-          phase: VoiceUiPhase.extracting,
-          ref: ref,
-          localPath: local.path,
-        ),
-      );
-
-      final waveform = await _waveforms.loadOrGenerate(
-        localPath: local.path,
-        durationSeconds: ref.durationSeconds,
-      );
-
+      // Le fichier est sur le disque, donc jouable immédiatement : on passe
+      // en `ready` sans attendre la waveform. L'extraction est sérialisée et
+      // peut prendre plusieurs secondes (timeout 15 s) — l'attendre bloquait
+      // le bouton de lecture sur un spinner alors que rien ne l'empêchait.
       final snap = VoiceMessageSnapshot(
         phase: VoiceUiPhase.ready,
         ref: ref,
         localPath: local.path,
-        waveform: waveform,
       );
       _setSnapshot(snap);
+      _scheduleWaveform(ref, local.path);
       return snap;
     } catch (e) {
       debugPrint('[VoiceMessageCoordinator] ensureReady échoué: $e');
@@ -257,6 +272,43 @@ class VoiceMessageCoordinator extends ChangeNotifier {
       return snap;
     } finally {
       _inFlight.remove(ref.clientId);
+    }
+  }
+
+  /// Lance l'extraction de waveform en tâche de fond. Ne bloque jamais la
+  /// lecture : le snapshot est déjà `ready`, la waveform arrive après.
+  void _scheduleWaveform(VoiceMessageRef ref, String localPath) {
+    // La carte musique n'affiche pas de waveform : extraction inutile, et
+    // coûteuse sur un morceau de plusieurs minutes.
+    if (ref.kind == AudioMessageKind.music) return;
+    if (_waveformJobs.contains(ref.clientId)) return;
+    _waveformJobs.add(ref.clientId);
+    unawaited(_runWaveform(ref.clientId, localPath, ref.durationSeconds));
+  }
+
+  Future<void> _runWaveform(
+    String clientId,
+    String localPath,
+    int durationSeconds,
+  ) async {
+    try {
+      final waveform = await _waveforms.loadOrGenerate(
+        localPath: localPath,
+        durationSeconds: durationSeconds,
+      );
+      // Le snapshot a pu être invalidé ou remplacé pendant l'extraction :
+      // on n'écrase que s'il s'agit toujours du même fichier prêt.
+      final current = _snapshots[clientId];
+      if (current == null ||
+          current.phase != VoiceUiPhase.ready ||
+          current.localPath != localPath) {
+        return;
+      }
+      _setSnapshot(current.copyWith(waveform: waveform));
+    } catch (e) {
+      debugPrint('[VoiceMessageCoordinator] waveform échouée: $e');
+    } finally {
+      _waveformJobs.remove(clientId);
     }
   }
 

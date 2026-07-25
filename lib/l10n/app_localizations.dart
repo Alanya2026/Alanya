@@ -3674,6 +3674,18 @@ abstract class AppLocalizations {
   /// **'Audio'**
   String get audio2;
 
+  /// No description provided for @music.
+  ///
+  /// In fr, this message translates to:
+  /// **'Musique'**
+  String get music;
+
+  /// No description provided for @musicPreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'🎵 {name}'**
+  String musicPreview(String name);
+
   /// No description provided for @active.
   ///
   /// In fr, this message translates to:

@@ -160,7 +160,6 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   ) {
     switch (snap.phase) {
       case VoiceUiPhase.resolving:
-      case VoiceUiPhase.extracting:
         return _smallSpinner(widget.foregroundColor);
       case VoiceUiPhase.needsDownload:
         return IconButton(
@@ -190,21 +189,20 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           ),
         );
       case VoiceUiPhase.ready:
+        // Démarrage optimiste : on affiche pause dès le tap plutôt qu'un
+        // spinner, et le bouton reste actif — un second tap annule le
+        // démarrage au lieu d'être avalé pendant le décodage.
         return IconButton(
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
-          icon: isPlaybackLoading
-              ? _smallSpinner(widget.foregroundColor, size: 22)
-              : Icon(
-                  playing
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_fill,
-                  color: widget.foregroundColor,
-                  size: 34,
-                ),
-          onPressed: isPlaybackLoading
-              ? null
-              : () => _toggle(service, snap),
+          icon: Icon(
+            playing || isPlaybackLoading
+                ? Icons.pause_circle_filled
+                : Icons.play_circle_fill,
+            color: widget.foregroundColor,
+            size: 34,
+          ),
+          onPressed: () => _toggle(service, snap),
         );
       case VoiceUiPhase.error:
         return IconButton(
@@ -304,7 +302,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                         samples: snap.waveform!,
                         progress: ratio,
                         foregroundColor: widget.foregroundColor,
-                        enabled: !isPlaybackLoading,
+                        enabled: true,
                         onSeek: (r) => _seek(service, snap, r),
                       )
                     else

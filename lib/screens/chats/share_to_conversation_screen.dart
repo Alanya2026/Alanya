@@ -8,6 +8,7 @@ import '../../core/db/app_database.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/audio_message_kind.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/forward_message.dart';
 import '../../core/utils/incoming_share_payload.dart';
@@ -513,7 +514,11 @@ class _ShareToConversationScreenState extends State<ShareToConversationScreen> {
         borderRadius: AppRadius.brSm,
       ),
       child: Icon(
-        item.type == 3 ? Icons.mic_outlined : Icons.insert_drive_file,
+        item.type == 3
+            ? (audioKindFromName(item.name) == AudioMessageKind.music
+                ? Icons.music_note
+                : Icons.mic_outlined)
+            : Icons.insert_drive_file,
         color: context.colors.primary,
       ),
     );

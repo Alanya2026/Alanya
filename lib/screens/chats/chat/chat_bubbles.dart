@@ -697,6 +697,36 @@ extension _ChatBubbles on _ChatDetailScreenState {
       case 2:
         return _buildVideoMedia(msg);
       case 3:
+        final chatContext = _convId != null
+            ? VoiceChatContext(
+                conversationId: _convId!,
+                title: widget.userName,
+                userId: widget.userId,
+                isGroup: widget.isGroup,
+                avatarUrl: widget.avatarUrl,
+              )
+            : null;
+        final accent =
+            isMe ? context.colors.onPrimary : context.colors.primary;
+        // Vocal et musique partagent le type 3 : c'est le nom du fichier qui
+        // décide de l'UI (cf. audio_message_kind.dart).
+        if (audioKindFromName(msg.mediaName) == AudioMessageKind.music) {
+          return MusicMessageBubble(
+            messageId: msg.clientId,
+            serverMsgId: msg.msgID,
+            isMe: isMe,
+            localPath: msg.localMediaPath,
+            pendingPath: isMe ? msg.pendingUploadPath : null,
+            networkUrl: msg.mediaUrl,
+            durationSeconds: msg.mediaDuration ?? 0,
+            mediaName: msg.mediaName,
+            mediaSize: msg.mediaSize,
+            coverThumb: msg.mediaThumb,
+            foregroundColor: accent,
+            textColor: _bubbleText(isMe),
+            chatContext: chatContext,
+          );
+        }
         return VoiceMessageBubble(
           messageId: msg.clientId,
           serverMsgId: msg.msgID,
@@ -705,18 +735,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
           pendingPath: isMe ? msg.pendingUploadPath : null,
           networkUrl: msg.mediaUrl,
           durationSeconds: msg.mediaDuration ?? 0,
-          foregroundColor: isMe
-              ? context.colors.onPrimary
-              : context.colors.primary,
-          chatContext: _convId != null
-              ? VoiceChatContext(
-                  conversationId: _convId!,
-                  title: widget.userName,
-                  userId: widget.userId,
-                  isGroup: widget.isGroup,
-                  avatarUrl: widget.avatarUrl,
-                )
-              : null,
+          foregroundColor: accent,
+          chatContext: chatContext,
         );
       case 4:
         return _buildFileMedia(msg, isMe);
@@ -725,7 +745,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
       case 7:
         return _buildContactMedia(msg, isMe);
       default:
-        return Text(_mediaLabel(msg.type),
+        return Text(_mediaLabel(msg.type, mediaName: msg.mediaName),
             style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));
     }
   }

@@ -19,6 +19,20 @@ class ImageThumbnailService {
     try {
       if (!File(path).existsSync()) return null;
       final raw = await File(path).readAsBytes();
+      return base64ForBytes(raw, maxWidth: maxWidth);
+    } catch (e) {
+      debugPrint('[ImageThumb] base64ForFile échec $path: $e');
+      return null;
+    }
+  }
+
+  /// Même vignette, à partir d'octets déjà en mémoire (pochette extraite des
+  /// tags d'un fichier audio, par exemple).
+  static Future<String?> base64ForBytes(
+    Uint8List raw, {
+    int maxWidth = 120,
+  }) async {
+    try {
       if (raw.isEmpty) return null;
 
       final codec = await ui.instantiateImageCodec(
@@ -35,7 +49,7 @@ class ImageThumbnailService {
         image.dispose();
       }
     } catch (e) {
-      debugPrint('[ImageThumb] base64ForFile échec $path: $e');
+      debugPrint('[ImageThumb] base64ForBytes échec: $e');
       return null;
     }
   }

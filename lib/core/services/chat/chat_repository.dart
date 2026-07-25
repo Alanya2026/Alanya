@@ -1386,17 +1386,20 @@ class ChatRepository {
     }
   }
 
-  /// Téléchargement manuel d'un message vocal reçu, avec progression.
+  /// Téléchargement manuel d'un audio reçu (vocal ou musique), avec
+  /// progression. Le plafond par défaut est celui des vocaux ; l'appelant le
+  /// relève pour un morceau.
   Future<String?> downloadVoiceMessage({
     required int msgID,
     required String mediaUrl,
     void Function(double? progress)? onProgress,
+    int maxBytes = 15 * 1024 * 1024,
   }) async {
     if (msgID == 0) return null;
     final path = await _mediaCache.downloadWithProgress(
       mediaUrl,
       onProgress: onProgress,
-      maxBytes: 15 * 1024 * 1024,
+      maxBytes: maxBytes,
     );
     if (path != null) await _dao.setLocalMediaPath(msgID, path);
     return path;

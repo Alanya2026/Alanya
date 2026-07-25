@@ -259,13 +259,15 @@ extension _ChatActions on _ChatDetailScreenState {
 
   String _previewOf(LocalMessage m) {
     // Vue unique : ne jamais exposer la légende hors de la visionneuse.
-    if (m.isViewOnce) return _mediaLabel(m.type);
+    if (m.isViewOnce) return _mediaLabel(m.type, mediaName: m.mediaName);
     // Localisation : JSON lat/lng — ne jamais exposer le content brut.
     if (m.type == 5) return locationPreviewLabel(m.content);
     // Contact : JSON — ne jamais exposer le content brut.
     if (m.type == 7) return contactPreviewLabel(m.content);
     // Item d'album : aperçu du média seul (pas du groupe).
-    if (isAlbumMarkerContent(m.content)) return _mediaLabel(m.type);
+    if (isAlbumMarkerContent(m.content)) {
+      return _mediaLabel(m.type, mediaName: m.mediaName);
+    }
     // Conserver les marqueurs (*gras*, etc.) : la citation les rend via parseRichSpans.
     if (m.content != null && m.content!.isNotEmpty) return m.content!;
     // Fichier : préférer le nom (ex. document.pdf) au libellé générique.
@@ -273,7 +275,7 @@ extension _ChatActions on _ChatDetailScreenState {
       final name = m.mediaName?.trim();
       if (name != null && name.isNotEmpty) return name;
     }
-    return _mediaLabel(m.type);
+    return _mediaLabel(m.type, mediaName: m.mediaName);
   }
 
   Future<void> _pickLocation() async {
@@ -916,7 +918,12 @@ extension _ChatActions on _ChatDetailScreenState {
                     sem.info,
                     _pickContact,
                   ),
-                  const SizedBox(width: 72),
+                  _attachOption(
+                    Icons.music_note,
+                    context.l10n.music,
+                    context.colors.tertiary,
+                    _pickMusic,
+                  ),
                   const SizedBox(width: 72),
                 ],
               ),
@@ -1121,6 +1128,29 @@ extension _ChatActions on _ChatDetailScreenState {
     final res = await FilePicker.platform.pickFiles(withData: false);
     final path = res?.files.single.path;
     if (path != null) _sendMediaFile(File(path), type: 4, name: res!.files.single.name);
+  }
+
+  /// Import d'un morceau : envoyé en `type = 3` comme un vocal, c'est le nom
+  /// de fichier qui le distinguera à l'affichage.
+  Future<void> _pickMusic() async {
+    final res = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      withData: false,
+    );
+    final picked = res?.files.single;
+    final path = picked?.path;
+    if (path == null) return;
+
+    // Sans durée lue ici, la bulle afficherait 0:00 avant la première lecture.
+    final durSec = await MusicMetadataService.durationSeconds(path);
+    if (!mounted) return;
+
+    await _sendMediaFile(
+      File(path),
+      type: 3,
+      name: picked!.name,
+      duration: durSec,
+    );
   }
 
   Future<void> _sendMediaFile(
@@ -1881,13 +1911,18 @@ extension _ChatActions on _ChatDetailScreenState {
     }
   }
 
-  String _mediaLabel(int type) {
+  String _mediaLabel(int type, {String? mediaName}) {
     switch (type) {
       case 1:
         return context.l10n.photo;
       case 2:
         return context.l10n.video;
       case 3:
+        if (audioKindFromName(mediaName) == AudioMessageKind.music) {
+          return context.l10n.musicPreview(
+            musicTitleFromName(mediaName, fallback: context.l10n.music),
+          );
+        }
         return context.l10n.audio;
       case 4:
         return context.l10n.file;
@@ -1896,7 +1931,8 @@ extension _ChatActions on _ChatDetailScreenState {
       case 7:
         return context.l10n.contact;
       default:
-        return '';
+        // Type inconnu (client plus ancien) : sans ça la bulle est vide.
+        return context.l10n.mediaFallback;
     }
   }
 

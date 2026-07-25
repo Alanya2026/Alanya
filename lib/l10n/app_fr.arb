@@ -1080,6 +1080,15 @@
   "title": "Titre",
   "admin": "Admin",
   "audio2": "Audio",
+  "music": "Musique",
+  "musicPreview": "🎵 {name}",
+  "@musicPreview": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "active": "Actif",
   "duration": "Durée",
   "failure": "Échec",

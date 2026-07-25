@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../db/app_database.dart';
+import 'audio_message_kind.dart';
 import 'contact_payload.dart';
 import 'location_payload.dart';
 import 'media_album.dart';
@@ -89,6 +90,10 @@ String mediaLabelForType(int type, {String? mediaName}) {
     case 2:
       return LocaleController.instance.l10n.video2;
     case 3:
+      if (audioKindFromName(mediaName) == AudioMessageKind.music) {
+        return musicTitleFromName(mediaName,
+            fallback: LocaleController.instance.l10n.music);
+      }
       return LocaleController.instance.l10n.audio2;
     case 4:
       return mediaName?.isNotEmpty == true ? mediaName! : LocaleController.instance.l10n.file2;

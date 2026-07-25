@@ -390,9 +390,25 @@ class TalkyApiClient {
       case 'webp':
         return 'image/webp';
       case 'm4a':
+      case 'm4b':
         return 'audio/mp4';
       case 'mp3':
         return 'audio/mpeg';
+      // Extensions que le package `mime` ne connaît pas : sans ces entrées
+      // elles retombent sur application/octet-stream et le serveur rejette.
+      case 'opus':
+        return 'audio/opus';
+      case 'wav':
+        return 'audio/wav';
+      case 'flac':
+        return 'audio/flac';
+      case 'ogg':
+      case 'oga':
+        return 'audio/ogg';
+      case 'aac':
+        return 'audio/aac';
+      case 'amr':
+        return 'audio/amr';
       case 'pdf':
         return 'application/pdf';
       case 'doc':

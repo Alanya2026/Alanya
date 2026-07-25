@@ -610,6 +610,15 @@
   "title": "Title",
   "admin": "Admin",
   "audio2": "Audio",
+  "music": "Music",
+  "musicPreview": "🎵 {name}",
+  "@musicPreview": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "active": "Active",
   "duration": "Duration",
   "failure": "Failure",

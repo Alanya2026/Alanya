@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
 import '../../../talky_models.dart';
+import '../../utils/audio_message_kind.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
@@ -153,7 +154,15 @@ class ConversationMerge {
       case 2:
         return isViewOnce ? LocaleController.instance.l10n.videoViewOnce : LocaleController.instance.l10n.video;
       case 3:
-        return isViewOnce ? LocaleController.instance.l10n.audioViewOnce : LocaleController.instance.l10n.audio;
+        if (isViewOnce) return LocaleController.instance.l10n.audioViewOnce;
+        // Vocal et musique partagent le type 3 : cf. audio_message_kind.dart.
+        if (audioKindFromName(mediaName) == AudioMessageKind.music) {
+          return LocaleController.instance.l10n.musicPreview(
+            musicTitleFromName(mediaName,
+                fallback: LocaleController.instance.l10n.music),
+          );
+        }
+        return LocaleController.instance.l10n.audio;
       case 4:
         return mediaName?.isNotEmpty == true ? LocaleController.instance.l10n.fileWithName(mediaName!) : LocaleController.instance.l10n.file;
       default:
