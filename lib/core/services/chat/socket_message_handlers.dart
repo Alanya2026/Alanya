@@ -54,6 +54,10 @@ class SocketMessageHandlers {
   /// Réactions en attente de confirmation HTTP (`msgID:userID`).
   final Set<String> _pendingReactionKeys = {};
 
+  /// msgID pour lesquels le son d'envoi a déjà été joué (anti-doublon si un
+  /// ack `messageSent` est reçu plusieurs fois).
+  final Set<int> _sentSoundMsgIds = {};
+
   Set<String> get pendingReactionKeys => Set.unmodifiable(_pendingReactionKeys);
 
   String _reactionKey(int msgID, int userID) => '$msgID:$userID';
@@ -101,17 +105,18 @@ class SocketMessageHandlers {
     if (!isNew) return;
     if (senderID0 == _myId()) return;
 
-    // Retour sonore de réception : uniquement app au premier plan (en
-    // arrière-plan c'est la notification système qui joue son propre son).
-    if (_appInForeground()) {
-      MessageSoundService.instance.playReceived();
-    }
-
     final convID = _toInt(json['conversationID']);
     final isViewOnce =
         json['isViewOnce'] == 1 || json['isViewOnce'] == true;
     final isActive =
         convID != 0 && convID == _activeConversationID() && _appInForeground();
+
+    // Retour sonore de réception : uniquement si le message arrive dans la
+    // discussion actuellement ouverte (sinon rien — en arrière-plan / autre
+    // conversation, c'est la notification qui signale).
+    if (isActive) {
+      MessageSoundService.instance.playReceived();
+    }
 
     // Conversation ouverte ET app au premier plan → message lu immédiatement.
     if (isActive) {
@@ -219,6 +224,11 @@ class SocketMessageHandlers {
     if (clientId != null) {
       MessagePathTracer.ackReceived(clientId);
       _ackWatchdog?.cancel(clientId);
+    }
+    // Son d'envoi : joué quand le SERVEUR confirme l'envoi (une seule fois par
+    // message), pas au tap. `Set.add` renvoie false si déjà présent.
+    if (_sentSoundMsgIds.add(msgID)) {
+      MessageSoundService.instance.playSent();
     }
     await _upsertServerMsg(json);
     final convID = _toInt(json['conversationID']);

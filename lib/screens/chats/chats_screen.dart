@@ -14,6 +14,9 @@ import '../../talky_models.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/status_ringed_avatar.dart';
+import '../../providers/status_provider.dart';
+import '../status/status_viewer_screen.dart';
 import '../../widgets/typing_indicator.dart';
 import '../../widgets/chat/message_status_icon.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
@@ -50,6 +53,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } else {
       _chatProvider!.addListener(_onChatProviderChanged);
     }
+    // Rafraîchit les statuts pour que les anneaux autour des avatars (1v1)
+    // reflètent l'état courant dès l'ouverture de la liste des chats.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<StatusProvider>().refresh();
+    });
   }
 
   void _onChatProviderChanged() {
@@ -362,6 +370,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
       conv.conversID,
       partnerUserId: conv.isGroup ? null : otherId,
     );
+
+    // Anneau de statut (1v1 uniquement pour l'instant) : le contact a-t-il des
+    // statuts en cours ? Si oui, l'avatar est encadré et le tap ouvre le statut.
+    final statusProv = context.watch<StatusProvider>();
+    final hasStatus =
+        !conv.isGroup && otherId != null && statusProv.totalCount(otherId) > 0;
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -378,15 +393,25 @@ class _ChatsScreenState extends State<ChatsScreen> {
       },
       leading: Stack(
         children: [
-          ProfileAvatar(
-            imageUrl: displayAvatar,
-            name: displayName,
-            userId: otherId ?? 0,
-            isGroup: conv.isGroup,
-            conversationId: conv.conversID,
-            size: AppSizes.avatarLg,
-            borderRadius: AppSizes.avatarLg / 2,
-          ),
+          if (hasStatus)
+            StatusRingedAvatar(
+              avatarUrl: displayAvatar,
+              name: displayName,
+              totalCount: statusProv.totalCount(otherId),
+              unseenCount: statusProv.unseenCount(otherId),
+              size: AppSizes.avatarLg,
+              onTap: () => _openContactStatus(context, statusProv, otherId),
+            )
+          else
+            ProfileAvatar(
+              imageUrl: displayAvatar,
+              name: displayName,
+              userId: otherId ?? 0,
+              isGroup: conv.isGroup,
+              conversationId: conv.conversID,
+              size: AppSizes.avatarLg,
+              borderRadius: AppSizes.avatarLg / 2,
+            ),
           if (isOnline && !conv.isGroup)
             const Positioned(
               right: 0,
@@ -510,6 +535,26 @@ class _ChatsScreenState extends State<ChatsScreen> {
   // Accusé affiché sur l'aperçu : ✓ envoyé · ✓✓ livré · ✓✓ bleu lu · horloge · !
   Widget _previewStatusIcon(int? status) {
     return MessageStatusIcon(status: status, size: 13, onBubble: false);
+  }
+
+  /// Ouvre la visionneuse sur les statuts du contact [authorId] (démarre au
+  /// premier non-vu, façon WhatsApp). Appelé au tap sur l'avatar encadré.
+  void _openContactStatus(
+      BuildContext context, StatusProvider prov, int authorId) {
+    final statuses = prov.byAuthor[authorId] ?? const <Statut>[];
+    if (statuses.isEmpty) return;
+    final firstUnseen = statuses.indexWhere((s) => !s.seenByMe);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StatusViewerScreen(
+          contactGroups: [statuses],
+          startContactIndex: 0,
+          startItemIndex: firstUnseen >= 0 ? firstUnseen : 0,
+          isMine: false,
+        ),
+      ),
+    );
   }
 
   void _openChatWithUser(User user) {
