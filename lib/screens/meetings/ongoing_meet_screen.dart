@@ -30,6 +30,11 @@ class OngoingMeetScreen extends StatefulWidget {
 class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final Map<String, RTCVideoRenderer> _remoteRenderers = {};
+
+  /// Résolu dans initState : `Provider.of` lève dans `dispose()`, l'élément
+  /// étant déjà démonté (Element.unmount vide `_widget` avant `state.dispose`).
+  /// Le nettoyage qui suivait était donc silencieusement sauté.
+  late final MeetingService _meetingService;
   final Map<String, String> _remoteStreamSignatures = {};
   bool _localRendererReady = false;
   bool _closing = false;
@@ -43,6 +48,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
   @override
   void initState() {
     super.initState();
+    _meetingService = Provider.of<MeetingService>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         Provider.of<MeetingService>(context, listen: false)
@@ -181,9 +187,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
 
   @override
   void dispose() {
-    final meetingService =
-        Provider.of<MeetingService>(context, listen: false);
-    meetingService.removeListener(_onMeetingServiceChanged);
+    _meetingService.removeListener(_onMeetingServiceChanged);
     _localRenderer.dispose();
     for (final r in _remoteRenderers.values) {
       r.dispose();

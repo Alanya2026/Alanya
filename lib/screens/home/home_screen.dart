@@ -39,6 +39,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _callScreenShown = false;
   late final PageController _pageController;
 
+  /// Résolu dans initState : `Provider.of` lève dans `dispose()`, l'élément
+  /// étant déjà démonté (Element.unmount vide `_widget` avant `state.dispose`).
+  /// Le nettoyage qui suivait était donc silencieusement sauté.
+  late final CallService _callService;
+
   StreamSubscription<NotificationAction>? _notifActionSub;
   Timer? _resumeSyncDebounce;
 
@@ -61,14 +66,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _callService = Provider.of<CallService>(context, listen: false);
     _pageController = PageController(initialPage: 0);
     unawaited(_loadCallsWatermark());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      final callService = Provider.of<CallService>(context, listen: false);
-      callService.addListener(_onCallStatusChanged);
+      _callService.addListener(_onCallStatusChanged);
       _onCallStatusChanged();
 
       _notifActionSub =
@@ -85,8 +90,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _resumeSyncDebounce?.cancel();
     _pageController.dispose();
-    Provider.of<CallService>(context, listen: false)
-        .removeListener(_onCallStatusChanged);
+    _callService.removeListener(_onCallStatusChanged);
     _notifActionSub?.cancel();
     super.dispose();
   }

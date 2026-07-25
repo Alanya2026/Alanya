@@ -25,6 +25,11 @@ class IncomingCallScreen extends StatefulWidget {
 class _IncomingCallScreenState extends State<IncomingCallScreen>
     with SingleTickerProviderStateMixin {
   bool _navigated = false;
+
+  /// Résolu dans initState : `Provider.of` lève dans `dispose()`, l'élément
+  /// étant déjà démonté (Element.unmount vide `_widget` avant `state.dispose`).
+  /// Le nettoyage qui suivait était donc silencieusement sauté.
+  late final CallService _callService;
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulse;
 
@@ -38,7 +43,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     _pulse = Tween<double>(begin: 0.96, end: 1.04).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
-    Provider.of<CallService>(context, listen: false).addListener(_onStatusChanged);
+    _callService = Provider.of<CallService>(context, listen: false);
+    _callService.addListener(_onStatusChanged);
   }
 
   @override
@@ -50,7 +56,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   @override
   void dispose() {
     _pulseCtrl.dispose();
-    Provider.of<CallService>(context, listen: false).removeListener(_onStatusChanged);
+    _callService.removeListener(_onStatusChanged);
     super.dispose();
   }
 

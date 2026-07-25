@@ -28,6 +28,11 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     with SingleTickerProviderStateMixin {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+
+  /// Résolu dans initState : `Provider.of` lève dans `dispose()`, l'élément
+  /// étant déjà démonté (Element.unmount vide `_widget` avant `state.dispose`).
+  /// Le nettoyage qui suivait était donc silencieusement sauté.
+  late final CallService _callService;
   bool _renderersReady = false;
   bool _closing = false;
   bool _localIsMainView = false;
@@ -40,6 +45,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   @override
   void initState() {
     super.initState();
+    _callService = Provider.of<CallService>(context, listen: false);
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -143,9 +149,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   @override
   void dispose() {
     _pulseCtrl.dispose();
-    try {
-      Provider.of<CallService>(context, listen: false).removeListener(_onCallChanged);
-    } catch (_) {}
+    _callService.removeListener(_onCallChanged);
     if (_renderersReady) {
       _localRenderer.srcObject = null;
       _remoteRenderer.srcObject = null;
