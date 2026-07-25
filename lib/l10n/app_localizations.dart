@@ -479,19 +479,19 @@ abstract class AppLocalizations {
   /// No description provided for @ringtoneSectionSystem.
   ///
   /// In fr, this message translates to:
-  /// **'Système'**
+  /// **'Sonnerie par défaut'**
   String get ringtoneSectionSystem;
 
   /// No description provided for @ringtoneSectionApp.
   ///
   /// In fr, this message translates to:
-  /// **'Fournies par l\'application'**
+  /// **'Sonneries préinstallées'**
   String get ringtoneSectionApp;
 
   /// No description provided for @ringtoneSectionCustom.
   ///
   /// In fr, this message translates to:
-  /// **'Personnalisées'**
+  /// **'Sonneries importées'**
   String get ringtoneSectionCustom;
 
   /// No description provided for @ringtoneSystemDefaultLabel.
@@ -511,6 +511,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fichiers audio (MP3, WAV, M4A…), 5 Mo max'**
   String get ringtoneAddCustomHint;
+
+  /// No description provided for @ringtoneLimitReached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nombre maximal de sonneries atteint (10)'**
+  String get ringtoneLimitReached;
+
+  /// No description provided for @ringtoneCustomEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune sonnerie importée pour l\'instant'**
+  String get ringtoneCustomEmpty;
 
   /// No description provided for @ringtoneDeleteConfirmTitle.
   ///
@@ -4183,6 +4195,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ouvert'**
   String get viewOnceOpened;
+
+  /// No description provided for @viewOnceDownloadKind.
+  ///
+  /// In fr, this message translates to:
+  /// **'{kind} · Télécharger'**
+  String viewOnceDownloadKind(String kind);
+
+  /// No description provided for @viewOnceDownloading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement…'**
+  String get viewOnceDownloading;
+
+  /// No description provided for @viewOnceRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échec — Réessayer'**
+  String get viewOnceRetry;
 
   /// No description provided for @recordingEllipsis.
   ///

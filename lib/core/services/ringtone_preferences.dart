@@ -65,17 +65,69 @@ class RingtoneOption {
     type: RingtoneSourceType.system,
   );
 
-  /// Sonneries embarquées avec l'app (assets déjà présents dans
-  /// `assets/sounds/`, déclarés dans pubspec.yaml).
+  /// Sonneries embarquées avec l'app. Chaque entrée existe en DEUX exemplaires :
+  ///  - un asset Flutter `assets/sounds/ringtones/<nom>.ogg` (aperçu + lecture
+  ///    quand l'app est au premier plan, via `just_audio`) ;
+  ///  - une ressource Android compilée `res/raw/rt_<nom>.ogg` référencée par
+  ///    [androidRawResource] (lecture par CallKit quand l'app est tuée).
+  /// Pour en remplacer une : déposer les deux fichiers (même nom) ; pour en
+  /// ajouter/supprimer ou renommer, éditer cette liste.
   static const List<RingtoneOption> bundled = [
     RingtoneOption(
-      id: 'bundled_ringback',
-      label: 'Sonnerie Alanya',
+      id: 'bundled_son1',
+      label: 'Sonnerie 1',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringback.wav',
-      // Copie compilée pour CallKit/natif (app tuée) :
-      // android/app/src/main/res/raw/ringback.ogg.
-      androidRawResource: 'ringback',
+      assetPath: 'assets/sounds/ringtones/son1.ogg',
+      androidRawResource: 'rt_son1',
+    ),
+    RingtoneOption(
+      id: 'bundled_son2',
+      label: 'Sonnerie 2',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/ringtones/son2.ogg',
+      androidRawResource: 'rt_son2',
+    ),
+    RingtoneOption(
+      id: 'bundled_son3',
+      label: 'Sonnerie 3',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/ringtones/son3.ogg',
+      androidRawResource: 'rt_son3',
+    ),
+    RingtoneOption(
+      id: 'bundled_son4',
+      label: 'Sonnerie 4',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/ringtones/son4.ogg',
+      androidRawResource: 'rt_son4',
+    ),
+    RingtoneOption(
+      id: 'bundled_son5',
+      label: 'Sonnerie 5',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/ringtones/son5.ogg',
+      androidRawResource: 'rt_son5',
+    ),
+    RingtoneOption(
+      id: 'bundled_son6',
+      label: 'Sonnerie 6',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/ringtones/son6.ogg',
+      androidRawResource: 'rt_son6',
+    ),
+    RingtoneOption(
+      id: 'bundled_son7',
+      label: 'Sonnerie 7',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/ringtones/son7.ogg',
+      androidRawResource: 'rt_son7',
+    ),
+    RingtoneOption(
+      id: 'bundled_son8',
+      label: 'Sonnerie 8',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/ringtones/son8.ogg',
+      androidRawResource: 'rt_son8',
     ),
   ];
 
@@ -102,6 +154,9 @@ const List<String> kSupportedRingtoneExtensions = ['mp3', 'wav', 'm4a', 'aac', '
 /// Taille max d'une sonnerie importée (garde-fou : évite qu'un utilisateur
 /// importe un fichier de plusieurs dizaines de Mo par erreur).
 const int kMaxRingtoneFileSizeBytes = 5 * 1024 * 1024; // 5 Mo
+
+/// Nombre maximal de sonneries importées par l'utilisateur.
+const int kMaxCustomRingtones = 10;
 
 class RingtoneImportException implements Exception {
   final String message;
@@ -170,6 +225,13 @@ class RingtonePreferences extends ChangeNotifier {
 
   List<RingtoneOption> get customRingtones => _custom;
 
+  /// Nombre de sonneries importées actuellement, et plafond associé.
+  int get customCount => _custom.length;
+  int get customMax => kMaxCustomRingtones;
+
+  /// L'utilisateur peut-il encore importer une sonnerie ? (limite non atteinte)
+  bool get canAddCustom => _custom.length < kMaxCustomRingtones;
+
   /// Lecture synchrone utilisable depuis un service non lié au Provider
   /// (ex. `CallService` au moment de sonner un appel entrant).
   static RingtoneOption get currentSelection {
@@ -206,7 +268,8 @@ class RingtonePreferences extends ChangeNotifier {
   static Future<void> preload() async {
     if (_prefsLoaded) return;
     final prefs = await SharedPreferences.getInstance();
-    _cachedSelectedId = prefs.getString(_kSelectedKey) ?? RingtoneOption.systemId;
+    _cachedSelectedId =
+        prefs.getString(_kSelectedKey) ?? RingtoneOption.systemId;
     final raw = prefs.getStringList(_kCustomListKey) ?? const [];
     _cachedCustom = raw
         .map((s) {
@@ -221,6 +284,32 @@ class RingtonePreferences extends ChangeNotifier {
         .where((o) => o.filePath != null && File(o.filePath!).existsSync())
         .toList();
     _prefsLoaded = true;
+    // Dès le préchargement, écrire les clés lues par le natif : garantit qu'un
+    // nouvel utilisateur (défaut = sonnerie Alanya) sonne correctement même
+    // app tuée, avant toute ouverture des réglages.
+    await _persistNativeKeys(prefs, _cachedSelectionFromCache());
+  }
+
+  /// Sélection courante calculée depuis le cache statique (utilisable sans
+  /// instance liée, ex. depuis [preload]).
+  static RingtoneOption _cachedSelectionFromCache() {
+    return [RingtoneOption.system, ...RingtoneOption.bundled, ..._cachedCustom]
+        .firstWhere((o) => o.id == _cachedSelectedId,
+            orElse: () => RingtoneOption.bundled.first);
+  }
+
+  /// Écrit les deux clés plates lues par le natif Android à partir d'une
+  /// sélection : chemin du fichier importé (ou '') + nom de ressource res/raw.
+  static Future<void> _persistNativeKeys(
+    SharedPreferences prefs,
+    RingtoneOption sel,
+  ) async {
+    final path = sel.type == RingtoneSourceType.custom ? (sel.filePath ?? '') : '';
+    await prefs.setString(_kActivePathKey, path);
+    await prefs.setString(
+      _kNativeNameKey,
+      sel.androidRawResource ?? 'system_ringtone_default',
+    );
   }
 
   Future<void> load() async {
@@ -248,14 +337,7 @@ class RingtonePreferences extends ChangeNotifier {
   /// sélection ou de la liste des sonneries importées.
   Future<void> _persistActivePath([SharedPreferences? prefsArg]) async {
     final prefs = prefsArg ?? await SharedPreferences.getInstance();
-    final sel = selected;
-    final path = sel.type == RingtoneSourceType.custom ? (sel.filePath ?? '') : '';
-    await prefs.setString(_kActivePathKey, path);
-    // Sonnerie fournie/système : CallKit joue lui-même une ressource compilée.
-    await prefs.setString(
-      _kNativeNameKey,
-      sel.androidRawResource ?? 'system_ringtone_default',
-    );
+    await _persistNativeKeys(prefs, selected);
   }
 
   /// Copie le fichier choisi par l'utilisateur dans le dossier documents de
@@ -265,6 +347,13 @@ class RingtonePreferences extends ChangeNotifier {
     required String sourcePath,
     required String label,
   }) async {
+    if (_custom.length >= kMaxCustomRingtones) {
+      throw RingtoneImportException(
+        'Limite atteinte ($kMaxCustomRingtones sonneries importées max). '
+        'Supprimez-en une pour en ajouter une nouvelle.',
+      );
+    }
+
     final sourceFile = File(sourcePath);
     if (!await sourceFile.exists()) {
       throw RingtoneImportException('Fichier introuvable.');
@@ -319,7 +408,8 @@ class RingtonePreferences extends ChangeNotifier {
     _custom = _custom.where((o) => o.id != id).toList();
     _cachedCustom = _custom;
 
-    // Si la sonnerie supprimée était sélectionnée, on retombe sur le défaut.
+    // Si la sonnerie supprimée était sélectionnée, on retombe sur la sonnerie
+    // par défaut de l'app.
     if (_selectedId == id) {
       await select(RingtoneOption.systemId);
     } else {

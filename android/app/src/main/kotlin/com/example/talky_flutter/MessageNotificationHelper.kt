@@ -5,7 +5,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -27,7 +29,11 @@ object MessageNotificationHelper {
 
     private val bufferLock = Any()
 
-    const val CHANNEL_ID = "talky_messages_v2"
+    // v3 : introduit un son de notification. Les canaux Android étant
+    // immuables une fois créés, on change d'ID (et on supprime l'ancien) pour
+    // que le son s'applique sans réinstallation.
+    const val CHANNEL_ID = "talky_messages_v3"
+    private const val LEGACY_CHANNEL_ID = "talky_messages_v2"
     const val ACTION_REPLY = "com.example.talky_flutter.NOTIF_REPLY"
     const val ACTION_MARK_READ = "com.example.talky_flutter.NOTIF_MARK_READ"
     const val EXTRA_CONVERSATION_ID = "conversationId"
@@ -241,14 +247,24 @@ object MessageNotificationHelper {
     private fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val mgr = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // Nettoie l'ancien canal silencieux (best-effort).
+        try {
+            mgr.deleteNotificationChannel(LEGACY_CHANNEL_ID)
+        } catch (_: Exception) {}
         if (mgr.getNotificationChannel(CHANNEL_ID) != null) return
         val channel = NotificationChannel(
             CHANNEL_ID,
             "Messages",
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "Messages Alanya (v2)"
+            description = "Messages Alanya"
             enableVibration(true)
+            // Son de notification par défaut du téléphone (canal notification).
+            val attrs = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build()
+            setSound(Settings.System.DEFAULT_NOTIFICATION_URI, attrs)
         }
         mgr.createNotificationChannel(channel)
     }

@@ -205,13 +205,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ringtoneScreenTitle => 'Call ringtone';
 
   @override
-  String get ringtoneSectionSystem => 'System';
+  String get ringtoneSectionSystem => 'Default ringtone';
 
   @override
-  String get ringtoneSectionApp => 'Provided by the app';
+  String get ringtoneSectionApp => 'Preinstalled ringtones';
 
   @override
-  String get ringtoneSectionCustom => 'Custom';
+  String get ringtoneSectionCustom => 'Imported ringtones';
 
   @override
   String get ringtoneSystemDefaultLabel => 'Device default ringtone';
@@ -221,6 +221,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ringtoneAddCustomHint => 'Audio files (MP3, WAV, M4A…), 5 MB max';
+
+  @override
+  String get ringtoneLimitReached => 'Maximum number of ringtones reached (10)';
+
+  @override
+  String get ringtoneCustomEmpty => 'No imported ringtones yet';
 
   @override
   String get ringtoneDeleteConfirmTitle => 'Delete this ringtone?';
@@ -2278,6 +2284,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewOnceOpened => 'Opened';
+
+  @override
+  String viewOnceDownloadKind(String kind) {
+    return '$kind · Download';
+  }
+
+  @override
+  String get viewOnceDownloading => 'Downloading…';
+
+  @override
+  String get viewOnceRetry => 'Failed — Retry';
 
   @override
   String get recordingEllipsis => 'Recording…';

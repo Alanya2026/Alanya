@@ -60,6 +60,80 @@ class MediaCacheService {
     }
   }
 
+  /// Comme [downloadToTemp] (fichier TEMPORAIRE hors cache persistant, pour la
+  /// vue unique) mais **en flux** avec progression (0.0–1.0, ou `null` si taille
+  /// inconnue) et **annulation** via [isCancelled]. Renvoie le chemin du fichier
+  /// temp, ou `null` en cas d'échec / d'annulation (le fichier partiel est alors
+  /// supprimé). Aucune trace persistante : l'appelant supprime le temp après
+  /// visionnage (ou en quittant, s'il n'a jamais été ouvert).
+  Future<String?> downloadToTempWithProgress(
+    String url, {
+    void Function(double? progress)? onProgress,
+    bool Function()? isCancelled,
+  }) async {
+    final resolved = _resolvedUrl(url);
+    final client = http.Client();
+    File? part;
+    try {
+      final tmp = await getTemporaryDirectory();
+      final path = p.join(
+        tmp.path,
+        'vo_${DateTime.now().microsecondsSinceEpoch}_${_fileName(resolved)}',
+      );
+      final file = File(path);
+      part = File('$path.part');
+
+      final request = http.Request('GET', Uri.parse(resolved));
+      final streamed =
+          await client.send(request).timeout(const Duration(seconds: 60));
+      if (streamed.statusCode != 200) return null;
+
+      final int? total = streamed.contentLength;
+      final hasKnownSize = total != null && total > 0;
+      onProgress?.call(hasKnownSize ? 0.0 : null);
+
+      final sink = part.openWrite();
+      var received = 0;
+      try {
+        await for (final chunk in streamed.stream) {
+          if (isCancelled?.call() ?? false) {
+            await sink.close();
+            await _deleteQuietly(part);
+            return null;
+          }
+          sink.add(chunk);
+          received += chunk.length;
+          if (hasKnownSize) {
+            onProgress?.call((received / total).clamp(0.0, 1.0));
+          }
+        }
+      } finally {
+        await sink.close();
+      }
+
+      if (hasKnownSize && received < total) {
+        await _deleteQuietly(part);
+        return null;
+      }
+      if (file.existsSync()) await file.delete();
+      await part.rename(file.path);
+      onProgress?.call(1.0);
+      return file.path;
+    } catch (e) {
+      debugPrint('[MediaCache] downloadToTempWithProgress échoué $resolved: $e');
+      if (part != null) await _deleteQuietly(part);
+      return null;
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<void> _deleteQuietly(File f) async {
+    try {
+      if (f.existsSync()) await f.delete();
+    } catch (_) {/* déjà supprimé — ignoré */}
+  }
+
   /// Télécharge le média avec progression (0.0–1.0) ou `null` si taille inconnue.
   Future<String?> downloadWithProgress(
     String url, {

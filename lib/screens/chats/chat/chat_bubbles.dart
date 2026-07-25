@@ -830,32 +830,49 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final uploading = msg.status == 0;
     final color = _bubbleText(isMe);
 
-    final String label;
-    final IconData icon;
-    if (uploading) {
-      label = context.l10n.sending;
-      icon = Icons.timer_outlined;
-    } else if (opened) {
-      label = context.l10n.viewOnceOpened;
-      icon = Icons.visibility_off_outlined;
-    } else {
-      final kind = msg.type == 1
-          ? context.l10n.photo2
-          : msg.type == 2
-              ? context.l10n.video2
-              : msg.type == 3
-                  ? context.l10n.audio2
-                  : context.l10n.mediaFallback;
-      label = isMe
-          ? context.l10n.kindViewOnce(kind)
-          : context.l10n.tapToViewKind(kind);
-      icon = Icons.timer;
+    // États non interactifs (envoi / déjà ouvert / expéditeur) : INCHANGÉS.
+    if (uploading || opened || isMe) {
+      final String label;
+      final IconData icon;
+      if (uploading) {
+        label = context.l10n.sending;
+        icon = Icons.timer_outlined;
+      } else if (opened) {
+        label = context.l10n.viewOnceOpened;
+        icon = Icons.visibility_off_outlined;
+      } else {
+        // Expéditeur : « {kind} · Vue unique ».
+        label = context.l10n.kindViewOnce(_voKind(msg.type));
+        icon = Icons.timer;
+      }
+      return _voRow(icon, label, color, opened: opened);
     }
 
-    final content = Row(
+    // Destinataire, pas encore ouvert : on télécharge D'ABORD (bulle réactive),
+    // puis l'ouverture est instantanée. Voir [ViewOnceDownloadManager].
+    return ValueListenableBuilder<VoState>(
+      valueListenable: ViewOnceDownloadManager.instance.notifier(msg.msgID),
+      builder: (context, st, _) => _buildViewOnceInteractive(msg, st, color),
+    );
+  }
+
+  /// Libellé localisé du type de média (photo/vidéo/audio/…).
+  String _voKind(int type) => type == 1
+      ? context.l10n.photo2
+      : type == 2
+          ? context.l10n.video2
+          : type == 3
+              ? context.l10n.audio2
+              : context.l10n.mediaFallback;
+
+  /// Ligne icône + libellé commune aux bulles vue-unique (rendu inchangé).
+  Widget _voRow(IconData icon, String label, Color color,
+      {bool opened = false, Widget? leading}) {
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 20, color: color.withAlpha(opened ? 140 : 255)),
+        leading ??
+            Icon(icon, size: 20, color: color.withAlpha(opened ? 140 : 255)),
         const SizedBox(width: AppSpacing.sm),
         Flexible(
           child: Text(
@@ -870,14 +887,70 @@ extension _ChatBubbles on _ChatDetailScreenState {
         ),
       ],
     );
+  }
 
-    // Tappable uniquement pour le destinataire, pas encore ouvert, non en envoi.
-    if (opened || isMe || uploading) return content;
+  /// Bulle vue-unique côté destinataire, selon l'état de pré-téléchargement.
+  Widget _buildViewOnceInteractive(LocalMessage msg, VoState st, Color color) {
+    final kind = _voKind(msg.type);
+    final manager = ViewOnceDownloadManager.instance;
+    final Widget row;
+    final VoidCallback onTap;
+
+    switch (st.status) {
+      case VoStatus.downloading:
+        final pct = st.progress != null
+            ? ' ${(st.progress! * 100).round()}%'
+            : '';
+        row = _voRow(
+          Icons.downloading,
+          '${context.l10n.viewOnceDownloading}$pct',
+          color,
+          leading: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: st.progress,
+              color: color,
+            ),
+          ),
+        );
+        onTap = () => manager.cancel(msg.msgID); // 2e tap = annuler
+        break;
+      case VoStatus.ready:
+        // Prêt : ouverture instantanée depuis le fichier local.
+        row = _voRow(
+            Icons.play_circle_outline, context.l10n.tapToViewKind(kind), color);
+        onTap = () => _openViewOnce(msg);
+        break;
+      case VoStatus.error:
+        row = _voRow(Icons.refresh, context.l10n.viewOnceRetry, color);
+        onTap = () => manager.download(msg.msgID, msg.mediaUrl ?? '');
+        break;
+      case VoStatus.idle:
+        final size = (msg.mediaSize != null && msg.mediaSize! > 0)
+            ? ' · ${_formatBytes(msg.mediaSize!)}'
+            : '';
+        row = _voRow(Icons.file_download_outlined,
+            '${context.l10n.viewOnceDownloadKind(kind)}$size', color);
+        onTap = () => manager.download(msg.msgID, msg.mediaUrl ?? '');
+        break;
+    }
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => _openViewOnce(msg),
-      child: content,
+      onTap: onTap,
+      child: row,
     );
+  }
+
+  /// Formate une taille d'octets en « Ko » / « Mo » (virgule décimale FR).
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes o';
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(0)} Ko';
+    final mb = kb / 1024;
+    return '${mb.toStringAsFixed(1).replaceAll('.', ',')} Mo';
   }
 
   /// Overlay spinner ou barre de progression pendant l'envoi d'un média.

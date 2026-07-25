@@ -205,13 +205,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ringtoneScreenTitle => 'Sonnerie d\'appel';
 
   @override
-  String get ringtoneSectionSystem => 'Système';
+  String get ringtoneSectionSystem => 'Sonnerie par défaut';
 
   @override
-  String get ringtoneSectionApp => 'Fournies par l\'application';
+  String get ringtoneSectionApp => 'Sonneries préinstallées';
 
   @override
-  String get ringtoneSectionCustom => 'Personnalisées';
+  String get ringtoneSectionCustom => 'Sonneries importées';
 
   @override
   String get ringtoneSystemDefaultLabel => 'Sonnerie par défaut de l\'appareil';
@@ -222,6 +222,12 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get ringtoneAddCustomHint =>
       'Fichiers audio (MP3, WAV, M4A…), 5 Mo max';
+
+  @override
+  String get ringtoneLimitReached => 'Nombre maximal de sonneries atteint (10)';
+
+  @override
+  String get ringtoneCustomEmpty => 'Aucune sonnerie importée pour l\'instant';
 
   @override
   String get ringtoneDeleteConfirmTitle => 'Supprimer cette sonnerie ?';
@@ -2298,6 +2304,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get viewOnceOpened => 'Ouvert';
+
+  @override
+  String viewOnceDownloadKind(String kind) {
+    return '$kind · Télécharger';
+  }
+
+  @override
+  String get viewOnceDownloading => 'Téléchargement…';
+
+  @override
+  String get viewOnceRetry => 'Échec — Réessayer';
 
   @override
   String get recordingEllipsis => 'Enregistrement…';
