@@ -220,11 +220,6 @@ extension _ChatActions on _ChatDetailScreenState {
     final text = _messageController.text.trim();
     if (text.isEmpty || _myId == null) return;
 
-    // Son d'envoi joué IMMÉDIATEMENT au tap (avant tout réseau) : le message
-    // « part » de l'expéditeur, indépendamment de la création de la conversation
-    // ou de sa réception par le destinataire.
-    MessageSoundService.instance.playSent();
-
     final convId = await _ensureConversation();
     if (convId == null) return;
 
@@ -1112,9 +1107,6 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
 
-    // Album : son d'envoi IMMÉDIAT au tap, avant la création éventuelle de
-    // conversation.
-    MessageSoundService.instance.playSent();
     final convId = await _ensureConversation();
     if (convId == null) return;
     _chat.repository.sendMediaAlbum(
@@ -1151,10 +1143,6 @@ extension _ChatActions on _ChatDetailScreenState {
       ));
       return;
     }
-
-    // Son d'envoi IMMÉDIAT (avant la création éventuelle de conversation et
-    // l'upload) : le média « part » dès le tap.
-    MessageSoundService.instance.playSent();
 
     final convId = await _ensureConversation();
     if (convId == null) return;
