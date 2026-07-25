@@ -105,6 +105,16 @@
 % --------------------------------------------------------------------
 %  Titres
 % --------------------------------------------------------------------
+% Les pages de \part restaient au style LaTeX par défaut (serif, centré) alors
+% que le reste du document est habillé : on les aligne sur la charte.
+\titleformat{\part}[display]
+  {\normalfont\sffamily\filright}
+  {\Large\color{AlanyaGray} PARTIE\ \thepart}
+  {1.2ex}
+  {\fontsize{40}{44}\selectfont\bfseries\color{AlanyaIndigoDark}}
+  [\vspace{1.2ex}{\color{AlanyaLine}\rule{0.42\linewidth}{1pt}}]
+\titlespacing*{\part}{0pt}{0pt}{28pt}
+
 \titleformat{\chapter}[display]
   {\normalfont\sffamily\bfseries\color{AlanyaIndigo}}
   {\filright\large CHAPITRE\ \Huge\thechapter}

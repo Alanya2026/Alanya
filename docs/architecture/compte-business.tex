@@ -1,0 +1,833 @@
+% =====================================================================
+%  ALANYA — Dossier de conception
+%  Étape 4 : comptes business
+%
+%  Compilation :  latexmk -pdf compte-business.tex
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{alanya-conception}
+\setAlanyaDocTitre{Comptes business}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Alanya - Comptes business},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Conception - profil business, catalogue, annuaire, tableau de bord}
+}
+
+\begin{document}
+
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-6.4cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-6.4cm]current page.north west) rectangle ([yshift=-6.0cm]current page.north east);
+\end{tikzpicture}
+
+\vspace*{1.1cm}
+{\color{white}\sffamily
+\begin{center}
+  {\small\bfseries DOSSIER DE CONCEPTION}\\[6pt]
+  {\footnotesize\color{AlanyaContainer} Document de travail --- à valider avant développement}
+\end{center}}
+
+\vspace{3.4cm}
+
+\begin{center}\sffamily
+  {\small\bfseries ÉTAPE 4}\\[10pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[20pt]
+  {\fontsize{32}{36}\selectfont\bfseries\color{AlanyaIndigoDark} Comptes business}\\[10pt]
+  {\large\color{AlanyaGray} Une vitrine, pas une boutique}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Fiche étendue, catalogue, horaires, annuaire de proximité}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}
+\end{center}
+
+\vspace{1.2cm}
+
+\begin{center}
+  \badgePanier[3.2]\hspace{1.6cm}\badgePastillePanier[3.2]
+\end{center}
+
+\vfill
+
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Périmètre}   & Talky (Flutter) \textbullet{} Alanya-Backend \textbullet{} Alanya Admin\\[3pt]
+    \thd{Statut}      & Conception --- aucune ligne de code écrite\\[3pt]
+    \thd{Dépend de}   & Socle de compte (migration 023)\\[3pt]
+    \thd{Hors périmètre} & Encaissement dans l'application\\[3pt]
+    \thd{Date}        & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.8cm}
+\begin{center}\color{AlanyaGray}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% =====================================================================
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\markboth{Avant-propos}{}
+\thispagestyle{plain}
+
+Le socle de compte (étape~1) a introduit le genre \emph{business} et son badge. Ce document
+décrit ce que ce genre de compte \textbf{contient}~: sa fiche, son catalogue, ses horaires,
+sa place dans un annuaire, et le tableau de bord qui lui rend compte de son audience.
+
+\begin{note}[Une décision de périmètre à garder en tête]
+Alanya reste une \textbf{vitrine}. Le commerçant présente son activité~; la transaction se
+fait hors application. Les \guillemotleft~moyens de paiement~\guillemotright{} de sa fiche
+sont une information affichée, pas un encaissement.
+\end{note}
+
+\tableofcontents
+
+% =====================================================================
+\part{Approche naïve}
+% =====================================================================
+
+\chapter{Ce qu'un commerçant peut présenter}
+
+\section{La fiche}
+
+Un compte business dispose d'une fiche étendue, absente d'un compte personnel~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Identité} & Raison sociale, description, logo, image de couverture. \\
+\thd{Catégorie} & Une catégorie principale, choisie dans une liste courte. \\
+\thd{Mots-clés} & Saisis librement par le commerçant, pour être trouvé. \\
+\thd{Lieu} & Adresse, position sur la carte, distance affichée au visiteur. \\
+\thd{Horaires} & Jours et créneaux d'ouverture, exceptions. \\
+\thd{Liens} & Site web, réseaux sociaux, dans l'ordre choisi. \\
+\thd{Médias} & Images et vidéos de présentation. \\
+\thd{Moyens de paiement} & Ce que l'établissement accepte sur place. \\
+\thd{Catalogue} & Produits ou services, avec prix et disponibilité. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Trois de ces rubriques méritent d'être détaillées, parce qu'elles ne sont pas de simples
+champs de formulaire.
+
+\section{Le lieu et la géolocalisation}
+
+C'est la rubrique dont dépend tout l'annuaire, et la seule qui parte réellement de zéro ---
+Alanya ne stocke aujourd'hui aucune donnée géographique.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Adresse écrite} & Ce que le visiteur lit et recopie.
+\guillemotleft~Avenue Kennedy, Yaoundé~\guillemotright. Texte libre~: il n'existe pas de
+référentiel d'adresses fiable sur le marché visé. \\
+\thd{Position} & Un point sur la carte, posé par le commerçant lui-même. C'est
+\emph{elle} qui sert à la recherche par proximité, pas l'adresse écrite. \\
+\thd{Distance affichée} & Calculée à la volée entre le visiteur et le commerce.
+\guillemotleft~à 1,2~km de vous~\guillemotright. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Comment le commerçant pose son point]
+Deux gestes seulement~: \guillemotleft~utiliser ma position actuelle~\guillemotright{}
+quand il est sur place, ou déplacer un repère sur une carte. Pas de géocodage d'adresse ---
+il donnerait des résultats médiocres et masquerait les erreurs derrière une fausse
+précision. Le commerçant sait où est sa boutique~; on lui demande de le montrer.
+\end{note}
+
+\begin{constat}[Aucune dépendance à ajouter]
+\code{geolocator} et \code{flutter\_map} sont \textbf{déjà} dans \code{pubspec.yaml} --- ils
+servent au partage de position dans les conversations
+(\code{lib/screens/chats/location\_picker\_screen.dart}). Le sélecteur de position du
+commerçant peut réutiliser cet écran.
+\end{constat}
+
+\section{Médias de présentation}
+
+Images \emph{et} vidéos. C'est ce qui fait la différence entre une fiche remplie et une
+fiche convaincante --- et c'est aussi la rubrique la plus coûteuse à exploiter.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Couverture} & Une image en tête de fiche, format paysage. \\
+\thd{Galerie} & Photos de l'établissement, des produits, de l'équipe. Ordre choisi par le
+commerçant. \\
+\thd{Vidéos} & Présentation de l'activité. Avec vignette, durée, et lecture au clic. \\
+\thd{Logo} & Réutilise l'avatar du compte --- pas de champ supplémentaire. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[La vidéo est un chantier, pas un champ]
+Une vidéo téléversée depuis un téléphone pèse couramment plusieurs dizaines de mégaoctets.
+La servir telle quelle à chaque ouverture de fiche est intenable. Il faut une vignette, une
+limite de durée, et un transcodage --- lequel suppose la file de jobs conçue à l'étape~3.
+Voir le chapitre~9.
+\end{alerte}
+
+\section{Liens et présence en ligne}
+
+Site web, Facebook, Instagram, WhatsApp, TikTok\ldots{} Le commerçant en ajoute autant qu'il
+veut et choisit leur ordre d'affichage.
+
+\begin{note}[Pas une colonne par réseau]
+Le point que le document d'amorce soulignait à juste titre. Une table
+\code{business\_link (type, url, ordre)} permet d'ajouter le réseau à la mode de l'an
+prochain sans migration. Une colonne \code{facebook\_url} ne le permettrait pas.
+\end{note}
+
+\section{Les quatre écrans}
+
+\begin{center}
+  \imageOuCadre{maquettes/comptes-business-ecrans.png}{\linewidth}%
+    {Fiche business, catalogue, éditeur d'horaires, annuaire\\
+     \texttt{maquettes/comptes-business-ecrans.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/37b8e6c7-1235-42df-aabc-d66b8f26ff67}%
+{\texttt{claude.ai/code/artifact/37b8e6c7}}\\
+Source versionnée~: \code{docs/architecture/maquettes/comptes-business.html}
+\end{note}
+
+\section{Le badge fait son travail}
+
+Dans l'annuaire, trois commerces se distinguent d'un coup d'{\oe}il~: deux portent la
+pastille pleine \badgePastillePanier[1] --- vérifiés par Alanya --- et un porte le panier nu
+\badgePanier[1], c'est-à-dire un commerce qui s'est déclaré tel sans qu'on l'ait contrôlé.
+
+C'est exactement la distinction que le socle devait rendre lisible à 13~pixels, et c'est
+dans l'annuaire qu'elle compte le plus~: un visiteur qui cherche une pharmacie de garde
+prend une décision sur cette base.
+
+\chapter{La catégorie et les mots-clés}
+
+\section{Une liste courte, pas une arborescence}
+
+Le choix retenu~: \textbf{une catégorie principale} dans une liste courte, plus des
+\textbf{mots-clés libres} saisis par le commerçant.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Pourquoi pas deux niveaux} & Un sélecteur à deux étages est pénible sur un téléphone,
+et il faudrait arrêter dès aujourd'hui une liste longue qu'on ne pourra plus changer. \\
+\thd{Pourquoi des mots-clés} & Ils absorbent tout ce que la liste ne prévoit pas ---
+\guillemotleft~garde de nuit~\guillemotright, \guillemotleft~livraison~\guillemotright,
+\guillemotleft~sur mesure~\guillemotright{} --- sans figer quoi que ce soit. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Le revers, à assumer]
+La qualité de la recherche dépendra de ce que les commerçants écrivent. Deux garde-fous
+tempèrent~: les mots-clés sont \emph{normalisés} (minuscules, accents repliés) et le champ
+propose les mots déjà utilisés par d'autres commerces de la même catégorie. Un mot-clé
+partagé vaut mieux que dix orthographes du même mot.
+\end{alerte}
+
+\section{Une taxonomie est difficile à changer}
+
+C'est le point que le document d'amorce soulignait à juste titre~: une fois des milliers de
+fiches rangées, renommer ou fusionner une catégorie devient une opération de reprise de
+données. D'où la liste courte --- vingt à trente entrées --- et la table de référence
+éditable plutôt que des valeurs figées dans le code.
+
+\chapter{Les horaires, l'écran le plus difficile}
+
+Ce n'est pas un champ de formulaire. Six cas doivent tenir sur un écran de téléphone, et
+cinq d'entre eux restent invisibles tant qu'on n'a pas essayé.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.1cm}X@{}}
+\toprule
+\thd{Multi-créneaux} & Ouvert le matin, fermé à midi, rouvert l'après-midi. Deux plages pour
+un seul jour --- le cas le plus courant, et celui qu'un champ \guillemotleft~de\ldots{}
+à\ldots{}~\guillemotright{} ne sait pas exprimer. \\
+\thd{24\,h/24} & N'est pas \guillemotleft~00:00 $\rightarrow$ 00:00~\guillemotright. C'est un
+état distinct, sans quoi le calcul \guillemotleft~ouvert maintenant~\guillemotright{} se
+trompe. \\
+\thd{Passage de minuit} & Un bar ouvert de 20\,h à 2\,h~: l'heure de fin est
+\emph{avant} l'heure de début. \\
+\thd{Copie d'un jour} & Saisir sept fois les mêmes horaires fait abandonner.
+\guillemotleft~Copier vers~\guillemotright{} n'est pas un confort, c'est ce qui décide si la
+fiche sera remplie. \\
+\thd{Exceptions} & Jours fériés, congés, fermeture ponctuelle. Une liste à part, pas un
+champ de plus. \\
+\thd{Fuseau horaire} & \guillemotleft~Ouvert maintenant~\guillemotright{} se calcule dans le
+fuseau du commerce, pas dans celui du visiteur. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{constat}[Le fuseau existe déjà]
+La table \code{pays} porte \code{timeZone} et \code{decalageHoraire}
+(\code{migrations/001\_initial\_schema.sql}), et \code{users.idPays} les relie. Rien à
+créer --- mais tout à ne pas oublier.
+\end{constat}
+
+\begin{note}[À budgéter comme un écran]
+Cet éditeur mérite sa propre estimation, au même titre qu'un écran de conversation. Le
+traiter comme un champ du formulaire de profil garantit qu'il sera bâclé, puis refait.
+\end{note}
+
+\chapter{Le tableau de bord du commerçant}
+
+\section{Ce qu'il montre}
+
+Puisque les transactions se font hors application, le tableau de bord ne peut pas parler
+d'argent. Il parle de ce qu'Alanya \textbf{observe réellement}~: l'audience de la fiche.
+
+\begin{itemize}[leftmargin=1.4em]
+  \item nombre de vues du profil, et son évolution~;
+  \item provenance des visites --- annuaire, recherche, conversation, lien partagé~;
+  \item répartition géographique des visiteurs~;
+  \item conversations entamées depuis la fiche.
+\end{itemize}
+
+\begin{note}[Pourquoi pas de commandes déclarées]
+On aurait pu laisser le commerçant saisir ses ventes pour obtenir un
+\guillemotleft~suivi des transactions~\guillemotright. L'expérience de ce genre de saisie
+manuelle est constante~: elle est abandonnée après quelques semaines, et le tableau de bord
+devient faux --- pire que vide. Écarté volontairement.
+\end{note}
+
+\section{Ce que cela implique}
+
+Compter des vues suppose de les enregistrer. C'est un journal d'événements, avec le volume
+que cela suppose --- voir le chapitre technique~8.
+
+% =====================================================================
+\part{Approche technique}
+% =====================================================================
+
+\chapter{Modèle de données}
+
+\section{Vue d'ensemble}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  t/.style={draw=AlanyaLine, fill=white, rounded corners=3pt,
+            font=\sffamily\scriptsize, inner sep=5pt, text=AlanyaInk, align=center},
+  socle/.style={t, draw=AlanyaIndigo, line width=1pt, fill=AlanyaContainer,
+                font=\sffamily\small\bfseries, text=AlanyaIndigoDark},
+  ref/.style={t, draw=AlanyaMute, fill=AlanyaSurface, text=AlanyaGray},
+  l/.style={draw=AlanyaLine, semithick}
+]
+  \node[socle] (u)  at (0,0)      {users};
+  \node[t]     (bp) at (0,-2.0)   {business\_profile};
+  \node[t]     (h)  at (-4.3,-3.9){business\_hours};
+  \node[t]     (ex) at (-4.3,-5.2){business\_hours\_exception};
+  \node[t]     (li) at (0,-3.9)   {business\_link};
+  \node[t]     (me) at (0,-5.2)   {business\_media};
+  \node[t]     (pr) at (4.3,-3.9) {business\_product};
+  \node[t]     (pv) at (4.3,-5.2) {business\_profile\_view};
+  \node[ref]   (ca) at (5.2,-2.0) {business\_category\\[-1pt]{\itshape référence}};
+  \node[ref]   (kw) at (-5.0,-2.0){business\_keyword};
+
+  \draw[l] (u)  -- (bp);
+  \draw[l] (bp) -- (ca);
+  \draw[l] (bp) -- (kw);
+  \foreach \n in {h,li,me,pr,pv} { \draw[l] (bp) -- (\n); }
+  \draw[l] (h) -- (ex);
+\end{tikzpicture}
+\end{center}
+
+\section{Le profil}
+
+\begin{lstlisting}[language=SQL, caption={\code{migrations/026\_business.sql} --- extrait}]
+-- 026_business.sql -- profil business etendu
+-- Requiert 023 (socle de compte).
+
+CREATE TABLE IF NOT EXISTS business_category (
+  id       SMALLINT     NOT NULL AUTO_INCREMENT,
+  slug     VARCHAR(40)  NOT NULL,
+  libelle  VARCHAR(80)  NOT NULL,
+  ordre    SMALLINT     NOT NULL DEFAULT 0,
+  actif    TINYINT      NOT NULL DEFAULT 1,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cat_slug (slug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS business_profile (
+  alanyaID     INT          NOT NULL,        -- 1-1 avec le compte
+  legal_name   VARCHAR(120) NOT NULL,
+  description  TEXT         NULL,
+  category_id  SMALLINT     NULL,
+  cover_url    VARCHAR(255) NULL,
+  address      VARCHAR(255) NULL,
+  -- SPATIAL INDEX impose NOT NULL : on prevoit la colonne des maintenant,
+  -- l'ajouter apres coup sur une table remplie est penible.
+  geo          POINT        NOT NULL SRID 4326,
+  timezone     VARCHAR(64)  NULL,            -- sinon deduit via users.idPays
+  is_hidden    TINYINT      NOT NULL DEFAULT 0
+    COMMENT 'Profil conserve mais masque (retour en compte personnel)',
+  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                            ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (alanyaID),
+  SPATIAL INDEX idx_bp_geo (geo),
+  KEY idx_bp_categorie (category_id, is_hidden),
+  CONSTRAINT fk_bp_user FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE,
+  CONSTRAINT fk_bp_cat  FOREIGN KEY (category_id)
+    REFERENCES business_category(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+\end{lstlisting}
+
+\begin{alerte}[Deux contraintes MySQL à ne pas découvrir en route]
+\code{SPATIAL INDEX} exige que la colonne soit \code{NOT NULL} et porte un SRID explicite.
+Un commerce sans coordonnées connues doit donc recevoir une position par défaut --- celle du
+chef-lieu de son pays --- plutôt qu'un \code{NULL}. Et \code{utf8mb4} est indispensable~: le
+premier emoji dans un nom d'entreprise ferait échouer l'insertion sur un jeu plus étroit.
+\end{alerte}
+
+\section{Liens, médias, mots-clés}
+
+\begin{lstlisting}[language=SQL, caption={Tables satellites}]
+-- Pas une colonne par reseau social : ajouter TikTok demain ne doit
+-- pas demander de migration.
+CREATE TABLE IF NOT EXISTS business_link (
+  id       BIGINT       NOT NULL AUTO_INCREMENT,
+  alanyaID INT          NOT NULL,
+  kind     TINYINT      NOT NULL COMMENT '0=site 1=facebook 2=instagram ...',
+  url      VARCHAR(255) NOT NULL,
+  ordre    SMALLINT     NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  KEY idx_bl_owner (alanyaID, ordre),
+  CONSTRAINT fk_bl_user FOREIGN KEY (alanyaID)
+    REFERENCES business_profile(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS business_keyword (
+  alanyaID   INT         NOT NULL,
+  keyword    VARCHAR(40) NOT NULL COMMENT 'Deja normalise : minuscules, accents replies',
+  PRIMARY KEY (alanyaID, keyword),
+  KEY idx_bk_mot (keyword),
+  CONSTRAINT fk_bk_user FOREIGN KEY (alanyaID)
+    REFERENCES business_profile(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Images ET videos de presentation. Une seule table : la difference tient
+-- au champ `kind` et aux colonnes de transcodage, nulles pour une image.
+CREATE TABLE IF NOT EXISTS business_media (
+  id           BIGINT       NOT NULL AUTO_INCREMENT,
+  alanyaID     INT          NOT NULL,
+  kind         TINYINT      NOT NULL DEFAULT 0 COMMENT '0=image 1=video',
+  role         TINYINT      NOT NULL DEFAULT 0 COMMENT '0=galerie 1=couverture',
+  url          VARCHAR(255) NOT NULL,
+  thumb_url    VARCHAR(255) NULL  COMMENT 'Vignette : obligatoire pour une video',
+  width        SMALLINT     NULL,
+  height       SMALLINT     NULL,
+  duration_ms  INT          NULL  COMMENT 'Video uniquement',
+  size_bytes   BIGINT       NULL,
+  -- Cycle de vie du transcodage, pilote par la file de jobs (etape 3).
+  status       TINYINT      NOT NULL DEFAULT 0
+                 COMMENT '0=en attente 1=pret 2=echec',
+  ordre        SMALLINT     NOT NULL DEFAULT 0,
+  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_bm_owner (alanyaID, role, ordre),
+  KEY idx_bm_statut (status),
+  CONSTRAINT fk_bm_user FOREIGN KEY (alanyaID)
+    REFERENCES business_profile(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+\end{lstlisting}
+
+\begin{note}[Une seule table pour les images et les vidéos]
+Les séparer obligerait à fusionner deux listes à chaque affichage de galerie, et à dupliquer
+l'ordre d'affichage. \code{kind} distingue les deux~; les colonnes propres à la vidéo
+(\code{duration\_ms}, \code{thumb\_url}, \code{status}) restent nulles pour une image.
+\end{note}
+
+\begin{note}[\code{status} n'est pas décoratif]
+Une vidéo est \emph{visible mais pas encore lisible} tant que le transcodage n'a pas
+abouti. Sans cet état, la fiche afficherait une vidéo qui ne démarre pas --- et le
+commerçant conclurait que l'application est cassée.
+\end{note}
+
+\section{Horaires}
+
+\begin{lstlisting}[language=SQL, caption={Horaires et exceptions}]
+CREATE TABLE IF NOT EXISTS business_hours (
+  id         BIGINT  NOT NULL AUTO_INCREMENT,
+  alanyaID   INT     NOT NULL,
+  weekday    TINYINT NOT NULL COMMENT '1=lundi ... 7=dimanche',
+  -- Minutes depuis minuit : 480 = 08:00. Un TIME suffirait, mais l'entier
+  -- rend le passage de minuit trivial (fin < debut => le lendemain).
+  start_min  SMALLINT NULL,
+  end_min    SMALLINT NULL,
+  all_day    TINYINT NOT NULL DEFAULT 0 COMMENT '1 = 24h/24, start/end ignores',
+  PRIMARY KEY (id),
+  KEY idx_bh_jour (alanyaID, weekday),
+  CONSTRAINT fk_bh_user FOREIGN KEY (alanyaID)
+    REFERENCES business_profile(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Absence de ligne pour un jour = ferme ce jour-la.
+-- Plusieurs lignes pour un meme jour = plusieurs creneaux.
+
+CREATE TABLE IF NOT EXISTS business_hours_exception (
+  id        BIGINT      NOT NULL AUTO_INCREMENT,
+  alanyaID  INT         NOT NULL,
+  day       DATE        NOT NULL,
+  closed    TINYINT     NOT NULL DEFAULT 1,
+  start_min SMALLINT    NULL,   -- horaires speciaux si closed = 0
+  end_min   SMALLINT    NULL,
+  label     VARCHAR(80) NULL,   -- "fete nationale"
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_bhe (alanyaID, day),
+  CONSTRAINT fk_bhe_user FOREIGN KEY (alanyaID)
+    REFERENCES business_profile(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+\end{lstlisting}
+
+\begin{note}[Trois conventions qui évitent des cas particuliers]
+\textbf{Pas de ligne} pour un jour signifie \emph{fermé} --- inutile de stocker l'absence.
+\textbf{Plusieurs lignes} pour le même jour donnent les créneaux multiples, sans colonne
+supplémentaire. Et \code{end\_min < start\_min} signifie \emph{le lendemain}, ce qui règle
+le passage de minuit sans champ dédié.
+\end{note}
+
+\section{Catalogue}
+
+\begin{lstlisting}[language=SQL, caption={Produits}]
+CREATE TABLE IF NOT EXISTS business_product (
+  id           BIGINT       NOT NULL AUTO_INCREMENT,
+  alanyaID     INT          NOT NULL,
+  name         VARCHAR(120) NOT NULL,
+  description  TEXT         NULL,
+  -- Entier en unite mineure + code devise. JAMAIS un flottant.
+  price_minor  BIGINT       NULL,
+  currency     CHAR(3)      NOT NULL DEFAULT 'XAF',
+  unit         VARCHAR(40)  NULL COMMENT 'boite de 20, 500 ml',
+  media_url    VARCHAR(255) NULL,
+  availability TINYINT      NOT NULL DEFAULT 0
+                 COMMENT '0=disponible 1=sur commande 2=epuise',
+  ordre        SMALLINT     NOT NULL DEFAULT 0,
+  is_hidden    TINYINT      NOT NULL DEFAULT 0,
+  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_bpr_owner (alanyaID, is_hidden, ordre),
+  CONSTRAINT fk_bpr_user FOREIGN KEY (alanyaID)
+    REFERENCES business_profile(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+\end{lstlisting}
+
+\begin{alerte}[Le prix n'est jamais un flottant]
+1\,200~FCFA se stocke \code{120000} en unité mineure, avec \code{XAF} à côté. Un
+\code{FLOAT} ou un \code{DOUBLE} sur des prix finit toujours par produire un centime
+fantôme, et le franc CFA n'a pas de subdivision --- raison de plus pour que l'unité soit
+explicite plutôt que devinée.
+\end{alerte}
+
+\chapter{Un lieu, ou plusieurs}
+
+\section{Ce qui est retenu}
+
+\textbf{Un seul lieu par compte.} L'adresse, la position et les horaires sont portés par
+\code{business\_profile}. Une chaîne de trois boutiques crée aujourd'hui trois comptes.
+
+\section{La variante multi-lieux}
+
+Elle est documentée ici parce qu'elle est envisagée comme \textbf{fonctionnalité payante} et
+qu'il vaut mieux en connaître le coût avant de la promettre.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.2cm}XX@{}}
+\toprule
+ & \thd{Un lieu (retenu)} & \thd{Plusieurs lieux} \\
+\midrule
+Adresse, position, horaires & sur \code{business\_profile} &
+  déplacés dans \code{business\_location} \\
+Annuaire & cherche des \emph{comptes} & cherche des \emph{lieux}, remonte le compte \\
+Index spatial & sur \code{business\_profile} & sur \code{business\_location} \\
+Éditeur d'horaires & un jeu & un jeu \textbf{par lieu} \\
+Fiche & une adresse & sélecteur de lieu en tête de fiche \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Coût de bascule}~: création de \code{business\_location}, migration des colonnes
+d'adresse, de position et d'horaires depuis \code{business\_profile}, déplacement de l'index
+spatial, et réécriture de la requête d'annuaire. Le reste --- catalogue, liens, médias,
+mots-clés --- n'est pas touché.
+
+\begin{note}[Comment se garder la porte ouverte à moindre frais]
+Concevoir dès maintenant les requêtes d'annuaire pour renvoyer un couple
+\emph{(compte, lieu)} plutôt qu'un compte seul. Avec un seul lieu, le second terme est
+constant~; le jour de la bascule, seule la source change, pas les appelants.
+\end{note}
+
+\begin{alerte}[Le déblocage vient de l'abonnement, pas du badge]
+Si les lieux multiples étaient conditionnés à \code{verification\_status = 2}, le badge
+deviendrait une fonctionnalité qui se vend --- exactement le recouplage entre identité et
+argent que le découplage de l'étape~5 cherche à éviter. La condition doit porter sur
+\code{subscriptions}. En pratique l'utilisateur voit la même chose~; dans le modèle, la porte
+n'est pas ouverte par la même clé.
+\end{alerte}
+
+\chapter{Annuaire et recherche de proximité}
+
+\section{L'état actuel}
+
+\begin{constat}[Il n'y a aucune donnée géographique]
+Le schéma ne contient pas une seule colonne de position. La page
+\guillemotleft~Géolocalisation~\guillemotright{} de l'administration est une table de
+\textbf{54~pays codée en dur} (\code{talky-admin/lib/geo-utils.ts}), alimentée par des
+\emph{noms de pays en chaîne} issus de \code{/api/admin/stats}. Il n'existe pas d'endpoint
+géographique côté backend.
+\end{constat}
+
+L'annuaire de proximité part donc de zéro. Ce n'est pas une évolution de l'existant, c'est
+une brique nouvelle.
+
+\section{La requête}
+
+\begin{lstlisting}[language=SQL, caption={Commerces ouverts, par proximité}]
+SELECT b.alanyaID, u.nom, b.legal_name, c.libelle,
+       ST_Distance_Sphere(b.geo, ST_SRID(POINT(?, ?), 4326)) AS metres
+FROM business_profile b
+JOIN users u ON u.alanyaID = b.alanyaID
+LEFT JOIN business_category c ON c.id = b.category_id
+WHERE b.is_hidden = 0
+  AND u.exclus = 0
+  AND MBRContains(
+        ST_Buffer(ST_SRID(POINT(?, ?), 4326), ?),   -- prefiltre sur l'index
+        b.geo)
+  AND (? IS NULL OR b.category_id = ?)
+ORDER BY metres
+LIMIT 50;
+\end{lstlisting}
+
+\begin{note}[Pourquoi le préfiltre]
+\code{ST\_Distance\_Sphere} est une fonction~: seule, elle impose un balayage complet.
+L'index spatial ne sert que si la requête contient une contrainte de \emph{contenance}
+(\code{MBRContains}) qu'il sait exploiter. On restreint donc d'abord à un rectangle, puis on
+trie sur la distance exacte à l'intérieur.
+\end{note}
+
+\section{\guillemotleft~Ouvert maintenant~\guillemotright}
+
+Ce filtre ne se calcule pas en SQL sans douleur~: il dépend du jour courant \emph{dans le
+fuseau du commerce}, des créneaux multiples, du cas 24\,h/24, du passage de minuit et des
+exceptions. On charge les horaires des résultats retenus --- au plus cinquante --- et on
+évalue en mémoire. La même fonction sert à l'affichage
+\guillemotleft~ferme à 19\,h~\guillemotright{} sur la fiche.
+
+\chapter{Tableau de bord d'audience}
+
+\section{Journal d'événements}
+
+\begin{lstlisting}[language=SQL, caption={Vues de fiche}]
+CREATE TABLE IF NOT EXISTS business_profile_view (
+  id         BIGINT   NOT NULL AUTO_INCREMENT,
+  alanyaID   INT      NOT NULL,          -- le commerce vu
+  viewer_id  INT      NULL,              -- NULL si non connecte
+  source     TINYINT  NOT NULL DEFAULT 0
+               COMMENT '0=annuaire 1=recherche 2=conversation 3=lien partage',
+  viewed_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_bpv_owner_date (alanyaID, viewed_at),
+  CONSTRAINT fk_bpv_biz FOREIGN KEY (alanyaID)
+    REFERENCES business_profile(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+\end{lstlisting}
+
+\begin{alerte}[Une table qui grossit vite]
+Chaque ouverture de fiche est une ligne. Il faut décider dès maintenant~: anti-rebond côté
+serveur (une vue par visiteur et par heure), agrégation quotidienne dans une table de
+synthèse, et purge du détail au-delà de quelques mois. Sans cela, cette table dépassera
+\code{message} en volume.
+\end{alerte}
+
+\section{Ce que le commerçant voit}
+
+Vues sur la période, évolution, répartition par provenance et par pays, conversations
+entamées depuis la fiche. Tout est dérivé de cette table et de \code{conversation}, sans
+saisie du commerçant.
+
+\chapter{Médias : stockage et transcodage}
+
+\section{Ce que l'existant sait déjà faire}
+
+\begin{constat}[Vérifié dans le code]
+\code{src/middleware/upload.js} accepte déjà les images (jpeg, png, webp, gif) et les vidéos
+(mp4, webm, quicktime, 3gpp), plafonne à \textbf{50~Mo} par fichier, range par type dans
+\code{uploads/media/\{images,audio,video,files\}} et sert le tout en statique sur
+\code{/uploads}. Côté mobile, \code{video\_thumbnail} et \code{image\_thumbnail\_service}
+produisent déjà des vignettes pour les messages.
+\end{constat}
+
+Le téléversement n'est donc pas à construire. Ce qui manque, c'est tout ce qui vient après.
+
+\section{Trois problèmes que la fiche business introduit}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.2cm}X@{}}
+\toprule
+\thd{Le volume} & Un message vidéo est vu une fois par un destinataire. Une vidéo de fiche
+est servie à \emph{chaque} ouverture de la fiche, à tous les visiteurs. Le rapport n'est pas
+du même ordre. \\
+\thd{Le poids d'origine} & 50~Mo est acceptable pour un envoi ponctuel entre deux personnes.
+C'est intenable pour un média public consulté depuis un réseau mobile. \\
+\thd{La diversité des formats} & Un enregistrement issu d'un téléphone Android bas de gamme
+et un autre d'un iPhone récent n'ont ni le même codec, ni la même orientation, ni la même
+cadence. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{La chaîne de traitement}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  e/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
+            font=\sffamily\scriptsize, inner sep=5pt, minimum height=0.9cm,
+            text width=2.4cm, text=AlanyaInk, align=center},
+  f/.style={e, draw=AlanyaIndigo, line width=0.9pt, fill=AlanyaContainer,
+            text=AlanyaIndigoDark},
+  a/.style={-{Stealth[length=2mm]}, draw=AlanyaGray, semithick},
+  l/.style={font=\sffamily\scriptsize, text=AlanyaGray, fill=white, inner sep=2pt}
+]
+  \node[f] (up) at (0,0)     {Téléversement\\[-2pt]{\scriptsize fichier d'origine}};
+  \node[e] (jq) at (3.9,0)   {File de jobs\\[-2pt]{\scriptsize étape 3}};
+  \node[e] (tr) at (7.8,0)   {Transcodage\\[-2pt]{\scriptsize + vignette}};
+  \node[f] (ok) at (11.7,0)  {\code{status = 1}\\[-2pt]{\scriptsize lisible}};
+
+  \draw[a] (up) -- node[l, above] {\code{status = 0}} (jq);
+  \draw[a] (jq) -- node[l, above] {consomme} (tr);
+  \draw[a] (tr) -- node[l, above] {publie} (ok);
+
+  \node[l, text=AlanyaMute, align=center, text width=4cm] at (7.8,-1.5)
+    {échec après $N$ tentatives\\ $\rightarrow$ \code{status = 2}, média retiré de la fiche};
+  \draw[draw=AlanyaLine, dashed] (7.8,-0.5) -- (7.8,-1.05);
+\end{tikzpicture}
+\end{center}
+
+Le transcodage est le \textbf{deuxième client} de la file de jobs, après le fan-out des
+notifications --- exactement ce que prévoyait le §7 du document d'amorce. C'est un argument
+de plus pour que la file soit construite à l'étape~3 et non plus tard.
+
+\section{Limites à fixer}
+
+Aucune n'est technique~: ce sont des décisions produit, à arrêter avant l'implémentation.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.2cm}X@{}}
+\toprule
+Images de galerie & 10 par fiche~? \\
+Vidéos de présentation & 2 par fiche, 60~secondes chacune~? \\
+Résolution servie & 1080p suffit pour un téléphone~; conserver l'original~? \\
+Poids après transcodage & viser quelques mégaoctets, pas quelques dizaines \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Le disque local va montrer ses limites]
+Les médias de fiches sont publics, consultés en boucle et conservés indéfiniment --- à la
+différence des médias de conversation. C'est le premier usage qui justifiera un stockage
+objet et un cache en frontal. Le disque local tiendra le temps de la mise en service, pas
+au-delà.
+\end{alerte}
+
+\chapter{Impact fichier par fichier}
+
+\section{Backend}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.2cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{migrations/026\_business.sql} & nouveau & Profil, catégories, liens, mots-clés, horaires, produits, vues \\
+\code{src/controllers/businessController.js} & nouveau & Fiche, liens, médias, mots-clés \\
+\code{src/controllers/businessHoursController.js} & nouveau & Créneaux et exceptions \\
+\code{src/controllers/businessProductController.js} & nouveau & Catalogue \\
+\code{src/controllers/directoryController.js} & nouveau & Annuaire, proximité, filtres \\
+\code{src/utils/openingHours.js} & nouveau & Évaluation « ouvert maintenant », fuseau compris \\
+\code{src/routes/business.js} & nouveau & \code{/api/business}, \code{/api/directory} \\
+\code{server.js} & modifié & Montage des routes \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Mobile}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.2cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Objet} \\
+\midrule
+\code{lib/screens/business/business\_profile\_screen.dart} \emph{(nouveau)} & Fiche vue par un visiteur \\
+\code{lib/screens/business/business\_edit\_screen.dart} \emph{(nouveau)} & Édition par le propriétaire \\
+\code{lib/screens/business/hours\_editor\_screen.dart} \emph{(nouveau)} & \textbf{À budgéter à part} \\
+\code{lib/screens/business/catalog\_screen.dart} \emph{(nouveau)} & Grille et fiche produit \\
+\code{lib/screens/business/directory\_screen.dart} \emph{(nouveau)} & Annuaire et proximité \\
+\code{lib/screens/business/dashboard\_screen.dart} \emph{(nouveau)} & Audience de la fiche \\
+\code{lib/core/db/app\_database.dart} & Cache local du profil et du catalogue (Drift v16 $\rightarrow$ v17) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Réutiliser ce qui existe]
+\code{geolocator} et \code{flutter\_map} sont \textbf{déjà} dans \code{pubspec.yaml} --- ils
+servent au partage de position dans les conversations. L'annuaire n'ajoute aucune
+dépendance. Idem pour \code{cached\_network\_image} sur les médias du catalogue.
+\end{note}
+
+\chapter{Points de vigilance et questions ouvertes}
+
+\section{Chantiers d'infrastructure nommés}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{L'index spatial} --- aucune donnée géographique n'existe aujourd'hui. Colonne
+        \code{NOT NULL}, SRID explicite, et une position par défaut pour les commerces sans
+        coordonnées.
+  \item \textbf{Le journal de vues} --- anti-rebond, agrégation, purge. À concevoir avec la
+        table, pas après.
+  \item \textbf{Le transcodage vidéo} --- deuxième client de la file de jobs de l'étape~3.
+        Sans lui, les vidéos de présentation sont inutilisables sur un réseau mobile.
+  \item \textbf{Le stockage des médias} --- galerie, vidéos et catalogue multiplient les
+        fichiers, publics et servis en boucle. Le disque local avec \code{multer}
+        (\code{src/middleware/upload.js}) tiendra le temps de la mise en service~; c'est le
+        premier candidat au stockage objet.
+\end{enumerate}
+
+\section{Questions ouvertes}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item La liste des 20 à 30 catégories reste à arrêter. Elle est difficile à changer
+        ensuite~: elle mérite une revue dédiée.
+  \item Un compte business a-t-il des réglages de confidentialité différents~? Sa fiche est
+        publique par nature --- le \guillemotleft~vu à~\guillemotright{} et le
+        \guillemotleft~en ligne~\guillemotright{} ont-ils encore un sens~?
+  \item Quelles limites~: nombre de produits, de médias, de mots-clés~? Sans plafond, une
+        fiche peut devenir une charge à elle seule.
+  \item Un commerce peut-il être signalé~? Une arnaque commerciale n'est pas le même
+        traitement qu'un signalement d'utilisateur, et rien n'existe aujourd'hui.
+  \item Que devient le catalogue au retour en compte personnel~? Le champ
+        \code{is\_hidden} le conserve --- confirmer que c'est bien le comportement voulu.
+\end{enumerate}
+
+\vfill
+\begin{center}\small\color{AlanyaGray}\sffamily
+Fin du dossier --- étape 4. \\
+Étape suivante : certification.
+\end{center}
+
+\end{document}

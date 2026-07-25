@@ -1,0 +1,582 @@
+<title>Alanya — Comptes business</title>
+
+<style>
+  /* Tokens mobiles : lib/core/theme/app_colors.dart et app_dimens.dart */
+  :root {
+    --brand: #3F51B5; --brand-dark: #1A237E; --brand-container: #E8EAF6;
+    --officiel: #C9A227; --online: #1FA363; --warn: #F59E0B; --err: #EF4444;
+
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px; --r-pill: 28px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #3A404C; --outline-strong: #3A404C;
+      --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand-container: #283593;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --outline-strong: #3A404C;
+    --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --brand-container: #E8EAF6;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink); font-family: var(--sans);
+    font-size: 15px; line-height: 1.55; min-height: 100vh;
+    padding: clamp(20px, 5vw, 52px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 38px; }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 66ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px, 3.6vw, 37px); line-height: 1.12; letter-spacing: -0.02em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px, 3vw, 30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 72ch; }
+
+  .stage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(252px, 1fr));
+    gap: clamp(14px, 1.8vw, 24px); align-items: start;
+  }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 32ch;
+  }
+  .device-caption b { display: block; color: var(--page-ink); font-weight: 600; }
+  .device {
+    width: 100%; max-width: 320px; background: var(--bg);
+    border: 1px solid var(--outline); border-radius: 30px; padding: 8px;
+    box-shadow: 0 18px 44px rgba(26,35,126,0.13), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  }
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 580px; color: var(--ink);
+    position: relative;
+  }
+
+  .appbar {
+    background: var(--surface); border-bottom: 1px solid var(--outline);
+    padding: 13px var(--s-lg) 11px; display: flex; align-items: center; gap: var(--s-md);
+  }
+  .appbar .ic { width: 21px; height: 21px; color: var(--ink-2); flex: none; }
+  .appbar h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+  .appbar .spacer { flex: 1; }
+
+  .scroll { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* ---------- Fiche business ---------- */
+  .couv { height: 92px; background: linear-gradient(135deg, #00796B, #26A69A); }
+  /* position + z-index : sans quoi la couverture, si elle est positionnée,
+     repeindrait par-dessus l'avatar remonté en marge négative. */
+  .ident {
+    background: var(--surface); padding: 0 var(--s-lg) var(--s-md);
+    border-bottom: 1px solid var(--outline);
+    position: relative; z-index: 1;
+  }
+  .ident .av {
+    width: 64px; height: 64px; border-radius: var(--r-md); background: #00796B;
+    display: grid; place-items: center; color: #fff; font-size: 21px; font-weight: 700;
+    margin-top: -30px; border: 3px solid var(--surface);
+  }
+  .ident .nom {
+    display: flex; align-items: center; gap: 5px; margin-top: var(--s-sm);
+    font-size: 18px; font-weight: 680; letter-spacing: -0.01em;
+  }
+  .ident .cat { font-size: 13px; color: var(--ink-2); margin-top: 1px; }
+  .mots { display: flex; gap: 5px; flex-wrap: wrap; margin-top: var(--s-sm); }
+  .mot {
+    font-size: 11px; padding: 2px 8px; border-radius: var(--r-pill);
+    background: var(--surface-muted); color: var(--ink-2);
+  }
+
+  .bloc { background: var(--surface); border-bottom: 1px solid var(--outline); padding: var(--s-md) var(--s-lg); }
+  .bloc + .bloc { border-top: none; }
+  .ligne { display: flex; gap: var(--s-md); align-items: flex-start; padding: 5px 0; font-size: 13.5px; }
+  .ligne svg { width: 17px; height: 17px; color: var(--ink-3); flex: none; margin-top: 2px; }
+  .ligne .v { min-width: 0; }
+  .ligne .v b { display: block; font-weight: 600; font-size: 13.5px; }
+  .ligne .v span { color: var(--ink-2); font-size: 12.5px; }
+  .ouvert { color: var(--online); font-weight: 650; }
+  .ferme  { color: var(--err);    font-weight: 650; }
+
+  .medias { display: flex; gap: 6px; padding: var(--s-md) var(--s-lg); background: var(--surface); }
+  .medias i {
+    flex: 1; height: 58px; border-radius: 10px; display: block;
+    background: linear-gradient(135deg, #CFD8DC, #B0BEC5);
+  }
+  .medias i:nth-child(2) { background: linear-gradient(135deg, #FFCCBC, #FFAB91); }
+  .medias i:nth-child(3) { background: linear-gradient(135deg, #C8E6C9, #A5D6A7); }
+
+  .actions { display: flex; gap: var(--s-sm); padding: var(--s-md) var(--s-lg); background: var(--surface); }
+  .btn {
+    flex: 1; height: 42px; border-radius: var(--r-sm); border: none; font-family: inherit;
+    font-size: 14px; font-weight: 640; display: inline-flex; align-items: center;
+    justify-content: center; gap: 6px;
+  }
+  .btn.primaire { background: var(--brand); color: #fff; }
+  .btn.second   { background: var(--surface-muted); color: var(--ink); }
+  .btn svg { width: 17px; height: 17px; }
+
+  /* ---------- Catalogue ---------- */
+  .grille {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-sm);
+    padding: var(--s-md) var(--s-lg); background: var(--surface); flex: 1; align-content: start;
+  }
+  .prod { display: flex; flex-direction: column; gap: 5px; }
+  .prod .img { height: 88px; border-radius: 10px; background: linear-gradient(135deg,#FFE0B2,#FFCC80); }
+  .prod:nth-child(2) .img { background: linear-gradient(135deg,#D1C4E9,#B39DDB); }
+  .prod:nth-child(3) .img { background: linear-gradient(135deg,#B2DFDB,#80CBC4); }
+  .prod:nth-child(4) .img { background: linear-gradient(135deg,#F8BBD0,#F48FB1); }
+  .prod .n { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .prod .p {
+    font-size: 13px; font-weight: 700; color: var(--brand);
+    font-variant-numeric: tabular-nums;
+  }
+  :root[data-theme="dark"] .prod .p { color: #9FA8DA; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .prod .p { color: #9FA8DA; }
+  }
+  .prod .ind { font-size: 11px; color: var(--ink-3); }
+
+  /* ---------- Horaires ---------- */
+  .jours { background: var(--surface); flex: 1; display: flex; flex-direction: column; }
+  .jour {
+    padding: 10px var(--s-lg); border-bottom: 1px solid var(--outline);
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .jour-tete { display: flex; align-items: center; gap: var(--s-md); }
+  .jour-tete .j { font-size: 14px; font-weight: 620; flex: 1; }
+  .sw {
+    width: 36px; height: 21px; border-radius: 999px; background: var(--outline-strong);
+    position: relative; flex: none; border: none; padding: 0;
+  }
+  .sw::after {
+    content: ""; position: absolute; top: 2.5px; left: 2.5px; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .sw[data-on="1"] { background: var(--brand); }
+  .sw[data-on="1"]::after { transform: translateX(15px); }
+  .creneaux { display: flex; flex-direction: column; gap: 5px; padding-left: 2px; }
+  .creneau {
+    display: flex; align-items: center; gap: var(--s-sm);
+    font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums;
+  }
+  .creneau .h {
+    padding: 3px 9px; border-radius: 8px; background: var(--surface-muted);
+    border: 1px solid var(--outline);
+  }
+  .creneau .sep { color: var(--ink-3); }
+  .creneau .x { margin-left: auto; color: var(--ink-3); width: 15px; height: 15px; }
+  .plus {
+    align-self: flex-start; font-size: 12.5px; color: var(--brand); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px; background: none; border: none;
+    font-family: inherit; padding: 2px 0;
+  }
+  .plus svg { width: 13px; height: 13px; }
+  .jour.off .jour-tete .j { color: var(--ink-3); }
+  .jour.off .etat { font-size: 12.5px; color: var(--ink-3); }
+  .jour.h24 .etat { font-size: 12.5px; color: var(--online); font-weight: 620; }
+
+  .barre-act {
+    background: var(--surface); border-top: 1px solid var(--outline);
+    padding: var(--s-md) var(--s-lg); display: flex; gap: var(--s-sm);
+  }
+
+  /* ---------- Annuaire ---------- */
+  .search {
+    margin: var(--s-md) var(--s-lg) var(--s-sm); background: var(--surface-muted);
+    border-radius: var(--r-pill); padding: 9px var(--s-md);
+    display: flex; align-items: center; gap: var(--s-sm); color: var(--ink-3); font-size: 13.5px;
+  }
+  .search svg { width: 16px; height: 16px; flex: none; }
+  .chips { display: flex; gap: 6px; padding: 0 var(--s-lg) var(--s-md); overflow: hidden; }
+  .chip {
+    flex: none; padding: 5px 11px; border-radius: var(--r-pill); font-size: 12px;
+    font-weight: 550; border: 1px solid var(--outline); background: var(--surface);
+    color: var(--ink-2); white-space: nowrap;
+  }
+  .chip[data-on="1"] { background: var(--brand-container); border-color: transparent; color: var(--brand-dark); }
+  :root[data-theme="dark"] .chip[data-on="1"] { color: #C5CAE9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .chip[data-on="1"] { color: #C5CAE9; }
+  }
+  .resultats { background: var(--surface); flex: 1; }
+  .res {
+    display: flex; gap: var(--s-md); align-items: center;
+    padding: 11px var(--s-lg); border-bottom: 1px solid var(--outline);
+  }
+  .res .av {
+    width: 46px; height: 46px; border-radius: var(--r-sm); flex: none;
+    display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 680;
+  }
+  .res .b { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .res .t {
+    display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 620;
+    white-space: nowrap; overflow: hidden;
+  }
+  .res .t .nm { overflow: hidden; text-overflow: ellipsis; }
+  .res .s { font-size: 12.5px; color: var(--ink-2); }
+  .res .d {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-3);
+    font-variant-numeric: tabular-nums; flex: none;
+  }
+
+  .badge-in { display: inline-flex; vertical-align: -0.15em; }
+
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note {
+    border-left: 3px solid var(--brand); padding-left: var(--s-md);
+    font-size: 14px; color: var(--page-ink-2); max-width: 80ch;
+  }
+  .note.attention { border-left-color: var(--err); }
+  .note.variante  { border-left-color: var(--warn); }
+  .note b { color: var(--page-ink); font-weight: 650; }
+  .note code { font-family: var(--mono); font-size: 13px; }
+
+  .cas { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px,1fr)); gap: var(--s-md); }
+  .cas-c {
+    border: 1px solid var(--page-line); border-radius: var(--r-md); padding: var(--s-md) var(--s-lg);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .cas-c b { font-size: 13.5px; }
+  .cas-c span { font-size: 12.5px; color: var(--page-ink-2); }
+
+  footer.colophon {
+    display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-xl); padding-top: var(--s-lg);
+    border-top: 1px solid var(--page-line); font-family: var(--mono);
+    font-size: 11.5px; color: var(--page-ink-2);
+  }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya · Comptes business · Étape 4</p>
+    <h1>Une vitrine, pas une boutique</h1>
+    <p>
+      Le commerçant présente son activité, ses horaires et son catalogue&nbsp;; la
+      transaction se fait hors application. Quatre écrans, dont l'éditeur d'horaires —
+      le plus difficile du lot, et celui qu'on sous-estime toujours.
+    </p>
+  </header>
+
+  <section class="panel">
+    <header>
+      <h2>Les quatre écrans</h2>
+      <p>Fiche, catalogue, horaires, annuaire.</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- ============ 1. Fiche business ============ -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="couv"></div>
+          <div class="ident">
+            <div class="av">PC</div>
+            <div class="nom">Pharmacie Centrale
+              <span class="badge-in"><svg viewBox="0 0 24 24" width="15" height="15">
+                <circle cx="12" cy="12" r="12" fill="#3F51B5"/>
+                <path d="M4.2 9.6H19.8L17.3 18.6H6.7Z" fill="none" stroke="#fff" stroke-width="2.1" stroke-linejoin="round"/>
+                <path d="M8.5 9.6a3.5 3.5 0 0 1 7 0" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
+              </svg></span>
+            </div>
+            <div class="cat">Santé · Pharmacie</div>
+            <div class="mots">
+              <span class="mot">garde de nuit</span><span class="mot">ordonnance</span>
+              <span class="mot">livraison</span>
+            </div>
+          </div>
+
+          <div class="bloc">
+            <div class="ligne">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+              <span class="v"><b class="ouvert">Ouvert · ferme à 19 h</b>
+                <span>Lun–Sam 8 h–13 h, 15 h–19 h</span></span>
+            </div>
+            <div class="ligne">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+              <span class="v"><b>Avenue Kennedy, Yaoundé</b>
+                <span>à 1,2 km de vous</span></span>
+            </div>
+            <div class="ligne">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M4 7h16v12H4zM4 7l8 6 8-6"/></svg>
+              <span class="v"><b>pharmaciecentrale.cm</b>
+                <span>Site web · Facebook · WhatsApp</span></span>
+            </div>
+            <div class="ligne">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M2.5 10h19"/></svg>
+              <span class="v"><b>Orange Money · MTN MoMo · Espèces</b>
+                <span>Moyens acceptés sur place</span></span>
+            </div>
+          </div>
+
+          <div class="medias"><i></i><i></i><i></i></div>
+
+          <div class="actions">
+            <button class="btn primaire" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M20 15.5v3a2 2 0 0 1-2.2 2 19.5 19.5 0 0 1-8.5-3 19 19 0 0 1-6-6 19.5 19.5 0 0 1-3-8.6A2 2 0 0 1 2.3 1h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L6.6 8.8a16 16 0 0 0 6 6l1.1-1.1a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z"/></svg>
+              Contacter
+            </button>
+            <button class="btn second" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              Catalogue
+            </button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Fiche business</b>vue par un visiteur</p>
+      </div>
+
+      <!-- ============ 2. Catalogue ============ -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <h3>Catalogue</h3><span class="spacer"></span>
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          </div>
+          <div class="chips" style="padding-top:var(--s-md)">
+            <span class="chip" data-on="1">Tout</span>
+            <span class="chip">Ordonnance</span>
+            <span class="chip">Hygiène</span>
+            <span class="chip">Bébé</span>
+          </div>
+          <div class="grille">
+            <div class="prod"><span class="img"></span>
+              <span class="n">Paracétamol 500 mg</span><span class="p">1 200 FCFA</span>
+              <span class="ind">Boîte de 20</span></div>
+            <div class="prod"><span class="img"></span>
+              <span class="n">Gel hydroalcoolique</span><span class="p">2 500 FCFA</span>
+              <span class="ind">500 ml</span></div>
+            <div class="prod"><span class="img"></span>
+              <span class="n">Thermomètre digital</span><span class="p">4 000 FCFA</span>
+              <span class="ind">Sur commande</span></div>
+            <div class="prod"><span class="img"></span>
+              <span class="n">Lait infantile 1er âge</span><span class="p">8 900 FCFA</span>
+              <span class="ind">400 g</span></div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Catalogue</b>grille, filtres, prix en unité mineure</p>
+      </div>
+
+      <!-- ============ 3. Horaires ============ -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <h3>Horaires</h3><span class="spacer"></span>
+            <span style="font-size:13px;font-weight:640;color:var(--brand)">Copier</span>
+          </div>
+          <div class="jours">
+            <div class="jour">
+              <div class="jour-tete"><span class="j">Lundi</span>
+                <button class="sw" data-on="1" type="button" aria-label="Ouvert le lundi"></button></div>
+              <div class="creneaux">
+                <div class="creneau"><span class="h">08:00</span><span class="sep">→</span><span class="h">13:00</span>
+                  <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+                <div class="creneau"><span class="h">15:00</span><span class="sep">→</span><span class="h">19:00</span>
+                  <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+                <button class="plus" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                       stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Ajouter un créneau</button>
+              </div>
+            </div>
+            <div class="jour">
+              <div class="jour-tete"><span class="j">Mardi</span>
+                <button class="sw" data-on="1" type="button" aria-label="Ouvert le mardi"></button></div>
+              <div class="creneaux">
+                <div class="creneau"><span class="h">08:00</span><span class="sep">→</span><span class="h">13:00</span></div>
+                <div class="creneau"><span class="h">15:00</span><span class="sep">→</span><span class="h">19:00</span></div>
+              </div>
+            </div>
+            <div class="jour h24">
+              <div class="jour-tete"><span class="j">Mercredi</span>
+                <button class="sw" data-on="1" type="button" aria-label="Ouvert le mercredi"></button></div>
+              <span class="etat">Ouvert 24 h/24 — garde de nuit</span>
+            </div>
+            <div class="jour off">
+              <div class="jour-tete"><span class="j">Dimanche</span>
+                <button class="sw" data-on="0" type="button" aria-label="Fermé le dimanche"></button></div>
+              <span class="etat">Fermé</span>
+            </div>
+            <div class="jour off">
+              <div class="jour-tete"><span class="j">20 mai — fête nationale</span></div>
+              <span class="etat">Fermeture exceptionnelle</span>
+            </div>
+          </div>
+          <div class="barre-act">
+            <button class="btn second" type="button">Exception</button>
+            <button class="btn primaire" type="button">Enregistrer</button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Éditeur d'horaires</b>multi-créneaux, 24 h/24, exceptions</p>
+      </div>
+
+      <!-- ============ 4. Annuaire ============ -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <h3>Annuaire</h3><span class="spacer"></span>
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          </div>
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <span>pharmacie de garde</span>
+          </div>
+          <div class="chips">
+            <span class="chip" data-on="1">Près de moi</span>
+            <span class="chip">Ouvert</span>
+            <span class="chip">Vérifié</span>
+            <span class="chip">Santé</span>
+          </div>
+          <div class="resultats">
+            <div class="res">
+              <span class="av" style="background:#00796B">PC</span>
+              <span class="b"><span class="t"><span class="nm">Pharmacie Centrale</span>
+                <svg viewBox="0 0 24 24" width="13" height="13"><circle cx="12" cy="12" r="12" fill="#3F51B5"/>
+                  <path d="M4.2 9.6H19.8L17.3 18.6H6.7Z" fill="none" stroke="#fff" stroke-width="2.1" stroke-linejoin="round"/>
+                  <path d="M8.5 9.6a3.5 3.5 0 0 1 7 0" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/></svg>
+              </span><span class="s"><b class="ouvert">Ouvert</b> · Santé · 1,2 km</span></span>
+            </div>
+            <div class="res">
+              <span class="av" style="background:#5E35B1">PB</span>
+              <span class="b"><span class="t"><span class="nm">Pharmacie du Boulevard</span></span>
+                <span class="s"><b class="ferme">Fermé</b> · ouvre à 8 h · 2,8 km</span></span>
+            </div>
+            <div class="res">
+              <span class="av" style="background:#B7791F">PM</span>
+              <span class="b"><span class="t"><span class="nm">Pharmacie Mvog-Ada</span>
+                <svg viewBox="0 0 24 24" width="13" height="13">
+                  <path d="M4.2 9.6H19.8L17.3 18.6H6.7Z" fill="none" stroke="#5B6273" stroke-width="2.1" stroke-linejoin="round"/>
+                  <path d="M8.5 9.6a3.5 3.5 0 0 1 7 0" fill="none" stroke="#5B6273" stroke-width="2.1" stroke-linecap="round"/></svg>
+              </span><span class="s"><b class="ouvert">Ouvert 24 h/24</b> · 4,1 km</span></span>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Annuaire</b>proximité, ouverture, catégorie</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note">
+        <b>Le badge fait son travail dans l'annuaire.</b> Troisième résultat&nbsp;: panier nu,
+        commerce déclaré mais non vérifié. Les deux premiers ne se ressemblent pas — c'est
+        exactement la distinction que le socle devait rendre lisible à 13&nbsp;px.
+      </p>
+      <p class="note attention">
+        <b>Prix en entier, jamais en flottant.</b> 1 200 FCFA se stocke <code>120000</code>
+        en unité mineure avec le code devise à côté. Un <code>FLOAT</code> sur des prix finit
+        toujours par produire un centime fantôme.
+      </p>
+      <p class="note variante">
+        <b>Un seul lieu par compte — pour l'instant.</b> Une chaîne de trois boutiques crée
+        aujourd'hui trois comptes. La variante multi-lieux est documentée dans le dossier
+        avec son coût de bascule&nbsp;; elle est envisagée comme fonctionnalité payante,
+        débloquée par l'abonnement et non par le badge.
+      </p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>Pourquoi l'éditeur d'horaires est le plus difficile</h2>
+      <p>Ce n'est pas un champ de formulaire. Six cas doivent tenir sur un écran de
+         téléphone, et cinq d'entre eux sont invisibles tant qu'on n'a pas essayé.</p>
+    </header>
+    <div class="cas">
+      <div class="cas-c"><b>Multi-créneaux</b><span>Ouvert le matin, fermé à midi, rouvert
+        l'après-midi. Deux plages pour un seul jour.</span></div>
+      <div class="cas-c"><b>24 h/24</b><span>N'est pas « 00:00 → 00:00 ». C'est un état
+        distinct, sinon le calcul d'ouverture se trompe.</span></div>
+      <div class="cas-c"><b>Passage minuit</b><span>Un bar ouvert 20 h → 02 h. La fin est
+        avant le début&nbsp;: le stockage doit le prévoir.</span></div>
+      <div class="cas-c"><b>Copie d'un jour</b><span>Saisir sept fois les mêmes horaires fait
+        abandonner. « Copier vers » n'est pas un confort.</span></div>
+      <div class="cas-c"><b>Exceptions</b><span>Jours fériés, congés, fermeture ponctuelle.
+        Une table à part, pas un champ.</span></div>
+      <div class="cas-c"><b>Fuseau horaire</b><span>« Ouvert maintenant » se calcule dans le
+        fuseau du commerce, pas du visiteur.</span></div>
+    </div>
+    <p class="note">
+      <b>Le fuseau existe déjà.</b> La table <code>pays</code> porte
+      <code>timeZone</code> et <code>decalageHoraire</code>, et <code>users.idPays</code>
+      les relie. Rien à créer — mais tout à ne pas oublier.
+    </p>
+  </section>
+
+  <footer class="colophon">
+    <span>Tokens : lib/core/theme/app_colors.dart</span>
+    <span>Vitrine — encaissement hors périmètre</span>
+    <span>Maquette de conception — aucun code applicatif</span>
+  </footer>
+
+</div>
+</div>
