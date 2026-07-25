@@ -1304,11 +1304,11 @@ abstract class AppLocalizations {
   /// **'Impossible d\'inviter les participants, réessayez'**
   String get unableToInviteParticipantsTryAgain;
 
-  /// No description provided for @pausedVoiceMessageTapToReturn.
+  /// No description provided for @pausedTapToReturn.
   ///
   /// In fr, this message translates to:
-  /// **'En pause · Message vocal · Toucher pour revenir'**
-  String get pausedVoiceMessageTapToReturn;
+  /// **'En pause · {type} · Toucher pour revenir'**
+  String pausedTapToReturn(String type);
 
   /// No description provided for @sayHelloToStartTheConversation.
   ///
@@ -2077,6 +2077,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Message vocal terminé'**
   String get voiceMessageEnded;
+
+  /// No description provided for @musicEnded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Musique terminée'**
+  String get musicEnded;
 
   /// No description provided for @noPreferredContacts.
   ///
@@ -3674,6 +3680,12 @@ abstract class AppLocalizations {
   /// **'Audio'**
   String get audio2;
 
+  /// No description provided for @playbackSpeed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vitesse de lecture'**
+  String get playbackSpeed;
+
   /// No description provided for @music.
   ///
   /// In fr, this message translates to:
@@ -4309,12 +4321,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Lu à {time}'**
   String readAtTime(String time);
-
-  /// No description provided for @voiceMessageDurationTapToReturn.
-  ///
-  /// In fr, this message translates to:
-  /// **'{duration} · Message vocal · Toucher pour revenir'**
-  String voiceMessageDurationTapToReturn(String duration);
 
   /// No description provided for @durationTapToReturn.
   ///

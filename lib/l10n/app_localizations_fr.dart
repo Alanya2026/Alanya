@@ -787,8 +787,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible d\'inviter les participants, réessayez';
 
   @override
-  String get pausedVoiceMessageTapToReturn =>
-      'En pause · Message vocal · Toucher pour revenir';
+  String pausedTapToReturn(String type) {
+    return 'En pause · $type · Toucher pour revenir';
+  }
 
   @override
   String get sayHelloToStartTheConversation =>
@@ -1210,6 +1211,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get voiceMessageEnded => 'Message vocal terminé';
+
+  @override
+  String get musicEnded => 'Musique terminée';
 
   @override
   String get noPreferredContacts => 'Aucun contact préféré';
@@ -2013,6 +2017,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get audio2 => 'Audio';
 
   @override
+  String get playbackSpeed => 'Vitesse de lecture';
+
+  @override
   String get music => 'Musique';
 
   @override
@@ -2381,11 +2388,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String readAtTime(String time) {
     return 'Lu à $time';
-  }
-
-  @override
-  String voiceMessageDurationTapToReturn(String duration) {
-    return '$duration · Message vocal · Toucher pour revenir';
   }
 
   @override

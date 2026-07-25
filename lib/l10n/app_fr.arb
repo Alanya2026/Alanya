@@ -671,7 +671,14 @@
   "unableToAddParticipantsTryAgain": "Impossible d'ajouter les participants, réessayez",
   "peopleYouBlockWillAppearHere": "Les personnes que vous bloquez apparaîtront ici.",
   "unableToInviteParticipantsTryAgain": "Impossible d'inviter les participants, réessayez",
-  "pausedVoiceMessageTapToReturn": "En pause · Message vocal · Toucher pour revenir",
+  "pausedTapToReturn": "En pause · {type} · Toucher pour revenir",
+  "@pausedTapToReturn": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
   "sayHelloToStartTheConversation": "Dites bonjour pour démarrer la conversation !",
   "noFreeNumberFoundInThe": "Aucun numéro libre trouvé dans la liste admin",
   "unableToDeleteTheMeetingTry": "Impossible de supprimer la réunion, réessayez",
@@ -807,6 +814,7 @@
   "mediaLinksAndDocs": "Médias, liens et docs",
   "searchForACountry": "Rechercher un pays...",
   "voiceMessageEnded": "Message vocal terminé",
+  "musicEnded": "Musique terminée",
   "noPreferredContacts": "Aucun contact préféré",
   "donTHaveAnAccount": "Pas encore de compte?",
   "joinAMeeting": "Rejoindre une réunion",
@@ -1080,6 +1088,7 @@
   "title": "Titre",
   "admin": "Admin",
   "audio2": "Audio",
+  "playbackSpeed": "Vitesse de lecture",
   "music": "Musique",
   "musicPreview": "🎵 {name}",
   "@musicPreview": {
@@ -1343,14 +1352,6 @@
   "@readAtTime": {
     "placeholders": {
       "time": {
-        "type": "String"
-      }
-    }
-  },
-  "voiceMessageDurationTapToReturn": "{duration} · Message vocal · Toucher pour revenir",
-  "@voiceMessageDurationTapToReturn": {
-    "placeholders": {
-      "duration": {
         "type": "String"
       }
     }

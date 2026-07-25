@@ -201,7 +201,14 @@
   "unableToAddParticipantsTryAgain": "Unable to add participants, try again",
   "peopleYouBlockWillAppearHere": "People you block will appear here.",
   "unableToInviteParticipantsTryAgain": "Unable to invite participants, try again",
-  "pausedVoiceMessageTapToReturn": "Paused · Voice message · Tap to return",
+  "pausedTapToReturn": "Paused · {type} · Tap to return",
+  "@pausedTapToReturn": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
   "sayHelloToStartTheConversation": "Say hello to start the conversation!",
   "noFreeNumberFoundInThe": "No free number found in the admin list",
   "unableToDeleteTheMeetingTry": "Unable to delete the meeting, try again",
@@ -337,6 +344,7 @@
   "mediaLinksAndDocs": "Media, links and docs",
   "searchForACountry": "Search for a country...",
   "voiceMessageEnded": "Voice message ended",
+  "musicEnded": "Music ended",
   "noPreferredContacts": "No preferred contacts",
   "donTHaveAnAccount": "Don't have an account?",
   "joinAMeeting": "Join a meeting",
@@ -610,6 +618,7 @@
   "title": "Title",
   "admin": "Admin",
   "audio2": "Audio",
+  "playbackSpeed": "Playback speed",
   "music": "Music",
   "musicPreview": "🎵 {name}",
   "@musicPreview": {
@@ -723,7 +732,6 @@
   "messagesCountLabelOne": "{count} message",
   "deliveredAtTime": "Delivered at {time}",
   "readAtTime": "Read at {time}",
-  "voiceMessageDurationTapToReturn": "{duration} · Voice message · Tap to return",
   "durationTapToReturn": "{duration} · Tap to return",
   "sessionBannerTapToReturn": "{duration} · {type} · Tap to return",
   "usedLabel": "Used",

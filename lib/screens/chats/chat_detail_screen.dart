@@ -92,6 +92,11 @@ class ChatDetailScreen extends StatefulWidget {
   final int? userId;
   final bool isGroup;
   final String? avatarUrl;
+
+  /// Message à révéler et surligner à l'ouverture. Utilisé par le mini-lecteur
+  /// pour ramener jusqu'à la bulle qui joue, pas seulement à la conversation.
+  final int? focusMessageId;
+
   const ChatDetailScreen({
     super.key,
     required this.userName,
@@ -99,6 +104,7 @@ class ChatDetailScreen extends StatefulWidget {
     this.userId,
     this.isGroup = false,
     this.avatarUrl,
+    this.focusMessageId,
   });
 
   @override
@@ -116,6 +122,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   late final TalkyApiClient _apiClient;
   late final ChatProvider _chat;
+
+  /// Résolu dans initState : `context.read` lève dans `dispose()`, l'élément
+  /// étant déjà démonté (Provider fait `element.widget!`). C'est ce qui
+  /// empêchait `leaveChat()` de s'exécuter, donc le mini-lecteur d'apparaître.
+  late final VoicePlaybackService _voice;
   int? _convId;
   Future<int?>? _ensureConversationInFlight;
   int? _myId;
@@ -214,6 +225,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     super.initState();
     _apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     _chat = Provider.of<ChatProvider>(context, listen: false);
+    _voice = Provider.of<VoicePlaybackService>(context, listen: false);
     _myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID;
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
@@ -241,7 +253,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   @override
   void didPushNext() => _setChatVisible(false); // recouvert par un autre écran
   @override
-  void didPop() => _setChatVisible(false); // quitté
+  void didPop() {
+    _setChatVisible(false); // quitté
+    // `dispose()` n'arrive qu'à la fin de la transition de sortie : attendre
+    // jusque-là retardait le mini-lecteur d'un demi-écran.
+    _voice.leaveChat();
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -332,16 +349,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _chatVisible = true;
     _chat.repository.setActiveConversation(convId);
 
-    final voice = context.read<VoicePlaybackService>();
-    voice
-      ..setChatContext(VoiceChatContext(
-        conversationId: convId,
-        title: widget.userName,
-        userId: widget.userId,
-        isGroup: widget.isGroup,
-        avatarUrl: widget.avatarUrl,
-      ))
-      ..enterChat(convId);
+    // Le contexte est posé au moment de la lecture par la bulle : le fixer ici
+    // écrasait celui de la conversation en cours d'écoute dès qu'on en ouvrait
+    // une autre, ce qui masquait le mini-lecteur et faussait son retour.
+    _voice.enterChat(convId);
+
+    // Ouvert depuis le mini-lecteur : rejoindre la bulle qui joue.
+    final focus = widget.focusMessageId;
+    if (focus != null && focus > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_scrollToReply(focus));
+      });
+    }
 
     // 2) Badge à 0 immédiat (await = local seulement ; HTTP/socket en fond).
     await _chat.repository.markAsRead(convId);
@@ -530,7 +549,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _highlightTimer?.cancel();
     _reactionsSub?.cancel();
     _recorder.dispose();
-    context.read<VoicePlaybackService>().leaveChat();
+    _voice.leaveChat();
     final convId = _convId;
     if (convId != null) _chat.repository.clearActiveConversation(convId);
     _stopTyping();

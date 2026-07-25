@@ -143,6 +143,9 @@ class _MusicMessageBubbleState extends State<MusicMessageBubble> {
         networkUrl: null,
         fallbackDuration: _fallbackDuration,
         chatContext: widget.chatContext,
+        serverMsgId: widget.serverMsgId,
+        title: _title,
+        kind: AudioMessageKind.music,
       );
     } catch (_) {
       if (!mounted) return;
@@ -167,6 +170,9 @@ class _MusicMessageBubbleState extends State<MusicMessageBubble> {
         networkUrl: null,
         fallbackDuration: _fallbackDuration,
         chatContext: widget.chatContext,
+        serverMsgId: widget.serverMsgId,
+        title: _title,
+        kind: AudioMessageKind.music,
       );
     } catch (_) {
       if (!mounted) return;

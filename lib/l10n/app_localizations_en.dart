@@ -784,8 +784,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to invite participants, try again';
 
   @override
-  String get pausedVoiceMessageTapToReturn =>
-      'Paused · Voice message · Tap to return';
+  String pausedTapToReturn(String type) {
+    return 'Paused · $type · Tap to return';
+  }
 
   @override
   String get sayHelloToStartTheConversation =>
@@ -1192,6 +1193,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceMessageEnded => 'Voice message ended';
+
+  @override
+  String get musicEnded => 'Music ended';
 
   @override
   String get noPreferredContacts => 'No preferred contacts';
@@ -1995,6 +1999,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audio2 => 'Audio';
 
   @override
+  String get playbackSpeed => 'Playback speed';
+
+  @override
   String get music => 'Music';
 
   @override
@@ -2360,11 +2367,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String readAtTime(String time) {
     return 'Read at $time';
-  }
-
-  @override
-  String voiceMessageDurationTapToReturn(String duration) {
-    return '$duration · Voice message · Tap to return';
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/playback_speed_preferences.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_message_coordinator.dart';
 import '../../core/services/voice_playback_service.dart';
@@ -83,6 +84,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   Duration get _fallbackDuration => Duration(seconds: widget.durationSeconds);
 
+  /// Libellé du mini-lecteur : le nom du contact seul ne dit pas ce qui joue.
+  String get _miniPlayerTitle {
+    final label = context.l10n.voiceMessage;
+    final chat = widget.chatContext?.title;
+    return (chat == null || chat.isEmpty) ? label : '$label · $chat';
+  }
+
   String _fmt(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -118,6 +126,8 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
         networkUrl: null,
         fallbackDuration: _fallbackDuration,
         chatContext: widget.chatContext,
+        serverMsgId: widget.serverMsgId,
+        title: _miniPlayerTitle,
       );
     } catch (_) {
       if (!mounted) return;
@@ -142,6 +152,8 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
         networkUrl: null,
         fallbackDuration: _fallbackDuration,
         chatContext: widget.chatContext,
+        serverMsgId: widget.serverMsgId,
+        title: _miniPlayerTitle,
       );
     } catch (_) {
       if (!mounted) return;
@@ -308,11 +320,24 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                     else
                       const SizedBox(height: 28),
                     const SizedBox(height: 2),
-                    Text(
-                      timeText,
-                      style: context.text.labelSmall?.copyWith(
-                        color: widget.foregroundColor.withAlpha(180),
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          timeText,
+                          style: context.text.labelSmall?.copyWith(
+                            color: widget.foregroundColor.withAlpha(180),
+                          ),
+                        ),
+                        const Spacer(),
+                        // Vitesse réservée aux vocaux : c'est là qu'accélérer
+                        // a du sens, et l'endroit où on la cherche.
+                        if (snap.phase == VoiceUiPhase.ready)
+                          _SpeedPill(
+                            speed: service.speed,
+                            color: widget.foregroundColor,
+                            onPressed: service.cycleSpeed,
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -321,6 +346,49 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Pastille cyclique 1× → 1,5× → 2×, alignée sur celle du mini-lecteur.
+class _SpeedPill extends StatelessWidget {
+  const _SpeedPill({
+    required this.speed,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final double speed;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withAlpha(38),
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Semantics(
+          button: true,
+          label: context.l10n.playbackSpeed,
+          child: Container(
+            height: 20,
+            constraints: const BoxConstraints(minWidth: 32),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 7),
+            child: Text(
+              formatPlaybackSpeed(speed),
+              style: context.text.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

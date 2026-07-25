@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'playback_speed_preferences.dart';
 import 'voice_chat_context.dart';
+import '../utils/audio_message_kind.dart';
 
 /// Lecteur audio singleton pour les messages vocaux du chat.
 /// Un seul vocal peut jouer à la fois ; le changement de message arrête le précédent.
@@ -23,6 +25,11 @@ class VoicePlaybackService extends ChangeNotifier {
   bool _playing = false;
   VoiceChatContext? _chatContext;
   bool _backgroundPlayback = false;
+  double _speed = PlaybackSpeedPreferences.defaultSpeed;
+
+  /// Écran de conversation ouvert depuis le mini-lecteur : évite d'en empiler
+  /// deux instances si l'utilisateur tape plusieurs fois le bandeau.
+  bool _isChatRouteOpen = false;
 
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<PlayerState>? _stateSub;
@@ -72,13 +79,16 @@ class VoicePlaybackService extends ChangeNotifier {
     });
   }
 
-  void setChatContext(VoiceChatContext context) {
-    _chatContext = context;
-    notifyListeners();
-  }
+  // Le contexte n'est plus posé à l'ouverture d'un chat : il vient de la bulle
+  // au moment de la lecture, via `toggle`. Le fixer ailleurs écrasait celui de
+  // la conversation en cours d'écoute.
 
   void enterChat(int conversationId) {
-    _backgroundPlayback = false;
+    // Entrer dans une AUTRE conversation ne doit pas masquer le mini-lecteur :
+    // seul le retour dans celle qui joue rend la main à la bulle.
+    if (_chatContext == null || _chatContext!.conversationId == conversationId) {
+      _backgroundPlayback = false;
+    }
     notifyListeners();
   }
 
@@ -95,6 +105,9 @@ class VoicePlaybackService extends ChangeNotifier {
     String? networkUrl,
     Duration fallbackDuration = Duration.zero,
     VoiceChatContext? chatContext,
+    String? title,
+    AudioMessageKind kind = AudioMessageKind.voiceNote,
+    int serverMsgId = 0,
   }) async {
     if (chatContext != null) _chatContext = chatContext;
     // Chargement en cours : le tap annule le démarrage au lieu d'être ignoré.
@@ -113,6 +126,9 @@ class VoicePlaybackService extends ChangeNotifier {
       networkUrl: networkUrl,
       fallbackDuration: fallbackDuration,
       chatContext: chatContext,
+      title: title,
+      kind: kind,
+      serverMsgId: serverMsgId,
     );
   }
 
@@ -144,6 +160,9 @@ class VoicePlaybackService extends ChangeNotifier {
       localPath: src.localPath,
       networkUrl: src.networkUrl,
       fallbackDuration: src.fallbackDuration,
+      title: src.title,
+      kind: src.kind,
+      serverMsgId: src.serverMsgId,
     );
   }
 
@@ -153,6 +172,9 @@ class VoicePlaybackService extends ChangeNotifier {
     String? networkUrl,
     Duration fallbackDuration = Duration.zero,
     VoiceChatContext? chatContext,
+    String? title,
+    AudioMessageKind kind = AudioMessageKind.voiceNote,
+    int serverMsgId = 0,
   }) async {
     if (chatContext != null) _chatContext = chatContext;
 
@@ -174,7 +196,15 @@ class VoicePlaybackService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _loadSource(messageId, localPath, networkUrl, fallbackDuration);
+      await _loadSource(
+        messageId,
+        localPath,
+        networkUrl,
+        fallbackDuration,
+        title,
+        kind,
+        serverMsgId,
+      );
       if (_player.processingState == ProcessingState.completed) {
         await _player.seek(Duration.zero);
         _position = Duration.zero;
@@ -196,6 +226,56 @@ class VoicePlaybackService extends ChangeNotifier {
     } finally {
       if (_loadingMessageId == messageId) _loadingMessageId = null;
       notifyListeners();
+    }
+  }
+
+  // ── Navigation depuis le mini-lecteur ───────────────────────────────
+
+  /// Vrai tant que la conversation ouverte depuis le bandeau est dans la pile.
+  /// Même garde-fou que `_isCallUiRouteOpen` côté appel, qui manquait ici.
+  bool get isChatRouteOpen => _isChatRouteOpen;
+
+  void markChatRouteOpen() => _isChatRouteOpen = true;
+
+  void markChatRouteClosed() => _isChatRouteOpen = false;
+
+  // ── Vitesse de lecture ──────────────────────────────────────────────
+
+  /// Vitesse courante du player. `1.0` tant que rien n'a été chargé.
+  double get speed => _speed;
+
+  /// Type de préférence correspondant à ce qui joue.
+  PlaybackSpeedKind get _speedKind =>
+      (_source?.kind ?? AudioMessageKind.voiceNote) == AudioMessageKind.music
+          ? PlaybackSpeedKind.music
+          : PlaybackSpeedKind.voice;
+
+  Future<void> setSpeed(double value) async {
+    if (_speed == value) return;
+    _speed = value;
+    notifyListeners();
+    try {
+      await _player.setSpeed(value);
+    } catch (e) {
+      debugPrint('[VoicePlayback] setSpeed échoué: $e');
+    }
+    await PlaybackSpeedPreferences.setSpeed(_speedKind, value);
+  }
+
+  /// Palier suivant en boucle : 1× → 1,5× → 2× → 1×.
+  Future<void> cycleSpeed() =>
+      setSpeed(PlaybackSpeedPreferences.nextSpeed(_speedKind, _speed));
+
+  Future<void> _applyStoredSpeed(AudioMessageKind kind) async {
+    final prefKind = kind == AudioMessageKind.music
+        ? PlaybackSpeedKind.music
+        : PlaybackSpeedKind.voice;
+    final stored = PlaybackSpeedPreferences.speedOf(prefKind);
+    _speed = stored;
+    try {
+      await _player.setSpeed(stored);
+    } catch (e) {
+      debugPrint('[VoicePlayback] setSpeed initial échoué: $e');
     }
   }
 
@@ -244,6 +324,9 @@ class VoicePlaybackService extends ChangeNotifier {
       localPath: src.localPath,
       networkUrl: src.networkUrl,
       fallbackDuration: src.fallbackDuration,
+      title: src.title,
+      kind: src.kind,
+      serverMsgId: src.serverMsgId,
     );
   }
 
@@ -254,6 +337,9 @@ class VoicePlaybackService extends ChangeNotifier {
     String? networkUrl,
     Duration fallbackDuration = Duration.zero,
     VoiceChatContext? chatContext,
+    String? title,
+    AudioMessageKind kind = AudioMessageKind.voiceNote,
+    int serverMsgId = 0,
   }) async {
     if (chatContext != null) _chatContext = chatContext;
     if (_loadingMessageId == messageId) return;
@@ -269,13 +355,24 @@ class VoicePlaybackService extends ChangeNotifier {
       localPath: localPath,
       networkUrl: networkUrl,
       fallbackDuration: fallbackDuration,
+      title: title,
+      kind: kind,
+      serverMsgId: serverMsgId,
     );
 
     if (_loadedMessageId != messageId) {
       _loadingMessageId = messageId;
       notifyListeners();
       try {
-        await _loadSource(messageId, localPath, networkUrl, fallbackDuration);
+        await _loadSource(
+        messageId,
+        localPath,
+        networkUrl,
+        fallbackDuration,
+        title,
+        kind,
+        serverMsgId,
+      );
         _activeMessageId = messageId;
       } catch (e) {
         _clearPlayback();
@@ -330,6 +427,9 @@ class VoicePlaybackService extends ChangeNotifier {
     String? localPath,
     String? networkUrl,
     Duration fallbackDuration,
+    String? title,
+    AudioMessageKind kind,
+    int serverMsgId,
   ) async {
     if (_loadedMessageId != null && _loadedMessageId != messageId) {
       await _player.stop();
@@ -345,9 +445,15 @@ class VoicePlaybackService extends ChangeNotifier {
       localPath: localPath ?? path,
       networkUrl: networkUrl,
       fallbackDuration: fallbackDuration,
+      title: title,
+      kind: kind,
+      serverMsgId: serverMsgId,
     );
     _duration = _player.duration ?? fallbackDuration;
     _position = Duration.zero;
+    // Vitesse mémorisée pour ce type de média : appliquée après setFilePath,
+    // sinon just_audio repart au défaut du player.
+    await _applyStoredSpeed(kind);
   }
 
   @override
