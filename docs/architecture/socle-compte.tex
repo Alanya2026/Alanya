@@ -1,0 +1,884 @@
+% =====================================================================
+%  ALANYA — Dossier de conception
+%  Étape 1 : socle de compte unifié
+%
+%  Compilation :  latexmk -pdf socle-compte.tex
+%              |  pdflatex socle-compte.tex  (deux passes)
+%              |  tectonic socle-compte.tex
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{alanya-conception}
+\setAlanyaDocTitre{Socle de compte}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Alanya - Socle de compte unifie},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Conception - socle de compte unifie (types de compte et verification)}
+}
+
+\begin{document}
+
+% =====================================================================
+%  PAGE DE GARDE
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-6.4cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-6.4cm]current page.north west) rectangle ([yshift=-6.0cm]current page.north east);
+\end{tikzpicture}
+
+\vspace*{1.1cm}
+{\color{white}\sffamily
+\begin{center}
+  {\small\bfseries DOSSIER DE CONCEPTION}\\[6pt]
+  {\footnotesize\color{AlanyaContainer} Document de travail --- à valider avant développement}
+\end{center}}
+
+\vspace{3.4cm}
+
+\begin{center}\sffamily
+  {\small\bfseries ÉTAPE 1 --- FONDATION}\\[10pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[20pt]
+  {\fontsize{32}{36}\selectfont\bfseries\color{AlanyaIndigoDark} Socle de compte unifié}\\[10pt]
+  {\large\color{AlanyaGray} Types de compte, vérification et badges}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Fondation commune aux comptes business, à la certification\\ et au compte officiel}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}
+\end{center}
+
+\vspace{1.2cm}
+
+\begin{center}
+  \badgePastilleCoche[2.6]\hspace{1.1cm}
+  \badgePanier[2.6]\hspace{1.1cm}
+  \badgePastillePanier[2.6]\hspace{1.1cm}
+  \badgeMarque[2.6]
+\end{center}
+
+\vfill
+
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Périmètre}   & Talky (Flutter) \textbullet{} Alanya-Backend \textbullet{} Alanya Admin\\[3pt]
+    \thd{Statut}      & Conception --- aucune ligne de code écrite\\[3pt]
+    \thd{Précède}     & Listes de contacts, compte officiel, comptes business, certification\\[3pt]
+    \thd{Date}        & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.8cm}
+\begin{center}\color{AlanyaGray}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% =====================================================================
+%  AVANT-PROPOS
+% =====================================================================
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\markboth{Avant-propos}{}
+\thispagestyle{plain}
+
+Quatre fonctionnalités ont été demandées pour Alanya : les comptes business, la
+certification des comptes, un compte officiel au nom de l'application, et les listes de
+contacts préférés.
+
+Trois d'entre elles --- business, certification, compte officiel --- ne sont pas trois
+systèmes différents. Ce sont trois réponses à la même question : \emph{qui est ce compte ?}
+Les concevoir séparément produirait trois systèmes de badges concurrents, trois écrans de
+profil et une logique d'affichage impossible à tenir. Ce document pose donc d'abord la
+fondation commune, et rien d'autre.
+
+\begin{note}[Comment lire ce document]
+Il est organisé en deux parties. La \textbf{partie I} décrit la fonctionnalité telle que
+l'utilisateur et le client la voient, sans vocabulaire technique. La \textbf{partie II}
+décrit comment on la construit. Les deux couvrent le même périmètre ; on peut valider la
+partie I sans lire la partie II.
+\end{note}
+
+\begin{constat}[Méthode]
+Toutes les affirmations sur l'existant de ce document ont été vérifiées en lisant le code
+des trois dépôts. Les chemins de fichiers cités sont réels. Là où une information manque,
+c'est écrit.
+\end{constat}
+
+\tableofcontents
+
+% =====================================================================
+\part{Approche naïve}
+% =====================================================================
+
+\chapter{Ce que l'on ajoute, et pourquoi}
+
+\section{La situation aujourd'hui}
+
+Dans Alanya, tous les comptes sont identiques. Un commerçant, une personnalité publique et
+un utilisateur ordinaire ont exactement le même profil et la même apparence dans une liste
+de conversations. Rien ne permet de distinguer l'entreprise officielle d'un imitateur qui
+aurait pris le même nom et la même photo.
+
+C'est ce manque que les trois fonctionnalités demandées viennent combler --- et c'est
+pourquoi elles partagent la même fondation.
+
+\section{Deux questions, pas une}
+
+L'erreur naturelle serait de créer une liste de « genres de comptes » : personnel,
+business, vérifié, officiel, business vérifié\ldots{} Cette liste devient ingérable dès
+qu'on ajoute un cas.
+
+On sépare donc deux questions \textbf{indépendantes} :
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.2cm}X@{}}
+\toprule
+\thd{Quel genre de compte ?} & Personnel, business, ou officiel. C'est ce que le compte
+\emph{est}. \\
+\thd{A-t-il été vérifié ?} & Aucune démarche, en attente, vérifié, refusé, révoqué, ou
+expiré. C'est ce qu'Alanya \emph{atteste} à son sujet. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Ces deux questions ne dépendent pas l'une de l'autre. Un commerce peut exister sans être
+vérifié. Une personne privée peut être vérifiée sans être un commerce --- c'est le cas
+d'une personnalité publique. Le compte officiel Alanya, lui, est la combinaison
+« officiel + vérifié d'office ».
+
+\begin{note}[Le bénéfice concret]
+Poser deux questions séparées plutôt qu'une seule liste, c'est ce qui permet d'ajouter
+demain un nouveau genre de compte, ou un nouvel état de vérification, sans toucher à
+l'autre axe ni refaire les écrans.
+\end{note}
+
+\section{Ce que couvre l'étape 1 --- et ce qu'elle ne couvre pas}
+
+\begin{tabularx}{\linewidth}{@{}p{5.4cm}X@{}}
+\toprule
+\thd{Dans cette étape} & Savoir \emph{qui} est un compte : son genre, son état de
+vérification, et le badge qui en découle partout dans l'application. \\
+\thd{Étapes suivantes} & Ce que ce compte \emph{contient} : la fiche business (horaires,
+adresse, catalogue, liens), le dossier de certification (pièces justificatives,
+approbation, abonnement), et la diffusion du compte officiel. \\
+\bottomrule
+\end{tabularx}
+
+La raison de cette coupure est simple : le genre et l'état d'un compte suffisent déjà à
+afficher le bon badge partout. Le contenu détaillé d'une fiche business dépend de règles
+qu'on n'a pas encore écrites --- le figer maintenant obligerait à tout refaire à l'étape
+suivante.
+
+\chapter{Ce que l'utilisateur voit}
+
+\section{Le principe du badge}
+
+Un badge qui combinerait « c'est un commerce » et « c'est vérifié » en un seul dessin
+devient illisible à la taille où il apparaît réellement --- environ 12 pixels, à côté d'un
+nom dans une liste de conversations. Et deux badges côte à côte mangent la largeur du nom,
+qui est déjà tronqué sur un petit écran.
+
+La solution retenue sépare les deux informations sur deux canaux visuels distincts :
+
+\begin{center}
+\begin{tabularx}{0.92\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Le glyphe dit \emph{quoi}} & Une coche pour une personne notable, un panier pour un
+commerce, la marque Alanya pour le compte officiel. \\
+\thd{Le contenant dit \emph{vérifié ou pas}} & Un glyphe nu = déclaré par le compte
+lui-même. Un glyphe posé dans un \textbf{sceau festonné} \badgeSceauNu[0.9] = attesté par
+Alanya. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Pourquoi un sceau festonné, et pas un rond}
+
+Un disque plein ne se distingue d'aucune autre icône circulaire de l'interface : avatars,
+puces de comptage, indicateurs de présence. À 12~pixels, un badge rond devient un point
+coloré parmi d'autres points colorés.
+
+Le feston à douze lobes, lui, a une silhouette reconnaissable même quand le glyphe qu'il
+contient n'est plus lisible. C'est la propriété qui compte : l'utilisateur qui distingue
+la \emph{forme} sait qu'Alanya s'est prononcé sur ce compte, sans avoir à lire le
+détail. Et cette forme est bien plus difficile à imiter avec un caractère Unicode dans un
+nom d'affichage qu'un simple rond ou une simple coche.
+
+\section{Les cinq rendus}
+
+\begin{center}
+\setlength{\extrarowheight}{7pt}
+\begin{tabular}{@{}llc@{\hspace{1.6cm}}c@{}}
+\toprule
+\thd{Genre} & \thd{État} & \thd{À taille réelle} & \thd{Agrandi} \\
+\midrule
+Personnel & non vérifié & --- & --- \\
+Personnel & vérifié     & \badgePastilleCoche[1]  & \badgePastilleCoche[2.2] \\
+Business  & déclaré     & \badgePanier[1]         & \badgePanier[2.2] \\
+Business  & vérifié     & \badgePastillePanier[1] & \badgePastillePanier[2.2] \\
+Officiel  & ---         & \badgeMarque[1]         & \badgeMarque[2.2] \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+
+La colonne « à taille réelle » est là pour être jugée telle quelle : c'est exactement la
+taille à laquelle le badge apparaîtra à côté d'un nom. Si un rendu n'est pas
+distinguable à cette échelle, il doit être redessiné avant l'implémentation.
+
+\begin{note}[Pourquoi une couleur différente pour l'officiel]
+Le sceau du compte officiel est doré, pas indigo. Il n'existe qu'un seul compte
+officiel dans toute l'application : lui donner une couleur à part évite qu'il soit confondu
+avec un compte simplement vérifié, et rend l'usurpation visuellement plus difficile.
+\end{note}
+
+\section{Où le badge apparaît}
+
+Le même badge, dessiné par le même composant, dans quatre contextes :
+
+\begin{itemize}[leftmargin=1.4em]
+  \item la \textbf{liste de conversations}, juste après le nom ;
+  \item l'\textbf{en-tête d'une conversation} ouverte ;
+  \item la \textbf{page de profil} du compte ;
+  \item les \textbf{résultats de recherche} et les listes de contacts.
+\end{itemize}
+
+\begin{center}
+  \imageOuCadre{maquettes/liste-conversations-badges.png}{0.86\linewidth}%
+    {Liste de conversations montrant les cinq variantes de badge en situation\\
+     \texttt{maquettes/liste-conversations-badges.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+La version vivante de cette maquette permet de faire varier la taille du badge de 10 à
+28~pixels pour juger la lisibilité, et montre la conversation officielle avec son bandeau
+de lecture seule :\\
+\href{https://claude.ai/code/artifact/029627c6-5dae-4b2a-a86b-3e28c899d824}%
+{\texttt{claude.ai/code/artifact/029627c6}}\\
+Source versionnée : \code{docs/architecture/maquettes/liste-conversations-badges.html}
+\end{note}
+
+\section{Pourquoi la distinction déclaré / vérifié est critique}
+
+Se déclarer « commerce » prend trente secondes et n'engage personne : le compte l'affirme
+lui-même, personne ne l'a contrôlé. Être vérifié suppose au contraire un dossier examiné
+par Alanya.
+
+Si les deux badges avaient le même poids visuel, n'importe qui créerait un compte business
+et hériterait d'une caution qui ne lui a jamais été accordée. C'est exactement le scénario
+qu'un arnaqueur cherche.
+
+\begin{alerte}[La règle qui en découle]
+Le sceau festonné est la signature d'Alanya. Rien d'autre dans l'interface ne doit pouvoir lui
+ressembler --- ni une icône décorative, ni un emoji dans un nom d'utilisateur.
+\end{alerte}
+
+\section{Protéger le badge des contournements}
+
+Un système de badge peut être contourné sans jamais être attaqué techniquement : il suffit
+qu'un utilisateur s'appelle « Alanya~\checkmark{} » pour que le nom affiché imite la
+certification.
+
+Deux protections sont donc posées dès cette étape :
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item les caractères de type coche, étoile et sceau sont \textbf{refusés} dans le nom et
+        le pseudo ;
+  \item les variantes du nom « Alanya » sont \textbf{réservées} et ne peuvent pas être
+        prises par un compte ordinaire.
+\end{enumerate}
+
+\chapter{Les règles de vie d'un compte}
+
+\section{Devenir un compte business, et revenir en arrière}
+
+Le passage d'un compte personnel à un compte business est \textbf{réversible}. Les règles
+proposées :
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.2cm}X@{}}
+\toprule
+\thd{Personnel $\rightarrow$ business} & Libre, à l'initiative de l'utilisateur. Devenir
+commerce est déclaratif : cela n'atteste de rien et ne demande donc aucune validation. \\
+\thd{Business $\rightarrow$ personnel} & Libre également. La fiche business est
+\textbf{conservée mais masquée}, pas supprimée : un retour en arrière ne doit pas détruire
+un catalogue de produits saisi pendant des semaines. \\
+\thd{Une vérification en cours} & La demande est annulée : elle portait sur une identité
+d'entreprise qui n'est plus revendiquée. \\
+\thd{Une vérification obtenue} & Elle est \textbf{révoquée}, pas suspendue. Le badge
+atteste d'une entreprise ; si le compte n'en est plus une, l'attestation n'a plus d'objet.
+Un nouveau dossier sera nécessaire pour la retrouver. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[À confirmer avec le client]
+La bascule business $\rightarrow$ personnel pourrait aussi être soumise à validation d'un
+administrateur, pour éviter qu'un commerce échappe à un signalement en repassant en
+personnel. La règle proposée ci-dessus est la plus simple ; l'alternative est plus sûre.
+\end{note}
+
+\section{La vie d'une vérification}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  etat/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
+               font=\sffamily\small, inner sep=6pt, minimum height=0.8cm,
+               text=AlanyaInk},
+  etatOk/.style={etat, draw=AlanyaSuccess, line width=0.9pt, fill=AlanyaSuccess!8},
+  etatKo/.style={etat, draw=danger, fill=danger!6},
+  fleche/.style={-{Stealth[length=2.2mm]}, draw=AlanyaGray, semithick},
+  etiq/.style={font=\sffamily\scriptsize, text=AlanyaGray,
+               fill=white, inner sep=1.5pt}
+]
+  \node[etat]   (aucun)   at (0,0)      {Aucune démarche};
+  \node[etat]   (attente) at (4.3,0)    {En attente};
+  \node[etatOk] (ok)      at (8.3,0)    {Vérifié};
+  \node[etatKo] (revoque) at (11.8,0)   {Révoqué};
+  \node[etatKo] (refuse)  at (1.7,-2.1) {Refusé};
+  \node[etatKo] (expire)  at (8.3,-2.1) {Expiré};
+
+  % Chemin nominal
+  \draw[fleche] (aucun)   -- node[etiq, above] {dépôt}       (attente);
+  \draw[fleche] (attente) -- node[etiq, above] {approbation} (ok);
+  \draw[fleche] (ok)      -- node[etiq, above] {abus}        (revoque);
+  \draw[fleche] (ok)      -- node[etiq, right] {échéance}    (expire);
+
+  % Rejet
+  \draw[fleche] (attente.south west) -- node[etiq, pos=0.55, above left, inner sep=1pt]
+    {rejet} (refuse.north east);
+
+  % Retours : deux couloirs qui ne se croisent pas
+  \draw[fleche] (refuse.north west) -- node[etiq, pos=0.5, above left, inner sep=1pt]
+    {nouveau dossier} (aucun.south);
+
+  \draw[fleche] (expire.west) -- (4.3,-2.1)
+    node[etiq, pos=0.55, below] {renouvellement} -- (attente.south);
+\end{tikzpicture}
+\end{center}
+
+\section{L'expiration et sa relance}
+
+Une vérification n'est pas éternelle : elle a une date de fin. Le comportement attendu :
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.4cm}X@{}}
+\toprule
+\thd{À J\,--\,30} & Le titulaire est prévenu qu'il doit renouveler, par trois canaux à la
+fois : une notification sur son téléphone, un e-mail, et un avertissement visible dans
+l'application. L'avertissement n'est envoyé qu'une fois. \\
+\thd{À l'échéance} & La vérification est \textbf{suspendue}. Le badge disparaît. Le compte
+et son contenu restent intacts --- seule l'attestation tombe. \\
+\thd{Après} & Le titulaire peut déposer un nouveau dossier pour retrouver son badge. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Suspendu, pas supprimé]
+Une vérification expirée est un état distinct d'un refus. Le compte a bien été vérifié par
+le passé ; il a simplement laissé passer la date. Cette nuance compte pour le service
+client, et pour ne pas retraiter un dossier déjà instruit.
+\end{note}
+
+\section{Le compte officiel}
+
+Le compte officiel est le compte au nom de l'application. Ses règles :
+
+\begin{itemize}[leftmargin=1.4em]
+  \item il est \textbf{créé par un administrateur}, jamais par une inscription ordinaire ;
+  \item sa photo de profil est le \textbf{logo Alanya} ;
+  \item il porte le badge officiel, distinct du badge de vérification ;
+  \item les utilisateurs \textbf{ne peuvent pas lui répondre}. Ses messages sont des
+        diffusions, pas des conversations.
+\end{itemize}
+
+Concrètement, dans une conversation avec le compte officiel, la zone de saisie est
+remplacée par un bandeau explicatif, et les actions « répondre » et « réagir » n'apparaissent
+pas sur ses messages.
+
+\begin{alerte}[Ce n'est pas qu'une question d'affichage]
+Masquer la zone de saisie ne suffit pas : un client modifié pourrait envoyer le message
+quand même. Le refus doit être appliqué par le serveur. La partie II décrit où.
+\end{alerte}
+
+\section{Un compte business ne peut pas être administrateur}
+
+Décision prise : les rôles d'administration de la plateforme et les genres de compte sont
+mutuellement exclusifs. Un compte business ou officiel ne peut pas recevoir de droits
+d'administration, et réciproquement.
+
+La raison est de sécurité : un compte visible du public, susceptible d'être usurpé ou
+compromis, ne doit pas ouvrir la porte au back-office.
+
+% =====================================================================
+\part{Approche technique}
+% =====================================================================
+
+\chapter{Modèle de données}
+
+\section{Pourquoi étendre \code{users} plutôt que créer une table \code{accounts}}
+
+La conception initiale prévoyait une nouvelle table \code{accounts} servant de socle. La
+lecture du schéma réel invalide cette approche.
+
+\begin{constat}
+\textbf{14 tables} référencent \code{users(alanyaID)} par clé étrangère :
+\code{preferredContact}, \code{blocked}, \code{userAccess}, \code{conversation},
+\code{conv\_participants}, \code{message}, \code{statut}, \code{statut\_views},
+\code{meeting}, \code{participant}, \code{callHistory}, \code{reserved\_alanya\_phone},
+\code{user\_push\_devices} et \code{user\_notification\_prefs} --- soit 34 contraintes au
+total (sources : \code{migrations/001\_initial\_schema.sql}, \code{010}, \code{020},
+\code{021}).
+\end{constat}
+
+Introduire une table parallèle imposerait de réécrire ces 34 contraintes. On étend donc
+\code{users}, qui \emph{est} le socle de compte.
+
+Ce choix a un second bénéfice, qui n'est pas un hasard : la conception exige que le genre
+et l'état de vérification soient lisibles dans la requête de liste de conversations
+\textbf{sans jointure supplémentaire}. Cette requête joint déjà \code{users} pour récupérer
+le nom et l'avatar du correspondant
+(\code{src/controllers/conversationController.js}, ligne~24). Deux colonnes de plus sur
+\code{users} sont donc gratuites ; une table \code{accounts} aurait imposé une jointure de
+plus sur le chemin le plus chaud de l'application.
+
+\section{La migration}
+
+\begin{lstlisting}[language=SQL, caption={\code{migrations/023\_account\_socle.sql}}]
+-- 023_account_socle.sql -- socle de compte unifie
+--
+-- Deux axes orthogonaux portes par `users` :
+--   account_type        : ce que le compte EST
+--   verification_status : ce qu'Alanya ATTESTE a son sujet
+--
+-- TINYINT et non ENUM : ajouter une valeur a un ENUM impose un ALTER TABLE
+-- sur une table qui grossit. L'enumeration vit cote Node.
+
+ALTER TABLE users
+  ADD COLUMN account_type TINYINT NOT NULL DEFAULT 0
+    COMMENT '0=personnel 1=business 2=officiel',
+  ADD COLUMN verification_status TINYINT NOT NULL DEFAULT 0
+    COMMENT '0=aucun 1=en_attente 2=verifie 3=refuse 4=revoque 5=expire',
+  ADD COLUMN verified_until DATETIME NULL
+    COMMENT 'Echeance de la verification (NULL si non verifie)',
+  ADD COLUMN verification_reminder_sent TINYINT NOT NULL DEFAULT 0
+    COMMENT '1 = relance J-30 deja envoyee pour l echeance courante';
+
+-- Annuaire business a venir : filtrer par genre puis par etat.
+ALTER TABLE users
+  ADD INDEX idx_users_account_type (account_type, verification_status);
+
+-- Balayage du scheduler d'expiration : ne remonter que les comptes verifies
+-- ayant une echeance, sans parcourir toute la table.
+ALTER TABLE users
+  ADD INDEX idx_users_verified_until (verified_until);
+\end{lstlisting}
+
+\begin{note}[Aucune colonne \code{badge\_type}]
+Le badge n'est jamais stocké. Il se calcule à l'affichage à partir des deux axes. Une
+valeur stockée finirait désynchronisée le jour où une certification expire ou est révoquée
+--- ce qui est précisément le cas que le système doit gérer.
+\end{note}
+
+\section{Les énumérations, côté Node}
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/constants/accountTypes.js} (nouveau)}]
+const ACCOUNT_TYPE = { PERSONNEL: 0, BUSINESS: 1, OFFICIEL: 2 };
+
+const VERIFICATION = {
+  AUCUN:      0,
+  EN_ATTENTE: 1,
+  VERIFIE:    2,
+  REFUSE:     3,
+  REVOQUE:    4,
+  EXPIRE:     5,
+};
+
+module.exports = { ACCOUNT_TYPE, VERIFICATION };
+\end{lstlisting}
+
+Le dossier \code{src/constants/} existe déjà (\code{participantLimits.js}) : la convention
+est respectée.
+
+\section{Raccordement au schéma existant}
+
+\begin{center}
+\begin{tikzpicture}[
+  tbl/.style={draw=AlanyaLine, fill=white, rounded corners=3pt,
+              font=\sffamily\scriptsize, inner sep=5pt, text=AlanyaInk},
+  socle/.style={draw=AlanyaIndigo, line width=1pt, fill=AlanyaContainer,
+                rounded corners=4pt, font=\sffamily\small\bfseries,
+                inner sep=8pt, text=AlanyaIndigoDark, align=center},
+  futur/.style={draw=AlanyaMute, dashed, fill=white, rounded corners=3pt,
+                font=\sffamily\scriptsize\itshape, inner sep=5pt, text=AlanyaGray},
+  lien/.style={draw=AlanyaLine, thick}
+]
+  \node[socle] (users) at (0,0) {users\\[2pt]
+    \footnotesize\mdseries account\_type\\
+    \footnotesize\mdseries verification\_status\\
+    \footnotesize\mdseries verified\_until};
+
+  \node[tbl] (a) at (-4.6,2.1) {message};
+  \node[tbl] (b) at (-4.6,1.1) {conversation};
+  \node[tbl] (c) at (-4.6,0.1) {conv\_participants};
+  \node[tbl] (d) at (-4.6,-0.9) {preferredContact};
+  \node[tbl] (e) at (-4.6,-1.9) {statut};
+  \node[tbl] (f) at (-4.6,-2.9) {\ldots{} 9 autres};
+
+  \node[futur] (g) at (4.7,1.5)  {business\_profiles};
+  \node[futur] (h) at (4.7,0.4)  {verification\_requests};
+  \node[futur] (i) at (4.7,-0.7) {contact\_list};
+
+  \foreach \n in {a,b,c,d,e,f} { \draw[lien] (\n.east) -- (users.west); }
+  \foreach \n in {g,h,i} { \draw[lien, dashed, draw=AlanyaMute] (users.east) -- (\n.west); }
+
+  \node[font=\sffamily\scriptsize, text=AlanyaGray] at (-4.6,3.0) {14 tables existantes};
+  \node[font=\sffamily\scriptsize, text=AlanyaGray] at (4.7,2.4) {étapes suivantes};
+\end{tikzpicture}
+\end{center}
+
+\chapter{Dérivation du badge}
+
+\section{Une fonction pure, trois implémentations identiques}
+
+Le badge est une fonction de deux entiers vers une variante d'affichage. Aucun accès base,
+aucune requête réseau.
+
+\begin{lstlisting}[language=Dart, caption={\code{lib/widgets/common/account\_badge.dart} (nouveau) --- forme cible}]
+enum AccountBadge { aucun, cocheVerifiee, panierDeclare, panierVerifie, officiel }
+
+AccountBadge resolveAccountBadge(int accountType, int verificationStatus) {
+  final verifie = verificationStatus == 2; // VERIFIE
+  switch (accountType) {
+    case 2: return AccountBadge.officiel;
+    case 1: return verifie ? AccountBadge.panierVerifie : AccountBadge.panierDeclare;
+    default: return verifie ? AccountBadge.cocheVerifiee : AccountBadge.aucun;
+  }
+}
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\thd{\code{account\_type}} & \thd{\code{verification\_status}} & \thd{Variante} & \thd{Rendu} \\
+\midrule
+0 & $\neq 2$ & \code{aucun}          & --- \\
+0 & $= 2$    & \code{cocheVerifiee}  & \badgePastilleCoche[1] \\
+1 & $\neq 2$ & \code{panierDeclare}  & \badgePanier[1] \\
+1 & $= 2$    & \code{panierVerifie}  & \badgePastillePanier[1] \\
+2 & indifférent & \code{officiel}    & \badgeMarque[1] \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{alerte}[Un seul widget, pas trois]
+Le composant doit être unique et utilisé aux quatre endroits listés en partie~I. Trois
+implémentations concurrentes divergeront en deux semaines --- c'est exactement ce qui est
+arrivé aux quatre indigos concurrents que le design system a dû unifier
+(\code{lib/core/theme/app\_colors.dart}).
+\end{alerte}
+
+\section{Le piège à corriger avant tout}
+
+\begin{constat}[Vérifié dans le code]
+Le champ \code{typeCompte} du modèle \code{User} est \textbf{codé en dur à \code{0}} partout
+où un \code{User} est reconstruit depuis une charge utile partielle :
+\code{lib/core/services/call\_service.dart} ligne~207,
+\code{lib/widgets/chat/contact\_message\_preview.dart} ligne~46, et
+\code{lib/screens/chats/contact\_detail\_screen.dart} ligne~104.
+\end{constat}
+
+Les nouveaux champs suivront le même chemin et subiront le même sort : un badge dérivé
+afficherait « compte personnel non vérifié » à ces trois endroits, quel que soit le compte
+réel. Ces trois sites doivent être corrigés dans le même lot que l'ajout du badge, sinon le
+défaut est invisible en développement et visible en production.
+
+\section{Composant existant à ne pas confondre}
+
+\code{lib/widgets/common/app\_badge.dart} existe déjà mais n'a aucun rapport : c'est
+\code{CountBadge}, la pastille de comptage des messages non lus. Le nouveau composant est
+donc un fichier distinct, \code{account\_badge.dart}.
+
+\chapter{Règles appliquées par le serveur}
+
+\section{Exclusion business / administrateur}
+
+Règle : \code{account\_type != 0} $\Rightarrow$ \code{type\_compte = 0}.
+
+\begin{note}[Pourquoi deux colonnes distinctes]
+\code{users.type\_compte} existe déjà et porte le \textbf{rôle d'administration}
+(\code{0} utilisateur, \code{>= 1} admin, \code{>= 2} super-admin). Il est lu par
+\code{src/middleware/adminAuth.js} (lignes~41 et~60),
+\code{lib/providers/admin\_provider.dart} (lignes~245--246) et
+\code{talky-admin/lib/auth.ts}. Réutiliser cette colonne pour le genre de compte aurait
+cassé l'administration existante ; d'où la colonne séparée \code{account\_type}.
+\end{note}
+
+Le contrôle est à poser aux deux endroits qui écrivent ces champs, dans
+\code{src/controllers/admin/users.js} : \code{setAccountType} (rôle admin, existant) et le
+nouveau point d'entrée qui fixera \code{account\_type}. Rejet en 409 avec un message
+explicite plutôt qu'un écrasement silencieux.
+
+\section{Validation des noms d'affichage}
+
+Le filtrage doit vivre \textbf{côté serveur}, et non dans l'application mobile : le mobile
+n'est pas le seul écrivain. L'administration crée aussi des comptes
+(\code{src/controllers/admin/userCreate.js}), et la modification de profil passe par
+l'API.
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/utils/displayNameGuard.js} (nouveau) --- principe}]
+// Blocs Unicode a refuser dans `nom` et `pseudo` :
+//   U+2705, U+2713-U+2714 (coches)        U+2B50, U+2606, U+2B51 (etoiles)
+//   U+1F396-U+1F397, U+1F3C5 (medailles)  U+269C (fleur de lys / sceau)
+//   Variation selectors utilises pour composer un faux badge.
+//
+// Plus : refus des variantes normalisees du nom "Alanya", en tenant compte
+//   de la casse, des accents, des espaces inseres, et des homoglyphes
+//   cyrilliques U+0410 U+0430 (a), U+0435 (e), U+043E (o), U+0443 (y),
+//   U+0441 (c) -- visuellement identiques, distincts pour la base.
+\end{lstlisting}
+
+\begin{alerte}[Les homoglyphes]
+Refuser la chaîne « Alanya » ne suffit pas. Le même mot dont le \emph{A} initial est un A
+cyrillique (U+0410) au lieu du A latin (U+0041) est une chaîne \emph{différente} pour la
+base de données, et rigoureusement identique à l'{\oe}il. La comparaison doit donc se faire
+sur une forme normalisée, après repli des homoglyphes.
+\end{alerte}
+
+\section{Interdire la réponse au compte officiel}
+
+\begin{constat}[Un seul point d'ancrage suffit]
+Les deux chemins d'envoi de message --- REST
+(\code{src/controllers/messageController.js} ligne~178) et Socket.IO
+(\code{src/socket/handlers/chat/messageSend.js} ligne~142) --- appellent tous deux la même
+fonction \code{evaluateDirectMessageSend} de \code{src/utils/blockUtils.js}. Une seule
+modification couvre donc les deux.
+\end{constat}
+
+Cette fonction résout déjà le correspondant d'une conversation 1-1 et renvoie une action
+(\code{deliver}, \code{reject} ou \code{silent}). Il suffit d'y ajouter un cas :
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/utils/blockUtils.js} --- ajout dans \code{evaluateDirectMessageSend}}]
+const evaluateDirectMessageSend = async (conversationID, senderID) => {
+  const peerId = await getDirectConversationPeer(conversationID, senderID);
+  if (peerId == null) return { isDirect: false };
+
+  // Nouveau : le compte officiel diffuse, il ne converse pas.
+  const [rows] = await pool.execute(
+    'SELECT account_type FROM users WHERE alanyaID = ?', [peerId],
+  );
+  if (rows[0] && rows[0].account_type === ACCOUNT_TYPE.OFFICIEL) {
+    return { isDirect: true, peerId, action: 'reject', code: 'OFFICIAL_READONLY' };
+  }
+
+  // ... suite inchangee : evaluation du blocage
+};
+\end{lstlisting}
+
+Côté mobile, la zone de saisie de \code{lib/screens/chats/chat/chat\_input.dart} est
+remplacée par un bandeau, et les actions « répondre » / « réagir » sont retirées des bulles.
+
+\begin{note}[À trancher à l'étape 3]
+Faut-il une conversation en lecture seule, ou un canal de diffusion distinct des
+conversations ? Le choix dépend de la stratégie de diffusion, qui est le sujet de l'étape
+sur le compte officiel. La règle serveur ci-dessus vaut dans les deux cas.
+\end{note}
+
+\section{Expiration : réutiliser le mécanisme existant}
+
+Le comportement demandé --- relance à J\,--\,30 puis suspension --- a déjà son patron exact
+dans le code.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.1cm}X@{}}
+\toprule
+\thd{Ordonnanceur} & \code{src/services/meetingScheduler.js} : un \code{setInterval} d'une
+minute, une requête qui remonte les échéances proches, et une colonne \code{reminder\_sent}
+pour ne jamais notifier deux fois. Le squelette se transpose tel quel en
+\code{verificationScheduler.js}. \\
+\thd{E-mail} & \code{src/services/mailService.js} : \code{sendMail} et
+\code{renderHtmlEmail} sur le gabarit \code{src/templates/email-template.html}, déjà en
+service pour l'OTP de réinitialisation. \\
+\thd{Notification} & \code{src/services/notificationService.js}, déjà utilisé par
+l'ordonnanceur de réunions. \\
+\thd{Avertissement in-app} & Dérivé de \code{verified\_until}, déjà présent dans la charge
+utile utilisateur --- aucun appel supplémentaire. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{lstlisting}[language=SQL, caption={Les deux requêtes du scheduler}]
+-- 1. Relance J-30, une seule fois par echeance
+SELECT alanyaID, nom, email, verified_until
+FROM users
+WHERE verification_status = 2
+  AND verified_until IS NOT NULL
+  AND verified_until > UTC_TIMESTAMP()
+  AND verified_until <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 DAY)
+  AND verification_reminder_sent = 0;
+
+-- 2. Suspension a l'echeance
+UPDATE users
+SET verification_status = 5,            -- EXPIRE
+    verification_reminder_sent = 0      -- rearme pour un futur renouvellement
+WHERE verification_status = 2
+  AND verified_until IS NOT NULL
+  AND verified_until <= UTC_TIMESTAMP();
+\end{lstlisting}
+
+\begin{note}[Pourquoi pas de file de jobs ici]
+La conception initiale demandait une file de jobs (BullMQ / Redis) dès le départ. Elle
+n'existe pas aujourd'hui dans le backend. Pour les relances de vérification, le volume est
+faible et espacé : un ordonnanceur en processus suffit, et il a déjà fait ses preuves sur
+les rappels de réunion. La file redeviendra nécessaire au fan-out des diffusions du compte
+officiel --- c'est là qu'il faudra la traiter, pas ici.
+\end{note}
+
+\chapter{Impact fichier par fichier}
+
+\section{Backend --- Alanya-Backend}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{migrations/023\_account\_socle.sql} & nouveau & Les quatre colonnes et deux index \\
+\code{src/constants/accountTypes.js} & nouveau & Énumérations partagées \\
+\code{src/utils/displayNameGuard.js} & nouveau & Filtrage des noms, réservation d'« Alanya » \\
+\code{src/services/verificationScheduler.js} & nouveau & Relance J\,--\,30 et suspension \\
+\code{src/utils/blockUtils.js} & modifié & Refus de réponse au compte officiel \\
+\code{src/controllers/userController.js} & modifié & Exposer les deux axes ; appliquer le filtrage des noms \\
+\code{src/controllers/conversationController.js} & modifié & Ajouter les deux axes à la projection du correspondant \\
+\code{src/controllers/preferredContactController.js} & modifié & Idem sur la liste de contacts \\
+\code{src/controllers/messageController.js} & modifié & Idem sur l'expéditeur d'un message \\
+\code{src/controllers/admin/users.js} & modifié & Piloter \code{account\_type} ; exclusion business/admin ; filtre par genre \\
+\code{src/controllers/admin/userCreate.js} & modifié & Création du compte officiel ; filtrage des noms \\
+\code{server.js} & modifié & Démarrage du \code{verificationScheduler} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Mobile --- Talky (Flutter)}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{lib/widgets/common/account\_badge.dart} & nouveau & Le composant unique et sa dérivation \\
+\code{lib/talky\_models.dart} & modifié & \code{accountType}, \code{verificationStatus}, \code{verifiedUntil} sur \code{User} \\
+\code{lib/core/db/app\_database.dart} & modifié & Colonnes sur \code{LocalUsers}, \code{schemaVersion} et \code{onUpgrade} \\
+\code{lib/core/services/local\_cache\_repository.dart} & modifié & Propager les champs dans le cache \\
+\code{lib/core/services/call\_service.dart} & \textbf{corrigé} & \code{typeCompte: 0} codé en dur, ligne~207 \\
+\code{lib/widgets/chat/contact\_message\_preview.dart} & \textbf{corrigé} & Idem, ligne~46 \\
+\code{lib/screens/chats/contact\_detail\_screen.dart} & \textbf{corrigé} & Idem, ligne~104 \\
+\code{lib/screens/chats/chats\_screen.dart} & modifié & Badge dans la liste de conversations \\
+\code{lib/screens/chats/chat\_detail\_screen.dart} & modifié & Badge dans l'en-tête ; masquage de la saisie \\
+\code{lib/screens/chats/chat/chat\_input.dart} & modifié & Bandeau « diffusion » à la place du champ \\
+\code{lib/screens/chats/chat/chat\_bubbles.dart} & modifié & Retrait de « répondre » et « réagir » \\
+\code{lib/l10n/*} & modifié & Libellés des badges, du bandeau et des avertissements \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Régénération obligatoire]
+Toute modification de \code{app\_database.dart} impose
+\code{dart run build\_runner build -{}-delete-conflicting-outputs}, et la montée de
+\code{schemaVersion} doit passer par \code{onUpgrade} --- pas par une recréation, sous peine
+de vider le cache local des utilisateurs déjà installés.
+\end{alerte}
+
+\section{Administration --- Alanya Admin}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{types/index.ts} & modifié & \code{accountType}, \code{verificationStatus}, \code{verifiedUntil} \\
+\code{app/(dashboard)/users/page.tsx} & modifié & Colonne badge et filtre par genre de compte \\
+\code{app/(dashboard)/users/[id]/page.tsx} & modifié & Pilotage du genre et de l'état \\
+\code{app/(dashboard)/users/new/page.tsx} & modifié & Création du compte officiel \\
+\code{components/ui/badge.tsx} & modifié & Variantes de badge de compte \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Conversion des noms]
+Le client HTTP de l'administration convertit automatiquement les clés
+\code{snake\_case} en \code{camelCase} (\code{lib/api.ts}). Les colonnes
+\code{account\_type} et \code{verification\_status} arriveront donc en
+\code{accountType} et \code{verificationStatus} sans travail supplémentaire.
+\end{note}
+
+\chapter{Points de vigilance et questions ouvertes}
+
+\section{À vérifier avant d'appliquer la migration}
+
+\begin{alerte}[Le backend n'a pas d'ordonnanceur de migrations]
+Il n'existe ni exécuteur, ni table de suivi : les fichiers de \code{migrations/} sont
+appliqués \textbf{à la main}. Rien ne garantit que l'état réel de la base corresponde au
+contenu du dossier. Avant d'appliquer 023, il faut constater l'état réel des colonnes.
+\end{alerte}
+
+\begin{alerte}[La migration 013 contient du SQL invalide]
+\code{migrations/013\_view\_once.sql} comporte un point-virgule au milieu de l'instruction
+\code{ALTER TABLE} : la seconde colonne, \code{viewedAt}, n'a jamais pu s'appliquer par ce
+fichier. Elle figure pourtant dans le schéma consolidé
+\code{docs/schema\_complet\_alanyBD2027.sql}. Il faut trancher lequel des deux décrit la
+production.
+\end{alerte}
+
+\section{Collision de numérotation}
+
+Le numéro 023 est également revendiqué par \code{docs/listes-contacts-plan.md}, qui prévoit
+\code{023\_contact\_lists.sql}. Le socle prenant 023, les listes de contacts passent à
+\textbf{024}. Le document doit être corrigé avant sa conversion, sinon les deux migrations
+entreront en collision à l'implémentation.
+
+\section{Écart assumé avec la conception initiale}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Conception initiale} & \thd{Ce document} \\
+\midrule
+Table \code{accounts} dédiée & Extension de \code{users} --- 14 tables et 34 contraintes
+en dépendent déjà \\
+« Fuir le type \code{ENUM} » & Appliqué : \code{TINYINT} partout. À noter que le schéma
+existant en contient déjà (\code{migrations/020} et \code{021}) ; on ne revient pas dessus \\
+File de jobs dès la conception & Reportée : l'ordonnanceur en processus suffit pour les
+relances. La file redevient nécessaire au fan-out des diffusions \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Ce qui reste à décider}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item La bascule business $\rightarrow$ personnel est-elle libre, ou soumise à validation
+        d'un administrateur ?
+  \item Un compte business dont la vérification a expiré reste-t-il visible dans l'annuaire
+        business, sans badge ?
+  \item La durée par défaut d'une vérification --- un an est l'usage, mais ce n'est pas
+        tranché.
+  \item Y a-t-il un seul compte officiel, ou plusieurs (support, actualités\ldots) ? Le
+        modèle proposé en supporte plusieurs sans modification.
+\end{enumerate}
+
+\vfill
+\begin{center}\small\color{AlanyaGray}\sffamily
+Fin du dossier --- étape 1. \\
+Étape suivante : listes de contacts préférés.
+\end{center}
+
+\end{document}

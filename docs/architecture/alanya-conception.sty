@@ -1,0 +1,319 @@
+% =====================================================================
+%  alanya-conception.sty
+%  Thème partagé des documents de conception Alanya.
+%
+%  Repris du préambule de docs/manuel-technique/manuel-technique-talky.tex
+%  afin que les dossiers de conception et le manuel technique aient la
+%  même identité visuelle.
+%
+%  Usage :  \usepackage{alanya-conception}
+%  Compilation : latexmk -pdf  |  pdflatex (x2)  |  tectonic
+% =====================================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{alanya-conception}[2026/07/25 Theme de conception Alanya]
+
+% --------------------------------------------------------------------
+%  Encodage, polices, langue
+% --------------------------------------------------------------------
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{textcomp}
+\RequirePackage{lmodern}
+\RequirePackage[french]{babel}
+\RequirePackage{microtype}
+
+% --------------------------------------------------------------------
+%  Mise en page
+% --------------------------------------------------------------------
+\RequirePackage[a4paper,margin=2.4cm,headheight=15pt]{geometry}
+\RequirePackage{graphicx}
+\RequirePackage{xcolor}
+\RequirePackage{amssymb}   % \checkmark, utilise pour illustrer l'usurpation de badge
+\RequirePackage{array}
+\RequirePackage{booktabs}
+\RequirePackage{tabularx}
+\RequirePackage{longtable}
+\RequirePackage{enumitem}
+\RequirePackage{caption}
+\RequirePackage{float}
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+\RequirePackage{listings}
+\RequirePackage[skins]{tcolorbox}
+
+% --------------------------------------------------------------------
+%  Diagrammes
+% --------------------------------------------------------------------
+\RequirePackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,calc,backgrounds,shadows.blur}
+
+% --------------------------------------------------------------------
+%  Liens (charge en dernier)
+% --------------------------------------------------------------------
+\RequirePackage[hidelinks]{hyperref}
+
+% --------------------------------------------------------------------
+%  Palette de marque Alanya — alignée sur lib/core/theme/app_colors.dart
+% --------------------------------------------------------------------
+\definecolor{AlanyaIndigo}{HTML}{3F51B5}        % brandPrimary
+\definecolor{AlanyaIndigoDark}{HTML}{1A237E}    % brandPrimaryDark
+\definecolor{AlanyaIndigoStrong}{HTML}{303F9F}  % brandPrimaryStrong
+\definecolor{AlanyaContainer}{HTML}{E8EAF6}     % brandContainer
+\definecolor{AlanyaInk}{HTML}{1A1D23}           % textPrimary
+\definecolor{AlanyaGray}{HTML}{5B6273}          % textSecondary
+\definecolor{AlanyaMute}{HTML}{9AA0AE}          % textTertiary
+\definecolor{AlanyaLine}{HTML}{CBD0E0}          % outlineStrong
+\definecolor{AlanyaSurface}{HTML}{F6F7FB}       % background
+\definecolor{AlanyaSuccess}{HTML}{1FA363}       % success
+\definecolor{codeBg}{HTML}{F6F7FB}
+\definecolor{codeKw}{HTML}{303F9F}
+\definecolor{codeStr}{HTML}{1FA363}
+\definecolor{codeCom}{HTML}{9AA0AE}
+\definecolor{warning}{HTML}{B7791F}
+\definecolor{danger}{HTML}{C0392B}
+
+% Couleur réservée au sceau du compte officiel — volontairement distincte
+% de l'indigo de marque pour que « officiel » ne se confonde pas avec
+% « vérifié ».
+\definecolor{AlanyaOfficiel}{HTML}{C9A227}
+
+% Couleurs d'exemple des listes de contacts (contact_list.color).
+% Ce ne sont pas des jetons du design system : ce sont des valeurs choisies
+% par l'utilisateur, reprises ici et dans la maquette pour rester cohérentes.
+\definecolor{AlanyaListeFamille}{HTML}{C2185B}
+\definecolor{AlanyaListeAmis}{HTML}{00796B}
+\definecolor{AlanyaListeBureau}{HTML}{3949AB}
+
+% --------------------------------------------------------------------
+%  En-têtes / pieds de page
+% --------------------------------------------------------------------
+\newcommand{\alanyaDocTitre}{Dossier de conception}
+\newcommand{\setAlanyaDocTitre}[1]{\renewcommand{\alanyaDocTitre}{#1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\nouppercase{\leftmark}}
+\fancyhead[R]{\small\textcolor{AlanyaIndigo}{\textbf{Alanya}} --- \alanyaDocTitre}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.0pt}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}\fancyfoot[C]{\small\thepage}%
+  \renewcommand{\headrulewidth}{0pt}}
+
+% --------------------------------------------------------------------
+%  Titres
+% --------------------------------------------------------------------
+\titleformat{\chapter}[display]
+  {\normalfont\sffamily\bfseries\color{AlanyaIndigo}}
+  {\filright\large CHAPITRE\ \Huge\thechapter}
+  {0.6ex}{\Huge}
+\titlespacing*{\chapter}{0pt}{10pt}{30pt}
+
+\titleformat{\section}
+  {\normalfont\sffamily\Large\bfseries\color{AlanyaIndigoDark}}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\sffamily\large\bfseries\color{AlanyaIndigoStrong}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\sffamily\normalsize\bfseries\color{AlanyaInk}}{\thesubsubsection}{1em}{}
+
+% --------------------------------------------------------------------
+%  Listings
+% --------------------------------------------------------------------
+\lstdefinelanguage{Dart}{
+  morekeywords={abstract,async,await,class,const,extends,final,Future,if,else,
+    import,in,new,return,static,super,this,var,void,bool,int,double,String,
+    List,Map,true,false,null,override,late,required,factory,get,set,enum,switch,case},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]'
+}
+\lstdefinelanguage{JavaScript}{
+  morekeywords={async,await,break,case,catch,class,const,continue,default,
+    delete,do,else,export,extends,false,finally,for,function,if,import,in,
+    instanceof,let,new,null,of,require,return,super,switch,this,throw,true,
+    try,typeof,var,void,while,yield},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]'
+}
+
+\lstdefinestyle{Alanya}{
+  backgroundcolor=\color{codeBg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codeKw}\bfseries,
+  commentstyle=\color{codeCom}\itshape,
+  stringstyle=\color{codeStr},
+  numberstyle=\tiny\color{codeCom},
+  numbers=left,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2,
+  frame=single,
+  rulecolor=\color{AlanyaLine},
+  framesep=6pt,
+  xleftmargin=14pt,
+  aboveskip=10pt,
+  belowskip=8pt,
+  captionpos=b
+}
+\lstset{style=Alanya}
+
+% --------------------------------------------------------------------
+%  Macros utilitaires
+% --------------------------------------------------------------------
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\thd}[1]{\textbf{\textcolor{AlanyaIndigoDark}{#1}}}
+
+\newcommand{\mGET}{\textcolor{codeStr}{\textbf{GET}}}
+\newcommand{\mPOST}{\textcolor{AlanyaIndigoStrong}{\textbf{POST}}}
+\newcommand{\mPUT}{\textcolor{warning}{\textbf{PUT}}}
+\newcommand{\mDEL}{\textcolor{danger}{\textbf{DELETE}}}
+
+% Cadre de remplacement si l'image n'est pas encore produite.
+\newcommand{\imageOuCadre}[3]{%
+  \IfFileExists{#1}{%
+    \includegraphics[width=#2]{#1}%
+  }{%
+    \fbox{\begin{minipage}[c][4.2cm][c]{#2}%
+      \centering\sffamily\color{AlanyaGray}%
+      \textbf{[ Maquette à produire ]}\\[6pt]%
+      \small #3%
+    \end{minipage}}%
+  }%
+}
+
+% Encadrés
+\newenvironment{note}[1][Note]{%
+  \begin{tcolorbox}[enhanced, frame hidden, interior hidden,
+    borderline west={3pt}{0pt}{AlanyaIndigo},
+    left=10pt, top=3pt, bottom=3pt, sharp corners, colback=white,
+    before skip=\medskipamount, after skip=\medskipamount]%
+  \small\textbf{\textcolor{AlanyaIndigoDark}{#1.}}\space\ignorespaces
+}{\end{tcolorbox}}
+
+\newenvironment{alerte}[1][Point de vigilance]{%
+  \begin{tcolorbox}[enhanced, frame hidden, interior hidden,
+    borderline west={3pt}{0pt}{danger},
+    left=10pt, top=3pt, bottom=3pt, sharp corners, colback=white,
+    before skip=\medskipamount, after skip=\medskipamount]%
+  \small\textbf{\textcolor{danger}{#1.}}\space\ignorespaces
+}{\end{tcolorbox}}
+
+\newenvironment{constat}[1][Constat vérifié dans le code]{%
+  \begin{tcolorbox}[enhanced, frame hidden, interior hidden,
+    borderline west={3pt}{0pt}{AlanyaSuccess},
+    left=10pt, top=3pt, bottom=3pt, sharp corners, colback=white,
+    before skip=\medskipamount, after skip=\medskipamount]%
+  \small\textbf{\textcolor{AlanyaSuccess}{#1.}}\space\ignorespaces
+}{\end{tcolorbox}}
+
+% --------------------------------------------------------------------
+%  Badges Alanya dessinés en TikZ
+%
+%  Deux canaux visuels indépendants :
+%    - le GLYPHE dit quoi   : coche = personne notable, panier = commerce,
+%                             marque = compte officiel
+%    - le CONTENANT dit si c'est vérifié : glyphe nu = déclaré par le compte,
+%                             glyphe dans une pastille pleine = sceau Alanya
+%
+%  \badgeCoche{taille} \badgePanier{taille} \badgeMarque{taille}
+%  \badgePastilleCoche{taille} \badgePastillePanier{taille}
+%  où taille est un facteur d'échelle (1 = environ 12 pt, taille réelle
+%  d'une ligne de conversation).
+% --------------------------------------------------------------------
+
+% Tracé de la coche, centré sur (0,0), rayon utile 0.5
+\newcommand{\alanyaGlypheCoche}[1]{%
+  \draw[#1, line width=0.16em, line cap=round, line join=round]
+    (-0.26,0.02) -- (-0.06,-0.20) -- (0.28,0.22);}
+
+% Tracé du panier : corps trapézoïdal PLEIN + anse.
+% Le corps est rempli et non contourné : à 12 px, un filet de moins d'un pixel
+% disparaît ou se remplit d'aliasing, alors qu'une silhouette pleine reste
+% identifiable. La coche, elle, reste un tracé — c'est sa nature.
+\newcommand{\alanyaGlyphePanier}[1]{%
+  \fill[#1, line join=round]
+    (-0.34,0.07) -- (0.34,0.07) -- (0.22,-0.28) -- (-0.22,-0.28) -- cycle;
+  \draw[#1, line width=0.11em, line cap=round]
+    (-0.17,0.09) arc[start angle=180, end angle=0, radius=0.17];}
+
+% Marque Alanya : monogramme A, tracé explicitement plutôt que posé en nœud
+% texte. Un \node centre la BOÎTE du texte, strut compris : la profondeur de
+% police décale visuellement un « A » (qui n'a pas de jambage) vers le haut.
+% Ce tracé est symétrique par construction — boîte x [-0,235 ; 0,235],
+% y [-0,26 ; 0,26] — donc exactement centré sur (0,0), et identique au tracé
+% SVG de la maquette.
+%
+% Le contre-poinçon (le triangle intérieur) est un second sous-chemin découpé
+% par la règle pair-impair.
+\newcommand{\alanyaGlypheMarque}[1]{%
+  \fill[#1, even odd rule]
+    (0,0.26) -- (0.235,-0.26) -- (0.125,-0.26) -- (0.083,-0.13)
+      -- (-0.083,-0.13) -- (-0.125,-0.26) -- (-0.235,-0.26) -- cycle
+    (0,0.115) -- (0.052,-0.045) -- (-0.052,-0.045) -- cycle;}
+
+% Le SCEAU — contenant des badges vérifiés.
+%
+% Rosace à 12 lobes obtenue par r(theta) = R + A*cos(12*theta). Une pastille
+% ronde ne se distingue d'aucune autre icône circulaire de l'interface ; le
+% feston est identifiable au premier coup d'oeil, y compris à 12 px, et il est
+% coûteux à imiter dans un nom d'affichage.
+%
+% Tracé échantillonné SANS `smooth` : l'interpolation lissée de TikZ dépasse sur
+% une courbe oscillante et transforme les lobes en pointes d'étoile. Avec 288
+% points (un tous les 1,25 degre) la ligne brisée est visuellement continue,
+% y compris agrandie, et l'amplitude reste exactement celle demandée.
+\newcommand{\alanyaSceau}[1]{%
+  \fill[#1] plot[domain=0:358.75, samples=288]
+    (\x:{0.44+0.05*cos(12*\x)}) -- cycle;}
+
+% Les glyphes posés dans un sceau sont réduits : le rayon utile est le CREUX
+% du feston (0,39), pas sa crête. Le panier, plus large que la coche, demande
+% une réduction plus forte pour que son anse reste lisible.
+\newcommand{\alanyaDansSceau}[2][0.85]{\begin{scope}[scale=#1]#2\end{scope}}
+
+% Les badges sont dessinés à une taille de référence de 1 em puis mis à
+% l'échelle par \scalebox : contrairement à l'option `scale` de TikZ,
+% \scalebox met aussi à l'échelle les épaisseurs de trait, ce qui est
+% indispensable pour juger la lisibilité à 12 px.
+\newcommand{\alanyaBadgeBoite}[2]{%
+  \scalebox{#1}{\begin{tikzpicture}[x=1em, y=1em, baseline=-0.35ex]#2\end{tikzpicture}}}
+
+\newcommand{\badgeCoche}[1][1]{%
+  \alanyaBadgeBoite{#1}{\alanyaGlypheCoche{AlanyaIndigo}}}
+
+\newcommand{\badgePanier}[1][1]{%
+  \alanyaBadgeBoite{#1}{\alanyaGlyphePanier{AlanyaGray}}}
+
+\newcommand{\badgePastilleCoche}[1][1]{%
+  \alanyaBadgeBoite{#1}{%
+    \alanyaSceau{AlanyaIndigo}
+    \alanyaDansSceau{\alanyaGlypheCoche{white}}}}
+
+\newcommand{\badgePastillePanier}[1][1]{%
+  \alanyaBadgeBoite{#1}{%
+    \alanyaSceau{AlanyaIndigo}
+    \alanyaDansSceau[0.78]{\alanyaGlyphePanier{white}}}}
+
+\newcommand{\badgeMarque}[1][1]{%
+  \alanyaBadgeBoite{#1}{%
+    \alanyaSceau{AlanyaOfficiel}
+    \alanyaDansSceau{\alanyaGlypheMarque{white}}}}
+
+% Sceau nu, pour illustrer la forme dans le texte.
+\newcommand{\badgeSceauNu}[1][1]{%
+  \alanyaBadgeBoite{#1}{\alanyaSceau{AlanyaIndigo}}}
+
+\renewcommand{\arraystretch}{1.25}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+
+\endinput

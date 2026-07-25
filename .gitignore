@@ -52,6 +52,17 @@ lib.zip
 docs/*
 !docs/notifications_e2e_matrix.md
 !docs/notifications_rollout.md
+# Dossiers de conception : versionner les SOURCES, pas les PDF ni les artefacts
+# LaTeX (voir plus bas). Sans ces exceptions, docs/* les rendait invisibles.
+!docs/architecture/
+docs/architecture/**/*.pdf
+docs/architecture/**/*.aux
+docs/architecture/**/*.log
+docs/architecture/**/*.out
+docs/architecture/**/*.toc
+docs/architecture/**/*.fls
+docs/architecture/**/*.fdb_latexmk
+docs/architecture/**/*.synctex.gz
 # E2E captures locales (pas de secrets)
 docs/e2e_evidence/
 *.dumpsys.txt

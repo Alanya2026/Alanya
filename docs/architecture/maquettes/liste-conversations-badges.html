@@ -1,0 +1,685 @@
+<title>Alanya — Badges de compte en situation</title>
+
+<style>
+  /* ------------------------------------------------------------------
+     Tokens repris de lib/core/theme/app_colors.dart et app_dimens.dart.
+     Aucune valeur inventée : si une couleur manque ici, c'est qu'elle
+     n'existe pas encore dans le design system.
+     ------------------------------------------------------------------ */
+  :root {
+    --brand:            #3F51B5;  /* brandPrimary */
+    --brand-dark:       #1A237E;  /* brandPrimaryDark */
+    --brand-strong:     #303F9F;  /* brandPrimaryStrong */
+    --brand-container:  #E8EAF6;  /* brandContainer */
+    --officiel:         #C9A227;  /* sceau du compte officiel (nouveau) */
+    --online:           #1FA363;  /* online */
+
+    --bg:               #F6F7FB;  /* background */
+    --surface:          #FFFFFF;  /* surface */
+    --surface-muted:    #F4F5F8;  /* surfaceMuted */
+    --outline:          #E2E5EC;  /* outline */
+    --outline-strong:   #CBD0E0;  /* outlineStrong */
+
+    --ink:              #1A1D23;  /* textPrimary */
+    --ink-2:            #5B6273;  /* textSecondary */
+    --ink-3:            #9AA0AE;  /* textTertiary */
+
+    /* Page chrome — neutre légèrement tiré vers l'indigo de marque,
+       pour que le cadre de présentation n'entre pas en conflit avec
+       la maquette qu'il encadre. */
+    --page-bg:          #EEF0F7;
+    --page-panel:       #FFFFFF;
+    --page-line:        #DDE1EC;
+    --page-ink:         #23283A;
+    --page-ink-2:       #626A82;
+
+    --r-sm: 12px;  /* AppRadius.sm */
+    --r-md: 16px;  /* AppRadius.md */
+    --r-lg: 20px;  /* AppRadius.lg */
+
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --badge-size: 13px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:             #0F1115;  /* darkBackground */
+      --surface:        #181B21;  /* darkSurface */
+      --surface-muted:  #1F232B;  /* darkSurfaceMuted */
+      --outline:        #3A404C;  /* darkOutline */
+      --outline-strong: #3A404C;
+      --ink:            #F2F4F8;  /* darkTextPrimary */
+      --ink-2:          #AAB1C0;  /* darkTextSecondary */
+      --ink-3:          #6F7787;  /* darkTextTertiary */
+      --brand-container:#283593;
+
+      --page-bg:        #0A0C11;
+      --page-panel:     #14171E;
+      --page-line:      #262C38;
+      --page-ink:       #E8EBF2;
+      --page-ink-2:     #939BAF;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:             #0F1115;
+    --surface:        #181B21;
+    --surface-muted:  #1F232B;
+    --outline:        #3A404C;
+    --outline-strong: #3A404C;
+    --ink:            #F2F4F8;
+    --ink-2:          #AAB1C0;
+    --ink-3:          #6F7787;
+    --brand-container:#283593;
+    --page-bg:        #0A0C11;
+    --page-panel:     #14171E;
+    --page-line:      #262C38;
+    --page-ink:       #E8EBF2;
+    --page-ink-2:     #939BAF;
+  }
+
+  :root[data-theme="light"] {
+    --bg:             #F6F7FB;
+    --surface:        #FFFFFF;
+    --surface-muted:  #F4F5F8;
+    --outline:        #E2E5EC;
+    --outline-strong: #CBD0E0;
+    --ink:            #1A1D23;
+    --ink-2:          #5B6273;
+    --ink-3:          #9AA0AE;
+    --brand-container:#E8EAF6;
+    --page-bg:        #EEF0F7;
+    --page-panel:     #FFFFFF;
+    --page-line:      #DDE1EC;
+    --page-ink:       #23283A;
+    --page-ink-2:     #626A82;
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--page-bg);
+    color: var(--page-ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    min-height: 100vh;
+    padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+  /* ---------- En-tête ---------- */
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 62ch; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand);
+    margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px, 3.6vw, 38px);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  /* ---------- Panneaux ---------- */
+  .panel {
+    background: var(--page-panel);
+    border: 1px solid var(--page-line);
+    border-radius: var(--r-lg);
+    padding: clamp(18px, 3vw, 30px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 {
+    font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em;
+  }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 68ch; }
+
+  /* ---------- Spécimen ---------- */
+  .specimen-top {
+    display: flex; flex-wrap: wrap; align-items: flex-end;
+    justify-content: space-between; gap: var(--s-lg);
+  }
+  .sizer { display: flex; align-items: center; gap: var(--s-md); flex-wrap: wrap; }
+  .sizer label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2);
+  }
+  .sizer input[type="range"] { width: 180px; accent-color: var(--brand); }
+  .sizer output {
+    font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums;
+    background: var(--brand-container); color: var(--brand-dark);
+    padding: 3px 9px; border-radius: 999px; min-width: 52px; text-align: center;
+  }
+  :root[data-theme="dark"] .sizer output { color: #C5CAE9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .sizer output { color: #C5CAE9; }
+  }
+
+  .table-scroll { overflow-x: auto; }
+  table.spec { border-collapse: collapse; width: 100%; min-width: 620px; }
+  table.spec th {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--page-ink-2);
+    text-align: left; font-weight: 500;
+    padding: 0 var(--s-md) var(--s-sm); border-bottom: 1px solid var(--page-line);
+  }
+  table.spec td {
+    padding: 14px var(--s-md);
+    border-bottom: 1px solid var(--page-line);
+    vertical-align: middle;
+  }
+  table.spec tr:last-child td { border-bottom: none; }
+  table.spec .genre { font-weight: 600; }
+  table.spec .etat { color: var(--page-ink-2); }
+  table.spec .axes {
+    font-family: var(--mono); font-size: 12px;
+    font-variant-numeric: tabular-nums; color: var(--page-ink-2);
+    white-space: nowrap;
+  }
+  table.spec .cell-reel { width: 92px; }
+  table.spec .cell-gros { width: 92px; }
+  .none { color: var(--ink-3); font-family: var(--mono); font-size: 12px; }
+
+  /* ---------- Badge ---------- */
+  .badge { display: inline-flex; vertical-align: -0.16em; flex: none; }
+  .badge svg { display: block; }
+
+  /* ---------- Téléphone ---------- */
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: clamp(20px, 3vw, 36px);
+    align-items: start;
+  }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center;
+  }
+  .device {
+    width: 100%; max-width: 340px;
+    background: var(--bg);
+    border: 1px solid var(--outline);
+    border-radius: 30px;
+    padding: 8px;
+    box-shadow: 0 18px 44px rgba(26, 35, 126, 0.13), 0 2px 6px rgba(0,0,0,0.05);
+    overflow: hidden;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 540px;
+    color: var(--ink);
+  }
+
+  .appbar {
+    background: var(--surface);
+    padding: 14px var(--s-lg) var(--s-md);
+    display: flex; align-items: center; gap: var(--s-md);
+    border-bottom: 1px solid var(--outline);
+  }
+  .appbar h3 { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.01em; }
+  .appbar .spacer { flex: 1; }
+  .dots { display: flex; gap: 3px; }
+  .dots i { width: 3.5px; height: 3.5px; border-radius: 50%; background: var(--ink-3); display: block; }
+
+  .convo-list { display: flex; flex-direction: column; background: var(--surface); flex: 1; }
+
+  .convo {
+    display: flex; gap: var(--s-md); align-items: center;
+    padding: 11px var(--s-lg);
+    border-bottom: 1px solid var(--outline);
+    text-align: left;
+  }
+  .convo:last-child { border-bottom: none; }
+
+  .avatar {
+    width: 48px; height: 48px; border-radius: 50%;   /* AppSizes.avatarMd */
+    display: grid; place-items: center; flex: none; position: relative;
+    font-size: 15px; font-weight: 650; color: #fff; letter-spacing: 0.02em;
+  }
+  .avatar .dot {
+    position: absolute; right: -1px; bottom: 1px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--online); border: 2px solid var(--surface);
+  }
+  .avatar.logo { background: var(--brand); }
+  .avatar.logo svg { width: 26px; height: 26px; display: block; }
+
+  .convo-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .line-1 { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .nom {
+    font-size: 15px; font-weight: 600; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+  .apercu {
+    font-size: 13.5px; color: var(--ink-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .convo-meta {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: none;
+  }
+  .heure { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .unread {
+    min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+    background: var(--brand); color: #fff; font-size: 11.5px; font-weight: 650;
+    display: grid; place-items: center; font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Écran conversation officielle ---------- */
+  .chat-head {
+    background: var(--surface); border-bottom: 1px solid var(--outline);
+    padding: var(--s-md) var(--s-lg);
+    display: flex; align-items: center; gap: var(--s-md);
+  }
+  .chat-head .avatar { width: 40px; height: 40px; font-size: 13px; }  /* avatarSm */
+  .chat-head .titre { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .chat-head .sous { font-size: 12px; color: var(--ink-3); }
+
+  .fil {
+    flex: 1; padding: var(--s-lg); display: flex; flex-direction: column;
+    gap: var(--s-md); justify-content: flex-end;
+  }
+  .bulle {
+    max-width: 84%; align-self: flex-start;
+    background: var(--surface); border: 1px solid var(--outline);
+    border-radius: var(--r-md) var(--r-md) var(--r-md) var(--s-xs);
+    padding: 10px var(--s-md);
+    font-size: 14px; line-height: 1.5;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .bulle .quand { display: block; margin-top: 5px; font-size: 11px; color: var(--ink-3); }
+
+  .bandeau {
+    background: var(--surface-muted);
+    border-top: 1px solid var(--outline);
+    padding: var(--s-lg);
+    display: flex; align-items: center; gap: var(--s-md);
+    color: var(--ink-2); font-size: 13px; line-height: 1.45;
+  }
+  .bandeau svg { flex: none; width: 18px; height: 18px; color: var(--ink-3); }
+
+  /* Rappel de ce que le bandeau remplace */
+  .compare {
+    display: flex; gap: var(--s-sm); align-items: center;
+    padding: 10px var(--s-md);
+    border: 1px dashed var(--outline-strong); border-radius: var(--r-sm);
+    background: transparent; color: var(--ink-3);
+    font-size: 13px; margin: var(--s-lg); margin-top: 0;
+    text-decoration: line-through;
+  }
+
+  /* ---------- Règle de dérivation ---------- */
+  .regle {
+    background: var(--surface-muted);
+    border-radius: var(--r-md);
+    padding: var(--s-lg) var(--s-xl);
+    display: flex; flex-direction: column; gap: var(--s-sm);
+  }
+  .regle .titre {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--page-ink-2);
+  }
+  .regle p { margin: 0; font-size: 14px; color: var(--page-ink); max-width: 72ch; }
+  .regle strong { color: var(--brand); font-weight: 650; }
+
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note {
+    display: flex; gap: var(--s-md);
+    border-left: 3px solid var(--brand); padding-left: var(--s-md);
+    font-size: 14px; color: var(--page-ink-2); max-width: 76ch;
+  }
+  .note.attention { border-left-color: #C0392B; }
+  .note b { color: var(--page-ink); font-weight: 650; }
+
+  footer.colophon {
+    display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-xl);
+    padding-top: var(--s-lg); border-top: 1px solid var(--page-line);
+    font-family: var(--mono); font-size: 11.5px; color: var(--page-ink-2);
+  }
+
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya · Socle de compte · Étape 1</p>
+    <h1>Les badges de compte, en situation</h1>
+    <p>
+      Cinq rendus dérivés de deux valeurs seulement. Le glyphe dit <em>quoi</em>,
+      le contenant dit <em>vérifié ou pas</em>. Réglez la taille ci-dessous pour juger
+      la lisibilité : c'est la décision que cette maquette doit permettre de trancher.
+    </p>
+  </header>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <div class="specimen-top">
+      <header>
+        <h2>Les cinq rendus</h2>
+        <p>La colonne « taille réelle » suit le curseur. La valeur de référence est 13&nbsp;px,
+           la taille du badge à côté d'un nom dans la liste de conversations.</p>
+      </header>
+      <div class="sizer">
+        <label for="taille">Taille</label>
+        <input type="range" id="taille" min="10" max="28" step="1" value="13"
+               aria-describedby="taille-val">
+        <output id="taille-val" for="taille">13 px</output>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="spec">
+        <thead>
+          <tr>
+            <th scope="col">Genre</th>
+            <th scope="col">État</th>
+            <th scope="col">Axes</th>
+            <th scope="col">Taille réelle</th>
+            <th scope="col">Agrandi</th>
+          </tr>
+        </thead>
+        <tbody id="specimens"></tbody>
+      </table>
+    </div>
+
+    <div class="regle">
+      <span class="titre">Règle de dérivation</span>
+      <p>
+        <strong>officiel</strong> l'emporte toujours&nbsp;: un compte officiel porte son
+        sceau quel que soit son état de vérification. Sinon, le glyphe vient du genre
+        (<strong>business</strong> → panier, <strong>personnel</strong> → coche) et le
+        sceau festonné n'apparaît que si <strong>verification_status = 2</strong>.
+        Un compte personnel non vérifié n'a aucun badge — c'est le cas courant.
+      </p>
+      <p>
+        Le feston à douze lobes n'est pas décoratif&nbsp;: un disque plein se confondrait
+        avec les avatars, les puces de comptage et l'indicateur de présence. La silhouette
+        reste reconnaissable même quand le glyphe qu'elle contient ne l'est plus — et elle
+        est bien plus difficile à imiter avec un caractère Unicode dans un nom.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>En situation</h2>
+      <p>Le même composant, aux endroits où il apparaît réellement. À gauche la liste de
+         conversations ; à droite une conversation avec le compte officiel, où la zone de
+         saisie est remplacée par un bandeau.</p>
+    </header>
+
+    <div class="stage">
+
+      <div class="device-block">
+        <div class="device">
+          <div class="screen">
+            <div class="appbar">
+              <h3>Discussions</h3>
+              <span class="spacer"></span>
+              <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            </div>
+            <div class="convo-list" id="liste"></div>
+          </div>
+        </div>
+        <p class="device-caption">Liste de conversations</p>
+      </div>
+
+      <div class="device-block">
+        <div class="device">
+          <div class="screen">
+            <div class="chat-head">
+              <span class="avatar logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 4.6 19.2 19.4h-3.4l-1.4-3.1H9.6l-1.4 3.1H4.8L12 4.6Zm0 5.9-1.5 3.3h3L12 10.5Z"
+                        fill="#fff"/>
+                </svg>
+              </span>
+              <div class="titre">
+                <div class="line-1">
+                  <span class="nom">Alanya</span>
+                  <span class="badge" data-badge="officiel" data-size="13"></span>
+                </div>
+                <span class="sous">Compte officiel</span>
+              </div>
+            </div>
+
+            <div class="fil">
+              <div class="bulle">
+                Bonjour&nbsp;! La version 2.4 est disponible. Les listes de contacts
+                arrivent&nbsp;: rangez vos favoris par Famille, Amis ou Bureau.
+                <span class="quand">Hier · 18:20</span>
+              </div>
+              <div class="bulle">
+                Pensez à vérifier votre compte si vous représentez une entreprise.
+                <span class="quand">Hier · 18:21</span>
+              </div>
+            </div>
+
+            <div class="compare" aria-hidden="true">Écrire un message…</div>
+
+            <div class="bandeau">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="4" y="10.5" width="16" height="10" rx="2.5"/>
+                <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>
+              </svg>
+              <span>Ce compte diffuse des annonces. Vous ne pouvez pas y répondre.</span>
+            </div>
+          </div>
+        </div>
+        <p class="device-caption">Conversation officielle — lecture seule</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note">
+        <span><b>Le badge suit le nom, jamais l'avatar.</b> Placé sur la photo, il se
+        confondrait avec l'indicateur de présence, qui occupe déjà le coin
+        inférieur droit — visible ici sur les deux premières lignes.</span>
+      </p>
+      <p class="note attention">
+        <span><b>Masquer la saisie ne suffit pas.</b> Le bandeau est une affaire
+        d'affichage&nbsp;; le refus doit aussi être appliqué par le serveur, sans quoi un
+        client modifié enverra le message quand même.</span>
+      </p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Tokens : lib/core/theme/app_colors.dart</span>
+    <span>Sceau officiel #C9A227 — nouveau</span>
+    <span>Maquette de conception — aucun code applicatif</span>
+  </footer>
+
+</div>
+</div>
+
+<script>
+  // ------------------------------------------------------------------
+  // Un seul générateur de badge — le pendant HTML du widget Flutter
+  // unique décrit dans socle-compte.tex. La dérivation vit ici, une
+  // seule fois, exactement comme elle devra vivre une seule fois en Dart.
+  // ------------------------------------------------------------------
+  const VERIFIE = 2;
+
+  function resolveBadge(accountType, verificationStatus) {
+    const verifie = verificationStatus === VERIFIE;
+    if (accountType === 2) return 'officiel';
+    if (accountType === 1) return verifie ? 'panierVerifie' : 'panierDeclare';
+    return verifie ? 'cocheVerifiee' : 'aucun';
+  }
+
+  // Le SCEAU — rosace à 12 lobes, r(t) = R + A·cos(12t).
+  // Un disque plein se confond avec les avatars, les puces de comptage et
+  // l'indicateur de présence ; le feston reste identifiable à 12 px même quand
+  // le glyphe qu'il contient ne l'est plus.
+  function cheminSceau(R, A, lobes, pas) {
+    let d = '';
+    for (let i = 0; i < pas; i++) {
+      const t = (i / pas) * Math.PI * 2;
+      const r = R + A * Math.cos(lobes * t);
+      const x = (12 + r * Math.cos(t)).toFixed(2);
+      const y = (12 + r * Math.sin(t)).toFixed(2);
+      d += (i === 0 ? 'M' : 'L') + x + ' ' + y;
+    }
+    return d + 'Z';
+  }
+  const SCEAU = cheminSceau(10.6, 1.25, 12, 288);
+
+  // Le corps du panier est PLEIN et non contourné : à 12 px un filet de moins
+  // d'un pixel disparaît dans l'aliasing. La coche reste un tracé — c'est sa
+  // nature. Le panier posé dans un sceau est réduit, le rayon utile étant le
+  // creux du feston et non sa crête.
+  const GLYPHE = {
+    coche:  '<path d="M6.6 12.4 10.1 15.9 17.6 8.2" fill="none" stroke="COL" ' +
+            'stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>',
+    panier: '<path d="M4.6 9.9H19.4L17.0 18.8H7.0Z" fill="COL"/>' +
+            '<path d="M9.0 9.9a3 3 0 0 1 6 0" fill="none" stroke="COL" ' +
+            'stroke-width="2.2" stroke-linecap="round"/>',
+    // Monogramme A, symétrique par construction : boîte x [6.36 ; 17.64],
+    // y [5.76 ; 18.24] dans un viewBox de 24 — donc centré pile sur (12,12).
+    // Le contre-poinçon est un second sous-chemin, découpé en pair-impair.
+    marque: '<path fill-rule="evenodd" d="M12 5.76 17.64 18.24H15L13.99 15.12' +
+            'H10.01L9 18.24H6.36ZM12 9.24 13.25 13.08H10.75Z" fill="COL"/>'
+  };
+
+  function svgBadge(variante, px) {
+    if (variante === 'aucun') return '';
+    const g = (nom, col) => GLYPHE[nom].replaceAll('COL', col);
+    const sceau = (col) => '<path d="' + SCEAU + '" fill="' + col + '"/>';
+    // Réduction appliquée au glyphe une fois posé dans le sceau.
+    const dans = (contenu, k) =>
+      '<g transform="translate(12 12) scale(' + k + ') translate(-12 -12)">' + contenu + '</g>';
+
+    let inner;
+    if (variante === 'cocheVerifiee') {
+      inner = sceau('var(--brand)') + dans(g('coche', '#fff'), 0.86);
+    } else if (variante === 'panierDeclare') {
+      inner = g('panier', 'var(--ink-2)');
+    } else if (variante === 'panierVerifie') {
+      inner = sceau('var(--brand)') + dans(g('panier', '#fff'), 0.84);
+    } else {
+      inner = sceau('var(--officiel)') + dans(g('marque', '#fff'), 0.9);
+    }
+    return '<svg viewBox="0 0 24 24" width="' + px + '" height="' + px +
+           '" role="img" aria-label="' + LIBELLE[variante] + '">' + inner + '</svg>';
+  }
+
+  const LIBELLE = {
+    aucun:         'aucun badge',
+    cocheVerifiee: 'compte vérifié',
+    panierDeclare: 'commerce déclaré',
+    panierVerifie: 'commerce vérifié',
+    officiel:      'compte officiel Alanya'
+  };
+
+  // --- Spécimens -----------------------------------------------------
+  // La dernière ligne passe volontairement statut = 0 : elle démontre que le
+  // genre « officiel » l'emporte sur l'axe de vérification.
+  const RENDUS = [
+    { genre: 'Personnel', etat: 'non vérifié', type: 0, statut: 0 },
+    { genre: 'Personnel', etat: 'vérifié',     type: 0, statut: 2 },
+    { genre: 'Business',  etat: 'déclaré',     type: 1, statut: 0 },
+    { genre: 'Business',  etat: 'vérifié',     type: 1, statut: 2 },
+    { genre: 'Officiel',  etat: 'indifférent', type: 2, statut: 0, axes: '2 · *' }
+  ];
+
+  const tbody = document.getElementById('specimens');
+  tbody.innerHTML = RENDUS.map(function (r) {
+    const v = resolveBadge(r.type, r.statut);
+    const reel = v === 'aucun'
+      ? '<span class="none">aucun</span>'
+      : '<span class="badge js-reel" data-variante="' + v + '"></span>';
+    const gros = v === 'aucun'
+      ? '<span class="none">—</span>'
+      : '<span class="badge">' + svgBadge(v, 40) + '</span>';
+    return '<tr>' +
+      '<td class="genre">' + r.genre + '</td>' +
+      '<td class="etat">' + r.etat + '</td>' +
+      '<td class="axes">' + (r.axes || (r.type + ' · ' + r.statut)) + '</td>' +
+      '<td class="cell-reel">' + reel + '</td>' +
+      '<td class="cell-gros">' + gros + '</td>' +
+      '</tr>';
+  }).join('');
+
+  const curseur = document.getElementById('taille');
+  const sortie  = document.getElementById('taille-val');
+
+  function appliquerTaille() {
+    const px = Number(curseur.value);
+    sortie.textContent = px + ' px';
+    document.querySelectorAll('.js-reel').forEach(function (el) {
+      el.innerHTML = svgBadge(el.dataset.variante, px);
+    });
+  }
+  curseur.addEventListener('input', appliquerTaille);
+
+  // --- Liste de conversations ---------------------------------------
+  const CONVERSATIONS = [
+    { nom: 'Alanya', init: '', logo: true, type: 2, statut: 2,
+      apercu: 'La version 2.4 est disponible', heure: 'Hier', unread: 1, teinte: null },
+    { nom: 'Pharmacie Centrale', init: 'PC', type: 1, statut: 2,
+      apercu: 'Nous avons bien reçu votre ordonnance', heure: '09:12', unread: 2, teinte: '#00796B' },
+    { nom: 'Samuel Etoa', init: 'SE', type: 0, statut: 2,
+      apercu: 'Merci beaucoup pour l’invitation', heure: '13:05', enligne: true, teinte: '#5E35B1' },
+    { nom: 'Boulangerie du Lac', init: 'BL', type: 1, statut: 0,
+      apercu: 'Vos croissants sont prêts', heure: '11:47', teinte: '#B7791F' },
+    { nom: 'Marie Ndongo', init: 'MN', type: 0, statut: 0,
+      apercu: 'D’accord, je passe demain matin', heure: '14:32', enligne: true, teinte: '#C2185B' },
+    { nom: 'Famille', init: 'FA', type: 0, statut: 0,
+      apercu: 'Aline : on se retrouve à 19 h', heure: 'Lun', teinte: '#3949AB' }
+  ];
+
+  document.getElementById('liste').innerHTML = CONVERSATIONS.map(function (c) {
+    const v = resolveBadge(c.type, c.statut);
+    const badge = v === 'aucun' ? '' : '<span class="badge">' + svgBadge(v, 13) + '</span>';
+    const avatar = c.logo
+      ? '<span class="avatar logo" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24">' + GLYPHE.marque.replaceAll('COL', '#fff') + '</svg></span>'
+      : '<span class="avatar" style="background:' + c.teinte + '" aria-hidden="true">' + c.init +
+        (c.enligne ? '<span class="dot"></span>' : '') + '</span>';
+    const meta = '<div class="convo-meta"><span class="heure">' + c.heure + '</span>' +
+      (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div>';
+    return '<div class="convo">' + avatar +
+      '<div class="convo-body">' +
+        '<div class="line-1"><span class="nom">' + c.nom + '</span>' + badge + '</div>' +
+        '<span class="apercu">' + c.apercu + '</span>' +
+      '</div>' + meta + '</div>';
+  }).join('');
+
+  // Badges déclarés en HTML statique (en-tête de la conversation officielle)
+  document.querySelectorAll('.badge[data-badge]').forEach(function (el) {
+    el.innerHTML = svgBadge(el.dataset.badge, Number(el.dataset.size || 13));
+  });
+
+  appliquerTaille();
+</script>

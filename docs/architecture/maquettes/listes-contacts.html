@@ -1,0 +1,587 @@
+<title>Alanya — Listes de contacts</title>
+
+<style>
+  /* ------------------------------------------------------------------
+     Mêmes tokens que la maquette des badges : lib/core/theme/app_colors.dart
+     et app_dimens.dart. Les deux maquettes forment une série.
+     ------------------------------------------------------------------ */
+  :root {
+    --brand:            #3F51B5;
+    --brand-dark:       #1A237E;
+    --brand-container:  #E8EAF6;
+    --online:           #1FA363;
+
+    --bg:               #F6F7FB;
+    --surface:          #FFFFFF;
+    --surface-muted:    #F4F5F8;
+    --outline:          #E2E5EC;
+    --outline-strong:   #CBD0E0;
+
+    --ink:              #1A1D23;
+    --ink-2:            #5B6273;
+    --ink-3:            #9AA0AE;
+
+    --page-bg:          #EEF0F7;
+    --page-panel:       #FFFFFF;
+    --page-line:        #DDE1EC;
+    --page-ink:         #23283A;
+    --page-ink-2:       #626A82;
+
+    /* Couleurs d'exemple des listes — stockées en base dans contact_list.color */
+    --l-famille: #C2185B;
+    --l-amis:    #00796B;
+    --l-bureau:  #3949AB;
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px; --r-pill: 28px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #3A404C; --outline-strong: #3A404C;
+      --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand-container: #283593;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --outline-strong: #3A404C;
+    --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --brand-container: #E8EAF6;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    min-height: 100vh; padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 64ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px, 3.6vw, 38px); line-height: 1.12; letter-spacing: -0.02em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px, 3vw, 30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 70ch; }
+
+  /* ---------- Scène ---------- */
+  .stage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: clamp(18px, 2.6vw, 32px); align-items: start;
+  }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 30ch;
+  }
+  .device-caption b { display: block; color: var(--page-ink); font-weight: 600; letter-spacing: 0.06em; }
+  .device {
+    width: 100%; max-width: 330px; background: var(--bg);
+    border: 1px solid var(--outline); border-radius: 30px; padding: 8px;
+    box-shadow: 0 18px 44px rgba(26, 35, 126, 0.13), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 560px; color: var(--ink);
+    position: relative;
+  }
+
+  .appbar {
+    background: var(--surface); border-bottom: 1px solid var(--outline);
+    padding: 14px var(--s-lg) var(--s-md);
+    display: flex; align-items: center; gap: var(--s-md);
+  }
+  .appbar .back { width: 22px; height: 22px; color: var(--ink-2); flex: none; }
+  .appbar h3 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+  .appbar .spacer { flex: 1; }
+  .appbar .compte { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Recherche ---------- */
+  .search {
+    margin: var(--s-md) var(--s-lg) var(--s-sm);
+    background: var(--surface-muted); border-radius: var(--r-pill);
+    padding: 9px var(--s-md); display: flex; align-items: center; gap: var(--s-sm);
+    color: var(--ink-3); font-size: 13.5px;
+  }
+  .search svg { width: 16px; height: 16px; flex: none; }
+
+  /* ---------- Puces de filtre ---------- */
+  /* La rangée défile horizontalement : le nombre de listes n'est pas borné.
+     Le dégradé de droite signale qu'il reste des puces au-delà du bord. */
+  .chips-wrap { position: relative; }
+  .chips-wrap::after {
+    content: ""; position: absolute; inset: 0 0 0 auto; width: 36px;
+    pointer-events: none;
+    background: linear-gradient(to right, transparent, var(--bg) 72%);
+  }
+  .chips {
+    display: flex; gap: var(--s-sm); padding: var(--s-sm) var(--s-lg) var(--s-md);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; flex: none;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    border: 1px solid var(--outline); background: var(--surface);
+    font-size: 12.5px; font-weight: 550; color: var(--ink-2); white-space: nowrap;
+  }
+  .chip .pastille { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .chip svg { width: 14px; height: 14px; flex: none; }
+  .chip[aria-pressed="true"] {
+    background: var(--brand-container); border-color: transparent; color: var(--brand-dark);
+  }
+  :root[data-theme="dark"] .chip[aria-pressed="true"] { color: #C5CAE9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .chip[aria-pressed="true"] { color: #C5CAE9; }
+  }
+  .chip.gerer { border-style: dashed; color: var(--ink-3); }
+
+  /* ---------- Listes ---------- */
+  .rows { background: var(--surface); flex: 1; display: flex; flex-direction: column; }
+  .row {
+    display: flex; align-items: center; gap: var(--s-md);
+    padding: 11px var(--s-lg); border-bottom: 1px solid var(--outline);
+  }
+  .row:last-child { border-bottom: none; }
+
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    flex: none; position: relative; font-size: 14px; font-weight: 650; color: #fff;
+  }
+  .avatar .dot {
+    position: absolute; right: -1px; bottom: 0; width: 11px; height: 11px;
+    border-radius: 50%; background: var(--online); border: 2px solid var(--surface);
+  }
+  .row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .row-nom {
+    font-size: 15px; font-weight: 600; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .row-sous { font-size: 12.5px; color: var(--ink-2); }
+  .row-sous.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .puces { display: flex; gap: var(--s-xs); flex-wrap: wrap; }
+  .mini {
+    font-size: 10.5px; padding: 1px 7px; border-radius: var(--r-pill);
+    color: #fff; font-weight: 600; letter-spacing: 0.01em;
+  }
+
+  .chevron { width: 18px; height: 18px; color: var(--ink-3); flex: none; }
+
+  .carre {
+    width: 44px; height: 44px; border-radius: var(--r-sm); flex: none;
+    display: grid; place-items: center; color: #fff;
+  }
+  .carre svg { width: 22px; height: 22px; }
+
+  .check {
+    width: 22px; height: 22px; border-radius: 50%; flex: none;
+    border: 1.8px solid var(--outline-strong); display: grid; place-items: center;
+  }
+  .check[data-on="1"] { background: var(--brand); border-color: var(--brand); }
+  .check svg { width: 13px; height: 13px; color: #fff; }
+
+  /* ---------- Bas d'écran ---------- */
+  .bas {
+    padding: var(--s-md) var(--s-lg) var(--s-lg);
+    background: var(--surface); border-top: 1px solid var(--outline);
+  }
+  .cta {
+    width: 100%; height: 48px; border-radius: var(--r-sm); border: none;
+    background: var(--brand); color: #fff; font-size: 15px; font-weight: 650;
+    font-family: inherit; display: inline-flex; align-items: center;
+    justify-content: center; gap: var(--s-sm);
+  }
+  .cta svg { width: 19px; height: 19px; }
+
+  .fab {
+    position: absolute; right: var(--s-lg); bottom: var(--s-lg);
+    height: 48px; padding: 0 var(--s-lg); border-radius: var(--r-pill); border: none;
+    background: var(--brand); color: #fff; font-size: 14.5px; font-weight: 650;
+    font-family: inherit; display: inline-flex; align-items: center; gap: var(--s-sm);
+    box-shadow: 0 6px 16px rgba(63, 81, 181, 0.35);
+  }
+  .fab svg { width: 18px; height: 18px; }
+
+  .hint {
+    margin: 0; padding: var(--s-lg);
+    font-size: 12.5px; line-height: 1.5; color: var(--ink-3);
+    background: var(--surface); flex: 1;
+  }
+
+  /* ---------- Modèle ---------- */
+  .modele { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--s-lg); }
+  .carte {
+    border: 1px solid var(--page-line); border-radius: var(--r-md);
+    padding: var(--s-lg); display: flex; flex-direction: column; gap: var(--s-sm);
+  }
+  .carte h3 {
+    margin: 0; font-family: var(--mono); font-size: 12.5px; color: var(--brand);
+    letter-spacing: 0.02em; font-weight: 600;
+  }
+  .carte p { margin: 0; font-size: 13.5px; color: var(--page-ink-2); }
+  .carte dl {
+    margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px var(--s-md);
+    font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  .carte dt { color: var(--page-ink); }
+  .carte dd { margin: 0; color: var(--page-ink-2); }
+  .carte .cle { color: var(--brand); }
+
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note {
+    border-left: 3px solid var(--brand); padding-left: var(--s-md);
+    font-size: 14px; color: var(--page-ink-2); max-width: 78ch;
+  }
+  .note.attention { border-left-color: #C0392B; }
+  .note b { color: var(--page-ink); font-weight: 650; }
+
+  footer.colophon {
+    display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-xl);
+    padding-top: var(--s-lg); border-top: 1px solid var(--page-line);
+    font-family: var(--mono); font-size: 11.5px; color: var(--page-ink-2);
+  }
+
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya · Listes de contacts · Étape 2</p>
+    <h1>Ranger ses favoris, puis en faire un groupe</h1>
+    <p>
+      Une liste nommée regroupe des contacts déjà en favoris. Elle sert à deux choses&nbsp;:
+      filtrer l'écran des contacts préférés, et créer une conversation de groupe avec toute
+      la liste en un geste. Trois écrans, aucun nouvel onglet.
+    </p>
+  </header>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>Les trois écrans</h2>
+      <p>Le parcours va de gauche à droite&nbsp;: on filtre, on gère, on agit.</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- ---------- 1. Contacts préférés + puces ---------- -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <h3>Contacts préférés</h3>
+            <span class="spacer"></span>
+            <span class="compte">12</span>
+          </div>
+
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <span>Rechercher un contact</span>
+          </div>
+
+          <div class="chips-wrap"><div class="chips">
+            <span class="chip" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+              </svg>Tous</span>
+            <span class="chip" aria-pressed="true">
+              <span class="pastille" style="background: var(--l-famille)"></span>Famille</span>
+            <span class="chip" aria-pressed="false">
+              <span class="pastille" style="background: var(--l-amis)"></span>Amis</span>
+            <span class="chip" aria-pressed="false">
+              <span class="pastille" style="background: var(--l-bureau)"></span>Bureau</span>
+            <span class="chip gerer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Gérer</span>
+          </div></div>
+
+          <div class="rows">
+            <div class="row">
+              <span class="avatar" style="background:#C2185B">AN<span class="dot"></span></span>
+              <div class="row-body"><span class="row-nom">Aline Ndongo</span>
+                <div class="puces"><span class="mini" style="background: var(--l-famille)">Famille</span></div>
+              </div>
+            </div>
+            <div class="row">
+              <span class="avatar" style="background:#5E35B1">JT</span>
+              <div class="row-body"><span class="row-nom">Joseph Talla</span>
+                <div class="puces">
+                  <span class="mini" style="background: var(--l-famille)">Famille</span>
+                  <span class="mini" style="background: var(--l-bureau)">Bureau</span>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <span class="avatar" style="background:#00796B">MK</span>
+              <div class="row-body"><span class="row-nom">Mireille Kamga</span>
+                <div class="puces"><span class="mini" style="background: var(--l-famille)">Famille</span></div>
+              </div>
+            </div>
+            <div class="row">
+              <span class="avatar" style="background:#B7791F">PE<span class="dot"></span></span>
+              <div class="row-body"><span class="row-nom">Paul Etoundi</span>
+                <div class="puces"><span class="mini" style="background: var(--l-famille)">Famille</span></div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Contacts préférés</b>filtre actif : Famille</p>
+      </div>
+
+      <!-- ---------- 2. Gestion des listes ---------- -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <h3>Listes de contacts</h3>
+          </div>
+
+          <div class="rows">
+            <div class="row">
+              <span class="carre" style="background: var(--l-famille)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/>
+                  <path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg></span>
+              <div class="row-body"><span class="row-nom">Famille</span>
+                <span class="row-sous mono">6 membres</span></div>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="row">
+              <span class="carre" style="background: var(--l-amis)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/>
+                  <path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg></span>
+              <div class="row-body"><span class="row-nom">Amis</span>
+                <span class="row-sous mono">9 membres</span></div>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="row">
+              <span class="carre" style="background: var(--l-bureau)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/>
+                  <path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg></span>
+              <div class="row-body"><span class="row-nom">Bureau</span>
+                <span class="row-sous mono">4 membres</span></div>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <p class="hint">
+              Une liste ne peut contenir que des contacts déjà en favoris.
+              Un même contact peut appartenir à plusieurs listes.
+            </p>
+          </div>
+
+          <button class="fab" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Nouvelle liste
+          </button>
+        </div></div>
+        <p class="device-caption"><b>Gestion des listes</b>créer · renommer · recolorer · supprimer</p>
+      </div>
+
+      <!-- ---------- 3. Détail d'une liste ---------- -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <h3>Famille</h3>
+            <span class="spacer"></span>
+            <span class="compte">6</span>
+          </div>
+
+          <div class="rows">
+            <div class="row">
+              <span class="avatar" style="background:#C2185B">AN<span class="dot"></span></span>
+              <div class="row-body"><span class="row-nom">Aline Ndongo</span>
+                <span class="row-sous">En ligne</span></div>
+              <span class="check" data-on="1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg>
+              </span>
+            </div>
+            <div class="row">
+              <span class="avatar" style="background:#5E35B1">JT</span>
+              <div class="row-body"><span class="row-nom">Joseph Talla</span>
+                <span class="row-sous">Vu à 12:04</span></div>
+              <span class="check" data-on="1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg>
+              </span>
+            </div>
+            <div class="row">
+              <span class="avatar" style="background:#00796B">MK</span>
+              <div class="row-body"><span class="row-nom">Mireille Kamga</span>
+                <span class="row-sous">Vu hier</span></div>
+              <span class="check" data-on="1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg>
+              </span>
+            </div>
+            <div class="row">
+              <span class="avatar" style="background:#B7791F">PE<span class="dot"></span></span>
+              <div class="row-body"><span class="row-nom">Paul Etoundi</span>
+                <span class="row-sous">En ligne</span></div>
+              <span class="check" data-on="1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg>
+              </span>
+            </div>
+            <div class="row">
+              <span class="avatar" style="background:#3949AB">SE</span>
+              <div class="row-body"><span class="row-nom">Samuel Etoa</span>
+                <span class="row-sous">Favori — pas dans cette liste</span></div>
+              <span class="check" data-on="0"></span>
+            </div>
+          </div>
+
+          <div class="bas">
+            <button class="cta" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/>
+                <path d="M20 8v6M23 11h-6"/>
+              </svg>
+              Créer un groupe « Famille »
+            </button>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Détail d'une liste</b>membres, ajout, retrait, action groupée</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note">
+        <b>Aucun sixième onglet.</b> La barre de navigation est codée en dur à cinq onglets
+        (<span style="font-family: var(--mono); font-size: 13px">glass_nav_bar.dart</span>).
+        Les listes entrent par les puces de filtre et par une entrée dans le profil, à côté
+        de « Contacts préférés ».
+      </p>
+      <p class="note">
+        <b>Un contact peut appartenir à plusieurs listes.</b> Joseph Talla est à la fois en
+        Famille et en Bureau — d'où l'appartenance plusieurs-à-plusieurs, et les puces
+        multiples sur sa ligne.
+      </p>
+      <p class="note attention">
+        <b>Créer le groupe n'invente rien.</b> Le bouton réutilise
+        <span style="font-family: var(--mono); font-size: 13px">POST /api/conversations/group</span>
+        déjà en service, avec le nom de la liste pré-rempli et modifiable. Aucun nouvel
+        endpoint de conversation.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>Pourquoi ce n'est pas la même chose qu'une audience de diffusion</h2>
+      <p>La conception initiale proposait une abstraction unique pour les deux. Ce sont deux
+         objets de nature différente&nbsp;: l'un énumère, l'autre décrit.</p>
+    </header>
+
+    <div class="modele">
+      <div class="carte">
+        <h3>contact_list</h3>
+        <p>Appartient à un utilisateur. Ses membres sont <strong>énumérés</strong>, ligne par
+           ligne, et doivent déjà être ses favoris.</p>
+        <dl>
+          <dt class="cle">alanyaID</dt><dd>propriétaire</dd>
+          <dt>name</dt><dd>« Famille »</dd>
+          <dt>color</dt><dd>#C2185B</dd>
+          <dt class="cle">membres</dt><dd>6 lignes</dd>
+        </dl>
+      </div>
+      <div class="carte">
+        <h3>audience de diffusion</h3>
+        <p>Définie par un administrateur. Ses destinataires sont décrits par un
+           <strong>critère</strong>, résolu au moment de l'envoi.</p>
+        <dl>
+          <dt class="cle">créée par</dt><dd>un admin</dd>
+          <dt>type</dt><dd>tous · pays · liste d'IDs</dd>
+          <dt>critère</dt><dd>{ idPays: 5 }</dd>
+          <dt class="cle">membres</dt><dd>0 ligne</dd>
+        </dl>
+      </div>
+    </div>
+
+    <p class="note">
+      <b>Les fusionner coûterait cher.</b> Il faudrait soit matérialiser l'audience de
+      diffusion en lignes d'appartenance — c'est le <em>fan-out on write</em> que la
+      conception rejette explicitement — soit doter les listes personnelles d'un moteur de
+      critères dont elles n'auront jamais l'usage. Deux modèles, un seul résolveur côté
+      serveur.
+    </p>
+  </section>
+
+  <footer class="colophon">
+    <span>Tokens : lib/core/theme/app_colors.dart</span>
+    <span>Migration 024 — après le socle (023)</span>
+    <span>Drift v15 → v16</span>
+    <span>Maquette de conception — aucun code applicatif</span>
+  </footer>
+
+</div>
+</div>
