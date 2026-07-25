@@ -205,13 +205,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ringtoneScreenTitle => 'Call ringtone';
 
   @override
-  String get ringtoneSectionSystem => 'System';
+  String get ringtoneSectionSystem => 'Default ringtone';
 
   @override
-  String get ringtoneSectionApp => 'Provided by the app';
+  String get ringtoneSectionApp => 'Preinstalled ringtones';
 
   @override
-  String get ringtoneSectionCustom => 'Custom';
+  String get ringtoneSectionCustom => 'Imported ringtones';
 
   @override
   String get ringtoneSystemDefaultLabel => 'Device default ringtone';

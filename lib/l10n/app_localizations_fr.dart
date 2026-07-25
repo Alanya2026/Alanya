@@ -205,13 +205,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ringtoneScreenTitle => 'Sonnerie d\'appel';
 
   @override
-  String get ringtoneSectionSystem => 'Système';
+  String get ringtoneSectionSystem => 'Sonnerie par défaut';
 
   @override
-  String get ringtoneSectionApp => 'Fournies par l\'application';
+  String get ringtoneSectionApp => 'Sonneries préinstallées';
 
   @override
-  String get ringtoneSectionCustom => 'Personnalisées';
+  String get ringtoneSectionCustom => 'Sonneries importées';
 
   @override
   String get ringtoneSystemDefaultLabel => 'Sonnerie par défaut de l\'appareil';

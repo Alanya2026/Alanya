@@ -22,6 +22,23 @@ class _RingtoneSettingsScreenState extends State<RingtoneSettingsScreen> {
   String? _previewingId;
   bool _importing = false;
 
+  /// Sections dépliées (clés : catégories fournies + 'custom'). Initialisé au
+  /// premier build sur la section contenant la sonnerie sélectionnée.
+  Set<String>? _expanded;
+
+  Set<String> _initialExpanded(RingtonePreferences prefs) {
+    if (prefs.selected.type == RingtoneSourceType.custom) return {'custom'};
+    // Sonnerie fournie (défaut) OU système sélectionnée → ouvrir les préinstallées.
+    return {'bundled'};
+  }
+
+  void _toggleSection(String key) {
+    setState(() {
+      final s = _expanded!;
+      if (!s.remove(key)) s.add(key);
+    });
+  }
+
   @override
   void dispose() {
     _previewPlayer.dispose();
@@ -141,141 +158,235 @@ class _RingtoneSettingsScreenState extends State<RingtoneSettingsScreen> {
         title: Text(l10n.ringtoneScreenTitle, style: context.text.headlineSmall),
       ),
       body: Consumer<RingtonePreferences>(
-        builder: (_, prefs, __) => ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.lg,
-            AppSpacing.lg,
-            AppSpacing.xxl,
-          ),
-          children: [
-            // --- Sonneries de l'application (défaut ici) ---
-            _SectionCard(
-              title: l10n.ringtoneSectionApp,
-              tiles: RingtoneOption.bundled
-                  .map((o) => _RingtoneTile(
+        builder: (_, prefs, __) {
+          _expanded ??= _initialExpanded(prefs);
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.xxl,
+            ),
+            children: [
+              // --- Sonnerie du téléphone (épinglée, toujours visible) ---
+              _CollapsibleSection(
+                title: l10n.ringtoneSectionSystem,
+                collapsible: false,
+                expanded: true,
+                onToggle: () {},
+                tiles: [
+                  _RingtoneTile(
+                    option: RingtoneOption.system,
+                    labelOverride: l10n.ringtoneSystemDefaultLabel,
+                    selected: prefs.selectedId == RingtoneOption.systemId,
+                    previewing: false,
+                    onTap: () => prefs.select(RingtoneOption.systemId),
+                    onPreview: null,
+                  ),
+                ],
+              ),
+              AppSpacing.vGapLg,
+
+              // --- Sonneries préinstallées dans l'app (repliable) ---
+              _CollapsibleSection(
+                title: l10n.ringtoneSectionApp,
+                trailing: _CountBadge(count: RingtoneOption.bundled.length),
+                hasSelected:
+                    prefs.selected.type == RingtoneSourceType.bundled,
+                expanded: _expanded!.contains('bundled'),
+                onToggle: () => _toggleSection('bundled'),
+                tiles: RingtoneOption.bundled
+                    .map((o) => _RingtoneTile(
+                          option: o,
+                          selected: prefs.selectedId == o.id,
+                          previewing: _previewingId == o.id,
+                          onTap: () => prefs.select(o.id),
+                          onPreview: () => _togglePreview(o),
+                        ))
+                    .toList(),
+              ),
+              AppSpacing.vGapLg,
+
+              // --- Sonneries importées par l'utilisateur (10 max, repliable) ---
+              _CollapsibleSection(
+                title: l10n.ringtoneSectionCustom,
+                trailing: _CounterChip(
+                  count: prefs.customCount,
+                  max: prefs.customMax,
+                ),
+                hasSelected:
+                    prefs.selected.type == RingtoneSourceType.custom,
+                expanded: _expanded!.contains('custom'),
+                onToggle: () => _toggleSection('custom'),
+                tiles: [
+                  if (prefs.customRingtones.isEmpty)
+                    _EmptyHint(text: l10n.ringtoneCustomEmpty),
+                  ...prefs.customRingtones.map((o) => _RingtoneTile(
                         option: o,
                         selected: prefs.selectedId == o.id,
                         previewing: _previewingId == o.id,
                         onTap: () => prefs.select(o.id),
                         onPreview: () => _togglePreview(o),
-                      ))
-                  .toList(),
-            ),
-            AppSpacing.vGapXl,
-
-            // --- Sonnerie du téléphone ---
-            _SectionCard(
-              title: l10n.ringtoneSectionSystem,
-              tiles: [
-                _RingtoneTile(
-                  option: RingtoneOption.system,
-                  labelOverride: l10n.ringtoneSystemDefaultLabel,
-                  selected: prefs.selectedId == RingtoneOption.systemId,
-                  previewing: false,
-                  onTap: () => prefs.select(RingtoneOption.systemId),
-                  onPreview: null,
-                ),
-              ],
-            ),
-            AppSpacing.vGapXl,
-
-            // --- Sonneries importées par l'utilisateur (10 max) ---
-            _SectionCard(
-              title: l10n.ringtoneSectionCustom,
-              trailing: _CounterChip(
-                count: prefs.customCount,
-                max: prefs.customMax,
+                        onDelete: () => _confirmDelete(prefs, o),
+                      )),
+                  _AddRingtoneTile(
+                    enabled: prefs.canAddCustom && !_importing,
+                    importing: _importing,
+                    limitReached: !prefs.canAddCustom,
+                    onTap: () => _pickAndAddRingtone(prefs),
+                  ),
+                ],
               ),
-              tiles: [
-                if (prefs.customRingtones.isEmpty)
-                  _EmptyHint(text: l10n.ringtoneCustomEmpty),
-                ...prefs.customRingtones.map((o) => _RingtoneTile(
-                      option: o,
-                      selected: prefs.selectedId == o.id,
-                      previewing: _previewingId == o.id,
-                      onTap: () => prefs.select(o.id),
-                      onPreview: () => _togglePreview(o),
-                      onDelete: () => _confirmDelete(prefs, o),
-                    )),
-                _AddRingtoneTile(
-                  enabled: prefs.canAddCustom && !_importing,
-                  importing: _importing,
-                  limitReached: !prefs.canAddCustom,
-                  onTap: () => _pickAndAddRingtone(prefs),
-                ),
-              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+}
+
+/// Section repliable (accordéon) : un en-tête tappable (titre + éventuel
+/// compteur + chevron) au-dessus d'un bloc arrondi contenant les tuiles. Permet
+/// de regrouper les sonneries par catégorie pour éviter une longue liste à
+/// défiler. [collapsible] = false → toujours ouverte, sans chevron (ex. la
+/// sonnerie système).
+class _CollapsibleSection extends StatelessWidget {
+  const _CollapsibleSection({
+    required this.title,
+    required this.tiles,
+    required this.expanded,
+    required this.onToggle,
+    this.trailing,
+    this.hasSelected = false,
+    this.collapsible = true,
+  });
+
+  final String title;
+  final List<Widget> tiles;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget? trailing;
+
+  /// Affiche une pastille indiquant que la sonnerie sélectionnée est dans cette
+  /// section (utile quand elle est repliée).
+  final bool hasSelected;
+  final bool collapsible;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final open = expanded || !collapsible;
+
+    final header = Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Flexible(
+            child: Text(
+              title,
+              style: context.text.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (hasSelected && !open) ...[
+            AppSpacing.hGapSm,
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.primary,
+              ),
             ),
           ],
-        ),
+          const Spacer(),
+          if (trailing != null) ...[trailing!, AppSpacing.hGapSm],
+          if (collapsible)
+            AnimatedRotation(
+              turns: open ? 0.5 : 0.0,
+              duration: const Duration(milliseconds: 180),
+              child: Icon(Icons.expand_more_rounded,
+                  color: colors.onSurfaceVariant),
+            ),
+        ],
+      ),
+    );
+
+    final body = Column(
+      children: [
+        Divider(height: 1, thickness: 1, color: colors.outlineVariant),
+        for (var i = 0; i < tiles.length; i++) ...[
+          if (i > 0)
+            Divider(
+              height: 1,
+              thickness: 1,
+              indent: 68,
+              color: colors.outlineVariant,
+            ),
+          tiles[i],
+        ],
+      ],
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadius.brLg,
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          collapsible
+              ? Material(
+                  color: Colors.transparent,
+                  child: InkWell(onTap: onToggle, child: header),
+                )
+              : header,
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity, height: 0),
+            secondChild: body,
+            crossFadeState:
+                open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 180),
+            sizeCurve: Curves.easeInOut,
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Carte de section : un titre (+ optionnel trailing) au-dessus d'un bloc
-/// arrondi contenant les tuiles séparées par de fins traits.
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.tiles,
-    this.trailing,
-  });
+/// Petite pastille de comptage (nombre de sonneries d'une catégorie).
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
 
-  final String title;
-  final List<Widget> tiles;
-  final Widget? trailing;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(
-            left: AppSpacing.xs,
-            right: AppSpacing.xs,
-            bottom: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title.toUpperCase(),
-                  style: context.text.labelMedium?.copyWith(
-                    color: context.colors.primary,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ),
-              if (trailing != null) trailing!,
-            ],
-          ),
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: AppRadius.brPill,
+      ),
+      child: Text(
+        '$count',
+        style: context.text.labelSmall?.copyWith(
+          color: colors.onSurfaceVariant,
+          fontWeight: FontWeight.bold,
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: context.colors.surface,
-            borderRadius: AppRadius.brLg,
-            border: Border.all(color: context.colors.outlineVariant),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var i = 0; i < tiles.length; i++) ...[
-                if (i > 0)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: 68,
-                    color: context.colors.outlineVariant,
-                  ),
-                tiles[i],
-              ],
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

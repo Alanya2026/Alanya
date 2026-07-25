@@ -220,6 +220,11 @@ extension _ChatActions on _ChatDetailScreenState {
     final text = _messageController.text.trim();
     if (text.isEmpty || _myId == null) return;
 
+    // Son d'envoi joué IMMÉDIATEMENT au tap (avant tout réseau) : le message
+    // « part » de l'expéditeur, indépendamment de la création de la conversation
+    // ou de sa réception par le destinataire.
+    MessageSoundService.instance.playSent();
+
     final convId = await _ensureConversation();
     if (convId == null) return;
 
@@ -247,7 +252,6 @@ extension _ChatActions on _ChatDetailScreenState {
       replyToID: replyId,
       replyToContent: replyContent,
     );
-    MessageSoundService.instance.playSent();
 
     _messageController.clear();
     rebuild(() {
@@ -1094,10 +1098,8 @@ extension _ChatActions on _ChatDetailScreenState {
     if (result == null || !mounted) return;
     if (_myId == null) return;
 
-    final convId = await _ensureConversation();
-    if (convId == null) return;
-
     if (items.length == 1) {
+      // _sendMediaFile joue déjà le son d'envoi immédiatement (avant réseau).
       final item = items.first;
       _sendMediaFile(
         item.file,
@@ -1110,7 +1112,11 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
 
+    // Album : son d'envoi IMMÉDIAT au tap, avant la création éventuelle de
+    // conversation.
     MessageSoundService.instance.playSent();
+    final convId = await _ensureConversation();
+    if (convId == null) return;
     _chat.repository.sendMediaAlbum(
       conversationID: convId,
       items: items,
@@ -1135,9 +1141,7 @@ extension _ChatActions on _ChatDetailScreenState {
   }) async {
     if (_myId == null) return;
 
-    final convId = await _ensureConversation();
-    if (convId == null) return;
-
+    // Vérif de taille (locale, instantanée) AVANT le son : pas de son si rejeté.
     final size = file.existsSync() ? file.lengthSync() : 0;
     if (size > _maxMediaBytes) {
       final mb = (size / (1024 * 1024)).toStringAsFixed(1);
@@ -1148,7 +1152,13 @@ extension _ChatActions on _ChatDetailScreenState {
       return;
     }
 
+    // Son d'envoi IMMÉDIAT (avant la création éventuelle de conversation et
+    // l'upload) : le média « part » dès le tap.
     MessageSoundService.instance.playSent();
+
+    final convId = await _ensureConversation();
+    if (convId == null) return;
+
     await _chat.repository.sendMediaFile(
       conversationID: convId,
       type: type,

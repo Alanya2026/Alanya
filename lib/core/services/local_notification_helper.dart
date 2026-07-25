@@ -13,16 +13,22 @@ import 'notifications/notification_buffer_store.dart';
 import 'notifications/notification_prefs_cache.dart';
 import '../theme/locale_controller.dart';
 
+// IDs suffixés `_v2` : introduisent le son de notification par défaut. Un canal
+// Android étant immuable une fois créé, on change d'ID (et on supprime l'ancien
+// dans [ensureInitialized]) pour que le son s'applique sans réinstallation.
+// `playSound: true` + `sound: null` → son de notification par défaut du système.
 AndroidNotificationChannel get _kChannelMessages => AndroidNotificationChannel(
-  'talky_messages',
+  'talky_messages_v2',
   resolveL10n().messagesChannelName,
   importance: Importance.high,
+  playSound: true,
 );
 AndroidNotificationChannel get _kChannelMeetings => AndroidNotificationChannel(
-  'talky_meetings',
+  'talky_meetings_v2',
   resolveL10n().navMeetings,
   description: resolveL10n().meetingInvitationsAndReminders,
   importance: Importance.max,
+  playSound: true,
 );
 
 const String kPushActiveConvKey = 'push_active_conv_id';
@@ -76,6 +82,11 @@ class LocalNotificationHelper {
 
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
+    // Supprime les anciens canaux silencieux (avant introduction du son).
+    try {
+      await android?.deleteNotificationChannel('talky_messages');
+      await android?.deleteNotificationChannel('talky_meetings');
+    } catch (_) {}
     await android?.createNotificationChannel(_kChannelMessages);
     await android?.createNotificationChannel(_kChannelMeetings);
 

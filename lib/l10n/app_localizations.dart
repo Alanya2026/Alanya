@@ -479,19 +479,19 @@ abstract class AppLocalizations {
   /// No description provided for @ringtoneSectionSystem.
   ///
   /// In fr, this message translates to:
-  /// **'Système'**
+  /// **'Sonnerie par défaut'**
   String get ringtoneSectionSystem;
 
   /// No description provided for @ringtoneSectionApp.
   ///
   /// In fr, this message translates to:
-  /// **'Fournies par l\'application'**
+  /// **'Sonneries préinstallées'**
   String get ringtoneSectionApp;
 
   /// No description provided for @ringtoneSectionCustom.
   ///
   /// In fr, this message translates to:
-  /// **'Personnalisées'**
+  /// **'Sonneries importées'**
   String get ringtoneSectionCustom;
 
   /// No description provided for @ringtoneSystemDefaultLabel.
