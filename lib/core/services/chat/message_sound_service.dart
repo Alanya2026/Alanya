@@ -35,8 +35,20 @@ class MessageSoundService {
   Future<void> init() async {
     if (_ready || kIsWeb) return;
     try {
-      _sentPlayer = AudioPlayer();
-      _receivedPlayer = AudioPlayer();
+      // handleInterruptions:false → nos petits sons UI ne sont PAS mis en pause
+      // quand le focus audio est pris ailleurs (caméra, galerie, visionneuse
+      // vue-unique, lecture d'un vocal…) : sinon un son d'envoi/réception de
+      // média ne jouait pas car on arrivait d'un contexte média.
+      // handleAudioSessionActivation:false → on ne touche pas à la session
+      // audio globale (partagée avec les appels).
+      _sentPlayer = AudioPlayer(
+        handleInterruptions: false,
+        handleAudioSessionActivation: false,
+      );
+      _receivedPlayer = AudioPlayer(
+        handleInterruptions: false,
+        handleAudioSessionActivation: false,
+      );
       await _sentPlayer!.setAndroidAudioAttributes(_uiAttributes);
       await _receivedPlayer!.setAndroidAudioAttributes(_uiAttributes);
       await _sentPlayer!.setAsset(_sentAsset);

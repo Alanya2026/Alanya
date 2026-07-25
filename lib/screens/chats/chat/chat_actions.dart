@@ -1778,12 +1778,17 @@ extension _ChatActions on _ChatDetailScreenState {
     } catch (_) {/* non supporté sur la plateforme — ignoré */}
 
     final caption = msg.content?.trim();
+    // Fichier déjà pré-téléchargé (1ᵉʳ tap) → ouverture instantanée. `takePath`
+    // transfère la propriété du temp à la visionneuse (qui le supprimera).
+    // Si null (pas pré-téléchargé), la visionneuse télécharge comme avant.
+    final localPath = ViewOnceDownloadManager.instance.takePath(msg.msgID);
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ViewOnceViewerScreen(
           type: msg.type,
           mediaUrl: msg.mediaUrl!,
+          localPath: localPath,
           caption: caption != null && caption.isNotEmpty ? caption : null,
         ),
       ),

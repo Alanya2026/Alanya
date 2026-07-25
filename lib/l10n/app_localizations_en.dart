@@ -2286,6 +2286,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewOnceOpened => 'Opened';
 
   @override
+  String viewOnceDownloadKind(String kind) {
+    return '$kind · Download';
+  }
+
+  @override
+  String get viewOnceDownloading => 'Downloading…';
+
+  @override
+  String get viewOnceRetry => 'Failed — Retry';
+
+  @override
   String get recordingEllipsis => 'Recording…';
 
   @override

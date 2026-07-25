@@ -22,10 +22,17 @@ class ViewOnceViewerScreen extends StatefulWidget {
   final String mediaUrl;
   final String? caption;
 
+  /// Fichier temporaire déjà téléchargé (pré-téléchargement au 1ᵉʳ tap) :
+  /// s'il est fourni et présent, on l'utilise directement (ouverture
+  /// instantanée) au lieu de télécharger ici. La visionneuse en prend la
+  /// propriété et le supprime à la fermeture, comme un temp classique.
+  final String? localPath;
+
   const ViewOnceViewerScreen({
     super.key,
     required this.type,
     required this.mediaUrl,
+    this.localPath,
     this.caption,
   });
 
@@ -51,7 +58,12 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
   }
 
   Future<void> _load() async {
-    final path = await _cache.downloadToTemp(widget.mediaUrl);
+    // Déjà pré-téléchargé → pas de nouvelle attente. Sinon, repli : on
+    // télécharge ici (comportement historique).
+    String? path = widget.localPath;
+    if (path == null || !File(path).existsSync()) {
+      path = await _cache.downloadToTemp(widget.mediaUrl);
+    }
     if (!mounted) return;
     if (path == null) {
       setState(() {

@@ -4196,6 +4196,24 @@ abstract class AppLocalizations {
   /// **'Ouvert'**
   String get viewOnceOpened;
 
+  /// No description provided for @viewOnceDownloadKind.
+  ///
+  /// In fr, this message translates to:
+  /// **'{kind} · Télécharger'**
+  String viewOnceDownloadKind(String kind);
+
+  /// No description provided for @viewOnceDownloading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement…'**
+  String get viewOnceDownloading;
+
+  /// No description provided for @viewOnceRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échec — Réessayer'**
+  String get viewOnceRetry;
+
   /// No description provided for @recordingEllipsis.
   ///
   /// In fr, this message translates to:
