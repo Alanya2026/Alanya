@@ -27,9 +27,18 @@ class _RingtoneSettingsScreenState extends State<RingtoneSettingsScreen> {
   Set<String>? _expanded;
 
   Set<String> _initialExpanded(RingtonePreferences prefs) {
-    if (prefs.selected.type == RingtoneSourceType.custom) return {'custom'};
-    // Sonnerie fournie (défaut) OU système sélectionnée → ouvrir les préinstallées.
-    return {'bundled'};
+    // Seule la section contenant la sonnerie sélectionnée est dépliée ; les
+    // autres restent compressées.
+    switch (prefs.selected.type) {
+      case RingtoneSourceType.custom:
+        return {'custom'};
+      case RingtoneSourceType.bundled:
+        return {'bundled'};
+      case RingtoneSourceType.system:
+        // Sélection = sonnerie par défaut (section épinglée, toujours visible) :
+        // aucune section repliable ouverte.
+        return {};
+    }
   }
 
   void _toggleSection(String key) {
@@ -285,14 +294,15 @@ class _CollapsibleSection extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Flexible(
+          // Titre en Expanded + softWrap : jamais tronqué, s'enroule sur
+          // plusieurs lignes si besoin (langues longues, petits écrans).
+          Expanded(
             child: Text(
               title,
               style: context.text.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              softWrap: true,
             ),
           ),
           if (hasSelected && !open) ...[
@@ -306,15 +316,16 @@ class _CollapsibleSection extends StatelessWidget {
               ),
             ),
           ],
-          const Spacer(),
-          if (trailing != null) ...[trailing!, AppSpacing.hGapSm],
-          if (collapsible)
+          if (trailing != null) ...[AppSpacing.hGapSm, trailing!],
+          if (collapsible) ...[
+            AppSpacing.hGapSm,
             AnimatedRotation(
               turns: open ? 0.5 : 0.0,
               duration: const Duration(milliseconds: 180),
               child: Icon(Icons.expand_more_rounded,
                   color: colors.onSurfaceVariant),
             ),
+          ],
         ],
       ),
     );

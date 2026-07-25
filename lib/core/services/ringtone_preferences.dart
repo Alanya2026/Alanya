@@ -65,66 +65,70 @@ class RingtoneOption {
     type: RingtoneSourceType.system,
   );
 
-  /// Id de la sonnerie fournie utilisée par défaut (nouvel utilisateur qui n'a
-  /// rien choisi). Doit référencer une entrée de [bundled].
-  static const String defaultBundledId = 'bundled_aurore';
-
   /// Sonneries embarquées avec l'app. Chaque entrée existe en DEUX exemplaires :
   ///  - un asset Flutter `assets/sounds/ringtones/<nom>.ogg` (aperçu + lecture
   ///    quand l'app est au premier plan, via `just_audio`) ;
   ///  - une ressource Android compilée `res/raw/rt_<nom>.ogg` référencée par
   ///    [androidRawResource] (lecture par CallKit quand l'app est tuée).
-  /// Pour en ajouter/remplacer une : déposer les deux fichiers et ajouter une
-  /// entrée ici (voir aussi `scratchpad/gen_ringtones.py` pour la génération).
+  /// Pour en remplacer une : déposer les deux fichiers (même nom) ; pour en
+  /// ajouter/supprimer ou renommer, éditer cette liste.
   static const List<RingtoneOption> bundled = [
     RingtoneOption(
-      id: defaultBundledId,
-      label: 'Aurore',
+      id: 'bundled_son1',
+      label: 'Sonnerie 1',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringtones/aurore.ogg',
-      androidRawResource: 'rt_aurore',    ),
+      assetPath: 'assets/sounds/ringtones/son1.ogg',
+      androidRawResource: 'rt_son1',
+    ),
     RingtoneOption(
-      id: 'bundled_horizon',
-      label: 'Horizon',
+      id: 'bundled_son2',
+      label: 'Sonnerie 2',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringtones/horizon.ogg',
-      androidRawResource: 'rt_horizon',    ),
+      assetPath: 'assets/sounds/ringtones/son2.ogg',
+      androidRawResource: 'rt_son2',
+    ),
     RingtoneOption(
-      id: 'bundled_lueur',
-      label: 'Lueur',
+      id: 'bundled_son3',
+      label: 'Sonnerie 3',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringtones/lueur.ogg',
-      androidRawResource: 'rt_lueur',    ),
+      assetPath: 'assets/sounds/ringtones/son3.ogg',
+      androidRawResource: 'rt_son3',
+    ),
     RingtoneOption(
-      id: 'bundled_cascade',
-      label: 'Cascade',
+      id: 'bundled_son4',
+      label: 'Sonnerie 4',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringtones/cascade.ogg',
-      androidRawResource: 'rt_cascade',    ),
+      assetPath: 'assets/sounds/ringtones/son4.ogg',
+      androidRawResource: 'rt_son4',
+    ),
     RingtoneOption(
-      id: 'bundled_carillon',
-      label: 'Carillon',
+      id: 'bundled_son5',
+      label: 'Sonnerie 5',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringtones/carillon.ogg',
-      androidRawResource: 'rt_carillon',    ),
+      assetPath: 'assets/sounds/ringtones/son5.ogg',
+      androidRawResource: 'rt_son5',
+    ),
     RingtoneOption(
-      id: 'bundled_classique',
-      label: 'Classique',
+      id: 'bundled_son6',
+      label: 'Sonnerie 6',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringtones/classique.ogg',
-      androidRawResource: 'rt_classique',    ),
+      assetPath: 'assets/sounds/ringtones/son6.ogg',
+      androidRawResource: 'rt_son6',
+    ),
     RingtoneOption(
-      id: 'bundled_marimba',
-      label: 'Marimba',
+      id: 'bundled_son7',
+      label: 'Sonnerie 7',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringtones/marimba.ogg',
-      androidRawResource: 'rt_marimba',    ),
+      assetPath: 'assets/sounds/ringtones/son7.ogg',
+      androidRawResource: 'rt_son7',
+    ),
     RingtoneOption(
-      id: 'bundled_impulsion',
-      label: 'Impulsion',
+      id: 'bundled_son8',
+      label: 'Sonnerie 8',
       type: RingtoneSourceType.bundled,
-      assetPath: 'assets/sounds/ringtones/impulsion.ogg',
-      androidRawResource: 'rt_impulsion',    ),
+      assetPath: 'assets/sounds/ringtones/son8.ogg',
+      androidRawResource: 'rt_son8',
+    ),
   ];
 
   Map<String, dynamic> toJson() => {
@@ -192,10 +196,10 @@ class RingtonePreferences extends ChangeNotifier {
   static RingtonePreferences? _bound;
 
   static bool _prefsLoaded = false;
-  static String _cachedSelectedId = RingtoneOption.defaultBundledId;
+  static String _cachedSelectedId = RingtoneOption.systemId;
   static List<RingtoneOption> _cachedCustom = const [];
 
-  String _selectedId = RingtoneOption.defaultBundledId;
+  String _selectedId = RingtoneOption.systemId;
   List<RingtoneOption> _custom = const [];
 
   RingtonePreferences() {
@@ -265,7 +269,7 @@ class RingtonePreferences extends ChangeNotifier {
     if (_prefsLoaded) return;
     final prefs = await SharedPreferences.getInstance();
     _cachedSelectedId =
-        prefs.getString(_kSelectedKey) ?? RingtoneOption.defaultBundledId;
+        prefs.getString(_kSelectedKey) ?? RingtoneOption.systemId;
     final raw = prefs.getStringList(_kCustomListKey) ?? const [];
     _cachedCustom = raw
         .map((s) {
@@ -407,7 +411,7 @@ class RingtonePreferences extends ChangeNotifier {
     // Si la sonnerie supprimée était sélectionnée, on retombe sur la sonnerie
     // par défaut de l'app.
     if (_selectedId == id) {
-      await select(RingtoneOption.defaultBundledId);
+      await select(RingtoneOption.systemId);
     } else {
       notifyListeners();
     }
