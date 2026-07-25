@@ -1,0 +1,507 @@
+<title>Alanya — Composer une diffusion</title>
+
+<style>
+  /* ------------------------------------------------------------------
+     Cet écran vit dans l'administration Next.js, pas dans le mobile :
+     il reprend donc le langage visuel de talky-admin (zinc + dégradé
+     indigo→violet) et non les tokens de app_colors.dart.
+     ------------------------------------------------------------------ */
+  :root {
+    --indigo-500: #6366F1; --indigo-600: #4F46E5; --indigo-700: #4338CA;
+    --violet-500: #8B5CF6;
+    --indigo-50:  #EEF2FF;
+
+    --z-50:  #FAFAFA; --z-100: #F4F4F5; --z-200: #E4E4E7; --z-300: #D4D4D8;
+    --z-400: #A1A1AA; --z-500: #71717A; --z-600: #52525B;
+    --z-800: #27272A; --z-900: #18181B; --z-950: #09090B;
+
+    --bg:      var(--z-50);
+    --panel:   #FFFFFF;
+    --line:    var(--z-200);
+    --ink:     var(--z-900);
+    --ink-2:   var(--z-500);
+    --ink-3:   var(--z-400);
+    --soft:    var(--z-100);
+    --accent-soft: var(--indigo-50);
+    --accent-ink:  var(--indigo-700);
+
+    --ok:   #16A34A;
+    --warn: #CA8A04;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: var(--z-950); --panel: var(--z-900); --line: var(--z-800);
+      --ink: #FAFAFA; --ink-2: var(--z-400); --ink-3: var(--z-600);
+      --soft: #1C1C20; --accent-soft: #1E1B4B; --accent-ink: #C7D2FE;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: var(--z-950); --panel: var(--z-900); --line: var(--z-800);
+    --ink: #FAFAFA; --ink-2: var(--z-400); --ink-3: var(--z-600);
+    --soft: #1C1C20; --accent-soft: #1E1B4B; --accent-ink: #C7D2FE;
+  }
+  :root[data-theme="light"] {
+    --bg: var(--z-50); --panel: #FFFFFF; --line: var(--z-200);
+    --ink: var(--z-900); --ink-2: var(--z-500); --ink-3: var(--z-400);
+    --soft: var(--z-100); --accent-soft: var(--indigo-50); --accent-ink: var(--indigo-700);
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--bg); color: var(--ink); font-family: var(--sans);
+    font-size: 14px; line-height: 1.55; min-height: 100vh;
+    padding: clamp(20px, 4vw, 48px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 34px; }
+
+  .masthead { display: flex; flex-direction: column; gap: 10px; max-width: 64ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--indigo-600); margin: 0;
+  }
+  :root[data-theme="dark"] .eyebrow { color: #A5B4FC; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .eyebrow { color: #A5B4FC; }
+  }
+  .masthead h1 {
+    font-size: clamp(25px, 3.4vw, 35px); line-height: 1.14; letter-spacing: -0.021em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--ink-2); font-size: 15px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: clamp(16px, 2.4vw, 26px); display: flex; flex-direction: column; gap: 20px;
+  }
+  .card > header { display: flex; flex-direction: column; gap: 4px; }
+  .card h2 { font-size: 17px; font-weight: 650; margin: 0; letter-spacing: -0.012em; }
+  .card header p { margin: 0; color: var(--ink-2); font-size: 13.5px; max-width: 70ch; }
+
+  .lab {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-2);
+  }
+
+  /* ---------- Composeur ---------- */
+  .composer { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 26px; }
+  @media (max-width: 880px) { .composer { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  .seg { display: flex; gap: 4px; padding: 3px; background: var(--soft); border-radius: 9px; }
+  .seg span {
+    flex: 1; text-align: center; padding: 6px 10px; border-radius: 6px;
+    font-size: 13px; font-weight: 550; color: var(--ink-2);
+  }
+  .seg span[aria-selected="true"] {
+    background: var(--panel); color: var(--ink);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07);
+  }
+
+  .zone {
+    border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px;
+    min-height: 108px; font-size: 14px; color: var(--ink); background: var(--panel);
+    line-height: 1.55;
+  }
+  .zone .ph { color: var(--ink-3); }
+
+  /* ---------- Constructeur de critères ---------- */
+  .builder { display: flex; flex-direction: column; gap: 9px; }
+  .cond {
+    display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center;
+    gap: 10px; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 9px; background: var(--panel);
+  }
+  .cond[data-off="1"] { opacity: 0.42; }
+  .cond .txt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .cond .champ { font-size: 13.5px; font-weight: 600; }
+  .cond .champ em { font-style: normal; color: var(--accent-ink); font-weight: 650; }
+  .cond .src { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .cond .part {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-2);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  .sw {
+    width: 36px; height: 21px; border-radius: 999px; background: var(--z-300);
+    position: relative; flex: none; border: none; padding: 0; cursor: pointer;
+    transition: background 0.15s;
+  }
+  :root[data-theme="dark"] .sw { background: var(--z-600); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .sw { background: var(--z-600); }
+  }
+  .sw::after {
+    content: ""; position: absolute; top: 2.5px; left: 2.5px;
+    width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: transform 0.15s;
+  }
+  .sw[aria-checked="true"] { background: var(--indigo-600); }
+  .sw[aria-checked="true"]::after { transform: translateX(15px); }
+
+  .liaison { display: flex; align-items: center; gap: 9px; padding-left: 4px; }
+  .liaison .trait { flex: 1; height: 1px; background: var(--line); }
+  .liaison b {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em;
+    color: var(--ink-3); font-weight: 600;
+  }
+
+  .ajouter {
+    display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
+    padding: 7px 12px; border: 1px dashed var(--z-300); border-radius: 9px;
+    background: transparent; color: var(--ink-2); font-size: 13px;
+    font-family: inherit; font-weight: 550;
+  }
+  :root[data-theme="dark"] .ajouter { border-color: var(--z-800); }
+  .ajouter svg { width: 14px; height: 14px; }
+
+  /* ---------- Estimation ---------- */
+  .estim {
+    border-radius: 11px; padding: 16px 18px; background: var(--accent-soft);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .estim .n {
+    font-size: 30px; font-weight: 700; letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums; color: var(--accent-ink); line-height: 1.1;
+  }
+  .estim .sur { font-size: 13px; color: var(--ink-2); }
+  .estim .barre {
+    height: 6px; border-radius: 999px; background: rgba(99,102,241,0.2);
+    margin-top: 8px; overflow: hidden;
+  }
+  .estim .barre i {
+    display: block; height: 100%; border-radius: 999px;
+    background: linear-gradient(to right, var(--indigo-500), var(--violet-500));
+    transition: width 0.28s ease;
+  }
+
+  .avert {
+    display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px;
+    color: var(--warn); line-height: 1.45;
+  }
+  .avert svg { width: 15px; height: 15px; flex: none; margin-top: 2px; }
+
+  /* ---------- SQL ---------- */
+  pre.sql {
+    margin: 0; padding: 15px 17px; border-radius: 10px; background: var(--z-950);
+    color: #E4E4E7; font-family: var(--mono); font-size: 12px; line-height: 1.65;
+    overflow-x: auto;
+  }
+  pre.sql .kw { color: #A5B4FC; }
+  pre.sql .st { color: #86EFAC; }
+  pre.sql .cm { color: #71717A; font-style: italic; }
+  pre.sql .nb { color: #FCD34D; }
+
+  .envoyer {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 0 18px; height: 40px; border-radius: 9px; border: none;
+    background: linear-gradient(to right, var(--indigo-500), var(--violet-500));
+    color: #fff; font-size: 14px; font-weight: 620; font-family: inherit;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08); align-self: flex-start;
+  }
+  .envoyer svg { width: 16px; height: 16px; }
+
+  /* ---------- Historique ---------- */
+  .tscroll { overflow-x: auto; }
+  table.hist { border-collapse: collapse; width: 100%; min-width: 700px; }
+  table.hist th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-2); text-align: left;
+    font-weight: 500; padding: 0 12px 8px; border-bottom: 1px solid var(--line);
+  }
+  table.hist td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.hist tr:last-child td { border-bottom: none; }
+  .contenu { font-size: 13.5px; max-width: 34ch; }
+  .cible { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
+  .nb { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 12.5px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px;
+    border-radius: 999px; font-size: 11.5px; font-weight: 600;
+  }
+  .pill.msg { background: var(--accent-soft); color: var(--accent-ink); }
+  .pill.sta { background: rgba(202,138,4,0.14); color: var(--warn); }
+  .pill i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  .notes { display: flex; flex-direction: column; gap: 12px; }
+  .note {
+    border-left: 3px solid var(--indigo-500); padding-left: 13px;
+    font-size: 13.5px; color: var(--ink-2); max-width: 82ch;
+  }
+  .note.attention { border-left-color: #DC2626; }
+  .note b { color: var(--ink); font-weight: 640; }
+  .note code { font-family: var(--mono); font-size: 12.5px; }
+
+  footer.colophon {
+    display: flex; flex-wrap: wrap; gap: 8px 24px; padding-top: 16px;
+    border-top: 1px solid var(--line); font-family: var(--mono);
+    font-size: 11px; color: var(--ink-2);
+  }
+
+  :focus-visible { outline: 2px solid var(--indigo-500); outline-offset: 3px; border-radius: 5px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya Admin · Diffusion · Étape 3</p>
+    <h1>Composer une diffusion, et savoir qui la recevra</h1>
+    <p>
+      Le ciblage n'est plus un choix parmi trois cas, mais une combinaison de conditions.
+      Activez-les pour voir l'estimation et la requête produite changer&nbsp;: c'est le même
+      résolveur qui sert aux messages et aux statuts officiels.
+    </p>
+  </header>
+
+  <!-- ============================================================ -->
+  <section class="card">
+    <header>
+      <h2>Nouvelle diffusion</h2>
+      <p>Le contenu à gauche, le ciblage à droite. L'estimation se recalcule à chaque
+         changement.</p>
+    </header>
+
+    <div class="composer">
+
+      <div class="col">
+        <div>
+          <span class="lab">Nature</span>
+          <div class="seg" role="tablist" style="margin-top:7px">
+            <span role="tab" aria-selected="true">Message</span>
+            <span role="tab" aria-selected="false">Statut (24 h)</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="lab">Contenu</span>
+          <div class="zone" style="margin-top:7px">
+            Bonjour&nbsp;! La version 2.4 arrive la semaine prochaine. Les commerçants
+            vérifiés pourront enfin publier leur catalogue directement depuis leur fiche.
+            <span class="ph">…</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="lab">Aperçu côté utilisateur</span>
+          <p style="margin:6px 0 0; font-size:13px; color:var(--ink-2)">
+            Le message apparaît dans une conversation avec le compte Alanya, sans zone de
+            saisie. Voir la maquette du socle de compte.
+          </p>
+        </div>
+
+        <button class="envoyer" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4 20 12 4 20 4 14 14 12 4 10Z"/>
+          </svg>
+          Diffuser maintenant
+        </button>
+      </div>
+
+      <div class="col">
+        <div>
+          <span class="lab">Ciblage</span>
+          <div class="builder" id="builder" style="margin-top:7px"></div>
+          <button class="ajouter" type="button" style="margin-top:10px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Ajouter une condition
+          </button>
+        </div>
+
+        <div class="estim">
+          <span class="lab" style="color:var(--accent-ink); opacity:0.75">Destinataires estimés</span>
+          <span class="n" id="estim-n">312 480</span>
+          <span class="sur" id="estim-sur">sur 312 480 comptes non bannis</span>
+          <span class="barre"><i id="estim-barre" style="width:100%"></i></span>
+        </div>
+
+        <p class="avert" id="avert" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18.4A2 2 0 0 0 3.5 21.4h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>
+          </svg>
+          <span>Diffusion large&nbsp;: le fan-out des notifications sera étalé par lots par
+          la file de jobs. La conversation, elle, n'est créée qu'à la première ouverture de
+          chaque destinataire.</span>
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="card">
+    <header>
+      <h2>Ce que le résolveur produit</h2>
+      <p>Le critère est stocké en JSON puis <strong>compilé</strong> en clauses SQL. Il n'est
+         jamais filtré en base — la règle du §7 sur les colonnes JSON est respectée.</p>
+    </header>
+    <pre class="sql" id="sql"></pre>
+    <p class="note">
+      <b>Ce comptage n'est demandé qu'ici.</b> À l'envoi, la liste des destinataires n'est
+      jamais construite&nbsp;: le critère ne sert qu'à ce <code>COUNT(*)</code> et au fan-out
+      push par lots.
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="card">
+    <header>
+      <h2>Historique</h2>
+      <p>Chaque diffusion conserve son critère, pour qu'on puisse relire six mois plus tard
+         à qui elle s'adressait.</p>
+    </header>
+    <div class="tscroll">
+      <table class="hist">
+        <thead>
+          <tr>
+            <th scope="col">Envoyée</th><th scope="col">Nature</th>
+            <th scope="col">Contenu</th><th scope="col">Cible</th>
+            <th scope="col">Destinataires</th><th scope="col">Ouvertures</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="nb">24 juil.<br><span style="color:var(--ink-3)">09:12</span></td>
+            <td><span class="pill msg"><i></i>Message</span></td>
+            <td class="contenu">Maintenance programmée dimanche de 2 h à 4 h</td>
+            <td class="cible">pays = Cameroun</td>
+            <td class="nb">128 430</td>
+            <td class="nb">71 %</td>
+          </tr>
+          <tr>
+            <td class="nb">19 juil.<br><span style="color:var(--ink-3)">17:40</span></td>
+            <td><span class="pill sta"><i></i>Statut</span></td>
+            <td class="contenu">Les listes de contacts arrivent</td>
+            <td class="cible">tous</td>
+            <td class="nb">309 004</td>
+            <td class="nb">44 %</td>
+          </tr>
+          <tr>
+            <td class="nb">11 juil.<br><span style="color:var(--ink-3)">08:05</span></td>
+            <td><span class="pill msg"><i></i>Message</span></td>
+            <td class="contenu">Votre vérification expire dans 30 jours</td>
+            <td class="cible">business ∧ vérifié ∧ échéance &lt; 30 j</td>
+            <td class="nb">1 246</td>
+            <td class="nb">92 %</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="notes">
+      <p class="note">
+        <b>La dernière ligne est la relance J-30 du socle.</b> Elle passe par le même canal
+        que les diffusions manuelles — un critère, un résolveur, une file. Rien de spécifique
+        n'a été construit pour elle.
+      </p>
+      <p class="note attention">
+        <b>Un compte créé après la diffusion ne doit pas la recevoir.</b> Le critère est
+        évalué à la lecture, donc un nouveau compte correspondrait. Le garde-fou est une
+        clause&nbsp;: <code>u.created_at &lt;= b.sent_at</code>.
+      </p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Écran : app/(dashboard)/broadcasts</span>
+    <span>Remplace targetType/targetCriteria par un critère composable</span>
+    <span>Maquette de conception — aucun code applicatif</span>
+  </footer>
+
+</div>
+</div>
+
+<script>
+  // ------------------------------------------------------------------
+  // Population synthétique : sert uniquement à rendre l'estimation
+  // crédible dans la maquette. Les proportions sont plausibles, pas
+  // mesurées — l'estimation réelle viendra d'un COUNT(*).
+  // ------------------------------------------------------------------
+  const TOTAL = 312480;
+
+  const CONDITIONS = [
+    { id: 'pays', actif: true, part: 0.411,
+      champ: 'Pays est <em>Cameroun</em>', src: 'users.idPays = 5',
+      sql: 'u.idPays = 5' },
+    { id: 'genre', actif: true, part: 0.038,
+      champ: 'Genre de compte est <em>business</em>', src: 'users.account_type = 1',
+      sql: 'u.account_type = 1' },
+    { id: 'anciennete', actif: false, part: 0.62,
+      champ: 'Inscrit depuis <em>plus de 3 mois</em>', src: 'users.created_at',
+      sql: "u.created_at <= DATE_SUB(NOW(), INTERVAL 3 MONTH)" },
+    { id: 'activite', actif: false, part: 0.47,
+      champ: 'Vu <em>dans les 30 derniers jours</em>', src: 'users.last_seen',
+      sql: 'u.last_seen >= DATE_SUB(NOW(), INTERVAL 30 DAY)' }
+  ];
+
+  const builder = document.getElementById('builder');
+
+  function dessiner() {
+    builder.innerHTML = CONDITIONS.map(function (c, i) {
+      const liaison = i === 0 ? '' :
+        '<div class="liaison"><b>ET</b><span class="trait"></span></div>';
+      return liaison +
+        '<div class="cond" data-off="' + (c.actif ? '0' : '1') + '">' +
+          '<button class="sw" type="button" role="switch" data-id="' + c.id + '" ' +
+            'aria-checked="' + c.actif + '" aria-label="' +
+            c.champ.replace(/<[^>]+>/g, '') + '"></button>' +
+          '<span class="txt">' +
+            '<span class="champ">' + c.champ + '</span>' +
+            '<span class="src">' + c.src + '</span>' +
+          '</span>' +
+          '<span class="part">' + Math.round(c.part * 100) + ' %</span>' +
+        '</div>';
+    }).join('');
+
+    builder.querySelectorAll('.sw').forEach(function (b) {
+      b.addEventListener('click', function () {
+        const c = CONDITIONS.find(function (x) { return x.id === b.dataset.id; });
+        c.actif = !c.actif;
+        dessiner();
+        calculer();
+      });
+    });
+  }
+
+  function calculer() {
+    const actives = CONDITIONS.filter(function (c) { return c.actif; });
+    // Indépendance supposée : suffisant pour une maquette, jamais pour la prod.
+    const part = actives.reduce(function (p, c) { return p * c.part; }, 1);
+    const n = Math.round(TOTAL * part);
+
+    document.getElementById('estim-n').textContent = n.toLocaleString('fr-FR');
+    document.getElementById('estim-sur').textContent =
+      'sur ' + TOTAL.toLocaleString('fr-FR') + ' comptes non bannis';
+    document.getElementById('estim-barre').style.width =
+      Math.max(part * 100, 0.6) + '%';
+    document.getElementById('avert').hidden = n < 50000;
+
+    const clauses = actives.map(function (c) { return c.sql; });
+    const where = clauses.length
+      ? clauses.map(function (s) { return '  AND ' + s; }).join('\n')
+      : '  <span class="cm">-- aucune condition : tous les comptes non bannis</span>';
+
+    document.getElementById('sql').innerHTML =
+      '<span class="cm">-- critere stocke sur la ligne broadcast, compile a la volee</span>\n' +
+      '<span class="kw">SELECT</span> <span class="kw">COUNT</span>(*) ' +
+      '<span class="kw">FROM</span> users u\n' +
+      '<span class="kw">WHERE</span> u.exclus = <span class="nb">0</span>\n' +
+      '  <span class="kw">AND</span> u.created_at &lt;= b.sent_at' +
+      '   <span class="cm">-- garde anti-derive</span>\n' +
+      where.replace(/  AND /g, '  <span class="kw">AND</span> ')
+           .replace(/(\d+)/g, '<span class="nb">$1</span>') + ';';
+  }
+
+  dessiner();
+  calculer();
+</script>
