@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
+
+import '../../widgets/video/double_tap_seek_overlay.dart';
+import '../../widgets/video/video_speed_memory.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/theme/app_colors.dart';
@@ -53,6 +56,7 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   late int _currentIndex;
   final Map<int, VideoPlayerController?> _videos = {};
   final Map<int, ChewieController?> _chewies = {};
+  final Map<int, VideoSpeedMemory> _speeds = {};
 
   @override
   void initState() {
@@ -67,6 +71,9 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     _pageController.dispose();
     for (final c in _chewies.values) {
       c?.dispose();
+    }
+    for (final m in _speeds.values) {
+      m.dispose();
     }
     for (final v in _videos.values) {
       v?.dispose();
@@ -92,11 +99,13 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
       await video.initialize();
       if (!mounted) return;
       setState(() {
+        _speeds[index] = VideoSpeedMemory.attach(video);
         _chewies[index] = ChewieController(
           videoPlayerController: video,
           autoPlay: index == _currentIndex,
           looping: false,
           aspectRatio: video.value.aspectRatio,
+          playbackSpeeds: kVideoPlaybackSpeeds,
         );
       });
     } catch (_) {
@@ -145,10 +154,14 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
 
   Widget _buildVideo(int index) {
     final chewie = _chewies[index];
-    if (chewie == null) {
+    final video = _videos[index];
+    if (chewie == null || video == null) {
       return const CircularProgressIndicator(color: AppColors.white);
     }
-    return Chewie(controller: chewie);
+    return DoubleTapSeekOverlay(
+      controller: video,
+      child: Chewie(controller: chewie),
+    );
   }
 
   Widget _buildImage(MediaViewerItem item) {

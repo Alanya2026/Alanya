@@ -1,5 +1,8 @@
 import 'dart:io';
 import 'package:chewie/chewie.dart';
+
+import '../../widgets/video/double_tap_seek_overlay.dart';
+import '../../widgets/video/video_speed_memory.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:video_player/video_player.dart';
@@ -49,6 +52,7 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
 
   VideoPlayerController? _video;
   ChewieController? _chewie;
+  VideoSpeedMemory? _speed;
   AudioPlayer? _audio;
 
   @override
@@ -79,11 +83,13 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
         _video = VideoPlayerController.file(File(path));
         await _video!.initialize();
         if (!mounted) return;
+        _speed = VideoSpeedMemory.attach(_video!);
         _chewie = ChewieController(
           videoPlayerController: _video!,
           autoPlay: true,
           looping: false,
           aspectRatio: _video!.value.aspectRatio,
+          playbackSpeeds: kVideoPlaybackSpeeds,
         );
       } else if (widget.type == 3) {
         _audio = AudioPlayer();
@@ -103,6 +109,7 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
 
   @override
   void dispose() {
+    _speed?.dispose();
     _chewie?.dispose();
     _video?.dispose();
     _audio?.dispose();
@@ -200,7 +207,10 @@ class _ViewOnceViewerScreenState extends State<ViewOnceViewerScreen> {
       case 2:
         return _chewie == null
             ? const CircularProgressIndicator(color: AppColors.white)
-            : Chewie(controller: _chewie!);
+            : DoubleTapSeekOverlay(
+                controller: _video!,
+                child: Chewie(controller: _chewie!),
+              );
       case 3:
         return _AudioView(player: _audio!);
       default: // 1 = image
