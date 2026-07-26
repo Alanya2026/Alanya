@@ -12,6 +12,14 @@ extension CallOneToOne on CallService {
     String? targetUserName,
     String? targetUserPhoto,
   }) async {
+    // Point de passage obligé de tous les appels sortants (pavé numérique,
+    // en-tête de conversation, modal profil, journal d'appels…) : un seul
+    // garde-fou suffit donc à couvrir l'auto-appel partout.
+    if (targetUserId == myId) {
+      _errorMessage = LocaleController.instance.l10n.cannotCallYourself;
+      notify();
+      return;
+    }
     if (_status != CallStatus.idle) {
       _errorMessage = LocaleController.instance.l10n.aCallIsAlreadyInProgress;
       notify();

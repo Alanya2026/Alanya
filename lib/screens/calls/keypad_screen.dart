@@ -255,6 +255,16 @@ class _KeypadScreenState extends State<KeypadScreen> {
       return;
     }
 
+    // Composer son propre numéro Alanya : le refuser ici donne un message
+    // clair, plutôt que l'erreur générique remontée par le service.
+    if (_foundUser!.alanyaID == me.alanyaID) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.cannotCallYourself)),
+      );
+      return;
+    }
+
     final callService = Provider.of<CallService>(context, listen: false);
     await callService.initiateCall(
       targetUserId: _foundUser!.alanyaID,
