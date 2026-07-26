@@ -21,12 +21,23 @@ class PendingDeliveryAckStore {
   static const Duration maxAge = Duration(hours: 24);
   static const int maxEntries = 50;
 
+  /// `reload()` obligatoire : `SharedPreferences` côté Dart est un cache
+  /// mémoire, et le natif écrit le fichier pendant que l'isolate est vivant
+  /// (app en arrière-plan — le cas nominal). Sans lui, un accusé en échec
+  /// n'était jamais rejoué, et `remove()` réécrivait la liste depuis le cache
+  /// périmé en effaçant les entrées ajoutées nativement entre-temps.
+  static Future<SharedPreferences> _freshPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    return prefs;
+  }
+
   /// Conversations en attente d'accusé, les plus anciennes d'abord.
   /// Les entrées périmées sont purgées au passage.
   static Future<List<int>> takeAll() async {
     if (kIsWeb) return const [];
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await _freshPrefs();
       final raw = prefs.getString(prefsKey);
       if (raw == null || raw.isEmpty) return const [];
       final cutoff =
@@ -50,7 +61,7 @@ class PendingDeliveryAckStore {
   static Future<void> remove(int conversationId) async {
     if (kIsWeb) return;
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await _freshPrefs();
       final raw = prefs.getString(prefsKey);
       if (raw == null || raw.isEmpty) return;
       final list = _decode(raw)

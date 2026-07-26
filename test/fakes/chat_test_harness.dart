@@ -19,13 +19,17 @@ class ChatTestHarness {
   static const int otherId = 2;
   static const int convId = 10;
 
-  Future<void> setUp({bool socketReady = true, bool autoAckSend = true}) async {
+  Future<void> setUp({
+    bool socketReady = true,
+    bool autoAckSend = true,
+    FakeChatApi? api,
+  }) async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
-    api = FakeChatApi(socketReady: socketReady)..autoAckSend = autoAckSend;
+    this.api = api ?? (FakeChatApi(socketReady: socketReady)..autoAckSend = autoAckSend);
     db = AppDatabase.forTesting(NativeDatabase.memory());
     dao = ChatDao(db);
-    repo = ChatRepository.forTesting(api: api, database: db);
+    repo = ChatRepository.forTesting(api: this.api, database: db);
     await repo.bind(myId);
     await _seedConversation();
   }

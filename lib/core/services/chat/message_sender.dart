@@ -66,12 +66,16 @@ class MessageSender {
     bool isForwarded = false,
     List<int>? mentions,
     bool mentionsAll = false,
+    // Rejeu d'une réponse rapide depuis la notification : la couche native a
+    // déjà déposé ce clientId, le réutiliser fait jouer l'idempotence serveur
+    // (index unique senderID+clientID) — jamais deux messages pour une réponse.
+    String? clientId,
   }) async {
     if (_myId() == 0) {
       debugPrint('[MessageSender] sendText ignoré : utilisateur non lié (myId=0)');
       return;
     }
-    final clientId = _newClientId();
+    clientId ??= _newClientId();
     final localNow = DateTime.now();
     final now = localNow.toUtc();
     MessagePathTracer.start(clientId);

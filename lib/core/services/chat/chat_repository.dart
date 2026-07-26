@@ -14,6 +14,7 @@ import '../../utils/media_album.dart';
 import '../alanya_media_export_service.dart';
 import '../local_notification_helper.dart';
 import '../notifications/badge_sync_service.dart';
+import '../notifications/pending_notification_action_store.dart';
 import '../media_cache_service.dart';
 import '../media_download_preferences.dart';
 import '../voice_asset_resolver.dart';
@@ -244,6 +245,10 @@ class ChatRepository {
   Future<void> _onAuthVerified(dynamic _) async {
     try {
       rejoinActiveRoom();
+      // En premier : une réponse rapide en attente est l'écriture la plus
+      // visible pour l'utilisateur, et le marquage lu doit précéder le
+      // catch-up des accusés pour ne pas être recalculé par-dessus.
+      await flushPendingNotificationActions();
       // Avant le catch-up socket : ces accusés viennent de messages reçus par
       // push alors que l'app était fermée, ils sont les plus en retard.
       await _receipts.flushNativeDeliveryAcks();
@@ -1261,6 +1266,56 @@ class ChatRepository {
 
   /// Rejeu des accusés de remise déposés par la couche push native.
   Future<void> flushNativeDeliveryAcks() => _receipts.flushNativeDeliveryAcks();
+
+  /// Rejoue les actions de notification (réponse rapide, marquer lu) que la
+  /// couche native n'a pas réussi à poster — réseau coupé, refresh token mort,
+  /// process tué en plein POST.
+  ///
+  /// Pour un `reply`, `GET /messages/status?clientId=` d'abord : si le POST
+  /// natif avait en réalité abouti (réponse HTTP perdue, watchdog), on ne
+  /// renvoie RIEN — deuxième ceinture anti-doublon, indépendante de
+  /// l'idempotence serveur. Sinon `sendText` avec LE MÊME clientId : la ligne
+  /// locale et la ligne serveur se réconcilient par l'ack `message:sent`, et
+  /// l'outbox porte la livraison si le socket n'est pas encore prêt.
+  Future<void> flushPendingNotificationActions() async {
+    if (_myId == 0) return;
+    final pending = await PendingNotificationActionStore.takeAll();
+    if (pending.isEmpty) return;
+    debugPrint(
+        '[ChatRepo] 🔁 flushPendingNotificationActions count=${pending.length}');
+    for (final action in pending) {
+      try {
+        if (action.kind == PendingNotificationActionStore.kindReply) {
+          final st = await _api.getMessageStatusByClientId(action.clientId!);
+          if (st['found'] == true) {
+            await PendingNotificationActionStore.remove(action);
+            unawaited(syncMessages(action.conversationId, delta: true));
+            continue;
+          }
+          await _sender.sendText(
+            conversationID: action.conversationId,
+            content: action.text ?? '',
+            clientId: action.clientId,
+          );
+          await PendingNotificationActionStore.remove(action);
+        } else {
+          // Le POST est l'action en attente ; le marquage local est best-effort
+          // (le serveur fait foi, le prochain refresh ramènerait unread=0).
+          await _api.markConversationAsRead(action.conversationId);
+          await PendingNotificationActionStore.remove(action);
+          try {
+            await _receipts.markAsReadLocal(action.conversationId);
+          } catch (e) {
+            debugPrint('[ChatRepo] markAsReadLocal après rejeu: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint(
+            '[ChatRepo] rejeu ${action.kind} conv=${action.conversationId}: $e');
+        await PendingNotificationActionStore.bumpAttempts(action);
+      }
+    }
+  }
 
 
   /// Batch upsert pour messages **entrants** (pas de matching optimiste).

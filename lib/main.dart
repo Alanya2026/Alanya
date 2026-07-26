@@ -39,6 +39,8 @@ import 'core/services/push_service.dart';
 import 'core/services/session_end_reason.dart';
 import 'core/services/notifications/notification_prefs_cache.dart';
 import 'core/services/notifications/badge_sync_service.dart';
+import 'core/services/notifications/pending_delivery_ack_store.dart';
+import 'core/services/notifications/pending_notification_action_store.dart';
 import 'firebase_options.dart';
 import 'screens/authentification/login_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -393,6 +395,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       if (authProvider.isLoggedIn) {
         final callService = Provider.of<CallService>(context, listen: false);
         unawaited(callService.flushPendingRejects());
+        // Actions de notification en attente (réponse rapide, marquer lu) :
+        // rejouées ici aussi, pour le cas où le socket ne monte jamais
+        // (`auth:verified` n'arrive pas) alors que l'HTTP passe.
+        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+        unawaited(chatProvider.repository.flushPendingNotificationActions());
       }
 
       try {
@@ -665,6 +672,14 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       await hidden.clearAll();
     } catch (e) {
       debugPrint('[AuthWrapper] LocalHiddenStore.clearAll échoué: $e');
+    }
+    // Files déposées par la couche native : les actions et accusés d'un compte
+    // ne doivent jamais être rejoués avec le token d'un autre.
+    try {
+      await PendingNotificationActionStore.clear();
+      await PendingDeliveryAckStore.clear();
+    } catch (e) {
+      debugPrint('[AuthWrapper] purge files natives échouée: $e');
     }
     try {
       await status.clearSessionPreferences();

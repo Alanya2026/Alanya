@@ -21,6 +21,10 @@ class RealtimeSyncService {
   Future<void> catchUp({int? conversationId, bool force = false}) async {
     try {
       await _chat.repository.flushOutbox();
+      // Après l'outbox (pour ne pas passer derrière une rafale d'upload) mais
+      // avant le reste : réponses rapides et « lu » déposés par la couche
+      // native, invisibles de la base locale.
+      await _chat.repository.flushPendingNotificationActions();
       // Messages reçus par push alors que l'app était fermée : leur accusé de
       // remise n'est pas déductible de la base locale, il n'y a que la file
       // native pour le retrouver.
