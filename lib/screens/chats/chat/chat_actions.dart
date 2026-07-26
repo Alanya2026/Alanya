@@ -251,6 +251,9 @@ extension _ChatActions on _ChatDetailScreenState {
     final convId = await _ensureConversation();
     if (convId == null) return;
 
+    // Répondre = on quitte le mode « rattrapage » : plus de bandeau non lus.
+    _dismissUnreadSeparator();
+
     // Résoudre un msgID frais : le snapshot `_replyTo` peut encore avoir
     // msgID=0 si la vidéo était en cours d'ack au moment du long-press.
     final reply = _replyTo;
@@ -1272,6 +1275,9 @@ extension _ChatActions on _ChatDetailScreenState {
     final convId = await _ensureConversation();
     if (convId == null) return;
 
+    // Média / vocal : même sémantique que l'envoi texte pour le bandeau.
+    _dismissUnreadSeparator();
+
     await _chat.repository.sendMediaFile(
       conversationID: convId,
       type: type,
@@ -1319,6 +1325,8 @@ extension _ChatActions on _ChatDetailScreenState {
 
   void _onTextChanged(String value) {
     final has = value.trim().isNotEmpty;
+    // Dès la première frappe (même espaces), le bandeau non lus n'a plus lieu.
+    if (value.isNotEmpty) _dismissUnreadSeparator();
     if (has != _hasText) rebuild(() => _hasText = has);
     _refreshMentionSuggestions(value);
     if (_convId == null) return;

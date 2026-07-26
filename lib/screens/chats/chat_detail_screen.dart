@@ -203,9 +203,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// `status < 3`. Sans un instantané pris auparavant, il n'y a plus rien à
   /// afficher : ni premier non-lu, ni compteur de mentions.
   ///
-  /// Ces champs sont FIGÉS pour toute la vie de l'écran — c'est ce qui rend le
-  /// séparateur stable quand les messages passent en lu, et le bouton « @ »
-  /// visible au lieu de disparaître à la première frame.
+  /// Instantané figé à l'ouverture pour que le séparateur reste stable quand
+  /// les messages passent en lu, et que le bouton « @ » ne disparaisse pas à
+  /// la première frame. Le séparateur est ensuite masqué dès qu'on compose
+  /// (frappe / envoi), pas seulement en quittant l'écran.
   int? _openFirstUnreadMsgId;
   int _openUnreadCount = 0;
 
@@ -727,6 +728,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     });
   }
 
+  /// Masque le bandeau « Messages non lus » (compose / envoi).
+  ///
+  /// Idempotent : ne rebuild que s'il reste quelque chose à cacher. Ne touche
+  /// pas aux mentions (`_openMentionMsgIds`) ni au mark-as-read déjà fait.
+  void _dismissUnreadSeparator() {
+    if (_openFirstUnreadMsgId == null) return;
+    rebuild(() => _openFirstUnreadMsgId = null);
+  }
+
   /// Ouvre la conversation sur le premier message non lu.
   ///
   /// Toutes les discussions, 1-1 comprises. Silencieux : un positionnement
@@ -953,10 +963,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                             children: [
                                               if (showDate) _buildDateSeparator(itemTime.toLocal()),
                                               // Après la date, comme WhatsApp.
-                                              // Il reste affiché quand les
-                                              // messages passent en lu : il est
-                                              // ancré sur l'instantané figé à
-                                              // l'ouverture, pas sur le statut.
+                                              // Ancré sur l'instantané d'ouverture
+                                              // (pas le statut) pour survivre à
+                                              // markAsRead ; masqué dès compose.
                                               if (_openFirstUnreadMsgId != null &&
                                                   premierDuBloc.msgID == _openFirstUnreadMsgId)
                                                 _buildUnreadSeparator(),

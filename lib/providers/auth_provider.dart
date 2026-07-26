@@ -32,12 +32,21 @@ class AuthProvider extends ChangeNotifier {
   bool get sessionExpired =>
       currentSessionEndReason == SessionEndReason.tokenExpired;
 
+  /// Restaure le cache local puis libère l'UI. La validation réseau part
+  /// ensuite en arrière-plan : évite splash → spinner → Home.
   Future<void> init() async {
     try {
       await _storage.init();
       _currentUser = await _storage.getUser();
       await _hydrateTokensFromStorage();
-      await _restoreSessionAtLaunch();
+
+      // Décision purement locale : profil sans tokens → pas de Home fantôme.
+      final hasAccess = _apiClient.accessToken != null;
+      final hasRefresh = _apiClient.currentRefreshToken != null;
+      if (!hasAccess && !hasRefresh && _currentUser != null) {
+        debugPrint('[AuthProvider] profil en cache mais tokens absents');
+        await _invalidateSession(reason: SessionEndReason.tokenExpired);
+      }
     } catch (e, st) {
       debugPrint('[AuthProvider] ** init() error: $e');
       AppLog.w('AuthProvider', 'init() error', e, st);
@@ -45,9 +54,29 @@ class AuthProvider extends ChangeNotifier {
       _isInitialized = true;
       notifyListeners();
     }
+
+    // Refresh / getMe hors chemin critique : l'UI est déjà sur Home ou Login.
+    unawaited(_validateSessionInBackground());
   }
 
-  /// Restaure la session au cold start — attendu avant d'afficher Login/Home.
+  /// Valide / rafraîchit la session sans bloquer le premier frame.
+  Future<void> _validateSessionInBackground() async {
+    final hasAccess = _apiClient.accessToken != null;
+    final hasRefresh = _apiClient.currentRefreshToken != null;
+    if (!hasAccess && !hasRefresh) return;
+
+    try {
+      await _restoreSessionAtLaunch();
+    } catch (e, st) {
+      debugPrint('[AuthProvider] ** validateSession background error: $e');
+      AppLog.w('AuthProvider', 'validateSession background error', e, st);
+    } finally {
+      // User mis à jour ou session invalidée → AuthWrapper rebind / Login.
+      notifyListeners();
+    }
+  }
+
+  /// Valide la session au cold start (réseau). Appelé hors chemin UI.
   Future<void> _restoreSessionAtLaunch() async {
     final hasAccess = _apiClient.accessToken != null;
     final hasRefresh = _apiClient.currentRefreshToken != null;

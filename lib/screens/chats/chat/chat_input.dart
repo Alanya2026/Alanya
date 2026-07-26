@@ -195,6 +195,7 @@ extension _ChatInput on _ChatDetailScreenState {
         textEditingController: _messageController,
         onEmojiSelected: (category, emoji) {
           if (!_hasText) rebuild(() => _hasText = true);
+          _dismissUnreadSeparator();
         },
         config: const Config(height: 280),
       ),
@@ -397,6 +398,7 @@ extension _ChatInput on _ChatDetailScreenState {
       selection: TextSelection.collapsed(offset: caret),
     );
     if (!_hasText) rebuild(() => _hasText = true);
+    _dismissUnreadSeparator();
     _inputFocus.requestFocus();
   }
 

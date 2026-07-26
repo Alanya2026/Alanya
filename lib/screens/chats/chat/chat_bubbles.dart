@@ -144,15 +144,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
     return Column(
       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        // Show sender name in group chats for other people's messages
-        if (widget.isGroup && !isMe)
-          Padding(
-            padding: const EdgeInsets.only(left: AppSpacing.lg, bottom: AppSpacing.xs),
-            child: Text(
-              msg.senderNom ?? msg.senderPseudo ?? (AppLocalizations.of(context)?.unknownSender ?? context.l10n.unknownSender),
-              style: context.text.labelSmall?.copyWith(color: context.colors.primary),
-            ),
-          ),
+        // Groupe, messages entrants : avatar + nom (pas sur les sortants).
+        if (widget.isGroup && !isMe) _buildGroupSenderHeader(msg),
         Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
           child: _wrapSelectableBubble(
@@ -370,6 +363,62 @@ extension _ChatBubbles on _ChatDetailScreenState {
     return mentionsUser(msg.mentionsJson, me);
   }
 
+  /// En-tête expéditeur (avatar + nom) au-dessus d'une bulle entrante de groupe.
+  ///
+  /// Avatar dénormalisé sur le message, sinon participants du groupe, sinon
+  /// initiales via [AppAvatar]. Tap → fiche contact (même chemin que les mentions).
+  Widget _buildGroupSenderHeader(LocalMessage msg) {
+    final name = msg.senderNom ??
+        msg.senderPseudo ??
+        (AppLocalizations.of(context)?.unknownSender ?? context.l10n.unknownSender);
+    final avatarUrl = _resolveSenderAvatar(msg);
+    const avatarSize = 20.0;
+
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.lg, bottom: AppSpacing.xs),
+      child: GestureDetector(
+        onTap: () => _openMentionTarget(msg.senderID),
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppAvatar(
+              imageUrl: hasValidAvatarUrl(avatarUrl) ? avatarUrl : null,
+              name: name,
+              size: avatarSize,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            // Pas de Flexible : le Row est en mainAxisSize.min (contrainte
+            // max absente). Un nom long est simplement tronqué ici.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.55,
+              ),
+              child: Text(
+                name,
+                style: context.text.labelSmall
+                    ?.copyWith(color: context.colors.primary),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Photo de l'expéditeur : cache message d'abord, puis membres du groupe.
+  String? _resolveSenderAvatar(LocalMessage msg) {
+    if (hasValidAvatarUrl(msg.senderAvatar)) return msg.senderAvatar;
+    final membre = _groupParticipants
+        .where((p) => p.alanyaID == msg.senderID)
+        .firstOrNull;
+    final fromMember = membre?.user.avatarUrl;
+    if (hasValidAvatarUrl(fromMember)) return fromMember;
+    return null;
+  }
+
   /// Surlignage et tap des mentions dans une bulle.
   ///
   /// `null` hors groupe : un homonyme ne doit pas devenir un lien dans un 1-1.
@@ -463,8 +512,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
   /// du fil, mais teinté : c'est un repère de lecture, pas une date.
   ///
   /// Il ne dépend PAS du statut des messages — il est ancré sur l'instantané
-  /// figé à l'ouverture. Sinon il disparaîtrait aussitôt, `markAsRead`
-  /// s'exécutant avant le premier rendu.
+  /// d'ouverture (sinon il disparaîtrait aussitôt via `markAsRead`). Masqué
+  /// ensuite par [_dismissUnreadSeparator] dès qu'on compose.
   Widget _buildUnreadSeparator() {
     return Container(
       width: double.infinity,
@@ -1639,14 +1688,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     return Column(
       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        if (widget.isGroup && !isMe)
-          Padding(
-            padding: const EdgeInsets.only(left: AppSpacing.lg, bottom: AppSpacing.xs),
-            child: Text(
-              first.senderNom ?? first.senderPseudo ?? (AppLocalizations.of(context)?.unknownSender ?? context.l10n.unknownSender),
-              style: context.text.labelSmall?.copyWith(color: context.colors.primary),
-            ),
-          ),
+        if (widget.isGroup && !isMe) _buildGroupSenderHeader(first),
         Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
           child: _wrapSelectableBubble(

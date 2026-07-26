@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:image_picker_android/image_picker_android.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:provider/provider.dart';
@@ -53,7 +54,9 @@ import 'widgets/session/active_session_banner.dart';
 final GlobalKey<NavigatorState> navigatorKey = appNavigatorKey;
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  // Garde le splash natif jusqu'à la restauration locale (pas de spinner Flutter).
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   debugPrint('[Main] ======== Application démarrée ========');
 
   // Photo Picker Android (grille + cases à cocher pour pickMultiImage / pickMultiVideo).
@@ -381,14 +384,19 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     }
   }
 
-  /// Bootstrap initial : restaure la session puis lie les providers et services
-  /// au compte courant si l'utilisateur est déjà loggé.
+  /// Bootstrap initial : restaure le cache local, retire le splash, puis lie
+  /// les providers. La validation réseau de session continue en arrière-plan.
   Future<void> _bootstrap() async {
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
-      await authProvider.init();
-      debugPrint('[AuthWrapper] !! init() complété');
+      try {
+        await authProvider.init();
+        debugPrint('[AuthWrapper] !! init() local complété');
+      } finally {
+        // Toujours retirer le splash : sinon écran figé si init échoue.
+        FlutterNativeSplash.remove();
+      }
       await _syncSessionBindings();
 
       // Refus CallKit persistés (app tuée) : rejouer dès que possible.
@@ -711,8 +719,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       builder: (context, auth, _) {
         debugPrint('[AuthWrapper] build - isInitialized=${auth.isInitialized}, isLoggedIn=${auth.isLoggedIn}');
         if (!auth.isInitialized) {
+          // Couverture blanche le temps du cache local ; le splash natif
+          // reste affiché grâce à FlutterNativeSplash.preserve (pas de spinner).
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            backgroundColor: Color(0xFFFFFFFF),
+            body: SizedBox.shrink(),
           );
         }
         return auth.isLoggedIn ? const HomeScreen() : const LoginScreen();
