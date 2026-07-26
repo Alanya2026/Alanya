@@ -31,6 +31,15 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
 
         when (type) {
             "message" -> {
+                // Accusé de remise AVANT tout court-circuit : la notification
+                // peut être supprimée (conversation déjà ouverte) ou silencieuse
+                // (sourdine), l'expéditeur doit voir ses 2 coches dans tous les cas.
+                DeliveryAckHelper.enqueueAndPost(this, data["conversationId"], data["msgID"])
+
+                if (data["silent"] == "1") {
+                    Log.d(TAG, "message silencieux (sourdine) conv=${data["conversationId"]} — accusé seul")
+                    return
+                }
                 if (MessageNotificationHelper.shouldSuppress(this, data)) {
                     Log.d(TAG, "message suppressed (active conv)")
                     return
