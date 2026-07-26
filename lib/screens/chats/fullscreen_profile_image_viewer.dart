@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/backend_url.dart';
 
 /// Visionneuse plein écran pour les images de profil avec zoom.
 /// Affiche uniquement l'image zoomable avec un bouton retour.
@@ -54,7 +55,8 @@ class _FullscreenProfileImageViewerState
 
     if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
       return CachedNetworkImage(
-        imageUrl: widget.imageUrl!,
+        // Réécrit l'ancien hôte encore présent dans le cache SQLite.
+        imageUrl: normalizeBackendUrl(widget.imageUrl!.trim())!,
         placeholder: (_, __) =>
             const CircularProgressIndicator(color: AppColors.white),
         errorWidget: (_, __, ___) =>

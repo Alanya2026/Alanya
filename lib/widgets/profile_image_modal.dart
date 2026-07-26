@@ -7,6 +7,8 @@ import '../core/theme/app_dimens.dart';
 import '../core/theme/app_theme.dart';
 import '../core/services/call_service.dart';
 import '../core/utils/app_log.dart';
+import '../core/utils/avatar_utils.dart';
+import '../core/utils/backend_url.dart';
 import '../providers/auth_provider.dart';
 import '../screens/chats/fullscreen_profile_image_viewer.dart';
 import '../screens/chats/contact_detail_screen.dart';
@@ -147,10 +149,13 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
     );
   }
 
+  bool get _hasLocal =>
+      widget.localPath != null && widget.localPath!.isNotEmpty;
+
   Widget _buildProfileImage() {
-    final hasImage =
-        (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) ||
-            widget.localPath != null;
+    // Mêmes règles de validité que [AppAvatar] : le modal et la tuile de la
+    // liste doivent afficher la même chose pour une même URL.
+    final hasImage = _hasLocal || hasValidAvatarUrl(widget.imageUrl);
 
     if (!hasImage) return _buildFallback();
 
@@ -171,7 +176,7 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
   }
 
   Widget _buildImageContent() {
-    if (widget.localPath != null) {
+    if (_hasLocal) {
       return Image.file(
         File(widget.localPath!),
         fit: BoxFit.cover,
@@ -180,7 +185,8 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
     }
 
     return CachedNetworkImage(
-      imageUrl: widget.imageUrl ?? '',
+      // Réécrit l'ancien hôte encore présent dans le cache SQLite.
+      imageUrl: normalizeBackendUrl(widget.imageUrl!.trim())!,
       fit: BoxFit.cover,
       placeholder: (_, __) => Container(
         color: AppColors.surfaceSubtle,
