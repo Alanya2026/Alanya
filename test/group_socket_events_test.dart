@@ -82,15 +82,31 @@ void main() {
           reason: 'une trame réordonnée a ressuscité un ancien nom');
     });
 
-    test('trame de même horodatage → ignorée (pas de réécriture inutile)',
-        () async {
+    // Ce test figeait auparavant le mauvais comportement (« → ignorée »). La
+    // garde doit rejeter les trames STRICTEMENT plus anciennes : à horodatage
+    // égal, les données sont les mêmes et l'écriture est un no-op. La rejeter
+    // perdait la seconde de deux actions rapprochées — cas courant, puisque
+    // `updatedAt` avance aussi à chaque message envoyé.
+    test('trame de même horodatage → appliquée (no-op inoffensif)', () async {
       h.api.emit(
         SocketEvents.conversationUpdated,
-        trameUpdated(nom: 'Doublon', updatedAt: '2026-07-26T10:00:00.000Z'),
+        trameUpdated(nom: 'Deuxième action', updatedAt: '2026-07-26T10:00:00.000Z'),
       );
       await Future<void>.delayed(Duration.zero);
 
-      expect((await h.conv())!.groupName, 'Projet Vitrine');
+      expect((await h.conv())!.groupName, 'Deuxième action',
+          reason: 'la seconde de deux actions dans la même seconde est perdue');
+    });
+
+    test('deux actions rapprochées → les deux sont appliquées', () async {
+      h.api.emit(SocketEvents.conversationUpdated,
+          trameUpdated(nom: 'Promotion', updatedAt: '2026-07-26T11:00:00.000Z'));
+      await Future<void>.delayed(Duration.zero);
+      h.api.emit(SocketEvents.conversationUpdated,
+          trameUpdated(nom: 'Retrait', updatedAt: '2026-07-26T11:00:00.000Z'));
+      await Future<void>.delayed(Duration.zero);
+
+      expect((await h.conv())!.groupName, 'Retrait');
     });
 
     test('trame sans updatedAt → appliquée (pas de garde possible)', () async {

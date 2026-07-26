@@ -376,7 +376,13 @@ class ChatRepository {
     if (incoming != null) {
       final local = await _dao.watchConversation(conv.conversID).first;
       final known = local?.metaUpdatedAt;
-      if (known != null && !incoming.isAfter(known)) return;
+      // `isBefore` et non `!isAfter` : le rôle de cette garde est de rejeter
+      // les trames STRICTEMENT plus anciennes. À horodatage égal la trame
+      // porte les mêmes données, l'appliquer est un no-op inoffensif — alors
+      // que la rejeter perdait la seconde de deux actions d'administration
+      // rapprochées, et laissait un membre retiré affiché jusqu'au prochain
+      // sync HTTP.
+      if (known != null && incoming.isBefore(known)) return;
     }
 
     await _dao.upsertConversation(_convToPartialCompanion(conv, json));
