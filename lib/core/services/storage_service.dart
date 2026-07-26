@@ -48,7 +48,9 @@ class StorageService {
       accessToken,
       refreshToken: refreshToken,
     );
-    await NotificationNativeCredentialsStore.syncNativeCredentials(accessToken);
+    // Le trio call_reject_* ci-dessus est désormais le seul miroir natif ;
+    // l'ancien access token en clair de notif_action_* est retiré du disque.
+    await NotificationNativeCredentialsStore.purgeLegacyKeys();
   }
 
   Future<String?> getAccessToken() => _secureStorage.read(key: _accessTokenKey);
@@ -76,7 +78,7 @@ class StorageService {
     await _secureStorage.delete(key: _refreshTokenKey);
     await _secureStorage.delete(key: _userKey);
     await PendingCallRejectStore.clearNativeCredentials();
-    await NotificationNativeCredentialsStore.clearNativeCredentials();
+    await NotificationNativeCredentialsStore.purgeLegacyKeys();
   }
 
   Future<bool> isLoggedIn() async => (await getAccessToken()) != null;
