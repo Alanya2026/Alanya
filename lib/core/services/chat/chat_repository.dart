@@ -244,6 +244,9 @@ class ChatRepository {
   Future<void> _onAuthVerified(dynamic _) async {
     try {
       rejoinActiveRoom();
+      // Avant le catch-up socket : ces accusés viennent de messages reçus par
+      // push alors que l'app était fermée, ils sont les plus en retard.
+      await _receipts.flushNativeDeliveryAcks();
       await flushReceiptsCatchUp();
       await resyncActiveConversation();
       await _receipts.flushPendingReads();
@@ -273,6 +276,9 @@ class ChatRepository {
       _api.onSocketEvent(SocketEvents.messageStatus, _handlers.onMessageStatus);
       _api.onSocketEvent(SocketEvents.inboxSync, _handlers.onInboxSync);
       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
+      _api.onSocketEvent(SocketEvents.conversationUpdated, _onConversationUpdated);
+      _api.onSocketEvent(
+          SocketEvents.groupParticipantRemoved, _onGroupParticipantRemoved);
       _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
     }
 
@@ -316,6 +322,10 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.messageStatus, _handlers.onMessageStatus);
     _api.removeSocketListener(SocketEvents.inboxSync, _handlers.onInboxSync);
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
+    _api.removeSocketListener(
+        SocketEvents.conversationUpdated, _onConversationUpdated);
+    _api.removeSocketListener(
+        SocketEvents.groupParticipantRemoved, _onGroupParticipantRemoved);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
     _activeConversationID = 0;
     LocalNotificationHelper.setActiveConversationId(null);
@@ -345,6 +355,50 @@ class ChatRepository {
     if (data is! Map) return;
     final json = Map<String, dynamic>.from(data);
     _dao.upsertConversation(_convToCompanion(Conversation.fromJson(json), json));
+  }
+
+  /// Métadonnées de groupe modifiées (nom, photo, description, rôles, verrous).
+  ///
+  /// Écrit un companion PARTIEL : la trame n'a pas les champs par-utilisateur,
+  /// et les écraser ferait réapparaître un badge fantôme.
+  ///
+  /// Garde anti-réordonnancement : Socket.IO ne garantit pas l'ordre entre deux
+  /// émissions issues de requêtes HTTP concurrentes. Sans elle, un renommage
+  /// suivi d'un changement de photo pourrait s'appliquer à l'envers et
+  /// ressusciter l'ancien nom.
+  Future<void> _onConversationUpdated(dynamic data) async {
+    if (data is! Map) return;
+    final json = Map<String, dynamic>.from(data);
+    final conv = Conversation.fromJson(json);
+    if (conv.conversID <= 0) return;
+
+    final incoming = _parseDate(conv.updatedAt);
+    if (incoming != null) {
+      final local = await _dao.watchConversation(conv.conversID).first;
+      final known = local?.metaUpdatedAt;
+      if (known != null && !incoming.isAfter(known)) return;
+    }
+
+    await _dao.upsertConversation(_convToPartialCompanion(conv, json));
+  }
+
+  /// Un membre a quitté ou a été retiré.
+  ///
+  /// Si c'est MOI, la conversation disparaît du cache : `watchConversation`
+  /// émet alors `null`, ce que la fiche groupe et l'écran de discussion
+  /// interprètent comme « sors d'ici ». C'est le seul chemin qui prévient
+  /// l'exclu — il n'est plus destinataire de `conversation:updated`.
+  ///
+  /// Sinon rien à faire : le `conversation:updated` qui accompagne l'événement
+  /// porte déjà la liste des participants à jour.
+  Future<void> _onGroupParticipantRemoved(dynamic data) async {
+    if (data is! Map) return;
+    final conversID = _toInt(data['conversID']);
+    final removedId = _toInt(data['alanyaID']);
+    if (conversID <= 0 || removedId <= 0) return;
+    if (removedId != _myId) return;
+
+    await _dao.deleteConversation(conversID);
   }
  
   /// Sync liste HTTP + delta messages.
@@ -543,6 +597,16 @@ class ChatRepository {
         isStatusReply: isStatusReply,
         isForwarded: isForwarded,
         isViewOnce: isViewOnce,
+      );
+
+  /// Un message par fichier — documents et morceaux, sans regroupement album.
+  Future<void> sendMediaFiles({
+    required int conversationID,
+    required List<AlbumSendItem> items,
+  }) =>
+      _sender.sendMediaFiles(
+        conversationID: conversationID,
+        items: items,
       );
 
   Future<void> sendMediaAlbum({
@@ -1028,6 +1092,124 @@ class ChatRepository {
     }
   }
 
+  // ── GROUPES ─────────────────────────────────────────────────────────
+  //
+  // Ces opérations passaient auparavant en direct des écrans vers
+  // TalkyApiClient. Elles remontent ici pour trois raisons :
+  //
+  // 1. chaque mutation renvoie la conversation enrichie, qui doit atterrir en
+  //    Drift — seule source lue par la liste, la fiche groupe et le verrou du
+  //    composeur ;
+  // 2. les handlers socket vivent déjà dans ce fichier : deux chemins d'écriture
+  //    concurrents sur la même ligne seraient une course garantie ;
+  // 3. c'est la seule façon de les tester avec ChatTestHarness.
+  //
+  // TOUTES sont online-only et SANS écriture optimiste. Un retrait appliqué
+  // localement puis refusé par le serveur (j'ai perdu mon rôle entre-temps)
+  // est pire qu'un délai : l'utilisateur croirait l'action faite. Les LECTURES,
+  // elles, restent offline-first depuis Drift, rôles compris.
+
+  /// Rafraîchit une conversation depuis le serveur et l'écrit en cache.
+  Future<void> refreshConversation(int conversID) async {
+    if (conversID <= 0) return;
+    final raw = await _api.getConversation(conversID);
+    await _upsertGroupResponse(raw);
+  }
+
+  Future<void> updateGroupInfo(
+    int conversID, {
+    String? groupName,
+    String? groupPhoto,
+    String? description,
+  }) async {
+    final raw = await _api.updateGroupInfo(
+      conversID,
+      groupName: groupName,
+      groupPhoto: groupPhoto,
+      description: description,
+    );
+    await _upsertGroupResponse(raw);
+  }
+
+  Future<void> updateGroupSettings(
+    int conversID, {
+    bool? onlyAdminsCanSend,
+    bool? onlyAdminsCanEditInfo,
+  }) async {
+    final raw = await _api.updateGroupSettings(
+      conversID,
+      onlyAdminsCanSend: onlyAdminsCanSend,
+      onlyAdminsCanEditInfo: onlyAdminsCanEditInfo,
+    );
+    await _upsertGroupResponse(raw);
+  }
+
+  Future<void> addParticipants(int conversID, List<int> participantIDs) async {
+    final ids = participantIDs.where((id) => id > 0).toSet().toList();
+    if (ids.isEmpty) return;
+    final raw = await _api.addParticipants(conversID, ids);
+    await _upsertGroupResponse(raw);
+  }
+
+  Future<void> removeParticipant(int conversID, int userId) async {
+    final raw = await _api.removeParticipant(conversID, userId);
+    // Le serveur renvoie `{ alreadyGone: true }` sans conversation quand le
+    // membre était déjà parti : rien à écrire, l'état voulu est déjà atteint.
+    if (raw['conversID'] != null && raw['participants'] != null) {
+      await _upsertGroupResponse(raw);
+    } else {
+      await refreshConversation(conversID);
+    }
+  }
+
+  Future<void> setParticipantRole(int conversID, int userId, int role) async {
+    final raw = await _api.setParticipantRole(conversID, userId, role);
+    await _upsertGroupResponse(raw);
+  }
+
+  /// Quitte le groupe et le retire du cache.
+  ///
+  /// La suppression locale est faite APRÈS l'aller-retour réussi : si le
+  /// serveur refuse, la conversation doit rester visible plutôt que de
+  /// disparaître d'un écran auquel l'utilisateur appartient toujours.
+  Future<void> leaveGroup(int conversID) async {
+    await _api.leaveGroup(conversID);
+    await _dao.deleteConversation(conversID);
+  }
+
+  /// Bascule « uniquement les mentions » sur un groupe.
+  ///
+  /// C'est ce qui rend enfin effectif le paramètre `mentionsOnly` de l'API,
+  /// qu'aucun appelant ne passait jusqu'ici — et donc la colonne serveur
+  /// correspondante, qui se comportait comme une sourdine totale.
+  Future<void> setMentionsOnly(int conversID, bool value) async {
+    final raw = await _api.updateConversationMute(
+      conversID,
+      mentionsOnly: value,
+    );
+    // La réponse de /mute ne porte que l'état de sourdine, pas la conversation
+    // entière : on écrit ces seules colonnes plutôt que de passer par le
+    // companion complet, qui viderait tout le reste.
+    await _dao.upsertConversation(
+      LocalConversationsCompanion(
+        conversID: Value(conversID),
+        mutedUntil: Value(_parseDate(raw['mutedUntil']?.toString())),
+        muteForever: Value(raw['muteForever'] == 1 || raw['muteForever'] == true),
+        mentionsOnly:
+            Value(raw['mentionsOnly'] == 1 || raw['mentionsOnly'] == true),
+      ),
+    );
+  }
+
+  /// Écrit la conversation enrichie renvoyée par une mutation de groupe.
+  Future<void> _upsertGroupResponse(Map<String, dynamic> raw) async {
+    if (raw.isEmpty) return;
+    final conv = Conversation.fromJson(raw);
+    if (conv.conversID <= 0) return;
+    await _dao.upsertConversation(_convToCompanion(conv, raw));
+    await _recomputeSummary(conv.conversID);
+  }
+
   Future<void> markAsRead(int conversationID) =>
       _receipts.markAsRead(conversationID);
 
@@ -1061,6 +1243,9 @@ class ChatRepository {
   }
 
   Future<void> flushReceiptsCatchUp() => _receipts.flushReceiptsCatchUp();
+
+  /// Rejeu des accusés de remise déposés par la couche push native.
+  Future<void> flushNativeDeliveryAcks() => _receipts.flushNativeDeliveryAcks();
 
 
   /// Batch upsert pour messages **entrants** (pas de matching optimiste).
@@ -1511,6 +1696,47 @@ class ChatRepository {
       isPinned: Value(c.isPinned),
       isArchived: Value(c.isArchived),
       participantsJson: Value(encodeParticipants(raw['participants'] as List? ?? [])),
+      description: Value(c.description),
+      createdBy: Value(c.createdBy),
+      metaUpdatedAt: Value(_parseDate(c.updatedAt)),
+      onlyAdminsCanSend: Value(c.onlyAdminsCanSend),
+      onlyAdminsCanEditInfo: Value(c.onlyAdminsCanEditInfo),
+      myRole: Value(c.myRole),
+      mutedUntil: Value(_parseDate(c.mutedUntil)),
+      muteForever: Value(c.muteForever),
+      mentionsOnly: Value(c.mentionsOnly),
+    );
+  }
+
+  /// Variante PARTIELLE, pour la trame socket `conversation:updated`.
+  ///
+  /// Cette trame ne porte que les métadonnées de groupe : elle omet
+  /// délibérément `unreadCount`, `isPinned`, `isArchived` et `lastMessage*`,
+  /// qui diffèrent d'un membre à l'autre. On écrit donc `Value.absent()` pour
+  /// eux — les recopier depuis un payload qui ne les contient pas remettrait
+  /// tout à zéro et ferait disparaître un badge légitime.
+  ///
+  /// `myRole` et l'état de sourdine sont eux aussi absents de la trame (ce sont
+  /// des champs par-utilisateur) : ils restent tels quels en local et seront
+  /// rafraîchis au prochain sync HTTP. Le rôle de CHAQUE participant, lui,
+  /// voyage bien dans `participants[]` — c'est ce qui permet à la fiche groupe
+  /// de se mettre à jour en direct après une promotion.
+  LocalConversationsCompanion _convToPartialCompanion(
+    Conversation c,
+    Map<String, dynamic> raw,
+  ) {
+    return LocalConversationsCompanion(
+      conversID: Value(c.conversID),
+      isGroup: Value(c.isGroup),
+      groupName: Value(c.groupName),
+      groupPhoto: Value(c.groupPhoto),
+      description: Value(c.description),
+      createdBy: Value(c.createdBy),
+      metaUpdatedAt: Value(_parseDate(c.updatedAt)),
+      onlyAdminsCanSend: Value(c.onlyAdminsCanSend),
+      onlyAdminsCanEditInfo: Value(c.onlyAdminsCanEditInfo),
+      participantsJson:
+          Value(encodeParticipants(raw['participants'] as List? ?? [])),
     );
   }
 
