@@ -37,6 +37,13 @@ android {
         manifestPlaceholders["talkyFlutterFcmEnabled"] = "false"
     }
 
+    testOptions {
+        // Les stubs android.jar lèvent « not mocked » : neutralisés pour les
+        // tests JVM purs (file d'actions, politique HTTP), qui n'utilisent de
+        // toute façon aucune API Android.
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -62,4 +69,9 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("androidx.core:core-ktx:1.15.0")
+    // Tests JVM purs (aucun impact APK). `org.json:json` fournit la vraie
+    // implémentation à la place des stubs android.jar, qui lèvent sinon
+    // « not mocked » sur JSONArray/JSONObject.
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
