@@ -7,8 +7,19 @@ import flutter_callkit_incoming
 // MARK: - Actions notification iOS (Phase 5.2)
 
 private enum NotificationActionHandler {
-  static let tokenKey = "notif_action_access_token"
-  static let apiBaseKey = "notif_action_api_base"
+  // `shared_preferences` préfixe TOUTES ses clés UserDefaults par `flutter.`.
+  // Les anciennes clés non préfixées n'ont jamais existé sur disque :
+  // credentials() retournait toujours nil et les actions iOS étaient mortes
+  // depuis le premier jour, boutons affichés compris.
+  //
+  // Trio partagé avec Android (CallRejectHelper & co) : réécrit par Flutter au
+  // login, au refresh ET à chaque démarrage à froid — contrairement à l'ancien
+  // miroir notif_action_*, jamais rafraîchi app fermée.
+  static let tokenKey = "flutter.call_reject_access_token"
+  static let apiBaseKey = "flutter.call_reject_api_base"
+  // Ancien miroir : lu en repli le temps d'une release.
+  static let legacyTokenKey = "flutter.notif_action_access_token"
+  static let legacyApiBaseKey = "flutter.notif_action_api_base"
   static let categoryId = "ALANYA_MESSAGE"
   static let actionReply = "REPLY"
   static let actionMarkRead = "MARK_AS_READ"
@@ -42,20 +53,33 @@ private enum NotificationActionHandler {
     return 0
   }
 
-  static func handle(response: UNNotificationResponse) -> Bool {
+  /// [completion] est le completionHandler système : il n'est appelé qu'à la
+  /// FIN du POST. L'appeler tout de suite (comme avant) autorisait iOS à
+  /// suspendre l'app avant que la requête ne parte — l'équivalent iOS du
+  /// receiver Android tué au retour de onReceive.
+  static func handle(response: UNNotificationResponse, completion: @escaping () -> Void) -> Bool {
     let convId = conversationId(from: response.notification.request.content.userInfo)
     switch response.actionIdentifier {
     case actionReply:
-      guard let textResponse = response as? UNTextInputNotificationResponse else { return true }
+      guard let textResponse = response as? UNTextInputNotificationResponse else {
+        completion()
+        return true
+      }
       let text = textResponse.userText.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !text.isEmpty, convId > 0 else { return true }
+      guard !text.isEmpty, convId > 0 else {
+        completion()
+        return true
+      }
       let clientId = "notif_ios_\(Int(Date().timeIntervalSince1970 * 1000))_\(convId)"
-      sendReply(conversationId: convId, text: text, clientId: clientId)
+      sendReply(conversationId: convId, text: text, clientId: clientId, completion: completion)
       return true
     case actionMarkRead:
-      guard convId > 0 else { return true }
-      markRead(conversationId: convId)
+      guard convId > 0 else {
+        completion()
+        return true
+      }
       removeThreadNotifications(conversationId: convId)
+      markRead(conversationId: convId, completion: completion)
       return true
     default:
       return false
@@ -64,38 +88,55 @@ private enum NotificationActionHandler {
 
   private static func credentials() -> (token: String, base: String)? {
     let defaults = UserDefaults.standard
-    guard let token = defaults.string(forKey: tokenKey), !token.isEmpty,
-          let base = defaults.string(forKey: apiBaseKey), !base.isEmpty else {
+    let token = defaults.string(forKey: tokenKey) ?? defaults.string(forKey: legacyTokenKey)
+    let base = defaults.string(forKey: apiBaseKey) ?? defaults.string(forKey: legacyApiBaseKey)
+    guard let token = token, !token.isEmpty,
+          let base = base, !base.isEmpty else {
       NSLog("[NotifAction] credentials manquantes")
       return nil
     }
     return (token, base)
   }
 
-  static func markRead(conversationId: Int) {
-    guard let creds = credentials() else { return }
+  static func markRead(conversationId: Int, completion: (() -> Void)? = nil) {
+    guard let creds = credentials() else {
+      completion?()
+      return
+    }
     let urlString = "\(creds.base.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/conversations/\(conversationId)/read"
-    guard let url = URL(string: urlString) else { return }
+    guard let url = URL(string: urlString) else {
+      completion?()
+      return
+    }
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
+    request.timeoutInterval = 8
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.setValue("Bearer \(creds.token)", forHTTPHeaderField: "Authorization")
     URLSession.shared.dataTask(with: request) { _, response, error in
       if let error = error {
         NSLog("[NotifAction] markRead error: \(error.localizedDescription)")
-        return
+      } else {
+        let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+        NSLog("[NotifAction] markRead HTTP \(code) conv=\(conversationId)")
       }
-      let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-      NSLog("[NotifAction] markRead HTTP \(code) conv=\(conversationId)")
+      completion?()
     }.resume()
   }
 
-  static func sendReply(conversationId: Int, text: String, clientId: String) {
-    guard let creds = credentials() else { return }
+  static func sendReply(conversationId: Int, text: String, clientId: String, completion: (() -> Void)? = nil) {
+    guard let creds = credentials() else {
+      completion?()
+      return
+    }
     let urlString = "\(creds.base.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/conversations/\(conversationId)/messages"
-    guard let url = URL(string: urlString) else { return }
+    guard let url = URL(string: urlString) else {
+      completion?()
+      return
+    }
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
+    request.timeoutInterval = 8
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.setValue("Bearer \(creds.token)", forHTTPHeaderField: "Authorization")
     let body: [String: Any] = ["content": text, "type": 0, "clientId": clientId]
@@ -103,10 +144,11 @@ private enum NotificationActionHandler {
     URLSession.shared.dataTask(with: request) { _, response, error in
       if let error = error {
         NSLog("[NotifAction] reply error: \(error.localizedDescription)")
-        return
+      } else {
+        let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+        NSLog("[NotifAction] reply HTTP \(code) conv=\(conversationId)")
       }
-      let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-      NSLog("[NotifAction] reply HTTP \(code) conv=\(conversationId)")
+      completion?()
     }.resume()
   }
 
@@ -220,8 +262,7 @@ private enum VoipCallHandler {
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
-    if NotificationActionHandler.handle(response: response) {
-      completionHandler()
+    if NotificationActionHandler.handle(response: response, completion: completionHandler) {
       return
     }
     super.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)
