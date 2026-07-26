@@ -72,6 +72,7 @@ import '../../core/utils/contact_payload.dart';
 import '../../core/utils/location_payload.dart';
 import '../../core/utils/group_permissions.dart';
 import '../../core/utils/mention_parser.dart';
+import '../../core/utils/avatar_utils.dart';
 import '../profile/profile_screen.dart';
 import '../../core/utils/system_event_payload.dart';
 import '../../widgets/chat/contact_message_preview.dart';
@@ -192,6 +193,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   /// Dernière mention atteinte par le bouton de saut, pour enchaîner.
   int? _lastMentionJumpMsgId;
+
+  /// Overlay de suggestions : requête en cours et candidats affichés.
+  String? _mentionQuery;
+  List<Participant> _mentionCandidates = const [];
+  bool _mentionOfferAll = false;
   StreamSubscription<LocalConversation?>? _groupWatch;
   bool _blockedByThem = false;
 
@@ -879,6 +885,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                   ],
                 ),
               ),
+              // Dans la Column existante et non un OverlayEntry : un vrai
+              // overlay se battrait avec le clavier.
+              if (!_selectionMode && !_inputBlocked) _buildMentionOverlay(),
               if (!_selectionMode && _replyTo != null) _buildReplyBanner(),
               if (!_selectionMode && _inputBlocked) _buildComposerLockBanner(),
               if (!_selectionMode && _showFormatBar && !_inputBlocked) _buildFormatBar(),

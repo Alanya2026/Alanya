@@ -3,6 +3,67 @@
 part of '../chat_detail_screen.dart';
 
 extension _ChatInput on _ChatDetailScreenState {
+  /// Liste des membres proposés pendant la frappe d'une mention.
+  Widget _buildMentionOverlay() {
+    if (_mentionQuery == null) return const SizedBox.shrink();
+    if (_mentionCandidates.isEmpty && !_mentionOfferAll) {
+      return const SizedBox.shrink();
+    }
+
+    final colors = context.colors;
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 200),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.outlineVariant)),
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        children: [
+          if (_mentionOfferAll) ...[
+            ListTile(
+              dense: true,
+              leading: CircleAvatar(
+                radius: AppSizes.avatarSm / 2,
+                backgroundColor: colors.primary,
+                child: Text('@',
+                    style: TextStyle(
+                        color: colors.onPrimary, fontWeight: FontWeight.w700)),
+              ),
+              title: Text(context.l10n.mentionAll,
+                  style: context.text.titleSmall),
+              subtitle: Text(
+                context.l10n.mentionAllSubtitle(_groupParticipants.length),
+                style: context.text.bodySmall,
+              ),
+              onTap: () => _insertMention(),
+            ),
+            if (_mentionCandidates.isNotEmpty)
+              Divider(height: 1, indent: AppSpacing.lg, color: colors.outlineVariant),
+          ],
+          ..._mentionCandidates.map((p) {
+            final nom = p.nom.isNotEmpty ? p.nom : p.user.pseudo;
+            return ListTile(
+              dense: true,
+              leading: AppAvatar(
+                imageUrl: hasValidAvatarUrl(p.user.avatarUrl)
+                    ? p.user.avatarUrl
+                    : null,
+                name: nom,
+                size: AppSizes.avatarSm,
+              ),
+              title: Text(nom, style: context.text.titleSmall),
+              subtitle: Text('@${p.user.pseudo}',
+                  style: context.text.bodySmall),
+              onTap: () => _insertMention(membre: p),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   /// Bandeau affiché à la place du composeur, selon la cause du verrou.
   Widget _buildComposerLockBanner() =>
       _composerLock == ComposerLock.adminsOnly

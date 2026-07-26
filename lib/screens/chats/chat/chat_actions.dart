@@ -1320,6 +1320,7 @@ extension _ChatActions on _ChatDetailScreenState {
   void _onTextChanged(String value) {
     final has = value.trim().isNotEmpty;
     if (has != _hasText) rebuild(() => _hasText = has);
+    _refreshMentionSuggestions(value);
     if (_convId == null) return;
     if (value.isEmpty) {
       _stopTyping();
@@ -1328,6 +1329,74 @@ extension _ChatActions on _ChatDetailScreenState {
     _apiClient.sendSocketEvent(SocketEvents.typingStart, {'conversationID': _convId});
     _typingTimer?.cancel();
     _typingTimer = Timer(const Duration(seconds: 3), _stopTyping);
+  }
+
+  /// Ouvre / met à jour / ferme l'overlay de suggestions de mention.
+  ///
+  /// La requête est relue depuis la position réelle du curseur : taper au
+  /// milieu d'un texte doit proposer les membres pour CE « @ » là, pas pour le
+  /// dernier de la ligne.
+  void _refreshMentionSuggestions(String value) {
+    if (!widget.isGroup || _groupParticipants.isEmpty) {
+      if (_mentionCandidates.isNotEmpty) {
+        rebuild(() => _mentionCandidates = const []);
+      }
+      return;
+    }
+
+    final caret = _messageController.selection.baseOffset;
+    final query = extractMentionQuery(value, caret);
+    if (query == null) {
+      if (_mentionCandidates.isNotEmpty) {
+        rebuild(() => _mentionCandidates = const []);
+      }
+      return;
+    }
+
+    final q = foldForMention(query);
+    final membres = _groupParticipants
+        .where((p) => p.alanyaID != _myId)
+        .where((p) => q.isEmpty || foldForMention(p.nom).startsWith(q))
+        .take(6)
+        .toList();
+
+    // @Tous épinglé en tête tant que la requête en est un préfixe. Ouvert à
+    // tous les membres (décision produit) : aucune règle de rôle ici.
+    final proposeTous =
+        q.isEmpty || foldForMention(context.l10n.mentionAll).contains(q);
+
+    rebuild(() {
+      _mentionQuery = query;
+      _mentionCandidates = membres;
+      _mentionOfferAll = proposeTous;
+    });
+  }
+
+  /// Remplace la plage « @requête » par le libellé choisi.
+  void _insertMention({Participant? membre}) {
+    final texte = _messageController.text;
+    final caret = _messageController.selection.baseOffset;
+    final query = _mentionQuery;
+    if (query == null || caret < 0) return;
+
+    // Début de la plage : le « @ » qui précède la requête.
+    final debut = caret - query.length - 1;
+    if (debut < 0 || debut >= texte.length || texte[debut] != '@') return;
+
+    final libelle =
+        membre != null ? '@${membre.nom}' : context.l10n.mentionAll;
+    final remplace = '${texte.substring(0, debut)}$libelle ${texte.substring(caret)}';
+    final nouveauCaret = debut + libelle.length + 1;
+
+    _messageController.value = TextEditingValue(
+      text: remplace,
+      selection: TextSelection.collapsed(offset: nouveauCaret),
+    );
+    rebuild(() {
+      _mentionCandidates = const [];
+      _mentionQuery = null;
+      _hasText = remplace.trim().isNotEmpty;
+    });
   }
 
   void _stopTyping() {
