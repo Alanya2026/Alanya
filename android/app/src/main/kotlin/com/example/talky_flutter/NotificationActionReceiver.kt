@@ -29,8 +29,17 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 if (text.isNullOrEmpty()) return
                 val clientId = "notif_${System.currentTimeMillis()}_$convId"
                 NotificationActionHelper.enqueueReply(context, convId, text, clientId)
-                // Mise à jour optimiste du fil de notification.
-                MessageNotificationHelper.appendOutgoing(context, convId, text)
+                // Mise à jour optimiste du fil de notification. Les extras posés
+                // par buildReplyAction étaient ignorés : sans eux, le titre
+                // devenait « Moi » et un groupe perdait son nom.
+                MessageNotificationHelper.appendOutgoing(
+                    context,
+                    convId,
+                    text,
+                    isGroup = intent.getBooleanExtra(MessageNotificationHelper.EXTRA_IS_GROUP, false),
+                    groupName = intent.getStringExtra(MessageNotificationHelper.EXTRA_GROUP_NAME) ?: "",
+                    senderName = intent.getStringExtra(MessageNotificationHelper.EXTRA_SENDER_NAME) ?: "",
+                )
             }
         }
     }

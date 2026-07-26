@@ -24,6 +24,7 @@ object MessageNotificationHelper {
     private const val TAG = "TalkyNativeNotif"
     private const val PREFS = "talky_native_notif"
     private const val KEY_BUFFER_PREFIX = "buf_"
+    private const val KEY_OPEN_PREFIX = "open_"
     private const val MAX_BUFFER = 7
     private const val LOCAL_USER_NAME = "Moi"
 
@@ -80,6 +81,9 @@ object MessageNotificationHelper {
             "msgID" to (data["msgID"] ?: ""),
             "senderId" to (data["senderId"] ?: ""),
         )
+        // Conservés pour qu'une réécriture après réponse rapide n'appauvrisse pas
+        // les extras du PendingIntent de contenu.
+        persistOpenExtras(context, convId, openExtras)
         postNotification(
             context,
             convId,
@@ -93,20 +97,34 @@ object MessageNotificationHelper {
         NotificationDedupHelper.markShown(context, msgID, eventId)
     }
 
-    fun appendOutgoing(context: Context, convId: Int, text: String) {
-        val buffer = appendBuffer(context, convId, LOCAL_USER_NAME, text)
+    /**
+     * Réécrit la notification après MA réponse rapide.
+     *
+     * [isGroup], [groupName] et [senderName] viennent des extras du PendingIntent
+     * de l'action : sans eux, le titre devenait « Moi » et un groupe perdait son
+     * nom. Les extras d'ouverture sont relus depuis le disque pour que le tap
+     * navigue toujours correctement — le PendingIntent est en FLAG_UPDATE_CURRENT,
+     * donc des extras appauvris écraseraient les bons.
+     */
+    fun appendOutgoing(
+        context: Context,
+        convId: Int,
+        text: String,
+        isGroup: Boolean,
+        groupName: String,
+        senderName: String,
+    ) {
+        val buffer = appendBuffer(context, convId, LOCAL_USER_NAME, text, isOutgoing = true)
         postNotification(
             context,
             convId,
-            false,
-            "",
-            LOCAL_USER_NAME,
+            isGroup,
+            groupName,
+            senderName,
             text,
             buffer,
-            mapOf(
-                "type" to "message",
-                EXTRA_CONVERSATION_ID to convId.toString(),
-            ),
+            readOpenExtras(context, convId, isGroup, groupName, senderName),
+            alertOnce = true,
         )
     }
 
@@ -118,6 +136,7 @@ object MessageNotificationHelper {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .remove(KEY_BUFFER_PREFIX + conversationId)
+                .remove(KEY_OPEN_PREFIX + conversationId)
                 .commit()
         }
     }
@@ -131,6 +150,7 @@ object MessageNotificationHelper {
         latestLine: String,
         buffer: List<BufferEntry>,
         openExtras: Map<String, String> = emptyMap(),
+        alertOnce: Boolean = false,
     ) {
         ensureChannel(context)
         val notifId = notificationIdForConversation(convId)
@@ -142,7 +162,15 @@ object MessageNotificationHelper {
             .setConversationTitle(if (isGroup && groupName.isNotEmpty()) groupName else null)
 
         for (entry in buffer) {
-            val person = Person.Builder().setName(entry.sender).build()
+            // Person null = « c'est moi » pour MessagingStyle. Un Person portant
+            // le nom « Moi » n'est pas reconnu comme le selfPerson (il faudrait
+            // une clé stable), et ma réponse rapide s'affichait donc comme un
+            // message reçu.
+            val person = if (entry.isOutgoing) {
+                null
+            } else {
+                Person.Builder().setName(entry.sender).build()
+            }
             style.addMessage(entry.body, entry.timestamp, person)
         }
 
@@ -181,13 +209,20 @@ object MessageNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(contentPending)
+            // Réécriture après MA réponse rapide : ne pas re-sonner ni relever un
+            // heads-up pour mon propre message. Reste à false pour un message
+            // entrant, qui doit alerter.
+            .setOnlyAlertOnce(alertOnce)
             // Pas de setGroup : évite le bundle Android qui n'affiche que le dernier message.
             .addAction(buildReplyAction(context, convId, isGroup, groupName, senderName))
             .addAction(buildMarkReadAction(context, convId))
 
-        cancelNotificationsWithTag(context, tag)
+        // exceptId : sans lui, on annulait la notification qu'on s'apprête à
+        // réécrire, et un cancel suivi d'un notify est un NOUVEAU post pour le
+        // système — donc une ré-alerte, même avec setOnlyAlertOnce.
+        cancelNotificationsWithTag(context, tag, exceptId = notifId)
         NotificationManagerCompat.from(context).notify(tag, notifId, builder.build())
-        Log.d(TAG, "posted conv=$convId messages=${buffer.size} tag=$tag id=$notifId")
+        Log.d(TAG, "posted conv=$convId messages=${buffer.size} tag=$tag id=$notifId alertOnce=$alertOnce")
     }
 
     private fun buildReplyAction(
@@ -274,6 +309,8 @@ object MessageNotificationHelper {
         val body: String,
         val timestamp: Long,
         val msgID: Int = 0,
+        /** Ma propre réponse rapide : rendue sans Person, donc alignée à droite. */
+        val isOutgoing: Boolean = false,
     )
 
     private fun appendBuffer(
@@ -282,6 +319,7 @@ object MessageNotificationHelper {
         sender: String,
         body: String,
         msgID: Int = 0,
+        isOutgoing: Boolean = false,
     ): List<BufferEntry> {
         synchronized(bufferLock) {
             val list = readBufferUnlocked(context, convId).toMutableList()
@@ -289,7 +327,7 @@ object MessageNotificationHelper {
                 Log.d(TAG, "buffer skip duplicate msgID=$msgID conv=$convId")
                 return list
             }
-            list.add(BufferEntry(sender, body, System.currentTimeMillis(), msgID))
+            list.add(BufferEntry(sender, body, System.currentTimeMillis(), msgID, isOutgoing))
             val deduped = dedupeBufferEntries(list)
             val trimmed = if (deduped.size > MAX_BUFFER) deduped.takeLast(MAX_BUFFER) else deduped
             persistBufferUnlocked(context, convId, trimmed)
@@ -314,13 +352,62 @@ object MessageNotificationHelper {
         return result
     }
 
-    private fun cancelNotificationsWithTag(context: Context, tag: String) {
+    /**
+     * Purge les notifications du même tag restées sur un ancien id (le hash a pu
+     * changer). [exceptId] préserve celle qu'on est en train de réécrire.
+     */
+    private fun cancelNotificationsWithTag(context: Context, tag: String, exceptId: Int = 0) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         for (sbn in nm.activeNotifications) {
-            if (sbn.tag == tag) {
+            if (sbn.tag == tag && sbn.id != exceptId) {
                 NotificationManagerCompat.from(context).cancel(sbn.tag, sbn.id)
             }
+        }
+    }
+
+    private fun persistOpenExtras(context: Context, convId: Int, extras: Map<String, String>) {
+        try {
+            val o = JSONObject()
+            for ((k, v) in extras) o.put(k, v)
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_OPEN_PREFIX + convId, o.toString())
+                .apply()
+        } catch (e: Exception) {
+            Log.w(TAG, "persistOpenExtras failed conv=$convId", e)
+        }
+    }
+
+    /**
+     * Extras d'ouverture mémorisés au dernier message reçu. Repli sur le strict
+     * nécessaire si rien n'a été mémorisé (buffer purgé, ancienne version).
+     */
+    private fun readOpenExtras(
+        context: Context,
+        convId: Int,
+        isGroup: Boolean,
+        groupName: String,
+        senderName: String,
+    ): Map<String, String> {
+        val fallback = mapOf(
+            "type" to "message",
+            EXTRA_CONVERSATION_ID to convId.toString(),
+            "title" to (if (isGroup && groupName.isNotEmpty()) groupName else senderName),
+            EXTRA_SENDER_NAME to senderName,
+            EXTRA_IS_GROUP to if (isGroup) "1" else "0",
+            EXTRA_GROUP_NAME to groupName,
+        )
+        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_OPEN_PREFIX + convId, null) ?: return fallback
+        return try {
+            val o = JSONObject(raw)
+            buildMap {
+                for (key in o.keys()) put(key, o.optString(key, ""))
+                if (isEmpty()) putAll(fallback)
+            }
+        } catch (_: Exception) {
+            fallback
         }
     }
 
@@ -336,6 +423,7 @@ object MessageNotificationHelper {
             o.put("body", e.body)
             o.put("ts", e.timestamp)
             if (e.msgID > 0) o.put("msgID", e.msgID)
+            if (e.isOutgoing) o.put("out", true)
             arr.put(o)
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -358,6 +446,7 @@ object MessageNotificationHelper {
                             body = o.optString("body", ""),
                             timestamp = o.optLong("ts", System.currentTimeMillis()),
                             msgID = o.optInt("msgID", 0),
+                            isOutgoing = o.optBoolean("out", false),
                         ),
                     )
                 }
