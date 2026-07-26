@@ -5533,6 +5533,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aller à la mention suivante'**
   String get jumpToMention;
+
+  /// No description provided for @unreadMessagesSeparator.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages non lus'**
+  String get unreadMessagesSeparator;
 }
 
 class _AppLocalizationsDelegate

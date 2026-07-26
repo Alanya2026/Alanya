@@ -1194,5 +1194,6 @@
     }
   },
   "mentionYou": "You",
-  "jumpToMention": "Go to next mention"
+  "jumpToMention": "Go to next mention",
+  "unreadMessagesSeparator": "Unread messages"
 }

@@ -1531,7 +1531,16 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
-  Future<void> _scrollToReply(int replyToID) async {
+  /// [silent] : aucune SnackBar d'échec. Un positionnement automatique — à
+  /// l'ouverture sur le premier non-lu — ne doit pas reprocher à l'utilisateur
+  /// un message qu'il n'a pas demandé.
+  /// [highlight] : le cadre temporaire, superflu quand la position elle-même
+  /// et le séparateur suffisent à situer le lecteur.
+  Future<void> _scrollToReply(
+    int replyToID, {
+    bool silent = false,
+    bool highlight = true,
+  }) async {
     final convId = _convId;
     if (convId == null || replyToID <= 0) return;
 
@@ -1542,9 +1551,11 @@ extension _ChatActions on _ChatDetailScreenState {
       final found = await _ensureMessageLoaded(convId, replyToID);
       if (!mounted) return;
       if (!found) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.messageNotFoundInThisConversation)),
-        );
+        if (!silent) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.messageNotFoundInThisConversation)),
+          );
+        }
         return;
       }
 
@@ -1555,7 +1566,7 @@ extension _ChatActions on _ChatDetailScreenState {
       rebuild(() => _pendingScrollMsgId = replyToID);
       await WidgetsBinding.instance.endOfFrame;
 
-      if (await _tryRevealMessage(replyToID)) return;
+      if (await _tryRevealMessage(replyToID, highlight: highlight)) return;
 
       final estimated = _estimateScrollOffset(index, messages);
       if (_scrollController.hasClients) {
@@ -1569,7 +1580,7 @@ extension _ChatActions on _ChatDetailScreenState {
 
       for (var i = 0; i < 12; i++) {
         await WidgetsBinding.instance.endOfFrame;
-        if (await _tryRevealMessage(replyToID)) return;
+        if (await _tryRevealMessage(replyToID, highlight: highlight)) return;
 
         if (!_scrollController.hasClients) break;
         final max = _scrollController.position.maxScrollExtent;
@@ -1584,7 +1595,7 @@ extension _ChatActions on _ChatDetailScreenState {
         );
       }
 
-      if (mounted) {
+      if (mounted && !silent) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.unableToDisplayTheMessage)),
         );
@@ -1597,7 +1608,7 @@ extension _ChatActions on _ChatDetailScreenState {
     }
   }
 
-  Future<bool> _tryRevealMessage(int msgID) async {
+  Future<bool> _tryRevealMessage(int msgID, {bool highlight = true}) async {
     if (!mounted) return false;
     final ctx = _messageKeys[msgID]?.currentContext;
     if (ctx == null) return false;
@@ -1607,7 +1618,7 @@ extension _ChatActions on _ChatDetailScreenState {
       curve: Curves.easeInOut,
       alignment: 0.35,
     );
-    _highlightMessage(msgID);
+    if (highlight) _highlightMessage(msgID);
     if (mounted) rebuild(() => _pendingScrollMsgId = null);
     return true;
   }

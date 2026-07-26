@@ -115,6 +115,35 @@ class ChatDao {
     return ids;
   }
 
+  /// Le plus ancien message non lu — celui où la conversation doit s'ouvrir.
+  ///
+  /// Même définition du « non lu » que [countUnread], pour que le séparateur
+  /// et le badge ne puissent pas se contredire.
+  ///
+  /// À appeler AVANT `markConversationRead` : ce dernier passe tout en
+  /// `status = 3` et l'information disparaît. C'est pour ça que l'écran en
+  /// prend un instantané figé à l'ouverture.
+  ///
+  /// `msgID` départage deux `sendAt` identiques — une rafale de messages peut
+  /// partager la milliseconde, et `watchMessages` n'ordonne que par `sendAt`.
+  Future<LocalMessage?> firstUnreadMessage(int conversationID, int myId) {
+    if (myId == 0) return Future.value(null);
+    return (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversationID) &
+              m.senderID.equals(myId).not() &
+              m.status.isSmallerThanValue(3) &
+              m.isDeleted.equals(false) &
+              m.type.equals(kSystemMessageType).not() &
+              (m.deletedForID.isNull() | m.deletedForID.equals(myId).not()))
+          ..orderBy([
+            (m) => OrderingTerm.asc(m.sendAt),
+            (m) => OrderingTerm.asc(m.msgID),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
   /// Total non lus toutes conversations (badge launcher).
   Future<int> countTotalUnread() async {
     final rows = await db.select(db.localConversations).get();

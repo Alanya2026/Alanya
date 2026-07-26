@@ -456,6 +456,35 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
+  /// Frontière « Messages non lus », posée au premier message non lu de
+  /// l'ouverture.
+  ///
+  /// Calqué sur [_buildDateSeparator] pour rester dans le vocabulaire visuel
+  /// du fil, mais teinté : c'est un repère de lecture, pas une date.
+  ///
+  /// Il ne dépend PAS du statut des messages — il est ancré sur l'instantané
+  /// figé à l'ouverture. Sinon il disparaîtrait aussitôt, `markAsRead`
+  /// s'exécutant avant le premier rendu.
+  Widget _buildUnreadSeparator() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: context.colors.primaryContainer,
+        borderRadius: AppRadius.brSm,
+      ),
+      child: Text(
+        context.l10n.unreadMessagesSeparator,
+        textAlign: TextAlign.center,
+        style: context.text.labelSmall?.copyWith(
+          color: context.colors.onPrimaryContainer,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   /// Événement de groupe rendu au centre du fil, sans bulle ni expéditeur.
   ///
   /// Calqué sur [_buildDateSeparator] : même surface atténuée, même typo. Le

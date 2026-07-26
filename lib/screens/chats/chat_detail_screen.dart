@@ -99,6 +99,14 @@ const int _maxSelectionCount = 50;
 /// direct par un administrateur. Elles n'affichent pas le même bandeau.
 enum ComposerLock { none, blocked, adminsOnly }
 
+/// Plafond au-delà duquel on renonce à sauter au premier non-lu.
+///
+/// `_ensureMessageLoaded` rapatrie l'historique par pages de 30 : sur des
+/// centaines de non-lus, atteindre le plus ancien coûterait des dizaines de
+/// requêtes et une longue attente devant un écran vide. Ouvrir en bas est
+/// alors le moindre mal.
+const int kMaxUnreadToJump = 200;
+
 class ChatDetailScreen extends StatefulWidget {
   final String userName;
   final int? conversationId;
@@ -188,8 +196,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// défile en fuit un par reconstruction de bulle.
   final List<GestureRecognizer> _mentionRecognizers = [];
 
-  /// Mentions non lues me ciblant, recalculées à chaque changement du fil.
+  /// ── Instantané d'ouverture ──────────────────────────────────────────
+  ///
+  /// `markAsRead` s'exécute AVANT le premier build (`didPush()` est appelé
+  /// synchroniquement par `RouteObserver.subscribe`), et efface tous les
+  /// `status < 3`. Sans un instantané pris auparavant, il n'y a plus rien à
+  /// afficher : ni premier non-lu, ni compteur de mentions.
+  ///
+  /// Ces champs sont FIGÉS pour toute la vie de l'écran — c'est ce qui rend le
+  /// séparateur stable quand les messages passent en lu, et le bouton « @ »
+  /// visible au lieu de disparaître à la première frame.
+  int? _openFirstUnreadMsgId;
+  int _openUnreadCount = 0;
   int _unreadMentionCount = 0;
+
+  /// Vrai une fois l'instantané pris, pour ne pas le refaire au retour d'un
+  /// sous-écran (`didPopNext`) ni à la reprise de l'app.
+  bool _openSnapshotTaken = false;
+
+  /// Vrai le temps du positionnement initial, pour ne pas le rejouer.
+  bool _initialScrollDone = false;
 
   /// Dernière mention atteinte par le bouton de saut, pour enchaîner.
   int? _lastMentionJumpMsgId;
@@ -407,7 +433,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       });
     }
 
-    // 2) Badge à 0 immédiat (await = local seulement ; HTTP/socket en fond).
+    // 2) Instantané AVANT markAsRead : celui-ci passe tout en status=3 et
+    //    l'information « non lu » disparaît définitivement. Il n'existe aucun
+    //    marqueur persistant de dernière lecture, ni client ni serveur.
+    await _takeOpeningSnapshot(convId);
+
+    // 3) Badge à 0 immédiat (await = local seulement ; HTTP/socket en fond).
     await _chat.repository.markAsRead(convId);
 
     // 3) Room temps réel : messages poussés pendant l'écran = actifs / lus.
@@ -634,31 +665,57 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   GlobalKey _keyForMessage(int msgID) =>
       _messageKeys.putIfAbsent(msgID, GlobalKey.new);
 
-  /// Recompte les mentions non lues me ciblant.
+  /// Fige l'état « non lu » de la conversation AVANT que `markAsRead` ne
+  /// l'efface.
   ///
-  /// Dérivé de la liste déjà en mémoire plutôt que par une requête : le stream
-  /// vient de la livrer, et un aller-retour DAO à chaque frame serait du
-  /// gaspillage. Le `setState` n'est déclenché que si le nombre CHANGE, sans
-  /// quoi on relancerait un build à chaque émission du stream.
-  void _recomputeMentionCount(List<LocalMessage> messages) {
-    if (!widget.isGroup) return;
+  /// Une seule prise par écran : ni `didPopNext` (retour d'une visionneuse), ni
+  /// la reprise de l'app ne doivent la refaire, sinon le séparateur migrerait
+  /// vers le bas au fil de la lecture.
+  Future<void> _takeOpeningSnapshot(int convId) async {
+    if (_openSnapshotTaken) return;
+    _openSnapshotTaken = true;
+
     final me = _myId;
     if (me == null || me == 0) return;
 
-    var n = 0;
-    for (final m in messages) {
-      if (m.senderID == me) continue;
-      if (m.status >= 3) continue;
-      if (m.isDeleted) continue;
-      if (m.type == kSystemMessageType) continue;
-      if (m.deletedForID == me) continue;
-      if (mentionsUser(m.mentionsJson, me)) n++;
-    }
-    if (n == _unreadMentionCount) return;
-    // Hors du build en cours : ce recompte est appelé DEPUIS un builder.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _unreadMentionCount = n);
+    final dao = _chat.repository.dao;
+    final premier = await dao.firstUnreadMessage(convId, me);
+    final total = await dao.countUnread(convId, me);
+    final mentions = widget.isGroup
+        ? (await dao.unreadMentionMsgIds(convId, me)).length
+        : 0;
+
+    if (!mounted || _convId != convId) return;
+    setState(() {
+      // msgID == 0 : message pas encore confirmé par le serveur, on ne peut
+      // pas y sauter ni l'ancrer.
+      _openFirstUnreadMsgId =
+          (premier != null && premier.msgID > 0) ? premier.msgID : null;
+      _openUnreadCount = total;
+      _unreadMentionCount = mentions;
     });
+  }
+
+  /// Ouvre la conversation sur le premier message non lu.
+  ///
+  /// Toutes les discussions, 1-1 comprises. Silencieux : un positionnement
+  /// automatique ne doit pas afficher « message introuvable ».
+  Future<void> _scrollToFirstUnread() async {
+    if (_initialScrollDone) return;
+    final cible = _openFirstUnreadMsgId;
+    if (cible == null) return;
+
+    // Le message ciblé explicitement (mini-lecteur vocal) est prioritaire : les
+    // deux chemins partagent `_pendingScrollMsgId` et se marcheraient dessus.
+    final focus = widget.focusMessageId;
+    if (focus != null && focus > 0) return;
+
+    // Au-delà, rapatrier l'historique coûterait des dizaines de requêtes pour
+    // un gain douteux : mieux vaut ouvrir en bas que faire attendre.
+    if (_openUnreadCount > kMaxUnreadToJump) return;
+
+    _initialScrollDone = true;
+    await _scrollToReply(cible, silent: true, highlight: false);
   }
 
   /// Suit le mode annonce et mon rôle. Sans ça, le verrou ne serait évalué
@@ -756,7 +813,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                               builder: (context, snapshot) {
                                 final messages = snapshot.data ?? const [];
                                 _currentMessages = messages;
-                                _recomputeMentionCount(messages);
+                                // Une seule fois, dès que le fil a du contenu :
+                                // l'instantané est déjà pris à ce stade.
+                                if (!_initialScrollDone && messages.isNotEmpty) {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    if (mounted) unawaited(_scrollToFirstUnread());
+                                  });
+                                }
                                 if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
                                   return const LoadingState();
                                 }
@@ -840,10 +904,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                               _tryRevealMessage(msg.msgID);
                                             });
                                           }
+                                          // Le séparateur s'ancre sur le PREMIER
+                                          // message du groupe d'album, pas sur
+                                          // `msg` (= le dernier) : sinon il
+                                          // apparaîtrait après les médias non lus.
+                                          final premierDuBloc = switch (chatItem) {
+                                            ChatListSingle(:final message) => message,
+                                            ChatListAlbum(:final messages) => messages.first,
+                                          };
                                           return Column(
                                             key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
                                             children: [
                                               if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                              // Après la date, comme WhatsApp.
+                                              // Il reste affiché quand les
+                                              // messages passent en lu : il est
+                                              // ancré sur l'instantané figé à
+                                              // l'ouverture, pas sur le statut.
+                                              if (_openFirstUnreadMsgId != null &&
+                                                  premierDuBloc.msgID == _openFirstUnreadMsgId)
+                                                _buildUnreadSeparator(),
                                               switch (chatItem) {
                                                 ChatListSingle(:final message) =>
                                                   _buildMessageBubble(

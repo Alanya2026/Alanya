@@ -3157,4 +3157,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get jumpToMention => 'Aller à la mention suivante';
+
+  @override
+  String get unreadMessagesSeparator => 'Messages non lus';
 }

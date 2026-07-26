@@ -2076,5 +2076,6 @@
     }
   },
   "mentionYou": "Vous",
-  "jumpToMention": "Aller à la mention suivante"
+  "jumpToMention": "Aller à la mention suivante",
+  "unreadMessagesSeparator": "Messages non lus"
 }
