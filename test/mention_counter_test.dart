@@ -155,6 +155,95 @@ void main() {
     expect(await h.dao.unreadMentionMsgIds(ChatTestHarness.convId, 0), isEmpty);
   });
 
+  // LE bug rapporté : le bouton « @ » n'apparaissait jamais parce que les
+  // messages venant du SERVEUR n'écrivaient jamais mentionsJson. Ces tests
+  // passent par le vrai chemin d'ingestion, pas par un insert direct.
+  group('ingestion serveur', () {
+    Map<String, dynamic> msgServeur({
+      required int msgID,
+      Object? mentions,
+      int senderID = ChatTestHarness.otherId,
+    }) =>
+        {
+          'msgID': msgID,
+          'clientId': 'srv$msgID',
+          'conversationID': ChatTestHarness.convId,
+          'senderID': senderID,
+          'content': 'coucou',
+          'type': 0,
+          'status': 1,
+          'sendAt': DateTime.utc(2026, 7, 26, 12, msgID).toIso8601String(),
+          if (mentions != null) 'mentions': mentions,
+        };
+
+    test('message reçu avec mentions → compté (c\'était le bug)', () async {
+      h.api.emit('message:received',
+          msgServeur(msgID: 1, mentions: [ChatTestHarness.myId]));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(await compteur(), [1],
+          reason: 'mentionsJson non hydraté depuis le payload serveur');
+    });
+
+    test('liste déjà parsée par le pilote MySQL → prise en charge', () async {
+      // mysql2 rend une colonne JSON déjà décodée : c'est une List, pas une
+      // chaîne JSON.
+      h.api.emit('message:received',
+          msgServeur(msgID: 2, mentions: <dynamic>[ChatTestHarness.myId, 99]));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(await compteur(), [2]);
+    });
+
+    test('mentions transmises en chaîne JSON → prises en charge', () async {
+      h.api.emit('message:received',
+          msgServeur(msgID: 3, mentions: '[${ChatTestHarness.myId}]'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(await compteur(), [3]);
+    });
+
+    test('message reçu sans mention → non compté', () async {
+      h.api.emit('message:received', msgServeur(msgID: 4));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(await compteur(), isEmpty);
+    });
+
+    test('marqueur « all » d\'un grand groupe → me concerne', () async {
+      h.api.emit('message:received', msgServeur(msgID: 5, mentions: '"all"'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(await compteur(), [5],
+          reason: 'un @Tous non déplié doit rester visible');
+    });
+  });
+
+  group('mentionsUser', () {
+    test('liste contenant mon id → vrai', () {
+      expect(mentionsUser('[45,7]', 7), isTrue);
+      expect(mentionsUser('[45,46]', 7), isFalse);
+    });
+
+    // decodeMentions renvoie [] sur le marqueur : un test par `contains`
+    // manquerait entièrement le @Tous des grands groupes.
+    test('marqueur « all » → vrai pour tout le monde', () {
+      expect(mentionsUser('"all"', 7), isTrue);
+      expect(mentionsUser('"all"', 99), isTrue);
+    });
+
+    test('null, vide ou illisible → faux, sans lever', () {
+      expect(mentionsUser(null, 7), isFalse);
+      expect(mentionsUser('', 7), isFalse);
+      expect(mentionsUser('{{', 7), isFalse);
+      expect(mentionsUser('{"a":1}', 7), isFalse);
+    });
+
+    test('myId inconnu → faux même sur un marqueur all', () {
+      expect(mentionsUser('"all"', 0), isFalse);
+    });
+  });
+
   group('encodeMentions / decodeMentions', () {
     // On n'écrit pas `[]` : la requête du compteur filtre sur IS NOT NULL.
     test('liste vide ou nulle → null en base', () {

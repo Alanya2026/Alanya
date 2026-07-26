@@ -108,7 +108,7 @@ class ChatDao {
 
     final ids = <int>[];
     for (final m in rows) {
-      if (decodeMentions(m.mentionsJson).contains(myId) && m.msgID > 0) {
+      if (m.msgID > 0 && mentionsUser(m.mentionsJson, myId)) {
         ids.add(m.msgID);
       }
     }
@@ -957,6 +957,10 @@ List<Map<String, dynamic>> decodeParticipants(String json) {
 String? encodeMentions(List<int>? ids) =>
     (ids == null || ids.isEmpty) ? null : jsonEncode(ids);
 
+/// Marqueur d'un `@Tous` que le serveur n'a pas déplié (groupe > 256 membres),
+/// pour ne pas alourdir chaque message de centaines d'ids.
+const String kMentionAllMarker = 'all';
+
 List<int> decodeMentions(String? json) {
   if (json == null || json.isEmpty) return const [];
   try {
@@ -968,5 +972,25 @@ List<int> decodeMentions(String? json) {
         .toList(growable: false);
   } catch (_) {
     return const [];
+  }
+}
+
+/// Ce message me mentionne-t-il ?
+///
+/// À préférer à `decodeMentions(...).contains(myId)` : le marqueur « all »
+/// n'est pas une liste, et un test par `contains` le manquerait entièrement —
+/// un @Tous de grand groupe resterait invisible.
+bool mentionsUser(String? json, int myId) {
+  if (json == null || json.isEmpty || myId == 0) return false;
+  try {
+    final decoded = jsonDecode(json);
+    if (decoded == kMentionAllMarker) return true;
+    if (decoded is! List) return false;
+    return decoded.any((e) {
+      final id = (e is num) ? e.toInt() : int.tryParse('$e');
+      return id == myId;
+    });
+  } catch (_) {
+    return false;
   }
 }

@@ -16,7 +16,7 @@ import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/db/app_database.dart';
 import '../../core/call_limits.dart';
-import '../../core/db/chat_dao.dart' show decodeParticipants, decodeMentions;
+import '../../core/db/chat_dao.dart' show decodeParticipants, mentionsUser;
 import '../../core/navigation/app_navigator.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/music_metadata_service.dart';
@@ -652,7 +652,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       if (m.isDeleted) continue;
       if (m.type == kSystemMessageType) continue;
       if (m.deletedForID == me) continue;
-      if (decodeMentions(m.mentionsJson).contains(me)) n++;
+      if (mentionsUser(m.mentionsJson, me)) n++;
     }
     if (n == _unreadMentionCount) return;
     // Hors du build en cours : ce recompte est appelé DEPUIS un builder.

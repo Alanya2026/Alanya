@@ -1434,12 +1434,14 @@ class ChatRepository {
       String? carriedMediaThumb;
       int? carriedMediaSize;
       int? carriedMediaPageCount;
+      String? carriedMentions;
       for (final m in candidates) {
         carriedLocalPath ??= m.localMediaPath;
         carriedClickSentAt ??= m.clickSentAt;
         carriedMediaThumb ??= m.mediaThumb;
         carriedMediaSize ??= m.mediaSize;
         carriedMediaPageCount ??= m.mediaPageCount;
+        carriedMentions ??= m.mentionsJson;
         await (_db.delete(_db.localMessages)
               ..where((x) => x.clientId.equals(m.clientId)))
             .go();
@@ -1463,6 +1465,12 @@ class ChatRepository {
       }
       if (carriedMediaPageCount != null && !companion.mediaPageCount.present) {
         companion = companion.copyWith(mediaPageCount: Value(carriedMediaPageCount));
+      }
+      // Filet pour un serveur qui n'aurait pas encore la colonne : sans lui, les
+      // mentions écrites à l'envoi étaient perdues dès l'ack, la ligne
+      // optimiste étant supprimée puis réinsérée depuis le seul JSON serveur.
+      if (carriedMentions != null && companion.mentionsJson.value == null) {
+        companion = companion.copyWith(mentionsJson: Value(carriedMentions));
       }
 
       debugPrint(
@@ -1749,6 +1757,31 @@ class ChatRepository {
     );
   }
 
+  /// Normalise le champ `mentions` du serveur vers la colonne locale.
+  ///
+  /// Trois formes possibles à l'arrivée : une `List` d'ids (cas courant), la
+  /// chaîne `"all"` (marqueur @Tous d'un grand groupe), ou une chaîne JSON si
+  /// un intermédiaire a sérialisé la colonne.
+  static String? _mentionsFromJson(Object? raw) {
+    if (raw == null) return null;
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return null;
+      // Déjà du JSON (`"all"`, `[45,46]`) : on le garde tel quel, decodeMentions
+      // sait le relire.
+      return trimmed;
+    }
+    if (raw is List) {
+      return encodeMentions(
+        raw
+            .map((e) => (e is num) ? e.toInt() : int.tryParse('$e'))
+            .whereType<int>()
+            .toList(),
+      );
+    }
+    return null;
+  }
+
   LocalMessagesCompanion _msgJsonToCompanion(Map<String, dynamic> j) {
     final rawClient = _clientIdFromJson(j);
     final clientId = (rawClient != null && rawClient.isNotEmpty)
@@ -1811,6 +1844,17 @@ class ChatRepository {
       viewedAt: (j['isViewOnce'] == 1 || j['isViewOnce'] == true) && _toInt(j['viewedByMe']) > 0
           ? Value(DateTime.now())
           : const Value.absent(),
+      // Le serveur renvoie la colonne `mentions` (MSG_SELECT fait SELECT m.*).
+      // Sans ce mapping, elle était écrite NULL à CHAQUE ingestion serveur —
+      // socket, getMessages et /messages/sync passant tous par ici — donc le
+      // compteur du bouton « @ », le saut, la bulle teintée et le surlignage
+      // étaient morts.
+      //
+      // Une colonne JSON MySQL arrive DÉJÀ PARSÉE côté Dart (List, ou la
+      // chaîne « all » du marqueur @Tous), pas comme une chaîne JSON : on
+      // repasse par l'encodage local, qui normalise aussi null et [] en null
+      // pour préserver le filtre `IS NOT NULL` du DAO.
+      mentionsJson: Value(_mentionsFromJson(j['mentions'])),
       senderNom: Value(j['sender_nom']?.toString()),
       senderPseudo: Value(j['sender_pseudo']?.toString()),
       senderAvatar: Value(normalizeBackendUrl(j['sender_avatar']?.toString())),

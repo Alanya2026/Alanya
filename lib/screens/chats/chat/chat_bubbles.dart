@@ -367,7 +367,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
   bool _mentionsMe(LocalMessage msg) {
     final me = _myId;
     if (me == null || me == 0) return false;
-    return decodeMentions(msg.mentionsJson).contains(me);
+    return mentionsUser(msg.mentionsJson, me);
   }
 
   /// Surlignage et tap des mentions dans une bulle.
