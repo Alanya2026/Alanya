@@ -208,7 +208,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// visible au lieu de disparaître à la première frame.
   int? _openFirstUnreadMsgId;
   int _openUnreadCount = 0;
-  int _unreadMentionCount = 0;
+
+  /// Mentions non lues à l'ouverture, du plus ancien au plus récent, FIGÉES.
+  ///
+  /// Interroger l'état vivant ne marche pas : `markAsRead` a déjà tout passé en
+  /// `status = 3` avant le premier rendu, donc la requête reviendrait toujours
+  /// vide et le bouton serait un no-op — c'est ce qui se produisait.
+  List<int> _openMentionMsgIds = const [];
+
+  /// Position dans [_openMentionMsgIds] : combien de mentions déjà visitées.
+  int _mentionJumpIndex = 0;
+
+  /// Ce qu'affiche la pastille : ce qu'il RESTE à voir.
+  int get _unreadMentionCount =>
+      (_openMentionMsgIds.length - _mentionJumpIndex).clamp(0, 9999);
 
   /// Vrai une fois l'instantané pris, pour ne pas le refaire au retour d'un
   /// sous-écran (`didPopNext`) ni à la reprise de l'app.
@@ -217,8 +230,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// Vrai le temps du positionnement initial, pour ne pas le rejouer.
   bool _initialScrollDone = false;
 
-  /// Dernière mention atteinte par le bouton de saut, pour enchaîner.
-  int? _lastMentionJumpMsgId;
 
   /// Overlay de suggestions : requête en cours et candidats affichés.
   String? _mentionQuery;
@@ -348,7 +359,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     if (convId == null) return;
     if (visible) {
       _chat.repository.setActiveConversation(convId);
-      unawaited(_chat.repository.markAsRead(convId));
+      // L'instantané DOIT précéder markAsRead, qui passe tout en status=3 et
+      // efface définitivement l'information « non lu ».
+      //
+      // Ce chemin-ci est atteint AVANT _attachToConversation dès que _init
+      // suspend sur un await — ce qui est le cas de toute conversation 1-1
+      // (chargement du statut de blocage). didChangeDependencies rend alors la
+      // main à RouteObserver.subscribe, qui appelle didPush() de façon
+      // synchrone. Les groupes n'échappaient au problème que par accident,
+      // _attachToConversation y posant _chatVisible avant de suspendre.
+      unawaited(() async {
+        await _takeOpeningSnapshot(convId);
+        await _chat.repository.markAsRead(convId);
+      }());
     } else {
       _chat.repository.clearActiveConversation(convId);
     }
@@ -433,9 +456,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       });
     }
 
-    // 2) Instantané AVANT markAsRead : celui-ci passe tout en status=3 et
-    //    l'information « non lu » disparaît définitivement. Il n'existe aucun
-    //    marqueur persistant de dernière lecture, ni client ni serveur.
+    // 2) Filet : _setChatVisible a normalement déjà pris l'instantané, mais pas
+    //    quand _convId est résolu tardivement (ouverture par userId seul, ou
+    //    création à la volée) — didPush() était alors sorti sur `convId == null`.
+    //    `_openSnapshotTaken` rend le second appel inoffensif.
     await _takeOpeningSnapshot(convId);
 
     // 3) Badge à 0 immédiat (await = local seulement ; HTTP/socket en fond).
@@ -682,8 +706,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     final premier = await dao.firstUnreadMessage(convId, me);
     final total = await dao.countUnread(convId, me);
     final mentions = widget.isGroup
-        ? (await dao.unreadMentionMsgIds(convId, me)).length
-        : 0;
+        ? await dao.unreadMentionMsgIds(convId, me)
+        : const <int>[];
 
     if (!mounted || _convId != convId) return;
     setState(() {
@@ -692,7 +716,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       _openFirstUnreadMsgId =
           (premier != null && premier.msgID > 0) ? premier.msgID : null;
       _openUnreadCount = total;
-      _unreadMentionCount = mentions;
+      _openMentionMsgIds = mentions;
+      _mentionJumpIndex = 0;
     });
   }
 

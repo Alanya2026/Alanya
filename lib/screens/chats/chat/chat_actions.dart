@@ -1421,29 +1421,24 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
-  /// Saute à la mention non lue la plus ANCIENNE, puis à la suivante.
+  /// Saute à la mention suivante et décrémente la pastille.
   ///
-  /// Sens de lecture : on remonte le fil comme on le lirait, du plus ancien
-  /// vers le plus récent. Le compteur, lui, n'est pas décrémenté ici — il est
-  /// dérivé de `countUnread` et tombe quand les messages passent en lu, ce qui
-  /// le rend incapable de devenir négatif ou de désynchroniser.
+  /// Parcourt la liste FIGÉE à l'ouverture, pas l'état vivant : `markAsRead`
+  /// a déjà tout passé en lu avant le premier rendu, donc une requête sur
+  /// `status < 3` reviendrait vide et le bouton ne ferait rien.
+  ///
+  /// Le curseur n'avance que si le saut a réussi — sinon un message
+  /// introuvable consommerait une mention sans que l'utilisateur ait rien vu.
   Future<void> _jumpToNextMention() async {
-    final convId = _convId;
-    final me = _myId;
-    if (convId == null || me == null) return;
+    if (_mentionJumpIndex >= _openMentionMsgIds.length) return;
+    final cible = _openMentionMsgIds[_mentionJumpIndex];
 
-    final ids = await _chat.repository.unreadMentionMsgIds(convId, me);
-    if (ids.isEmpty || !mounted) return;
+    await _scrollToReply(cible, silent: true);
+    if (!mounted) return;
 
-    // La plus ancienne encore au-dessus de celle où l'on vient d'atterrir,
-    // sinon on reboucle sur la première : un second appui ne doit pas rester
-    // bloqué sur le même message.
-    final courant = _lastMentionJumpMsgId;
-    final cible = ids.firstWhere((id) => courant == null || id > courant,
-        orElse: () => ids.first);
-    _lastMentionJumpMsgId = cible;
-
-    await _scrollToReply(cible);
+    // Décrémente : la pastille montre ce qu'il RESTE à voir, et le bouton
+    // disparaît de lui-même une fois la dernière mention atteinte.
+    rebuild(() => _mentionJumpIndex++);
   }
 
   /// Bouton « @ » avec le nombre de mentions non lues, posé AU-DESSUS du
