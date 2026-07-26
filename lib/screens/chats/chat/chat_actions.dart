@@ -218,6 +218,31 @@ extension _ChatActions on _ChatDetailScreenState {
     if (ok == true && mounted) _exitSelectionMode();
   }
 
+  /// Mentions réellement présentes dans le texte au moment de l'envoi.
+  ///
+  /// Rien en 1-1 : `@Tous` y serait absurde et un homonyme ne doit pas
+  /// déclencher de ciblage.
+  ({List<int> ids, bool all}) _resolveMentionsForSend(String text) {
+    if (!widget.isGroup) return (ids: const <int>[], all: false);
+    final membres = _groupParticipants;
+    if (membres.isEmpty) return (ids: const <int>[], all: false);
+
+    final trouvees = resolveMentions(
+      text,
+      membres,
+      allLabelFr: '@Tous',
+      allLabelEn: '@All',
+    );
+    return (
+      ids: trouvees
+          .where((m) => m.userId != null)
+          .map((m) => m.userId!)
+          .toSet()
+          .toList(),
+      all: trouvees.any((m) => m.isAll),
+    );
+  }
+
   Future<void> _sendMessage() async {
     if (_inputBlocked) return;
     final text = _messageController.text.trim();
@@ -244,11 +269,18 @@ extension _ChatActions on _ChatDetailScreenState {
       }
     }
 
+    // Résolu sur le TEXTE FINAL, pas sur ce qui a été choisi dans l'overlay :
+    // l'utilisateur a pu effacer un « @Marc » après l'avoir inséré, et une
+    // notification partirait alors sans trace visible dans le message.
+    final mentions = _resolveMentionsForSend(text);
+
     _chat.repository.sendText(
       conversationID: convId,
       content: text,
       replyToID: replyId,
       replyToContent: replyContent,
+      mentions: mentions.ids,
+      mentionsAll: mentions.all,
     );
 
     _messageController.clear();

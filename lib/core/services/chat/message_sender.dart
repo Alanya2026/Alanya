@@ -64,6 +64,8 @@ class MessageSender {
     String? replyToContent,
     int isStatusReply = 0,
     bool isForwarded = false,
+    List<int>? mentions,
+    bool mentionsAll = false,
   }) async {
     if (_myId() == 0) {
       debugPrint('[MessageSender] sendText ignoré : utilisateur non lié (myId=0)');
@@ -88,6 +90,10 @@ class MessageSender {
       isStatusReply: Value(isStatusReply),
       isForwarded: Value(isForwarded),
       syncPending: const Value(true),
+      // Persistées dès l'insertion locale : `flushOutbox` reconstruit l'emit
+      // depuis cette ligne, et une mention envoyée hors ligne perdrait sinon
+      // sa notification au rejeu.
+      mentionsJson: Value(encodeMentions(mentions)),
     ));
     MessagePathTracer.mark(clientId, 'local_insert');
 
@@ -101,6 +107,8 @@ class MessageSender {
       isStatusReply: isStatusReply,
       isForwarded: isForwarded,
       clickSentAt: now,
+      mentions: mentions,
+      mentionsAll: mentionsAll,
     );
     unawaited(_recompute(conversationID));
   }
@@ -727,6 +735,10 @@ class MessageSender {
       isForwarded: m.isForwarded,
       isViewOnce: m.isViewOnce,
       clickSentAt: m.clickSentAt,
+      // Relues depuis la ligne : c'est ICI qu'une mention envoyée hors ligne
+      // se perdrait si elle n'était que dérivée du texte au moment de la
+      // frappe.
+      mentions: decodeMentions(m.mentionsJson),
     );
   }
 
@@ -802,6 +814,8 @@ class MessageSender {
     bool isForwarded = false,
     bool isViewOnce = false,
     DateTime? clickSentAt,
+    List<int>? mentions,
+    bool mentionsAll = false,
   }) {
     // Garde stricte : tant que le socket n'est pas authentifié, le serveur
     // ignore l'emit silencieusement. On laisse la ligne `syncPending=true` ;
@@ -829,6 +843,10 @@ class MessageSender {
       if (isForwarded) 'isForwarded': 1,
       if (isViewOnce) 'isViewOnce': 1,
       if (clickSentAt != null) 'clickSentAt': clickSentAt.toIso8601String(),
+      // Le serveur ré-intersecte avec les participants : ces ids sont une
+      // intention, pas une autorisation.
+      if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+      if (mentionsAll) 'mentionsAll': true,
     });
     // Marque la ligne comme « tout juste émise » → backoff outbox.
     _dao.touchEmitted(clientId);

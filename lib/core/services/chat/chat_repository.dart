@@ -503,6 +503,8 @@ class ChatRepository {
     String? replyToContent,
     int isStatusReply = 0,
     bool isForwarded = false,
+    List<int>? mentions,
+    bool mentionsAll = false,
   }) =>
       _sender.sendText(
         conversationID: conversationID,
@@ -511,6 +513,8 @@ class ChatRepository {
         replyToContent: replyToContent,
         isStatusReply: isStatusReply,
         isForwarded: isForwarded,
+        mentions: mentions,
+        mentionsAll: mentionsAll,
       );
 
   Future<void> sendLocation({

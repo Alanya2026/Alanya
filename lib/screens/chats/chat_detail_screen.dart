@@ -70,6 +70,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/utils/contact_payload.dart';
 import '../../core/utils/location_payload.dart';
 import '../../core/utils/group_permissions.dart';
+import '../../core/utils/mention_parser.dart';
 import '../../core/utils/system_event_payload.dart';
 import '../../widgets/chat/contact_message_preview.dart';
 import '../../widgets/chat/location_message_preview.dart';
@@ -175,6 +176,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// ou lever le verrou pendant que cet écran est ouvert.
   bool _groupOnlyAdminsCanSend = false;
   int _myGroupRole = GroupRole.member;
+
+  /// Membres du groupe, pour résoudre les mentions à l'envoi et les surligner.
+  /// Alimenté par le même stream que le verrou du composeur.
+  List<Participant> _groupParticipants = const [];
   StreamSubscription<LocalConversation?>? _groupWatch;
   bool _blockedByThem = false;
 
@@ -615,12 +620,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _groupWatch?.cancel();
     _groupWatch = _chat.repository.watchConversation(convId).listen((conv) {
       if (!mounted || conv == null) return;
+      final membres = decodeParticipants(conv.participantsJson)
+          .map(Participant.fromJson)
+          .toList();
       if (conv.onlyAdminsCanSend != _groupOnlyAdminsCanSend ||
-          conv.myRole != _myGroupRole) {
+          conv.myRole != _myGroupRole ||
+          membres.length != _groupParticipants.length) {
         setState(() {
           _groupOnlyAdminsCanSend = conv.onlyAdminsCanSend;
           _myGroupRole = conv.myRole;
+          _groupParticipants = membres;
         });
+      } else {
+        // Les noms ou les rôles ont pu changer sans que le nombre bouge :
+        // on met à jour sans reconstruire l'arbre.
+        _groupParticipants = membres;
       }
     });
   }
