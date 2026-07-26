@@ -351,7 +351,7 @@ extension _ChatActions on _ChatDetailScreenState {
                 },
               ),
             // Si le message est en échec d'envoi, on propose en priorité le retry.
-            if (isMe && msg.status == 4)
+            if (isMe && msg.status == 4 && msg.failureCode == null)
               ListTile(
                 leading: Icon(Icons.refresh, color: primary),
                 title: Text(context.l10n.retrySending),

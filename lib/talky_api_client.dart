@@ -69,6 +69,10 @@ class TalkyApiClient {
   Timer? _healthCheckTimer;
   Future<bool> Function()? _pendingMessagesCallback;
 
+  /// Présence à déclarer au serveur juste après `auth:verified`.
+  /// Renseigné par [PresenceService] ; null ⇒ on suppose « en ligne ».
+  bool Function()? _presenceOnlineCallback;
+
   /// Enveloppes pour [onSocketEvent] afin de [removeSocketListener] avec la bonne ref.
   final Map<void Function(dynamic), void Function(dynamic)> _socketCallbackWrappers = {};
 

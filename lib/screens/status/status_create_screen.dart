@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/services/video_thumbnail_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
@@ -19,6 +20,21 @@ import '../../talky_api_client.dart';
 import '../../widgets/common/common.dart';
 
 enum _StatusType { text, photo, video, audio }
+
+/// Un média sélectionné en attente de publication.
+///
+/// Chaque brouillon devient un statut à part entière : le serveur ne stocke
+/// qu'un média par statut, la publication multiple boucle donc sur la liste.
+class _StatusMediaDraft {
+  _StatusMediaDraft({required this.file, this.name, this.durationMs});
+
+  final File file;
+  final String? name;
+  final int? durationMs;
+  final TextEditingController captionCtrl = TextEditingController();
+
+  void dispose() => captionCtrl.dispose();
+}
 
 class StatusCreateScreen extends StatefulWidget {
   const StatusCreateScreen({super.key});
@@ -42,27 +58,34 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     Color(0xFF6D4C41),
   ];
 
+  /// Plafond par publication — au-delà, l'enchaînement des uploads devient
+  /// interminable et la story illisible.
+  static const int _maxMedias = 30;
+
   _StatusType _type = _StatusType.text;
   final _textCtrl = TextEditingController();
-  final _captionCtrl = TextEditingController();
-  File? _mediaFile;
+  final List<_StatusMediaDraft> _drafts = [];
+  int _index = 0;
   Color _bgColor = const Color(0xFFE53935);
   bool _publishing = false;
+
+  /// Nombre de brouillons déjà publiés dans la passe en cours.
+  int _published = 0;
 
   final AudioRecorder _recorder = AudioRecorder();
   bool _isRecording = false;
   int _recordSeconds = 0;
   Timer? _recordTimer;
-  int? _audioDurationMs;
-  String? _audioName;
 
   late final TabController _tabController;
+  late final PageController _pageCtrl;
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseScale;
 
   @override
   void initState() {
     super.initState();
+    _pageCtrl = PageController();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_onTabChanged);
     _pulseCtrl = AnimationController(
@@ -77,9 +100,12 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _pageCtrl.dispose();
     _pulseCtrl.dispose();
     _textCtrl.dispose();
-    _captionCtrl.dispose();
+    for (final draft in _drafts) {
+      draft.dispose();
+    }
     _recordTimer?.cancel();
     _recorder.dispose();
     super.dispose();
@@ -93,7 +119,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
       case _StatusType.photo:
       case _StatusType.video:
       case _StatusType.audio:
-        return _mediaFile != null;
+        return _drafts.isNotEmpty;
     }
   }
 
@@ -117,27 +143,104 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     }
     setState(() {
       _type = next;
-      _mediaFile = null;
-      _captionCtrl.clear();
+      _clearDrafts();
       _isRecording = false;
       _recordSeconds = 0;
-      _audioDurationMs = null;
-      _audioName = null;
     });
   }
 
   // ── Actions médias ───────────────────────────────────────────────
 
+  /// Libère un brouillon retiré **après** le frame : son `TextField` est encore
+  /// monté au moment du retrait, et disposer son contrôleur trop tôt le casse.
+  void _disposeDraftLater(_StatusMediaDraft draft) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => draft.dispose());
+  }
+
+  /// À appeler dans un `setState` : vide la sélection et libère les contrôleurs.
+  void _clearDrafts() {
+    for (final draft in _drafts) {
+      _disposeDraftLater(draft);
+    }
+    _drafts.clear();
+    _index = 0;
+  }
+
+  void _warnMaxReached() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.maxMedias(_maxMedias))),
+    );
+  }
+
+  /// Ajoute les médias sélectionnés et cadre sur le premier d'entre eux.
+  ///
+  /// Matérialisé d'emblée : une `Iterable` paresseuse construirait deux fois
+  /// les brouillons — donc deux `TextEditingController` dont un jamais libéré.
+  void _addDrafts(Iterable<_StatusMediaDraft> added) {
+    final list = added.toList();
+    if (list.isEmpty) return;
+    setState(() {
+      _index = _drafts.length;
+      _drafts.addAll(list);
+    });
+    _jumpTo(_index);
+  }
+
+  /// Recadre la PageView après le rebuild — `itemCount` n'a pas encore changé
+  /// au moment où la sélection est modifiée.
+  void _jumpTo(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageCtrl.hasClients) return;
+      if (index < 0 || index >= _drafts.length) return;
+      _pageCtrl.jumpToPage(index);
+    });
+  }
+
+  void _removeDraftAt(int index) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _disposeDraftLater(_drafts.removeAt(index));
+      if (_index >= _drafts.length) _index = _drafts.length - 1;
+      if (_index < 0) _index = 0;
+    });
+    if (_drafts.isNotEmpty) _jumpTo(_index);
+  }
+
   Future<void> _pickMedia(ImageSource source, {bool video = false}) async {
+    final remaining = _maxMedias - _drafts.length;
+    if (remaining <= 0) {
+      _warnMaxReached();
+      return;
+    }
+
     final picker = ImagePicker();
-    final file = video
-        ? await picker.pickVideo(source: source)
-        : await picker.pickImage(
-            source: source,
-            imageQuality: 80,
-            maxWidth: 1920,
-          );
-    if (file != null) setState(() => _mediaFile = File(file.path));
+    final List<XFile> files;
+    // La caméra ne produit qu'un média ; `pickMulti*` exige une limite ≥ 2.
+    if (source == ImageSource.camera || remaining == 1) {
+      final one = video
+          ? await picker.pickVideo(source: source)
+          : await picker.pickImage(
+              source: source,
+              imageQuality: 80,
+              maxWidth: 1920,
+            );
+      files = one == null ? const [] : [one];
+    } else {
+      files = video
+          ? await picker.pickMultiVideo(limit: remaining)
+          : await picker.pickMultiImage(
+              imageQuality: 80,
+              maxWidth: 1920,
+              limit: remaining,
+            );
+    }
+    if (files.isEmpty || !mounted) return;
+
+    if (files.length > remaining) _warnMaxReached();
+    _addDrafts(
+      files.take(remaining).map((f) => _StatusMediaDraft(file: File(f.path))),
+    );
   }
 
   // ── Audio ────────────────────────────────────────────────────────
@@ -164,9 +267,6 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     setState(() {
       _isRecording = true;
       _recordSeconds = 0;
-      _mediaFile = null;
-      _audioDurationMs = null;
-      _audioName = null;
     });
     _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _recordSeconds++);
@@ -182,20 +282,21 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     if (!mounted) return;
     HapticFeedback.lightImpact();
     if (keep && path != null && seconds >= 1) {
-      setState(() {
-        _isRecording = false;
-        _mediaFile = File(path);
-        _audioDurationMs = seconds * 1000;
-        _audioName = context.l10n.voiceMessage;
-      });
-    } else {
-      if (path != null) {
-        try {
-          File(path).deleteSync();
-        } catch (_) {
-          /* fichier temporaire déjà absent — ignoré */
-        }
+      setState(() => _isRecording = false);
+      if (_drafts.length >= _maxMedias) {
+        _warnMaxReached();
+        _deleteTempFile(path);
+        return;
       }
+      _addDrafts([
+        _StatusMediaDraft(
+          file: File(path),
+          durationMs: seconds * 1000,
+          name: context.l10n.voiceMessage,
+        ),
+      ]);
+    } else {
+      _deleteTempFile(path);
       setState(() {
         _isRecording = false;
         _recordSeconds = 0;
@@ -203,16 +304,36 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     }
   }
 
-  Future<void> _pickAudioFile() async {
-    final res = await FilePicker.platform.pickFiles(type: FileType.audio);
-    final path = res?.files.single.path;
-    if (path != null && mounted) {
-      setState(() {
-        _mediaFile = File(path);
-        _audioDurationMs = null;
-        _audioName = res!.files.single.name;
-      });
+  void _deleteTempFile(String? path) {
+    if (path == null) return;
+    try {
+      File(path).deleteSync();
+    } catch (_) {
+      /* fichier temporaire déjà absent — ignoré */
     }
+  }
+
+  Future<void> _pickAudioFile() async {
+    final remaining = _maxMedias - _drafts.length;
+    if (remaining <= 0) {
+      _warnMaxReached();
+      return;
+    }
+
+    final res = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      allowMultiple: true,
+    );
+    final picked = res?.files ?? const <PlatformFile>[];
+    if (picked.isEmpty || !mounted) return;
+
+    if (picked.length > remaining) _warnMaxReached();
+    _addDrafts(
+      picked
+          .take(remaining)
+          .where((f) => f.path != null)
+          .map((f) => _StatusMediaDraft(file: File(f.path!), name: f.name)),
+    );
   }
 
   String _formatDuration(int seconds) {
@@ -280,43 +401,58 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 
   // ── Publication ──────────────────────────────────────────────────
 
+  /// Type serveur du média courant (1 = image, 2 = vidéo, 3 = audio).
+  int get _mediaType => switch (_type) {
+        _StatusType.video => 2,
+        _StatusType.audio => 3,
+        _ => 1,
+      };
+
   Future<void> _publish() async {
     if (!_canPublish) return;
     HapticFeedback.lightImpact();
-    setState(() => _publishing = true);
+    setState(() {
+      _publishing = true;
+      _published = 0;
+    });
     final provider = context.read<StatusProvider>();
     try {
-      switch (_type) {
-        case _StatusType.text:
-          await provider.createText(
-            text: _textCtrl.text.trim(),
-            backgroundColor:
-                _bgColor.toARGB32().toRadixString(16).padLeft(8, '0'),
-          );
-        case _StatusType.photo:
+      if (_type == _StatusType.text) {
+        await provider.createText(
+          text: _textCtrl.text.trim(),
+          backgroundColor:
+              _bgColor.toARGB32().toRadixString(16).padLeft(8, '0'),
+        );
+      } else {
+        final type = _mediaType;
+        // Un statut par média : le serveur n'en accepte qu'un par publication.
+        for (final draft in List<_StatusMediaDraft>.of(_drafts)) {
+          final caption = draft.captionCtrl.text.trim();
           await provider.createMedia(
-            file: _mediaFile!,
-            type: 1,
-            caption: _captionCtrl.text.trim(),
+            file: draft.file,
+            type: type,
+            caption: type == 3 ? null : caption,
+            mediaDurationMs: draft.durationMs,
           );
-        case _StatusType.video:
-          await provider.createMedia(
-            file: _mediaFile!,
-            type: 2,
-            caption: _captionCtrl.text.trim(),
-          );
-        case _StatusType.audio:
-          await provider.createMedia(
-            file: _mediaFile!,
-            type: 3,
-            mediaDurationMs: _audioDurationMs,
-          );
+          if (!mounted) return;
+          setState(() => _published++);
+        }
       }
       if (mounted) Navigator.pop(context);
     } catch (e, st) {
       AppLog.e('StatusCreate', 'Publication du statut échouée', e, st);
       if (mounted) {
-        setState(() => _publishing = false);
+        setState(() {
+          // Les médias déjà publiés sortent de la liste : le bouton ne
+          // republiera que ceux qui restent.
+          for (var i = 0; i < _published && _drafts.isNotEmpty; i++) {
+            _disposeDraftLater(_drafts.removeAt(0));
+          }
+          _index = 0;
+          _published = 0;
+          _publishing = false;
+        });
+        if (_drafts.isNotEmpty) _jumpTo(0);
         final detail = e is TalkyException ? e.message : e.toString();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -348,15 +484,17 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
               tooltip: context.l10n.backgroundColor,
               onPressed: _openColorPicker,
             ),
-          if (_mediaFile != null &&
+          if (_drafts.isNotEmpty &&
               (_type == _StatusType.photo || _type == _StatusType.video))
             IconButton(
-              icon: const Icon(Icons.swap_horiz_rounded),
-              tooltip: context.l10n.changeMedia,
-              onPressed: () => _pickMedia(
-                ImageSource.gallery,
-                video: _type == _StatusType.video,
-              ),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              tooltip: context.l10n.addMore,
+              onPressed: _publishing
+                  ? null
+                  : () => _pickMedia(
+                        ImageSource.gallery,
+                        video: _type == _StatusType.video,
+                      ),
             ),
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.md),
@@ -367,13 +505,25 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               ),
               child: _publishing
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: context.colors.primary,
-                      ),
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: context.colors.primary,
+                          ),
+                        ),
+                        if (_drafts.length > 1) ...[
+                          AppSpacing.hGapSm,
+                          Text(
+                            '${(_published + 1).clamp(1, _drafts.length)}'
+                            '/${_drafts.length}',
+                          ),
+                        ],
+                      ],
                     )
                   : Text(context.l10n.publishAction),
             ),
@@ -464,92 +614,31 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   Widget _buildMediaCanvas({required bool isVideo}) {
     final bottom = MediaQuery.paddingOf(context).bottom;
 
-    if (_mediaFile != null) {
+    if (_drafts.isNotEmpty) {
+      final multi = _drafts.length > 1;
       return ColoredBox(
         color: context.semantic.surfaceMuted,
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg + bottom,
-            ),
-            child: AspectRatio(
-              aspectRatio: 9 / 16,
-              child: ClipRRect(
-                borderRadius: AppRadius.brMd,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (isVideo)
-                      _LocalVideoPreview(
-                        key: ValueKey(_mediaFile!.path),
-                        file: _mediaFile!,
-                      )
-                    else
-                      Image.file(_mediaFile!, fit: BoxFit.cover),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.55),
-                            ],
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.md,
-                            AppSpacing.xxl,
-                            AppSpacing.md,
-                            AppSpacing.md,
-                          ),
-                          child: TextField(
-                            controller: _captionCtrl,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                            ),
-                            cursorColor: Colors.white,
-                            minLines: 1,
-                            maxLines: 3,
-                            textCapitalization: TextCapitalization.sentences,
-                            decoration: InputDecoration(
-                              filled: false,
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              hintText: context.l10n.addADescription,
-                              hintStyle: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (isVideo)
-                      Positioned(
-                        top: AppSpacing.md,
-                        right: AppSpacing.md,
-                        child: StatusChip(
-                          label: context.l10n.video2,
-                          tone: StatusChipTone.brand,
-                          icon: Icons.movie_outlined,
-                        ),
-                      ),
-                  ],
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _pageCtrl,
+                itemCount: _drafts.length,
+                onPageChanged: (i) => setState(() => _index = i),
+                itemBuilder: (_, i) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.lg,
+                  ),
+                  child: Center(
+                    child: _buildDraftPreview(i, isVideo: isVideo),
+                  ),
                 ),
               ),
             ),
-          ),
+            if (multi) _buildFilmstrip(isVideo: isVideo),
+            SizedBox(height: bottom + (multi ? AppSpacing.md : AppSpacing.lg)),
+          ],
         ),
       );
     }
@@ -587,107 +676,328 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     );
   }
 
+  /// Aperçu plein cadre d'un brouillon, avec sa légende et son bouton retirer.
+  Widget _buildDraftPreview(int index, {required bool isVideo}) {
+    final draft = _drafts[index];
+    return AspectRatio(
+      aspectRatio: 9 / 16,
+      child: ClipRRect(
+        borderRadius: AppRadius.brMd,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (isVideo)
+              _LocalVideoPreview(
+                key: ValueKey(draft.file.path),
+                file: draft.file,
+              )
+            else
+              Image.file(draft.file, fit: BoxFit.cover),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.55),
+                    ],
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.xxl,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                  ),
+                  child: TextField(
+                    controller: draft.captionCtrl,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                    ),
+                    cursorColor: Colors.white,
+                    minLines: 1,
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      hintText: context.l10n.addADescription,
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: AppSpacing.md,
+              left: AppSpacing.md,
+              child: _OverlayIconButton(
+                icon: Icons.close_rounded,
+                tooltip: context.l10n.removeMedia,
+                onPressed: _publishing ? null : () => _removeDraftAt(index),
+              ),
+            ),
+            Positioned(
+              top: AppSpacing.md,
+              right: AppSpacing.md,
+              child: Row(
+                children: [
+                  if (_drafts.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.sm),
+                      child: StatusChip(
+                        label: '${index + 1}/${_drafts.length}',
+                        tone: StatusChipTone.neutral,
+                      ),
+                    ),
+                  if (isVideo)
+                    StatusChip(
+                      label: context.l10n.video2,
+                      tone: StatusChipTone.brand,
+                      icon: Icons.movie_outlined,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Pellicule des médias sélectionnés — navigation rapide entre les brouillons.
+  Widget _buildFilmstrip({required bool isVideo}) {
+    return SizedBox(
+      height: 68,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        itemCount: _drafts.length,
+        separatorBuilder: (_, __) => AppSpacing.hGapSm,
+        itemBuilder: (_, i) {
+          final selected = i == _index;
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() => _index = i);
+              _jumpTo(i);
+            },
+            child: Container(
+              width: 56,
+              decoration: BoxDecoration(
+                borderRadius: AppRadius.brSm,
+                border: Border.all(
+                  color: selected
+                      ? context.colors.primary
+                      : context.colors.outlineVariant,
+                  width: selected ? 2 : 1,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: AppRadius.brSm,
+                child: isVideo
+                    ? _VideoThumb(file: _drafts[i].file)
+                    : Image.file(_drafts[i].file, fit: BoxFit.cover),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildAudioCanvas() {
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final hasFile = _mediaFile != null;
+    final hasFiles = _drafts.isNotEmpty;
     final colors = context.colors;
     final sem = context.semantic;
 
     final Color circleColor = _isRecording
         ? colors.error
-        : (hasFile ? colors.primary : sem.brandContainer);
-    final Color iconColor = (_isRecording || hasFile)
+        : (hasFiles ? colors.primary : sem.brandContainer);
+    final Color iconColor = (_isRecording || hasFiles)
         ? colors.onPrimary
         : sem.onBrandContainer;
     final IconData circleIcon = _isRecording
         ? Icons.graphic_eq_rounded
-        : (hasFile ? Icons.audiotrack_rounded : Icons.mic_rounded);
+        : (hasFiles ? Icons.audiotrack_rounded : Icons.mic_rounded);
 
     return ColoredBox(
       color: context.semantic.surfaceMuted,
-      child: Padding(
-        padding: EdgeInsets.only(bottom: bottom),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-              ScaleTransition(
-                scale: _isRecording ? _pulseScale : const AlwaysStoppedAnimation(1),
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: circleColor,
-                    shape: BoxShape.circle,
-                    boxShadow: _isRecording ? AppShadows.medium : null,
-                  ),
-                  child: Icon(circleIcon, size: 44, color: iconColor),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xxl,
+          AppSpacing.xl,
+          AppSpacing.xxl,
+          AppSpacing.xl + bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ScaleTransition(
+              scale: _isRecording ? _pulseScale : const AlwaysStoppedAnimation(1),
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: circleColor,
+                  shape: BoxShape.circle,
+                  boxShadow: _isRecording ? AppShadows.medium : null,
                 ),
+                child: Icon(circleIcon, size: 44, color: iconColor),
               ),
-              AppSpacing.vGapXl,
-              Text(
-                _isRecording
-                    ? '${context.l10n.recordingEllipsis} ${_formatDuration(_recordSeconds)}'
-                    : hasFile
-                        ? (_audioName ?? context.l10n.voiceMessage)
-                        : context.l10n.recordOrImportAudio,
-                style: context.text.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              if (hasFile && !_isRecording && _audioDurationMs != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Text(
-                    _formatDuration((_audioDurationMs! / 1000).round()),
-                    style: context.text.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              AppSpacing.vGapXl,
-              if (_isRecording)
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _stopRecording(keep: false),
-                      icon: const Icon(Icons.delete_outline, size: AppIconSize.sm),
-                      label: Text(context.l10n.commonCancel),
-                    ),
-                    FilledButton.icon(
-                      onPressed: () => _stopRecording(keep: true),
-                      icon: const Icon(Icons.check_rounded, size: AppIconSize.sm),
-                      label: Text(context.l10n.finishAction),
-                    ),
-                  ],
-                )
-              else
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: _startRecording,
-                      icon: const Icon(Icons.mic_rounded, size: AppIconSize.sm),
-                      label: Text(hasFile ? context.l10n.reRecord : context.l10n.recordAction),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _pickAudioFile,
-                      icon: const Icon(Icons.upload_file_rounded, size: AppIconSize.sm),
-                      label: Text(context.l10n.importAction),
-                    ),
-                  ],
-                ),
-              ],
             ),
-          ),
+            AppSpacing.vGapXl,
+            Text(
+              _isRecording
+                  ? '${context.l10n.recordingEllipsis} ${_formatDuration(_recordSeconds)}'
+                  : context.l10n.recordOrImportAudio,
+              style: context.text.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            AppSpacing.vGapXl,
+            if (_isRecording)
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _stopRecording(keep: false),
+                    icon: const Icon(Icons.delete_outline, size: AppIconSize.sm),
+                    label: Text(context.l10n.commonCancel),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () => _stopRecording(keep: true),
+                    icon: const Icon(Icons.check_rounded, size: AppIconSize.sm),
+                    label: Text(context.l10n.finishAction),
+                  ),
+                ],
+              )
+            else
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _publishing ? null : _startRecording,
+                    icon: const Icon(Icons.mic_rounded, size: AppIconSize.sm),
+                    label: Text(context.l10n.recordAction),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _publishing ? null : _pickAudioFile,
+                    icon: const Icon(Icons.upload_file_rounded, size: AppIconSize.sm),
+                    label: Text(context.l10n.importAction),
+                  ),
+                ],
+              ),
+            if (hasFiles && !_isRecording) ...[
+              AppSpacing.vGapXl,
+              for (var i = 0; i < _drafts.length; i++)
+                _buildAudioDraftTile(i),
+            ],
+          ],
         ),
       ),
+    );
+  }
+
+  /// Ligne d'un audio sélectionné : nom, durée si connue, retrait.
+  Widget _buildAudioDraftTile(int index) {
+    final draft = _drafts[index];
+    final duration = draft.durationMs;
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: context.semantic.brandContainer,
+          child: Icon(
+            Icons.audiotrack_rounded,
+            color: context.semantic.onBrandContainer,
+          ),
+        ),
+        title: Text(
+          draft.name ?? context.l10n.voiceMessage,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: duration == null
+            ? null
+            : Text(_formatDuration((duration / 1000).round())),
+        trailing: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          tooltip: context.l10n.removeMedia,
+          onPressed: _publishing ? null : () => _removeDraftAt(index),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouton rond translucide posé sur un média (retirer, etc.).
+class _OverlayIconButton extends StatelessWidget {
+  const _OverlayIconButton({
+    required this.icon,
+    required this.tooltip,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.45),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white, size: 20),
+        tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+/// Vignette d'une vidéo locale pour la pellicule de sélection.
+class _VideoThumb extends StatelessWidget {
+  const _VideoThumb({required this.file});
+
+  final File file;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List?>(
+      future: VideoThumbnailService.forFile(file.path),
+      builder: (context, snap) {
+        final bytes = snap.data;
+        if (bytes == null) {
+          return ColoredBox(
+            color: context.semantic.surfaceMuted,
+            child: Icon(
+              Icons.movie_outlined,
+              size: AppIconSize.sm,
+              color: context.colors.onSurfaceVariant,
+            ),
+          );
+        }
+        return Image.memory(bytes, fit: BoxFit.cover);
+      },
     );
   }
 }

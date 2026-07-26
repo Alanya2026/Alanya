@@ -1734,6 +1734,17 @@ class $LocalMessagesTable extends LocalMessages
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _failureCodeMeta = const VerificationMeta(
+    'failureCode',
+  );
+  @override
+  late final GeneratedColumn<String> failureCode = GeneratedColumn<String>(
+    'failure_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _mentionsJsonMeta = const VerificationMeta(
     'mentionsJson',
   );
@@ -1785,6 +1796,7 @@ class $LocalMessagesTable extends LocalMessages
     syncPending,
     lastEmittedAt,
     retryCount,
+    failureCode,
     mentionsJson,
   ];
   @override
@@ -2086,6 +2098,15 @@ class $LocalMessagesTable extends LocalMessages
         retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
       );
     }
+    if (data.containsKey('failure_code')) {
+      context.handle(
+        _failureCodeMeta,
+        failureCode.isAcceptableOrUnknown(
+          data['failure_code']!,
+          _failureCodeMeta,
+        ),
+      );
+    }
     if (data.containsKey('mentions_json')) {
       context.handle(
         _mentionsJsonMeta,
@@ -2256,6 +2277,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.int,
         data['${effectivePrefix}retry_count'],
       )!,
+      failureCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}failure_code'],
+      ),
       mentionsJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}mentions_json'],
@@ -2357,6 +2382,14 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   /// Nombre de tentatives de retry pour ce message (failed -> retry).
   final int retryCount;
 
+  /// Code d'échec serveur quand l'envoi a été REFUSÉ définitivement
+  /// (`GROUP_ADMINS_ONLY`, `NOT_A_MEMBER`, `BLOCKED_BY_SENDER`).
+  ///
+  /// Distingue « le réseau a lâché » — où réessayer a du sens — de « le
+  /// serveur a dit non » — où le bouton « réessayer » échouerait
+  /// indéfiniment et ferait tourner l'utilisateur en rond.
+  final String? failureCode;
+
   /// Ids mentionnés, sérialisés (`[45,46]`), miroir de `message.mentions`.
   ///
   /// Persisté et pas seulement dérivé du texte : `flushOutbox` reconstruit
@@ -2402,6 +2435,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     required this.syncPending,
     this.lastEmittedAt,
     required this.retryCount,
+    this.failureCode,
     this.mentionsJson,
   });
   @override
@@ -2491,6 +2525,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       map['last_emitted_at'] = Variable<DateTime>(lastEmittedAt);
     }
     map['retry_count'] = Variable<int>(retryCount);
+    if (!nullToAbsent || failureCode != null) {
+      map['failure_code'] = Variable<String>(failureCode);
+    }
     if (!nullToAbsent || mentionsJson != null) {
       map['mentions_json'] = Variable<String>(mentionsJson);
     }
@@ -2583,6 +2620,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ? const Value.absent()
           : Value(lastEmittedAt),
       retryCount: Value(retryCount),
+      failureCode: failureCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failureCode),
       mentionsJson: mentionsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(mentionsJson),
@@ -2635,6 +2675,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       syncPending: serializer.fromJson<bool>(json['syncPending']),
       lastEmittedAt: serializer.fromJson<DateTime?>(json['lastEmittedAt']),
       retryCount: serializer.fromJson<int>(json['retryCount']),
+      failureCode: serializer.fromJson<String?>(json['failureCode']),
       mentionsJson: serializer.fromJson<String?>(json['mentionsJson']),
     );
   }
@@ -2680,6 +2721,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'syncPending': serializer.toJson<bool>(syncPending),
       'lastEmittedAt': serializer.toJson<DateTime?>(lastEmittedAt),
       'retryCount': serializer.toJson<int>(retryCount),
+      'failureCode': serializer.toJson<String?>(failureCode),
       'mentionsJson': serializer.toJson<String?>(mentionsJson),
     };
   }
@@ -2723,6 +2765,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     bool? syncPending,
     Value<DateTime?> lastEmittedAt = const Value.absent(),
     int? retryCount,
+    Value<String?> failureCode = const Value.absent(),
     Value<String?> mentionsJson = const Value.absent(),
   }) => LocalMessage(
     clientId: clientId ?? this.clientId,
@@ -2777,6 +2820,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
         ? lastEmittedAt.value
         : this.lastEmittedAt,
     retryCount: retryCount ?? this.retryCount,
+    failureCode: failureCode.present ? failureCode.value : this.failureCode,
     mentionsJson: mentionsJson.present ? mentionsJson.value : this.mentionsJson,
   );
   LocalMessage copyWithCompanion(LocalMessagesCompanion data) {
@@ -2857,6 +2901,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       retryCount: data.retryCount.present
           ? data.retryCount.value
           : this.retryCount,
+      failureCode: data.failureCode.present
+          ? data.failureCode.value
+          : this.failureCode,
       mentionsJson: data.mentionsJson.present
           ? data.mentionsJson.value
           : this.mentionsJson,
@@ -2904,6 +2951,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('syncPending: $syncPending, ')
           ..write('lastEmittedAt: $lastEmittedAt, ')
           ..write('retryCount: $retryCount, ')
+          ..write('failureCode: $failureCode, ')
           ..write('mentionsJson: $mentionsJson')
           ..write(')'))
         .toString();
@@ -2949,6 +2997,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     syncPending,
     lastEmittedAt,
     retryCount,
+    failureCode,
     mentionsJson,
   ]);
   @override
@@ -2993,6 +3042,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.syncPending == this.syncPending &&
           other.lastEmittedAt == this.lastEmittedAt &&
           other.retryCount == this.retryCount &&
+          other.failureCode == this.failureCode &&
           other.mentionsJson == this.mentionsJson);
 }
 
@@ -3035,6 +3085,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<bool> syncPending;
   final Value<DateTime?> lastEmittedAt;
   final Value<int> retryCount;
+  final Value<String?> failureCode;
   final Value<String?> mentionsJson;
   final Value<int> rowid;
   const LocalMessagesCompanion({
@@ -3076,6 +3127,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.syncPending = const Value.absent(),
     this.lastEmittedAt = const Value.absent(),
     this.retryCount = const Value.absent(),
+    this.failureCode = const Value.absent(),
     this.mentionsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3118,6 +3170,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.syncPending = const Value.absent(),
     this.lastEmittedAt = const Value.absent(),
     this.retryCount = const Value.absent(),
+    this.failureCode = const Value.absent(),
     this.mentionsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientId = Value(clientId),
@@ -3163,6 +3216,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<bool>? syncPending,
     Expression<DateTime>? lastEmittedAt,
     Expression<int>? retryCount,
+    Expression<String>? failureCode,
     Expression<String>? mentionsJson,
     Expression<int>? rowid,
   }) {
@@ -3205,6 +3259,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (syncPending != null) 'sync_pending': syncPending,
       if (lastEmittedAt != null) 'last_emitted_at': lastEmittedAt,
       if (retryCount != null) 'retry_count': retryCount,
+      if (failureCode != null) 'failure_code': failureCode,
       if (mentionsJson != null) 'mentions_json': mentionsJson,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3249,6 +3304,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<bool>? syncPending,
     Value<DateTime?>? lastEmittedAt,
     Value<int>? retryCount,
+    Value<String?>? failureCode,
     Value<String?>? mentionsJson,
     Value<int>? rowid,
   }) {
@@ -3291,6 +3347,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       syncPending: syncPending ?? this.syncPending,
       lastEmittedAt: lastEmittedAt ?? this.lastEmittedAt,
       retryCount: retryCount ?? this.retryCount,
+      failureCode: failureCode ?? this.failureCode,
       mentionsJson: mentionsJson ?? this.mentionsJson,
       rowid: rowid ?? this.rowid,
     );
@@ -3413,6 +3470,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (retryCount.present) {
       map['retry_count'] = Variable<int>(retryCount.value);
     }
+    if (failureCode.present) {
+      map['failure_code'] = Variable<String>(failureCode.value);
+    }
     if (mentionsJson.present) {
       map['mentions_json'] = Variable<String>(mentionsJson.value);
     }
@@ -3463,6 +3523,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('syncPending: $syncPending, ')
           ..write('lastEmittedAt: $lastEmittedAt, ')
           ..write('retryCount: $retryCount, ')
+          ..write('failureCode: $failureCode, ')
           ..write('mentionsJson: $mentionsJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -7196,6 +7257,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<bool> syncPending,
       Value<DateTime?> lastEmittedAt,
       Value<int> retryCount,
+      Value<String?> failureCode,
       Value<String?> mentionsJson,
       Value<int> rowid,
     });
@@ -7239,6 +7301,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<bool> syncPending,
       Value<DateTime?> lastEmittedAt,
       Value<int> retryCount,
+      Value<String?> failureCode,
       Value<String?> mentionsJson,
       Value<int> rowid,
     });
@@ -7439,6 +7502,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<int> get retryCount => $composableBuilder(
     column: $table.retryCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get failureCode => $composableBuilder(
+    column: $table.failureCode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7647,6 +7715,11 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get failureCode => $composableBuilder(
+    column: $table.failureCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get mentionsJson => $composableBuilder(
     column: $table.mentionsJson,
     builder: (column) => ColumnOrderings(column),
@@ -7814,6 +7887,11 @@ class $$LocalMessagesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get failureCode => $composableBuilder(
+    column: $table.failureCode,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get mentionsJson => $composableBuilder(
     column: $table.mentionsJson,
     builder: (column) => column,
@@ -7889,6 +7967,7 @@ class $$LocalMessagesTableTableManager
                 Value<bool> syncPending = const Value.absent(),
                 Value<DateTime?> lastEmittedAt = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
+                Value<String?> failureCode = const Value.absent(),
                 Value<String?> mentionsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion(
@@ -7930,6 +8009,7 @@ class $$LocalMessagesTableTableManager
                 syncPending: syncPending,
                 lastEmittedAt: lastEmittedAt,
                 retryCount: retryCount,
+                failureCode: failureCode,
                 mentionsJson: mentionsJson,
                 rowid: rowid,
               ),
@@ -7973,6 +8053,7 @@ class $$LocalMessagesTableTableManager
                 Value<bool> syncPending = const Value.absent(),
                 Value<DateTime?> lastEmittedAt = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
+                Value<String?> failureCode = const Value.absent(),
                 Value<String?> mentionsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion.insert(
@@ -8014,6 +8095,7 @@ class $$LocalMessagesTableTableManager
                 syncPending: syncPending,
                 lastEmittedAt: lastEmittedAt,
                 retryCount: retryCount,
+                failureCode: failureCode,
                 mentionsJson: mentionsJson,
                 rowid: rowid,
               ),

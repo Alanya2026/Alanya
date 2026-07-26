@@ -291,7 +291,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       ],
                       if (isMe && !msg.isDeleted) ...[
                         const SizedBox(width: 4),
-                        _statusIcon(msg.status, deliveredAt: msg.deliveredAt, readAt: msg.readAt, retryClientId: msg.clientId),
+                        _statusIcon(msg.status, deliveredAt: msg.deliveredAt, readAt: msg.readAt, retryClientId: msg.clientId, failureCode: msg.failureCode),
                       ],
                     ],
                   ),
@@ -659,6 +659,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
     DateTime? deliveredAt,
     DateTime? readAt,
     String? retryClientId,
+    /// Non nul = refus serveur définitif : réessayer échouerait à l'identique,
+    /// on n'offre donc pas le bouton.
+    String? failureCode,
   }) {
     // Conversation avec soi-même : pas de destinataire, donc « envoyé /
     // distribué / lu » n'a aucun sens et resterait de toute façon figé sur ✓.
@@ -674,7 +677,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
       size: status == 0 ? 11 : 12,
       onBubble: true,
       timeFormatter: _formatTime,
-      onRetry: status == 4 && retryClientId != null
+      onRetry: status == 4 && retryClientId != null && failureCode == null
           ? () => _chat.repository.retryMessage(retryClientId)
           : null,
     );
@@ -1601,6 +1604,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
                               .where((m) => m.status == 4)
                               .map((m) => m.clientId)
                               .firstOrNull,
+                          // Un seul refus définitif dans l'album suffit à
+                          // retirer le bouton : le renvoi est global.
+                          failureCode: sorted
+                              .where((m) => m.status == 4)
+                              .map((m) => m.failureCode)
+                              .firstWhere((c) => c != null, orElse: () => null),
                         ),
                       ],
                     ],

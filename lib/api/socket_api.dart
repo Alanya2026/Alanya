@@ -15,6 +15,24 @@ extension SocketApi on TalkyApiClient {
     if (_accessToken != null) _startConditionalHealthCheck();
   }
 
+  /// Détermine la présence annoncée à chaque `auth:verified`.
+  ///
+  /// Sans ce callback, toute (re)connexion socket déclarerait l'utilisateur en
+  /// ligne — y compris quand l'app se reconnecte en arrière-plan, réveillée par
+  /// une push. Passer `null` restaure ce comportement historique.
+  void setPresenceOnlineCallback(bool Function()? callback) {
+    _presenceOnlineCallback = callback;
+  }
+
+  /// Déclare la présence courante au serveur. Sans effet si le socket n'est pas
+  /// prêt : l'état sera réémis au prochain `auth:verified`.
+  void sendPresence({required bool online}) {
+    sendSocketEvent(
+      online ? SocketEvents.presenceOnline : SocketEvents.presenceOffline,
+      const <String, dynamic>{},
+    );
+  }
+
   void _recordEvent() {
     _lastEventReceivedAt = DateTime.now();
   }
@@ -108,8 +126,14 @@ extension SocketApi on TalkyApiClient {
       if (external == null || external.isEmpty) {
         debugPrint('[Socket] ⚠ auth:verified sans listeners externes enregistrés');
       }
-      // Signaler présence en ligne
-      _socket!.emit(SocketEvents.presenceOnline, {'userID': data['alanyaID']});
+      // Déclarer la présence réelle : « en ligne » seulement si l'app est au
+      // premier plan (ou en appel). Le serveur ignore désormais le userID du
+      // payload et s'appuie sur le JWT du socket.
+      final online = _presenceOnlineCallback?.call() ?? true;
+      _socket!.emit(
+        online ? SocketEvents.presenceOnline : SocketEvents.presenceOffline,
+        const <String, dynamic>{},
+      );
     });
 
     _socket!.on(SocketEvents.authError, (data) {

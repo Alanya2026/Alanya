@@ -23,6 +23,7 @@ import 'core/theme/locale_controller.dart';
 import 'core/services/chat/message_sound_service.dart';
 import 'core/services/incoming_share_service.dart';
 import 'core/services/media_download_preferences.dart';
+import 'core/services/playback_speed_preferences.dart';
 import 'core/services/ringtone_preferences.dart';
 import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
@@ -30,6 +31,7 @@ import 'core/services/call/ended_call_registry.dart';
 import 'core/services/local_cache_repository.dart';
 import 'core/services/local_hidden_store.dart';
 import 'core/services/meeting_service.dart';
+import 'core/services/presence_service.dart';
 import 'core/services/realtime_sync_service.dart';
 import 'core/services/voice_message_coordinator.dart';
 import 'core/services/voice_playback_service.dart';
@@ -99,6 +101,10 @@ void main() async {
   // Charger avant runApp : le prefetch socket/sync lit ce flag de façon sync.
   await MediaDownloadPreferences.preload();
 
+  // Charger avant runApp : la première lecture applique la vitesse mémorisée
+  // sans attendre, sinon le premier vocal repart à 1×.
+  await PlaybackSpeedPreferences.preload();
+
   // Charger avant runApp : CallService/RingtoneService/CallKitService lisent
   // la sonnerie sélectionnée de façon synchrone dès le premier appel entrant.
   await RingtonePreferences.preload();
@@ -143,8 +149,23 @@ class _TalkyAppState extends State<TalkyApp> {
             create: (_) => RingtonePreferences()..load()),
         ChangeNotifierProvider(
             create: (_) => AuthProvider(apiClient: _apiClient)),
-        ChangeNotifierProvider(
-            create: (_) => CallService(apiClient: _apiClient)),
+        // Déclaré avant CallService, qui s'y abonne dans son `create`.
+        ChangeNotifierProvider(create: (_) => VoicePlaybackService()),
+        ChangeNotifierProvider(create: (ctx) {
+          final call = CallService(apiClient: _apiClient);
+          final voice = ctx.read<VoicePlaybackService>();
+          // Un appel — sonnerie comprise — ne doit pas se superposer à la
+          // lecture en cours. `isCallActive` ignore le statut `incoming`,
+          // d'où le test sur idle/ended plutôt que sur ce getter.
+          var wasBusy = false;
+          call.addListener(() {
+            final busy = call.status != CallStatus.idle &&
+                call.status != CallStatus.ended;
+            if (busy && !wasBusy && voice.isPlaying) voice.pause();
+            wasBusy = busy;
+          });
+          return call;
+        }),
         ChangeNotifierProvider(
             create: (_) => MeetingService(apiClient: _apiClient)),
         ChangeNotifierProvider.value(value: _chatProvider),
@@ -155,7 +176,6 @@ class _TalkyAppState extends State<TalkyApp> {
         ChangeNotifierProvider(
             create: (_) => ConnectivityProvider(api: _apiClient)),
         ChangeNotifierProvider(create: (_) => LocalHiddenStore()..load()),
-        ChangeNotifierProvider(create: (_) => VoicePlaybackService()),
         ChangeNotifierProvider(
           create: (ctx) => VoiceMessageCoordinator(
             repository: ctx.read<ChatProvider>().repository,
@@ -166,6 +186,26 @@ class _TalkyAppState extends State<TalkyApp> {
             chat: ctx.read<ChatProvider>(),
             status: ctx.read<StatusProvider>(),
           ),
+        ),
+        // Présence : « en ligne » ⇔ app au premier plan, ou appel/réunion en
+        // cours. Déclaré après CallService et MeetingService, dont il dépend.
+        Provider<PresenceService>(
+          create: (ctx) {
+            final call = ctx.read<CallService>();
+            final meeting = ctx.read<MeetingService>();
+            final presence = PresenceService(
+              sendPresence: _apiClient.sendPresence,
+              registerResolver: _apiClient.setPresenceOnlineCallback,
+              isSessionActive: () =>
+                  (call.status != CallStatus.idle &&
+                      call.status != CallStatus.ended) ||
+                  meeting.currentMeeting != null,
+            );
+            presence.bindSessionSource(call);
+            presence.bindSessionSource(meeting);
+            return presence;
+          },
+          dispose: (_, presence) => presence.dispose(),
         ),
       ],
       child: Consumer2<ThemeController, LocaleController>(
@@ -479,6 +519,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         _removeBackOnlineListener();
         _clearCallLogBindings();
         try {
+          Provider.of<PresenceService>(context, listen: false).detach();
+        } catch (e) {
+          debugPrint('[AuthWrapper] PresenceService.detach échoué: $e');
+        }
+        try {
           Provider.of<ChatProvider>(context, listen: false).unbind();
           Provider.of<ChatProvider>(context, listen: false).onSocketReadyHook = null;
         } catch (e) {
@@ -515,6 +560,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       try {
         Provider.of<ChatProvider>(context, listen: false).unbind();
         Provider.of<StatusProvider>(context, listen: false).unbind();
+        // Repart d'un état de présence vierge pour le nouveau compte.
+        Provider.of<PresenceService>(context, listen: false).detach();
       } catch (e) {
         debugPrint('[AuthWrapper] unbind avant switch user: $e');
       }
@@ -531,6 +578,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final syncService = Provider.of<RealtimeSyncService>(context, listen: false);
+    final presence = Provider.of<PresenceService>(context, listen: false);
 
     unawaited(PushService.syncTokenWithBackend());
     unawaited(_loadNotificationPrefs(apiClient));
@@ -560,6 +608,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     apiClient.setPendingMessagesCallback(
       () => chatProvider.repository.hasSyncPending(),
     );
+    // Avant connectSocket : le résolveur doit être en place quand le premier
+    // `auth:verified` arrive, sinon la session s'annoncerait en ligne par
+    // défaut même app en arrière-plan.
+    presence.attach();
     apiClient.connectSocket();
 
     chatProvider.onSocketReadyHook = syncService.refreshStatuses;

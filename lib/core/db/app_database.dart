@@ -146,6 +146,14 @@ class LocalMessages extends Table {
   /// Nombre de tentatives de retry pour ce message (failed -> retry).
   IntColumn get retryCount => integer().withDefault(const Constant(0))();
 
+  /// Code d'échec serveur quand l'envoi a été REFUSÉ définitivement
+  /// (`GROUP_ADMINS_ONLY`, `NOT_A_MEMBER`, `BLOCKED_BY_SENDER`).
+  ///
+  /// Distingue « le réseau a lâché » — où réessayer a du sens — de « le
+  /// serveur a dit non » — où le bouton « réessayer » échouerait
+  /// indéfiniment et ferait tourner l'utilisateur en rond.
+  TextColumn get failureCode => text().nullable()();
+
   /// Ids mentionnés, sérialisés (`[45,46]`), miroir de `message.mentions`.
   ///
   /// Persisté et pas seulement dérivé du texte : `flushOutbox` reconstruit
@@ -418,6 +426,7 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(localConversations, localConversations.muteForever);
             await m.addColumn(localConversations, localConversations.mentionsOnly);
             await m.addColumn(localMessages, localMessages.mentionsJson);
+            await m.addColumn(localMessages, localMessages.failureCode);
           }
         },
       );

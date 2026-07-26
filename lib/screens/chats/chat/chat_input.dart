@@ -3,6 +3,40 @@
 part of '../chat_detail_screen.dart';
 
 extension _ChatInput on _ChatDetailScreenState {
+  /// Bandeau affiché à la place du composeur, selon la cause du verrou.
+  Widget _buildComposerLockBanner() =>
+      _composerLock == ComposerLock.adminsOnly
+          ? _buildAnnouncementBanner()
+          : _buildBlockedBanner();
+
+  /// Mode annonce : contrairement au blocage, il n'y a rien à débloquer —
+  /// seul un administrateur peut lever le verrou.
+  Widget _buildAnnouncementBanner() {
+    final colors = context.colors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      color: context.semantic.surfaceMuted,
+      child: Row(
+        children: [
+          Icon(Icons.campaign_outlined,
+              size: 18, color: colors.onSurfaceVariant),
+          AppSpacing.hGapSm,
+          Expanded(
+            child: Text(
+              context.l10n.announcementOnlyAdmins,
+              style: context.text.bodySmall
+                  ?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBlockedBanner() {
     final colors = context.colors;
     return Container(

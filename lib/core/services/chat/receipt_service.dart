@@ -7,6 +7,7 @@ import '../../../talky_models.dart';
 import '../local_notification_helper.dart';
 import '../notifications/badge_sync_service.dart';
 import '../notifications/notification_dedup_store.dart';
+import '../notifications/pending_delivery_ack_store.dart';
 import 'chat_api.dart';
 
 /// Accusés de lecture / livraison + catch-up hors ligne.
@@ -90,6 +91,26 @@ class ReceiptService {
         if ((_pendingReadsRetry[convID] ?? 0) > 3) {
           _pendingReadsRetry.remove(convID);
         }
+      }
+    }
+  }
+
+  /// Rejoue les accusés de remise que la couche push native n'a pas réussi à
+  /// envoyer (app fermée + réseau coupé, ou token irrécupérable).
+  ///
+  /// Passe par HTTP et non par le socket : au bootstrap le socket peut ne pas
+  /// encore être prêt, et ces accusés ne doivent pas attendre un tour de plus.
+  Future<void> flushNativeDeliveryAcks() async {
+    if (_myId() == 0) return;
+    final pending = await PendingDeliveryAckStore.takeAll();
+    if (pending.isEmpty) return;
+    debugPrint('[ReceiptService] 🔁 flushNativeDeliveryAcks count=${pending.length}');
+    for (final convID in pending) {
+      try {
+        await _api.markConversationDelivered(convID);
+        await PendingDeliveryAckStore.remove(convID);
+      } catch (e) {
+        debugPrint('[ReceiptService] delivery ack rejeu $convID: $e');
       }
     }
   }

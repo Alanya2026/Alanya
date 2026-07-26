@@ -69,6 +69,7 @@ import 'voice_message_bubble.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/utils/contact_payload.dart';
 import '../../core/utils/location_payload.dart';
+import '../../core/utils/group_permissions.dart';
 import '../../core/utils/system_event_payload.dart';
 import '../../widgets/chat/contact_message_preview.dart';
 import '../../widgets/chat/location_message_preview.dart';
@@ -86,6 +87,13 @@ part 'chat/chat_input.dart';    // barre de saisie, emoji, bandeau réponse
 const int _maxMediaBytes = 50 * 1024 * 1024;
 const Duration _messageEditWindow = Duration(minutes: 30);
 const int _maxSelectionCount = 50;
+
+/// Raison pour laquelle le composeur est masqué.
+///
+/// Deux causes qui ne doivent pas être confondues : `blocked` est définitif
+/// tant que l'utilisateur ne débloque pas, `adminsOnly` peut être levé en
+/// direct par un administrateur. Elles n'affichent pas le même bandeau.
+enum ComposerLock { none, blocked, adminsOnly }
 
 class ChatDetailScreen extends StatefulWidget {
   final String userName;
@@ -162,6 +170,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   Timer? _recordTimer;
 
   bool _isBlocked = false;
+
+  /// Mode annonce et rôle, suivis en direct depuis Drift : un admin peut poser
+  /// ou lever le verrou pendant que cet écran est ouvert.
+  bool _groupOnlyAdminsCanSend = false;
+  int _myGroupRole = GroupRole.member;
+  StreamSubscription<LocalConversation?>? _groupWatch;
   bool _blockedByThem = false;
 
   bool _selectionMode = false;
@@ -314,6 +328,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   Future<void> _init() async {
     _convId = widget.conversationId;
+    _watchGroupState();
 
     // Inutile de demander au serveur si je me suis bloqué moi-même.
     if (!widget.isGroup && widget.userId != null && !_isSelfChat) {
@@ -395,6 +410,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   void _bindReactionsStream(int convId) {
     _reactionsSub?.cancel();
+    _groupWatch?.cancel();
     _reactionsSub = _chat.repository.watchReactions(convId).listen((reactions) {
       if (!mounted) return;
       setState(() => _currentReactionsByMsg = _groupReactionsByMsg(reactions));
@@ -572,10 +588,42 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   bool get _callsDisabled =>
       !widget.isGroup && (_isSelfChat || _isBlocked || _blockedByThem);
 
-  bool get _inputBlocked => !widget.isGroup && _isBlocked;
+  /// Pourquoi le composeur est verrouillé — deux causes distinctes qu'il ne
+  /// faut PAS confondre dans un seul booléen : elles n'affichent pas le même
+  /// bandeau, et la seconde peut disparaître en direct (un admin peut lever le
+  /// mode annonce pendant que l'écran est ouvert).
+  ComposerLock get _composerLock {
+    if (!widget.isGroup && _isBlocked) return ComposerLock.blocked;
+    if (widget.isGroup &&
+        _groupOnlyAdminsCanSend &&
+        !canSend(_myGroupRole, _groupOnlyAdminsCanSend)) {
+      return ComposerLock.adminsOnly;
+    }
+    return ComposerLock.none;
+  }
+
+  bool get _inputBlocked => _composerLock != ComposerLock.none;
 
   GlobalKey _keyForMessage(int msgID) =>
       _messageKeys.putIfAbsent(msgID, GlobalKey.new);
+
+  /// Suit le mode annonce et mon rôle. Sans ça, le verrou ne serait évalué
+  /// qu'à l'ouverture de l'écran et resterait faux après une promotion.
+  void _watchGroupState() {
+    final convId = _convId;
+    if (!widget.isGroup || convId == null) return;
+    _groupWatch?.cancel();
+    _groupWatch = _chat.repository.watchConversation(convId).listen((conv) {
+      if (!mounted || conv == null) return;
+      if (conv.onlyAdminsCanSend != _groupOnlyAdminsCanSend ||
+          conv.myRole != _myGroupRole) {
+        setState(() {
+          _groupOnlyAdminsCanSend = conv.onlyAdminsCanSend;
+          _myGroupRole = conv.myRole;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -763,7 +811,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                 ),
               ),
               if (!_selectionMode && _replyTo != null) _buildReplyBanner(),
-              if (!_selectionMode && _inputBlocked) _buildBlockedBanner(),
+              if (!_selectionMode && _inputBlocked) _buildComposerLockBanner(),
               if (!_selectionMode && _showFormatBar && !_inputBlocked) _buildFormatBar(),
               if (!_selectionMode) _buildInputBar(),
               if (!_selectionMode && _showEmoji) _buildEmojiPicker(),

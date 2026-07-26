@@ -21,6 +21,10 @@ class RealtimeSyncService {
   Future<void> catchUp({int? conversationId, bool force = false}) async {
     try {
       await _chat.repository.flushOutbox();
+      // Messages reçus par push alors que l'app était fermée : leur accusé de
+      // remise n'est pas déductible de la base locale, il n'y a que la file
+      // native pour le retrouver.
+      await _chat.repository.flushNativeDeliveryAcks();
       await _chat.repository.flushReceiptsCatchUp();
       await _chat.refreshConversations(force: force);
       if (conversationId != null && conversationId > 0) {

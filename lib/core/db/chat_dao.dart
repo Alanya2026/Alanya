@@ -530,9 +530,16 @@ class ChatDao {
 
   /// Marque un message comme définitivement échoué. Sort de l'outbox : il ne sera
   /// pas retenté automatiquement. L'utilisateur peut relancer via [retryFailed].
-  Future<void> markFailed(String clientId) {
+  /// Marque un envoi en échec. [failureCode] n'est renseigné que pour un REFUS
+  /// serveur définitif : c'est lui qui permet de ne pas proposer un
+  /// « réessayer » condamné à échouer.
+  Future<void> markFailed(String clientId, {String? failureCode}) {
     return (db.update(db.localMessages)..where((m) => m.clientId.equals(clientId)))
-        .write(const LocalMessagesCompanion(status: Value(4), syncPending: Value(false)));
+        .write(LocalMessagesCompanion(
+      status: const Value(4),
+      syncPending: const Value(false),
+      failureCode: Value(failureCode),
+    ));
   }
 
   /// True s'il existe au moins un message encore en outbox (horloge).

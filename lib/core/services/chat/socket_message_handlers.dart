@@ -21,6 +21,17 @@ typedef UpsertServerMsgFn = Future<bool> Function(
 });
 
 /// Handlers socket `message:*`.
+/// Refus serveur DÉFINITIFS : réessayer échouera à l'identique tant que la
+/// situation n'a pas changé (le verrou levé, le membre réintégré, le blocage
+/// retiré). Un échec réseau, lui, n'est pas dans cette liste et reste
+/// légitimement réessayable.
+const Set<String> kTerminalSendFailures = {
+  'GROUP_ADMINS_ONLY',
+  'NOT_A_MEMBER',
+  'BLOCKED_BY_SENDER',
+  'CONVERSATION_NOT_FOUND',
+};
+
 class SocketMessageHandlers {
   SocketMessageHandlers({
     required ChatApi api,
@@ -263,7 +274,11 @@ class SocketMessageHandlers {
       '[SocketHandlers] message:send_failed clientId=$clientId '
       'code=${json['code']} msg=${json['message']}',
     );
-    await _dao.markFailed(clientId);
+    final code = json['code']?.toString();
+    await _dao.markFailed(
+      clientId,
+      failureCode: kTerminalSendFailures.contains(code) ? code : null,
+    );
   }
 
   /// (Dés)épingle un message. Optimistic : on écrit localement d'abord pour un

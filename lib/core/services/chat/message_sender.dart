@@ -378,6 +378,115 @@ class MessageSender {
     }
   }
 
+  /// Envoie plusieurs documents / morceaux : **un message par fichier**, sans
+  /// regroupement (le marqueur d'album ne décrit que des photos et vidéos).
+  ///
+  /// Les lignes locales sont toutes insérées d'abord pour que les bulles
+  /// apparaissent d'un coup, puis les uploads partent en parallèle limité.
+  Future<void> sendMediaFiles({
+    required int conversationID,
+    required List<AlbumSendItem> items,
+  }) async {
+    if (_myId() == 0) {
+      debugPrint('[MessageSender] sendMediaFiles ignoré : utilisateur non lié (myId=0)');
+      return;
+    }
+    if (items.isEmpty) return;
+    if (items.length == 1) {
+      final item = items.first;
+      await sendMediaFile(
+        conversationID: conversationID,
+        type: item.type,
+        file: item.file,
+        mediaName: item.mediaName,
+        mediaDuration: item.duration,
+      );
+      return;
+    }
+
+    final base = DateTime.now().toUtc();
+    final pending = <_PendingMediaUpload>[];
+
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      File uploadFile;
+      try {
+        uploadFile = item.file.path.contains('talky_outbox')
+            ? item.file
+            : await stageMediaFile(item.file);
+      } catch (e) {
+        debugPrint('[MessageSender] sendMediaFiles staging échoué: $e');
+        continue;
+      }
+
+      final clientId = _newClientId();
+      // Horodatage strictement croissant : préserve l'ordre de sélection.
+      final now = base.add(Duration(milliseconds: i));
+      final name = item.mediaName ?? uploadFile.path.split('/').last;
+      final isMusic =
+          item.type == 3 && audioKindFromName(name) == AudioMessageKind.music;
+
+      int? fileMediaSize;
+      int? fileMediaPageCount;
+      // La musique affiche sa taille en sous-titre de bulle, comme un document.
+      if (item.type == 4 || isMusic) {
+        final meta = await fileMetadataForSend(uploadFile, mediaName: name);
+        if (meta.size > 0) fileMediaSize = meta.size;
+        fileMediaPageCount = meta.pageCount;
+      }
+
+      final mediaThumb =
+          await _mediaThumbFor(item.type, uploadFile.path, mediaName: name);
+      MessagePathTracer.start(clientId);
+
+      await _dao.upsertMessage(LocalMessagesCompanion.insert(
+        clientId: clientId,
+        conversationID: conversationID,
+        senderID: _myId(),
+        sendAt: now,
+        clickSentAt: Value(now),
+        type: Value(item.type),
+        status: const Value(0),
+        mediaName: Value(name),
+        mediaDuration: Value(item.duration),
+        mediaSize: Value(fileMediaSize),
+        mediaPageCount: Value(fileMediaPageCount),
+        mediaThumb: Value(mediaThumb),
+        localMediaPath: Value(uploadFile.path),
+        pendingUploadPath: Value(uploadFile.path),
+        syncPending: const Value(true),
+      ));
+      MessagePathTracer.mark(clientId, 'local_insert');
+
+      pending.add(_PendingMediaUpload(
+        clientId: clientId,
+        file: uploadFile,
+        type: item.type,
+        mediaName: name,
+        mediaDuration: item.duration,
+        clickSentAt: now,
+      ));
+    }
+
+    unawaited(_recompute(conversationID));
+
+    await _runConcurrent(pending, 3, (p) async {
+      try {
+        await uploadAndEmit(
+          clientId: p.clientId,
+          conversationID: conversationID,
+          file: p.file,
+          type: p.type,
+          mediaName: p.mediaName,
+          mediaDuration: p.mediaDuration,
+          clickSentAt: p.clickSentAt,
+        );
+      } catch (e) {
+        await handleUploadFailure(p.clientId, e, 'upload fichier échoué');
+      }
+    });
+  }
+
   /// Envoie plusieurs photos/vidéos regroupées en album (marqueur dans `content`).
   ///
   /// [content] est la légende optionnelle (stockée sur le premier item).
@@ -416,7 +525,7 @@ class MessageSender {
     final types = items.map((e) => e.type).toList();
     final counts = countAlbumMediaTypesFromTypes(types);
 
-    final pending = <_PendingAlbumUpload>[];
+    final pending = <_PendingMediaUpload>[];
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
       final clientId = _newClientId();
@@ -452,7 +561,7 @@ class MessageSender {
       ));
       MessagePathTracer.mark(clientId, 'local_insert');
 
-      pending.add(_PendingAlbumUpload(
+      pending.add(_PendingMediaUpload(
         clientId: clientId,
         file: item.file,
         type: item.type,
@@ -732,22 +841,23 @@ class MessageSender {
       'c_${_myId()}_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(99999)}';
 }
 
-class _PendingAlbumUpload {
-  const _PendingAlbumUpload({
+class _PendingMediaUpload {
+  const _PendingMediaUpload({
     required this.clientId,
     required this.file,
     required this.type,
-    required this.content,
     required this.mediaName,
-    this.mediaDuration,
-    required this.isForwarded,
     required this.clickSentAt,
+    this.content,
+    this.mediaDuration,
+    this.isForwarded = false,
   });
 
   final String clientId;
   final File file;
   final int type;
-  final String content;
+  /// Marqueur d'album, ou `null` pour un envoi fichier par fichier.
+  final String? content;
   final String mediaName;
   final int? mediaDuration;
   final bool isForwarded;
