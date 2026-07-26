@@ -5359,6 +5359,180 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Le groupe a été mis à jour'**
   String get sysGroupEventFallback;
+
+  /// No description provided for @groupOwner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propriétaire'**
+  String get groupOwner;
+
+  /// No description provided for @groupAdmin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Admin'**
+  String get groupAdmin;
+
+  /// No description provided for @removeFromGroup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du groupe'**
+  String get removeFromGroup;
+
+  /// No description provided for @removeMemberConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {name} du groupe ?'**
+  String removeMemberConfirm(String name);
+
+  /// No description provided for @removeMemberDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été retiré du groupe'**
+  String removeMemberDone(String name);
+
+  /// No description provided for @dismissAdmin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer les droits d\'administrateur'**
+  String get dismissAdmin;
+
+  /// No description provided for @viewProfile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le profil'**
+  String get viewProfile;
+
+  /// No description provided for @groupDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Description'**
+  String get groupDescription;
+
+  /// No description provided for @groupDescriptionHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter une description…'**
+  String get groupDescriptionHint;
+
+  /// No description provided for @noGroupDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune description'**
+  String get noGroupDescription;
+
+  /// No description provided for @renameGroup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renommer le groupe'**
+  String get renameGroup;
+
+  /// No description provided for @changeGroupPhoto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer la photo'**
+  String get changeGroupPhoto;
+
+  /// No description provided for @groupSettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages du groupe'**
+  String get groupSettings;
+
+  /// No description provided for @onlyAdminsCanSendLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les admins peuvent écrire'**
+  String get onlyAdminsCanSendLabel;
+
+  /// No description provided for @onlyAdminsCanSendSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le groupe devient un canal d\'annonces'**
+  String get onlyAdminsCanSendSubtitle;
+
+  /// No description provided for @onlyAdminsCanEditInfoLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les admins modifient les infos'**
+  String get onlyAdminsCanEditInfoLabel;
+
+  /// No description provided for @onlyAdminsCanEditInfoSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom, photo, description et ajout de membres'**
+  String get onlyAdminsCanEditInfoSubtitle;
+
+  /// No description provided for @mentionsOnlyLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Uniquement les mentions'**
+  String get mentionsOnlyLabel;
+
+  /// No description provided for @mentionsOnlySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'N\'être alerté que si l\'on vous mentionne'**
+  String get mentionsOnlySubtitle;
+
+  /// No description provided for @youWereRemovedFromGroup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne faites plus partie de ce groupe'**
+  String get youWereRemovedFromGroup;
+
+  /// No description provided for @notAllowedGroupAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action non autorisée'**
+  String get notAllowedGroupAction;
+
+  /// No description provided for @ownerMustTransferOnLeave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous êtes propriétaire : le groupe sera confié au membre le plus ancien.'**
+  String get ownerMustTransferOnLeave;
+
+  /// No description provided for @groupInfoUpdated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos du groupe mises à jour'**
+  String get groupInfoUpdated;
+
+  /// No description provided for @groupUpdateFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de modifier le groupe'**
+  String get groupUpdateFailed;
+
+  /// No description provided for @announcementOnlyAdmins.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les administrateurs peuvent envoyer des messages'**
+  String get announcementOnlyAdmins;
+
+  /// No description provided for @mentionAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'@Tous'**
+  String get mentionAll;
+
+  /// No description provided for @mentionAllSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alerte les {count} membres'**
+  String mentionAllSubtitle(int count);
+
+  /// No description provided for @mentionYou.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous'**
+  String get mentionYou;
+
+  /// No description provided for @jumpToMention.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aller à la mention suivante'**
+  String get jumpToMention;
 }
 
 class _AppLocalizationsDelegate

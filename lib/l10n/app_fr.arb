@@ -2026,5 +2026,55 @@
     }
   },
   "sysOnlyAdminsEditOffByMe": "Vous avez autorisé tout le monde à modifier les infos",
-  "sysGroupEventFallback": "Le groupe a été mis à jour"
+  "sysGroupEventFallback": "Le groupe a été mis à jour",
+  "groupOwner": "Propriétaire",
+  "groupAdmin": "Admin",
+  "removeFromGroup": "Retirer du groupe",
+  "removeMemberConfirm": "Retirer {name} du groupe ?",
+  "@removeMemberConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "removeMemberDone": "{name} a été retiré du groupe",
+  "@removeMemberDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dismissAdmin": "Retirer les droits d'administrateur",
+  "viewProfile": "Voir le profil",
+  "groupDescription": "Description",
+  "groupDescriptionHint": "Ajouter une description…",
+  "noGroupDescription": "Aucune description",
+  "renameGroup": "Renommer le groupe",
+  "changeGroupPhoto": "Changer la photo",
+  "groupSettings": "Réglages du groupe",
+  "onlyAdminsCanSendLabel": "Seuls les admins peuvent écrire",
+  "onlyAdminsCanSendSubtitle": "Le groupe devient un canal d'annonces",
+  "onlyAdminsCanEditInfoLabel": "Seuls les admins modifient les infos",
+  "onlyAdminsCanEditInfoSubtitle": "Nom, photo, description et ajout de membres",
+  "mentionsOnlyLabel": "Uniquement les mentions",
+  "mentionsOnlySubtitle": "N'être alerté que si l'on vous mentionne",
+  "youWereRemovedFromGroup": "Vous ne faites plus partie de ce groupe",
+  "notAllowedGroupAction": "Action non autorisée",
+  "ownerMustTransferOnLeave": "Vous êtes propriétaire : le groupe sera confié au membre le plus ancien.",
+  "groupInfoUpdated": "Infos du groupe mises à jour",
+  "groupUpdateFailed": "Impossible de modifier le groupe",
+  "announcementOnlyAdmins": "Seuls les administrateurs peuvent envoyer des messages",
+  "mentionAll": "@Tous",
+  "mentionAllSubtitle": "Alerte les {count} membres",
+  "@mentionAllSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mentionYou": "Vous",
+  "jumpToMention": "Aller à la mention suivante"
 }

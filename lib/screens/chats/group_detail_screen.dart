@@ -15,6 +15,7 @@ import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../core/utils/avatar_utils.dart';
+import '../../core/utils/group_permissions.dart';
 import '../../core/utils/document_file_style.dart';
 import '../../core/db/app_database.dart';
 import '../../widgets/common/common.dart';
@@ -44,46 +45,56 @@ class GroupDetailScreen extends StatefulWidget {
 }
 
 class _GroupDetailScreenState extends State<GroupDetailScreen> {
+  /// Dernier état connu, alimenté par le stream Drift. Conservé pour les
+  /// callbacks (`_addParticipants`, `_leaveGroup`…) qui ne sont pas dans
+  /// l'arbre du `StreamBuilder`.
   Conversation? _group;
-  bool _isLoading = true;
+
+  /// Vrai une fois qu'une exclusion a été détectée : empêche de rejouer le
+  /// `pop` à chaque frame quand le stream continue d'émettre `null`.
+  bool _leaving = false;
 
   @override
   void initState() {
     super.initState();
-    _loadGroup();
+    // Le cache local peut être en retard (participants jamais synchronisés,
+    // rôle absent d'une version antérieure) : on redemande au serveur sans
+    // bloquer l'affichage, qui part de Drift.
+    unawaited(_refresh());
   }
 
-  Future<void> _loadGroup() async {
+  Future<void> _refresh() async {
     try {
-      final chat = context.read<ChatProvider>();
-      final conversations =
-          await chat.repository.watchConversations().first;
-      final localConv = conversations
-          .where((c) => c.conversID == widget.conversationId)
-          .firstOrNull;
-
-      if (localConv != null) {
-        _group = Conversation(
-          conversID: localConv.conversID,
-          isGroup: localConv.isGroup,
-          groupName: localConv.groupName,
-          groupPhoto: localConv.groupPhoto,
-          lastMessage: localConv.lastMessage,
-          lastMessageAt: localConv.lastMessageAt?.toIso8601String(),
-          lastMessageSenderID: localConv.lastMessageSenderID,
-          lastMessageType: localConv.lastMessageType,
-          lastMessageStatus: localConv.lastMessageStatus,
-          unreadCount: localConv.unreadCount,
-          isPinned: localConv.isPinned,
-          isArchived: localConv.isArchived,
-          participants: _parseParticipants(localConv.participantsJson),
-        );
-      }
-      if (mounted) setState(() => _isLoading = false);
+      await context.read<ChatProvider>().repository
+          .refreshConversation(widget.conversationId);
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      // Hors ligne : la fiche reste consultable depuis le cache.
+      AppLog.w('GroupDetail', 'refreshConversation échouée: $e');
     }
   }
+
+  /// Reconstruit le modèle depuis la ligne Drift.
+  Conversation _fromLocal(LocalConversation c) => Conversation(
+        conversID: c.conversID,
+        isGroup: c.isGroup,
+        groupName: c.groupName,
+        groupPhoto: c.groupPhoto,
+        description: c.description,
+        createdBy: c.createdBy,
+        lastMessage: c.lastMessage,
+        lastMessageAt: c.lastMessageAt?.toIso8601String(),
+        lastMessageSenderID: c.lastMessageSenderID,
+        lastMessageType: c.lastMessageType,
+        lastMessageStatus: c.lastMessageStatus,
+        onlyAdminsCanSend: c.onlyAdminsCanSend,
+        onlyAdminsCanEditInfo: c.onlyAdminsCanEditInfo,
+        unreadCount: c.unreadCount,
+        isPinned: c.isPinned,
+        isArchived: c.isArchived,
+        myRole: c.myRole,
+        mentionsOnly: c.mentionsOnly,
+        participants: _parseParticipants(c.participantsJson),
+      );
 
   List<Participant> _parseParticipants(String json) {
     try {
@@ -171,11 +182,10 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     if (_group == null) return;
     final messenger = ScaffoldMessenger.of(context);
     final errorColor = context.colors.error;
-    final api = Provider.of<TalkyApiClient>(context, listen: false);
     final chat = Provider.of<ChatProvider>(context, listen: false);
 
     final excludeIds =
-        _group!.participants.map((u) => u.alanyaID).toSet();
+        _group!.participants.map((p) => p.alanyaID).toSet();
 
     final picked = await Navigator.push<List<User>>(
       context,
@@ -189,13 +199,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     if (picked == null || picked.isEmpty || !mounted) return;
 
     try {
-      await api.addParticipants(
+      // Via le repository : la conversation enrichie renvoyée atterrit en
+      // Drift, et le StreamBuilder rafraîchit la liste tout seul.
+      await chat.repository.addParticipants(
         widget.conversationId,
         picked.map((u) => u.alanyaID).toList(),
       );
-      await chat.refreshConversations(force: true);
       if (!mounted) return;
-      await _loadGroup();
       messenger.showSnackBar(SnackBar(
         content: Text(context.l10n.participantsAdded(picked.length)),
       ));
@@ -208,13 +218,157 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
+  // ── Gestion des membres et des infos ────────────────────────────
+  //
+  // Chaque action passe par le repository et ne touche RIEN localement avant
+  // la réponse du serveur : appliquer un retrait puis se le voir refuser (rôle
+  // perdu entre-temps) ferait croire l'action faite. Le gating vient de
+  // group_permissions.dart, mais c'est le serveur qui décide vraiment.
+
+  ChatProvider get _chat => context.read<ChatProvider>();
+
+  /// Exécute une mutation en affichant l'erreur serveur telle quelle.
+  Future<void> _runGroupAction(
+    Future<void> Function() action, {
+    String? successMessage,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = context.colors.error;
+    final echecLabel = context.l10n.groupUpdateFailed;
+    try {
+      await action();
+      if (!mounted || successMessage == null) return;
+      messenger.showSnackBar(SnackBar(content: Text(successMessage)));
+    } catch (e, st) {
+      AppLog.e('GroupDetail', 'action de groupe échouée', e, st);
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text(echecLabel),
+        backgroundColor: errorColor,
+      ));
+    }
+  }
+
+  Future<void> _renameGroup() async {
+    final controller = TextEditingController(text: _group?.groupName ?? '');
+    final nom = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.l10n.renameGroup),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 255,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(labelText: ctx.l10n.groupName),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(ctx.l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(ctx.l10n.commonSave),
+          ),
+        ],
+      ),
+    );
+    if (nom == null || nom.isEmpty || nom == _group?.groupName) return;
+    await _runGroupAction(
+      () => _chat.repository
+          .updateGroupInfo(widget.conversationId, groupName: nom),
+      successMessage: context.l10n.groupInfoUpdated,
+    );
+  }
+
+  Future<void> _editDescription() async {
+    final controller = TextEditingController(text: _group?.description ?? '');
+    final desc = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.l10n.groupDescription),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 512,
+          maxLines: 4,
+          minLines: 2,
+          textCapitalization: TextCapitalization.sentences,
+          decoration:
+              InputDecoration(hintText: ctx.l10n.groupDescriptionHint),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(ctx.l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(ctx.l10n.commonSave),
+          ),
+        ],
+      ),
+    );
+    if (desc == null || desc == (_group?.description ?? '')) return;
+    await _runGroupAction(
+      () => _chat.repository
+          .updateGroupInfo(widget.conversationId, description: desc),
+      successMessage: context.l10n.groupInfoUpdated,
+    );
+  }
+
+  Future<void> _removeMember(Participant membre) async {
+    final nom = membre.nom.isNotEmpty ? membre.nom : membre.user.pseudo;
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.l10n.removeFromGroup),
+        content: Text(ctx.l10n.removeMemberConfirm(nom)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(ctx.l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(ctx.l10n.removeMedia,
+                style: TextStyle(color: ctx.colors.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirme != true || !mounted) return;
+
+    await _runGroupAction(
+      () => _chat.repository
+          .removeParticipant(widget.conversationId, membre.alanyaID),
+      successMessage: context.l10n.removeMemberDone(nom),
+    );
+  }
+
+  Future<void> _setRole(Participant membre, int role) async {
+    await _runGroupAction(
+      () => _chat.repository
+          .setParticipantRole(widget.conversationId, membre.alanyaID, role),
+      successMessage: context.l10n.groupInfoUpdated,
+    );
+  }
+
   Future<void> _leaveGroup() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(context.l10n.leaveGroup),
         content: Text(
-            context.l10n.youWillNoLongerSeeThis),
+          // Le propriétaire n'est pas bloqué — il serait prisonnier de son
+          // groupe — mais on lui dit ce qui va se passer : le serveur confie
+          // la propriété au membre restant le plus ancien.
+          (_group?.iAmOwner ?? false)
+              ? '${context.l10n.youWillNoLongerSeeThis}\n\n'
+                  '${context.l10n.ownerMustTransferOnLeave}'
+              : context.l10n.youWillNoLongerSeeThis,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -233,13 +387,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     if (!mounted) return;
     try {
-      final api = Provider.of<TalkyApiClient>(context, listen: false);
       final chat = Provider.of<ChatProvider>(context, listen: false);
-      await api.leaveGroup(widget.conversationId);
-      if (!mounted) return;
-      await chat.refreshConversations(force: true);
+      // Le repository ne supprime en local qu'après un aller-retour réussi :
+      // si le serveur refuse, la conversation doit rester visible.
+      _leaving = true;
+      await chat.repository.leaveGroup(widget.conversationId);
       if (mounted) Navigator.pop(context);
     } catch (e, st) {
+      _leaving = false;
       AppLog.e('GroupDetail', context.l10n.failedToLeaveGroup, e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -253,6 +408,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final repo = context.read<ChatProvider>().repository;
+
     return Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
       appBar: AppBar(
@@ -260,61 +417,127 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         centerTitle: true,
         title: Text(context.l10n.groupInfo),
         // Appels de groupe audio/vidéo — masqués temporairement, à remettre plus tard.
-        // actions: _group == null
-        //     ? null
-        //     : [
-        //         IconButton(
-        //           icon: const Icon(Icons.videocam_outlined),
-        //           tooltip: context.l10n.videoCall,
-        //           onPressed: () => _startGroupCall(true),
-        //         ),
-        //         IconButton(
-        //           icon: const Icon(Icons.call_outlined),
-        //           tooltip: context.l10n.voiceCall,
-        //           onPressed: () => _startGroupCall(false),
-        //         ),
-        //       ],
       ),
-      body: _isLoading
-          ? const LoadingState()
-          : _group == null
-              ? EmptyState(
-                  icon: Icons.group_off,
-                  title: context.l10n.groupNotFound,
-                  message: context.l10n.thisGroupIsNoLongerAccessible,
-                )
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xxl),
+      // Le stream Drift est la source unique : il rafraîchit la fiche après
+      // chaque mutation (réponse HTTP) ET après chaque trame
+      // `conversation:updated` d'un autre appareil, sans rechargement manuel.
+      body: StreamBuilder<LocalConversation?>(
+        stream: repo.watchConversation(widget.conversationId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const LoadingState();
+          }
+
+          final local = snapshot.data;
+          if (local == null) {
+            // La ligne a disparu du cache : soit je viens d'être retiré
+            // (`group:participant:removed` → deleteConversation), soit je viens
+            // de partir. On sort de l'écran plutôt que d'afficher une fiche
+            // fantôme. Le drapeau évite de rejouer le pop à chaque frame.
+            if (!_leaving) {
+              _leaving = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(context.l10n.youWereRemovedFromGroup),
+                ));
+                Navigator.of(context).pop();
+              });
+            }
+            return const LoadingState();
+          }
+
+          final group = _fromLocal(local);
+          _group = group;
+
+          final myId = context.read<AuthProvider>().currentUser?.alanyaID ?? 0;
+          final peutEditer =
+              canEditInfo(group.myRole, group.onlyAdminsCanEditInfo);
+          final peutAjouter =
+              canAddParticipants(group.myRole, group.onlyAdminsCanEditInfo);
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xxl),
+            children: [
+              _Header(
+                // La conversation streamée fait foi : sans ça, le titre
+                // resterait figé sur l'argument de navigation après un
+                // renommage.
+                groupName: group.groupName ?? widget.groupName,
+                groupAvatar: widget.groupAvatar,
+                groupPhoto: group.groupPhoto,
+                memberCount: group.participants.length,
+                canEdit: peutEditer,
+                onRename: _renameGroup,
+              ),
+              AppSpacing.vGapLg,
+              _DescriptionCard(
+                description: group.description,
+                canEdit: peutEditer,
+                onEdit: _editDescription,
+              ),
+              AppSpacing.vGapLg,
+              _MediaCard(
+                conversationId: widget.conversationId,
+                conversationName: group.groupName ?? widget.groupName,
+              ),
+              AppSpacing.vGapLg,
+              _MembersCard(
+                participants: sortParticipantsForDisplay(group.participants),
+                myId: myId,
+                myRole: group.myRole,
+                onAddParticipants: peutAjouter ? _addParticipants : null,
+                onRemove: _removeMember,
+                onSetRole: _setRole,
+              ),
+              if (canChangeSettings(group.myRole)) ...[
+                AppSpacing.vGapLg,
+                _SettingsCard(
+                  onlyAdminsCanSend: group.onlyAdminsCanSend,
+                  onlyAdminsCanEditInfo: group.onlyAdminsCanEditInfo,
+                  onChanged: (send, edit) => _runGroupAction(
+                    () => _chat.repository.updateGroupSettings(
+                      widget.conversationId,
+                      onlyAdminsCanSend: send,
+                      onlyAdminsCanEditInfo: edit,
+                    ),
+                  ),
+                ),
+              ],
+              AppSpacing.vGapLg,
+              _Card(
+                padding: EdgeInsets.zero,
+                child: Column(
                   children: [
-                    _Header(
-                      groupName: widget.groupName,
-                      groupAvatar: widget.groupAvatar,
-                      groupPhoto: _group!.groupPhoto,
-                      memberCount: _group!.participants.length,
-                    ),
-                    AppSpacing.vGapLg,
-                    _MediaCard(
+                    ConversationMuteListTile(
                       conversationId: widget.conversationId,
-                      conversationName: widget.groupName,
+                      conversationName: group.groupName ?? widget.groupName,
                     ),
-                    AppSpacing.vGapLg,
-                    _MembersCard(
-                      participants: _group?.participants ?? [],
-                      onAddParticipants: _addParticipants,
-                    ),
-                    AppSpacing.vGapLg,
-                    _Card(
-                      padding: EdgeInsets.zero,
-                      child: ConversationMuteListTile(
-                        conversationId: widget.conversationId,
-                        conversationName: widget.groupName,
+                    // C'est ce qui rend enfin effectif le flag `mentionsOnly`,
+                    // qu'aucun appelant ne passait : la colonne serveur se
+                    // comportait jusqu'ici comme une sourdine totale.
+                    SwitchListTile(
+                      value: group.mentionsOnly,
+                      onChanged: (v) => _runGroupAction(
+                        () => _chat.repository
+                            .setMentionsOnly(widget.conversationId, v),
                       ),
+                      title: Text(context.l10n.mentionsOnlyLabel,
+                          style: context.text.titleSmall),
+                      subtitle: Text(context.l10n.mentionsOnlySubtitle,
+                          style: context.text.bodySmall),
                     ),
-                    AppSpacing.vGapLg,
-                    _DangerCard(onLeave: _leaveGroup),
                   ],
                 ),
+              ),
+              AppSpacing.vGapLg,
+              _DangerCard(onLeave: _leaveGroup),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -356,17 +579,23 @@ class _Header extends StatelessWidget {
   final String? groupAvatar;
   final String? groupPhoto;
   final int memberCount;
+  final bool canEdit;
+  final VoidCallback onRename;
 
   const _Header({
     required this.groupName,
     this.groupAvatar,
     this.groupPhoto,
     required this.memberCount,
+    required this.canEdit,
+    required this.onRename,
   });
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = groupAvatar ?? groupPhoto;
+    // La photo streamée d'abord : `groupAvatar` n'est que l'argument de
+    // navigation, figé au moment de l'ouverture de l'écran.
+    final avatarUrl = groupPhoto ?? groupAvatar;
 
     return _Card(
       padding: const EdgeInsets.symmetric(
@@ -380,16 +609,130 @@ class _Header extends StatelessWidget {
             size: 120,
           ),
           AppSpacing.vGapLg,
-          Text(
-            groupName,
-            style: context.text.headlineSmall,
-            textAlign: TextAlign.center,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  groupName,
+                  style: context.text.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              if (canEdit) ...[
+                AppSpacing.hGapSm,
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  iconSize: AppIconSize.sm,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: context.l10n.renameGroup,
+                  color: context.colors.primary,
+                  onPressed: onRename,
+                ),
+              ],
+            ],
           ),
           AppSpacing.vGapSm,
           Text(
             context.l10n.groupMembersCount(memberCount),
             style: context.text.bodySmall
                 ?.copyWith(color: context.colors.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── DESCRIPTION ───────────────────────────────────────────────────────
+
+class _DescriptionCard extends StatelessWidget {
+  final String? description;
+  final bool canEdit;
+  final VoidCallback onEdit;
+
+  const _DescriptionCard({
+    required this.description,
+    required this.canEdit,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final texte = description?.trim() ?? '';
+    // Rien à dire et rien à faire : on n'affiche pas une carte vide.
+    if (texte.isEmpty && !canEdit) return const SizedBox.shrink();
+
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: ListTile(
+        title: Text(context.l10n.groupDescription,
+            style: context.text.titleSmall),
+        subtitle: Text(
+          texte.isEmpty ? context.l10n.noGroupDescription : texte,
+          style: context.text.bodySmall?.copyWith(
+            color: texte.isEmpty
+                ? context.colors.onSurfaceVariant
+                : context.colors.onSurface,
+            fontStyle: texte.isEmpty ? FontStyle.italic : null,
+          ),
+        ),
+        trailing: canEdit
+            ? Icon(Icons.edit_outlined,
+                size: AppIconSize.sm, color: context.colors.primary)
+            : null,
+        onTap: canEdit ? onEdit : null,
+      ),
+    );
+  }
+}
+
+// ── RÉGLAGES DU GROUPE ────────────────────────────────────────────────
+
+/// Les deux verrous, visibles des seuls administrateurs.
+///
+/// Ce ne sont que des interrupteurs : c'est `groupSendPolicy` et
+/// `requireGroupAdmin` qui les font respecter côté serveur.
+class _SettingsCard extends StatelessWidget {
+  final bool onlyAdminsCanSend;
+  final bool onlyAdminsCanEditInfo;
+  final void Function(bool? send, bool? edit) onChanged;
+
+  const _SettingsCard({
+    required this.onlyAdminsCanSend,
+    required this.onlyAdminsCanEditInfo,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md,
+                AppSpacing.lg, AppSpacing.xs),
+            child: Text(context.l10n.groupSettings,
+                style: context.text.titleSmall),
+          ),
+          SwitchListTile(
+            value: onlyAdminsCanSend,
+            onChanged: (v) => onChanged(v, null),
+            title: Text(context.l10n.onlyAdminsCanSendLabel,
+                style: context.text.bodyMedium),
+            subtitle: Text(context.l10n.onlyAdminsCanSendSubtitle,
+                style: context.text.bodySmall),
+          ),
+          SwitchListTile(
+            value: onlyAdminsCanEditInfo,
+            onChanged: (v) => onChanged(null, v),
+            title: Text(context.l10n.onlyAdminsCanEditInfoLabel,
+                style: context.text.bodyMedium),
+            subtitle: Text(context.l10n.onlyAdminsCanEditInfoSubtitle,
+                style: context.text.bodySmall),
           ),
         ],
       ),
@@ -684,10 +1027,18 @@ class _MediaCardState extends State<_MediaCard> {
 
 class _MembersCard extends StatelessWidget {
   final List<Participant> participants;
+  final int myId;
+  final int myRole;
   final VoidCallback? onAddParticipants;
+  final void Function(Participant) onRemove;
+  final void Function(Participant, int) onSetRole;
 
   const _MembersCard({
     required this.participants,
+    required this.myId,
+    required this.myRole,
+    required this.onRemove,
+    required this.onSetRole,
     this.onAddParticipants,
   });
 
@@ -727,22 +1078,35 @@ class _MembersCard extends StatelessWidget {
             ),
           ...participants.map((p) {
             final member = p.user;
-            final isYou = member.alanyaID ==
-                context.read<AuthProvider>().currentUser?.alanyaID;
+            final isYou = member.alanyaID == myId;
+            final nom = member.nom.isNotEmpty ? member.nom : member.pseudo;
+
+            final peutRetirer = canRemove(myRole, p.role, isSelf: isYou);
+            final peutChangerRole = canChangeRole(myRole, isSelf: isYou);
+            final aDesActions = peutRetirer || peutChangerRole;
 
             return ListTile(
               leading: AppAvatar(
                 imageUrl: hasValidAvatarUrl(member.avatarUrl)
                     ? member.avatarUrl
                     : null,
-                name: member.nom.isNotEmpty ? member.nom : member.pseudo,
+                name: nom,
                 size: AppSizes.avatarMd,
               ),
-              title: Text(
-                isYou
-                    ? context.l10n.youLabel
-                    : (member.nom.isNotEmpty ? member.nom : member.pseudo),
-                style: context.text.titleSmall,
+              title: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      isYou ? context.l10n.youLabel : nom,
+                      style: context.text.titleSmall,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (p.role >= GroupRole.admin) ...[
+                    AppSpacing.hGapSm,
+                    _RoleBadge(role: p.role),
+                  ],
+                ],
               ),
               subtitle: (!isYou && member.isOnline)
                   ? Text(
@@ -751,8 +1115,45 @@ class _MembersCard extends StatelessWidget {
                           color: context.semantic.online),
                     )
                   : null,
-              trailing: Icon(Icons.chevron_right,
-                  color: context.colors.outlineVariant),
+              // Pas de menu quand il n'y a rien à y mettre : un menu réduit au
+              // seul « voir le profil » ferait doublon avec le tap sur la ligne.
+              trailing: aDesActions
+                  ? PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert,
+                          color: context.colors.onSurfaceVariant),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'promote':
+                            onSetRole(p, GroupRole.admin);
+                          case 'demote':
+                            onSetRole(p, GroupRole.member);
+                          case 'remove':
+                            onRemove(p);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        if (peutChangerRole && p.role < GroupRole.admin)
+                          PopupMenuItem(
+                            value: 'promote',
+                            child: Text(context.l10n.makeAdmin),
+                          ),
+                        if (peutChangerRole && p.role == GroupRole.admin)
+                          PopupMenuItem(
+                            value: 'demote',
+                            child: Text(context.l10n.dismissAdmin),
+                          ),
+                        if (peutRetirer)
+                          PopupMenuItem(
+                            value: 'remove',
+                            child: Text(
+                              context.l10n.removeFromGroup,
+                              style: TextStyle(color: context.colors.error),
+                            ),
+                          ),
+                      ],
+                    )
+                  : Icon(Icons.chevron_right,
+                      color: context.colors.outlineVariant),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -766,6 +1167,30 @@ class _MembersCard extends StatelessWidget {
             );
           }),
         ],
+      ),
+    );
+  }
+}
+
+/// Puce « Propriétaire » / « Admin » à côté du nom.
+class _RoleBadge extends StatelessWidget {
+  final int role;
+  const _RoleBadge({required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    final estProprietaire = role == GroupRole.owner;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm, vertical: 1),
+      decoration: BoxDecoration(
+        color: context.colors.primaryContainer,
+        borderRadius: AppRadius.brSm,
+      ),
+      child: Text(
+        estProprietaire ? context.l10n.groupOwner : context.l10n.groupAdmin,
+        style: context.text.labelSmall
+            ?.copyWith(color: context.colors.onPrimaryContainer),
       ),
     );
   }

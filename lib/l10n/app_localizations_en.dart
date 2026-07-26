@@ -3032,4 +3032,101 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sysGroupEventFallback => 'The group was updated';
+
+  @override
+  String get groupOwner => 'Owner';
+
+  @override
+  String get groupAdmin => 'Admin';
+
+  @override
+  String get removeFromGroup => 'Remove from group';
+
+  @override
+  String removeMemberConfirm(String name) {
+    return 'Remove $name from the group?';
+  }
+
+  @override
+  String removeMemberDone(String name) {
+    return '$name was removed from the group';
+  }
+
+  @override
+  String get dismissAdmin => 'Dismiss as admin';
+
+  @override
+  String get viewProfile => 'View profile';
+
+  @override
+  String get groupDescription => 'Description';
+
+  @override
+  String get groupDescriptionHint => 'Add a description…';
+
+  @override
+  String get noGroupDescription => 'No description';
+
+  @override
+  String get renameGroup => 'Rename group';
+
+  @override
+  String get changeGroupPhoto => 'Change photo';
+
+  @override
+  String get groupSettings => 'Group settings';
+
+  @override
+  String get onlyAdminsCanSendLabel => 'Only admins can send messages';
+
+  @override
+  String get onlyAdminsCanSendSubtitle =>
+      'Turns the group into an announcement channel';
+
+  @override
+  String get onlyAdminsCanEditInfoLabel => 'Only admins can edit info';
+
+  @override
+  String get onlyAdminsCanEditInfoSubtitle =>
+      'Name, photo, description and adding members';
+
+  @override
+  String get mentionsOnlyLabel => 'Mentions only';
+
+  @override
+  String get mentionsOnlySubtitle =>
+      'Only get alerted when someone mentions you';
+
+  @override
+  String get youWereRemovedFromGroup => 'You are no longer part of this group';
+
+  @override
+  String get notAllowedGroupAction => 'Action not allowed';
+
+  @override
+  String get ownerMustTransferOnLeave =>
+      'You are the owner: the group will pass to the longest-standing member.';
+
+  @override
+  String get groupInfoUpdated => 'Group info updated';
+
+  @override
+  String get groupUpdateFailed => 'Could not update the group';
+
+  @override
+  String get announcementOnlyAdmins => 'Only admins can send messages';
+
+  @override
+  String get mentionAll => '@All';
+
+  @override
+  String mentionAllSubtitle(int count) {
+    return 'Alerts all $count members';
+  }
+
+  @override
+  String get mentionYou => 'You';
+
+  @override
+  String get jumpToMention => 'Go to next mention';
 }

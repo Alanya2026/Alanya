@@ -3057,4 +3057,104 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get sysGroupEventFallback => 'Le groupe a été mis à jour';
+
+  @override
+  String get groupOwner => 'Propriétaire';
+
+  @override
+  String get groupAdmin => 'Admin';
+
+  @override
+  String get removeFromGroup => 'Retirer du groupe';
+
+  @override
+  String removeMemberConfirm(String name) {
+    return 'Retirer $name du groupe ?';
+  }
+
+  @override
+  String removeMemberDone(String name) {
+    return '$name a été retiré du groupe';
+  }
+
+  @override
+  String get dismissAdmin => 'Retirer les droits d\'administrateur';
+
+  @override
+  String get viewProfile => 'Voir le profil';
+
+  @override
+  String get groupDescription => 'Description';
+
+  @override
+  String get groupDescriptionHint => 'Ajouter une description…';
+
+  @override
+  String get noGroupDescription => 'Aucune description';
+
+  @override
+  String get renameGroup => 'Renommer le groupe';
+
+  @override
+  String get changeGroupPhoto => 'Changer la photo';
+
+  @override
+  String get groupSettings => 'Réglages du groupe';
+
+  @override
+  String get onlyAdminsCanSendLabel => 'Seuls les admins peuvent écrire';
+
+  @override
+  String get onlyAdminsCanSendSubtitle =>
+      'Le groupe devient un canal d\'annonces';
+
+  @override
+  String get onlyAdminsCanEditInfoLabel =>
+      'Seuls les admins modifient les infos';
+
+  @override
+  String get onlyAdminsCanEditInfoSubtitle =>
+      'Nom, photo, description et ajout de membres';
+
+  @override
+  String get mentionsOnlyLabel => 'Uniquement les mentions';
+
+  @override
+  String get mentionsOnlySubtitle =>
+      'N\'être alerté que si l\'on vous mentionne';
+
+  @override
+  String get youWereRemovedFromGroup =>
+      'Vous ne faites plus partie de ce groupe';
+
+  @override
+  String get notAllowedGroupAction => 'Action non autorisée';
+
+  @override
+  String get ownerMustTransferOnLeave =>
+      'Vous êtes propriétaire : le groupe sera confié au membre le plus ancien.';
+
+  @override
+  String get groupInfoUpdated => 'Infos du groupe mises à jour';
+
+  @override
+  String get groupUpdateFailed => 'Impossible de modifier le groupe';
+
+  @override
+  String get announcementOnlyAdmins =>
+      'Seuls les administrateurs peuvent envoyer des messages';
+
+  @override
+  String get mentionAll => '@Tous';
+
+  @override
+  String mentionAllSubtitle(int count) {
+    return 'Alerte les $count membres';
+  }
+
+  @override
+  String get mentionYou => 'Vous';
+
+  @override
+  String get jumpToMention => 'Aller à la mention suivante';
 }

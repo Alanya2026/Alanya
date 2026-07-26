@@ -1144,5 +1144,55 @@
     }
   },
   "sysOnlyAdminsEditOffByMe": "You allowed everyone to edit group info",
-  "sysGroupEventFallback": "The group was updated"
+  "sysGroupEventFallback": "The group was updated",
+  "groupOwner": "Owner",
+  "groupAdmin": "Admin",
+  "removeFromGroup": "Remove from group",
+  "removeMemberConfirm": "Remove {name} from the group?",
+  "@removeMemberConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "removeMemberDone": "{name} was removed from the group",
+  "@removeMemberDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dismissAdmin": "Dismiss as admin",
+  "viewProfile": "View profile",
+  "groupDescription": "Description",
+  "groupDescriptionHint": "Add a description…",
+  "noGroupDescription": "No description",
+  "renameGroup": "Rename group",
+  "changeGroupPhoto": "Change photo",
+  "groupSettings": "Group settings",
+  "onlyAdminsCanSendLabel": "Only admins can send messages",
+  "onlyAdminsCanSendSubtitle": "Turns the group into an announcement channel",
+  "onlyAdminsCanEditInfoLabel": "Only admins can edit info",
+  "onlyAdminsCanEditInfoSubtitle": "Name, photo, description and adding members",
+  "mentionsOnlyLabel": "Mentions only",
+  "mentionsOnlySubtitle": "Only get alerted when someone mentions you",
+  "youWereRemovedFromGroup": "You are no longer part of this group",
+  "notAllowedGroupAction": "Action not allowed",
+  "ownerMustTransferOnLeave": "You are the owner: the group will pass to the longest-standing member.",
+  "groupInfoUpdated": "Group info updated",
+  "groupUpdateFailed": "Could not update the group",
+  "announcementOnlyAdmins": "Only admins can send messages",
+  "mentionAll": "@All",
+  "mentionAllSubtitle": "Alerts all {count} members",
+  "@mentionAllSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mentionYou": "You",
+  "jumpToMention": "Go to next mention"
 }
