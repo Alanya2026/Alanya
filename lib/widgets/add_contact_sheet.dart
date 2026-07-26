@@ -123,7 +123,8 @@ class _AddContactSheetState extends State<AddContactSheet> {
       await apiClient.addContact(user.alanyaID);
       if (!mounted) return;
       final cache = Provider.of<LocalCacheRepository>(context, listen: false);
-      await cache.upsertKnownUser(user, preferred: true);
+      // Résultat de recherche : payload incomplet, écriture partielle.
+      await cache.upsertKnownUser(user, preferred: true, partial: true);
       if (!mounted) return;
       final updated = await cache.getPreferredContactsOnce();
       if (!mounted) return;

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
@@ -249,6 +250,28 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
+  Future<void> _changeGroupPhoto() async {
+    final picker = ImagePicker();
+    final x = await picker.pickImage(source: ImageSource.gallery);
+    if (x == null || !mounted) return;
+
+    final api = Provider.of<TalkyApiClient>(context, listen: false);
+    await _runGroupAction(
+      () async {
+        // Deux temps, comme à la création : l'upload rend une URL, que la
+        // route de groupe enregistre. Le serveur ne reçoit jamais le binaire.
+        final res = await api.uploadImage(File(x.path));
+        final url = (res['url'] as String?)?.trim();
+        if (url == null || url.isEmpty) {
+          throw Exception('upload sans URL');
+        }
+        await _chat.repository
+            .updateGroupInfo(widget.conversationId, groupPhoto: url);
+      },
+      successMessage: context.l10n.groupInfoUpdated,
+    );
+  }
+
   Future<void> _renameGroup() async {
     final controller = TextEditingController(text: _group?.groupName ?? '');
     final nom = await showDialog<String>(
@@ -471,6 +494,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 memberCount: group.participants.length,
                 canEdit: peutEditer,
                 onRename: _renameGroup,
+                onChangePhoto: _changeGroupPhoto,
               ),
               AppSpacing.vGapLg,
               _DescriptionCard(
@@ -581,6 +605,7 @@ class _Header extends StatelessWidget {
   final int memberCount;
   final bool canEdit;
   final VoidCallback onRename;
+  final VoidCallback onChangePhoto;
 
   const _Header({
     required this.groupName,
@@ -589,6 +614,7 @@ class _Header extends StatelessWidget {
     required this.memberCount,
     required this.canEdit,
     required this.onRename,
+    required this.onChangePhoto,
   });
 
   @override
@@ -602,11 +628,40 @@ class _Header extends StatelessWidget {
           vertical: AppSpacing.xxxl, horizontal: AppSpacing.lg),
       child: Column(
         children: [
-          AppAvatar(
-            imageUrl: avatarUrl?.isNotEmpty == true ? avatarUrl : null,
-            name: groupName,
-            isGroup: true,
-            size: 120,
+          // Avatar tappable quand j'ai le droit d'éditer. La pastille rend
+          // l'affordance visible : sans elle, rien n'indique qu'on peut
+          // toucher la photo.
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              GestureDetector(
+                onTap: canEdit ? onChangePhoto : null,
+                child: AppAvatar(
+                  imageUrl: avatarUrl?.isNotEmpty == true ? avatarUrl : null,
+                  name: groupName,
+                  isGroup: true,
+                  size: 120,
+                ),
+              ),
+              if (canEdit)
+                GestureDetector(
+                  onTap: onChangePhoto,
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: context.colors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: context.colors.surface, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.photo_camera_rounded,
+                      size: AppIconSize.sm,
+                      color: context.colors.onPrimary,
+                    ),
+                  ),
+                ),
+            ],
           ),
           AppSpacing.vGapLg,
           Row(

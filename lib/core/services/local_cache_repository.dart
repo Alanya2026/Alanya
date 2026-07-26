@@ -81,10 +81,18 @@ class LocalCacheRepository {
           final u = User.fromJson(r);
           if (u.alanyaID == 0) continue;
           newIds.add(u.alanyaID);
+          // `GET /contacts` ne porte ni email ni pays : écriture partielle
+          // pour ne pas effacer une fiche déjà complète.
+          final companion = _partialUserToCompanion(
+            u,
+            preferred: true,
+            cachedAt: now,
+            presenceKnown: true,
+          );
           b.insert(
             _db.localUsers,
-            _userToCompanion(u, preferred: true, cachedAt: now),
-            onConflict: DoUpdate((_) => _userToCompanion(u, preferred: true, cachedAt: now)),
+            companion,
+            onConflict: DoUpdate((_) => companion),
           );
         }
       });
@@ -103,9 +111,20 @@ class LocalCacheRepository {
 
   /// Stocke un user vu de passage (résolu via getUserById) — utile pour
   /// peupler le roster d'appel groupe ou l'affichage de messages.
-  Future<void> upsertKnownUser(User u, {bool preferred = false}) async {
+  ///
+  /// [partial] pour les sources qui ne portent pas tout l'utilisateur
+  /// (résultat de recherche, carte de visite) : les colonnes absentes sont
+  /// alors laissées telles quelles au lieu d'être vidées.
+  Future<void> upsertKnownUser(
+    User u, {
+    bool preferred = false,
+    bool partial = false,
+  }) async {
+    final now = DateTime.now();
     await _db.into(_db.localUsers).insertOnConflictUpdate(
-          _userToCompanion(u, preferred: preferred, cachedAt: DateTime.now()),
+          partial
+              ? _partialUserToCompanion(u, preferred: preferred, cachedAt: now)
+              : _userToCompanion(u, preferred: preferred, cachedAt: now),
         );
   }
 
@@ -278,6 +297,52 @@ class LocalCacheRepository {
     );
   }
 
+  /// Companion « partiel » : n'écrit que les colonnes réellement portées par
+  /// la source.
+  ///
+  /// L'historique d'appels, la liste des contacts préférés ou une carte de
+  /// visite ne transportent pas tout un utilisateur (pas de pays, parfois
+  /// pas de téléphone). Les écrire via [_userToCompanion] remplaçait la
+  /// ligne entière et effaçait ce qu'un `GET /users/:id` avait déjà appris —
+  /// la fiche contact repartait alors sur un aller-retour réseau pour
+  /// réafficher le numéro et le pays.
+  ///
+  /// [presenceKnown] distingue les sources qui portent `is_online` /
+  /// `last_seen` (contacts préférés) de celles qui les inventent à faux
+  /// (snapshots d'appel, cartes de visite).
+  LocalUsersCompanion _partialUserToCompanion(
+    User u, {
+    bool? preferred,
+    required DateTime cachedAt,
+    bool presenceKnown = false,
+  }) {
+    // Le pays n'est jamais partiel : `idPays` seul vaut 10 par défaut dans
+    // User.fromJson, donc on ne l'écrit qu'accompagné de son libellé.
+    final hasCountry = (u.paysLibelle ?? '').isNotEmpty;
+    return LocalUsersCompanion(
+      alanyaID: Value(u.alanyaID),
+      nom: u.nom.isNotEmpty ? Value(u.nom) : const Value.absent(),
+      pseudo: u.pseudo.isNotEmpty ? Value(u.pseudo) : const Value.absent(),
+      alanyaPhone: u.alanyaPhone.isNotEmpty
+          ? Value(u.alanyaPhone)
+          : const Value.absent(),
+      email: u.email.isNotEmpty ? Value(u.email) : const Value.absent(),
+      avatarUrl:
+          u.avatarUrl.isNotEmpty ? Value(u.avatarUrl) : const Value.absent(),
+      idPays: hasCountry ? Value(u.idPays) : const Value.absent(),
+      paysLibelle: hasCountry ? Value(u.paysLibelle) : const Value.absent(),
+      isOnline: presenceKnown ? Value(u.isOnline) : const Value.absent(),
+      lastSeen: presenceKnown
+          ? Value(DateTime.tryParse(u.lastSeen))
+          : const Value.absent(),
+      typeCompte:
+          u.typeCompte > 0 ? Value(u.typeCompte) : const Value.absent(),
+      isPreferredContact:
+          preferred != null ? Value(preferred) : const Value.absent(),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
   Future<void> _upsertCall(Call c, {required int myId}) async {
     if (c.idCall == 0) return;
     final now = DateTime.now();
@@ -303,10 +368,14 @@ class LocalCacheRepository {
       onConflict: DoUpdate((_) => _callToCompanion(c, other)),
     );
     if (other != null) {
+      // L'historique d'appels ne renvoie que nom / pseudo / avatar : sans
+      // écriture partielle, chaque synchro d'appels effaçait le numéro et le
+      // pays du contact (et le marquait hors ligne à tort).
+      final companion = _partialUserToCompanion(other, cachedAt: now);
       b.insert(
         _db.localUsers,
-        _userToCompanion(other, cachedAt: now),
-        onConflict: DoUpdate((_) => _userToCompanion(other, cachedAt: now)),
+        companion,
+        onConflict: DoUpdate((_) => companion),
       );
     }
   }

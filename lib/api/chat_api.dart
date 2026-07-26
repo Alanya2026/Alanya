@@ -28,6 +28,7 @@ extension ChatHttpApi on TalkyApiClient {
     required List<int> participantIDs,
     required String groupName,
     String? groupPhoto,
+    String? description,
   }) async {
     final data = await _handleRequest(
       () => _client.post(
@@ -37,6 +38,7 @@ extension ChatHttpApi on TalkyApiClient {
           'participantIDs': participantIDs,
           'groupName': groupName,
           if (groupPhoto != null) 'groupPhoto': groupPhoto,
+          if (description != null) 'description': description,
         }),
       ),
     );

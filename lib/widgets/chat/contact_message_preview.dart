@@ -73,7 +73,7 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
       if (!mounted) return;
       setState(() => _isPreferred = fav);
       if (fav) {
-        await cache.upsertKnownUser(_asUser, preferred: true);
+        await cache.upsertKnownUser(_asUser, preferred: true, partial: true);
       }
     } catch (e, st) {
       AppLog.e('ContactPreview', 'checkIsContact échoué', e, st);
@@ -90,7 +90,7 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
     setState(() => _adding = true);
     try {
       await api.addContact(widget.contact.alanyaID);
-      await cache.upsertKnownUser(_asUser, preferred: true);
+      await cache.upsertKnownUser(_asUser, preferred: true, partial: true);
       if (!mounted) return;
       setState(() {
         _isPreferred = true;

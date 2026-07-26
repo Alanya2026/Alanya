@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import '../../providers/connectivity_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
+import 'chat_detail_screen.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   final List<User> members;
@@ -27,6 +29,7 @@ class CreateGroupScreen extends StatefulWidget {
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   late List<User> _members;
   File? _photoFile;
   bool _creating = false;
@@ -41,6 +44,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -75,15 +79,37 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         photoUrl = (res['url'] as String?)?.trim();
       }
 
-      await api.createGroup(
-        groupName: _nameController.text,
+      final description = _descriptionController.text.trim();
+      final cree = await api.createGroup(
+        groupName: _nameController.text.trim(),
         participantIDs: _members.map((m) => m.alanyaID).toList(),
         groupPhoto: photoUrl,
+        description: description.isEmpty ? null : description,
       );
 
       await chat.refreshConversations(force: true);
       if (!mounted) return;
+
+      // La conversation créée était jetée, et l'écran renvoyait à la racine :
+      // on venait de créer un groupe sans pouvoir y entrer. On l'ouvre, et le
+      // message système « X a créé le groupe » en est déjà la première ligne.
+      final convId = (cree['conversID'] as num?)?.toInt() ?? 0;
+      if (convId <= 0) {
+        Navigator.popUntil(context, (route) => route.isFirst);
+        return;
+      }
       Navigator.popUntil(context, (route) => route.isFirst);
+      unawaited(Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatDetailScreen(
+            userName: _nameController.text.trim(),
+            conversationId: convId,
+            isGroup: true,
+            avatarUrl: photoUrl,
+          ),
+        ),
+      ));
     } catch (e, st) {
       AppLog.e('CreateGroup', context.l10n.failedToCreateGroup, e, st);
       if (mounted) {
@@ -144,6 +170,21 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               validator: Validators.required,
               decoration: InputDecoration(
                 hintText: context.l10n.enterTheGroupName,
+              ),
+            ),
+            AppSpacing.vGapLg,
+
+            // Description — facultative, comme sur la fiche du groupe.
+            Text(context.l10n.groupDescription, style: context.text.titleSmall),
+            AppSpacing.vGapSm,
+            TextFormField(
+              controller: _descriptionController,
+              maxLength: 512,
+              maxLines: 3,
+              minLines: 2,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: context.l10n.groupDescriptionHint,
               ),
             ),
             AppSpacing.vGapXxl,

@@ -56,6 +56,10 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   bool _isBlocked = false;
   bool _blockedByThem = false;
   bool _busy = false;
+  /// Vrai dès que `GET /users/:id` a répondu : le cache local, plus pauvre,
+  /// ne doit plus écraser l'en-tête s'il arrive après (course possible depuis
+  /// que les requêtes partent en parallèle).
+  bool _profileFromNetwork = false;
   /// 1-1 locale avec [widget.userId] si [widget.conversationId] est absent.
   int? _resolvedConvId;
 
@@ -96,10 +100,55 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     }
   }
 
+  /// Exécute [run] en repliant toute erreur sur [fallback] (les statuts
+  /// annexes ne doivent jamais empêcher l'affichage du profil).
+  Future<T> _guard<T>(
+    Future<T> Function() run,
+    T fallback,
+    String label,
+  ) async {
+    try {
+      return await run();
+    } catch (e, st) {
+      AppLog.e('ContactDetail', label, e, st);
+      return fallback;
+    }
+  }
+
   Future<void> _load() async {
     final cache = context.read<LocalCacheRepository>();
-    // Résoudre tôt pour que Médias / actions ciblent la bonne 1-1.
-    await _resolveDirectConversation();
+    // Mon propre profil : ni « suis-je dans mes contacts ? », ni « me suis-je
+    // bloqué ? » — deux allers-retours réseau sans objet. Lu avant tout await
+    // (le context ne doit pas être touché après démontage).
+    final isSelf = _isSelf;
+
+    // La 1-1 locale ne conditionne que les médias et les actions : la
+    // résoudre en tâche de fond plutôt que devant les requêtes profil.
+    unawaited(_resolveDirectConversation());
+
+    // Les trois requêtes partent ensemble. Le téléphone et le pays ne
+    // transitent que par `getUserById` : les faire attendre `checkIsContact`
+    // puis `getBlockStatus` en série coûtait deux allers-retours réseau
+    // pendant lesquels l'en-tête restait incomplet.
+    // `null` = statut inconnu (réseau indisponible) : on garde alors la
+    // valeur déjà hydratée depuis le cache plutôt que de la remettre à faux.
+    final profileFuture = _api.getUserById(widget.userId);
+    final favFuture = isSelf
+        ? Future<bool?>.value(false)
+        : _guard<bool?>(
+            () => _api.checkIsContact(widget.userId),
+            null,
+            'checkIsContact échoué',
+          );
+    final blockFuture = isSelf
+        ? Future<({bool isBlocked, bool blockedByThem})?>.value(
+            (isBlocked: false, blockedByThem: false),
+          )
+        : _guard<({bool isBlocked, bool blockedByThem})?>(
+            () => _api.getBlockStatus(widget.userId),
+            null,
+            'getBlockStatus échoué',
+          );
 
     if (widget.initialName.isNotEmpty || widget.initialAvatar.isNotEmpty) {
       setState(() {
@@ -120,7 +169,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     }
     try {
       final u = await cache.getKnownUser(widget.userId);
-      if (u != null && mounted) {
+      if (u != null && mounted && !_profileFromNetwork) {
         setState(() {
           _contact = User(
             alanyaID: u.alanyaID,
@@ -143,42 +192,38 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       AppLog.e('ContactDetail', 'Chargement contact (cache) échoué', e, st);
     }
 
+    // Premier rendu complet dès la réponse profil — sans attendre les deux
+    // statuts annexes.
+    User? user;
     try {
-      final data = await _api.getUserById(widget.userId);
-      // Mon propre profil : ni « suis-je dans mes contacts ? », ni « me
-      // suis-je bloqué ? » — deux allers-retours réseau sans objet.
-      final isSelf = _isSelf;
-      bool fav = false;
-      if (!isSelf) {
-        try {
-          fav = await _api.checkIsContact(widget.userId);
-        } catch (e, st) {
-          AppLog.e('ContactDetail', 'checkIsContact échoué', e, st);
-        }
-      }
-      ({bool isBlocked, bool blockedByThem}) blockStatus = (
-        isBlocked: false,
-        blockedByThem: false,
-      );
-      if (!isSelf) {
-        try {
-          blockStatus = await _api.getBlockStatus(widget.userId);
-        } catch (e, st) {
-          AppLog.e('ContactDetail', 'getBlockStatus échoué', e, st);
-        }
-      }
+      final data = await profileFuture;
       if (!mounted) return;
-      final user = User.fromJson(data);
+      user = User.fromJson(data);
       setState(() {
         _contact = user;
-        _isFavorite = fav;
-        _isBlocked = blockStatus.isBlocked;
-        _blockedByThem = blockStatus.blockedByThem;
+        _profileFromNetwork = true;
         _isLoading = false;
       });
-      cache.upsertKnownUser(user, preferred: fav);
-    } catch (_) {
+    } catch (e, st) {
+      AppLog.e('ContactDetail', 'getUserById échoué', e, st);
       if (mounted && _contact == null) setState(() => _isLoading = false);
+    }
+
+    // Second rendu : contact préféré et blocage, qui n'ont d'effet que sur
+    // les actions du bas de fiche.
+    final fav = await favFuture;
+    final blockStatus = await blockFuture;
+    if (!mounted) return;
+    setState(() {
+      if (fav != null) _isFavorite = fav;
+      if (blockStatus != null) {
+        _isBlocked = blockStatus.isBlocked;
+        _blockedByThem = blockStatus.blockedByThem;
+      }
+    });
+
+    if (user != null) {
+      unawaited(cache.upsertKnownUser(user, preferred: fav ?? _isFavorite));
     }
   }
 
