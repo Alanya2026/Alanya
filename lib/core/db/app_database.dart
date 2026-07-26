@@ -50,6 +50,14 @@ class LocalConversations extends Table {
   BoolColumn get mentionsOnly =>
       boolean().withDefault(const Constant(false))();
 
+  /// Au moins une mention non lue me ciblant.
+  ///
+  /// Dérivé par ConversationSummaryReducer à côté de `unreadCount`, et non
+  /// calculé par tuile : la liste des discussions ne peut pas se permettre une
+  /// requête par ligne à chaque frame.
+  BoolColumn get hasUnreadMention =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {conversID};
 }
@@ -425,6 +433,8 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(localConversations, localConversations.mutedUntil);
             await m.addColumn(localConversations, localConversations.muteForever);
             await m.addColumn(localConversations, localConversations.mentionsOnly);
+            await m.addColumn(
+                localConversations, localConversations.hasUnreadMention);
             await m.addColumn(localMessages, localMessages.mentionsJson);
             await m.addColumn(localMessages, localMessages.failureCode);
           }

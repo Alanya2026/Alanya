@@ -281,6 +281,21 @@ class $LocalConversationsTable extends LocalConversations
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _hasUnreadMentionMeta = const VerificationMeta(
+    'hasUnreadMention',
+  );
+  @override
+  late final GeneratedColumn<bool> hasUnreadMention = GeneratedColumn<bool>(
+    'has_unread_mention',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_unread_mention" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     conversID,
@@ -305,6 +320,7 @@ class $LocalConversationsTable extends LocalConversations
     mutedUntil,
     muteForever,
     mentionsOnly,
+    hasUnreadMention,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -489,6 +505,15 @@ class $LocalConversationsTable extends LocalConversations
         ),
       );
     }
+    if (data.containsKey('has_unread_mention')) {
+      context.handle(
+        _hasUnreadMentionMeta,
+        hasUnreadMention.isAcceptableOrUnknown(
+          data['has_unread_mention']!,
+          _hasUnreadMentionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -586,6 +611,10 @@ class $LocalConversationsTable extends LocalConversations
         DriftSqlType.bool,
         data['${effectivePrefix}mentions_only'],
       )!,
+      hasUnreadMention: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_unread_mention'],
+      )!,
     );
   }
 
@@ -627,6 +656,13 @@ class LocalConversation extends DataClass
   final DateTime? mutedUntil;
   final bool muteForever;
   final bool mentionsOnly;
+
+  /// Au moins une mention non lue me ciblant.
+  ///
+  /// Dérivé par ConversationSummaryReducer à côté de `unreadCount`, et non
+  /// calculé par tuile : la liste des discussions ne peut pas se permettre une
+  /// requête par ligne à chaque frame.
+  final bool hasUnreadMention;
   const LocalConversation({
     required this.conversID,
     required this.isGroup,
@@ -650,6 +686,7 @@ class LocalConversation extends DataClass
     this.mutedUntil,
     required this.muteForever,
     required this.mentionsOnly,
+    required this.hasUnreadMention,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -698,6 +735,7 @@ class LocalConversation extends DataClass
     }
     map['mute_forever'] = Variable<bool>(muteForever);
     map['mentions_only'] = Variable<bool>(mentionsOnly);
+    map['has_unread_mention'] = Variable<bool>(hasUnreadMention);
     return map;
   }
 
@@ -747,6 +785,7 @@ class LocalConversation extends DataClass
           : Value(mutedUntil),
       muteForever: Value(muteForever),
       mentionsOnly: Value(mentionsOnly),
+      hasUnreadMention: Value(hasUnreadMention),
     );
   }
 
@@ -782,6 +821,7 @@ class LocalConversation extends DataClass
       mutedUntil: serializer.fromJson<DateTime?>(json['mutedUntil']),
       muteForever: serializer.fromJson<bool>(json['muteForever']),
       mentionsOnly: serializer.fromJson<bool>(json['mentionsOnly']),
+      hasUnreadMention: serializer.fromJson<bool>(json['hasUnreadMention']),
     );
   }
   @override
@@ -810,6 +850,7 @@ class LocalConversation extends DataClass
       'mutedUntil': serializer.toJson<DateTime?>(mutedUntil),
       'muteForever': serializer.toJson<bool>(muteForever),
       'mentionsOnly': serializer.toJson<bool>(mentionsOnly),
+      'hasUnreadMention': serializer.toJson<bool>(hasUnreadMention),
     };
   }
 
@@ -836,6 +877,7 @@ class LocalConversation extends DataClass
     Value<DateTime?> mutedUntil = const Value.absent(),
     bool? muteForever,
     bool? mentionsOnly,
+    bool? hasUnreadMention,
   }) => LocalConversation(
     conversID: conversID ?? this.conversID,
     isGroup: isGroup ?? this.isGroup,
@@ -869,6 +911,7 @@ class LocalConversation extends DataClass
     mutedUntil: mutedUntil.present ? mutedUntil.value : this.mutedUntil,
     muteForever: muteForever ?? this.muteForever,
     mentionsOnly: mentionsOnly ?? this.mentionsOnly,
+    hasUnreadMention: hasUnreadMention ?? this.hasUnreadMention,
   );
   LocalConversation copyWithCompanion(LocalConversationsCompanion data) {
     return LocalConversation(
@@ -926,6 +969,9 @@ class LocalConversation extends DataClass
       mentionsOnly: data.mentionsOnly.present
           ? data.mentionsOnly.value
           : this.mentionsOnly,
+      hasUnreadMention: data.hasUnreadMention.present
+          ? data.hasUnreadMention.value
+          : this.hasUnreadMention,
     );
   }
 
@@ -953,7 +999,8 @@ class LocalConversation extends DataClass
           ..write('myRole: $myRole, ')
           ..write('mutedUntil: $mutedUntil, ')
           ..write('muteForever: $muteForever, ')
-          ..write('mentionsOnly: $mentionsOnly')
+          ..write('mentionsOnly: $mentionsOnly, ')
+          ..write('hasUnreadMention: $hasUnreadMention')
           ..write(')'))
         .toString();
   }
@@ -982,6 +1029,7 @@ class LocalConversation extends DataClass
     mutedUntil,
     muteForever,
     mentionsOnly,
+    hasUnreadMention,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -1008,7 +1056,8 @@ class LocalConversation extends DataClass
           other.myRole == this.myRole &&
           other.mutedUntil == this.mutedUntil &&
           other.muteForever == this.muteForever &&
-          other.mentionsOnly == this.mentionsOnly);
+          other.mentionsOnly == this.mentionsOnly &&
+          other.hasUnreadMention == this.hasUnreadMention);
 }
 
 class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
@@ -1034,6 +1083,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
   final Value<DateTime?> mutedUntil;
   final Value<bool> muteForever;
   final Value<bool> mentionsOnly;
+  final Value<bool> hasUnreadMention;
   const LocalConversationsCompanion({
     this.conversID = const Value.absent(),
     this.isGroup = const Value.absent(),
@@ -1057,6 +1107,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     this.mutedUntil = const Value.absent(),
     this.muteForever = const Value.absent(),
     this.mentionsOnly = const Value.absent(),
+    this.hasUnreadMention = const Value.absent(),
   });
   LocalConversationsCompanion.insert({
     this.conversID = const Value.absent(),
@@ -1081,6 +1132,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     this.mutedUntil = const Value.absent(),
     this.muteForever = const Value.absent(),
     this.mentionsOnly = const Value.absent(),
+    this.hasUnreadMention = const Value.absent(),
   });
   static Insertable<LocalConversation> custom({
     Expression<int>? conversID,
@@ -1105,6 +1157,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     Expression<DateTime>? mutedUntil,
     Expression<bool>? muteForever,
     Expression<bool>? mentionsOnly,
+    Expression<bool>? hasUnreadMention,
   }) {
     return RawValuesInsertable({
       if (conversID != null) 'convers_i_d': conversID,
@@ -1131,6 +1184,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
       if (mutedUntil != null) 'muted_until': mutedUntil,
       if (muteForever != null) 'mute_forever': muteForever,
       if (mentionsOnly != null) 'mentions_only': mentionsOnly,
+      if (hasUnreadMention != null) 'has_unread_mention': hasUnreadMention,
     });
   }
 
@@ -1157,6 +1211,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     Value<DateTime?>? mutedUntil,
     Value<bool>? muteForever,
     Value<bool>? mentionsOnly,
+    Value<bool>? hasUnreadMention,
   }) {
     return LocalConversationsCompanion(
       conversID: conversID ?? this.conversID,
@@ -1182,6 +1237,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
       mutedUntil: mutedUntil ?? this.mutedUntil,
       muteForever: muteForever ?? this.muteForever,
       mentionsOnly: mentionsOnly ?? this.mentionsOnly,
+      hasUnreadMention: hasUnreadMention ?? this.hasUnreadMention,
     );
   }
 
@@ -1256,6 +1312,9 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     if (mentionsOnly.present) {
       map['mentions_only'] = Variable<bool>(mentionsOnly.value);
     }
+    if (hasUnreadMention.present) {
+      map['has_unread_mention'] = Variable<bool>(hasUnreadMention.value);
+    }
     return map;
   }
 
@@ -1283,7 +1342,8 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
           ..write('myRole: $myRole, ')
           ..write('mutedUntil: $mutedUntil, ')
           ..write('muteForever: $muteForever, ')
-          ..write('mentionsOnly: $mentionsOnly')
+          ..write('mentionsOnly: $mentionsOnly, ')
+          ..write('hasUnreadMention: $hasUnreadMention')
           ..write(')'))
         .toString();
   }
@@ -6679,6 +6739,7 @@ typedef $$LocalConversationsTableCreateCompanionBuilder =
       Value<DateTime?> mutedUntil,
       Value<bool> muteForever,
       Value<bool> mentionsOnly,
+      Value<bool> hasUnreadMention,
     });
 typedef $$LocalConversationsTableUpdateCompanionBuilder =
     LocalConversationsCompanion Function({
@@ -6704,6 +6765,7 @@ typedef $$LocalConversationsTableUpdateCompanionBuilder =
       Value<DateTime?> mutedUntil,
       Value<bool> muteForever,
       Value<bool> mentionsOnly,
+      Value<bool> hasUnreadMention,
     });
 
 class $$LocalConversationsTableFilterComposer
@@ -6822,6 +6884,11 @@ class $$LocalConversationsTableFilterComposer
 
   ColumnFilters<bool> get mentionsOnly => $composableBuilder(
     column: $table.mentionsOnly,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasUnreadMention => $composableBuilder(
+    column: $table.hasUnreadMention,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6944,6 +7011,11 @@ class $$LocalConversationsTableOrderingComposer
     column: $table.mentionsOnly,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get hasUnreadMention => $composableBuilder(
+    column: $table.hasUnreadMention,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalConversationsTableAnnotationComposer
@@ -7052,6 +7124,11 @@ class $$LocalConversationsTableAnnotationComposer
     column: $table.mentionsOnly,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get hasUnreadMention => $composableBuilder(
+    column: $table.hasUnreadMention,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalConversationsTableTableManager
@@ -7116,6 +7193,7 @@ class $$LocalConversationsTableTableManager
                 Value<DateTime?> mutedUntil = const Value.absent(),
                 Value<bool> muteForever = const Value.absent(),
                 Value<bool> mentionsOnly = const Value.absent(),
+                Value<bool> hasUnreadMention = const Value.absent(),
               }) => LocalConversationsCompanion(
                 conversID: conversID,
                 isGroup: isGroup,
@@ -7139,6 +7217,7 @@ class $$LocalConversationsTableTableManager
                 mutedUntil: mutedUntil,
                 muteForever: muteForever,
                 mentionsOnly: mentionsOnly,
+                hasUnreadMention: hasUnreadMention,
               ),
           createCompanionCallback:
               ({
@@ -7164,6 +7243,7 @@ class $$LocalConversationsTableTableManager
                 Value<DateTime?> mutedUntil = const Value.absent(),
                 Value<bool> muteForever = const Value.absent(),
                 Value<bool> mentionsOnly = const Value.absent(),
+                Value<bool> hasUnreadMention = const Value.absent(),
               }) => LocalConversationsCompanion.insert(
                 conversID: conversID,
                 isGroup: isGroup,
@@ -7187,6 +7267,7 @@ class $$LocalConversationsTableTableManager
                 mutedUntil: mutedUntil,
                 muteForever: muteForever,
                 mentionsOnly: mentionsOnly,
+                hasUnreadMention: hasUnreadMention,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

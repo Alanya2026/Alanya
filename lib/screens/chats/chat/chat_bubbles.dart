@@ -171,7 +171,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 isMe: isMe,
                 selected: selected,
                 highlighted: _highlightMsgId == msg.msgID,
-                baseColor: isMe ? context.colors.primary : context.colors.surface,
+                // Fond teinté quand JE suis mentionné : c'est ce qui rend le
+                // bouton de saut lisible — on voit où l'on atterrit. Pas de
+                // liseré (décision produit) : un troisième traitement visuel
+                // alourdirait un fil déjà partagé entre bulles et messages
+                // système. Entrantes seulement : une sortante est déjà indigo.
+                baseColor: isMe
+                    ? context.colors.primary
+                    : (_mentionsMe(msg)
+                        ? context.colors.primaryContainer
+                        : context.colors.surface),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(AppRadius.lg),
                   topRight: const Radius.circular(AppRadius.lg),
@@ -239,6 +248,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                                 linkColor: isMe
                                     ? context.colors.onPrimary
                                     : context.colors.primary,
+                                mentions: _mentionSpec(isMe),
                               ),
                             ),
                           ),
@@ -349,6 +359,100 @@ extension _ChatBubbles on _ChatDetailScreenState {
         borderRadius: AppRadius.brSm,
       ),
       child: Text(label, style: context.text.labelSmall),
+    );
+  }
+
+  /// Ce message me mentionne-t-il ? Lu sur la colonne serveur et non sur le
+  /// texte : c'est elle qui fait autorité, le surlignage n'est qu'un rendu.
+  bool _mentionsMe(LocalMessage msg) {
+    final me = _myId;
+    if (me == null || me == 0) return false;
+    return decodeMentions(msg.mentionsJson).contains(me);
+  }
+
+  /// Surlignage et tap des mentions dans une bulle.
+  ///
+  /// `null` hors groupe : un homonyme ne doit pas devenir un lien dans un 1-1.
+  MentionSpec? _mentionSpec(bool isMe) {
+    if (!widget.isGroup) return null;
+    final membres = _groupParticipants;
+    if (membres.isEmpty) return null;
+
+    return MentionSpec(
+      resolve: (segment) => resolveMentions(
+        segment,
+        membres,
+        // LES DEUX libellés : le texte est stocké tel quel, un message écrit
+        // en français (« @Tous ») lu par un client anglais doit rester
+        // surligné.
+        allLabelFr: '@Tous',
+        allLabelEn: '@All',
+      ).map((m) => (
+            start: m.start,
+            end: m.end,
+            userId: m.userId,
+            isAll: m.isAll,
+          )).toList(),
+      style: (base) => isMe
+          // Sur fond indigo, l'indigo serait invisible : blanc gras souligné.
+          ? base.copyWith(
+              fontWeight: FontWeight.w700,
+              decoration: TextDecoration.underline,
+              decorationColor: context.colors.onPrimary,
+            )
+          : base.copyWith(
+              color: context.colors.primary,
+              fontWeight: FontWeight.w600,
+            ),
+      onTap: _openMentionTarget,
+      recognizerSink: _mentionRecognizers,
+    );
+  }
+
+  /// Trois destinations, dont deux non évidentes.
+  void _openMentionTarget(int? userId) {
+    // @Tous → la liste des membres, seule réponse utile à « qui est concerné ».
+    if (userId == null) {
+      final convId = _convId;
+      if (convId == null) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GroupDetailScreen(
+            conversationId: convId,
+            groupName: widget.userName,
+            groupAvatar: widget.avatarUrl,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Moi-même → mon profil, PAS la fiche contact : celle-ci propose bloquer
+    // et signaler, absurdes sur soi, et charge un blockStatus avec soi-même
+    // comme pair.
+    if (userId == _myId) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+      );
+      return;
+    }
+
+    final membre = _groupParticipants
+        .where((p) => p.alanyaID == userId)
+        .firstOrNull;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ContactDetailScreen(
+          userId: userId,
+          conversationId: _convId,
+          // Évitent l'écran vide le temps du chargement.
+          initialName: membre?.nom ?? '',
+          initialAvatar: membre?.user.avatarUrl ?? '',
+        ),
+      ),
     );
   }
 
@@ -1532,7 +1636,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
               decoration: _bubbleDecoration(
                 isMe: isMe,
                 selected: selected,
-                baseColor: isMe ? context.colors.primary : context.colors.surface,
+                // Fond teinté quand JE suis mentionné : c'est ce qui rend le
+                // bouton de saut lisible — on voit où l'on atterrit. Pas de
+                // liseré (décision produit) : un troisième traitement visuel
+                // alourdirait un fil déjà partagé entre bulles et messages
+                // système. Entrantes seulement : une sortante est déjà indigo.
+                baseColor: isMe
+                    ? context.colors.primary
+                    : (_mentionsMe(last)
+                        ? context.colors.primaryContainer
+                        : context.colors.surface),
                 borderRadius: borderRadius,
               ),
               child: Column(
@@ -1577,6 +1690,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                                 linkColor: isMe
                                     ? context.colors.onPrimary
                                     : context.colors.primary,
+                                mentions: _mentionSpec(isMe),
                               ),
                             ),
                           ),

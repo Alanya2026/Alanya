@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -15,7 +16,7 @@ import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/db/app_database.dart';
 import '../../core/call_limits.dart';
-import '../../core/db/chat_dao.dart' show decodeParticipants;
+import '../../core/db/chat_dao.dart' show decodeParticipants, decodeMentions;
 import '../../core/navigation/app_navigator.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/music_metadata_service.dart';
@@ -71,6 +72,7 @@ import '../../core/utils/contact_payload.dart';
 import '../../core/utils/location_payload.dart';
 import '../../core/utils/group_permissions.dart';
 import '../../core/utils/mention_parser.dart';
+import '../profile/profile_screen.dart';
 import '../../core/utils/system_event_payload.dart';
 import '../../widgets/chat/contact_message_preview.dart';
 import '../../widgets/chat/location_message_preview.dart';
@@ -180,6 +182,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// Membres du groupe, pour résoudre les mentions à l'envoi et les surligner.
   /// Alimenté par le même stream que le verrou du composeur.
   List<Participant> _groupParticipants = const [];
+
+  /// Recognizers des mentions, libérés au dispose. Sans ça, une liste qui
+  /// défile en fuit un par reconstruction de bulle.
+  final List<GestureRecognizer> _mentionRecognizers = [];
+
+  /// Mentions non lues me ciblant, recalculées à chaque changement du fil.
+  int _unreadMentionCount = 0;
+
+  /// Dernière mention atteinte par le bouton de saut, pour enchaîner.
+  int? _lastMentionJumpMsgId;
   StreamSubscription<LocalConversation?>? _groupWatch;
   bool _blockedByThem = false;
 
@@ -416,6 +428,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   void _bindReactionsStream(int convId) {
     _reactionsSub?.cancel();
     _groupWatch?.cancel();
+    for (final r in _mentionRecognizers) {
+      r.dispose();
+    }
+    _mentionRecognizers.clear();
     _reactionsSub = _chat.repository.watchReactions(convId).listen((reactions) {
       if (!mounted) return;
       setState(() => _currentReactionsByMsg = _groupReactionsByMsg(reactions));
@@ -612,6 +628,33 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   GlobalKey _keyForMessage(int msgID) =>
       _messageKeys.putIfAbsent(msgID, GlobalKey.new);
 
+  /// Recompte les mentions non lues me ciblant.
+  ///
+  /// Dérivé de la liste déjà en mémoire plutôt que par une requête : le stream
+  /// vient de la livrer, et un aller-retour DAO à chaque frame serait du
+  /// gaspillage. Le `setState` n'est déclenché que si le nombre CHANGE, sans
+  /// quoi on relancerait un build à chaque émission du stream.
+  void _recomputeMentionCount(List<LocalMessage> messages) {
+    if (!widget.isGroup) return;
+    final me = _myId;
+    if (me == null || me == 0) return;
+
+    var n = 0;
+    for (final m in messages) {
+      if (m.senderID == me) continue;
+      if (m.status >= 3) continue;
+      if (m.isDeleted) continue;
+      if (m.type == kSystemMessageType) continue;
+      if (m.deletedForID == me) continue;
+      if (decodeMentions(m.mentionsJson).contains(me)) n++;
+    }
+    if (n == _unreadMentionCount) return;
+    // Hors du build en cours : ce recompte est appelé DEPUIS un builder.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _unreadMentionCount = n);
+    });
+  }
+
   /// Suit le mode annonce et mon rôle. Sans ça, le verrou ne serait évalué
   /// qu'à l'ouverture de l'écran et resterait faux après une promotion.
   void _watchGroupState() {
@@ -707,6 +750,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                               builder: (context, snapshot) {
                                 final messages = snapshot.data ?? const [];
                                 _currentMessages = messages;
+                                _recomputeMentionCount(messages);
                                 if (snapshot.connectionState == ConnectionState.waiting && messages.isEmpty) {
                                   return const LoadingState();
                                 }
@@ -814,12 +858,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                               },
                             ),
                     ),
-                    // Retour rapide en bas du fil (évite de re-scroller tout l'historique).
-                    if (convId != null && !_selectionMode && !_atBottom)
+                    // Pile de boutons flottants : le saut aux mentions
+                    // au-dessus du retour en bas, chacun apparaissant
+                    // indépendamment de l'autre.
+                    if (convId != null && !_selectionMode)
                       Positioned(
                         right: AppSpacing.lg,
                         bottom: AppSpacing.md,
-                        child: _buildScrollToBottomButton(),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.isGroup && _unreadMentionCount > 0) ...[
+                              _buildMentionJumpButton(_unreadMentionCount),
+                              AppSpacing.vGapSm,
+                            ],
+                            if (!_atBottom) _buildScrollToBottomButton(),
+                          ],
+                        ),
                       ),
                   ],
                 ),

@@ -87,13 +87,48 @@ String? firstUrlIn(String text) {
   return 'https://$raw';
 }
 
-/// Découpe [text] en segments : texte normal + liens tappables (bleu souligné).
+/// Décrit comment surligner et rendre tappables les mentions d'un message.
+///
+/// Le surlignage se fait par CORRESPONDANCE DE NOM et non par offsets stockés :
+/// le contenu reste une simple String, aucun format de fil à faire évoluer, et
+/// les messages antérieurs se dégradent proprement. La liste faisant autorité
+/// (notifications, mentionsOnly, compteur de saut) reste la colonne serveur —
+/// ce scan n'est que de la présentation.
+class MentionSpec {
+  /// Résout les mentions présentes dans un segment de texte.
+  final List<({int start, int end, int? userId, bool isAll})> Function(String)
+      resolve;
+
+  /// Style appliqué à une mention. Sur une bulle sortante (fond indigo),
+  /// l'indigo serait invisible : l'appelant fournit alors une variante claire.
+  final TextStyle Function(TextStyle base) style;
+
+  /// `userId` nul = `@Tous`.
+  final void Function(int? userId) onTap;
+
+  /// Les recognizers créés y sont déposés pour que l'appelant les libère.
+  /// Sans ça, chaque reconstruction de bulle en fuit un dans une liste qui
+  /// défile.
+  final List<GestureRecognizer>? recognizerSink;
+
+  const MentionSpec({
+    required this.resolve,
+    required this.style,
+    required this.onTap,
+    this.recognizerSink,
+  });
+}
+
+/// Découpe [text] en segments : texte normal + liens tappables (bleu souligné)
+/// + mentions surlignées.
 void _appendWithLinks(
-    List<InlineSpan> out, String text, TextStyle style, Color linkColor) {
+    List<InlineSpan> out, String text, TextStyle style, Color linkColor,
+    [MentionSpec? mentions]) {
   int last = 0;
   for (final match in _urlRegExp.allMatches(text)) {
     if (match.start > last) {
-      out.add(TextSpan(text: text.substring(last, match.start), style: style));
+      _appendWithMentions(
+          out, text.substring(last, match.start), style, mentions);
     }
     final raw = match.group(0)!;
     final url = _trimUrlTail(raw);
@@ -111,6 +146,44 @@ void _appendWithLinks(
       out.add(TextSpan(text: raw.substring(url.length), style: style));
     }
     last = match.end;
+  }
+  if (last < text.length) {
+    _appendWithMentions(out, text.substring(last), style, mentions);
+  }
+}
+
+/// Découpe un segment SANS URL en texte normal + mentions.
+///
+/// Appelé après le découpage des liens : un « @ » dans une URL a donc déjà été
+/// consommé et ne peut pas être pris pour une mention.
+void _appendWithMentions(
+    List<InlineSpan> out, String text, TextStyle style, MentionSpec? spec) {
+  if (spec == null || text.isEmpty) {
+    if (text.isNotEmpty) out.add(TextSpan(text: text, style: style));
+    return;
+  }
+
+  final trouvees = spec.resolve(text);
+  if (trouvees.isEmpty) {
+    out.add(TextSpan(text: text, style: style));
+    return;
+  }
+
+  int last = 0;
+  for (final m in trouvees) {
+    if (m.start < last || m.end > text.length) continue; // plage incohérente
+    if (m.start > last) {
+      out.add(TextSpan(text: text.substring(last, m.start), style: style));
+    }
+    final recognizer = TapGestureRecognizer()
+      ..onTap = () => spec.onTap(m.userId);
+    spec.recognizerSink?.add(recognizer);
+    out.add(TextSpan(
+      text: text.substring(m.start, m.end),
+      style: spec.style(style),
+      recognizer: recognizer,
+    ));
+    last = m.end;
   }
   if (last < text.length) {
     out.add(TextSpan(text: text.substring(last), style: style));
@@ -143,18 +216,24 @@ TextDecoration _addDecoration(TextStyle s, TextDecoration add) {
 /// Transforme [text] en liste de spans stylés à partir du style de base [base].
 /// Les URLs y sont rendues tappables (couleur [linkColor], soulignées).
 /// À utiliser dans un `Text.rich(TextSpan(children: parseRichSpans(...)))`.
-List<InlineSpan> parseRichSpans(String text, TextStyle base, {Color? linkColor}) {
-  return _parse(text, base, linkColor ?? const Color(0xFF1B6EF3));
+List<InlineSpan> parseRichSpans(
+  String text,
+  TextStyle base, {
+  Color? linkColor,
+  MentionSpec? mentions,
+}) {
+  return _parse(text, base, linkColor ?? const Color(0xFF1B6EF3), mentions);
 }
 
-List<InlineSpan> _parse(String text, TextStyle style, Color linkColor) {
+List<InlineSpan> _parse(
+    String text, TextStyle style, Color linkColor, [MentionSpec? mentions]) {
   final spans = <InlineSpan>[];
   final buffer = StringBuffer();
 
   void flush() {
     if (buffer.isNotEmpty) {
       // Au lieu d'un simple TextSpan, on détecte les liens dans ce segment.
-      _appendWithLinks(spans, buffer.toString(), style, linkColor);
+      _appendWithLinks(spans, buffer.toString(), style, linkColor, mentions);
       buffer.clear();
     }
   }
@@ -169,7 +248,7 @@ List<InlineSpan> _parse(String text, TextStyle style, Color linkColor) {
         flush();
         final inner = text.substring(i + 1, close);
         // Analyse récursive → les marqueurs internes se combinent au style courant.
-        spans.addAll(_parse(inner, transform(style), linkColor));
+        spans.addAll(_parse(inner, transform(style), linkColor, mentions));
         i = close + 1;
         continue;
       }

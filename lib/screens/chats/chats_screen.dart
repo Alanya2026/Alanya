@@ -368,6 +368,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
     final colors = context.colors;
     final hasUnread = conv.unreadCount > 0;
+    final mentionsMe = conv.isGroup && conv.hasUnreadMention;
     final isTyping = !isSelf &&
         chat.isPartnerTyping(
           conv.conversID,
@@ -467,6 +468,24 @@ class _ChatsScreenState extends State<ChatsScreen> {
                       !(isSelf && (conv.lastMessageStatus ?? 1) >= 1
                           && (conv.lastMessageStatus ?? 1) <= 3)) ...[
                     _previewStatusIcon(conv.lastMessageStatus),
+                    AppSpacing.hGapXs,
+                  ],
+                  // Marqueur de mention non lue. Il précède le texte RÉEL du
+                  // message plutôt que de le remplacer par « Vous avez été
+                  // mentionné » : on garde de quoi décider d'ouvrir ou non.
+                  //
+                  // Le cas qui porte la fonctionnalité est le groupe en
+                  // sourdine : la pastille de non-lus y est grise, mais ce @
+                  // reste indigo — c'est ce que promet « uniquement les
+                  // mentions », rendu visible sans ouvrir la conversation.
+                  if (mentionsMe) ...[
+                    Text(
+                      '@',
+                      style: context.text.bodyMedium?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     AppSpacing.hGapXs,
                   ],
                   Expanded(

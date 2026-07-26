@@ -1113,6 +1113,11 @@ class ChatRepository {
   // est pire qu'un délai : l'utilisateur croirait l'action faite. Les LECTURES,
   // elles, restent offline-first depuis Drift, rôles compris.
 
+  /// Ids des messages non lus qui me mentionnent, du plus ancien au plus
+  /// récent. Dérivé du cache local : aucune requête réseau.
+  Future<List<int>> unreadMentionMsgIds(int conversID, int myId) =>
+      _dao.unreadMentionMsgIds(conversID, myId);
+
   /// Rafraîchit une conversation depuis le serveur et l'écrit en cache.
   Future<void> refreshConversation(int conversID) async {
     if (conversID <= 0) return;

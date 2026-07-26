@@ -63,10 +63,15 @@ class ConversationSummaryReducer {
           await _dao.hasPendingNewerThan(conversID, latest.sendAt)) {
         // Unread toujours dérivé (même pendant pending).
         final unread = await _dao.countUnread(conversID, myId);
-        if (unread != conv.unreadCount) {
+        final mentionne = await _hasUnreadMention(conversID, myId);
+        if (unread != conv.unreadCount ||
+            mentionne != conv.hasUnreadMention) {
           await (_db.update(_db.localConversations)
                 ..where((c) => c.conversID.equals(conversID)))
-              .write(LocalConversationsCompanion(unreadCount: Value(unread)));
+              .write(LocalConversationsCompanion(
+            unreadCount: Value(unread),
+            hasUnreadMention: Value(mentionne),
+          ));
         }
         return;
       }
@@ -84,13 +89,15 @@ class ConversationSummaryReducer {
       );
       final desiredStatus = mine ? latest.status : null;
       final unread = await _dao.countUnread(conversID, myId);
+      final mentionne = await _hasUnreadMention(conversID, myId);
 
       final needsUpdate = conv.lastMessageSenderID != latest.senderID ||
           conv.lastMessageType != latest.type ||
           conv.lastMessage != preview ||
           conv.lastMessageAt != latest.sendAt ||
           conv.lastMessageStatus != desiredStatus ||
-          conv.unreadCount != unread;
+          conv.unreadCount != unread ||
+          conv.hasUnreadMention != mentionne;
 
       if (!needsUpdate) return;
 
@@ -103,8 +110,17 @@ class ConversationSummaryReducer {
         lastMessageAt: Value(latest.sendAt),
         lastMessageStatus: Value(desiredStatus),
         unreadCount: Value(unread),
+        hasUnreadMention: Value(mentionne),
       ));
     });
+  }
+
+  /// Réutilise la requête du bouton de saut : une seule définition de « mention
+  /// non lue », donc pas de dérive entre le compteur du fil et le marqueur de
+  /// la liste.
+  Future<bool> _hasUnreadMention(int conversID, int myId) async {
+    final ids = await _dao.unreadMentionMsgIds(conversID, myId);
+    return ids.isNotEmpty;
   }
 
   Future<void> recomputeAll(int myId) async {

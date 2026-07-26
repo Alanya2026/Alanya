@@ -31,6 +31,7 @@ void main() {
         myRole: 0,
         muteForever: false,
         mentionsOnly: false,
+        hasUnreadMention: false,
       );
     }
 

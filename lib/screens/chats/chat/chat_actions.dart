@@ -1352,6 +1352,93 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  /// Saute à la mention non lue la plus ANCIENNE, puis à la suivante.
+  ///
+  /// Sens de lecture : on remonte le fil comme on le lirait, du plus ancien
+  /// vers le plus récent. Le compteur, lui, n'est pas décrémenté ici — il est
+  /// dérivé de `countUnread` et tombe quand les messages passent en lu, ce qui
+  /// le rend incapable de devenir négatif ou de désynchroniser.
+  Future<void> _jumpToNextMention() async {
+    final convId = _convId;
+    final me = _myId;
+    if (convId == null || me == null) return;
+
+    final ids = await _chat.repository.unreadMentionMsgIds(convId, me);
+    if (ids.isEmpty || !mounted) return;
+
+    // La plus ancienne encore au-dessus de celle où l'on vient d'atterrir,
+    // sinon on reboucle sur la première : un second appui ne doit pas rester
+    // bloqué sur le même message.
+    final courant = _lastMentionJumpMsgId;
+    final cible = ids.firstWhere((id) => courant == null || id > courant,
+        orElse: () => ids.first);
+    _lastMentionJumpMsgId = cible;
+
+    await _scrollToReply(cible);
+  }
+
+  /// Bouton « @ » avec le nombre de mentions non lues, posé AU-DESSUS du
+  /// bouton « aller en bas » — même gabarit, pour qu'ils se lisent comme une
+  /// pile cohérente.
+  Widget _buildMentionJumpButton(int count) {
+    final colors = context.colors;
+    return Semantics(
+      label: context.l10n.jumpToMention,
+      button: true,
+      child: Material(
+        color: colors.surface,
+        shape: const CircleBorder(),
+        elevation: 3,
+        shadowColor: Colors.black26,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _jumpToNextMention,
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  '@',
+                  style: context.text.titleMedium?.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 18),
+                    height: 18,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: colors.error,
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(color: colors.surface, width: 2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      // Au-delà de 99 la pastille déborderait la bulle.
+                      count > 99 ? '99+' : '$count',
+                      style: context.text.labelSmall?.copyWith(
+                        color: colors.onError,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildScrollToBottomButton() {
     final colors = context.colors;
     return Material(
