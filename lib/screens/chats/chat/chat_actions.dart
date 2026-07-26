@@ -1336,20 +1336,36 @@ extension _ChatActions on _ChatDetailScreenState {
   /// La requête est relue depuis la position réelle du curseur : taper au
   /// milieu d'un texte doit proposer les membres pour CE « @ » là, pas pour le
   /// dernier de la ligne.
+  /// Ferme l'overlay de mention.
+  ///
+  /// Les TROIS champs doivent retomber ensemble : l'overlay ne se masque que si
+  /// `_mentionQuery == null`, ou si les candidats sont vides ET que `@Tous`
+  /// n'est pas proposé. Ne vider que les candidats laissait un panneau mort
+  /// affiché au-dessus du clavier, réduit à la seule ligne « @Tous », dont le
+  /// tap ne faisait rien. Deux frappes suffisaient : « @ » puis une espace.
+  void _closeMentionOverlay() {
+    if (_mentionQuery == null &&
+        _mentionCandidates.isEmpty &&
+        !_mentionOfferAll) {
+      return;
+    }
+    rebuild(() {
+      _mentionQuery = null;
+      _mentionCandidates = const [];
+      _mentionOfferAll = false;
+    });
+  }
+
   void _refreshMentionSuggestions(String value) {
     if (!widget.isGroup || _groupParticipants.isEmpty) {
-      if (_mentionCandidates.isNotEmpty) {
-        rebuild(() => _mentionCandidates = const []);
-      }
+      _closeMentionOverlay();
       return;
     }
 
     final caret = _messageController.selection.baseOffset;
     final query = extractMentionQuery(value, caret);
     if (query == null) {
-      if (_mentionCandidates.isNotEmpty) {
-        rebuild(() => _mentionCandidates = const []);
-      }
+      _closeMentionOverlay();
       return;
     }
 
@@ -1376,12 +1392,25 @@ extension _ChatActions on _ChatDetailScreenState {
   void _insertMention({Participant? membre}) {
     final texte = _messageController.text;
     final caret = _messageController.selection.baseOffset;
-    final query = _mentionQuery;
-    if (query == null || caret < 0) return;
+    if (caret < 0) return;
+
+    // La requête est RELUE depuis la position actuelle du curseur, et non
+    // reprise de `_mentionQuery` : déplacer le curseur ne déclenche pas
+    // `onChanged`, donc l'overlay pouvait rester ouvert avec une requête
+    // périmée. Le décalage qui en résultait faisait au mieux un tap sans
+    // effet, au pire un splice qui mangeait du texte ailleurs dans la phrase.
+    final query = extractMentionQuery(texte, caret);
+    if (query == null) {
+      _closeMentionOverlay();
+      return;
+    }
 
     // Début de la plage : le « @ » qui précède la requête.
     final debut = caret - query.length - 1;
-    if (debut < 0 || debut >= texte.length || texte[debut] != '@') return;
+    if (debut < 0 || debut >= texte.length || texte[debut] != '@') {
+      _closeMentionOverlay();
+      return;
+    }
 
     final libelle =
         membre != null ? '@${membre.nom}' : context.l10n.mentionAll;
@@ -1395,6 +1424,7 @@ extension _ChatActions on _ChatDetailScreenState {
     rebuild(() {
       _mentionCandidates = const [];
       _mentionQuery = null;
+      _mentionOfferAll = false;
       _hasText = remplace.trim().isNotEmpty;
     });
   }
@@ -1430,10 +1460,19 @@ extension _ChatActions on _ChatDetailScreenState {
   /// Le curseur n'avance que si le saut a réussi — sinon un message
   /// introuvable consommerait une mention sans que l'utilisateur ait rien vu.
   Future<void> _jumpToNextMention() async {
+    // Un second appui pendant que le premier saut charge encore l'historique
+    // consommait deux entrées : une mention passée sous le nez, et la pastille
+    // qui perdait 2 d'un coup.
+    if (_mentionJumpInFlight) return;
     if (_mentionJumpIndex >= _openMentionMsgIds.length) return;
     final cible = _openMentionMsgIds[_mentionJumpIndex];
+    _mentionJumpInFlight = true;
 
-    await _scrollToReply(cible, silent: true);
+    try {
+      await _scrollToReply(cible, silent: true);
+    } finally {
+      _mentionJumpInFlight = false;
+    }
     if (!mounted) return;
 
     // Décrémente : la pastille montre ce qu'il RESTE à voir, et le bouton

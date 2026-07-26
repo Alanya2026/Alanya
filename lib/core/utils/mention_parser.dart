@@ -310,9 +310,21 @@ bool _opensMention(int codeUnit) =>
     _isLineBreak(codeUnit) ||
     _kOpeningPunctuation.contains(codeUnit);
 
-/// `(` `[` `{` `«` `"` `'` `’` `“` `‘` — ponctuations ouvrantes usuelles.
+/// `(` `[` `{` `«` `"` `'` `’` `“` `‘` — ponctuations ouvrantes usuelles —
+/// plus les marqueurs de mise en forme inline `*` `_` `~` `=` `#`.
+///
+/// Les marqueurs sont indispensables à la COHÉRENCE entre affichage et envoi :
+/// `parseRichSpans` les retire avant de résoudre les mentions (il passe
+/// « @Marie » au résolveur), alors que le chemin d'envoi travaille sur le texte
+/// brut « *@Marie* ». Sans eux, une mention en gras était surlignée et
+/// tappable chez l'expéditeur, mais n'était jamais transmise — donc aucune
+/// notification pour la personne citée.
+///
+/// Aucun de ces caractères ne réintroduit le faux positif e-mail : une adresse
+/// est toujours précédée d'un caractère de mot.
 const Set<int> _kOpeningPunctuation = {
   0x28, 0x5B, 0x7B, 0xAB, 0x22, 0x27, 0x2019, 0x201C, 0x2018,
+  0x2A, 0x5F, 0x7E, 0x3D, 0x23,
 };
 
 bool _isBlank(int codeUnit) =>

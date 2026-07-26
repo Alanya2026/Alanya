@@ -219,6 +219,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// Position dans [_openMentionMsgIds] : combien de mentions déjà visitées.
   int _mentionJumpIndex = 0;
 
+  /// Un saut est en cours : les appuis suivants sont ignorés.
+  bool _mentionJumpInFlight = false;
+
   /// Ce qu'affiche la pastille : ce qu'il RESTE à voir.
   int get _unreadMentionCount =>
       (_openMentionMsgIds.length - _mentionJumpIndex).clamp(0, 9999);
@@ -437,6 +440,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   }
 
   Future<void> _attachToConversation(int convId) async {
+    // Réabonnement : _convId peut avoir été résolu APRÈS l'initState (ouverture
+    // par userId seul, création à la volée, déduplication d'un doublon 1-1),
+    // auquel cas le premier appel avait un convId nul.
+    _watchGroupState();
+
     // 1) Marque ce chat visible → conversation active + lecture immédiate.
     //    (didPush a pu se déclencher avant la résolution async du convId ;
     //    on force donc l'état visible ici une fois le convId connu.)
@@ -488,11 +496,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   void _bindReactionsStream(int convId) {
     _reactionsSub?.cancel();
-    _groupWatch?.cancel();
-    for (final r in _mentionRecognizers) {
-      r.dispose();
-    }
-    _mentionRecognizers.clear();
     _reactionsSub = _chat.repository.watchReactions(convId).listen((reactions) {
       if (!mounted) return;
       setState(() => _currentReactionsByMsg = _groupReactionsByMsg(reactions));
@@ -697,10 +700,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// vers le bas au fil de la lecture.
   Future<void> _takeOpeningSnapshot(int convId) async {
     if (_openSnapshotTaken) return;
-    _openSnapshotTaken = true;
 
     final me = _myId;
+    // Pas encore d'identité : on ne consomme PAS le drapeau, sinon l'instantané
+    // ne serait jamais pris — l'appel suivant sortirait immédiatement.
     if (me == null || me == 0) return;
+
+    _openSnapshotTaken = true;
 
     final dao = _chat.repository.dao;
     final premier = await dao.firstUnreadMessage(convId, me);
@@ -778,6 +784,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _recordTimer?.cancel();
     _highlightTimer?.cancel();
     _reactionsSub?.cancel();
+    _groupWatch?.cancel();
+    for (final r in _mentionRecognizers) {
+      r.dispose();
+    }
+    _mentionRecognizers.clear();
     _recorder.dispose();
     _voice.leaveChat();
     final convId = _convId;

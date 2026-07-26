@@ -69,6 +69,17 @@ void main() {
       }
     });
 
+    // Cohérence affichage / envoi : parseRichSpans retire les marqueurs avant
+    // de résoudre, le chemin d'envoi travaille sur le texte brut. Sans les
+    // marqueurs ici, une mention en gras était surlignée mais jamais transmise.
+    test('marqueur de mise en forme avant le @ → mention reconnue', () {
+      for (final marqueur in ['*', '_', '~', '=', '#']) {
+        final texte = '$marqueur@ma';
+        expect(extractMentionQuery(texte, texte.length), 'ma',
+            reason: 'marqueur « $marqueur » : mention perdue à l\'envoi');
+      }
+    });
+
     // Le tiret et le point, eux, apparaissent DANS les adresses : les admettre
     // comme ouvrantes ferait resurgir le faux positif e-mail.
     test('tiret ou point avant le @ → toujours aucune requête', () {
