@@ -1,0 +1,456 @@
+% Fragment partage : inclus par socle-compte.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Modèle de données}
+
+\section{Pourquoi étendre \code{users} plutôt que créer une table \code{accounts}}
+
+La conception initiale prévoyait une nouvelle table \code{accounts} servant de socle. La
+lecture du schéma réel invalide cette approche.
+
+\begin{constat}
+\textbf{14 tables} référencent \code{users(alanyaID)} par clé étrangère :
+\code{preferredContact}, \code{blocked}, \code{userAccess}, \code{conversation},
+\code{conv\_participants}, \code{message}, \code{statut}, \code{statut\_views},
+\code{meeting}, \code{participant}, \code{callHistory}, \code{reserved\_alanya\_phone},
+\code{user\_push\_devices} et \code{user\_notification\_prefs} --- soit 34 contraintes au
+total (sources : \code{migrations/001\_initial\_schema.sql}, \code{010}, \code{020},
+\code{021}).
+\end{constat}
+
+Introduire une table parallèle imposerait de réécrire ces 34 contraintes. On étend donc
+\code{users}, qui \emph{est} le socle de compte.
+
+Ce choix a un second bénéfice, qui n'est pas un hasard : la conception exige que le genre
+et l'état de vérification soient lisibles dans la requête de liste de conversations
+\textbf{sans jointure supplémentaire}. Cette requête joint déjà \code{users} pour récupérer
+le nom et l'avatar du correspondant
+(\code{src/controllers/conversationController.js}, ligne~24). Deux colonnes de plus sur
+\code{users} sont donc gratuites ; une table \code{accounts} aurait imposé une jointure de
+plus sur le chemin le plus chaud de l'application.
+
+\section{La migration}
+
+\begin{lstlisting}[language=SQL, caption={\code{migrations/023\_account\_socle.sql}}]
+-- 023_account_socle.sql -- socle de compte unifie
+--
+-- Deux axes orthogonaux portes par `users` :
+--   account_type        : ce que le compte EST
+--   verification_status : ce qu'Alanya ATTESTE a son sujet
+--
+-- TINYINT et non ENUM : ajouter une valeur a un ENUM impose un ALTER TABLE
+-- sur une table qui grossit. L'enumeration vit cote Node.
+
+ALTER TABLE users
+  ADD COLUMN account_type TINYINT NOT NULL DEFAULT 0
+    COMMENT '0=personnel 1=business 2=officiel',
+  ADD COLUMN verification_status TINYINT NOT NULL DEFAULT 0
+    COMMENT '0=aucun 1=en_attente 2=verifie 3=refuse 4=revoque 5=expire',
+  ADD COLUMN verified_until DATETIME NULL
+    COMMENT 'Echeance de la verification (NULL si non verifie)',
+  ADD COLUMN verification_reminder_sent TINYINT NOT NULL DEFAULT 0
+    COMMENT '1 = relance J-30 deja envoyee pour l echeance courante';
+
+-- Annuaire business a venir : filtrer par genre puis par etat.
+ALTER TABLE users
+  ADD INDEX idx_users_account_type (account_type, verification_status);
+
+-- Balayage du scheduler d'expiration : ne remonter que les comptes verifies
+-- ayant une echeance, sans parcourir toute la table.
+ALTER TABLE users
+  ADD INDEX idx_users_verified_until (verified_until);
+\end{lstlisting}
+
+\begin{note}[Aucune colonne \code{badge\_type}]
+Le badge n'est jamais stocké. Il se calcule à l'affichage à partir des deux axes. Une
+valeur stockée finirait désynchronisée le jour où une certification expire ou est révoquée
+--- ce qui est précisément le cas que le système doit gérer.
+\end{note}
+
+\section{Les énumérations, côté Node}
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/constants/accountTypes.js} (nouveau)}]
+const ACCOUNT_TYPE = { PERSONNEL: 0, BUSINESS: 1, OFFICIEL: 2 };
+
+const VERIFICATION = {
+  AUCUN:      0,
+  EN_ATTENTE: 1,
+  VERIFIE:    2,
+  REFUSE:     3,
+  REVOQUE:    4,
+  EXPIRE:     5,
+};
+
+module.exports = { ACCOUNT_TYPE, VERIFICATION };
+\end{lstlisting}
+
+Le dossier \code{src/constants/} existe déjà (\code{participantLimits.js}) : la convention
+est respectée.
+
+\section{Raccordement au schéma existant}
+
+\begin{center}
+\begin{tikzpicture}[
+  tbl/.style={draw=AlanyaLine, fill=white, rounded corners=3pt,
+              font=\sffamily\scriptsize, inner sep=5pt, text=AlanyaInk},
+  socle/.style={draw=AlanyaIndigo, line width=1pt, fill=AlanyaContainer,
+                rounded corners=4pt, font=\sffamily\small\bfseries,
+                inner sep=8pt, text=AlanyaIndigoDark, align=center},
+  futur/.style={draw=AlanyaMute, dashed, fill=white, rounded corners=3pt,
+                font=\sffamily\scriptsize\itshape, inner sep=5pt, text=AlanyaGray},
+  lien/.style={draw=AlanyaLine, thick}
+]
+  \node[socle] (users) at (0,0) {users\\[2pt]
+    \footnotesize\mdseries account\_type\\
+    \footnotesize\mdseries verification\_status\\
+    \footnotesize\mdseries verified\_until};
+
+  \node[tbl] (a) at (-4.6,2.1) {message};
+  \node[tbl] (b) at (-4.6,1.1) {conversation};
+  \node[tbl] (c) at (-4.6,0.1) {conv\_participants};
+  \node[tbl] (d) at (-4.6,-0.9) {preferredContact};
+  \node[tbl] (e) at (-4.6,-1.9) {statut};
+  \node[tbl] (f) at (-4.6,-2.9) {\ldots{} 9 autres};
+
+  \node[futur] (g) at (4.7,1.5)  {business\_profiles};
+  \node[futur] (h) at (4.7,0.4)  {verification\_requests};
+  \node[futur] (i) at (4.7,-0.7) {contact\_list};
+
+  \foreach \n in {a,b,c,d,e,f} { \draw[lien] (\n.east) -- (users.west); }
+  \foreach \n in {g,h,i} { \draw[lien, dashed, draw=AlanyaMute] (users.east) -- (\n.west); }
+
+  \node[font=\sffamily\scriptsize, text=AlanyaGray] at (-4.6,3.0) {14 tables existantes};
+  \node[font=\sffamily\scriptsize, text=AlanyaGray] at (4.7,2.4) {étapes suivantes};
+\end{tikzpicture}
+\end{center}
+
+\chapter{Dérivation du badge}
+
+\section{Une fonction pure, trois implémentations identiques}
+
+Le badge est une fonction de deux entiers vers une variante d'affichage. Aucun accès base,
+aucune requête réseau.
+
+\begin{lstlisting}[language=Dart, caption={\code{lib/widgets/common/account\_badge.dart} (nouveau) --- forme cible}]
+enum AccountBadge { aucun, cocheVerifiee, panierDeclare, panierVerifie, officiel }
+
+AccountBadge resolveAccountBadge(int accountType, int verificationStatus) {
+  final verifie = verificationStatus == 2; // VERIFIE
+  switch (accountType) {
+    case 2: return AccountBadge.officiel;
+    case 1: return verifie ? AccountBadge.panierVerifie : AccountBadge.panierDeclare;
+    default: return verifie ? AccountBadge.cocheVerifiee : AccountBadge.aucun;
+  }
+}
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\thd{\code{account\_type}} & \thd{\code{verification\_status}} & \thd{Variante} & \thd{Rendu} \\
+\midrule
+0 & $\neq 2$ & \code{aucun}          & --- \\
+0 & $= 2$    & \code{cocheVerifiee}  & \badgePastilleCoche[1] \\
+1 & $\neq 2$ & \code{panierDeclare}  & \badgePanier[1] \\
+1 & $= 2$    & \code{panierVerifie}  & \badgePastillePanier[1] \\
+2 & indifférent & \code{officiel}    & \badgeMarque[1] \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{alerte}[Un seul widget, pas trois]
+Le composant doit être unique et utilisé aux quatre endroits listés en partie~I. Trois
+implémentations concurrentes divergeront en deux semaines --- c'est exactement ce qui est
+arrivé aux quatre indigos concurrents que le design system a dû unifier
+(\code{lib/core/theme/app\_colors.dart}).
+\end{alerte}
+
+\section{Le piège à corriger avant tout}
+
+\begin{constat}[Vérifié dans le code]
+Le champ \code{typeCompte} du modèle \code{User} est \textbf{codé en dur à \code{0}} partout
+où un \code{User} est reconstruit depuis une charge utile partielle :
+\code{lib/core/services/call\_service.dart} ligne~207,
+\code{lib/widgets/chat/contact\_message\_preview.dart} ligne~46, et
+\code{lib/screens/chats/contact\_detail\_screen.dart} ligne~104.
+\end{constat}
+
+Les nouveaux champs suivront le même chemin et subiront le même sort : un badge dérivé
+afficherait « compte personnel non vérifié » à ces trois endroits, quel que soit le compte
+réel. Ces trois sites doivent être corrigés dans le même lot que l'ajout du badge, sinon le
+défaut est invisible en développement et visible en production.
+
+\section{Composant existant à ne pas confondre}
+
+\code{lib/widgets/common/app\_badge.dart} existe déjà mais n'a aucun rapport : c'est
+\code{CountBadge}, la pastille de comptage des messages non lus. Le nouveau composant est
+donc un fichier distinct, \code{account\_badge.dart}.
+
+\chapter{Règles appliquées par le serveur}
+
+\section{Exclusion business / administrateur}
+
+Règle : \code{account\_type != 0} $\Rightarrow$ \code{type\_compte = 0}.
+
+\begin{note}[Pourquoi deux colonnes distinctes]
+\code{users.type\_compte} existe déjà et porte le \textbf{rôle d'administration}
+(\code{0} utilisateur, \code{>= 1} admin, \code{>= 2} super-admin). Il est lu par
+\code{src/middleware/adminAuth.js} (lignes~41 et~60),
+\code{lib/providers/admin\_provider.dart} (lignes~245--246) et
+\code{talky-admin/lib/auth.ts}. Réutiliser cette colonne pour le genre de compte aurait
+cassé l'administration existante ; d'où la colonne séparée \code{account\_type}.
+\end{note}
+
+Le contrôle est à poser aux deux endroits qui écrivent ces champs, dans
+\code{src/controllers/admin/users.js} : \code{setAccountType} (rôle admin, existant) et le
+nouveau point d'entrée qui fixera \code{account\_type}. Rejet en 409 avec un message
+explicite plutôt qu'un écrasement silencieux.
+
+\section{Validation des noms d'affichage}
+
+Le filtrage doit vivre \textbf{côté serveur}, et non dans l'application mobile : le mobile
+n'est pas le seul écrivain. L'administration crée aussi des comptes
+(\code{src/controllers/admin/userCreate.js}), et la modification de profil passe par
+l'API.
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/utils/displayNameGuard.js} (nouveau) --- principe}]
+// Blocs Unicode a refuser dans `nom` et `pseudo` :
+//   U+2705, U+2713-U+2714 (coches)        U+2B50, U+2606, U+2B51 (etoiles)
+//   U+1F396-U+1F397, U+1F3C5 (medailles)  U+269C (fleur de lys / sceau)
+//   Variation selectors utilises pour composer un faux badge.
+//
+// Plus : refus des variantes normalisees du nom "Alanya", en tenant compte
+//   de la casse, des accents, des espaces inseres, et des homoglyphes
+//   cyrilliques U+0410 U+0430 (a), U+0435 (e), U+043E (o), U+0443 (y),
+//   U+0441 (c) -- visuellement identiques, distincts pour la base.
+\end{lstlisting}
+
+\begin{alerte}[Les homoglyphes]
+Refuser la chaîne « Alanya » ne suffit pas. Le même mot dont le \emph{A} initial est un A
+cyrillique (U+0410) au lieu du A latin (U+0041) est une chaîne \emph{différente} pour la
+base de données, et rigoureusement identique à l'{\oe}il. La comparaison doit donc se faire
+sur une forme normalisée, après repli des homoglyphes.
+\end{alerte}
+
+\section{Interdire la réponse au compte officiel}
+
+\begin{constat}[Un seul point d'ancrage suffit]
+Les deux chemins d'envoi de message --- REST
+(\code{src/controllers/messageController.js} ligne~178) et Socket.IO
+(\code{src/socket/handlers/chat/messageSend.js} ligne~142) --- appellent tous deux la même
+fonction \code{evaluateDirectMessageSend} de \code{src/utils/blockUtils.js}. Une seule
+modification couvre donc les deux.
+\end{constat}
+
+Cette fonction résout déjà le correspondant d'une conversation 1-1 et renvoie une action
+(\code{deliver}, \code{reject} ou \code{silent}). Il suffit d'y ajouter un cas :
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/utils/blockUtils.js} --- ajout dans \code{evaluateDirectMessageSend}}]
+const evaluateDirectMessageSend = async (conversationID, senderID) => {
+  const peerId = await getDirectConversationPeer(conversationID, senderID);
+  if (peerId == null) return { isDirect: false };
+
+  // Nouveau : le compte officiel diffuse, il ne converse pas.
+  const [rows] = await pool.execute(
+    'SELECT account_type FROM users WHERE alanyaID = ?', [peerId],
+  );
+  if (rows[0] && rows[0].account_type === ACCOUNT_TYPE.OFFICIEL) {
+    return { isDirect: true, peerId, action: 'reject', code: 'OFFICIAL_READONLY' };
+  }
+
+  // ... suite inchangee : evaluation du blocage
+};
+\end{lstlisting}
+
+Côté mobile, la zone de saisie de \code{lib/screens/chats/chat/chat\_input.dart} est
+remplacée par un bandeau, et les actions « répondre » / « réagir » sont retirées des bulles.
+
+\begin{note}[À trancher à l'étape 3]
+Faut-il une conversation en lecture seule, ou un canal de diffusion distinct des
+conversations ? Le choix dépend de la stratégie de diffusion, qui est le sujet de l'étape
+sur le compte officiel. La règle serveur ci-dessus vaut dans les deux cas.
+\end{note}
+
+\section{Expiration : réutiliser le mécanisme existant}
+
+Le comportement demandé --- relance à J\,--\,30 puis suspension --- a déjà son patron exact
+dans le code.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.1cm}X@{}}
+\toprule
+\thd{Ordonnanceur} & \code{src/services/meetingScheduler.js} : un \code{setInterval} d'une
+minute, une requête qui remonte les échéances proches, et une colonne \code{reminder\_sent}
+pour ne jamais notifier deux fois. Le squelette se transpose tel quel en
+\code{verificationScheduler.js}. \\
+\thd{E-mail} & \code{src/services/mailService.js} : \code{sendMail} et
+\code{renderHtmlEmail} sur le gabarit \code{src/templates/email-template.html}, déjà en
+service pour l'OTP de réinitialisation. \\
+\thd{Notification} & \code{src/services/notificationService.js}, déjà utilisé par
+l'ordonnanceur de réunions. \\
+\thd{Avertissement in-app} & Dérivé de \code{verified\_until}, déjà présent dans la charge
+utile utilisateur --- aucun appel supplémentaire. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{lstlisting}[language=SQL, caption={Les deux requêtes du scheduler}]
+-- 1. Relance J-30, une seule fois par echeance
+SELECT alanyaID, nom, email, verified_until
+FROM users
+WHERE verification_status = 2
+  AND verified_until IS NOT NULL
+  AND verified_until > UTC_TIMESTAMP()
+  AND verified_until <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 DAY)
+  AND verification_reminder_sent = 0;
+
+-- 2. Suspension a l'echeance
+UPDATE users
+SET verification_status = 5,            -- EXPIRE
+    verification_reminder_sent = 0      -- rearme pour un futur renouvellement
+WHERE verification_status = 2
+  AND verified_until IS NOT NULL
+  AND verified_until <= UTC_TIMESTAMP();
+\end{lstlisting}
+
+\begin{note}[Pourquoi pas de file de jobs ici]
+La conception initiale demandait une file de jobs (BullMQ / Redis) dès le départ. Elle
+n'existe pas aujourd'hui dans le backend. Pour les relances de vérification, le volume est
+faible et espacé : un ordonnanceur en processus suffit, et il a déjà fait ses preuves sur
+les rappels de réunion. La file redeviendra nécessaire au fan-out des diffusions du compte
+officiel --- c'est là qu'il faudra la traiter, pas ici.
+\end{note}
+
+\chapter{Impact fichier par fichier}
+
+\section{Backend --- Alanya-Backend}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{migrations/023\_account\_socle.sql} & nouveau & Les quatre colonnes et deux index \\
+\code{src/constants/accountTypes.js} & nouveau & Énumérations partagées \\
+\code{src/utils/displayNameGuard.js} & nouveau & Filtrage des noms, réservation d'« Alanya » \\
+\code{src/services/verificationScheduler.js} & nouveau & Relance J\,--\,30 et suspension \\
+\code{src/utils/blockUtils.js} & modifié & Refus de réponse au compte officiel \\
+\code{src/controllers/userController.js} & modifié & Exposer les deux axes ; appliquer le filtrage des noms \\
+\code{src/controllers/conversationController.js} & modifié & Ajouter les deux axes à la projection du correspondant \\
+\code{src/controllers/preferredContactController.js} & modifié & Idem sur la liste de contacts \\
+\code{src/controllers/messageController.js} & modifié & Idem sur l'expéditeur d'un message \\
+\code{src/controllers/admin/users.js} & modifié & Piloter \code{account\_type} ; exclusion business/admin ; filtre par genre \\
+\code{src/controllers/admin/userCreate.js} & modifié & Création du compte officiel ; filtrage des noms \\
+\code{server.js} & modifié & Démarrage du \code{verificationScheduler} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Mobile --- Talky (Flutter)}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{lib/widgets/common/account\_badge.dart} & nouveau & Le composant unique et sa dérivation \\
+\code{lib/talky\_models.dart} & modifié & \code{accountType}, \code{verificationStatus}, \code{verifiedUntil} sur \code{User} \\
+\code{lib/core/db/app\_database.dart} & modifié & Colonnes sur \code{LocalUsers}, \code{schemaVersion} et \code{onUpgrade} \\
+\code{lib/core/services/local\_cache\_repository.dart} & modifié & Propager les champs dans le cache \\
+\code{lib/core/services/call\_service.dart} & \textbf{corrigé} & \code{typeCompte: 0} codé en dur, ligne~207 \\
+\code{lib/widgets/chat/contact\_message\_preview.dart} & \textbf{corrigé} & Idem, ligne~46 \\
+\code{lib/screens/chats/contact\_detail\_screen.dart} & \textbf{corrigé} & Idem, ligne~104 \\
+\code{lib/screens/chats/chats\_screen.dart} & modifié & Badge dans la liste de conversations \\
+\code{lib/screens/chats/chat\_detail\_screen.dart} & modifié & Badge dans l'en-tête ; masquage de la saisie \\
+\code{lib/screens/chats/chat/chat\_input.dart} & modifié & Bandeau « diffusion » à la place du champ \\
+\code{lib/screens/chats/chat/chat\_bubbles.dart} & modifié & Retrait de « répondre » et « réagir » \\
+\code{lib/l10n/*} & modifié & Libellés des badges, du bandeau et des avertissements \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Régénération obligatoire]
+Toute modification de \code{app\_database.dart} impose
+\code{dart run build\_runner build -{}-delete-conflicting-outputs}, et la montée de
+\code{schemaVersion} doit passer par \code{onUpgrade} --- pas par une recréation, sous peine
+de vider le cache local des utilisateurs déjà installés.
+\end{alerte}
+
+\section{Administration --- Alanya Admin}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{types/index.ts} & modifié & \code{accountType}, \code{verificationStatus}, \code{verifiedUntil} \\
+\code{app/(dashboard)/users/page.tsx} & modifié & Colonne badge et filtre par genre de compte \\
+\code{app/(dashboard)/users/[id]/page.tsx} & modifié & Pilotage du genre et de l'état \\
+\code{app/(dashboard)/users/new/page.tsx} & modifié & Création du compte officiel \\
+\code{components/ui/badge.tsx} & modifié & Variantes de badge de compte \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Conversion des noms]
+Le client HTTP de l'administration convertit automatiquement les clés
+\code{snake\_case} en \code{camelCase} (\code{lib/api.ts}). Les colonnes
+\code{account\_type} et \code{verification\_status} arriveront donc en
+\code{accountType} et \code{verificationStatus} sans travail supplémentaire.
+\end{note}
+
+\chapter{Points de vigilance et questions ouvertes}
+
+\section{À vérifier avant d'appliquer la migration}
+
+\begin{alerte}[Le backend n'a pas d'ordonnanceur de migrations]
+Il n'existe ni exécuteur, ni table de suivi : les fichiers de \code{migrations/} sont
+appliqués \textbf{à la main}. Rien ne garantit que l'état réel de la base corresponde au
+contenu du dossier. Avant d'appliquer 023, il faut constater l'état réel des colonnes.
+\end{alerte}
+
+\begin{alerte}[La migration 013 contient du SQL invalide]
+\code{migrations/013\_view\_once.sql} comporte un point-virgule au milieu de l'instruction
+\code{ALTER TABLE} : la seconde colonne, \code{viewedAt}, n'a jamais pu s'appliquer par ce
+fichier. Elle figure pourtant dans le schéma consolidé
+\code{docs/schema\_complet\_alanyBD2027.sql}. Il faut trancher lequel des deux décrit la
+production.
+\end{alerte}
+
+\section{Collision de numérotation}
+
+Le numéro 023 est également revendiqué par \code{docs/listes-contacts-plan.md}, qui prévoit
+\code{023\_contact\_lists.sql}. Le socle prenant 023, les listes de contacts passent à
+\textbf{024}. Le document doit être corrigé avant sa conversion, sinon les deux migrations
+entreront en collision à l'implémentation.
+
+\section{Écart assumé avec la conception initiale}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Conception initiale} & \thd{Ce document} \\
+\midrule
+Table \code{accounts} dédiée & Extension de \code{users} --- 14 tables et 34 contraintes
+en dépendent déjà \\
+« Fuir le type \code{ENUM} » & Appliqué : \code{TINYINT} partout. À noter que le schéma
+existant en contient déjà (\code{migrations/020} et \code{021}) ; on ne revient pas dessus \\
+File de jobs dès la conception & Reportée : l'ordonnanceur en processus suffit pour les
+relances. La file redevient nécessaire au fan-out des diffusions \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Ce qui reste à décider}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item La bascule business $\rightarrow$ personnel est-elle libre, ou soumise à validation
+        d'un administrateur ?
+  \item Un compte business dont la vérification a expiré reste-t-il visible dans l'annuaire
+        business, sans badge ?
+  \item La durée par défaut d'une vérification --- un an est l'usage, mais ce n'est pas
+        tranché.
+  \item Y a-t-il un seul compte officiel, ou plusieurs (support, actualités\ldots) ? Le
+        modèle proposé en supporte plusieurs sans modification.
+\end{enumerate}

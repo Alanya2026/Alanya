@@ -226,6 +226,42 @@
 }{\end{tcolorbox}}
 
 % --------------------------------------------------------------------
+%  Bandeau de volet — utilisé uniquement par le dossier assemblé.
+%
+%  Les cinq fonctionnalités partagent des titres de chapitre ("Modèle de
+%  données", "Impact fichier par fichier"…). Mis bout à bout, ils deviennent
+%  ambigus. Ce bandeau ouvre chaque bloc, met à jour l'en-tête courant, et
+%  pose un repère dans la table des matières.
+%
+%  \volet{Numéro}{Titre}{Sous-titre}
+% --------------------------------------------------------------------
+%  Un \chapter ouvre de toute façon une page : un bandeau posé juste avant
+%  laisserait une page presque vide. On en fait donc une vraie page
+%  d'ouverture, qui sert aussi de repère de navigation dans un document long.
+\newcommand{\volet}[3]{%
+  \clearpage
+  \setAlanyaDocTitre{#2}%
+  \addtocontents{toc}{\protect\vspace{10pt}}%
+  \addtocontents{toc}{\protect\noindent
+    {\protect\sffamily\protect\bfseries\protect\color{AlanyaIndigoDark}
+     VOLET~#1 --- #2}\protect\par\protect\vspace{3pt}}%
+  \thispagestyle{empty}%
+  \begin{tikzpicture}[remember picture, overlay]
+    \fill[AlanyaContainer]
+      ([yshift=-6.2cm]current page.north west)
+      rectangle ([yshift=-14.6cm]current page.north east);
+    \fill[AlanyaIndigo]
+      ([yshift=-6.2cm]current page.north west)
+      rectangle ([yshift=-14.6cm, xshift=6pt]current page.north west);
+  \end{tikzpicture}%
+  \vspace*{7.1cm}\par\noindent
+  {\sffamily\small\bfseries\color{AlanyaIndigoStrong} VOLET~#1}\\[10pt]
+  {\sffamily\fontsize{30}{34}\selectfont\bfseries\color{AlanyaIndigoDark} #2}\\[12pt]
+  {\sffamily\large\color{AlanyaGray} #3}%
+  \clearpage
+}
+
+% --------------------------------------------------------------------
 %  Badges Alanya dessinés en TikZ
 %
 %  Deux canaux visuels indépendants :

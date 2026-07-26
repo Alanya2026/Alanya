@@ -1,0 +1,316 @@
+% =====================================================================
+%  ALANYA — DOSSIER DE CONCEPTION
+%  Document de validation client — assemble les cinq volets.
+%
+%  Ce fichier ne contient AUCUN texte de fond : il assemble les fragments
+%  de contenu/, partagés avec les cinq dossiers autonomes. Une correction
+%  faite dans un fragment vaut pour les deux formats.
+%
+%  Compilation :  latexmk -pdf dossier-conception-alanya.tex
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{alanya-conception}
+\setAlanyaDocTitre{Dossier de conception}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Alanya - Dossier de conception},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Conception - comptes business, certification, compte officiel, listes de contacts}
+}
+
+\begin{document}
+
+% =====================================================================
+%  PAGE DE GARDE
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-8.6cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-8.6cm]current page.north west) rectangle ([yshift=-8.1cm]current page.north east);
+\end{tikzpicture}
+
+\vspace*{1.6cm}
+{\color{white}\sffamily
+\begin{center}
+  {\small\bfseries DOSSIER DE CONCEPTION}\\[8pt]
+  {\footnotesize\color{AlanyaContainer}
+   Document de validation --- à approuver avant tout développement}
+\end{center}}
+
+\vspace{2.6cm}
+
+\begin{center}
+  \badgePastilleCoche[2.4]\hspace{1cm}
+  \badgePanier[2.4]\hspace{1cm}
+  \badgePastillePanier[2.4]\hspace{1cm}
+  \badgeMarque[2.4]
+\end{center}
+
+\vspace{2.2cm}
+
+\begin{center}\sffamily
+  {\color{AlanyaLine}\rule{0.62\linewidth}{0.6pt}}\\[24pt]
+  {\fontsize{38}{42}\selectfont\bfseries\color{AlanyaIndigoDark} Alanya}\\[10pt]
+  {\Large\color{AlanyaGray} Comptes business, certification,}\\[3pt]
+  {\Large\color{AlanyaGray} compte officiel et listes de contacts}\\[16pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Cinq volets --- approche fonctionnelle et approche technique}\\[24pt]
+  {\color{AlanyaLine}\rule{0.62\linewidth}{0.6pt}}
+\end{center}
+
+\vfill
+
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Périmètre}    & Talky (Flutter) \textbullet{} Alanya-Backend \textbullet{} Alanya Admin\\[3pt]
+    \thd{Statut}       & Conception --- aucune ligne de code écrite\\[3pt]
+    \thd{Échelle visée}& Centaines de milliers de comptes\\[3pt]
+    \thd{Date}         & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.9cm}
+\begin{center}\color{AlanyaGray}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% =====================================================================
+%  RÉSUMÉ
+% =====================================================================
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+\markboth{Résumé}{}
+\thispagestyle{plain}
+
+Quatre fonctionnalités ont été demandées pour Alanya~: les \textbf{comptes business} avec
+leur fiche étendue, la \textbf{certification des comptes}, un \textbf{compte officiel} au nom
+de l'application, et les \textbf{listes de contacts préférés}.
+
+La première décision de ce dossier est de constater que trois d'entre elles ne sont pas trois
+systèmes différents. Comptes business, certification et compte officiel répondent à la même
+question --- \emph{qui est ce compte~?} --- et se ramènent à \textbf{deux axes indépendants}
+portés par un socle commun~: ce que le compte \emph{est} (personnel, business, officiel), et
+ce qu'Alanya \emph{atteste} à son sujet (aucune démarche, en attente, vérifié, refusé,
+révoqué, expiré). Les concevoir séparément aurait produit trois systèmes de badges
+concurrents et une logique d'affichage impossible à tenir.
+
+La seconde décision structurante est de \textbf{séparer l'identité de l'argent}. La
+vérification répond à «~est-ce bien qui il prétend être~?~»~; l'abonnement répond à
+«~qu'est-ce qu'il a payé~?~». Les garder distincts permet de livrer la certification
+\textbf{gratuitement} en version~1, sans avoir arrêté l'offre commerciale --- celle-ci
+devient une règle de configuration, pas une reprise de schéma.
+
+Le dossier se lit en deux parties. La \textbf{partie~I} décrit ce que chaque fonctionnalité
+change pour l'utilisateur et pour le client, sans vocabulaire technique, maquettes à l'appui.
+La \textbf{partie~II} décrit comment on la construit~: modèle de données, machines à états,
+impact fichier par fichier sur les trois dépôts.
+
+\begin{constat}[Méthode]
+Toutes les affirmations sur l'existant ont été vérifiées en lisant le code des trois dépôts.
+Les chemins de fichiers cités sont réels. Là où une information manque, c'est écrit. Là où
+une décision de conception antérieure s'est révélée incompatible avec le code, l'écart est
+signalé et argumenté.
+\end{constat}
+
+% =====================================================================
+%  AVANT-PROPOS
+% =====================================================================
+\chapter*{Comment lire ce dossier}
+\addcontentsline{toc}{chapter}{Comment lire ce dossier}
+\markboth{Comment lire ce dossier}{}
+\thispagestyle{plain}
+
+\section*{Les cinq volets}
+
+Chaque fonctionnalité est traitée dans les \emph{deux} parties. L'ordre suit les dépendances
+techniques, pas l'ordre dans lequel les fonctionnalités ont été demandées.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{0.9cm}p{4.5cm}X@{}}
+\toprule
+\thd{№} & \thd{Volet} & \thd{Rôle} \\
+\midrule
+1 & Socle de compte & La fondation~: deux axes, un badge dérivé. Les volets 3, 4 et 5 en
+dépendent. \\
+2 & Listes de contacts & Indépendante des autres. Ranger ses favoris, en faire un groupe. \\
+3 & Compte officiel et diffusion & Messages et statuts adressés à une partie de la base. \\
+4 & Comptes business & Ce que contient une fiche~: lieu, médias, horaires, catalogue. \\
+5 & Certification & Le dossier, son instruction, le sort des pièces. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section*{Les conventions du document}
+
+\begin{note}[Encadré bleu]
+Une explication, une justification de choix, ou un point de méthode. Utile mais non bloquant.
+\end{note}
+
+\begin{constat}[Encadré vert]
+Un fait établi en lisant le code des trois dépôts, avec son chemin de fichier. C'est ce qui
+distingue une contrainte réelle d'une supposition.
+\end{constat}
+
+\begin{alerte}[Encadré rouge]
+Un point de vigilance~: un piège, une contrainte technique dure, ou une décision dont
+l'oubli coûterait cher. À lire avant de commencer le développement concerné.
+\end{alerte}
+
+\section*{Ce qui reste à trancher}
+
+Chaque volet se termine par ses questions ouvertes. Elles ne bloquent pas la validation de
+l'architecture, mais elles doivent être arbitrées avant l'implémentation du volet concerné.
+
+\tableofcontents
+
+% =====================================================================
+\part{Approche naïve}
+% =====================================================================
+
+\volet{1}{Socle de compte}%
+  {Deux axes indépendants, un badge dérivé, et les règles de vie d'un compte}
+\input{contenu/socle-naive}
+
+\volet{2}{Listes de contacts}%
+  {Ranger ses favoris dans des listes nommées, et en faire une conversation de groupe}
+\input{contenu/listes-naive}
+
+\volet{3}{Compte officiel et diffusion}%
+  {Adresser un message ou un statut à tout ou partie des comptes}
+\input{contenu/diffusion-naive}
+
+\volet{4}{Comptes business}%
+  {Une vitrine : lieu, médias, horaires, catalogue et annuaire de proximité}
+\input{contenu/business-naive}
+
+\volet{5}{Certification}%
+  {Attester une identité, sans vendre de badge}
+\input{contenu/certification-naive}
+
+% =====================================================================
+\part{Approche technique}
+% =====================================================================
+
+\volet{1}{Socle de compte}%
+  {Extension de \texttt{users}, dérivation du badge, protection du nom}
+\input{contenu/socle-technique}
+
+\volet{2}{Listes de contacts}%
+  {Appartenance plusieurs-à-plusieurs, cache hors ligne, arbitrage des audiences}
+\input{contenu/listes-technique}
+
+\volet{3}{Compte officiel et diffusion}%
+  {Matérialisation paresseuse, résolveur de critères, file de jobs}
+\input{contenu/diffusion-technique}
+
+\volet{4}{Comptes business}%
+  {Index spatial, horaires, catalogue, transcodage des médias}
+\input{contenu/business-technique}
+
+\volet{5}{Certification}%
+  {Dossiers, coffre à documents, abonnement laissé dormant}
+\input{contenu/certification-technique}
+
+% =====================================================================
+%  SYNTHÈSE FINALE
+% =====================================================================
+\clearpage
+\setAlanyaDocTitre{Synthèse}
+\chapter*{Ce qui reste à construire}
+\addcontentsline{toc}{chapter}{Ce qui reste à construire}
+\markboth{Ce qui reste à construire}{}
+
+Les cinq volets s'appuient sur des briques d'infrastructure qui \textbf{n'existent pas
+aujourd'hui} dans les trois dépôts. Les rassembler ici évite qu'elles apparaissent comme des
+surprises au moment du développement.
+
+\section*{Briques d'infrastructure}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.2cm}p{1.5cm}X@{}}
+\toprule
+\thd{Brique} & \thd{Volet} & \thd{Pourquoi elle est nécessaire} \\
+\midrule
+File de jobs & 3, puis 4 & Fan-out des notifications de diffusion, puis transcodage des
+vidéos de fiche. Table MySQL avec \code{SKIP LOCKED} --- aucun service supplémentaire à
+héberger. \\
+Index spatial & 4 & Recherche par proximité. Aucune donnée géographique n'existe~; la
+colonne doit être \code{NOT NULL} avec un SRID explicite dès la création. \\
+Coffre à documents & 5 & Chiffrement au repos, service authentifié, purge à 90~jours,
+journal d'accès. La brique la plus sensible du lot. \\
+Journal de vues & 4 & Tableau de bord du commerçant. Anti-rebond, agrégation et purge à
+concevoir \emph{avec} la table, pas après. \\
+Stockage objet & 4 & Les médias de fiche sont publics et servis en boucle. Le disque local
+tiendra la mise en service, pas au-delà. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section*{Points relevés dans l'existant}
+
+Constatés en lisant le code, sans rapport direct avec les fonctionnalités demandées, mais
+susceptibles de gêner leur implémentation.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.4cm}X@{}}
+\toprule
+\thd{Constat} & \thd{Conséquence} \\
+\midrule
+Aucun exécuteur de migrations, ni table de suivi & Rien ne garantit que l'état réel de la
+base corresponde au contenu de \code{migrations/}. À vérifier avant d'appliquer 023. \\
+\code{migrations/013\_view\_once.sql} contient du SQL invalide & La colonne \code{viewedAt}
+n'a jamais pu s'appliquer par ce fichier, alors qu'elle figure dans le schéma consolidé.
+Trancher lequel décrit la production. \\
+\code{typeCompte} codé en dur à \code{0} en trois endroits du mobile & Un badge dérivé y
+afficherait faux. À corriger dans le même lot que le volet~1. \\
+\code{uploads/} est servi en statique par \code{server.js} & Une pièce d'identité déposée
+par le chemin habituel serait publiquement téléchargeable. Stockage distinct obligatoire. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section*{Ordre de réalisation recommandé}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  v/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
+            font=\sffamily\scriptsize, inner sep=5pt, minimum height=0.9cm,
+            text width=2.5cm, text=AlanyaInk, align=center},
+  f/.style={v, draw=AlanyaIndigo, line width=1pt, fill=AlanyaContainer,
+            text=AlanyaIndigoDark},
+  a/.style={-{Stealth[length=2mm]}, draw=AlanyaGray, semithick}
+]
+  \node[f] (s)  at (0,0)      {1. Socle\\[-2pt]{\scriptsize fondation}};
+  \node[v] (l)  at (0,-2.1)   {2. Listes\\[-2pt]{\scriptsize indépendant}};
+  \node[v] (d)  at (4.1,0)    {3. Diffusion\\[-2pt]{\scriptsize + file de jobs}};
+  \node[v] (b)  at (8.2,0)    {4. Business\\[-2pt]{\scriptsize + géo, médias}};
+  \node[v] (c)  at (12.3,0)   {5. Certification\\[-2pt]{\scriptsize + coffre}};
+
+  \draw[a] (s) -- (d);
+  \draw[a] (d) -- (b);
+  \draw[a] (b) -- (c);
+  \draw[a, dashed, draw=AlanyaMute] (s) -- (l);
+  \draw[a] (s.south east) to[out=-40, in=180] (4.1,-2.1) -- (12.3,-2.1) -- (c.south);
+\end{tikzpicture}
+\end{center}
+
+Le socle conditionne les volets 3, 4 et 5. Les listes de contacts n'en dépendent que pour la
+numérotation des migrations et du schéma local~: elles peuvent être livrées en parallèle, et
+constituent le cycle le plus court.
+
+\vfill
+\begin{center}\small\color{AlanyaGray}\sffamily
+Fin du dossier de conception. \\
+Les cinq volets existent aussi en documents autonomes, dans le même dossier.
+\end{center}
+
+\end{document}

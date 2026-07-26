@@ -1,0 +1,118 @@
+% Fragment partage : inclus par liste-contacts.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Le besoin}
+
+\section{Ce qui existe déjà}
+
+Alanya a aujourd'hui une seule forme d'organisation des contacts~: la liste plate des
+\textbf{contacts préférés}, les favoris. Elle est implémentée de bout en bout --- base de
+données, API, cache local hors ligne, écran dédié.
+
+Ce qui n'existe pas~: aucun moyen de \emph{regrouper} ces favoris. Un utilisateur qui a
+quarante contacts préférés les voit dans une seule liste alphabétique, sans distinction
+entre sa famille, ses amis et ses collègues.
+
+\begin{alerte}[Un mot à ne pas confondre]
+Dans le code actuel, « groupe » désigne uniquement les \textbf{conversations de groupe}
+(\code{conversation.isGroup}). C'est autre chose. Une liste de contacts n'est pas une
+conversation~: c'est un rangement personnel, invisible des autres.
+\end{alerte}
+
+\section{Ce qu'on ajoute}
+
+Permettre à l'utilisateur de ranger ses contacts préférés dans des \textbf{listes nommées}
+--- Famille, Amis, Bureau --- pour deux usages~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{filtrer} l'écran des contacts préférés d'un seul geste~;
+  \item \textbf{créer une conversation de groupe} avec toute une liste, sans resélectionner
+        les membres un par un.
+\end{enumerate}
+
+\section{Les règles produit}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Qui peut être membre} & Uniquement des contacts \textbf{déjà en favoris}. Une liste
+range ce qui est déjà rangé~; elle n'est pas un second carnet d'adresses. \\
+\thd{Appartenance} & \textbf{Plusieurs à plusieurs}. Un contact peut être à la fois en
+Famille et en Bureau. \\
+\thd{Action groupée} & \textbf{Chat de groupe} uniquement. Pas d'appel de groupe ni de
+diffusion de statut à ce stade --- les tables les permettront plus tard sans modification. \\
+\thd{Visibilité} & \textbf{Strictement privée}. Personne ne sait dans quelle liste il est
+rangé, ni même qu'il l'est. \\
+\thd{Emplacement} & Puces de filtre dans l'écran des contacts préférés, \emph{et} un écran
+dédié de gestion. \\
+\thd{Navigation} & \textbf{Aucun sixième onglet.} La barre est codée en dur à cinq onglets
+(\code{lib/screens/home/glass\_nav\_bar.dart}). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\chapter{Les écrans}
+
+\section{Vue d'ensemble}
+
+Trois écrans, un parcours~: on filtre, on gère, on agit.
+
+\begin{center}
+  \imageOuCadre{maquettes/listes-contacts.png}{\linewidth}%
+    {Les trois écrans : contacts préférés filtrés, gestion des listes, détail d'une liste\\
+     \texttt{maquettes/listes-contacts.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/d15fb039-5e57-436b-be65-c3579d0dd90c}%
+{\texttt{claude.ai/code/artifact/d15fb039}}\\
+Source versionnée~: \code{docs/architecture/maquettes/listes-contacts.html}
+\end{note}
+
+\section{Écran 1 --- Contacts préférés, filtrés}
+
+L'écran existant gagne une rangée de puces au-dessus de la liste~:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item une puce \textbf{« Tous »}, active par défaut~;
+  \item une puce \textbf{par liste}, portant sa couleur~;
+  \item une puce \textbf{« + Gérer »} qui ouvre l'écran de gestion.
+\end{itemize}
+
+La rangée défile horizontalement --- le nombre de listes n'est pas borné. Le filtre se
+combine avec la recherche existante~: chercher « Ali » dans le filtre Famille cherche dans
+la famille seulement.
+
+Chaque contact affiche les puces des listes auxquelles il appartient. C'est le seul endroit
+où l'appartenance multiple se voit d'un coup d'{\oe}il.
+
+\section{Écran 2 --- Gestion des listes}
+
+Une liste par ligne~: pastille de couleur, nom, nombre de membres. Créer, renommer,
+recolorer, supprimer. Un bouton flottant « Nouvelle liste ».
+
+Supprimer une liste ne supprime aucun contact --- seulement le rangement.
+
+\section{Écran 3 --- Détail d'une liste}
+
+Les membres de la liste, plus les autres favoris présentés en grisé avec une case à cocher~:
+ajouter et retirer se font au même endroit, sans écran intermédiaire.
+
+En bas, un bouton pleine largeur~: \textbf{« Créer un groupe \guillemotleft~Famille~\guillemotright~»}.
+Le nom de la liste est pré-rempli et reste modifiable. Un appui ouvre la nouvelle
+conversation de groupe.
+
+\begin{note}[Pourquoi la case à cocher plutôt qu'une feuille de sélection]
+Montrer les non-membres dans la même liste, en grisé, évite un aller-retour vers un écran
+de sélection. L'utilisateur voit d'un seul coup qui est dedans et qui pourrait y être.
+\end{note}
+
+\section{Points d'entrée}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Le profil, entrée « Listes de contacts » à côté de « Contacts préférés »
+        (\code{lib/screens/profile/profile\_screen.dart}, méthode
+        \code{\_openPreferredContacts}).
+  \item La puce « + Gérer » de l'écran 1.
+\end{enumerate}

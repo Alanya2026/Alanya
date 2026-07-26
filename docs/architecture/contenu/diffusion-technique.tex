@@ -1,0 +1,489 @@
+% Fragment partage : inclus par broadcast.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{La stratégie de livraison}\label{ch:livraison}
+
+\section{Le désaccord à trancher}
+
+Deux documents existants se contredisaient~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{\code{ideas/broadcast.tex}} & Pour chaque destinataire~: créer ou réutiliser la
+conversation 1-1, insérer une ligne \code{message}, incrémenter \code{unreadCount},
+envoyer le push. C'est un \emph{fan-out on write}. \\
+\thd{\code{alanya-contexte-conception.md}, §9} & \guillemotleft~Fan-out on read, pas on
+write. Un enregistrement de diffusion unique + un état de lecture par utilisateur,
+\textbf{matérialisé à la demande}.~\guillemotright{} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+En lisant les deux attentivement, la contradiction est moins frontale qu'elle en a l'air~:
+le §9 ne dit pas de renoncer aux lignes de message, il dit de ne pas les écrire \emph{au
+moment de l'envoi}. C'est une question de \emph{quand}, pas de \emph{quoi}.
+
+\section{Les trois options, chiffrées}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.9cm}XXX@{}}
+\toprule
+ & \thd{Écriture immédiate} & \thd{Matérialisation paresseuse} & \thd{Lecture pure} \\
+\midrule
+À l'envoi        & $N$ conversations + $N$ messages & 1 ligne & 1 ligne \\
+Pipeline existant& réutilisé & réutilisé & \textbf{à réécrire} \\
+Cache Drift      & gratuit & gratuit & à refaire \\
+Non-lus, accusés & gratuits & gratuits & à refaire \\
+Effort           & faible & moyen & élevé \\
+Tient à 300\,k   & \textbf{non} & oui & oui \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Décision~: matérialisation paresseuse.} À 300\,000 comptes, l'écriture immédiate
+produirait 300\,000 lignes \code{message} en une transaction. La lecture pure, elle, obligerait
+à réécrire tout le chemin de livraison --- synchronisation, cache local, compteurs de non-lus,
+accusés de réception --- pour un seul type de message.
+
+\section{Le moment de la matérialisation}
+
+\begin{constat}[Vérifié dans le code]
+\code{getMessagesSince} (\code{src/controllers/messageController.js}, ligne~922) ne
+synchronise que les conversations dont \textbf{le client envoie déjà le curseur}, et sort
+immédiatement en \code{\{messages: [], hasMore: false\}} si la liste est vide (ligne~941).
+Une conversation créée côté serveur n'est donc jamais découverte par ce chemin.
+\end{constat}
+
+Le point d'accroche est donc \code{GET /api/conversations} --- la liste des conversations,
+qui est le seul endroit où une conversation inconnue du client peut apparaître. Avant de
+répondre, on matérialise les diffusions en attente pour cet utilisateur.
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  etape/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
+                font=\sffamily\small, inner sep=6pt, minimum height=1cm,
+                text width=2.6cm, text=AlanyaInk, align=center},
+  fort/.style={etape, draw=AlanyaIndigo, line width=0.9pt, fill=AlanyaContainer,
+               text=AlanyaIndigoDark},
+  fl/.style={-{Stealth[length=2.2mm]}, draw=AlanyaGray, semithick},
+  et/.style={font=\sffamily\scriptsize, text=AlanyaGray, fill=white, inner sep=2pt}
+]
+  % Voie du haut : la notification, seul vrai fan-out.
+  \node[fort]  (env)  at (0,0)      {Envoi\\[-2pt]{\scriptsize 1 ligne}};
+  \node[etape] (job)  at (4.3,0)    {File de jobs\\[-2pt]{\scriptsize par lots}};
+  \node[etape] (push) at (8.4,0)    {Notification\\[-2pt]{\scriptsize sur le téléphone}};
+
+  % Voie du bas : le contenu, cueilli à l'ouverture.
+  \node[fort]  (ouv)  at (8.4,-2.6) {Ouverture\\[-2pt]{\scriptsize de l'application}};
+  \node[etape] (mat)  at (12.7,-2.6){Matérialisation\\[-2pt]{\scriptsize pour lui seul}};
+
+  \draw[fl] (env)  -- node[et, above] {enfile}   (job);
+  \draw[fl] (job)  -- node[et, above] {consomme} (push);
+  \draw[fl] (push) -- node[et, right] {l'utilisateur ouvre} (ouv);
+  \draw[fl] (ouv)  -- node[et, above] {1 message} (mat);
+
+  \node[et, text width=3.6cm, align=center, text=AlanyaMute] at (2.2,-2.6)
+    {la diffusion attend~;\\ rien n'est écrit d'ici là};
+  \draw[draw=AlanyaLine, dashed] (0,-0.55) -- (0,-2.6) -- (0.35,-2.6);
+\end{tikzpicture}
+\end{center}
+
+\section{Le garde-fou contre la dérive}
+
+Un critère évalué à la lecture pose un problème que l'écriture immédiate n'avait pas~: un
+compte \textbf{créé après} la diffusion correspondrait au critère et recevrait un message qui
+ne lui était pas destiné.
+
+Une clause suffit~:
+
+\begin{lstlisting}[language=SQL, numbers=none]
+AND u.created_at <= b.sent_at
+\end{lstlisting}
+
+\begin{note}[Pourquoi ne pas figer l'audience]
+On pourrait enregistrer la liste des destinataires à l'envoi. Ce serait exactement le
+\emph{fan-out on write} qu'on vient d'écarter, avec les mêmes 300\,000 lignes. La clause
+ci-dessus couvre le seul cas réaliste de dérive. Les autres --- un compte devenu business
+après l'envoi, par exemple --- sont acceptés~: le critère décrit \emph{à qui le message
+s'adresse}, et cette description reste vraie.
+\end{note}
+
+\chapter{Modèle de données}
+
+\section{Migration \code{025\_broadcast.sql}}
+
+\begin{lstlisting}[language=SQL, caption={Diffusions et livraisons}]
+-- 025_broadcast.sql -- compte officiel, diffusions et file de jobs
+-- Requiert 023 (socle de compte) et 024 (listes de contacts).
+
+CREATE TABLE IF NOT EXISTS broadcast (
+  id           BIGINT       NOT NULL AUTO_INCREMENT,
+  sender_id    INT          NOT NULL,   -- compte officiel (account_type = 2)
+  created_by   INT          NOT NULL,   -- admin auteur de la diffusion
+  kind         TINYINT      NOT NULL DEFAULT 0  COMMENT '0=message 1=statut',
+  content      TEXT         NULL,
+  type         TINYINT      NOT NULL DEFAULT 0  COMMENT '0=texte 1=image 2=video',
+  media_url    VARCHAR(255) NULL,
+  criteria     JSON         NOT NULL   COMMENT 'Critere de ciblage, compile a la volee',
+  estimate     INT          NOT NULL DEFAULT 0 COMMENT 'Destinataires estimes a l envoi',
+  statut_id    INT          NULL       COMMENT 'Ligne statut creee (kind = 1)',
+  sent_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_broadcast_sent (sent_at),
+  CONSTRAINT fk_bc_sender  FOREIGN KEY (sender_id)  REFERENCES users(alanyaID),
+  CONSTRAINT fk_bc_admin   FOREIGN KEY (created_by) REFERENCES users(alanyaID),
+  CONSTRAINT fk_bc_statut  FOREIGN KEY (statut_id)  REFERENCES statut(ID) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Une ligne par destinataire AYANT REELLEMENT recu : creee a la
+-- materialisation, pas a l'envoi. Donne le taux d'ouverture gratuitement.
+CREATE TABLE IF NOT EXISTS broadcast_delivery (
+  broadcast_id    BIGINT   NOT NULL,
+  alanyaID        INT      NOT NULL,
+  conversation_id BIGINT   NULL,
+  message_id      BIGINT   NULL,
+  delivered_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (broadcast_id, alanyaID),
+  KEY idx_bd_user (alanyaID),
+  CONSTRAINT fk_bd_broadcast FOREIGN KEY (broadcast_id)
+    REFERENCES broadcast(id) ON DELETE CASCADE,
+  CONSTRAINT fk_bd_user FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Filigrane : jusqu'ou cet utilisateur a deja ete servi.
+ALTER TABLE users
+  ADD COLUMN last_broadcast_id BIGINT NOT NULL DEFAULT 0
+    COMMENT 'Derniere diffusion evaluee pour ce compte (materialisee ou non)';
+\end{lstlisting}
+
+\begin{note}[Pourquoi un filigrane sur \code{users}]
+Sans lui, chaque \code{GET /api/conversations} devrait comparer l'utilisateur à toutes les
+diffusions jamais envoyées. Avec lui, la requête ne remonte que
+\code{broadcast.id > u.last\_broadcast\_id}. Le filigrane avance \textbf{même quand le
+critère ne correspond pas} --- on ne réévalue jamais deux fois la même diffusion pour le même
+compte.
+\end{note}
+
+\begin{note}[Le taux d'ouverture sort tout seul]
+\code{broadcast\_delivery} n'existe que pour les comptes ayant rouvert l'application depuis
+l'envoi. Le taux affiché dans l'historique est donc
+\code{COUNT(delivery) / broadcast.estimate} --- aucune instrumentation supplémentaire.
+\end{note}
+
+\chapter{Le résolveur de critères}
+
+\section{Format stocké}
+
+\begin{lstlisting}[language=JavaScript, caption={Exemple de valeur de \code{broadcast.criteria}}]
+{
+  "v": 1,
+  "op": "and",
+  "conditions": [
+    { "field": "pays",         "op": "in",     "value": [5, 7] },
+    { "field": "account_type", "op": "eq",     "value": 1 },
+    { "field": "created_at",   "op": "before", "value": "-3 months" },
+    { "field": "last_seen",    "op": "after",  "value": "-30 days" }
+  ]
+}
+\end{lstlisting}
+
+Le champ \code{v} porte la version du format~: une diffusion relue dans deux ans doit rester
+interprétable même si le vocabulaire a évolué.
+
+\begin{note}[La règle du §7 sur le JSON est respectée, pas contournée]
+\code{alanya-contexte-conception.md} déconseille les colonnes JSON \guillemotleft~dès qu'elles
+font l'objet d'un \code{WHERE}~\guillemotright{}. Ici, \code{criteria} n'est \textbf{jamais}
+filtré en SQL~: il est lu, puis \emph{compilé} en clauses. Aucune requête ne cherche à
+l'intérieur.
+\end{note}
+
+\section{Deux évaluateurs pour un même critère}
+
+C'est le point qui rend l'ensemble simple. Le résolveur a deux modes, et l'un des deux
+n'écrit pas de SQL du tout~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.2cm}p{3.6cm}X@{}}
+\toprule
+\thd{Mode} & \thd{Usage} & \thd{Fonctionnement} \\
+\midrule
+Compilation SQL & estimation, parcours pour le push &
+  Produit un fragment \code{WHERE} paramétré, appliqué sur \code{users}. \\
+Évaluation en mémoire & « ce compte précis correspond-il~? » &
+  Pure fonction JavaScript sur la ligne \code{users} déjà chargée. Aucune requête. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+La matérialisation et la visibilité des statuts n'ont besoin que du \textbf{second} mode~:
+l'utilisateur est connu, sa ligne est déjà en main, il suffit de tester ses attributs.
+
+\begin{alerte}[Invariant à tester]
+Les deux modes doivent toujours répondre la même chose. C'est exactement le genre d'accord
+qui se rompt silencieusement à la première évolution. Un test qui, pour un jeu de comptes,
+compare le résultat des deux évaluateurs sur chaque critère du catalogue est indispensable.
+\end{alerte}
+
+\section{Sécurité : compiler n'est pas concaténer}
+
+Un critère venu du client, compilé en SQL, est une surface d'injection s'il est traité
+naïvement.
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Le champ (\code{field}) est résolu par une \textbf{liste blanche} vers un nom de
+        colonne. Toute valeur inconnue est un rejet, pas un passage.
+  \item L'opérateur vient d'une énumération fermée par type de champ.
+  \item La valeur est \textbf{toujours} un paramètre lié (\code{?}), jamais interpolée.
+\end{itemize}
+
+\begin{center}
+  \imageOuCadre{maquettes/diffusion-resolveur.png}{\linewidth}%
+    {Requête produite par le résolveur, telle que l'administrateur peut la relire\\
+     \texttt{maquettes/diffusion-resolveur.png}}
+\end{center}
+
+\section{Ce qu'on n'accepte pas comme critère}
+
+Tous les champs retenus sont indexés~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.4cm}p{4.6cm}X@{}}
+\toprule
+\thd{Critère} & \thd{Colonne} & \thd{Index} \\
+\midrule
+Ancienneté & \code{users.created\_at} & \code{idx\_users\_created\_at} (migration 005) \\
+Activité   & \code{users.last\_seen}  & \code{idx\_users\_online} (migration 001) \\
+Pays       & \code{users.idPays}      & clé étrangère \\
+Genre, état& \code{account\_type}, \code{verification\_status} &
+             \code{idx\_users\_account\_type} (migration 023) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Critère écarté]
+\guillemotleft~Nombre de messages envoyés~\guillemotright{} exigerait une agrégation sur
+\code{message}, la plus grosse table de la base, à chaque estimation. À écarter, ou à
+pré-calculer dans une colonne entretenue --- pas à compiler à la volée.
+\end{alerte}
+
+\chapter{Les statuts officiels}\label{ch:statuts-officiels}
+
+\section{Le correctif de visibilité}
+
+\begin{constat}[État actuel]
+\code{getStatus} (\code{src/controllers/statutController.js}, lignes~29--30) impose deux
+jointures \code{INNER} sur \code{preferredContact}~: l'auteur doit avoir le lecteur en
+favori \textbf{et} réciproquement.
+\end{constat}
+
+\code{ideas/broadcast.tex} proposait d'ajouter une colonne \code{isBroadcast} sur
+\code{statut}. Elle est inutile depuis le socle~: l'information est déjà sur l'auteur.
+
+\begin{lstlisting}[language=SQL, caption={\code{getStatus} --- jointures assouplies}]
+FROM statut s
+JOIN users u ON s.alanyaID = u.alanyaID
+LEFT JOIN preferredContact pc1 ON pc1.alanyaID = s.alanyaID AND pc1.idFriend = ?
+LEFT JOIN preferredContact pc2 ON pc2.alanyaID = ?          AND pc2.idFriend = s.alanyaID
+WHERE s.expiredAt > NOW()
+  AND (
+        u.account_type = 2                 -- officiel : pas de reciprocite exigee
+     OR (pc1.idPrefContact IS NOT NULL      -- sinon : regle inchangee
+    AND  pc2.idPrefContact IS NOT NULL)
+      )
+  ...
+\end{lstlisting}
+
+\section{Les statuts n'ont pas besoin de matérialisation}
+
+Asymétrie qu'il faut voir pour ne pas sur-concevoir~: un statut est \textbf{une seule ligne
+lue par tout le monde}. Il est nativement en \emph{fan-out on read}. Un message, lui, vit
+dans une conversation propre à chaque destinataire.
+
+Un statut officiel se réduit donc à~: une ligne \code{statut} portée par le compte officiel,
+plus le filtre de critère appliqué au lecteur --- en mode évaluation en mémoire, sur la ligne
+\code{users} déjà chargée par la requête. Aucune table, aucun travail de fond.
+
+\chapter{La file de jobs}
+
+\section{Pourquoi elle devient obligatoire ici}
+
+Quelle que soit la stratégie de livraison, envoyer les \textbf{notifications} reste un
+parcours de $N$ destinataires. C'est le seul véritable fan-out qui subsiste, et à 300\,000
+comptes il ne peut pas tenir dans le cycle d'une requête HTTP.
+
+\begin{note}[Nuance à ne pas gommer]
+On lit souvent que la matérialisation paresseuse évite de parcourir les destinataires. C'est
+faux~: elle évite de leur \textbf{écrire des lignes de message}. Le parcours pour le push
+existe bien --- mais il se fait par pages, en arrière-plan, sans rien persister.
+\end{note}
+
+\section{Table plutôt que Redis}
+
+Le §7 de \code{alanya-contexte-conception.md} recommandait BullMQ sur Redis. On retient une
+\textbf{table MySQL}~: aucun service supplémentaire à héberger, sauvegarder et surveiller,
+pour un besoin qui se limite aujourd'hui au push par lots.
+
+\begin{lstlisting}[language=SQL, caption={File de jobs --- même migration 025}]
+CREATE TABLE IF NOT EXISTS job_queue (
+  id           BIGINT      NOT NULL AUTO_INCREMENT,
+  kind         VARCHAR(40) NOT NULL COMMENT 'broadcast_push, ...',
+  payload      JSON        NOT NULL,
+  run_after    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  attempts     TINYINT     NOT NULL DEFAULT 0,
+  max_attempts TINYINT     NOT NULL DEFAULT 5,
+  locked_at    DATETIME    NULL,
+  locked_by    VARCHAR(64) NULL,
+  failed_at    DATETIME    NULL,
+  last_error   TEXT        NULL,
+  created_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_job_pret (kind, failed_at, locked_at, run_after)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+\end{lstlisting}
+
+\section{Consommation concurrente}
+
+\code{SKIP LOCKED} (MySQL 8, déjà la cible du schéma) permet à plusieurs consommateurs de
+prendre des lots disjoints sans se bloquer~:
+
+\begin{lstlisting}[language=SQL, numbers=none]
+START TRANSACTION;
+  SELECT id, payload FROM job_queue
+  WHERE kind = ? AND locked_at IS NULL AND failed_at IS NULL
+    AND run_after <= NOW()
+  ORDER BY run_after, id
+  LIMIT 20
+  FOR UPDATE SKIP LOCKED;
+
+  UPDATE job_queue
+  SET locked_at = NOW(), locked_by = ?, attempts = attempts + 1
+  WHERE id IN (...);
+COMMIT;
+\end{lstlisting}
+
+Un job réussi est supprimé~; un job échoué est déverrouillé avec \code{run\_after} repoussé
+(recul exponentiel) jusqu'à \code{max\_attempts}, puis marqué \code{failed\_at} et laissé
+pour inspection.
+
+\section{Découpage du fan-out}
+
+L'enfileur parcourt les destinataires par \textbf{pagination par clé} sur \code{alanyaID}
+--- jamais par \code{OFFSET}, qui se dégrade sur des centaines de milliers de lignes --- et
+crée un job par lot de quelques centaines. Une diffusion à 300\,000 comptes produit quelques
+centaines de jobs, pas 300\,000.
+
+\begin{note}[Réutiliser l'existant]
+\code{src/services/meetingScheduler.js} fournit déjà le squelette d'une boucle de fond
+(\code{setInterval} d'une minute, démarrage depuis \code{server.js}). Le consommateur de
+jobs suit le même patron. \code{notificationService.js} envoie déjà les push par lots.
+\end{note}
+
+\chapter{Impact fichier par fichier}
+
+\section{Backend}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.3cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{migrations/025\_broadcast.sql} & nouveau & \code{broadcast}, \code{broadcast\_delivery}, \code{job\_queue}, filigrane \\
+\code{src/services/criteriaResolver.js} & nouveau & Compilation SQL \emph{et} évaluation en mémoire \\
+\code{src/services/jobQueue.js} & nouveau & Enfilage, consommation \code{SKIP LOCKED}, recul exponentiel \\
+\code{src/services/broadcastService.js} & nouveau & Envoi, enfilage du push, matérialisation \\
+\code{src/controllers/admin/broadcast.js} & nouveau & CRUD, estimation, historique \\
+\code{src/routes/admin.js} & modifié & \mGET{} / \mPOST{} \code{/broadcasts}, \mGET{} \code{/broadcasts/:id}, \mPOST{} \code{/broadcasts/estimate} \\
+\code{src/controllers/conversationController.js} & modifié & Matérialisation avant de répondre à la liste \\
+\code{src/controllers/statutController.js} & modifié & Jointures en \code{LEFT} + critère \\
+\code{server.js} & modifié & Démarrage du consommateur de jobs \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Administration}
+
+L'écran existe déjà, branché sur des données simulées
+(\code{app/(dashboard)/broadcasts/page.tsx}, \code{components/broadcasts/*},
+\code{hooks/useBroadcasts.ts} $\rightarrow$ \code{lib/mock-data.ts}). Il faut le brancher et
+remplacer le ciblage~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.3cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Objet} \\
+\midrule
+\code{components/broadcasts/BroadcastDialog.tsx} &
+  Remplacer les trois boutons radio \code{targetType} par le constructeur de conditions \\
+\code{components/broadcasts/CriteriaBuilder.tsx} \emph{(nouveau)} &
+  Ajout, retrait et édition des conditions \\
+\code{components/broadcasts/RecipientEstimate.tsx} \emph{(nouveau)} &
+  Estimation en direct, appel anti-rebond sur \code{/broadcasts/estimate} \\
+\code{types/index.ts} &
+  \code{targetType} / \code{targetCriteria} deviennent \code{criteria} \\
+\code{lib/mock-data.ts} &
+  Retirer la bascule simulée pour les diffusions \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{constat}[Déjà anticipé]
+\code{BroadcastFormData} contient déjà un booléen \code{isStatus}
+(\code{types/index.ts}, ligne~324)~: la distinction message / statut avait été prévue.
+\end{constat}
+
+\section{Mobile}
+
+Peu de travail, et c'est la récompense du choix de livraison~: une diffusion arrive comme un
+message ordinaire.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.3cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Objet} \\
+\midrule
+\code{lib/screens/chats/chat/chat\_input.dart} & Bandeau à la place de la saisie (étape~1) \\
+\code{lib/screens/chats/chat/chat\_bubbles.dart} & Retrait de « répondre » et « réagir » (étape~1) \\
+\code{lib/screens/status/statuses\_screen.dart} & Aucun changement --- le statut officiel arrive par la requête corrigée \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\chapter{Points de vigilance et questions ouvertes}
+
+\section{Chantier d'infrastructure nommé}
+
+La \textbf{file de jobs} n'existe pas aujourd'hui dans le backend. Ce n'est pas un détail
+d'implémentation~: c'est une brique à construire, tester et surveiller, avec sa propre
+supervision (jobs en échec, jobs bloqués par un consommateur mort). À budgéter comme telle.
+
+\begin{alerte}[Verrous orphelins]
+Un consommateur tué laisse ses jobs \code{locked\_at} non nul indéfiniment. Il faut une
+reprise~: tout job verrouillé depuis plus de $N$ minutes est considéré comme abandonné et
+redevient disponible.
+\end{alerte}
+
+\section{Coût de la matérialisation sur le chemin chaud}
+
+\code{GET /api/conversations} est appelé à chaque ouverture de l'application. Y ajouter un
+travail conditionnel demande de la rigueur~: la requête de filigrane doit être triviale quand
+il n'y a rien à faire --- c'est-à-dire dans la quasi-totalité des appels.
+
+\section{Questions ouvertes}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Une diffusion peut-elle être \textbf{annulée} après envoi~? Techniquement oui tant
+        qu'elle n'est pas matérialisée pour tout le monde --- mais elle l'aura déjà été pour
+        une partie, et les push seront partis. Un rappel partiel est-il pire que rien~?
+  \item Faut-il \textbf{programmer} une diffusion à une date future~? La file de jobs le
+        permet gratuitement via \code{run\_after}.
+  \item Combien de temps conserve-t-on les lignes \code{broadcast\_delivery}~? Elles
+        grossissent avec chaque diffusion.
+  \item Un utilisateur peut-il \textbf{se désabonner} des annonces~? Aucune obligation légale
+        pour des notifications de service, mais la question se posera.
+  \item Plusieurs comptes officiels (support, actualités) --- le modèle le permet~; faut-il
+        l'exposer dès maintenant dans l'administration~?
+\end{enumerate}

@@ -1,0 +1,305 @@
+% Fragment partage : inclus par socle-compte.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Ce que l'on ajoute, et pourquoi}
+
+\section{La situation aujourd'hui}
+
+Dans Alanya, tous les comptes sont identiques. Un commerçant, une personnalité publique et
+un utilisateur ordinaire ont exactement le même profil et la même apparence dans une liste
+de conversations. Rien ne permet de distinguer l'entreprise officielle d'un imitateur qui
+aurait pris le même nom et la même photo.
+
+C'est ce manque que les trois fonctionnalités demandées viennent combler --- et c'est
+pourquoi elles partagent la même fondation.
+
+\section{Deux questions, pas une}
+
+L'erreur naturelle serait de créer une liste de « genres de comptes » : personnel,
+business, vérifié, officiel, business vérifié\ldots{} Cette liste devient ingérable dès
+qu'on ajoute un cas.
+
+On sépare donc deux questions \textbf{indépendantes} :
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.2cm}X@{}}
+\toprule
+\thd{Quel genre de compte ?} & Personnel, business, ou officiel. C'est ce que le compte
+\emph{est}. \\
+\thd{A-t-il été vérifié ?} & Aucune démarche, en attente, vérifié, refusé, révoqué, ou
+expiré. C'est ce qu'Alanya \emph{atteste} à son sujet. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Ces deux questions ne dépendent pas l'une de l'autre. Un commerce peut exister sans être
+vérifié. Une personne privée peut être vérifiée sans être un commerce --- c'est le cas
+d'une personnalité publique. Le compte officiel Alanya, lui, est la combinaison
+« officiel + vérifié d'office ».
+
+\begin{note}[Le bénéfice concret]
+Poser deux questions séparées plutôt qu'une seule liste, c'est ce qui permet d'ajouter
+demain un nouveau genre de compte, ou un nouvel état de vérification, sans toucher à
+l'autre axe ni refaire les écrans.
+\end{note}
+
+\section{Ce que couvre l'étape 1 --- et ce qu'elle ne couvre pas}
+
+\begin{tabularx}{\linewidth}{@{}p{5.4cm}X@{}}
+\toprule
+\thd{Dans cette étape} & Savoir \emph{qui} est un compte : son genre, son état de
+vérification, et le badge qui en découle partout dans l'application. \\
+\thd{Étapes suivantes} & Ce que ce compte \emph{contient} : la fiche business (horaires,
+adresse, catalogue, liens), le dossier de certification (pièces justificatives,
+approbation, abonnement), et la diffusion du compte officiel. \\
+\bottomrule
+\end{tabularx}
+
+La raison de cette coupure est simple : le genre et l'état d'un compte suffisent déjà à
+afficher le bon badge partout. Le contenu détaillé d'une fiche business dépend de règles
+qu'on n'a pas encore écrites --- le figer maintenant obligerait à tout refaire à l'étape
+suivante.
+
+\chapter{Ce que l'utilisateur voit}
+
+\section{Le principe du badge}
+
+Un badge qui combinerait « c'est un commerce » et « c'est vérifié » en un seul dessin
+devient illisible à la taille où il apparaît réellement --- environ 12 pixels, à côté d'un
+nom dans une liste de conversations. Et deux badges côte à côte mangent la largeur du nom,
+qui est déjà tronqué sur un petit écran.
+
+La solution retenue sépare les deux informations sur deux canaux visuels distincts :
+
+\begin{center}
+\begin{tabularx}{0.92\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Le glyphe dit \emph{quoi}} & Une coche pour une personne notable, un panier pour un
+commerce, la marque Alanya pour le compte officiel. \\
+\thd{Le contenant dit \emph{vérifié ou pas}} & Un glyphe nu = déclaré par le compte
+lui-même. Un glyphe posé dans un \textbf{sceau festonné} \badgeSceauNu[0.9] = attesté par
+Alanya. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Pourquoi un sceau festonné, et pas un rond}
+
+Un disque plein ne se distingue d'aucune autre icône circulaire de l'interface : avatars,
+puces de comptage, indicateurs de présence. À 12~pixels, un badge rond devient un point
+coloré parmi d'autres points colorés.
+
+Le feston à douze lobes, lui, a une silhouette reconnaissable même quand le glyphe qu'il
+contient n'est plus lisible. C'est la propriété qui compte : l'utilisateur qui distingue
+la \emph{forme} sait qu'Alanya s'est prononcé sur ce compte, sans avoir à lire le
+détail. Et cette forme est bien plus difficile à imiter avec un caractère Unicode dans un
+nom d'affichage qu'un simple rond ou une simple coche.
+
+\section{Les cinq rendus}
+
+\begin{center}
+\setlength{\extrarowheight}{7pt}
+\begin{tabular}{@{}llc@{\hspace{1.6cm}}c@{}}
+\toprule
+\thd{Genre} & \thd{État} & \thd{À taille réelle} & \thd{Agrandi} \\
+\midrule
+Personnel & non vérifié & --- & --- \\
+Personnel & vérifié     & \badgePastilleCoche[1]  & \badgePastilleCoche[2.2] \\
+Business  & déclaré     & \badgePanier[1]         & \badgePanier[2.2] \\
+Business  & vérifié     & \badgePastillePanier[1] & \badgePastillePanier[2.2] \\
+Officiel  & ---         & \badgeMarque[1]         & \badgeMarque[2.2] \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+
+La colonne « à taille réelle » est là pour être jugée telle quelle : c'est exactement la
+taille à laquelle le badge apparaîtra à côté d'un nom. Si un rendu n'est pas
+distinguable à cette échelle, il doit être redessiné avant l'implémentation.
+
+\begin{note}[Pourquoi une couleur différente pour l'officiel]
+Le sceau du compte officiel est doré, pas indigo. Il n'existe qu'un seul compte
+officiel dans toute l'application : lui donner une couleur à part évite qu'il soit confondu
+avec un compte simplement vérifié, et rend l'usurpation visuellement plus difficile.
+\end{note}
+
+\section{Où le badge apparaît}
+
+Le même badge, dessiné par le même composant, dans quatre contextes :
+
+\begin{itemize}[leftmargin=1.4em]
+  \item la \textbf{liste de conversations}, juste après le nom ;
+  \item l'\textbf{en-tête d'une conversation} ouverte ;
+  \item la \textbf{page de profil} du compte ;
+  \item les \textbf{résultats de recherche} et les listes de contacts.
+\end{itemize}
+
+\begin{center}
+  \imageOuCadre{maquettes/liste-conversations-badges.png}{0.86\linewidth}%
+    {Liste de conversations montrant les cinq variantes de badge en situation\\
+     \texttt{maquettes/liste-conversations-badges.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+La version vivante de cette maquette permet de faire varier la taille du badge de 10 à
+28~pixels pour juger la lisibilité, et montre la conversation officielle avec son bandeau
+de lecture seule :\\
+\href{https://claude.ai/code/artifact/029627c6-5dae-4b2a-a86b-3e28c899d824}%
+{\texttt{claude.ai/code/artifact/029627c6}}\\
+Source versionnée : \code{docs/architecture/maquettes/liste-conversations-badges.html}
+\end{note}
+
+\section{Pourquoi la distinction déclaré / vérifié est critique}
+
+Se déclarer « commerce » prend trente secondes et n'engage personne : le compte l'affirme
+lui-même, personne ne l'a contrôlé. Être vérifié suppose au contraire un dossier examiné
+par Alanya.
+
+Si les deux badges avaient le même poids visuel, n'importe qui créerait un compte business
+et hériterait d'une caution qui ne lui a jamais été accordée. C'est exactement le scénario
+qu'un arnaqueur cherche.
+
+\begin{alerte}[La règle qui en découle]
+Le sceau festonné est la signature d'Alanya. Rien d'autre dans l'interface ne doit pouvoir lui
+ressembler --- ni une icône décorative, ni un emoji dans un nom d'utilisateur.
+\end{alerte}
+
+\section{Protéger le badge des contournements}
+
+Un système de badge peut être contourné sans jamais être attaqué techniquement : il suffit
+qu'un utilisateur s'appelle « Alanya~\checkmark{} » pour que le nom affiché imite la
+certification.
+
+Deux protections sont donc posées dès cette étape :
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item les caractères de type coche, étoile et sceau sont \textbf{refusés} dans le nom et
+        le pseudo ;
+  \item les variantes du nom « Alanya » sont \textbf{réservées} et ne peuvent pas être
+        prises par un compte ordinaire.
+\end{enumerate}
+
+\chapter{Les règles de vie d'un compte}
+
+\section{Devenir un compte business, et revenir en arrière}
+
+Le passage d'un compte personnel à un compte business est \textbf{réversible}. Les règles
+proposées :
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.2cm}X@{}}
+\toprule
+\thd{Personnel $\rightarrow$ business} & Libre, à l'initiative de l'utilisateur. Devenir
+commerce est déclaratif : cela n'atteste de rien et ne demande donc aucune validation. \\
+\thd{Business $\rightarrow$ personnel} & Libre également. La fiche business est
+\textbf{conservée mais masquée}, pas supprimée : un retour en arrière ne doit pas détruire
+un catalogue de produits saisi pendant des semaines. \\
+\thd{Une vérification en cours} & La demande est annulée : elle portait sur une identité
+d'entreprise qui n'est plus revendiquée. \\
+\thd{Une vérification obtenue} & Elle est \textbf{révoquée}, pas suspendue. Le badge
+atteste d'une entreprise ; si le compte n'en est plus une, l'attestation n'a plus d'objet.
+Un nouveau dossier sera nécessaire pour la retrouver. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[À confirmer avec le client]
+La bascule business $\rightarrow$ personnel pourrait aussi être soumise à validation d'un
+administrateur, pour éviter qu'un commerce échappe à un signalement en repassant en
+personnel. La règle proposée ci-dessus est la plus simple ; l'alternative est plus sûre.
+\end{note}
+
+\section{La vie d'une vérification}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  etat/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
+               font=\sffamily\small, inner sep=6pt, minimum height=0.8cm,
+               text=AlanyaInk},
+  etatOk/.style={etat, draw=AlanyaSuccess, line width=0.9pt, fill=AlanyaSuccess!8},
+  etatKo/.style={etat, draw=danger, fill=danger!6},
+  fleche/.style={-{Stealth[length=2.2mm]}, draw=AlanyaGray, semithick},
+  etiq/.style={font=\sffamily\scriptsize, text=AlanyaGray,
+               fill=white, inner sep=1.5pt}
+]
+  \node[etat]   (aucun)   at (0,0)      {Aucune démarche};
+  \node[etat]   (attente) at (4.3,0)    {En attente};
+  \node[etatOk] (ok)      at (8.3,0)    {Vérifié};
+  \node[etatKo] (revoque) at (11.8,0)   {Révoqué};
+  \node[etatKo] (refuse)  at (1.7,-2.1) {Refusé};
+  \node[etatKo] (expire)  at (8.3,-2.1) {Expiré};
+
+  % Chemin nominal
+  \draw[fleche] (aucun)   -- node[etiq, above] {dépôt}       (attente);
+  \draw[fleche] (attente) -- node[etiq, above] {approbation} (ok);
+  \draw[fleche] (ok)      -- node[etiq, above] {abus}        (revoque);
+  \draw[fleche] (ok)      -- node[etiq, right] {échéance}    (expire);
+
+  % Rejet
+  \draw[fleche] (attente.south west) -- node[etiq, pos=0.55, above left, inner sep=1pt]
+    {rejet} (refuse.north east);
+
+  % Retours : deux couloirs qui ne se croisent pas
+  \draw[fleche] (refuse.north west) -- node[etiq, pos=0.5, above left, inner sep=1pt]
+    {nouveau dossier} (aucun.south);
+
+  \draw[fleche] (expire.west) -- (4.3,-2.1)
+    node[etiq, pos=0.55, below] {renouvellement} -- (attente.south);
+\end{tikzpicture}
+\end{center}
+
+\section{L'expiration et sa relance}
+
+Une vérification n'est pas éternelle : elle a une date de fin. Le comportement attendu :
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.4cm}X@{}}
+\toprule
+\thd{À J\,--\,30} & Le titulaire est prévenu qu'il doit renouveler, par trois canaux à la
+fois : une notification sur son téléphone, un e-mail, et un avertissement visible dans
+l'application. L'avertissement n'est envoyé qu'une fois. \\
+\thd{À l'échéance} & La vérification est \textbf{suspendue}. Le badge disparaît. Le compte
+et son contenu restent intacts --- seule l'attestation tombe. \\
+\thd{Après} & Le titulaire peut déposer un nouveau dossier pour retrouver son badge. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Suspendu, pas supprimé]
+Une vérification expirée est un état distinct d'un refus. Le compte a bien été vérifié par
+le passé ; il a simplement laissé passer la date. Cette nuance compte pour le service
+client, et pour ne pas retraiter un dossier déjà instruit.
+\end{note}
+
+\section{Le compte officiel}
+
+Le compte officiel est le compte au nom de l'application. Ses règles :
+
+\begin{itemize}[leftmargin=1.4em]
+  \item il est \textbf{créé par un administrateur}, jamais par une inscription ordinaire ;
+  \item sa photo de profil est le \textbf{logo Alanya} ;
+  \item il porte le badge officiel, distinct du badge de vérification ;
+  \item les utilisateurs \textbf{ne peuvent pas lui répondre}. Ses messages sont des
+        diffusions, pas des conversations.
+\end{itemize}
+
+Concrètement, dans une conversation avec le compte officiel, la zone de saisie est
+remplacée par un bandeau explicatif, et les actions « répondre » et « réagir » n'apparaissent
+pas sur ses messages.
+
+\begin{alerte}[Ce n'est pas qu'une question d'affichage]
+Masquer la zone de saisie ne suffit pas : un client modifié pourrait envoyer le message
+quand même. Le refus doit être appliqué par le serveur. La partie II décrit où.
+\end{alerte}
+
+\section{Un compte business ne peut pas être administrateur}
+
+Décision prise : les rôles d'administration de la plateforme et les genres de compte sont
+mutuellement exclusifs. Un compte business ou officiel ne peut pas recevoir de droits
+d'administration, et réciproquement.
+
+La raison est de sécurité : un compte visible du public, susceptible d'être usurpé ou
+compromis, ne doit pas ouvrir la porte au back-office.

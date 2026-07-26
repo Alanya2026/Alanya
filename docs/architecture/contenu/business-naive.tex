@@ -1,0 +1,217 @@
+% Fragment partage : inclus par compte-business.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Ce qu'un commerçant peut présenter}
+
+\section{La fiche}
+
+Un compte business dispose d'une fiche étendue, absente d'un compte personnel~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Identité} & Raison sociale, description, logo, image de couverture. \\
+\thd{Catégorie} & Une catégorie principale, choisie dans une liste courte. \\
+\thd{Mots-clés} & Saisis librement par le commerçant, pour être trouvé. \\
+\thd{Lieu} & Adresse, position sur la carte, distance affichée au visiteur. \\
+\thd{Horaires} & Jours et créneaux d'ouverture, exceptions. \\
+\thd{Liens} & Site web, réseaux sociaux, dans l'ordre choisi. \\
+\thd{Médias} & Images et vidéos de présentation. \\
+\thd{Moyens de paiement} & Ce que l'établissement accepte sur place. \\
+\thd{Catalogue} & Produits ou services, avec prix et disponibilité. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Trois de ces rubriques méritent d'être détaillées, parce qu'elles ne sont pas de simples
+champs de formulaire.
+
+\section{Le lieu et la géolocalisation}
+
+C'est la rubrique dont dépend tout l'annuaire, et la seule qui parte réellement de zéro ---
+Alanya ne stocke aujourd'hui aucune donnée géographique.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Adresse écrite} & Ce que le visiteur lit et recopie.
+\guillemotleft~Avenue Kennedy, Yaoundé~\guillemotright. Texte libre~: il n'existe pas de
+référentiel d'adresses fiable sur le marché visé. \\
+\thd{Position} & Un point sur la carte, posé par le commerçant lui-même. C'est
+\emph{elle} qui sert à la recherche par proximité, pas l'adresse écrite. \\
+\thd{Distance affichée} & Calculée à la volée entre le visiteur et le commerce.
+\guillemotleft~à 1,2~km de vous~\guillemotright. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Comment le commerçant pose son point]
+Deux gestes seulement~: \guillemotleft~utiliser ma position actuelle~\guillemotright{}
+quand il est sur place, ou déplacer un repère sur une carte. Pas de géocodage d'adresse ---
+il donnerait des résultats médiocres et masquerait les erreurs derrière une fausse
+précision. Le commerçant sait où est sa boutique~; on lui demande de le montrer.
+\end{note}
+
+\begin{constat}[Aucune dépendance à ajouter]
+\code{geolocator} et \code{flutter\_map} sont \textbf{déjà} dans \code{pubspec.yaml} --- ils
+servent au partage de position dans les conversations
+(\code{lib/screens/chats/location\_picker\_screen.dart}). Le sélecteur de position du
+commerçant peut réutiliser cet écran.
+\end{constat}
+
+\section{Médias de présentation}
+
+Images \emph{et} vidéos. C'est ce qui fait la différence entre une fiche remplie et une
+fiche convaincante --- et c'est aussi la rubrique la plus coûteuse à exploiter.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Couverture} & Une image en tête de fiche, format paysage. \\
+\thd{Galerie} & Photos de l'établissement, des produits, de l'équipe. Ordre choisi par le
+commerçant. \\
+\thd{Vidéos} & Présentation de l'activité. Avec vignette, durée, et lecture au clic. \\
+\thd{Logo} & Réutilise l'avatar du compte --- pas de champ supplémentaire. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[La vidéo est un chantier, pas un champ]
+Une vidéo téléversée depuis un téléphone pèse couramment plusieurs dizaines de mégaoctets.
+La servir telle quelle à chaque ouverture de fiche est intenable. Il faut une vignette, une
+limite de durée, et un transcodage --- lequel suppose la file de jobs conçue à l'étape~3.
+Voir le chapitre~\ref{ch:medias}.
+\end{alerte}
+
+\section{Liens et présence en ligne}
+
+Site web, Facebook, Instagram, WhatsApp, TikTok\ldots{} Le commerçant en ajoute autant qu'il
+veut et choisit leur ordre d'affichage.
+
+\begin{note}[Pas une colonne par réseau]
+Le point que le document d'amorce soulignait à juste titre. Une table
+\code{business\_link (type, url, ordre)} permet d'ajouter le réseau à la mode de l'an
+prochain sans migration. Une colonne \code{facebook\_url} ne le permettrait pas.
+\end{note}
+
+\section{Les quatre écrans}
+
+\begin{center}
+  \imageOuCadre{maquettes/comptes-business-ecrans.png}{\linewidth}%
+    {Fiche business, catalogue, éditeur d'horaires, annuaire\\
+     \texttt{maquettes/comptes-business-ecrans.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/37b8e6c7-1235-42df-aabc-d66b8f26ff67}%
+{\texttt{claude.ai/code/artifact/37b8e6c7}}\\
+Source versionnée~: \code{docs/architecture/maquettes/comptes-business.html}
+\end{note}
+
+\section{Le badge fait son travail}
+
+Dans l'annuaire, trois commerces se distinguent d'un coup d'{\oe}il~: deux portent la
+pastille pleine \badgePastillePanier[1] --- vérifiés par Alanya --- et un porte le panier nu
+\badgePanier[1], c'est-à-dire un commerce qui s'est déclaré tel sans qu'on l'ait contrôlé.
+
+C'est exactement la distinction que le socle devait rendre lisible à 13~pixels, et c'est
+dans l'annuaire qu'elle compte le plus~: un visiteur qui cherche une pharmacie de garde
+prend une décision sur cette base.
+
+\chapter{La catégorie et les mots-clés}
+
+\section{Une liste courte, pas une arborescence}
+
+Le choix retenu~: \textbf{une catégorie principale} dans une liste courte, plus des
+\textbf{mots-clés libres} saisis par le commerçant.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Pourquoi pas deux niveaux} & Un sélecteur à deux étages est pénible sur un téléphone,
+et il faudrait arrêter dès aujourd'hui une liste longue qu'on ne pourra plus changer. \\
+\thd{Pourquoi des mots-clés} & Ils absorbent tout ce que la liste ne prévoit pas ---
+\guillemotleft~garde de nuit~\guillemotright, \guillemotleft~livraison~\guillemotright,
+\guillemotleft~sur mesure~\guillemotright{} --- sans figer quoi que ce soit. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Le revers, à assumer]
+La qualité de la recherche dépendra de ce que les commerçants écrivent. Deux garde-fous
+tempèrent~: les mots-clés sont \emph{normalisés} (minuscules, accents repliés) et le champ
+propose les mots déjà utilisés par d'autres commerces de la même catégorie. Un mot-clé
+partagé vaut mieux que dix orthographes du même mot.
+\end{alerte}
+
+\section{Une taxonomie est difficile à changer}
+
+C'est le point que le document d'amorce soulignait à juste titre~: une fois des milliers de
+fiches rangées, renommer ou fusionner une catégorie devient une opération de reprise de
+données. D'où la liste courte --- vingt à trente entrées --- et la table de référence
+éditable plutôt que des valeurs figées dans le code.
+
+\chapter{Les horaires, l'écran le plus difficile}
+
+Ce n'est pas un champ de formulaire. Six cas doivent tenir sur un écran de téléphone, et
+cinq d'entre eux restent invisibles tant qu'on n'a pas essayé.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.1cm}X@{}}
+\toprule
+\thd{Multi-créneaux} & Ouvert le matin, fermé à midi, rouvert l'après-midi. Deux plages pour
+un seul jour --- le cas le plus courant, et celui qu'un champ \guillemotleft~de\ldots{}
+à\ldots{}~\guillemotright{} ne sait pas exprimer. \\
+\thd{24\,h/24} & N'est pas \guillemotleft~00:00 $\rightarrow$ 00:00~\guillemotright. C'est un
+état distinct, sans quoi le calcul \guillemotleft~ouvert maintenant~\guillemotright{} se
+trompe. \\
+\thd{Passage de minuit} & Un bar ouvert de 20\,h à 2\,h~: l'heure de fin est
+\emph{avant} l'heure de début. \\
+\thd{Copie d'un jour} & Saisir sept fois les mêmes horaires fait abandonner.
+\guillemotleft~Copier vers~\guillemotright{} n'est pas un confort, c'est ce qui décide si la
+fiche sera remplie. \\
+\thd{Exceptions} & Jours fériés, congés, fermeture ponctuelle. Une liste à part, pas un
+champ de plus. \\
+\thd{Fuseau horaire} & \guillemotleft~Ouvert maintenant~\guillemotright{} se calcule dans le
+fuseau du commerce, pas dans celui du visiteur. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{constat}[Le fuseau existe déjà]
+La table \code{pays} porte \code{timeZone} et \code{decalageHoraire}
+(\code{migrations/001\_initial\_schema.sql}), et \code{users.idPays} les relie. Rien à
+créer --- mais tout à ne pas oublier.
+\end{constat}
+
+\begin{note}[À budgéter comme un écran]
+Cet éditeur mérite sa propre estimation, au même titre qu'un écran de conversation. Le
+traiter comme un champ du formulaire de profil garantit qu'il sera bâclé, puis refait.
+\end{note}
+
+\chapter{Le tableau de bord du commerçant}
+
+\section{Ce qu'il montre}
+
+Puisque les transactions se font hors application, le tableau de bord ne peut pas parler
+d'argent. Il parle de ce qu'Alanya \textbf{observe réellement}~: l'audience de la fiche.
+
+\begin{itemize}[leftmargin=1.4em]
+  \item nombre de vues du profil, et son évolution~;
+  \item provenance des visites --- annuaire, recherche, conversation, lien partagé~;
+  \item répartition géographique des visiteurs~;
+  \item conversations entamées depuis la fiche.
+\end{itemize}
+
+\begin{note}[Pourquoi pas de commandes déclarées]
+On aurait pu laisser le commerçant saisir ses ventes pour obtenir un
+\guillemotleft~suivi des transactions~\guillemotright. L'expérience de ce genre de saisie
+manuelle est constante~: elle est abandonnée après quelques semaines, et le tableau de bord
+devient faux --- pire que vide. Écarté volontairement.
+\end{note}
+
+\section{Ce que cela implique}
+
+Compter des vues suppose de les enregistrer. C'est un journal d'événements, avec le volume
+que cela suppose --- voir le chapitre technique~8.

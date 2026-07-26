@@ -1,0 +1,314 @@
+% Fragment partage : inclus par compte-certifie-officiel.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Modèle de données}
+
+\section{Ce que le socle a déjà posé}
+
+\begin{constat}[Rien à recréer]
+La migration~023 porte déjà sur \code{users}~: \code{verification\_status} (six états),
+\code{verified\_until}, \code{verification\_reminder\_sent}, et l'index
+\code{idx\_users\_verified\_until}. Le \code{verificationScheduler} de l'étape~1 assure déjà
+la relance à J\,--\,30 et le passage en \emph{expiré} à l'échéance.
+\end{constat}
+
+Ce document n'ajoute que le \textbf{dossier} et ses pièces --- plus les tables commerciales,
+laissées inactives.
+
+\section{Migration \code{027\_verification.sql}}
+
+\begin{lstlisting}[language=SQL, caption={Dossiers et pièces}]
+-- 027_verification.sql -- dossiers de verification
+-- Requiert 023 (socle de compte).
+
+CREATE TABLE IF NOT EXISTS verification_request (
+  id           BIGINT   NOT NULL AUTO_INCREMENT,
+  alanyaID     INT      NOT NULL,
+  target_type  TINYINT  NOT NULL DEFAULT 1
+                 COMMENT 'Genre vise : 0=personnel notable 1=business',
+  claimed_name VARCHAR(160) NULL COMMENT 'Raison sociale telle que declaree',
+  status       TINYINT  NOT NULL DEFAULT 0
+                 COMMENT '0=en attente 1=piece demandee 2=approuve 3=refuse 4=annule',
+  reviewed_by  INT      NULL,
+  decided_at   DATETIME NULL,
+  reason       VARCHAR(255) NULL COMMENT 'Obligatoire si status = 3',
+  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_vr_file (status, created_at),
+  KEY idx_vr_user (alanyaID, created_at),
+  CONSTRAINT fk_vr_user     FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE,
+  CONSTRAINT fk_vr_reviewer FOREIGN KEY (reviewed_by)
+    REFERENCES users(alanyaID) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS verification_document (
+  id           BIGINT       NOT NULL AUTO_INCREMENT,
+  request_id   BIGINT       NOT NULL,
+  doc_type     TINYINT      NOT NULL
+                 COMMENT '0=registre commerce 1=piece identite 2=adresse 3=notoriete',
+  storage_key  VARCHAR(255) NOT NULL COMMENT 'Chemin du fichier chiffre',
+  mime         VARCHAR(80)  NOT NULL,
+  size_bytes   BIGINT       NOT NULL,
+  -- Echeance portee par la ligne : plus simple qu'un script de retention
+  -- separe, et lisible par quiconque ouvre la table.
+  purge_after  DATETIME     NULL COMMENT 'Renseigne a la decision : +90 jours',
+  purged_at    DATETIME     NULL,
+  uploaded_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_vd_purge (purge_after, purged_at),
+  CONSTRAINT fk_vd_request FOREIGN KEY (request_id)
+    REFERENCES verification_request(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Journal d'acces : chaque ouverture d'une piece est tracee.
+CREATE TABLE IF NOT EXISTS verification_document_access (
+  id          BIGINT   NOT NULL AUTO_INCREMENT,
+  document_id BIGINT   NOT NULL,
+  admin_id    INT      NOT NULL,
+  accessed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ip          VARCHAR(45) NULL,
+  PRIMARY KEY (id),
+  KEY idx_vda_doc (document_id, accessed_at),
+  CONSTRAINT fk_vda_doc   FOREIGN KEY (document_id)
+    REFERENCES verification_document(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vda_admin FOREIGN KEY (admin_id)
+    REFERENCES users(alanyaID)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+\end{lstlisting}
+
+\begin{note}[Pourquoi \code{purge\_after} sur la ligne]
+Porter l'échéance dans l'enregistrement lui-même évite un script de rétention séparé, qui
+serait la première chose oubliée lors d'un déploiement. Le même ordonnanceur que
+l'expiration balaie \code{purge\_after <= NOW() AND purged\_at IS NULL}.
+\end{note}
+
+\begin{alerte}[Le journal d'accès n'est pas une option]
+Des pièces d'identité consultables par n'importe quel administrateur sans trace, c'est le
+genre de détail qui ne se remarque qu'après un incident. La table pèse peu et se purge avec
+le reste.
+\end{alerte}
+
+\section{La machine à états du dossier}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  e/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
+            font=\sffamily\small, inner sep=6pt, minimum height=0.85cm, text=AlanyaInk},
+  ok/.style={e, draw=AlanyaSuccess, line width=0.9pt, fill=AlanyaSuccess!8},
+  ko/.style={e, draw=danger, fill=danger!6},
+  fin/.style={e, draw=AlanyaIndigo, line width=0.9pt, fill=AlanyaContainer,
+              text=AlanyaIndigoDark},
+  a/.style={-{Stealth[length=2.2mm]}, draw=AlanyaGray, semithick},
+  l/.style={font=\sffamily\scriptsize, text=AlanyaGray, fill=white, inner sep=2pt}
+]
+  \node[e]   (att) at (0,0)      {En attente};
+  \node[ok]  (app) at (4.8,0)    {Approuvé};
+  \node[fin] (ver) at (10.2,0)   {\code{verification\_status = 2}};
+  \node[e]   (pie) at (0,-2.5)   {Pièce demandée};
+  \node[ko]  (ref) at (4.8,-2.5) {Refusé};
+  \node[ko]  (ann) at (10.2,-2.5){Annulé};
+
+  \draw[a] (att) -- node[l, above] {approuve}        (app);
+  \draw[a] (app) -- node[l, above] {pose l'échéance} (ver);
+
+  % Aller-retour vers « pièce demandée » : deux traits parallèles, pour que
+  % le retour ne se confonde pas avec l'aller.
+  \draw[a] ([xshift=-9pt]att.south) -- node[l, left, pos=0.5] {pièce manquante}
+           ([xshift=-9pt]pie.north);
+  \draw[a] ([xshift=9pt]pie.north)  -- node[l, right, pos=0.5] {complété}
+           ([xshift=9pt]att.south);
+
+  \draw[a] (att.south east) -- node[l, pos=0.55, above right, inner sep=1pt]
+           {refusé + motif} (ref.north west);
+
+  % Abandon : route par le bas, sous les autres etats, pour ne rien croiser.
+  \draw[a] (att.west) -- (-1.9,0) -- (-1.9,-4.1)
+           -- node[l, below, pos=0.62] {abandon par le demandeur} (10.2,-4.1)
+           -- (ann.south);
+\end{tikzpicture}
+\end{center}
+
+\begin{note}[Un seul dossier ouvert à la fois]
+Un compte ne peut avoir qu'une demande en \emph{attente} ou \emph{pièce demandée}. Sans cette
+règle, un demandeur impatient en dépose trois et trois administrateurs les instruisent en
+parallèle. Contrainte applicative --- une clé unique partielle n'existe pas en MySQL.
+\end{note}
+
+\chapter{Sécurité des pièces}
+
+\section{Chiffrement au repos}
+
+Les pièces sont des \textbf{données personnelles sensibles}. Trois exigences~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Chiffrées au repos} & Chiffrement par fichier, clé hors de la base. Un accès en lecture
+au disque ne doit pas suffire. \\
+\thd{Jamais servies en statique} & \code{server.js} sert \code{/uploads} en statique
+(\code{express.static}). Les pièces ne doivent \textbf{pas} y vivre~: elles passent par un
+point d'entrée authentifié qui déchiffre à la volée. \\
+\thd{Journalisées} & Chaque ouverture écrit une ligne avec l'administrateur et l'horodatage. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Le piège du dossier \code{uploads}]
+\code{src/middleware/upload.js} range tout sous \code{uploads/} et \code{server.js} expose
+ce dossier en statique. Déposer une pièce d'identité par le chemin habituel la rendrait
+\textbf{publiquement téléchargeable} pour qui connaît l'URL. Il faut un stockage distinct,
+hors de l'arborescence servie.
+\end{alerte}
+
+\section{La purge}
+
+Un balayage quotidien, sur le patron du \code{verificationScheduler}~:
+
+\begin{lstlisting}[language=SQL, numbers=none]
+SELECT id, storage_key FROM verification_document
+WHERE purge_after IS NOT NULL
+  AND purge_after <= NOW()
+  AND purged_at IS NULL
+LIMIT 200;
+\end{lstlisting}
+
+Le fichier est effacé du stockage, puis \code{purged\_at} est renseigné. La ligne survit
+--- elle atteste qu'une pièce a existé et qu'elle a été détruite, ce qui est précisément ce
+qu'on veut pouvoir montrer.
+
+\chapter{Abonnement et paiement --- conçus, dormants}
+
+\section{Pourquoi les concevoir maintenant}
+
+Parce que la version~1 est gratuite, ces tables ne servent à rien aujourd'hui. On les décrit
+tout de même, pour deux raisons~: leur forme conditionne des choix qu'on fait dès à présent
+(le déblocage de fonctionnalités), et les ajouter plus tard sur une base peuplée coûte plus
+cher que de les prévoir vides.
+
+\begin{lstlisting}[language=SQL, caption={\code{027\_verification.sql} --- tables inactives en v1}]
+CREATE TABLE IF NOT EXISTS subscription (
+  id                 BIGINT   NOT NULL AUTO_INCREMENT,
+  alanyaID           INT      NOT NULL,
+  plan               TINYINT  NOT NULL DEFAULT 0,
+  status             TINYINT  NOT NULL DEFAULT 0
+                       COMMENT '0=inactif 1=actif 2=en retard 3=resilie',
+  current_period_end DATETIME NULL,
+  reminder_sent      TINYINT  NOT NULL DEFAULT 0,
+  created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_sub_user (alanyaID, status),
+  KEY idx_sub_echeance (current_period_end),
+  CONSTRAINT fk_sub_user FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS payment_transaction (
+  id              BIGINT       NOT NULL AUTO_INCREMENT,
+  subscription_id BIGINT       NOT NULL,
+  provider_ref    VARCHAR(120) NULL,
+  -- Le fournisseur rejouera ses webhooks. Sans cette contrainte unique,
+  -- double credit garanti.
+  idempotency_key VARCHAR(120) NOT NULL,
+  amount_minor    BIGINT       NOT NULL,
+  currency        CHAR(3)      NOT NULL DEFAULT 'XAF',
+  status          TINYINT      NOT NULL DEFAULT 0,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_pt_idempotence (idempotency_key),
+  KEY idx_pt_sub (subscription_id, created_at),
+  CONSTRAINT fk_pt_sub FOREIGN KEY (subscription_id)
+    REFERENCES subscription(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+\end{lstlisting}
+
+\section{Renouvellement manuel, pas prélèvement}
+
+\code{subscription} est modélisée pour un renouvellement \textbf{manuel} avec relances, et
+non pour un prélèvement automatique. Sur mobile money, les autorisations expirent et les
+échecs sont silencieux~; une formule annuelle relancée est plus réaliste qu'un auto-débit
+qui casse sans prévenir. D'où \code{reminder\_sent}, exactement comme sur la vérification.
+
+\section{La règle à ne jamais enfreindre}
+
+\begin{alerte}[Ce qui débloque une fonctionnalité, c'est l'abonnement]
+Aucune fonctionnalité ne doit être conditionnée à \code{verification\_status}. Les lieux
+multiples de l'étape~4, par exemple, se débloquent par \code{subscription.status = 1}.
+
+Si le badge ouvrait des portes, il deviendrait un produit qui se vend, et le retirer pour
+défaut de paiement reviendrait à retirer une attestation d'identité à quelqu'un qui est
+toujours la même personne. C'est le recouplage que le §4 du document d'amorce écarte, et
+c'est ce qui permet aujourd'hui de livrer la certification gratuitement sans rien fermer.
+\end{alerte}
+
+\section{Une contrainte de plateforme à anticiper}
+
+Un badge payant est un service numérique~: l'App~Store et le Play~Store peuvent exiger un
+achat in-app, avec leur commission. C'est la raison pour laquelle les offres équivalentes
+coûtent plus cher sur mobile que sur le web. À trancher \textbf{avant} la soumission, pas
+pendant --- et c'est un argument de plus pour que la v1 reste gratuite.
+
+\chapter{Impact fichier par fichier}
+
+\section{Backend}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.2cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{migrations/027\_verification.sql} & nouveau & Dossiers, pièces, journal, tables dormantes \\
+\code{src/services/documentVault.js} & nouveau & Chiffrement, déchiffrement à la volée, purge \\
+\code{src/controllers/verificationController.js} & nouveau & Dépôt, suivi, annulation \\
+\code{src/controllers/admin/verification.js} & nouveau & File, instruction, décision \\
+\code{src/routes/verification.js} & nouveau & \code{/api/verification} \\
+\code{src/routes/admin.js} & modifié & File et décision \\
+\code{src/services/verificationScheduler.js} & modifié & Ajout du balayage de purge \\
+\code{server.js} & modifié & Montage des routes \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Administration et mobile}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.2cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Objet} \\
+\midrule
+\code{app/(dashboard)/verifications/page.tsx} \emph{(nouveau)} & File des dossiers \\
+\code{app/(dashboard)/verifications/[id]/page.tsx} \emph{(nouveau)} & Instruction \\
+\code{app/(dashboard)/layout.tsx} & Entrée de navigation, avec le compteur en attente \\
+\code{lib/screens/profile/verification\_screen.dart} \emph{(nouveau)} & Dépôt et suivi \\
+\code{lib/screens/profile/settings\_screen.dart} & Entrée « Faire vérifier mon compte » \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\chapter{Points de vigilance et questions ouvertes}
+
+\section{Chantiers nommés}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Le coffre à documents} --- chiffrement, service authentifié, purge, journal.
+        Rien de cela n'existe~; c'est la brique la plus sensible des cinq étapes.
+  \item \textbf{La sortie de \code{uploads/}} --- les pièces ne doivent pas transiter par le
+        chemin de téléversement habituel, servi en statique.
+\end{enumerate}
+
+\section{Questions ouvertes}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Durée de validité par défaut}~: un an est l'usage, mais ce n'est pas tranché.
+        Elle conditionne le rythme des relances et la charge d'instruction.
+  \item La liste des pièces ci-dessus est une proposition~: elle demande une validation
+        métier, notamment sur le RCCM comme pièce obligatoire.
+  \item Un dossier refusé peut-il être redéposé immédiatement, ou après un délai~? Sans
+        délai, un demandeur peut saturer la file.
+  \item Que se passe-t-il si un compte vérifié \textbf{change de nom}~? L'attestation portait
+        sur une identité~; un changement devrait au minimum alerter.
+  \item Qui traite une \textbf{contestation} après refus~? Aucun circuit n'existe, et c'est
+        précisément à cela que servent les 90~jours de rétention.
+\end{enumerate}

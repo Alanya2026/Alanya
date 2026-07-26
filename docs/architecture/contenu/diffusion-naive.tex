@@ -1,0 +1,120 @@
+% Fragment partage : inclus par broadcast.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Ce que l'on ajoute}
+
+\section{Le besoin}
+
+Alanya n'a aujourd'hui aucun moyen de s'adresser à ses utilisateurs. Annoncer une
+maintenance, une nouvelle version ou prévenir un commerçant que sa vérification expire
+suppose de passer par un canal extérieur --- e-mail, réseaux sociaux --- que la plupart des
+utilisateurs ne consultent pas.
+
+On ajoute donc un \textbf{compte officiel} capable d'envoyer deux choses~:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item des \textbf{messages}, qui apparaissent comme une conversation ordinaire~;
+  \item des \textbf{statuts}, qui apparaissent dans le fil des statuts.
+\end{itemize}
+
+Dans les deux cas, à \textbf{tous} les utilisateurs ou à une \textbf{partie} d'entre eux.
+
+\section{Ce qui a déjà été décidé}
+
+Le socle de compte (étape~1) a posé les règles qui encadrent ce compte~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Création} & Par un administrateur, jamais par une inscription ordinaire. \\
+\thd{Apparence} & Avatar = logo Alanya, badge officiel doré, distinct du badge de
+vérification. \\
+\thd{Réponse} & \textbf{Impossible}. Le compte diffuse, il ne converse pas. \\
+\thd{Nombre} & Le modèle en supporte plusieurs (support, actualités\ldots) sans
+modification. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\chapter{Cibler une diffusion}
+
+\section{Un critère, pas un choix parmi trois}
+
+La spécification d'origine prévoyait trois cibles~: tous, par pays, ou une liste de comptes
+choisis. C'est insuffisant --- on veut aussi pouvoir s'adresser aux commerçants, aux comptes
+inscrits depuis plus de trois mois, à ceux vus récemment, et à d'autres critères qu'on ne
+connaît pas encore.
+
+Le ciblage devient donc une \textbf{combinaison de conditions}, que l'administrateur
+assemble. Ajouter un critère demain ne demandera aucune modification de la base.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Pays} & Un ou plusieurs pays. \\
+\thd{Genre de compte} & Personnel, business, officiel. \\
+\thd{État de vérification} & Vérifié, en attente, expiré\ldots{} \\
+\thd{Ancienneté} & Inscrit avant ou après une date, ou depuis une durée. \\
+\thd{Activité} & Vu dans les $N$ derniers jours. \\
+\thd{Comptes choisis} & Une liste explicite, pour un message de service. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Savoir qui recevra, avant d'envoyer}
+
+À chaque modification du ciblage, l'administrateur voit l'estimation se recalculer. C'est le
+garde-fou principal~: on ne diffuse pas à trois cent mille personnes sans l'avoir vu écrit.
+
+\begin{center}
+  \imageOuCadre{maquettes/diffusion-composeur.png}{\linewidth}%
+    {Composeur de diffusion : contenu, constructeur de critères, estimation en direct\\
+     \texttt{maquettes/diffusion-composeur.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+Les conditions s'activent et se désactivent, l'estimation et la requête produite suivent~:\\
+\href{https://claude.ai/code/artifact/b609a75d-ea57-490a-8df4-2fe31d9df609}%
+{\texttt{claude.ai/code/artifact/b609a75d}}\\
+Source versionnée~: \code{docs/architecture/maquettes/diffusion-admin.html}
+\end{note}
+
+\section{L'historique}
+
+Chaque diffusion conserve son critère, et non sa liste de destinataires. Six mois plus tard,
+on peut relire à qui elle s'adressait --- ce qu'une liste d'identifiants ne dirait pas.
+
+L'historique affiche aussi le taux d'ouverture, dérivé du nombre de destinataires ayant
+réellement rouvert l'application depuis l'envoi.
+
+\begin{note}[La relance J-30 passe par ce canal]
+Les avertissements d'expiration de vérification conçus à l'étape~1 ne sont rien d'autre
+qu'une diffusion dont le critère est « business, vérifié, échéance dans moins de 30~jours ».
+Aucun mécanisme spécifique n'est construit pour eux.
+\end{note}
+
+\chapter{Ce que voit l'utilisateur}
+
+\section{Un message diffusé}
+
+Une conversation ordinaire avec le compte Alanya, à ceci près que la zone de saisie est
+remplacée par un bandeau~: \guillemotleft~Ce compte diffuse des annonces. Vous ne pouvez pas
+y répondre.~\guillemotright{} Les actions \guillemotleft~répondre~\guillemotright{} et
+\guillemotleft~réagir~\guillemotright{} n'apparaissent pas sur ses messages.
+
+Tout le reste fonctionne normalement~: notification, compteur de non-lus, conservation hors
+ligne, recherche. C'est voulu --- voir chapitre~\ref{ch:livraison}.
+
+\section{Un statut diffusé}
+
+Il apparaît dans le fil des statuts, avec l'avatar Alanya et le badge officiel, exactement
+comme le statut d'un contact. Il expire au bout de 24~heures comme les autres.
+
+\begin{alerte}[Un obstacle que la spécification d'origine n'avait pas vu]
+Aujourd'hui, un statut n'est visible que si l'auteur et le lecteur sont \textbf{mutuellement}
+en contacts préférés. En l'état, un statut officiel serait invisible pour absolument tout le
+monde --- le compte Alanya ne peut pas ajouter trois cent mille personnes en favoris, ni
+espérer qu'elles le fassent en retour. Le correctif tient en trois lignes et se trouve au
+chapitre~\ref{ch:statuts-officiels}.
+\end{alerte}

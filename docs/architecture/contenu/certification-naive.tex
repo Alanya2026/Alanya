@@ -1,0 +1,130 @@
+% Fragment partage : inclus par compte-certifie-officiel.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Ce que la certification dit, et ne dit pas}
+
+\section{Une seule question}
+
+Le badge répond à \emph{une} question~: \guillemotleft~ce compte est-il bien qui il prétend
+être~?~\guillemotright{} Rien d'autre.
+
+Il ne dit pas que le commerce est sérieux, que ses prix sont justes, ni qu'il livre à
+l'heure. C'est une attestation d'identité, pas une recommandation --- et la communication
+doit le refléter, sous peine d'engager Alanya sur ce qu'elle ne vérifie pas.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Ce qu'on vérifie} & Que l'entreprise existe, et que la personne qui tient le compte est
+habilitée à la représenter. \\
+\thd{Ce qu'on ne vérifie pas} & La qualité des produits, l'honnêteté commerciale, le respect
+des délais. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Qui peut être vérifié}
+
+Les deux axes du socle étant indépendants, la vérification ne concerne pas que les
+commerces~:
+
+\begin{center}
+\begin{tabular}{@{}llp{6.4cm}@{}}
+\toprule
+\thd{Genre} & \thd{Rendu} & \thd{Cas typique} \\
+\midrule
+Business  & \badgePastillePanier[1] & Une entreprise, une boutique, un cabinet \\
+Personnel & \badgePastilleCoche[1]  & Une personnalité publique, un journaliste \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\chapter{Le parcours du demandeur}
+
+\section{Trois états}
+
+\begin{center}
+  \imageOuCadre{maquettes/certification-parcours.png}{\linewidth}%
+    {Dépôt du dossier, attente, compte vérifié avec relance à J-30\\
+     \texttt{maquettes/certification-parcours.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/fb9bb169-1370-4cad-be00-0101a68ba2fe}%
+{\texttt{claude.ai/code/artifact/fb9bb169}}\\
+Source versionnée~: \code{docs/architecture/maquettes/certification.html}
+\end{note}
+
+\section{Les pièces demandées}
+
+Proposition, à valider --- elle est calquée sur le contexte camerounais et ouest-africain~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.8cm}p{2.2cm}X@{}}
+\toprule
+\thd{Pièce} & \thd{Statut} & \thd{Pourquoi} \\
+\midrule
+Registre de commerce (RCCM) & obligatoire & Prouve que l'entreprise existe \\
+Pièce d'identité du gérant & obligatoire & Relie la personne à l'entreprise \\
+Justificatif d'adresse & facultatif & Corrobore le lieu déclaré \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Pour un compte \emph{personnel} vérifié, la liste change~: pièce d'identité, plus un
+élément de notoriété publique --- page officielle, article de presse, site institutionnel.
+
+\begin{note}[Annoncer la rétention dès le dépôt]
+L'écran de dépôt dit, avant l'envoi, que les pièces sont chiffrées, supprimées 90~jours
+après la décision, et que chaque consultation est journalisée. Le dire après serait perçu
+comme une justification~; le dire avant est ce qui fait déposer.
+\end{note}
+
+\section{Ce qui est promis, et ce qui ne l'est pas}
+
+\guillemotleft~Réponse sous 5~jours ouvrés~\guillemotright{} plutôt qu'un compte à rebours.
+Un délai affiché à la minute transforme le sixième jour en manquement~; une fourchette
+laisse la marge que l'instruction demande réellement.
+
+\chapter{Le parcours de l'administrateur}
+
+\section{L'écran d'instruction}
+
+\begin{center}
+  \imageOuCadre{maquettes/certification-instruction.png}{\linewidth}%
+    {Instruction d'un dossier : identité déclarée, pièces, échéance de purge\\
+     \texttt{maquettes/certification-instruction.png}}
+\end{center}
+
+À gauche ce que le compte déclare, à droite ce qu'il apporte comme preuve. L'administrateur
+compare les deux~; c'est tout le travail.
+
+\section{Trois issues, pas deux}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}X@{}}
+\toprule
+\thd{Approuver} & Le badge apparaît, l'échéance est posée. \\
+\thd{Refuser avec motif} & Le motif est \textbf{obligatoire} et repart dans la notification.
+Sans lui, le demandeur redépose le même dossier incomplet et la file se remplit de
+doublons. \\
+\thd{Demander une pièce} & Le dossier \emph{reste} en attente, le demandeur est prévenu de
+ce qui manque. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[La troisième issue manquait]
+Ni \code{alanya-contexte-conception.md} ni \code{ideas/todo.tex} ne la mentionnaient. C'est
+pourtant le cas le plus fréquent en pratique~: le dossier n'est pas mauvais, il est
+incomplet. Sans cette issue, l'administrateur doit refuser puis expliquer --- ce qui est
+vécu comme un rejet.
+\end{note}
+
+\section{Qui décide}
+
+\textbf{Tout administrateur} (\code{type\_compte >= 1}). C'est cohérent avec l'existant~:
+bannir et débannir sont déjà ouverts à tout administrateur
+(\code{src/routes/admin.js}). Chaque décision garde son auteur dans \code{reviewed\_by} et
+sa date --- la traçabilité remplace la restriction.
