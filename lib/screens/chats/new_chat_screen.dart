@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/user_search.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -111,9 +112,13 @@ class _NewChatScreenState extends State<NewChatScreen> {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
       final data = await apiClient.searchUsers(query);
       if (mounted) {
+        // Le serveur ne m'exclut pas de ses résultats : sans ce filtre, chercher
+        // mon propre numéro afficherait deux lignes (l'épinglée + le résultat).
+        final myId = context.read<AuthProvider>().currentUser?.alanyaID;
         setState(() {
           _filteredUsers = data
               .map((json) => User.fromJson(json as Map<String, dynamic>))
+              .where((u) => u.alanyaID != myId)
               .toList();
           _isLoading = false;
         });
@@ -128,9 +133,60 @@ class _NewChatScreenState extends State<NewChatScreen> {
     setState(() => _filteredUsers = _contacts);
   }
 
+  /// Moi-même, à épingler en tête de liste — ou null s'il ne faut pas l'y
+  /// montrer. Avec une recherche en cours, uniquement si elle me correspond.
+  User? _selfUser(bool hasQuery) {
+    final me = context.read<AuthProvider>().currentUser;
+    if (me == null) return null;
+    if (!hasQuery) return me;
+    return userMatchesSearch(me, _searchController.text) ? me : null;
+  }
+
+  /// Entrée « M'envoyer un message », façon WhatsApp.
+  ///
+  /// Renvoie l'utilisateur courant via le même `Navigator.pop` que les autres
+  /// lignes : les trois écrans appelants fonctionnent donc sans modification.
+  Widget _buildSelfRow(User me) {
+    final name = me.nom.isNotEmpty ? me.nom : me.pseudo;
+    return InkWell(
+      onTap: () => Navigator.pop(context, me),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+        child: Row(
+          children: [
+            AppAvatar(
+              imageUrl: me.avatarUrl.isNotEmpty ? me.avatarUrl : null,
+              name: name,
+              size: AppSizes.avatarMd,
+            ),
+            AppSpacing.hGapMd,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.selfChatTitle(name),
+                    style: context.text.titleSmall,
+                  ),
+                  Text(
+                    context.l10n.selfChatSubtitle,
+                    style: context.text.bodySmall
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasQuery = _searchController.text.trim().isNotEmpty;
+    final selfUser = _selfUser(hasQuery);
 
     return Scaffold(
       appBar: AppBar(
@@ -171,16 +227,23 @@ class _NewChatScreenState extends State<NewChatScreen> {
               ],
             ),
           ),
+          if (selfUser != null) _buildSelfRow(selfUser),
           Expanded(
             child: _isLoading
                 ? const LoadingState()
                 : _filteredUsers.isEmpty
-                    ? EmptyState(
-                        icon: hasQuery
-                            ? Icons.person_search
-                            : Icons.people_outline,
-                        title: hasQuery ? context.l10n.noResults : context.l10n.noContacts,
-                      )
+                    // Ne pas afficher « Aucun résultat » sous la ligne épinglée
+                    // quand celle-ci est justement le résultat.
+                    ? (selfUser != null
+                        ? const SizedBox.shrink()
+                        : EmptyState(
+                            icon: hasQuery
+                                ? Icons.person_search
+                                : Icons.people_outline,
+                            title: hasQuery
+                                ? context.l10n.noResults
+                                : context.l10n.noContacts,
+                          ))
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [

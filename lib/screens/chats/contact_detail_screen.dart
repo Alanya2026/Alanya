@@ -61,6 +61,16 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
 
   int? get _effectiveConvId => widget.conversationId ?? _resolvedConvId;
 
+  /// Mon propre profil, ouvert depuis une conversation avec moi-même.
+  ///
+  /// L'écran se réduit alors à l'en-tête, aux médias et à la gestion de la
+  /// conversation : ni appels, ni blocage, ni contacts — tout ce qui suppose
+  /// une relation avec un tiers disparaît.
+  bool get _isSelf {
+    final myId = context.read<AuthProvider>().currentUser?.alanyaID;
+    return myId != null && myId == widget.userId;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -135,20 +145,27 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
 
     try {
       final data = await _api.getUserById(widget.userId);
+      // Mon propre profil : ni « suis-je dans mes contacts ? », ni « me
+      // suis-je bloqué ? » — deux allers-retours réseau sans objet.
+      final isSelf = _isSelf;
       bool fav = false;
-      try {
-        fav = await _api.checkIsContact(widget.userId);
-      } catch (e, st) {
-        AppLog.e('ContactDetail', 'checkIsContact échoué', e, st);
+      if (!isSelf) {
+        try {
+          fav = await _api.checkIsContact(widget.userId);
+        } catch (e, st) {
+          AppLog.e('ContactDetail', 'checkIsContact échoué', e, st);
+        }
       }
       ({bool isBlocked, bool blockedByThem}) blockStatus = (
         isBlocked: false,
         blockedByThem: false,
       );
-      try {
-        blockStatus = await _api.getBlockStatus(widget.userId);
-      } catch (e, st) {
-        AppLog.e('ContactDetail', 'getBlockStatus échoué', e, st);
+      if (!isSelf) {
+        try {
+          blockStatus = await _api.getBlockStatus(widget.userId);
+        } catch (e, st) {
+          AppLog.e('ContactDetail', 'getBlockStatus échoué', e, st);
+        }
       }
       if (!mounted) return;
       final user = User.fromJson(data);
@@ -275,9 +292,14 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       _snack(context.l10n.noConversationToDelete);
       return;
     }
+    // Conversation avec soi-même : un seul participant, donc le serveur purge
+    // messages ET conversation. Contrairement à un 1-1, aucune copie ne
+    // survit chez un pair — l'avertissement doit le dire.
     final confirmed = await _confirm(
       title: context.l10n.deleteConversation,
-      message: context.l10n.historyWillBeDeleted,
+      message: _isSelf
+          ? context.l10n.selfChatDeleteWarning
+          : context.l10n.historyWillBeDeleted,
       confirmLabel: context.l10n.commonDelete,
       destructive: true,
     );
@@ -368,10 +390,11 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
               }
             },
             itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'block',
-                child: Text(_isBlocked ? context.l10n.unblock : context.l10n.commonBlock),
-              ),
+              if (!_isSelf)
+                PopupMenuItem(
+                  value: 'block',
+                  child: Text(_isBlocked ? context.l10n.unblock : context.l10n.commonBlock),
+                ),
               if (_effectiveConvId != null) ...[
                 PopupMenuItem(
                     value: 'clear', child: Text(context.l10n.clearMessages2)),
@@ -392,27 +415,34 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   }
 
   Widget _buildContent(User u) {
+    // Mon propre profil : en-tête, médias et gestion de la conversation. Tout
+    // ce qui suppose un tiers (appels, blocage, contacts, mise en sourdine)
+    // disparaît — aucune notification ne peut viser mes propres notes.
+    final isSelf = _isSelf;
     return ListView(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg,
           AppSpacing.xxl),
       children: [
-        _Header(user: u, hidePhoto: _blockedByThem),
+        _Header(user: u, hidePhoto: !isSelf && _blockedByThem),
         AppSpacing.vGapXl,
-        _PrimaryActions(
-          callsDisabled: _isBlocked || _blockedByThem,
-          onCall: () => _snack(context.l10n.callComingSoon),
-          onVideo: () => _snack(context.l10n.videoComingSoon),
-          onMessage: _openChat,
-        ),
-        AppSpacing.vGapLg,
+        if (!isSelf) ...[
+          _PrimaryActions(
+            callsDisabled: _isBlocked || _blockedByThem,
+            onCall: () => _snack(context.l10n.callComingSoon),
+            onVideo: () => _snack(context.l10n.videoComingSoon),
+            onMessage: _openChat,
+          ),
+          AppSpacing.vGapLg,
+        ],
         _QuickActionsCard(
           isFavorite: _isFavorite,
+          showFavorite: !isSelf,
           onToggleFavorite: _toggleFavorite,
           onSearch: () => _snack(context.l10n.searchComingSoon),
           onClear: _clearMessages,
         ),
         AppSpacing.vGapLg,
-        if (_effectiveConvId != null)
+        if (!isSelf && _effectiveConvId != null) ...[
           _Card(
             padding: EdgeInsets.zero,
             child: ConversationMuteListTile(
@@ -420,7 +450,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
               conversationName: u.nom.isNotEmpty ? u.nom : u.pseudo,
             ),
           ),
-        if (_effectiveConvId != null) AppSpacing.vGapLg,
+          AppSpacing.vGapLg,
+        ],
         _MediaCard(
           key: ValueKey('media-${_effectiveConvId ?? 'none'}'),
           conversationId: _effectiveConvId,
@@ -430,6 +461,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         _DangerActionsCard(
           isBlocked: _isBlocked,
           isFavorite: _isFavorite,
+          showBlock: !isSelf,
+          showRemoveContact: !isSelf,
           hasConversation: _effectiveConvId != null,
           onBlock: _toggleBlock,
           onDeleteConversation: _deleteConversation,
@@ -575,11 +608,15 @@ class _PrimaryActionTile extends StatelessWidget {
 
 class _QuickActionsCard extends StatelessWidget {
   final bool isFavorite;
+
+  /// Masqué sur mon propre profil : on ne s'ajoute pas à ses contacts.
+  final bool showFavorite;
   final VoidCallback onToggleFavorite;
   final VoidCallback onSearch;
   final VoidCallback onClear;
   const _QuickActionsCard({
     required this.isFavorite,
+    this.showFavorite = true,
     required this.onToggleFavorite,
     required this.onSearch,
     required this.onClear,
@@ -591,15 +628,16 @@ class _QuickActionsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.sm),
       child: Row(
         children: [
-          Expanded(
-            child: _QuickAction(
-              icon: isFavorite ? Icons.star : Icons.star_border,
-              label: isFavorite ? context.l10n.favoriteSingular : context.l10n.add,
-              iconColor: isFavorite ? context.semantic.warning : context.colors.primary,
-              bg: isFavorite ? context.semantic.warningContainer : context.colors.primaryContainer,
-              onTap: onToggleFavorite,
+          if (showFavorite)
+            Expanded(
+              child: _QuickAction(
+                icon: isFavorite ? Icons.star : Icons.star_border,
+                label: isFavorite ? context.l10n.favoriteSingular : context.l10n.add,
+                iconColor: isFavorite ? context.semantic.warning : context.colors.primary,
+                bg: isFavorite ? context.semantic.warningContainer : context.colors.primaryContainer,
+                onTap: onToggleFavorite,
+              ),
             ),
-          ),
           Expanded(
             child: _QuickAction(
               icon: Icons.search,
@@ -939,6 +977,11 @@ class _DangerActionsCard extends StatelessWidget {
   final bool isBlocked;
   final bool isFavorite;
   final bool hasConversation;
+
+  /// Masqués sur mon propre profil : on ne se bloque ni ne se retire de ses
+  /// propres contacts. Ne reste alors que la suppression de la conversation.
+  final bool showBlock;
+  final bool showRemoveContact;
   final VoidCallback onBlock;
   final VoidCallback onDeleteConversation;
   final VoidCallback onRemoveContact;
@@ -946,6 +989,8 @@ class _DangerActionsCard extends StatelessWidget {
     required this.isBlocked,
     required this.isFavorite,
     required this.hasConversation,
+    this.showBlock = true,
+    this.showRemoveContact = true,
     required this.onBlock,
     required this.onDeleteConversation,
     required this.onRemoveContact,
@@ -954,20 +999,22 @@ class _DangerActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = <Widget>[
-      _DangerRow(
-        icon: CupertinoIcons.nosign,
-        label: isBlocked ? context.l10n.unblockContact : context.l10n.blockContact,
-        onTap: onBlock,
-      ),
+      if (showBlock)
+        _DangerRow(
+          icon: CupertinoIcons.nosign,
+          label: isBlocked ? context.l10n.unblockContact : context.l10n.blockContact,
+          onTap: onBlock,
+        ),
       if (hasConversation) ...[
-        _DangerDivider(),
+        // Pas de séparateur en tête de carte si « Bloquer » est masqué.
+        if (showBlock) _DangerDivider(),
         _DangerRow(
           icon: Icons.delete_outline,
           label: context.l10n.deleteConversation2,
           onTap: onDeleteConversation,
         ),
       ],
-      if (isFavorite) ...[
+      if (showRemoveContact && isFavorite) ...[
         _DangerDivider(),
         _DangerRow(
           icon: Icons.person_remove_outlined,
@@ -976,6 +1023,7 @@ class _DangerActionsCard extends StatelessWidget {
         ),
       ],
     ];
+    if (rows.isEmpty) return const SizedBox.shrink();
     return _Card(padding: EdgeInsets.zero, child: Column(children: rows));
   }
 }

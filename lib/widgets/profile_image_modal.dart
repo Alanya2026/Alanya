@@ -47,6 +47,13 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
     _callService = Provider.of<CallService>(context, listen: false);
   }
 
+  /// Mon propre profil : on ne s'appelle pas soi-même.
+  bool get _isSelf {
+    if (widget.isGroup || widget.userId == 0) return false;
+    final me = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    return me != null && me.alanyaID == widget.userId;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -120,14 +127,17 @@ class _ProfileImageModalState extends State<ProfileImageModal> {
                                   if (!widget.isGroup) ...[
                                     _buildCTAIcon(Icons.message_outlined,
                                         context.l10n.messageNoun, _openChat),
-                                    _buildCTAIcon(
-                                        Icons.call,
-                                        context.l10n.audio2,
-                                        () => _initiateCall(isVideo: false)),
-                                    _buildCTAIcon(
-                                        Icons.videocam_outlined,
-                                        context.l10n.video2,
-                                        () => _initiateCall(isVideo: true)),
+                                    // Pas d'appel vers soi-même.
+                                    if (!_isSelf) ...[
+                                      _buildCTAIcon(
+                                          Icons.call,
+                                          context.l10n.audio2,
+                                          () => _initiateCall(isVideo: false)),
+                                      _buildCTAIcon(
+                                          Icons.videocam_outlined,
+                                          context.l10n.video2,
+                                          () => _initiateCall(isVideo: true)),
+                                    ],
                                   ],
                                   _buildCTAIcon(
                                       Icons.info_outlined, context.l10n.infoAction, _openContactDetail),

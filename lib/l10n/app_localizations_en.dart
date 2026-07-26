@@ -2256,6 +2256,27 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String maxFiles(int count) {
+    return 'Maximum $count files.';
+  }
+
+  @override
+  String filesSkippedTooLarge(int count) {
+    return '$count file(s) skipped: 50 MB limit.';
+  }
+
+  @override
+  String maxMedias(int count) {
+    return 'Maximum $count media.';
+  }
+
+  @override
+  String get addMore => 'Add';
+
+  @override
+  String get removeMedia => 'Remove';
+
+  @override
   String get voiceViewOnce => 'Voice · view once';
 
   @override
@@ -2585,6 +2606,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get meLabel => 'Me';
+
+  @override
+  String selfChatTitle(String name) {
+    return '$name (Me)';
+  }
+
+  @override
+  String get messageYourself => 'Message yourself';
+
+  @override
+  String get selfChatSubtitle => 'Notes, reminders, files';
+
+  @override
+  String get selfChatDeleteWarning =>
+      'All your notes will be permanently deleted. This cannot be undone.';
+
+  @override
+  String get cannotCallYourself => 'You can\'t call yourself';
 
   @override
   String get statusNoun => 'Status';

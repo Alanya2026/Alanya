@@ -353,6 +353,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
     final displayName = conversationDisplayName(conv, myId);
     final displayAvatar = conversationDisplayAvatar(conv, myId);
     final otherId = conversationOtherUserId(conv, myId);
+    // Conversation avec soi-même : ni présence, ni frappe, ni anneau de statut.
+    final isSelf = isSelfConversation(conv, myId);
 
     // Présence : event temps réel prioritaire, sinon valeur du cache.
     final cachedOnline = other?['is_online'] == 1 || other?['is_online'] == true;
@@ -362,20 +364,23 @@ class _ChatsScreenState extends State<ChatsScreen> {
         other['last_seen'] == null;
     final live = otherId != null && !presenceHidden ? chat.presenceOf(otherId) : null;
     final isOnline =
-        !presenceHidden && (live?.online ?? cachedOnline);
+        !isSelf && !presenceHidden && (live?.online ?? cachedOnline);
 
     final colors = context.colors;
     final hasUnread = conv.unreadCount > 0;
-    final isTyping = chat.isPartnerTyping(
-      conv.conversID,
-      partnerUserId: conv.isGroup ? null : otherId,
-    );
+    final isTyping = !isSelf &&
+        chat.isPartnerTyping(
+          conv.conversID,
+          partnerUserId: conv.isGroup ? null : otherId,
+        );
 
     // Anneau de statut (1v1 uniquement pour l'instant) : le contact a-t-il des
     // statuts en cours ? Si oui, l'avatar est encadré et le tap ouvre le statut.
     final statusProv = context.watch<StatusProvider>();
-    final hasStatus =
-        !conv.isGroup && otherId != null && statusProv.totalCount(otherId) > 0;
+    final hasStatus = !conv.isGroup &&
+        !isSelf &&
+        otherId != null &&
+        statusProv.totalCount(otherId) > 0;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
@@ -406,7 +411,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
             ProfileAvatar(
               imageUrl: displayAvatar,
               name: displayName,
-              userId: otherId ?? 0,
+              userId: otherId ?? (isSelf ? myId : 0),
               isGroup: conv.isGroup,
               conversationId: conv.conversID,
               size: AppSizes.avatarLg,
@@ -454,7 +459,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
             : Row(
                 children: [
                   // Accusé (✓ / ✓✓ / ✓✓ bleu) si le dernier message est le mien.
-                  if (conv.lastMessageSenderID == myId && conv.lastMessage != null) ...[
+                  // Masqué dans une conversation avec soi-même pour les statuts
+                  // 1–3 : sans destinataire ils resteraient figés sur ✓.
+                  // L'horloge (0) et l'échec (4) restent utiles.
+                  if (conv.lastMessageSenderID == myId &&
+                      conv.lastMessage != null &&
+                      !(isSelf && (conv.lastMessageStatus ?? 1) >= 1
+                          && (conv.lastMessageStatus ?? 1) <= 3)) ...[
                     _previewStatusIcon(conv.lastMessageStatus),
                     AppSpacing.hGapXs,
                   ],
@@ -522,7 +533,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
             builder: (_) => ChatDetailScreen(
               userName: displayName,
               conversationId: conv.conversID,
-              userId: otherId,
+              userId: isSelf ? myId : otherId,
               isGroup: conv.isGroup,
               avatarUrl: displayAvatar,
             ),

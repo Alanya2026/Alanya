@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../db/app_database.dart';
-import '../db/chat_dao.dart' show decodeParticipants;
 import '../theme/app_theme.dart';
+import '../utils/conversation_display.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../screens/chats/chat_detail_screen.dart';
@@ -97,20 +97,19 @@ class NotificationNavigation {
       return;
     }
 
-    final other = _otherParticipant(conv, myId);
     final displayName = _displayName(context, conv, myId, fallbackName);
-    final displayAvatar =
-        conv.isGroup ? conv.groupPhoto : other?['avatar_url'] as String?;
-    final otherId = _toInt(other?['alanyaID']);
+    // conversationCounterpartId renvoie mon propre id pour une conversation
+    // avec soi-même — c'est ce qui permet à ChatDetailScreen de la reconnaître.
+    final counterpartId = conversationCounterpartId(conv, myId);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ChatDetailScreen(
           userName: displayName,
           conversationId: conv.conversID,
-          userId: otherId != 0 ? otherId : fallbackUserId,
+          userId: counterpartId ?? fallbackUserId,
           isGroup: conv.isGroup,
-          avatarUrl: displayAvatar,
+          avatarUrl: conversationDisplayAvatar(conv, myId),
         ),
       ),
     );
@@ -127,18 +126,11 @@ class NotificationNavigation {
     return chat.repository.dao.watchConversation(conversationId).first;
   }
 
-  static Map<String, dynamic>? _otherParticipant(
-    LocalConversation conv,
-    int myId,
-  ) {
-    final parts = decodeParticipants(conv.participantsJson);
-    for (final p in parts) {
-      final id = _toInt(p['alanyaID']);
-      if (myId != 0 && id != 0 && id != myId) return p;
-    }
-    return null;
-  }
-
+  /// Nom d'affichage, avec repli sur le nom porté par la notification.
+  ///
+  /// Se distingue de [conversationDisplayName] par ce repli : quand la conv
+  /// locale ne connaît pas encore l'autre participant, la charge utile de la
+  /// notification est une meilleure source que « Inconnu ».
   static String _displayName(
     BuildContext context,
     LocalConversation conv,
@@ -150,15 +142,13 @@ class NotificationNavigation {
           ? conv.groupName!
           : context.l10n.groupFallback;
     }
-    final other = _otherParticipant(conv, myId);
-    final name = other?['username']?.toString();
+    if (isSelfConversation(conv, myId)) {
+      return conversationDisplayName(conv, myId);
+    }
+    // Le serveur envoie `nom` (et non `username`) : cette clé-là ne matchait
+    // jamais, le repli s'appliquait donc systématiquement.
+    final name = otherParticipant(conv, myId)?['nom']?.toString();
     if (name != null && name.isNotEmpty) return name;
     return fallback;
-  }
-
-  static int _toInt(dynamic v) {
-    if (v is int) return v;
-    if (v is num) return v.toInt();
-    return int.tryParse(v?.toString() ?? '') ?? 0;
   }
 }

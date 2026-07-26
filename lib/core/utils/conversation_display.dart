@@ -4,6 +4,9 @@ import '../db/chat_dao.dart';
 import '../services/chat/conversation_merge.dart';
 import '../theme/locale_controller.dart';
 import 'media_album.dart';
+import 'self_chat.dart';
+
+export 'self_chat.dart' show kSelfChatMarker;
 
 int conversationParticipantId(dynamic v) {
   if (v is int) return v;
@@ -20,26 +23,70 @@ Map<String, dynamic>? otherParticipant(LocalConversation conv, int myId) {
   return null;
 }
 
+/// Le participant « moi » d'une conversation avec soi-même, ou null.
+Map<String, dynamic>? selfParticipant(LocalConversation conv, int myId) {
+  if (myId == 0) return null;
+  for (final p in decodeParticipants(conv.participantsJson)) {
+    if (conversationParticipantId(p['alanyaID']) == myId) return p;
+  }
+  return null;
+}
+
+/// Conversation « message à soi-même ».
+///
+/// S'appuie sur le marqueur serveur, jamais sur « 1-1 sans autre participant » :
+/// une conv 1-1 dont le pair a supprimé son côté — ou dont le compte a été
+/// supprimé — a exactement la même forme sans en être une. Le contrôle sur
+/// [myId] protège d'une ligne héritée d'un autre compte.
+bool isSelfConversation(LocalConversation conv, int myId) {
+  if (conv.isGroup || myId == 0) return false;
+  if (conv.groupName != kSelfChatMarker) return false;
+  final parts = decodeParticipants(conv.participantsJson);
+  if (parts.isEmpty) return true; // payload serveur tronqué
+  return parts.any((p) => conversationParticipantId(p['alanyaID']) == myId);
+}
+
 String conversationDisplayName(LocalConversation conv, int myId) {
-  if (conv.isGroup) return conv.groupName ?? LocaleController.instance.l10n.groupFallback;
+  final l10n = resolveL10n();
+  if (conv.isGroup) return conv.groupName ?? l10n.groupFallback;
+  if (isSelfConversation(conv, myId)) {
+    final name = (selfParticipant(conv, myId)?['nom'] as String?)?.trim();
+    return l10n.selfChatTitle(
+      name != null && name.isNotEmpty ? name : l10n.meLabel,
+    );
+  }
   final other = otherParticipant(conv, myId);
-  return (other?['nom'] as String?) ?? LocaleController.instance.l10n.unknownSender;
+  return (other?['nom'] as String?) ?? l10n.unknownSender;
 }
 
 String? conversationDisplayAvatar(LocalConversation conv, int myId) {
   if (conv.isGroup) {
     return conv.groupPhoto?.isNotEmpty == true ? conv.groupPhoto : null;
   }
-  final other = otherParticipant(conv, myId);
-  final avatar = other?['avatar_url']?.toString();
+  final source = isSelfConversation(conv, myId)
+      ? selfParticipant(conv, myId)
+      : otherParticipant(conv, myId);
+  final avatar = source?['avatar_url']?.toString();
   return avatar != null && avatar.isNotEmpty ? avatar : null;
 }
 
+/// L'AUTRE personne d'une conversation 1-1 — donc null pour un self-chat.
+///
+/// Plusieurs écrans s'appuient sur ce null pour désactiver présence, anneau de
+/// statut et profil du pair. Pour « avec qui cette conversation est-elle ? »,
+/// utiliser [conversationCounterpartId].
 int? conversationOtherUserId(LocalConversation conv, int myId) {
   final other = otherParticipant(conv, myId);
   if (other == null) return null;
   final id = conversationParticipantId(other['alanyaID']);
   return id == 0 ? null : id;
+}
+
+/// Interlocuteur d'une conversation 1-1 : moi-même pour un self-chat.
+int? conversationCounterpartId(LocalConversation conv, int myId) {
+  if (conv.isGroup) return null;
+  if (isSelfConversation(conv, myId)) return myId == 0 ? null : myId;
+  return conversationOtherUserId(conv, myId);
 }
 
 /// Retrouve l'ID d'une conversation 1-1 locale avec [peerUserId], ou null.
@@ -52,7 +99,7 @@ int? findLocalDirectConversationId(
   LocalConversation? best;
   for (final c in convs) {
     if (c.isGroup) continue;
-    if (conversationOtherUserId(c, myId) != peerUserId) continue;
+    if (conversationCounterpartId(c, myId) != peerUserId) continue;
     if (best == null) {
       best = c;
       continue;

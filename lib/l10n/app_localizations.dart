@@ -4142,6 +4142,36 @@ abstract class AppLocalizations {
   /// **'Maximum {count} photos.'**
   String maxPhotos(int count);
 
+  /// No description provided for @maxFiles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maximum {count} fichiers.'**
+  String maxFiles(int count);
+
+  /// No description provided for @filesSkippedTooLarge.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} fichier(s) ignoré(s) : limite 50 Mo.'**
+  String filesSkippedTooLarge(int count);
+
+  /// No description provided for @maxMedias.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maximum {count} médias.'**
+  String maxMedias(int count);
+
+  /// No description provided for @addMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addMore;
+
+  /// No description provided for @removeMedia.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get removeMedia;
+
   /// No description provided for @voiceViewOnce.
   ///
   /// In fr, this message translates to:
@@ -4639,6 +4669,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Moi'**
   String get meLabel;
+
+  /// Titre d'une conversation avec soi-même
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} (Moi)'**
+  String selfChatTitle(String name);
+
+  /// No description provided for @messageYourself.
+  ///
+  /// In fr, this message translates to:
+  /// **'M\'envoyer un message'**
+  String get messageYourself;
+
+  /// No description provided for @selfChatSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notes, rappels, fichiers'**
+  String get selfChatSubtitle;
+
+  /// No description provided for @selfChatDeleteWarning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toutes vos notes seront définitivement supprimées. Cette action est irréversible.'**
+  String get selfChatDeleteWarning;
+
+  /// No description provided for @cannotCallYourself.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne pouvez pas vous appeler vous-même'**
+  String get cannotCallYourself;
 
   /// No description provided for @statusNoun.
   ///

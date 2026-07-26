@@ -130,6 +130,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   int? _convId;
   Future<int?>? _ensureConversationInFlight;
   int? _myId;
+  String? _myName;
   bool _hasText = false;
   bool _showEmoji = false;
   bool _showFormatBar = false;
@@ -226,7 +227,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     _chat = Provider.of<ChatProvider>(context, listen: false);
     _voice = Provider.of<VoicePlaybackService>(context, listen: false);
-    _myId = Provider.of<AuthProvider>(context, listen: false).currentUser?.alanyaID;
+    final me = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    _myId = me?.alanyaID;
+    _myName = me == null
+        ? null
+        : (me.nom.isNotEmpty ? me.nom : me.pseudo);
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
     _init();
@@ -309,7 +314,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   Future<void> _init() async {
     _convId = widget.conversationId;
 
-    if (!widget.isGroup && widget.userId != null) {
+    // Inutile de demander au serveur si je me suis bloqué moi-même.
+    if (!widget.isGroup && widget.userId != null && !_isSelfChat) {
       await _loadBlockStatus();
     }
 
@@ -479,6 +485,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       final conversationId = result['conversID'] as int?;
       if (conversationId == null || !mounted) return null;
 
+      // Garde-fou contre un serveur non migré : son ancienne requête de
+      // déduplication renvoie, pour participantID == moi, la conversation 1-1
+      // la plus active avec un TIERS. Échouer plutôt que d'ouvrir — et de
+      // remplir — la discussion de quelqu'un d'autre.
+      if (_isSelfChat && result['GroupName'] != kSelfChatMarker) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.errorCreatingTheConversation)),
+        );
+        return null;
+      }
+
       setState(() => _convId = conversationId);
       await _chat.refreshConversations(force: true);
       if (!mounted) return conversationId;
@@ -532,8 +549,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     }
   }
 
+  /// Conversation avec soi-même : ni appels, ni présence, ni blocage.
+  bool get _isSelfChat =>
+      !widget.isGroup && _myId != null && widget.userId == _myId;
+
+  /// Titre de l'en-tête.
+  ///
+  /// Recalculé pour un self-chat plutôt que de réutiliser `widget.userName` :
+  /// selon le point d'entrée celui-ci vaut déjà « Chris (Moi) » (tuile de la
+  /// liste) ou le nom brut (nouvelle discussion). Repartir du nom évite un
+  /// suffixe doublé.
+  String _chatTitle(BuildContext context) {
+    if (!_isSelfChat) return widget.userName;
+    final l10n = context.l10n;
+    final name = _myName?.trim();
+    return l10n.selfChatTitle(
+      name != null && name.isNotEmpty ? name : l10n.meLabel,
+    );
+  }
+
   bool get _callsDisabled =>
-      !widget.isGroup && (_isBlocked || _blockedByThem);
+      !widget.isGroup && (_isSelfChat || _isBlocked || _blockedByThem);
 
   bool get _inputBlocked => !widget.isGroup && _isBlocked;
 
@@ -768,12 +804,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                         builder: (_) => ContactDetailScreen(
                           userId: widget.userId!,
                           conversationId: _convId,
-                          initialName: widget.userName,
+                          initialName: _chatTitle(context),
                           initialAvatar: widget.avatarUrl ?? '',
                         ),
                       ),
                     );
-                    if (mounted) _loadBlockStatus();
+                    if (mounted && !_isSelfChat) _loadBlockStatus();
                   }
                 : null),
         child: Row(
@@ -794,11 +830,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.userName,
+                    _chatTitle(context),
                     style: context.text.titleMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Builder(builder: (_) {
+                    // Conversation avec soi-même : ni présence, ni frappe.
+                    if (_isSelfChat) return const SizedBox.shrink();
                     if (widget.isGroup) {
                       if (partnerTyping) {
                         return Text(

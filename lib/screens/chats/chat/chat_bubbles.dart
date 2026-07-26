@@ -617,6 +617,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
     DateTime? readAt,
     String? retryClientId,
   }) {
+    // Conversation avec soi-même : pas de destinataire, donc « envoyé /
+    // distribué / lu » n'a aucun sens et resterait de toute façon figé sur ✓.
+    // L'horloge (0) et l'échec (4) restent affichés : ils concernent l'envoi
+    // lui-même, et l'échec porte l'action de renvoi.
+    if (_isSelfChat && status >= 1 && status <= 3) {
+      return const SizedBox.shrink();
+    }
     return MessageStatusIcon(
       status: status,
       deliveredAt: deliveredAt,

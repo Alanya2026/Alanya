@@ -1242,6 +1242,32 @@
       }
     }
   },
+  "maxFiles": "Maximum {count} fichiers.",
+  "@maxFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filesSkippedTooLarge": "{count} fichier(s) ignoré(s) : limite 50 Mo.",
+  "@filesSkippedTooLarge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maxMedias": "Maximum {count} médias.",
+  "@maxMedias": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addMore": "Ajouter",
+  "removeMedia": "Retirer",
   "voiceViewOnce": "Vocal · vue unique",
   "heCanContactYouAgain": "Il pourra de nouveau vous contacter.",
   "unableToLoadNamed": "Impossible de charger {name}",
@@ -1638,6 +1664,19 @@
   "finishAction": "Terminer",
   "recordAction": "Enregistrer",
   "meLabel": "Moi",
+  "selfChatTitle": "{name} (Moi)",
+  "@selfChatTitle": {
+    "description": "Titre d'une conversation avec soi-même",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "messageYourself": "M'envoyer un message",
+  "selfChatSubtitle": "Notes, rappels, fichiers",
+  "selfChatDeleteWarning": "Toutes vos notes seront définitivement supprimées. Cette action est irréversible.",
+  "cannotCallYourself": "Vous ne pouvez pas vous appeler vous-même",
   "statusNoun": "Statut",
   "youLabel": "Vous",
   "hostLabel": "Hôte",
