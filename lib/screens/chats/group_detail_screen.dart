@@ -85,11 +85,11 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
-  List<User> _parseParticipants(String json) {
+  List<Participant> _parseParticipants(String json) {
     try {
       final data =
           (jsonDecode(json) as List?)?.cast<Map<String, dynamic>>() ?? [];
-      return data.map((j) => User.fromJson(j)).toList();
+      return data.map(Participant.fromJson).toList();
     } catch (_) {
       return [];
     }
@@ -104,8 +104,10 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     if (me == null) return;
 
     final members = _group!.participants;
-    final others =
-        members.where((u) => u.alanyaID != me.alanyaID).toList();
+    final others = members
+        .where((p) => p.alanyaID != me.alanyaID)
+        .map((p) => p.user)
+        .toList();
 
     if (others.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -681,7 +683,7 @@ class _MediaCardState extends State<_MediaCard> {
 // ── MEMBERS CARD ──────────────────────────────────────────────────────
 
 class _MembersCard extends StatelessWidget {
-  final List<User> participants;
+  final List<Participant> participants;
   final VoidCallback? onAddParticipants;
 
   const _MembersCard({
@@ -723,7 +725,8 @@ class _MembersCard extends StatelessWidget {
               ),
               onTap: onAddParticipants,
             ),
-          ...participants.map((member) {
+          ...participants.map((p) {
+            final member = p.user;
             final isYou = member.alanyaID ==
                 context.read<AuthProvider>().currentUser?.alanyaID;
 

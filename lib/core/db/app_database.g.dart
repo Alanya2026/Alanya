@@ -166,6 +166,121 @@ class $LocalConversationsTable extends LocalConversations
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<int> createdBy = GeneratedColumn<int>(
+    'created_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _metaUpdatedAtMeta = const VerificationMeta(
+    'metaUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> metaUpdatedAt =
+      GeneratedColumn<DateTime>(
+        'meta_updated_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _onlyAdminsCanSendMeta = const VerificationMeta(
+    'onlyAdminsCanSend',
+  );
+  @override
+  late final GeneratedColumn<bool> onlyAdminsCanSend = GeneratedColumn<bool>(
+    'only_admins_can_send',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("only_admins_can_send" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _onlyAdminsCanEditInfoMeta =
+      const VerificationMeta('onlyAdminsCanEditInfo');
+  @override
+  late final GeneratedColumn<bool> onlyAdminsCanEditInfo =
+      GeneratedColumn<bool>(
+        'only_admins_can_edit_info',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("only_admins_can_edit_info" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _myRoleMeta = const VerificationMeta('myRole');
+  @override
+  late final GeneratedColumn<int> myRole = GeneratedColumn<int>(
+    'my_role',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _mutedUntilMeta = const VerificationMeta(
+    'mutedUntil',
+  );
+  @override
+  late final GeneratedColumn<DateTime> mutedUntil = GeneratedColumn<DateTime>(
+    'muted_until',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _muteForeverMeta = const VerificationMeta(
+    'muteForever',
+  );
+  @override
+  late final GeneratedColumn<bool> muteForever = GeneratedColumn<bool>(
+    'mute_forever',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("mute_forever" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _mentionsOnlyMeta = const VerificationMeta(
+    'mentionsOnly',
+  );
+  @override
+  late final GeneratedColumn<bool> mentionsOnly = GeneratedColumn<bool>(
+    'mentions_only',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("mentions_only" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     conversID,
@@ -181,6 +296,15 @@ class $LocalConversationsTable extends LocalConversations
     isPinned,
     isArchived,
     participantsJson,
+    description,
+    createdBy,
+    metaUpdatedAt,
+    onlyAdminsCanSend,
+    onlyAdminsCanEditInfo,
+    myRole,
+    mutedUntil,
+    muteForever,
+    mentionsOnly,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -293,6 +417,78 @@ class $LocalConversationsTable extends LocalConversations
         ),
       );
     }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    }
+    if (data.containsKey('meta_updated_at')) {
+      context.handle(
+        _metaUpdatedAtMeta,
+        metaUpdatedAt.isAcceptableOrUnknown(
+          data['meta_updated_at']!,
+          _metaUpdatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('only_admins_can_send')) {
+      context.handle(
+        _onlyAdminsCanSendMeta,
+        onlyAdminsCanSend.isAcceptableOrUnknown(
+          data['only_admins_can_send']!,
+          _onlyAdminsCanSendMeta,
+        ),
+      );
+    }
+    if (data.containsKey('only_admins_can_edit_info')) {
+      context.handle(
+        _onlyAdminsCanEditInfoMeta,
+        onlyAdminsCanEditInfo.isAcceptableOrUnknown(
+          data['only_admins_can_edit_info']!,
+          _onlyAdminsCanEditInfoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('my_role')) {
+      context.handle(
+        _myRoleMeta,
+        myRole.isAcceptableOrUnknown(data['my_role']!, _myRoleMeta),
+      );
+    }
+    if (data.containsKey('muted_until')) {
+      context.handle(
+        _mutedUntilMeta,
+        mutedUntil.isAcceptableOrUnknown(data['muted_until']!, _mutedUntilMeta),
+      );
+    }
+    if (data.containsKey('mute_forever')) {
+      context.handle(
+        _muteForeverMeta,
+        muteForever.isAcceptableOrUnknown(
+          data['mute_forever']!,
+          _muteForeverMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mentions_only')) {
+      context.handle(
+        _mentionsOnlyMeta,
+        mentionsOnly.isAcceptableOrUnknown(
+          data['mentions_only']!,
+          _mentionsOnlyMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -354,6 +550,42 @@ class $LocalConversationsTable extends LocalConversations
         DriftSqlType.string,
         data['${effectivePrefix}participants_json'],
       )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_by'],
+      ),
+      metaUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}meta_updated_at'],
+      ),
+      onlyAdminsCanSend: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}only_admins_can_send'],
+      )!,
+      onlyAdminsCanEditInfo: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}only_admins_can_edit_info'],
+      )!,
+      myRole: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}my_role'],
+      )!,
+      mutedUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}muted_until'],
+      ),
+      muteForever: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}mute_forever'],
+      )!,
+      mentionsOnly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}mentions_only'],
+      )!,
     );
   }
 
@@ -377,7 +609,24 @@ class LocalConversation extends DataClass
   final int unreadCount;
   final bool isPinned;
   final bool isArchived;
+
+  /// Participants sérialisés tels que renvoyés par le serveur. Le `role` de
+  /// chacun voyage dedans : aucune colonne dédiée n'est nécessaire.
   final String participantsJson;
+  final String? description;
+  final int? createdBy;
+
+  /// `conversation.updatedAt` serveur. Garde anti-réordonnancement : une trame
+  /// `conversation:updated` plus ancienne que ce qu'on a déjà est ignorée.
+  final DateTime? metaUpdatedAt;
+  final bool onlyAdminsCanSend;
+  final bool onlyAdminsCanEditInfo;
+
+  /// Mon rôle : 0=membre, 1=admin, 2=propriétaire (voir `GroupRole`).
+  final int myRole;
+  final DateTime? mutedUntil;
+  final bool muteForever;
+  final bool mentionsOnly;
   const LocalConversation({
     required this.conversID,
     required this.isGroup,
@@ -392,6 +641,15 @@ class LocalConversation extends DataClass
     required this.isPinned,
     required this.isArchived,
     required this.participantsJson,
+    this.description,
+    this.createdBy,
+    this.metaUpdatedAt,
+    required this.onlyAdminsCanSend,
+    required this.onlyAdminsCanEditInfo,
+    required this.myRole,
+    this.mutedUntil,
+    required this.muteForever,
+    required this.mentionsOnly,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -423,6 +681,23 @@ class LocalConversation extends DataClass
     map['is_pinned'] = Variable<bool>(isPinned);
     map['is_archived'] = Variable<bool>(isArchived);
     map['participants_json'] = Variable<String>(participantsJson);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || createdBy != null) {
+      map['created_by'] = Variable<int>(createdBy);
+    }
+    if (!nullToAbsent || metaUpdatedAt != null) {
+      map['meta_updated_at'] = Variable<DateTime>(metaUpdatedAt);
+    }
+    map['only_admins_can_send'] = Variable<bool>(onlyAdminsCanSend);
+    map['only_admins_can_edit_info'] = Variable<bool>(onlyAdminsCanEditInfo);
+    map['my_role'] = Variable<int>(myRole);
+    if (!nullToAbsent || mutedUntil != null) {
+      map['muted_until'] = Variable<DateTime>(mutedUntil);
+    }
+    map['mute_forever'] = Variable<bool>(muteForever);
+    map['mentions_only'] = Variable<bool>(mentionsOnly);
     return map;
   }
 
@@ -455,6 +730,23 @@ class LocalConversation extends DataClass
       isPinned: Value(isPinned),
       isArchived: Value(isArchived),
       participantsJson: Value(participantsJson),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      createdBy: createdBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdBy),
+      metaUpdatedAt: metaUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(metaUpdatedAt),
+      onlyAdminsCanSend: Value(onlyAdminsCanSend),
+      onlyAdminsCanEditInfo: Value(onlyAdminsCanEditInfo),
+      myRole: Value(myRole),
+      mutedUntil: mutedUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mutedUntil),
+      muteForever: Value(muteForever),
+      mentionsOnly: Value(mentionsOnly),
     );
   }
 
@@ -479,6 +771,17 @@ class LocalConversation extends DataClass
       isPinned: serializer.fromJson<bool>(json['isPinned']),
       isArchived: serializer.fromJson<bool>(json['isArchived']),
       participantsJson: serializer.fromJson<String>(json['participantsJson']),
+      description: serializer.fromJson<String?>(json['description']),
+      createdBy: serializer.fromJson<int?>(json['createdBy']),
+      metaUpdatedAt: serializer.fromJson<DateTime?>(json['metaUpdatedAt']),
+      onlyAdminsCanSend: serializer.fromJson<bool>(json['onlyAdminsCanSend']),
+      onlyAdminsCanEditInfo: serializer.fromJson<bool>(
+        json['onlyAdminsCanEditInfo'],
+      ),
+      myRole: serializer.fromJson<int>(json['myRole']),
+      mutedUntil: serializer.fromJson<DateTime?>(json['mutedUntil']),
+      muteForever: serializer.fromJson<bool>(json['muteForever']),
+      mentionsOnly: serializer.fromJson<bool>(json['mentionsOnly']),
     );
   }
   @override
@@ -498,6 +801,15 @@ class LocalConversation extends DataClass
       'isPinned': serializer.toJson<bool>(isPinned),
       'isArchived': serializer.toJson<bool>(isArchived),
       'participantsJson': serializer.toJson<String>(participantsJson),
+      'description': serializer.toJson<String?>(description),
+      'createdBy': serializer.toJson<int?>(createdBy),
+      'metaUpdatedAt': serializer.toJson<DateTime?>(metaUpdatedAt),
+      'onlyAdminsCanSend': serializer.toJson<bool>(onlyAdminsCanSend),
+      'onlyAdminsCanEditInfo': serializer.toJson<bool>(onlyAdminsCanEditInfo),
+      'myRole': serializer.toJson<int>(myRole),
+      'mutedUntil': serializer.toJson<DateTime?>(mutedUntil),
+      'muteForever': serializer.toJson<bool>(muteForever),
+      'mentionsOnly': serializer.toJson<bool>(mentionsOnly),
     };
   }
 
@@ -515,6 +827,15 @@ class LocalConversation extends DataClass
     bool? isPinned,
     bool? isArchived,
     String? participantsJson,
+    Value<String?> description = const Value.absent(),
+    Value<int?> createdBy = const Value.absent(),
+    Value<DateTime?> metaUpdatedAt = const Value.absent(),
+    bool? onlyAdminsCanSend,
+    bool? onlyAdminsCanEditInfo,
+    int? myRole,
+    Value<DateTime?> mutedUntil = const Value.absent(),
+    bool? muteForever,
+    bool? mentionsOnly,
   }) => LocalConversation(
     conversID: conversID ?? this.conversID,
     isGroup: isGroup ?? this.isGroup,
@@ -537,6 +858,17 @@ class LocalConversation extends DataClass
     isPinned: isPinned ?? this.isPinned,
     isArchived: isArchived ?? this.isArchived,
     participantsJson: participantsJson ?? this.participantsJson,
+    description: description.present ? description.value : this.description,
+    createdBy: createdBy.present ? createdBy.value : this.createdBy,
+    metaUpdatedAt: metaUpdatedAt.present
+        ? metaUpdatedAt.value
+        : this.metaUpdatedAt,
+    onlyAdminsCanSend: onlyAdminsCanSend ?? this.onlyAdminsCanSend,
+    onlyAdminsCanEditInfo: onlyAdminsCanEditInfo ?? this.onlyAdminsCanEditInfo,
+    myRole: myRole ?? this.myRole,
+    mutedUntil: mutedUntil.present ? mutedUntil.value : this.mutedUntil,
+    muteForever: muteForever ?? this.muteForever,
+    mentionsOnly: mentionsOnly ?? this.mentionsOnly,
   );
   LocalConversation copyWithCompanion(LocalConversationsCompanion data) {
     return LocalConversation(
@@ -571,6 +903,29 @@ class LocalConversation extends DataClass
       participantsJson: data.participantsJson.present
           ? data.participantsJson.value
           : this.participantsJson,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      metaUpdatedAt: data.metaUpdatedAt.present
+          ? data.metaUpdatedAt.value
+          : this.metaUpdatedAt,
+      onlyAdminsCanSend: data.onlyAdminsCanSend.present
+          ? data.onlyAdminsCanSend.value
+          : this.onlyAdminsCanSend,
+      onlyAdminsCanEditInfo: data.onlyAdminsCanEditInfo.present
+          ? data.onlyAdminsCanEditInfo.value
+          : this.onlyAdminsCanEditInfo,
+      myRole: data.myRole.present ? data.myRole.value : this.myRole,
+      mutedUntil: data.mutedUntil.present
+          ? data.mutedUntil.value
+          : this.mutedUntil,
+      muteForever: data.muteForever.present
+          ? data.muteForever.value
+          : this.muteForever,
+      mentionsOnly: data.mentionsOnly.present
+          ? data.mentionsOnly.value
+          : this.mentionsOnly,
     );
   }
 
@@ -589,13 +944,22 @@ class LocalConversation extends DataClass
           ..write('unreadCount: $unreadCount, ')
           ..write('isPinned: $isPinned, ')
           ..write('isArchived: $isArchived, ')
-          ..write('participantsJson: $participantsJson')
+          ..write('participantsJson: $participantsJson, ')
+          ..write('description: $description, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('metaUpdatedAt: $metaUpdatedAt, ')
+          ..write('onlyAdminsCanSend: $onlyAdminsCanSend, ')
+          ..write('onlyAdminsCanEditInfo: $onlyAdminsCanEditInfo, ')
+          ..write('myRole: $myRole, ')
+          ..write('mutedUntil: $mutedUntil, ')
+          ..write('muteForever: $muteForever, ')
+          ..write('mentionsOnly: $mentionsOnly')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     conversID,
     isGroup,
     groupName,
@@ -609,7 +973,16 @@ class LocalConversation extends DataClass
     isPinned,
     isArchived,
     participantsJson,
-  );
+    description,
+    createdBy,
+    metaUpdatedAt,
+    onlyAdminsCanSend,
+    onlyAdminsCanEditInfo,
+    myRole,
+    mutedUntil,
+    muteForever,
+    mentionsOnly,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -626,7 +999,16 @@ class LocalConversation extends DataClass
           other.unreadCount == this.unreadCount &&
           other.isPinned == this.isPinned &&
           other.isArchived == this.isArchived &&
-          other.participantsJson == this.participantsJson);
+          other.participantsJson == this.participantsJson &&
+          other.description == this.description &&
+          other.createdBy == this.createdBy &&
+          other.metaUpdatedAt == this.metaUpdatedAt &&
+          other.onlyAdminsCanSend == this.onlyAdminsCanSend &&
+          other.onlyAdminsCanEditInfo == this.onlyAdminsCanEditInfo &&
+          other.myRole == this.myRole &&
+          other.mutedUntil == this.mutedUntil &&
+          other.muteForever == this.muteForever &&
+          other.mentionsOnly == this.mentionsOnly);
 }
 
 class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
@@ -643,6 +1025,15 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
   final Value<bool> isPinned;
   final Value<bool> isArchived;
   final Value<String> participantsJson;
+  final Value<String?> description;
+  final Value<int?> createdBy;
+  final Value<DateTime?> metaUpdatedAt;
+  final Value<bool> onlyAdminsCanSend;
+  final Value<bool> onlyAdminsCanEditInfo;
+  final Value<int> myRole;
+  final Value<DateTime?> mutedUntil;
+  final Value<bool> muteForever;
+  final Value<bool> mentionsOnly;
   const LocalConversationsCompanion({
     this.conversID = const Value.absent(),
     this.isGroup = const Value.absent(),
@@ -657,6 +1048,15 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     this.isPinned = const Value.absent(),
     this.isArchived = const Value.absent(),
     this.participantsJson = const Value.absent(),
+    this.description = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.metaUpdatedAt = const Value.absent(),
+    this.onlyAdminsCanSend = const Value.absent(),
+    this.onlyAdminsCanEditInfo = const Value.absent(),
+    this.myRole = const Value.absent(),
+    this.mutedUntil = const Value.absent(),
+    this.muteForever = const Value.absent(),
+    this.mentionsOnly = const Value.absent(),
   });
   LocalConversationsCompanion.insert({
     this.conversID = const Value.absent(),
@@ -672,6 +1072,15 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     this.isPinned = const Value.absent(),
     this.isArchived = const Value.absent(),
     this.participantsJson = const Value.absent(),
+    this.description = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.metaUpdatedAt = const Value.absent(),
+    this.onlyAdminsCanSend = const Value.absent(),
+    this.onlyAdminsCanEditInfo = const Value.absent(),
+    this.myRole = const Value.absent(),
+    this.mutedUntil = const Value.absent(),
+    this.muteForever = const Value.absent(),
+    this.mentionsOnly = const Value.absent(),
   });
   static Insertable<LocalConversation> custom({
     Expression<int>? conversID,
@@ -687,6 +1096,15 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     Expression<bool>? isPinned,
     Expression<bool>? isArchived,
     Expression<String>? participantsJson,
+    Expression<String>? description,
+    Expression<int>? createdBy,
+    Expression<DateTime>? metaUpdatedAt,
+    Expression<bool>? onlyAdminsCanSend,
+    Expression<bool>? onlyAdminsCanEditInfo,
+    Expression<int>? myRole,
+    Expression<DateTime>? mutedUntil,
+    Expression<bool>? muteForever,
+    Expression<bool>? mentionsOnly,
   }) {
     return RawValuesInsertable({
       if (conversID != null) 'convers_i_d': conversID,
@@ -703,6 +1121,16 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
       if (isPinned != null) 'is_pinned': isPinned,
       if (isArchived != null) 'is_archived': isArchived,
       if (participantsJson != null) 'participants_json': participantsJson,
+      if (description != null) 'description': description,
+      if (createdBy != null) 'created_by': createdBy,
+      if (metaUpdatedAt != null) 'meta_updated_at': metaUpdatedAt,
+      if (onlyAdminsCanSend != null) 'only_admins_can_send': onlyAdminsCanSend,
+      if (onlyAdminsCanEditInfo != null)
+        'only_admins_can_edit_info': onlyAdminsCanEditInfo,
+      if (myRole != null) 'my_role': myRole,
+      if (mutedUntil != null) 'muted_until': mutedUntil,
+      if (muteForever != null) 'mute_forever': muteForever,
+      if (mentionsOnly != null) 'mentions_only': mentionsOnly,
     });
   }
 
@@ -720,6 +1148,15 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     Value<bool>? isPinned,
     Value<bool>? isArchived,
     Value<String>? participantsJson,
+    Value<String?>? description,
+    Value<int?>? createdBy,
+    Value<DateTime?>? metaUpdatedAt,
+    Value<bool>? onlyAdminsCanSend,
+    Value<bool>? onlyAdminsCanEditInfo,
+    Value<int>? myRole,
+    Value<DateTime?>? mutedUntil,
+    Value<bool>? muteForever,
+    Value<bool>? mentionsOnly,
   }) {
     return LocalConversationsCompanion(
       conversID: conversID ?? this.conversID,
@@ -735,6 +1172,16 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
       isPinned: isPinned ?? this.isPinned,
       isArchived: isArchived ?? this.isArchived,
       participantsJson: participantsJson ?? this.participantsJson,
+      description: description ?? this.description,
+      createdBy: createdBy ?? this.createdBy,
+      metaUpdatedAt: metaUpdatedAt ?? this.metaUpdatedAt,
+      onlyAdminsCanSend: onlyAdminsCanSend ?? this.onlyAdminsCanSend,
+      onlyAdminsCanEditInfo:
+          onlyAdminsCanEditInfo ?? this.onlyAdminsCanEditInfo,
+      myRole: myRole ?? this.myRole,
+      mutedUntil: mutedUntil ?? this.mutedUntil,
+      muteForever: muteForever ?? this.muteForever,
+      mentionsOnly: mentionsOnly ?? this.mentionsOnly,
     );
   }
 
@@ -780,6 +1227,35 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     if (participantsJson.present) {
       map['participants_json'] = Variable<String>(participantsJson.value);
     }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<int>(createdBy.value);
+    }
+    if (metaUpdatedAt.present) {
+      map['meta_updated_at'] = Variable<DateTime>(metaUpdatedAt.value);
+    }
+    if (onlyAdminsCanSend.present) {
+      map['only_admins_can_send'] = Variable<bool>(onlyAdminsCanSend.value);
+    }
+    if (onlyAdminsCanEditInfo.present) {
+      map['only_admins_can_edit_info'] = Variable<bool>(
+        onlyAdminsCanEditInfo.value,
+      );
+    }
+    if (myRole.present) {
+      map['my_role'] = Variable<int>(myRole.value);
+    }
+    if (mutedUntil.present) {
+      map['muted_until'] = Variable<DateTime>(mutedUntil.value);
+    }
+    if (muteForever.present) {
+      map['mute_forever'] = Variable<bool>(muteForever.value);
+    }
+    if (mentionsOnly.present) {
+      map['mentions_only'] = Variable<bool>(mentionsOnly.value);
+    }
     return map;
   }
 
@@ -798,7 +1274,16 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
           ..write('unreadCount: $unreadCount, ')
           ..write('isPinned: $isPinned, ')
           ..write('isArchived: $isArchived, ')
-          ..write('participantsJson: $participantsJson')
+          ..write('participantsJson: $participantsJson, ')
+          ..write('description: $description, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('metaUpdatedAt: $metaUpdatedAt, ')
+          ..write('onlyAdminsCanSend: $onlyAdminsCanSend, ')
+          ..write('onlyAdminsCanEditInfo: $onlyAdminsCanEditInfo, ')
+          ..write('myRole: $myRole, ')
+          ..write('mutedUntil: $mutedUntil, ')
+          ..write('muteForever: $muteForever, ')
+          ..write('mentionsOnly: $mentionsOnly')
           ..write(')'))
         .toString();
   }
@@ -1249,6 +1734,17 @@ class $LocalMessagesTable extends LocalMessages
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _mentionsJsonMeta = const VerificationMeta(
+    'mentionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> mentionsJson = GeneratedColumn<String>(
+    'mentions_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientId,
@@ -1289,6 +1785,7 @@ class $LocalMessagesTable extends LocalMessages
     syncPending,
     lastEmittedAt,
     retryCount,
+    mentionsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1589,6 +2086,15 @@ class $LocalMessagesTable extends LocalMessages
         retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
       );
     }
+    if (data.containsKey('mentions_json')) {
+      context.handle(
+        _mentionsJsonMeta,
+        mentionsJson.isAcceptableOrUnknown(
+          data['mentions_json']!,
+          _mentionsJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1750,6 +2256,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.int,
         data['${effectivePrefix}retry_count'],
       )!,
+      mentionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mentions_json'],
+      ),
     );
   }
 
@@ -1846,6 +2356,13 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
 
   /// Nombre de tentatives de retry pour ce message (failed -> retry).
   final int retryCount;
+
+  /// Ids mentionnés, sérialisés (`[45,46]`), miroir de `message.mentions`.
+  ///
+  /// Persisté et pas seulement dérivé du texte : `flushOutbox` reconstruit
+  /// l'émission depuis cette ligne, et une mention envoyée hors ligne perdrait
+  /// sinon sa notification au rejeu.
+  final String? mentionsJson;
   const LocalMessage({
     required this.clientId,
     required this.msgID,
@@ -1885,6 +2402,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     required this.syncPending,
     this.lastEmittedAt,
     required this.retryCount,
+    this.mentionsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1973,6 +2491,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       map['last_emitted_at'] = Variable<DateTime>(lastEmittedAt);
     }
     map['retry_count'] = Variable<int>(retryCount);
+    if (!nullToAbsent || mentionsJson != null) {
+      map['mentions_json'] = Variable<String>(mentionsJson);
+    }
     return map;
   }
 
@@ -2062,6 +2583,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ? const Value.absent()
           : Value(lastEmittedAt),
       retryCount: Value(retryCount),
+      mentionsJson: mentionsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mentionsJson),
     );
   }
 
@@ -2111,6 +2635,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       syncPending: serializer.fromJson<bool>(json['syncPending']),
       lastEmittedAt: serializer.fromJson<DateTime?>(json['lastEmittedAt']),
       retryCount: serializer.fromJson<int>(json['retryCount']),
+      mentionsJson: serializer.fromJson<String?>(json['mentionsJson']),
     );
   }
   @override
@@ -2155,6 +2680,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'syncPending': serializer.toJson<bool>(syncPending),
       'lastEmittedAt': serializer.toJson<DateTime?>(lastEmittedAt),
       'retryCount': serializer.toJson<int>(retryCount),
+      'mentionsJson': serializer.toJson<String?>(mentionsJson),
     };
   }
 
@@ -2197,6 +2723,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     bool? syncPending,
     Value<DateTime?> lastEmittedAt = const Value.absent(),
     int? retryCount,
+    Value<String?> mentionsJson = const Value.absent(),
   }) => LocalMessage(
     clientId: clientId ?? this.clientId,
     msgID: msgID ?? this.msgID,
@@ -2250,6 +2777,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
         ? lastEmittedAt.value
         : this.lastEmittedAt,
     retryCount: retryCount ?? this.retryCount,
+    mentionsJson: mentionsJson.present ? mentionsJson.value : this.mentionsJson,
   );
   LocalMessage copyWithCompanion(LocalMessagesCompanion data) {
     return LocalMessage(
@@ -2329,6 +2857,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       retryCount: data.retryCount.present
           ? data.retryCount.value
           : this.retryCount,
+      mentionsJson: data.mentionsJson.present
+          ? data.mentionsJson.value
+          : this.mentionsJson,
     );
   }
 
@@ -2372,7 +2903,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('senderAvatar: $senderAvatar, ')
           ..write('syncPending: $syncPending, ')
           ..write('lastEmittedAt: $lastEmittedAt, ')
-          ..write('retryCount: $retryCount')
+          ..write('retryCount: $retryCount, ')
+          ..write('mentionsJson: $mentionsJson')
           ..write(')'))
         .toString();
   }
@@ -2417,6 +2949,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     syncPending,
     lastEmittedAt,
     retryCount,
+    mentionsJson,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2459,7 +2992,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.senderAvatar == this.senderAvatar &&
           other.syncPending == this.syncPending &&
           other.lastEmittedAt == this.lastEmittedAt &&
-          other.retryCount == this.retryCount);
+          other.retryCount == this.retryCount &&
+          other.mentionsJson == this.mentionsJson);
 }
 
 class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
@@ -2501,6 +3035,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<bool> syncPending;
   final Value<DateTime?> lastEmittedAt;
   final Value<int> retryCount;
+  final Value<String?> mentionsJson;
   final Value<int> rowid;
   const LocalMessagesCompanion({
     this.clientId = const Value.absent(),
@@ -2541,6 +3076,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.syncPending = const Value.absent(),
     this.lastEmittedAt = const Value.absent(),
     this.retryCount = const Value.absent(),
+    this.mentionsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LocalMessagesCompanion.insert({
@@ -2582,6 +3118,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.syncPending = const Value.absent(),
     this.lastEmittedAt = const Value.absent(),
     this.retryCount = const Value.absent(),
+    this.mentionsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientId = Value(clientId),
        conversationID = Value(conversationID),
@@ -2626,6 +3163,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<bool>? syncPending,
     Expression<DateTime>? lastEmittedAt,
     Expression<int>? retryCount,
+    Expression<String>? mentionsJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2667,6 +3205,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (syncPending != null) 'sync_pending': syncPending,
       if (lastEmittedAt != null) 'last_emitted_at': lastEmittedAt,
       if (retryCount != null) 'retry_count': retryCount,
+      if (mentionsJson != null) 'mentions_json': mentionsJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2710,6 +3249,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<bool>? syncPending,
     Value<DateTime?>? lastEmittedAt,
     Value<int>? retryCount,
+    Value<String?>? mentionsJson,
     Value<int>? rowid,
   }) {
     return LocalMessagesCompanion(
@@ -2751,6 +3291,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       syncPending: syncPending ?? this.syncPending,
       lastEmittedAt: lastEmittedAt ?? this.lastEmittedAt,
       retryCount: retryCount ?? this.retryCount,
+      mentionsJson: mentionsJson ?? this.mentionsJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2872,6 +3413,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (retryCount.present) {
       map['retry_count'] = Variable<int>(retryCount.value);
     }
+    if (mentionsJson.present) {
+      map['mentions_json'] = Variable<String>(mentionsJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2919,6 +3463,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('syncPending: $syncPending, ')
           ..write('lastEmittedAt: $lastEmittedAt, ')
           ..write('retryCount: $retryCount, ')
+          ..write('mentionsJson: $mentionsJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6064,6 +6609,15 @@ typedef $$LocalConversationsTableCreateCompanionBuilder =
       Value<bool> isPinned,
       Value<bool> isArchived,
       Value<String> participantsJson,
+      Value<String?> description,
+      Value<int?> createdBy,
+      Value<DateTime?> metaUpdatedAt,
+      Value<bool> onlyAdminsCanSend,
+      Value<bool> onlyAdminsCanEditInfo,
+      Value<int> myRole,
+      Value<DateTime?> mutedUntil,
+      Value<bool> muteForever,
+      Value<bool> mentionsOnly,
     });
 typedef $$LocalConversationsTableUpdateCompanionBuilder =
     LocalConversationsCompanion Function({
@@ -6080,6 +6634,15 @@ typedef $$LocalConversationsTableUpdateCompanionBuilder =
       Value<bool> isPinned,
       Value<bool> isArchived,
       Value<String> participantsJson,
+      Value<String?> description,
+      Value<int?> createdBy,
+      Value<DateTime?> metaUpdatedAt,
+      Value<bool> onlyAdminsCanSend,
+      Value<bool> onlyAdminsCanEditInfo,
+      Value<int> myRole,
+      Value<DateTime?> mutedUntil,
+      Value<bool> muteForever,
+      Value<bool> mentionsOnly,
     });
 
 class $$LocalConversationsTableFilterComposer
@@ -6153,6 +6716,51 @@ class $$LocalConversationsTableFilterComposer
 
   ColumnFilters<String> get participantsJson => $composableBuilder(
     column: $table.participantsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdBy => $composableBuilder(
+    column: $table.createdBy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get metaUpdatedAt => $composableBuilder(
+    column: $table.metaUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get onlyAdminsCanSend => $composableBuilder(
+    column: $table.onlyAdminsCanSend,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get onlyAdminsCanEditInfo => $composableBuilder(
+    column: $table.onlyAdminsCanEditInfo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get myRole => $composableBuilder(
+    column: $table.myRole,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get muteForever => $composableBuilder(
+    column: $table.muteForever,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get mentionsOnly => $composableBuilder(
+    column: $table.mentionsOnly,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6230,6 +6838,51 @@ class $$LocalConversationsTableOrderingComposer
     column: $table.participantsJson,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdBy => $composableBuilder(
+    column: $table.createdBy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get metaUpdatedAt => $composableBuilder(
+    column: $table.metaUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get onlyAdminsCanSend => $composableBuilder(
+    column: $table.onlyAdminsCanSend,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get onlyAdminsCanEditInfo => $composableBuilder(
+    column: $table.onlyAdminsCanEditInfo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get myRole => $composableBuilder(
+    column: $table.myRole,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get muteForever => $composableBuilder(
+    column: $table.muteForever,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get mentionsOnly => $composableBuilder(
+    column: $table.mentionsOnly,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalConversationsTableAnnotationComposer
@@ -6297,6 +6950,47 @@ class $$LocalConversationsTableAnnotationComposer
     column: $table.participantsJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdBy =>
+      $composableBuilder(column: $table.createdBy, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get metaUpdatedAt => $composableBuilder(
+    column: $table.metaUpdatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get onlyAdminsCanSend => $composableBuilder(
+    column: $table.onlyAdminsCanSend,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get onlyAdminsCanEditInfo => $composableBuilder(
+    column: $table.onlyAdminsCanEditInfo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get myRole =>
+      $composableBuilder(column: $table.myRole, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get muteForever => $composableBuilder(
+    column: $table.muteForever,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get mentionsOnly => $composableBuilder(
+    column: $table.mentionsOnly,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalConversationsTableTableManager
@@ -6352,6 +7046,15 @@ class $$LocalConversationsTableTableManager
                 Value<bool> isPinned = const Value.absent(),
                 Value<bool> isArchived = const Value.absent(),
                 Value<String> participantsJson = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int?> createdBy = const Value.absent(),
+                Value<DateTime?> metaUpdatedAt = const Value.absent(),
+                Value<bool> onlyAdminsCanSend = const Value.absent(),
+                Value<bool> onlyAdminsCanEditInfo = const Value.absent(),
+                Value<int> myRole = const Value.absent(),
+                Value<DateTime?> mutedUntil = const Value.absent(),
+                Value<bool> muteForever = const Value.absent(),
+                Value<bool> mentionsOnly = const Value.absent(),
               }) => LocalConversationsCompanion(
                 conversID: conversID,
                 isGroup: isGroup,
@@ -6366,6 +7069,15 @@ class $$LocalConversationsTableTableManager
                 isPinned: isPinned,
                 isArchived: isArchived,
                 participantsJson: participantsJson,
+                description: description,
+                createdBy: createdBy,
+                metaUpdatedAt: metaUpdatedAt,
+                onlyAdminsCanSend: onlyAdminsCanSend,
+                onlyAdminsCanEditInfo: onlyAdminsCanEditInfo,
+                myRole: myRole,
+                mutedUntil: mutedUntil,
+                muteForever: muteForever,
+                mentionsOnly: mentionsOnly,
               ),
           createCompanionCallback:
               ({
@@ -6382,6 +7094,15 @@ class $$LocalConversationsTableTableManager
                 Value<bool> isPinned = const Value.absent(),
                 Value<bool> isArchived = const Value.absent(),
                 Value<String> participantsJson = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int?> createdBy = const Value.absent(),
+                Value<DateTime?> metaUpdatedAt = const Value.absent(),
+                Value<bool> onlyAdminsCanSend = const Value.absent(),
+                Value<bool> onlyAdminsCanEditInfo = const Value.absent(),
+                Value<int> myRole = const Value.absent(),
+                Value<DateTime?> mutedUntil = const Value.absent(),
+                Value<bool> muteForever = const Value.absent(),
+                Value<bool> mentionsOnly = const Value.absent(),
               }) => LocalConversationsCompanion.insert(
                 conversID: conversID,
                 isGroup: isGroup,
@@ -6396,6 +7117,15 @@ class $$LocalConversationsTableTableManager
                 isPinned: isPinned,
                 isArchived: isArchived,
                 participantsJson: participantsJson,
+                description: description,
+                createdBy: createdBy,
+                metaUpdatedAt: metaUpdatedAt,
+                onlyAdminsCanSend: onlyAdminsCanSend,
+                onlyAdminsCanEditInfo: onlyAdminsCanEditInfo,
+                myRole: myRole,
+                mutedUntil: mutedUntil,
+                muteForever: muteForever,
+                mentionsOnly: mentionsOnly,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -6466,6 +7196,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<bool> syncPending,
       Value<DateTime?> lastEmittedAt,
       Value<int> retryCount,
+      Value<String?> mentionsJson,
       Value<int> rowid,
     });
 typedef $$LocalMessagesTableUpdateCompanionBuilder =
@@ -6508,6 +7239,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<bool> syncPending,
       Value<DateTime?> lastEmittedAt,
       Value<int> retryCount,
+      Value<String?> mentionsJson,
       Value<int> rowid,
     });
 
@@ -6707,6 +7439,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<int> get retryCount => $composableBuilder(
     column: $table.retryCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mentionsJson => $composableBuilder(
+    column: $table.mentionsJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6909,6 +7646,11 @@ class $$LocalMessagesTableOrderingComposer
     column: $table.retryCount,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get mentionsJson => $composableBuilder(
+    column: $table.mentionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalMessagesTableAnnotationComposer
@@ -7071,6 +7813,11 @@ class $$LocalMessagesTableAnnotationComposer
     column: $table.retryCount,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get mentionsJson => $composableBuilder(
+    column: $table.mentionsJson,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalMessagesTableTableManager
@@ -7142,6 +7889,7 @@ class $$LocalMessagesTableTableManager
                 Value<bool> syncPending = const Value.absent(),
                 Value<DateTime?> lastEmittedAt = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
+                Value<String?> mentionsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion(
                 clientId: clientId,
@@ -7182,6 +7930,7 @@ class $$LocalMessagesTableTableManager
                 syncPending: syncPending,
                 lastEmittedAt: lastEmittedAt,
                 retryCount: retryCount,
+                mentionsJson: mentionsJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7224,6 +7973,7 @@ class $$LocalMessagesTableTableManager
                 Value<bool> syncPending = const Value.absent(),
                 Value<DateTime?> lastEmittedAt = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
+                Value<String?> mentionsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion.insert(
                 clientId: clientId,
@@ -7264,6 +8014,7 @@ class $$LocalMessagesTableTableManager
                 syncPending: syncPending,
                 lastEmittedAt: lastEmittedAt,
                 retryCount: retryCount,
+                mentionsJson: mentionsJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

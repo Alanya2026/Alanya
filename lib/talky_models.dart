@@ -5,6 +5,7 @@ import 'core/utils/backend_url.dart';
 import 'core/utils/contact_payload.dart';
 import 'core/utils/location_payload.dart';
 import 'core/theme/locale_controller.dart';
+import 'core/utils/self_chat.dart';
 
 // ── USER ─────────────────────────────────────────────────────────────
 
@@ -284,71 +285,177 @@ class MessageReaction {
 // Table: conversation
 // PK: conversID | isGroup | GroupName | groupPhoto | lastMessage | lastMessageAt
 
+/// Rôles dans un groupe — miroir de `conv_participants.role`.
+///
+/// Volontairement des constantes sur un `int` plutôt qu'une enum : la valeur
+/// voyage telle quelle en JSON et en base, et le gating s'écrit `role >= admin`
+/// (même style que `AdminProvider.isAdmin`, qui compare `typeCompte >= 1`).
+abstract final class GroupRole {
+  static const int member = 0;
+  static const int admin = 1;
+  static const int owner = 2;
+}
+
+/// Un membre d'une conversation, avec ses métadonnées de liaison.
+///
+/// Le rôle ne peut pas vivre sur [User] : cette classe est partagée par les
+/// contacts, l'administration, les appels et les réunions, où un rôle de groupe
+/// vaudrait 0 partout et se confondrait avec `typeCompte`.
+class Participant {
+  final User user;
+  final int role;
+  final String? joinedAt;
+
+  const Participant({
+    required this.user,
+    this.role = GroupRole.member,
+    this.joinedAt,
+  });
+
+  bool get isAdmin => role >= GroupRole.admin;
+  bool get isOwner => role == GroupRole.owner;
+
+  int get alanyaID => user.alanyaID;
+  String get nom => user.nom;
+
+  /// Le serveur aplatit le rôle dans l'objet utilisateur (`attachParticipants`),
+  /// il n'y a donc pas d'objet imbriqué à déballer.
+  factory Participant.fromJson(Map<String, dynamic> json) => Participant(
+        user: User.fromJson(json),
+        role: (json['role'] as num?)?.toInt() ?? GroupRole.member,
+        joinedAt: json['joinedAt']?.toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        ...user.toJson(),
+        'role': role,
+        if (joinedAt != null) 'joinedAt': joinedAt,
+      };
+}
+
 class Conversation {
   final int conversID;
   final bool isGroup;
   final String? groupName;
   final String? groupPhoto;
+  final String? description;
+  final int? createdBy;
   final String? lastMessage;
   final String? lastMessageAt;
   final int? lastMessageSenderID;
   final int? lastMessageType;
   final int? lastMessageStatus;
+  final String? updatedAt;
+  // Réglages de groupe
+  final bool onlyAdminsCanSend;
+  final bool onlyAdminsCanEditInfo;
   // conv_participants
   final int unreadCount;
   final bool isPinned;
   final bool isArchived;
+  final int myRole;
+  final String? mutedUntil;
+  final bool muteForever;
+  final bool mentionsOnly;
   // Jointure participants
-  final List<User> participants;
+  final List<Participant> participants;
 
   Conversation({
     required this.conversID,
     required this.isGroup,
     this.groupName,
     this.groupPhoto,
+    this.description,
+    this.createdBy,
     this.lastMessage,
     this.lastMessageAt,
     this.lastMessageSenderID,
     this.lastMessageType,
     this.lastMessageStatus,
+    this.updatedAt,
+    this.onlyAdminsCanSend = false,
+    this.onlyAdminsCanEditInfo = false,
     required this.unreadCount,
     required this.isPinned,
     required this.isArchived,
+    this.myRole = GroupRole.member,
+    this.mutedUntil,
+    this.muteForever = false,
+    this.mentionsOnly = false,
     required this.participants,
   });
 
+  static bool _flag(dynamic v) => v == 1 || v == true || v == '1';
+
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
         conversID: json['conversID'] ?? 0,
-        isGroup: json['isGroup'] == 1 || json['isGroup'] == true,
+        isGroup: _flag(json['isGroup']),
         groupName: json['GroupName'],
         groupPhoto: normalizeBackendUrl(json['groupPhoto']?.toString()),
+        description: json['description'],
+        createdBy: (json['createdBy'] as num?)?.toInt(),
         lastMessage: json['lastMessage'],
         lastMessageAt: json['lastMessageAt'],
         lastMessageSenderID: json['lastMessageSenderID'],
         lastMessageType: json['lastMessageType'],
         lastMessageStatus: json['lastMessageStatus'],
+        updatedAt: json['updatedAt']?.toString(),
+        onlyAdminsCanSend: _flag(json['onlyAdminsCanSend']),
+        onlyAdminsCanEditInfo: _flag(json['onlyAdminsCanEditInfo']),
         unreadCount: json['unreadCount'] ?? 0,
-        isPinned: json['isPinned'] == 1 || json['isPinned'] == true,
-        isArchived: json['isArchived'] == 1 || json['isArchived'] == true,
+        isPinned: _flag(json['isPinned']),
+        isArchived: _flag(json['isArchived']),
+        myRole: (json['myRole'] as num?)?.toInt() ?? GroupRole.member,
+        mutedUntil: json['mutedUntil']?.toString(),
+        muteForever: _flag(json['muteForever']),
+        mentionsOnly: _flag(json['mentionsOnly']),
         participants: (json['participants'] as List?)
-                ?.map((e) => User.fromJson(e as Map<String, dynamic>))
+                ?.map((e) => Participant.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             [],
       );
 
-  // Nom à afficher (groupe ou nom de l'autre participant)
+  bool get iAmAdmin => myRole >= GroupRole.admin;
+  bool get iAmOwner => myRole == GroupRole.owner;
+
+  /// Conversation « avec soi-même » (marqueur serveur porté par `GroupName`).
+  bool isSelfChat(int myId) {
+    if (isGroup || myId == 0) return false;
+    if (groupName != kSelfChatMarker) return false;
+    if (participants.isEmpty) return true; // payload serveur tronqué
+    return participants.any((u) => u.alanyaID == myId);
+  }
+
+  // Nom à afficher (groupe, « Moi », ou nom de l'autre participant)
   String displayName(int myId) {
-    if (isGroup) return groupName ?? LocaleController.instance.l10n.groupFallback;
+    final l10n = resolveL10n();
+    if (isGroup) return groupName ?? l10n.groupFallback;
+    if (isSelfChat(myId)) {
+      final me = participants.where((u) => u.alanyaID == myId).firstOrNull;
+      final name = me?.nom.trim();
+      return l10n.selfChatTitle(
+        name != null && name.isNotEmpty ? name : l10n.meLabel,
+      );
+    }
     final other = participants.where((u) => u.alanyaID != myId).firstOrNull;
-    return other?.nom ?? LocaleController.instance.l10n.unknownSender;
+    return other?.nom ?? l10n.unknownSender;
   }
 
   // Avatar à afficher
   String? displayAvatar(int myId) {
     if (isGroup) return groupPhoto;
-    final other = participants.where((u) => u.alanyaID != myId).firstOrNull;
-    return other?.avatarUrl;
+    final source = isSelfChat(myId)
+        ? participants.where((u) => u.alanyaID == myId).firstOrNull
+        : participants.where((u) => u.alanyaID != myId).firstOrNull;
+    return source?.user.avatarUrl;
   }
+
+  /// Mon rôle dans ce groupe, en repli sur la liste des participants quand
+  /// `myRole` n'est pas dans le payload (trame socket `conversation:updated`,
+  /// qui omet volontairement les champs par-utilisateur).
+  int roleOf(int userId) =>
+      participants.where((p) => p.alanyaID == userId).firstOrNull?.role ??
+      GroupRole.member;
 }
 
 // ── CALL ─────────────────────────────────────────────────────────────
@@ -755,7 +862,21 @@ class SocketEvents {
   static const messageStatus     = 'message:status';
   /// Sync badge non-lus entre appareils du même compte (local uniquement).
   static const inboxSync         = 'inbox:sync';
+  /// Réservé au cas « je n'avais pas cette conversation » : 1-1, création de
+  /// groupe, membre ajouté. N'est plus un upsert générique.
   static const conversationCreated = 'conversation:created';
+
+  /// Métadonnées de conversation modifiées (nom, photo, description, rôles,
+  /// réglages). La charge omet volontairement les champs par-utilisateur
+  /// (`unreadCount`, `isPinned`, `isArchived`, `lastMessage*`) : les écraser
+  /// avec une trame tardive ferait réapparaître un badge fantôme.
+  static const conversationUpdated = 'conversation:updated';
+
+  /// Un membre a quitté ou a été retiré. Indispensable en plus de
+  /// `conversation:updated` : l'exclu n'est plus dans la liste de diffusion de
+  /// ce dernier et n'apprendrait jamais son exclusion.
+  static const groupParticipantRemoved = 'group:participant:removed';
+
   static const typingStart       = 'typing:start';
   static const typingStop        = 'typing:stop';
   static const typingStarted     = 'typing:started';

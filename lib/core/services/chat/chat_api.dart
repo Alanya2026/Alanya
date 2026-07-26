@@ -39,6 +39,9 @@ abstract class ChatApi {
 
   Future<void> markConversationAsRead(int conversID);
 
+  /// Accusé de remise HTTP (rejeu des accusés déposés par la couche push).
+  Future<void> markConversationDelivered(int conversID);
+
   Future<Map<String, dynamic>> editMessage(int msgID, String content);
 
   Future<void> deleteMessages(List<int> msgIDs, {bool forAll = false});
@@ -78,4 +81,54 @@ abstract class ChatApi {
 
   /// Messages sortants status=1 côté serveur (réconciliation).
   Future<List<dynamic>> getPendingOutgoingMessages();
+
+  // ── GROUPES ───────────────────────────────────────────────────────
+  //
+  // Ces méthodes passaient auparavant en direct des écrans vers
+  // TalkyApiClient. Elles remontent ici pour que le repository soit le seul
+  // chemin d'écriture vers Drift (sinon la réponse HTTP et la trame socket
+  // s'écrivent en concurrence sur la même ligne) — et pour être testables.
+  //
+  // Toutes renvoient la conversation enrichie, à upserter telle quelle.
+
+  Future<Map<String, dynamic>> getConversation(int conversID);
+
+  Future<Map<String, dynamic>> updateGroupInfo(
+    int conversID, {
+    String? groupName,
+    String? groupPhoto,
+    String? description,
+  });
+
+  Future<Map<String, dynamic>> updateGroupSettings(
+    int conversID, {
+    bool? onlyAdminsCanSend,
+    bool? onlyAdminsCanEditInfo,
+  });
+
+  Future<Map<String, dynamic>> addParticipants(
+    int conversID,
+    List<int> participantIDs,
+  );
+
+  /// Retire un membre. Idempotent : un membre déjà parti renvoie
+  /// `{ alreadyGone: true }` et non une erreur.
+  Future<Map<String, dynamic>> removeParticipant(int conversID, int userId);
+
+  /// Promeut (1) ou rétrograde (0) un membre. Réservé au propriétaire.
+  Future<Map<String, dynamic>> setParticipantRole(
+    int conversID,
+    int userId,
+    int role,
+  );
+
+  Future<void> leaveGroup(int conversID);
+
+  Future<Map<String, dynamic>> updateConversationMute(
+    int conversID, {
+    bool unmute,
+    bool muteForever,
+    DateTime? mutedUntil,
+    bool? mentionsOnly,
+  });
 }

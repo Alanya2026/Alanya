@@ -20,6 +20,7 @@ class FakeChatApi implements ChatApi {
   Map<String, dynamic> uploadResult = const {'url': 'https://cdn.test/m.jpg'};
   Object? uploadError;
   Object? markReadError;
+  Object? markDeliveredError;
   Object? editError;
   Object? deleteError;
 
@@ -154,6 +155,12 @@ class FakeChatApi implements ChatApi {
   }
 
   @override
+  Future<void> markConversationDelivered(int conversID) async {
+    httpLog.add('markConversationDelivered:$conversID');
+    if (markDeliveredError != null) throw markDeliveredError!;
+  }
+
+  @override
   Future<Map<String, dynamic>> editMessage(int msgID, String content) async {
     httpLog.add('editMessage:$msgID');
     if (editError != null) throw editError!;
@@ -237,5 +244,134 @@ class FakeChatApi implements ChatApi {
   Future<List<dynamic>> getPendingOutgoingMessages() async {
     httpLog.add('getPendingOutgoingMessages');
     return messageStatusByClientId.values.toList();
+  }
+
+  // ── GROUPES ───────────────────────────────────────────────────────
+  //
+  // Chaque mutation renvoie la conversation enrichie que le repository
+  // upserte. Les tests règlent [conversationById] pour décrire l'état que le
+  // serveur renverra, et [groupError] pour simuler un refus d'autorisation.
+
+  /// État servi par `getConversation` et renvoyé par les mutations de groupe.
+  final Map<int, Map<String, dynamic>> conversationById = {};
+
+  /// Injecté par les tests pour simuler un 403 / 404 côté serveur.
+  Object? groupError;
+
+  Map<String, dynamic> _conv(int conversID) =>
+      conversationById[conversID] ?? {'conversID': conversID};
+
+  @override
+  Future<Map<String, dynamic>> getConversation(int conversID) async {
+    httpLog.add('getConversation:$conversID');
+    if (groupError != null) throw groupError!;
+    return _conv(conversID);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateGroupInfo(
+    int conversID, {
+    String? groupName,
+    String? groupPhoto,
+    String? description,
+  }) async {
+    httpLog.add('updateGroupInfo:$conversID');
+    if (groupError != null) throw groupError!;
+    final conv = _conv(conversID);
+    if (groupName != null) conv['GroupName'] = groupName;
+    if (groupPhoto != null) conv['groupPhoto'] = groupPhoto;
+    if (description != null) conv['description'] = description;
+    conversationById[conversID] = conv;
+    return conv;
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateGroupSettings(
+    int conversID, {
+    bool? onlyAdminsCanSend,
+    bool? onlyAdminsCanEditInfo,
+  }) async {
+    httpLog.add('updateGroupSettings:$conversID');
+    if (groupError != null) throw groupError!;
+    final conv = _conv(conversID);
+    if (onlyAdminsCanSend != null) {
+      conv['onlyAdminsCanSend'] = onlyAdminsCanSend ? 1 : 0;
+    }
+    if (onlyAdminsCanEditInfo != null) {
+      conv['onlyAdminsCanEditInfo'] = onlyAdminsCanEditInfo ? 1 : 0;
+    }
+    conversationById[conversID] = conv;
+    return conv;
+  }
+
+  @override
+  Future<Map<String, dynamic>> addParticipants(
+    int conversID,
+    List<int> participantIDs,
+  ) async {
+    httpLog.add('addParticipants:$conversID:${participantIDs.join(",")}');
+    if (groupError != null) throw groupError!;
+    return _conv(conversID);
+  }
+
+  @override
+  Future<Map<String, dynamic>> removeParticipant(
+    int conversID,
+    int userId,
+  ) async {
+    httpLog.add('removeParticipant:$conversID:$userId');
+    if (groupError != null) throw groupError!;
+    final conv = _conv(conversID);
+    final parts = (conv['participants'] as List?) ?? const [];
+    conv['participants'] =
+        parts.where((p) => (p as Map)['alanyaID'] != userId).toList();
+    conversationById[conversID] = conv;
+    return conv;
+  }
+
+  @override
+  Future<Map<String, dynamic>> setParticipantRole(
+    int conversID,
+    int userId,
+    int role,
+  ) async {
+    httpLog.add('setParticipantRole:$conversID:$userId:$role');
+    if (groupError != null) throw groupError!;
+    final conv = _conv(conversID);
+    for (final p in (conv['participants'] as List?) ?? const []) {
+      if ((p as Map)['alanyaID'] == userId) p['role'] = role;
+    }
+    conversationById[conversID] = conv;
+    return conv;
+  }
+
+  @override
+  Future<void> leaveGroup(int conversID) async {
+    httpLog.add('leaveGroup:$conversID');
+    if (groupError != null) throw groupError!;
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateConversationMute(
+    int conversID, {
+    bool unmute = false,
+    bool muteForever = false,
+    DateTime? mutedUntil,
+    bool? mentionsOnly,
+  }) async {
+    httpLog.add('updateConversationMute:$conversID:mentionsOnly=$mentionsOnly');
+    if (groupError != null) throw groupError!;
+    final conv = _conv(conversID);
+    if (unmute) {
+      conv['mutedUntil'] = null;
+      conv['muteForever'] = 0;
+    }
+    if (muteForever) conv['muteForever'] = 1;
+    if (mutedUntil != null) {
+      conv['mutedUntil'] = mutedUntil.toUtc().toIso8601String();
+    }
+    if (mentionsOnly != null) conv['mentionsOnly'] = mentionsOnly ? 1 : 0;
+    conversationById[conversID] = conv;
+    return conv;
   }
 }

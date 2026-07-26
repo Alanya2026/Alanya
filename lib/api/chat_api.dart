@@ -56,10 +56,110 @@ extension ChatHttpApi on TalkyApiClient {
     );
   }
 
+  /// Accusé de remise en HTTP. Équivalent de l'event socket `message:delivered`,
+  /// utilisé pour rejouer les accusés déposés par la couche push native quand
+  /// l'app était fermée.
+  Future<void> markConversationDelivered(int conversID) async {
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/delivered'),
+        headers: _headers,
+        body: jsonEncode({'conversationId': conversID}),
+      ),
+    );
+  }
+
+  /// Quitte le groupe. Si j'en suis le propriétaire, le serveur transmet la
+  /// propriété au plus ancien admin (à défaut au plus ancien membre) : un
+  /// groupe n'est jamais laissé sans propriétaire.
   Future<void> leaveGroup(int conversID) async {
     await _handleRequest(
       () => _client.post(Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/leave'), headers: _headers),
     );
+  }
+
+  /// Renomme le groupe / change sa photo / sa description.
+  ///
+  /// Route dédiée et non `PUT /conversations/:id` : cette dernière porte une
+  /// sémantique **par utilisateur** (épinglage, archivage) avec une règle
+  /// d'autorisation différente, et les mélanger est précisément ce qui avait
+  /// laissé n'importe qui renommer n'importe quel groupe.
+  Future<Map<String, dynamic>> updateGroupInfo(
+    int conversID, {
+    String? groupName,
+    String? groupPhoto,
+    String? description,
+  }) async {
+    final body = <String, dynamic>{};
+    if (groupName != null) body['GroupName'] = groupName;
+    if (groupPhoto != null) body['groupPhoto'] = groupPhoto;
+    if (description != null) body['description'] = description;
+    final data = await _handleRequest(
+      () => _client.patch(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/group'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Verrous du groupe : mode annonce et édition des infos réservée.
+  Future<Map<String, dynamic>> updateGroupSettings(
+    int conversID, {
+    bool? onlyAdminsCanSend,
+    bool? onlyAdminsCanEditInfo,
+  }) async {
+    final body = <String, dynamic>{};
+    if (onlyAdminsCanSend != null) {
+      body['onlyAdminsCanSend'] = onlyAdminsCanSend ? 1 : 0;
+    }
+    if (onlyAdminsCanEditInfo != null) {
+      body['onlyAdminsCanEditInfo'] = onlyAdminsCanEditInfo ? 1 : 0;
+    }
+    final data = await _handleRequest(
+      () => _client.patch(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/settings'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Retire un membre du groupe (admin ou propriétaire).
+  Future<Map<String, dynamic>> removeParticipant(
+    int conversID,
+    int userId,
+  ) async {
+    final data = await _handleRequest(
+      () => _client.delete(
+        Uri.parse(
+          '${TalkyApiClient.baseUrl}/conversations/$conversID/participants/$userId',
+        ),
+        headers: _headers,
+      ),
+    );
+    return data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+  }
+
+  /// Promeut (`role = 1`) ou rétrograde (`role = 0`) un membre.
+  /// Réservé au propriétaire côté serveur.
+  Future<Map<String, dynamic>> setParticipantRole(
+    int conversID,
+    int userId,
+    int role,
+  ) async {
+    final data = await _handleRequest(
+      () => _client.patch(
+        Uri.parse(
+          '${TalkyApiClient.baseUrl}/conversations/$conversID/participants/$userId/role',
+        ),
+        headers: _headers,
+        body: jsonEncode({'role': role}),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
   }
 
   /// Ajoute des participants à un groupe existant. Idempotent côté serveur

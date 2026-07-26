@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../services/chat/conversation_merge.dart';
 import '../utils/media_album.dart';
+import '../utils/system_event_payload.dart';
 import 'app_database.dart';
  
 class ChatDao {
@@ -70,10 +71,48 @@ class ChatDao {
           db.localMessages.senderID.equals(myId).not() &
           db.localMessages.status.isSmallerThanValue(3) &
           db.localMessages.isDeleted.equals(false) &
+          // Les messages système (« X a ajouté Y ») portent le senderID de
+          // l'acteur : sans cette exclusion, l'action d'un tiers gonflerait le
+          // badge alors que le serveur n'incrémente jamais l'unread pour eux.
+          db.localMessages.type.equals(kSystemMessageType).not() &
           (db.localMessages.deletedForID.isNull() |
               db.localMessages.deletedForID.equals(myId).not()));
     final row = await q.getSingleOrNull();
     return row?.read(countExp) ?? 0;
+  }
+
+  /// Ids des messages non lus qui me mentionnent, du plus ancien au plus
+  /// récent — l'ordre du bouton de saut, qui remonte le fil dans le sens de
+  /// lecture.
+  ///
+  /// Entièrement dérivé du cache local : aucun champ serveur, aucune requête
+  /// réseau. Le compteur suit donc `countUnread` — il tombe quand les messages
+  /// passent en lu, pas au moment du saut, et ne peut pas devenir négatif.
+  ///
+  /// Le filtrage JSON se fait en Dart : la liste de mentions non lues d'une
+  /// conversation est courte, et SQLite sans extension JSON1 garantie ne peut
+  /// pas indexer `mentionsJson` de toute façon.
+  Future<List<int>> unreadMentionMsgIds(int conversationID, int myId) async {
+    if (myId == 0) return const [];
+    final rows = await (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversationID) &
+              m.senderID.equals(myId).not() &
+              m.status.isSmallerThanValue(3) &
+              m.isDeleted.equals(false) &
+              m.type.equals(kSystemMessageType).not() &
+              m.mentionsJson.isNotNull() &
+              (m.deletedForID.isNull() | m.deletedForID.equals(myId).not()))
+          ..orderBy([(m) => OrderingTerm.asc(m.sendAt)]))
+        .get();
+
+    final ids = <int>[];
+    for (final m in rows) {
+      if (decodeMentions(m.mentionsJson).contains(myId) && m.msgID > 0) {
+        ids.add(m.msgID);
+      }
+    }
+    return ids;
   }
 
   /// Total non lus toutes conversations (badge launcher).
@@ -899,5 +938,28 @@ List<Map<String, dynamic>> decodeParticipants(String json) {
     return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
   } catch (_) {
     return [];
+  }
+}
+
+// ── Helpers de (dé)sérialisation des mentions ──────────────────────────
+//
+// Miroir de la colonne serveur `message.mentions` : `[45,46]`, ou `null` quand
+// il n'y a aucune mention (on n'écrit pas `[]`, pour que la requête du
+// compteur puisse filtrer sur `IS NOT NULL`).
+
+String? encodeMentions(List<int>? ids) =>
+    (ids == null || ids.isEmpty) ? null : jsonEncode(ids);
+
+List<int> decodeMentions(String? json) {
+  if (json == null || json.isEmpty) return const [];
+  try {
+    final decoded = jsonDecode(json);
+    if (decoded is! List) return const [];
+    return decoded
+        .map((e) => (e is num) ? e.toInt() : int.tryParse('$e'))
+        .whereType<int>()
+        .toList(growable: false);
+  } catch (_) {
+    return const [];
   }
 }

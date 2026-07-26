@@ -68,6 +68,10 @@ class TalkyChatApi implements ChatApi {
       _client.markConversationAsRead(conversID);
 
   @override
+  Future<void> markConversationDelivered(int conversID) =>
+      _client.markConversationDelivered(conversID);
+
+  @override
   Future<Map<String, dynamic>> editMessage(int msgID, String content) =>
       _client.editMessage(msgID, content);
 
@@ -140,4 +144,74 @@ class TalkyChatApi implements ChatApi {
   @override
   Future<List<dynamic>> getPendingOutgoingMessages() =>
       _client.getPendingOutgoingMessages();
+
+  // ── GROUPES ───────────────────────────────────────────────────────
+
+  @override
+  Future<Map<String, dynamic>> getConversation(int conversID) =>
+      _client.getConversation(conversID);
+
+  @override
+  Future<Map<String, dynamic>> updateGroupInfo(
+    int conversID, {
+    String? groupName,
+    String? groupPhoto,
+    String? description,
+  }) =>
+      _client.updateGroupInfo(
+        conversID,
+        groupName: groupName,
+        groupPhoto: groupPhoto,
+        description: description,
+      );
+
+  @override
+  Future<Map<String, dynamic>> updateGroupSettings(
+    int conversID, {
+    bool? onlyAdminsCanSend,
+    bool? onlyAdminsCanEditInfo,
+  }) =>
+      _client.updateGroupSettings(
+        conversID,
+        onlyAdminsCanSend: onlyAdminsCanSend,
+        onlyAdminsCanEditInfo: onlyAdminsCanEditInfo,
+      );
+
+  @override
+  Future<Map<String, dynamic>> addParticipants(
+    int conversID,
+    List<int> participantIDs,
+  ) =>
+      _client.addParticipants(conversID, participantIDs);
+
+  @override
+  Future<Map<String, dynamic>> removeParticipant(int conversID, int userId) =>
+      _client.removeParticipant(conversID, userId);
+
+  @override
+  Future<Map<String, dynamic>> setParticipantRole(
+    int conversID,
+    int userId,
+    int role,
+  ) =>
+      _client.setParticipantRole(conversID, userId, role);
+
+  @override
+  Future<void> leaveGroup(int conversID) => _client.leaveGroup(conversID);
+
+  @override
+  Future<Map<String, dynamic>> updateConversationMute(
+    int conversID, {
+    bool unmute = false,
+    bool muteForever = false,
+    DateTime? mutedUntil,
+    bool? mentionsOnly,
+  }) =>
+      _client.updateConversationMute(
+        conversID,
+        unmute: unmute,
+        muteForever: muteForever,
+        mutedUntil: mutedUntil,
+        mentionsOnly: mentionsOnly,
+      );
 }

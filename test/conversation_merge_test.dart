@@ -26,6 +26,11 @@ void main() {
         isPinned: false,
         isArchived: false,
         participantsJson: '[]',
+        onlyAdminsCanSend: false,
+        onlyAdminsCanEditInfo: false,
+        myRole: 0,
+        muteForever: false,
+        mentionsOnly: false,
       );
     }
 

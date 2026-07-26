@@ -23,7 +23,32 @@ class LocalConversations extends Table {
   IntColumn get unreadCount => integer().withDefault(const Constant(0))();
   BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
+
+  /// Participants sérialisés tels que renvoyés par le serveur. Le `role` de
+  /// chacun voyage dedans : aucune colonne dédiée n'est nécessaire.
   TextColumn get participantsJson => text().withDefault(const Constant('[]'))();
+
+  // ── Groupe (migration 024) ──────────────────────────────────────────
+  TextColumn get description => text().nullable()();
+  IntColumn get createdBy => integer().nullable()();
+
+  /// `conversation.updatedAt` serveur. Garde anti-réordonnancement : une trame
+  /// `conversation:updated` plus ancienne que ce qu'on a déjà est ignorée.
+  DateTimeColumn get metaUpdatedAt => dateTime().nullable()();
+
+  BoolColumn get onlyAdminsCanSend =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get onlyAdminsCanEditInfo =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Mon rôle : 0=membre, 1=admin, 2=propriétaire (voir `GroupRole`).
+  IntColumn get myRole => integer().withDefault(const Constant(0))();
+
+  // ── Sourdine (le client ne la stockait pas jusqu'ici) ───────────────
+  DateTimeColumn get mutedUntil => dateTime().nullable()();
+  BoolColumn get muteForever => boolean().withDefault(const Constant(false))();
+  BoolColumn get mentionsOnly =>
+      boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {conversID};
@@ -120,6 +145,13 @@ class LocalMessages extends Table {
   
   /// Nombre de tentatives de retry pour ce message (failed -> retry).
   IntColumn get retryCount => integer().withDefault(const Constant(0))();
+
+  /// Ids mentionnés, sérialisés (`[45,46]`), miroir de `message.mentions`.
+  ///
+  /// Persisté et pas seulement dérivé du texte : `flushOutbox` reconstruit
+  /// l'émission depuis cette ligne, et une mention envoyée hors ligne perdrait
+  /// sinon sa notification au rejeu.
+  TextColumn get mentionsJson => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};
@@ -250,7 +282,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -370,6 +402,22 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 14) {
             await _createLocalMessagesIndexes(m.database);
+          }
+          if (from < 15) {
+            // Groupes enrichis (migration serveur 024). Que des addColumn :
+            // le cache existant n'est pas vidé.
+            await m.addColumn(localConversations, localConversations.description);
+            await m.addColumn(localConversations, localConversations.createdBy);
+            await m.addColumn(localConversations, localConversations.metaUpdatedAt);
+            await m.addColumn(
+                localConversations, localConversations.onlyAdminsCanSend);
+            await m.addColumn(
+                localConversations, localConversations.onlyAdminsCanEditInfo);
+            await m.addColumn(localConversations, localConversations.myRole);
+            await m.addColumn(localConversations, localConversations.mutedUntil);
+            await m.addColumn(localConversations, localConversations.muteForever);
+            await m.addColumn(localConversations, localConversations.mentionsOnly);
+            await m.addColumn(localMessages, localMessages.mentionsJson);
           }
         },
       );
