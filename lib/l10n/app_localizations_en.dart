@@ -2910,4 +2910,126 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get convMuteFailed => 'Could not update mute settings';
+
+  @override
+  String sysGroupCreated(String actor, String value) {
+    return '$actor created the group “$value”';
+  }
+
+  @override
+  String sysGroupCreatedByMe(String value) {
+    return 'You created the group “$value”';
+  }
+
+  @override
+  String sysMemberAdded(String actor, String targets) {
+    return '$actor added $targets';
+  }
+
+  @override
+  String sysMemberAddedByMe(String targets) {
+    return 'You added $targets';
+  }
+
+  @override
+  String sysMemberRemoved(String actor, String targets) {
+    return '$actor removed $targets';
+  }
+
+  @override
+  String sysMemberRemovedByMe(String targets) {
+    return 'You removed $targets';
+  }
+
+  @override
+  String sysMemberLeft(String actor) {
+    return '$actor left the group';
+  }
+
+  @override
+  String get sysMemberLeftByMe => 'You left the group';
+
+  @override
+  String sysGroupRenamed(String actor, String value) {
+    return '$actor renamed the group to “$value”';
+  }
+
+  @override
+  String sysGroupRenamedByMe(String value) {
+    return 'You renamed the group to “$value”';
+  }
+
+  @override
+  String sysGroupPhotoChanged(String actor) {
+    return '$actor changed the group photo';
+  }
+
+  @override
+  String get sysGroupPhotoChangedByMe => 'You changed the group photo';
+
+  @override
+  String sysGroupDescriptionChanged(String actor) {
+    return '$actor changed the description';
+  }
+
+  @override
+  String get sysGroupDescriptionChangedByMe => 'You changed the description';
+
+  @override
+  String sysRolePromoted(String actor, String targets) {
+    return '$actor made $targets an admin';
+  }
+
+  @override
+  String sysRolePromotedByMe(String targets) {
+    return 'You made $targets an admin';
+  }
+
+  @override
+  String sysRoleDemoted(String actor, String targets) {
+    return '$actor dismissed $targets as admin';
+  }
+
+  @override
+  String sysRoleDemotedByMe(String targets) {
+    return 'You dismissed $targets as admin';
+  }
+
+  @override
+  String sysOnlyAdminsSendOn(String actor) {
+    return '$actor restricted sending to admins';
+  }
+
+  @override
+  String get sysOnlyAdminsSendOnByMe => 'You restricted sending to admins';
+
+  @override
+  String sysOnlyAdminsSendOff(String actor) {
+    return '$actor allowed everyone to send messages';
+  }
+
+  @override
+  String get sysOnlyAdminsSendOffByMe =>
+      'You allowed everyone to send messages';
+
+  @override
+  String sysOnlyAdminsEditOn(String actor) {
+    return '$actor restricted editing group info to admins';
+  }
+
+  @override
+  String get sysOnlyAdminsEditOnByMe =>
+      'You restricted editing group info to admins';
+
+  @override
+  String sysOnlyAdminsEditOff(String actor) {
+    return '$actor allowed everyone to edit group info';
+  }
+
+  @override
+  String get sysOnlyAdminsEditOffByMe =>
+      'You allowed everyone to edit group info';
+
+  @override
+  String get sysGroupEventFallback => 'The group was updated';
 }

@@ -130,6 +130,14 @@ extension _ChatBubbles on _ChatDetailScreenState {
     bool isMe, {
     List<LocalMessageReaction> reactions = const [],
   }) {
+    // Court-circuit AVANT toute logique `isMe` : un message système porte le
+    // senderID de l'acteur, donc mes propres actions s'aligneraient à droite
+    // dans une bulle bleue. Il n'a ni expéditeur affiché, ni réactions, ni
+    // menu contextuel, ni swipe-répondre.
+    if (msg.type == kSystemMessageType) {
+      return _buildSystemMessage(msg);
+    }
+
     final selected = _isMessageSelected(msg);
     final selectable = _isSelectableMessage(msg);
     final reactionGroups = groupReactions(reactions, _myId ?? 0);
@@ -341,6 +349,41 @@ extension _ChatBubbles on _ChatDetailScreenState {
         borderRadius: AppRadius.brSm,
       ),
       child: Text(label, style: context.text.labelSmall),
+    );
+  }
+
+  /// Événement de groupe rendu au centre du fil, sans bulle ni expéditeur.
+  ///
+  /// Calqué sur [_buildDateSeparator] : même surface atténuée, même typo. Le
+  /// contenu est un payload JSON traduit ici, dans la langue du lecteur — le
+  /// serveur ne stocke jamais de phrase pré-rendue.
+  Widget _buildSystemMessage(LocalMessage msg) {
+    final payload = SystemEventPayload.tryParse(msg.content);
+    // Événement inconnu d'une version serveur plus récente, ou JSON illisible :
+    // on n'affiche rien plutôt que du texte brut.
+    final label = payload?.label(_myId ?? 0, context.l10n);
+    if (label == null || label.isEmpty) return const SizedBox.shrink();
+
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.8,
+        ),
+        decoration: BoxDecoration(
+          color: context.semantic.surfaceMuted,
+          borderRadius: AppRadius.brSm,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: context.text.labelSmall
+              ?.copyWith(color: context.colors.onSurfaceVariant),
+        ),
+      ),
     );
   }
 

@@ -2933,4 +2933,128 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get convMuteFailed => 'Impossible de modifier le mute';
+
+  @override
+  String sysGroupCreated(String actor, String value) {
+    return '$actor a créé le groupe « $value »';
+  }
+
+  @override
+  String sysGroupCreatedByMe(String value) {
+    return 'Vous avez créé le groupe « $value »';
+  }
+
+  @override
+  String sysMemberAdded(String actor, String targets) {
+    return '$actor a ajouté $targets';
+  }
+
+  @override
+  String sysMemberAddedByMe(String targets) {
+    return 'Vous avez ajouté $targets';
+  }
+
+  @override
+  String sysMemberRemoved(String actor, String targets) {
+    return '$actor a retiré $targets';
+  }
+
+  @override
+  String sysMemberRemovedByMe(String targets) {
+    return 'Vous avez retiré $targets';
+  }
+
+  @override
+  String sysMemberLeft(String actor) {
+    return '$actor a quitté le groupe';
+  }
+
+  @override
+  String get sysMemberLeftByMe => 'Vous avez quitté le groupe';
+
+  @override
+  String sysGroupRenamed(String actor, String value) {
+    return '$actor a renommé le groupe en « $value »';
+  }
+
+  @override
+  String sysGroupRenamedByMe(String value) {
+    return 'Vous avez renommé le groupe en « $value »';
+  }
+
+  @override
+  String sysGroupPhotoChanged(String actor) {
+    return '$actor a changé la photo du groupe';
+  }
+
+  @override
+  String get sysGroupPhotoChangedByMe => 'Vous avez changé la photo du groupe';
+
+  @override
+  String sysGroupDescriptionChanged(String actor) {
+    return '$actor a modifié la description';
+  }
+
+  @override
+  String get sysGroupDescriptionChangedByMe =>
+      'Vous avez modifié la description';
+
+  @override
+  String sysRolePromoted(String actor, String targets) {
+    return '$actor a nommé $targets administrateur';
+  }
+
+  @override
+  String sysRolePromotedByMe(String targets) {
+    return 'Vous avez nommé $targets administrateur';
+  }
+
+  @override
+  String sysRoleDemoted(String actor, String targets) {
+    return '$actor a retiré les droits d\'administrateur à $targets';
+  }
+
+  @override
+  String sysRoleDemotedByMe(String targets) {
+    return 'Vous avez retiré les droits d\'administrateur à $targets';
+  }
+
+  @override
+  String sysOnlyAdminsSendOn(String actor) {
+    return '$actor a réservé l\'envoi aux administrateurs';
+  }
+
+  @override
+  String get sysOnlyAdminsSendOnByMe =>
+      'Vous avez réservé l\'envoi aux administrateurs';
+
+  @override
+  String sysOnlyAdminsSendOff(String actor) {
+    return '$actor a autorisé tout le monde à écrire';
+  }
+
+  @override
+  String get sysOnlyAdminsSendOffByMe =>
+      'Vous avez autorisé tout le monde à écrire';
+
+  @override
+  String sysOnlyAdminsEditOn(String actor) {
+    return '$actor a réservé la modification des infos aux administrateurs';
+  }
+
+  @override
+  String get sysOnlyAdminsEditOnByMe =>
+      'Vous avez réservé la modification des infos aux administrateurs';
+
+  @override
+  String sysOnlyAdminsEditOff(String actor) {
+    return '$actor a autorisé tout le monde à modifier les infos';
+  }
+
+  @override
+  String get sysOnlyAdminsEditOffByMe =>
+      'Vous avez autorisé tout le monde à modifier les infos';
+
+  @override
+  String get sysGroupEventFallback => 'Le groupe a été mis à jour';
 }

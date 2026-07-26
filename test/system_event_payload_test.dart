@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/utils/system_event_payload.dart';
+import 'package:talky_flutter/l10n/app_localizations.dart';
 
 /// Le `content` d'un message système est un JSON machine-lisible, jamais une
 /// phrase pré-rendue : le fil doit s'afficher dans la langue du lecteur, pas
@@ -134,6 +136,121 @@ void main() {
   group('kSystemMessageType', () {
     test('vaut 6 — le seul code libre entre localisation (5) et contact (7)', () {
       expect(kSystemMessageType, 6);
+    });
+  });
+
+  // Le libellé est rendu dans la langue DU LECTEUR : le serveur ne stocke
+  // jamais de phrase pré-rendue.
+  group('SystemEventPayload.label', () {
+    late AppLocalizations fr;
+    late AppLocalizations en;
+
+    setUp(() {
+      fr = lookupAppLocalizations(const Locale('fr'));
+      en = lookupAppLocalizations(const Locale('en'));
+    });
+
+    SystemEventPayload parse(Map<String, dynamic> p) =>
+        SystemEventPayload.tryParse(encode(p))!;
+
+    const me = 7;
+
+    test('acteur tiers → phrase à la troisième personne', () {
+      final p = parse({
+        'e': 'member_added',
+        'by': 12,
+        'byName': 'Chris',
+        'ids': [45],
+        'names': ['Marc'],
+      });
+      expect(p.label(me, fr), 'Chris a ajouté Marc');
+      expect(p.label(me, en), 'Chris added Marc');
+    });
+
+    // En français, substituer « Vous » à l'acteur donnerait « Vous a ajouté ».
+    // D'où deux clés par événement plutôt qu'un placeholder.
+    test('acteur = moi → formulation à la première personne, conjuguée', () {
+      final p = parse({
+        'e': 'member_added',
+        'by': me,
+        'byName': 'Moi',
+        'ids': [45],
+        'names': ['Marc'],
+      });
+      expect(p.label(me, fr), 'Vous avez ajouté Marc');
+      expect(p.label(me, en), 'You added Marc');
+    });
+
+    test('plusieurs cibles → noms joints', () {
+      final p = parse({
+        'e': 'member_removed',
+        'by': 12,
+        'byName': 'Chris',
+        'ids': [45, 46],
+        'names': ['Marc', 'Léa'],
+      });
+      expect(p.label(me, fr), 'Chris a retiré Marc, Léa');
+    });
+
+    test('role_changed distingue promotion et rétrogradation', () {
+      expect(
+        parse({
+          'e': 'role_changed',
+          'by': 12,
+          'byName': 'Chris',
+          'ids': [45],
+          'names': ['Marc'],
+          'role': 1,
+        }).label(me, fr),
+        'Chris a nommé Marc administrateur',
+      );
+      expect(
+        parse({
+          'e': 'role_changed',
+          'by': 12,
+          'byName': 'Chris',
+          'ids': [45],
+          'names': ['Marc'],
+          'role': 0,
+        }).label(me, fr),
+        "Chris a retiré les droits d'administrateur à Marc",
+      );
+    });
+
+    test('settings_changed distingue le verrou et son sens', () {
+      expect(
+        parse({'e': 'settings_changed', 'by': 12, 'byName': 'Chris', 'lock': 'send', 'on': 1})
+            .label(me, fr),
+        "Chris a réservé l'envoi aux administrateurs",
+      );
+      expect(
+        parse({'e': 'settings_changed', 'by': 12, 'byName': 'Chris', 'lock': 'send', 'on': 0})
+            .label(me, fr),
+        'Chris a autorisé tout le monde à écrire',
+      );
+      expect(
+        parse({'e': 'settings_changed', 'by': 12, 'byName': 'Chris', 'lock': 'edit', 'on': 1})
+            .label(me, fr),
+        'Chris a réservé la modification des infos aux administrateurs',
+      );
+    });
+
+    test('member_left sans cible → phrase complète quand même', () {
+      final p = parse({'e': 'member_left', 'by': 12, 'byName': 'Chris'});
+      expect(p.label(me, fr), 'Chris a quitté le groupe');
+      expect(p.label(12, fr), 'Vous avez quitté le groupe');
+    });
+
+    // Payload d'une version antérieure : on préfère une phrase générique à une
+    // phrase amputée (« Chris a ajouté »).
+    test('cibles manquantes → repli générique, jamais de phrase tronquée', () {
+      final p = parse({'e': 'member_added', 'by': 12, 'byName': 'Chris', 'ids': [45]});
+      expect(p.label(me, fr), 'Le groupe a été mis à jour');
+    });
+
+    test('nom d\'acteur vide → repli sur « expéditeur inconnu »', () {
+      final p = parse({'e': 'member_left', 'by': 12, 'byName': '   '});
+      expect(p.label(me, fr), contains(fr.unknownSender));
     });
   });
 }

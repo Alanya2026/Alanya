@@ -5197,6 +5197,168 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible de modifier le mute'**
   String get convMuteFailed;
+
+  /// No description provided for @sysGroupCreated.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a créé le groupe « {value} »'**
+  String sysGroupCreated(String actor, String value);
+
+  /// No description provided for @sysGroupCreatedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez créé le groupe « {value} »'**
+  String sysGroupCreatedByMe(String value);
+
+  /// No description provided for @sysMemberAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a ajouté {targets}'**
+  String sysMemberAdded(String actor, String targets);
+
+  /// No description provided for @sysMemberAddedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez ajouté {targets}'**
+  String sysMemberAddedByMe(String targets);
+
+  /// No description provided for @sysMemberRemoved.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a retiré {targets}'**
+  String sysMemberRemoved(String actor, String targets);
+
+  /// No description provided for @sysMemberRemovedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez retiré {targets}'**
+  String sysMemberRemovedByMe(String targets);
+
+  /// No description provided for @sysMemberLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a quitté le groupe'**
+  String sysMemberLeft(String actor);
+
+  /// No description provided for @sysMemberLeftByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez quitté le groupe'**
+  String get sysMemberLeftByMe;
+
+  /// No description provided for @sysGroupRenamed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a renommé le groupe en « {value} »'**
+  String sysGroupRenamed(String actor, String value);
+
+  /// No description provided for @sysGroupRenamedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez renommé le groupe en « {value} »'**
+  String sysGroupRenamedByMe(String value);
+
+  /// No description provided for @sysGroupPhotoChanged.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a changé la photo du groupe'**
+  String sysGroupPhotoChanged(String actor);
+
+  /// No description provided for @sysGroupPhotoChangedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez changé la photo du groupe'**
+  String get sysGroupPhotoChangedByMe;
+
+  /// No description provided for @sysGroupDescriptionChanged.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a modifié la description'**
+  String sysGroupDescriptionChanged(String actor);
+
+  /// No description provided for @sysGroupDescriptionChangedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez modifié la description'**
+  String get sysGroupDescriptionChangedByMe;
+
+  /// No description provided for @sysRolePromoted.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a nommé {targets} administrateur'**
+  String sysRolePromoted(String actor, String targets);
+
+  /// No description provided for @sysRolePromotedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez nommé {targets} administrateur'**
+  String sysRolePromotedByMe(String targets);
+
+  /// No description provided for @sysRoleDemoted.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a retiré les droits d\'administrateur à {targets}'**
+  String sysRoleDemoted(String actor, String targets);
+
+  /// No description provided for @sysRoleDemotedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez retiré les droits d\'administrateur à {targets}'**
+  String sysRoleDemotedByMe(String targets);
+
+  /// No description provided for @sysOnlyAdminsSendOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a réservé l\'envoi aux administrateurs'**
+  String sysOnlyAdminsSendOn(String actor);
+
+  /// No description provided for @sysOnlyAdminsSendOnByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez réservé l\'envoi aux administrateurs'**
+  String get sysOnlyAdminsSendOnByMe;
+
+  /// No description provided for @sysOnlyAdminsSendOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a autorisé tout le monde à écrire'**
+  String sysOnlyAdminsSendOff(String actor);
+
+  /// No description provided for @sysOnlyAdminsSendOffByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez autorisé tout le monde à écrire'**
+  String get sysOnlyAdminsSendOffByMe;
+
+  /// No description provided for @sysOnlyAdminsEditOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a réservé la modification des infos aux administrateurs'**
+  String sysOnlyAdminsEditOn(String actor);
+
+  /// No description provided for @sysOnlyAdminsEditOnByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez réservé la modification des infos aux administrateurs'**
+  String get sysOnlyAdminsEditOnByMe;
+
+  /// No description provided for @sysOnlyAdminsEditOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a autorisé tout le monde à modifier les infos'**
+  String sysOnlyAdminsEditOff(String actor);
+
+  /// No description provided for @sysOnlyAdminsEditOffByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez autorisé tout le monde à modifier les infos'**
+  String get sysOnlyAdminsEditOffByMe;
+
+  /// No description provided for @sysGroupEventFallback.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le groupe a été mis à jour'**
+  String get sysGroupEventFallback;
 }
 
 class _AppLocalizationsDelegate

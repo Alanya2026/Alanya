@@ -7,7 +7,10 @@ part of '../chat_detail_screen.dart';
 const List<String> _quickReactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 extension _ChatActions on _ChatDetailScreenState {
-  bool _isSelectableMessage(LocalMessage msg) => msg.msgID > 0 && !msg.isDeleted;
+  /// Un message système n'est ni sélectionnable, ni transférable, ni
+  /// supprimable : ce n'est pas un contenu, c'est une trace d'événement.
+  bool _isSelectableMessage(LocalMessage msg) =>
+      msg.msgID > 0 && !msg.isDeleted && msg.type != kSystemMessageType;
 
   bool _isMessageSelected(LocalMessage msg) =>
       _selectedMsgIDs.contains(msg.msgID);
@@ -264,6 +267,13 @@ extension _ChatActions on _ChatDetailScreenState {
     if (m.type == 5) return locationPreviewLabel(m.content);
     // Contact : JSON — ne jamais exposer le content brut.
     if (m.type == 7) return contactPreviewLabel(m.content);
+    // Message système : JSON aussi. Le swipe-répondre est déjà neutralisé par
+    // le court-circuit de rendu, mais la citation reste protégée ici.
+    if (m.type == kSystemMessageType) {
+      return SystemEventPayload.tryParse(m.content)
+              ?.label(_myId ?? 0, context.l10n) ??
+          '';
+    }
     // Item d'album : aperçu du média seul (pas du groupe).
     if (isAlbumMarkerContent(m.content)) {
       return _mediaLabel(m.type, mediaName: m.mediaName);
@@ -1125,32 +1135,84 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _pickFile() async {
-    final res = await FilePicker.platform.pickFiles(withData: false);
-    final path = res?.files.single.path;
-    if (path != null) _sendMediaFile(File(path), type: 4, name: res!.files.single.name);
+    final res = await FilePicker.platform.pickFiles(
+      withData: false,
+      allowMultiple: true,
+    );
+    await _sendPickedFiles(res?.files, type: 4);
   }
 
-  /// Import d'un morceau : envoyé en `type = 3` comme un vocal, c'est le nom
-  /// de fichier qui le distinguera à l'affichage.
+  /// Import de morceaux : envoyés en `type = 3` comme un vocal, c'est le nom
+  /// de fichier qui les distinguera à l'affichage.
   Future<void> _pickMusic() async {
     final res = await FilePicker.platform.pickFiles(
       type: FileType.audio,
       withData: false,
+      allowMultiple: true,
     );
-    final picked = res?.files.single;
-    final path = picked?.path;
-    if (path == null) return;
+    await _sendPickedFiles(res?.files, type: 3);
+  }
 
-    // Sans durée lue ici, la bulle afficherait 0:00 avant la première lecture.
-    final durSec = await MusicMetadataService.durationSeconds(path);
+  /// Envoie une sélection de documents / morceaux : un message par fichier
+  /// (pas d'album — le regroupement ne couvre que les photos et vidéos).
+  Future<void> _sendPickedFiles(
+    List<PlatformFile>? picked, {
+    required int type,
+  }) async {
+    if (picked == null || picked.isEmpty || _myId == null) return;
+
+    const max = ChatRepository.maxAlbumItems;
+    if (picked.length > max && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${context.l10n.maxFiles(max)} ${context.l10n.albumFirstOnly(max)}',
+          ),
+        ),
+      );
+    }
+
+    final items = <AlbumSendItem>[];
+    var skipped = 0;
+    for (final file in picked.take(max)) {
+      final path = file.path;
+      if (path == null) continue;
+
+      final local = File(path);
+      final size = local.existsSync() ? local.lengthSync() : 0;
+      if (size > _maxMediaBytes) {
+        skipped++;
+        continue;
+      }
+
+      // Sans durée lue ici, la bulle afficherait 0:00 avant la première lecture.
+      final durSec =
+          type == 3 ? await MusicMetadataService.durationSeconds(path) : null;
+      items.add(AlbumSendItem(
+        file: local,
+        type: type,
+        mediaName: file.name,
+        duration: durSec,
+      ));
+    }
+
     if (!mounted) return;
+    if (skipped > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.l10n.filesSkippedTooLarge(skipped)),
+        backgroundColor: AppColors.error,
+      ));
+    }
+    if (items.isEmpty) return;
 
-    await _sendMediaFile(
-      File(path),
-      type: 3,
-      name: picked!.name,
-      duration: durSec,
+    final convId = await _ensureConversation();
+    if (convId == null) return;
+
+    await _chat.repository.sendMediaFiles(
+      conversationID: convId,
+      items: items,
     );
+    _scrollToBottom();
   }
 
   Future<void> _sendMediaFile(
@@ -1166,6 +1228,7 @@ extension _ChatActions on _ChatDetailScreenState {
     // Vérif de taille (locale, instantanée) AVANT le son : pas de son si rejeté.
     final size = file.existsSync() ? file.lengthSync() : 0;
     if (size > _maxMediaBytes) {
+      if (!mounted) return;
       final mb = (size / (1024 * 1024)).toStringAsFixed(1);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(context.l10n.fileTooLarge(mb)),

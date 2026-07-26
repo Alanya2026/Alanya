@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../l10n/app_localizations.dart';
+
 /// Type de message réservé aux événements de groupe (« X a ajouté Y »).
 ///
 /// Le 6 était le seul code libre entre la localisation (5) et la carte de
@@ -127,6 +129,91 @@ class SystemEventPayload {
 
   bool get hasTargetNames =>
       targetNames.any((n) => n.trim().isNotEmpty);
+
+  /// Phrase affichée dans le fil, dans la langue **du lecteur**.
+  ///
+  /// [myId] sélectionne la variante `…ByMe` : en français, substituer « Vous »
+  /// à l'acteur produirait « Vous a ajouté ». Deux clés par événement, donc.
+  ///
+  /// Renvoie `null` quand la phrase serait vide de sens (cibles manquantes sur
+  /// un événement qui en exige) : l'appelant n'affiche alors aucune bulle.
+  String? label(int myId, AppLocalizations l10n) {
+    final byMe = actorId != 0 && actorId == myId;
+    final actor = actorName.trim().isNotEmpty
+        ? actorName.trim()
+        : l10n.unknownSender;
+    final targets = targetLabel(separator: ', ');
+    final v = value ?? '';
+
+    switch (event) {
+      case SystemEvent.groupCreated:
+        return byMe ? l10n.sysGroupCreatedByMe(v) : l10n.sysGroupCreated(actor, v);
+
+      case SystemEvent.memberAdded:
+        if (!hasTargetNames) return l10n.sysGroupEventFallback;
+        return byMe
+            ? l10n.sysMemberAddedByMe(targets)
+            : l10n.sysMemberAdded(actor, targets);
+
+      case SystemEvent.memberRemoved:
+        if (!hasTargetNames) return l10n.sysGroupEventFallback;
+        return byMe
+            ? l10n.sysMemberRemovedByMe(targets)
+            : l10n.sysMemberRemoved(actor, targets);
+
+      case SystemEvent.memberLeft:
+        return byMe ? l10n.sysMemberLeftByMe : l10n.sysMemberLeft(actor);
+
+      case SystemEvent.groupRenamed:
+        return byMe ? l10n.sysGroupRenamedByMe(v) : l10n.sysGroupRenamed(actor, v);
+
+      case SystemEvent.groupPhotoChanged:
+        return byMe
+            ? l10n.sysGroupPhotoChangedByMe
+            : l10n.sysGroupPhotoChanged(actor);
+
+      case SystemEvent.groupDescriptionChanged:
+        return byMe
+            ? l10n.sysGroupDescriptionChangedByMe
+            : l10n.sysGroupDescriptionChanged(actor);
+
+      case SystemEvent.roleChanged:
+        if (!hasTargetNames) return l10n.sysGroupEventFallback;
+        final promoted = (role ?? 0) >= 1;
+        if (promoted) {
+          return byMe
+              ? l10n.sysRolePromotedByMe(targets)
+              : l10n.sysRolePromoted(actor, targets);
+        }
+        return byMe
+            ? l10n.sysRoleDemotedByMe(targets)
+            : l10n.sysRoleDemoted(actor, targets);
+
+      case SystemEvent.settingsChanged:
+        if (lock == 'send') {
+          if (lockEnabled) {
+            return byMe
+                ? l10n.sysOnlyAdminsSendOnByMe
+                : l10n.sysOnlyAdminsSendOn(actor);
+          }
+          return byMe
+              ? l10n.sysOnlyAdminsSendOffByMe
+              : l10n.sysOnlyAdminsSendOff(actor);
+        }
+        if (lock == 'edit') {
+          if (lockEnabled) {
+            return byMe
+                ? l10n.sysOnlyAdminsEditOnByMe
+                : l10n.sysOnlyAdminsEditOn(actor);
+          }
+          return byMe
+              ? l10n.sysOnlyAdminsEditOffByMe
+              : l10n.sysOnlyAdminsEditOff(actor);
+        }
+        return l10n.sysGroupEventFallback;
+    }
+    return null;
+  }
 
   static List<int> _intList(Object? raw) {
     if (raw is! List) return const [];

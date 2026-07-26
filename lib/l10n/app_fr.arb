@@ -1848,5 +1848,183 @@
       }
     }
   },
-  "convMuteFailed": "Impossible de modifier le mute"
+  "convMuteFailed": "Impossible de modifier le mute",
+  "sysGroupCreated": "{actor} a créé le groupe « {value} »",
+  "@sysGroupCreated": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "sysGroupCreatedByMe": "Vous avez créé le groupe « {value} »",
+  "@sysGroupCreatedByMe": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "sysMemberAdded": "{actor} a ajouté {targets}",
+  "@sysMemberAdded": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "targets": {
+        "type": "String"
+      }
+    }
+  },
+  "sysMemberAddedByMe": "Vous avez ajouté {targets}",
+  "@sysMemberAddedByMe": {
+    "placeholders": {
+      "targets": {
+        "type": "String"
+      }
+    }
+  },
+  "sysMemberRemoved": "{actor} a retiré {targets}",
+  "@sysMemberRemoved": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "targets": {
+        "type": "String"
+      }
+    }
+  },
+  "sysMemberRemovedByMe": "Vous avez retiré {targets}",
+  "@sysMemberRemovedByMe": {
+    "placeholders": {
+      "targets": {
+        "type": "String"
+      }
+    }
+  },
+  "sysMemberLeft": "{actor} a quitté le groupe",
+  "@sysMemberLeft": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysMemberLeftByMe": "Vous avez quitté le groupe",
+  "sysGroupRenamed": "{actor} a renommé le groupe en « {value} »",
+  "@sysGroupRenamed": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "sysGroupRenamedByMe": "Vous avez renommé le groupe en « {value} »",
+  "@sysGroupRenamedByMe": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "sysGroupPhotoChanged": "{actor} a changé la photo du groupe",
+  "@sysGroupPhotoChanged": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysGroupPhotoChangedByMe": "Vous avez changé la photo du groupe",
+  "sysGroupDescriptionChanged": "{actor} a modifié la description",
+  "@sysGroupDescriptionChanged": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysGroupDescriptionChangedByMe": "Vous avez modifié la description",
+  "sysRolePromoted": "{actor} a nommé {targets} administrateur",
+  "@sysRolePromoted": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "targets": {
+        "type": "String"
+      }
+    }
+  },
+  "sysRolePromotedByMe": "Vous avez nommé {targets} administrateur",
+  "@sysRolePromotedByMe": {
+    "placeholders": {
+      "targets": {
+        "type": "String"
+      }
+    }
+  },
+  "sysRoleDemoted": "{actor} a retiré les droits d'administrateur à {targets}",
+  "@sysRoleDemoted": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "targets": {
+        "type": "String"
+      }
+    }
+  },
+  "sysRoleDemotedByMe": "Vous avez retiré les droits d'administrateur à {targets}",
+  "@sysRoleDemotedByMe": {
+    "placeholders": {
+      "targets": {
+        "type": "String"
+      }
+    }
+  },
+  "sysOnlyAdminsSendOn": "{actor} a réservé l'envoi aux administrateurs",
+  "@sysOnlyAdminsSendOn": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysOnlyAdminsSendOnByMe": "Vous avez réservé l'envoi aux administrateurs",
+  "sysOnlyAdminsSendOff": "{actor} a autorisé tout le monde à écrire",
+  "@sysOnlyAdminsSendOff": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysOnlyAdminsSendOffByMe": "Vous avez autorisé tout le monde à écrire",
+  "sysOnlyAdminsEditOn": "{actor} a réservé la modification des infos aux administrateurs",
+  "@sysOnlyAdminsEditOn": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysOnlyAdminsEditOnByMe": "Vous avez réservé la modification des infos aux administrateurs",
+  "sysOnlyAdminsEditOff": "{actor} a autorisé tout le monde à modifier les infos",
+  "@sysOnlyAdminsEditOff": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysOnlyAdminsEditOffByMe": "Vous avez autorisé tout le monde à modifier les infos",
+  "sysGroupEventFallback": "Le groupe a été mis à jour"
 }
