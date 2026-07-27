@@ -10,6 +10,7 @@ import '../../core/services/ringtone_preferences.dart';
 import 'privacy_screen.dart';
 import 'notification_settings_screen.dart';
 import 'ringtone_settings_screen.dart';
+import 'account_security_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -29,6 +30,50 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           AppSpacing.vGapLg,
+          _SettingsGroup(
+            title: l10n.accountSecurityTitle,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.sm,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: context.semantic.surfaceMuted,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.shield_outlined,
+                  color: context.colors.onSurfaceVariant,
+                  size: AppIconSize.md,
+                ),
+              ),
+              title: Text(
+                l10n.accountSecurityTitle,
+                style: context.text.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                l10n.accountSecuritySubtitle,
+                style: context.text.bodySmall?.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: context.colors.outlineVariant,
+              ),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AccountSecurityScreen(),
+                ),
+              ),
+            ),
+          ),
+          AppSpacing.vGapXxl,
           _SettingsGroup(
             title: l10n.settingsAppearance,
             child: Padding(

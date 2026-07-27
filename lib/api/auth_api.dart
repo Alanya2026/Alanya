@@ -3,7 +3,7 @@ part of '../talky_api_client.dart';
 
 extension AuthApi on TalkyApiClient {
   Future<Map<String, dynamic>> register({
-    required String email,
+    String? email,
     required String password,
     String? nom,
     String? pseudo,
@@ -12,11 +12,12 @@ extension AuthApi on TalkyApiClient {
     String? deviceId,
   }) async {
     final deviceModel = await TalkyApiClient._currentDeviceModel();
+    final cleanEmail = email?.trim();
     final response = await _client.post(
       Uri.parse('${TalkyApiClient.baseUrl}/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'email': email,
+        if (cleanEmail != null && cleanEmail.isNotEmpty) 'email': cleanEmail,
         'password': password,
         if (nom != null) 'nom': nom,
         if (pseudo != null) 'pseudo': pseudo,
@@ -94,6 +95,54 @@ extension AuthApi on TalkyApiClient {
       }),
     );
     return _parseResponse(response);
+  }
+
+  /// Demande un OTP pour ajouter ou remplacer l'email du compte connecté.
+  Future<Map<String, dynamic>> requestEmailChangeOtp(String email) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/me/email/request-otp'),
+        headers: _headers,
+        body: jsonEncode({'email': email.trim()}),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Confirme l'OTP et applique le nouvel email.
+  Future<Map<String, dynamic>> confirmEmailChange({
+    required String email,
+    required String otp,
+  }) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/me/email/confirm'),
+        headers: _headers,
+        body: jsonEncode({
+          'email': email.trim(),
+          'otp': otp.trim(),
+        }),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Change le mot de passe (authentifié).
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final data = await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/me/password'),
+        headers: _headers,
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
   }
 
   Future<Map<String, dynamic>> getMe() async {

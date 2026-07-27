@@ -14,6 +14,8 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/country_selector_tile.dart';
+import '../../widgets/account/warning_banner.dart';
+import 'change_email_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -341,6 +343,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     controller: _pseudoController,
                     validator: Validators.required,
+                  ),
+                  AppSpacing.vGapXxl,
+                  if ((_user?.email.trim().isEmpty ?? true)) ...[
+                    WarningBanner(
+                      message: context.l10n.emailMissingRecoveryBanner,
+                    ),
+                    AppSpacing.vGapLg,
+                  ],
+                  InkWell(
+                    onTap: () async {
+                      final auth = context.read<AuthProvider>();
+                      final ok = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ChangeEmailScreen(),
+                        ),
+                      );
+                      if (ok == true && mounted) {
+                        await auth.refreshProfile();
+                        if (!mounted) return;
+                        _hydrateFromAuth();
+                      }
+                    },
+                    borderRadius: AppRadius.brSm,
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: context.l10n.emailLabel,
+                        prefixIcon: Icon(
+                          (_user?.email.trim().isNotEmpty ?? false)
+                              ? Icons.email_outlined
+                              : Icons.warning_amber_rounded,
+                          color: (_user?.email.trim().isNotEmpty ?? false)
+                              ? null
+                              : context.colors.error,
+                        ),
+                        suffixIcon: Icon(
+                          Icons.chevron_right,
+                          color: context.colors.outlineVariant,
+                        ),
+                        helperText: (_user?.email.trim().isEmpty ?? true)
+                            ? context.l10n.emailNeededForRecovery
+                            : null,
+                      ),
+                      child: Text(
+                        (_user?.email.trim().isNotEmpty ?? false)
+                            ? _user!.email.trim()
+                            : context.l10n.emailNotSet,
+                        style: context.text.bodyLarge?.copyWith(
+                          color: (_user?.email.trim().isNotEmpty ?? false)
+                              ? context.colors.onSurface
+                              : context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   ),
                   AppSpacing.vGapXxl,
                   TextField(

@@ -5539,6 +5539,198 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Messages non lus'**
   String get unreadMessagesSeparator;
+
+  /// No description provided for @signupEmailOptionalHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail (optionnel)'**
+  String get signupEmailOptionalHint;
+
+  /// No description provided for @signupEmailOptionalSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Uniquement pour récupérer votre mot de passe'**
+  String get signupEmailOptionalSubtitle;
+
+  /// No description provided for @signupNoEmailWarningTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans adresse e-mail'**
+  String get signupNoEmailWarningTitle;
+
+  /// No description provided for @signupNoEmailWarningBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans e-mail, vous ne pourrez pas récupérer votre compte si vous oubliez votre numéro Alanya ou votre mot de passe.'**
+  String get signupNoEmailWarningBody;
+
+  /// No description provided for @signupAddEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un e-mail'**
+  String get signupAddEmail;
+
+  /// No description provided for @signupContinueWithoutEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get signupContinueWithoutEmail;
+
+  /// No description provided for @signupCredentialsNoEmailReminder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans e-mail, la récupération de compte est impossible. Vous pourrez en ajouter un à tout moment dans Profil → Compte → Modifier le profil (vérification par code OTP).'**
+  String get signupCredentialsNoEmailReminder;
+
+  /// No description provided for @signupCredentialsEmailOk.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre e-mail pourra servir à récupérer votre mot de passe en cas d\'oubli.'**
+  String get signupCredentialsEmailOk;
+
+  /// No description provided for @emailLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'E-mail'**
+  String get emailLabel;
+
+  /// No description provided for @emailNotSet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non renseigné'**
+  String get emailNotSet;
+
+  /// No description provided for @emailNeededForRecovery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nécessaire pour récupérer votre mot de passe'**
+  String get emailNeededForRecovery;
+
+  /// No description provided for @emailMissingRecoveryBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune adresse e-mail : vous ne pourrez pas récupérer votre compte en cas d\'oubli d\'identifiants.'**
+  String get emailMissingRecoveryBanner;
+
+  /// No description provided for @accountSecurityTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compte et sécurité'**
+  String get accountSecurityTitle;
+
+  /// No description provided for @accountSecuritySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'E-mail et mot de passe'**
+  String get accountSecuritySubtitle;
+
+  /// No description provided for @changeEmailTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail'**
+  String get changeEmailTitle;
+
+  /// No description provided for @changeEmailSubtitleAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez une adresse pour pouvoir récupérer votre mot de passe.'**
+  String get changeEmailSubtitleAdd;
+
+  /// No description provided for @changeEmailSubtitleReplace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un code de vérification sera envoyé à la nouvelle adresse.'**
+  String get changeEmailSubtitleReplace;
+
+  /// No description provided for @changeEmailSendCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le code'**
+  String get changeEmailSendCode;
+
+  /// No description provided for @changeEmailOtpTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de vérification'**
+  String get changeEmailOtpTitle;
+
+  /// No description provided for @changeEmailOtpSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez le code envoyé à {email}'**
+  String changeEmailOtpSubtitle(String email);
+
+  /// No description provided for @changeEmailResendCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renvoyer le code'**
+  String get changeEmailResendCode;
+
+  /// No description provided for @changeEmailConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer'**
+  String get changeEmailConfirm;
+
+  /// No description provided for @changeEmailSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail mise à jour'**
+  String get changeEmailSuccess;
+
+  /// No description provided for @changePasswordTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer le mot de passe'**
+  String get changePasswordTitle;
+
+  /// No description provided for @changePasswordSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le mot de passe actuel est requis'**
+  String get changePasswordSubtitle;
+
+  /// No description provided for @changePasswordCurrent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe actuel'**
+  String get changePasswordCurrent;
+
+  /// No description provided for @changePasswordNew.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau mot de passe'**
+  String get changePasswordNew;
+
+  /// No description provided for @changePasswordConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer le nouveau mot de passe'**
+  String get changePasswordConfirm;
+
+  /// No description provided for @changePasswordSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get changePasswordSubmit;
+
+  /// No description provided for @changePasswordSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe modifié'**
+  String get changePasswordSuccess;
+
+  /// No description provided for @changePasswordSameAsCurrent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le nouveau mot de passe doit être différent de l\'actuel'**
+  String get changePasswordSameAsCurrent;
+
+  /// No description provided for @profileNoEmailChip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez un e-mail pour sécuriser votre compte'**
+  String get profileNoEmailChip;
 }
 
 class _AppLocalizationsDelegate

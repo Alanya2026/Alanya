@@ -2077,5 +2077,44 @@
   },
   "mentionYou": "Vous",
   "jumpToMention": "Aller à la mention suivante",
-  "unreadMessagesSeparator": "Messages non lus"
+  "unreadMessagesSeparator": "Messages non lus",
+
+  "signupEmailOptionalHint": "Adresse e-mail (optionnel)",
+  "signupEmailOptionalSubtitle": "Uniquement pour récupérer votre mot de passe",
+  "signupNoEmailWarningTitle": "Sans adresse e-mail",
+  "signupNoEmailWarningBody": "Sans e-mail, vous ne pourrez pas récupérer votre compte si vous oubliez votre numéro Alanya ou votre mot de passe.",
+  "signupAddEmail": "Ajouter un e-mail",
+  "signupContinueWithoutEmail": "Continuer",
+  "signupCredentialsNoEmailReminder": "Sans e-mail, la récupération de compte est impossible. Vous pourrez en ajouter un à tout moment dans Profil → Compte → Modifier le profil (vérification par code OTP).",
+  "signupCredentialsEmailOk": "Votre e-mail pourra servir à récupérer votre mot de passe en cas d'oubli.",
+
+  "emailLabel": "E-mail",
+  "emailNotSet": "Non renseigné",
+  "emailNeededForRecovery": "Nécessaire pour récupérer votre mot de passe",
+  "emailMissingRecoveryBanner": "Aucune adresse e-mail : vous ne pourrez pas récupérer votre compte en cas d'oubli d'identifiants.",
+  "accountSecurityTitle": "Compte et sécurité",
+  "accountSecuritySubtitle": "E-mail et mot de passe",
+  "changeEmailTitle": "Adresse e-mail",
+  "changeEmailSubtitleAdd": "Ajoutez une adresse pour pouvoir récupérer votre mot de passe.",
+  "changeEmailSubtitleReplace": "Un code de vérification sera envoyé à la nouvelle adresse.",
+  "changeEmailSendCode": "Envoyer le code",
+  "changeEmailOtpTitle": "Code de vérification",
+  "changeEmailOtpSubtitle": "Saisissez le code envoyé à {email}",
+  "@changeEmailOtpSubtitle": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "changeEmailResendCode": "Renvoyer le code",
+  "changeEmailConfirm": "Confirmer",
+  "changeEmailSuccess": "Adresse e-mail mise à jour",
+  "changePasswordTitle": "Changer le mot de passe",
+  "changePasswordSubtitle": "Le mot de passe actuel est requis",
+  "changePasswordCurrent": "Mot de passe actuel",
+  "changePasswordNew": "Nouveau mot de passe",
+  "changePasswordConfirm": "Confirmer le nouveau mot de passe",
+  "changePasswordSubmit": "Enregistrer",
+  "changePasswordSuccess": "Mot de passe modifié",
+  "changePasswordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'actuel",
+  "profileNoEmailChip": "Ajoutez un e-mail pour sécuriser votre compte"
 }

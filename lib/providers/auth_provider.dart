@@ -255,7 +255,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> register({
-    required String email,
+    String? email,
     required String password,
     required String nom,
     required String pseudo,
@@ -265,8 +265,9 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
 
     try {
+      final cleanEmail = email?.trim();
       await _apiClient.register(
-        email: email,
+        email: (cleanEmail == null || cleanEmail.isEmpty) ? null : cleanEmail,
         password: password,
         nom: nom,
         pseudo: pseudo,
@@ -292,6 +293,31 @@ class AuthProvider extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Demande un OTP pour ajouter / remplacer l'email.
+  Future<void> requestEmailChange(String email) async {
+    await _apiClient.requestEmailChangeOtp(email);
+  }
+
+  /// Confirme l'OTP et rafraîchit le profil.
+  Future<void> confirmEmailChange({
+    required String email,
+    required String otp,
+  }) async {
+    await _apiClient.confirmEmailChange(email: email, otp: otp);
+    await refreshProfile();
+  }
+
+  /// Change le mot de passe (mot de passe actuel requis).
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _apiClient.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
   }
 
   /// Upload une nouvelle photo de profil puis rafraîchit le user.

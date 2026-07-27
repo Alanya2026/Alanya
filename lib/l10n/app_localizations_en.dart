@@ -3132,4 +3132,110 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unreadMessagesSeparator => 'Unread messages';
+
+  @override
+  String get signupEmailOptionalHint => 'Email address (optional)';
+
+  @override
+  String get signupEmailOptionalSubtitle =>
+      'Only used to recover your password';
+
+  @override
+  String get signupNoEmailWarningTitle => 'No email address';
+
+  @override
+  String get signupNoEmailWarningBody =>
+      'Without an email, you will not be able to recover your account if you forget your Alanya number or password.';
+
+  @override
+  String get signupAddEmail => 'Add an email';
+
+  @override
+  String get signupContinueWithoutEmail => 'Continue';
+
+  @override
+  String get signupCredentialsNoEmailReminder =>
+      'Without an email, account recovery is impossible. You can add one anytime in Profile → Account → Edit profile (OTP verification).';
+
+  @override
+  String get signupCredentialsEmailOk =>
+      'Your email can be used to recover your password if you forget it.';
+
+  @override
+  String get emailLabel => 'Email';
+
+  @override
+  String get emailNotSet => 'Not set';
+
+  @override
+  String get emailNeededForRecovery => 'Required to recover your password';
+
+  @override
+  String get emailMissingRecoveryBanner =>
+      'No email address: you will not be able to recover your account if you forget your credentials.';
+
+  @override
+  String get accountSecurityTitle => 'Account & security';
+
+  @override
+  String get accountSecuritySubtitle => 'Email and password';
+
+  @override
+  String get changeEmailTitle => 'Email address';
+
+  @override
+  String get changeEmailSubtitleAdd =>
+      'Add an address so you can recover your password.';
+
+  @override
+  String get changeEmailSubtitleReplace =>
+      'A verification code will be sent to the new address.';
+
+  @override
+  String get changeEmailSendCode => 'Send code';
+
+  @override
+  String get changeEmailOtpTitle => 'Verification code';
+
+  @override
+  String changeEmailOtpSubtitle(String email) {
+    return 'Enter the code sent to $email';
+  }
+
+  @override
+  String get changeEmailResendCode => 'Resend code';
+
+  @override
+  String get changeEmailConfirm => 'Confirm';
+
+  @override
+  String get changeEmailSuccess => 'Email address updated';
+
+  @override
+  String get changePasswordTitle => 'Change password';
+
+  @override
+  String get changePasswordSubtitle => 'Current password required';
+
+  @override
+  String get changePasswordCurrent => 'Current password';
+
+  @override
+  String get changePasswordNew => 'New password';
+
+  @override
+  String get changePasswordConfirm => 'Confirm new password';
+
+  @override
+  String get changePasswordSubmit => 'Save';
+
+  @override
+  String get changePasswordSuccess => 'Password updated';
+
+  @override
+  String get changePasswordSameAsCurrent =>
+      'New password must be different from the current one';
+
+  @override
+  String get profileNoEmailChip => 'Add an email to secure your account';
 }

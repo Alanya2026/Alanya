@@ -1195,5 +1195,44 @@
   },
   "mentionYou": "You",
   "jumpToMention": "Go to next mention",
-  "unreadMessagesSeparator": "Unread messages"
+  "unreadMessagesSeparator": "Unread messages",
+
+  "signupEmailOptionalHint": "Email address (optional)",
+  "signupEmailOptionalSubtitle": "Only used to recover your password",
+  "signupNoEmailWarningTitle": "No email address",
+  "signupNoEmailWarningBody": "Without an email, you will not be able to recover your account if you forget your Alanya number or password.",
+  "signupAddEmail": "Add an email",
+  "signupContinueWithoutEmail": "Continue",
+  "signupCredentialsNoEmailReminder": "Without an email, account recovery is impossible. You can add one anytime in Profile → Account → Edit profile (OTP verification).",
+  "signupCredentialsEmailOk": "Your email can be used to recover your password if you forget it.",
+
+  "emailLabel": "Email",
+  "emailNotSet": "Not set",
+  "emailNeededForRecovery": "Required to recover your password",
+  "emailMissingRecoveryBanner": "No email address: you will not be able to recover your account if you forget your credentials.",
+  "accountSecurityTitle": "Account & security",
+  "accountSecuritySubtitle": "Email and password",
+  "changeEmailTitle": "Email address",
+  "changeEmailSubtitleAdd": "Add an address so you can recover your password.",
+  "changeEmailSubtitleReplace": "A verification code will be sent to the new address.",
+  "changeEmailSendCode": "Send code",
+  "changeEmailOtpTitle": "Verification code",
+  "changeEmailOtpSubtitle": "Enter the code sent to {email}",
+  "@changeEmailOtpSubtitle": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "changeEmailResendCode": "Resend code",
+  "changeEmailConfirm": "Confirm",
+  "changeEmailSuccess": "Email address updated",
+  "changePasswordTitle": "Change password",
+  "changePasswordSubtitle": "Current password required",
+  "changePasswordCurrent": "Current password",
+  "changePasswordNew": "New password",
+  "changePasswordConfirm": "Confirm new password",
+  "changePasswordSubmit": "Save",
+  "changePasswordSuccess": "Password updated",
+  "changePasswordSameAsCurrent": "New password must be different from the current one",
+  "profileNoEmailChip": "Add an email to secure your account"
 }

@@ -22,6 +22,13 @@ class Validators {
     return ok ? null : (l10n?.validatorEmail ?? LocaleController.instance.l10n.validatorEmail);
   }
 
+  /// Email facultatif : vide = OK ; sinon même format que [email].
+  static String? optionalEmail(String? v, {AppLocalizations? l10n}) {
+    if (v == null || v.trim().isEmpty) return null;
+    final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim());
+    return ok ? null : (l10n?.validatorEmail ?? LocaleController.instance.l10n.validatorEmail);
+  }
+
   static String? minLength(
     String? v,
     int n, {

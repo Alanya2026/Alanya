@@ -3160,4 +3160,112 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get unreadMessagesSeparator => 'Messages non lus';
+
+  @override
+  String get signupEmailOptionalHint => 'Adresse e-mail (optionnel)';
+
+  @override
+  String get signupEmailOptionalSubtitle =>
+      'Uniquement pour récupérer votre mot de passe';
+
+  @override
+  String get signupNoEmailWarningTitle => 'Sans adresse e-mail';
+
+  @override
+  String get signupNoEmailWarningBody =>
+      'Sans e-mail, vous ne pourrez pas récupérer votre compte si vous oubliez votre numéro Alanya ou votre mot de passe.';
+
+  @override
+  String get signupAddEmail => 'Ajouter un e-mail';
+
+  @override
+  String get signupContinueWithoutEmail => 'Continuer';
+
+  @override
+  String get signupCredentialsNoEmailReminder =>
+      'Sans e-mail, la récupération de compte est impossible. Vous pourrez en ajouter un à tout moment dans Profil → Compte → Modifier le profil (vérification par code OTP).';
+
+  @override
+  String get signupCredentialsEmailOk =>
+      'Votre e-mail pourra servir à récupérer votre mot de passe en cas d\'oubli.';
+
+  @override
+  String get emailLabel => 'E-mail';
+
+  @override
+  String get emailNotSet => 'Non renseigné';
+
+  @override
+  String get emailNeededForRecovery =>
+      'Nécessaire pour récupérer votre mot de passe';
+
+  @override
+  String get emailMissingRecoveryBanner =>
+      'Aucune adresse e-mail : vous ne pourrez pas récupérer votre compte en cas d\'oubli d\'identifiants.';
+
+  @override
+  String get accountSecurityTitle => 'Compte et sécurité';
+
+  @override
+  String get accountSecuritySubtitle => 'E-mail et mot de passe';
+
+  @override
+  String get changeEmailTitle => 'Adresse e-mail';
+
+  @override
+  String get changeEmailSubtitleAdd =>
+      'Ajoutez une adresse pour pouvoir récupérer votre mot de passe.';
+
+  @override
+  String get changeEmailSubtitleReplace =>
+      'Un code de vérification sera envoyé à la nouvelle adresse.';
+
+  @override
+  String get changeEmailSendCode => 'Envoyer le code';
+
+  @override
+  String get changeEmailOtpTitle => 'Code de vérification';
+
+  @override
+  String changeEmailOtpSubtitle(String email) {
+    return 'Saisissez le code envoyé à $email';
+  }
+
+  @override
+  String get changeEmailResendCode => 'Renvoyer le code';
+
+  @override
+  String get changeEmailConfirm => 'Confirmer';
+
+  @override
+  String get changeEmailSuccess => 'Adresse e-mail mise à jour';
+
+  @override
+  String get changePasswordTitle => 'Changer le mot de passe';
+
+  @override
+  String get changePasswordSubtitle => 'Le mot de passe actuel est requis';
+
+  @override
+  String get changePasswordCurrent => 'Mot de passe actuel';
+
+  @override
+  String get changePasswordNew => 'Nouveau mot de passe';
+
+  @override
+  String get changePasswordConfirm => 'Confirmer le nouveau mot de passe';
+
+  @override
+  String get changePasswordSubmit => 'Enregistrer';
+
+  @override
+  String get changePasswordSuccess => 'Mot de passe modifié';
+
+  @override
+  String get changePasswordSameAsCurrent =>
+      'Le nouveau mot de passe doit être différent de l\'actuel';
+
+  @override
+  String get profileNoEmailChip =>
+      'Ajoutez un e-mail pour sécuriser votre compte';
 }

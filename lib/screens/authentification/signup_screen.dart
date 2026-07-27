@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/account/warning_banner.dart';
 import '../../widgets/country_selector_tile.dart';
 import '../home/home_screen.dart';
 
@@ -27,6 +28,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _pseudoController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocus = FocusNode();
   bool _obscurePassword = true;
   List<Pays> _countries = const [];
   Pays? _selectedCountry;
@@ -45,6 +47,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _pseudoController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
     super.dispose();
   }
 
@@ -77,14 +80,49 @@ class _SignupScreenState extends State<SignupScreen> {
       _countries.isNotEmpty &&
       _selectedCountry != null;
 
-  Future<void> _signup() async {
+  Future<void> _onSubmitPressed() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final country = _selectedCountry;
     if (country == null) return;
 
+    final emailEmpty = _emailController.text.trim().isEmpty;
+    if (emailEmpty) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(ctx.l10n.signupNoEmailWarningTitle),
+          content: WarningBanner(
+            message: ctx.l10n.signupNoEmailWarningBody,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(ctx.l10n.signupAddEmail),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(ctx.l10n.signupContinueWithoutEmail),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) {
+        if (mounted) _emailFocus.requestFocus();
+        return;
+      }
+    }
+
+    await _signup();
+  }
+
+  Future<void> _signup() async {
+    final country = _selectedCountry;
+    if (country == null) return;
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final emailTrim = _emailController.text.trim();
     await authProvider.register(
-      email: _emailController.text.trim(),
+      email: emailTrim.isEmpty ? null : emailTrim,
       password: _passwordController.text,
       nom: _nameController.text.trim(),
       pseudo: _pseudoController.text.trim(),
@@ -95,55 +133,68 @@ class _SignupScreenState extends State<SignupScreen> {
 
     final alanyaPhone = authProvider.currentUser?.alanyaPhone ?? '';
     final password = _passwordController.text;
+    final signedUpWithoutEmail = emailTrim.isEmpty;
+
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         title: Text(context.l10n.yourSignInCredentials),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              context.l10n.saveTheseDetailsYouWillNeed,
-              textAlign: TextAlign.center,
-            ),
-            AppSpacing.vGapXl,
-            Text(
-              context.l10n.alanyaPhone,
-              textAlign: TextAlign.center,
-              style: context.text.labelMedium?.copyWith(
-                color: context.colors.onSurfaceVariant,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                context.l10n.saveTheseDetailsYouWillNeed,
+                textAlign: TextAlign.center,
               ),
-            ),
-            AppSpacing.vGapSm,
-            AlanyaPhoneText(
-              alanyaPhone,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 4,
-                color: AppColors.brandPrimary,
+              AppSpacing.vGapXl,
+              Text(
+                context.l10n.alanyaPhone,
+                textAlign: TextAlign.center,
+                style: context.text.labelMedium?.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
               ),
-            ),
-            AppSpacing.vGapXl,
-            Text(
-              context.l10n.signupPasswordHint,
-              textAlign: TextAlign.center,
-              style: context.text.labelMedium?.copyWith(
-                color: context.colors.onSurfaceVariant,
+              AppSpacing.vGapSm,
+              AlanyaPhoneText(
+                alanyaPhone,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 4,
+                  color: AppColors.brandPrimary,
+                ),
               ),
-            ),
-            AppSpacing.vGapSm,
-            Text(
-              password,
-              textAlign: TextAlign.center,
-              style: context.text.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
+              AppSpacing.vGapXl,
+              Text(
+                context.l10n.signupPasswordHint,
+                textAlign: TextAlign.center,
+                style: context.text.labelMedium?.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
               ),
-            ),
-          ],
+              AppSpacing.vGapSm,
+              Text(
+                password,
+                textAlign: TextAlign.center,
+                style: context.text.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              AppSpacing.vGapXl,
+              WarningBanner(
+                variant: signedUpWithoutEmail
+                    ? WarningBannerVariant.error
+                    : WarningBannerVariant.info,
+                message: signedUpWithoutEmail
+                    ? context.l10n.signupCredentialsNoEmailReminder
+                    : context.l10n.signupCredentialsEmailOk,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -215,11 +266,13 @@ class _SignupScreenState extends State<SignupScreen> {
               AppSpacing.vGapLg,
               TextFormField(
                 controller: _emailController,
+                focusNode: _emailFocus,
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
-                validator: (v) => Validators.email(v, l10n: l10n),
+                validator: (v) => Validators.optionalEmail(v, l10n: l10n),
                 decoration: InputDecoration(
-                  hintText: l10n?.signupEmailHint ?? context.l10n.signupEmailHint,
+                  hintText: context.l10n.signupEmailOptionalHint,
+                  helperText: context.l10n.signupEmailOptionalSubtitle,
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
@@ -287,7 +340,7 @@ class _SignupScreenState extends State<SignupScreen> {
               AppSpacing.vGapXxl,
               Consumer<AuthProvider>(
                 builder: (context, auth, _) => ElevatedButton(
-                  onPressed: auth.isLoading || !_canSubmit ? null : _signup,
+                  onPressed: auth.isLoading || !_canSubmit ? null : _onSubmitPressed,
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
                     shape: const RoundedRectangleBorder(

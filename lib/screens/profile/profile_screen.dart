@@ -134,6 +134,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
               user: user,
               isLoading: isLoading,
             ),
+            if (!isLoading &&
+                user != null &&
+                user.email.trim().isEmpty) ...[
+              AppSpacing.vGapMd,
+              Padding(
+                padding: AppSpacing.screenH,
+                child: Material(
+                  color: context.colors.errorContainer,
+                  borderRadius: AppRadius.brSm,
+                  child: InkWell(
+                    borderRadius: AppRadius.brSm,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            size: AppIconSize.sm,
+                            color: context.colors.onErrorContainer,
+                          ),
+                          AppSpacing.hGapSm,
+                          Expanded(
+                            child: Text(
+                              context.l10n.profileNoEmailChip,
+                              style: context.text.bodySmall?.copyWith(
+                                color: context.colors.onErrorContainer,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
+                            size: AppIconSize.sm,
+                            color: context.colors.onErrorContainer,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             AppSpacing.vGapXl,
 
             StreamBuilder<List<LocalUser>>(
