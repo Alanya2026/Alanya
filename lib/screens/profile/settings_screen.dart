@@ -378,6 +378,7 @@ class _SettingsGroup extends StatelessWidget {
           ),
         ),
         Container(
+          width: double.infinity,
           color: context.colors.surface,
           child: child,
         ),

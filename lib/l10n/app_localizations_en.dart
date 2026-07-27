@@ -857,7 +857,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchByNameUsernameOrPhone =>
-      'Search by name, username or phone…';
+      'Search by name, username or Alanya ID…';
 
   @override
   String get assignAReservedNumberOptional =>
@@ -1015,7 +1015,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noConversationToDelete => 'No conversation to delete';
 
   @override
-  String get phoneAlanyaPhone => 'Phone (Alanya phone)';
+  String get phoneAlanyaPhone => 'Alanya ID';
 
   @override
   String get noOtherMembersToCall => 'No other members to call';
@@ -1225,7 +1225,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addACaption => 'Add a caption…';
 
   @override
-  String get alanyaNumberRequired => 'Alanya number required';
+  String get alanyaNumberRequired => 'Alanya ID required';
 
   @override
   String get selectACountry => 'Select a country';
@@ -1423,7 +1423,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newMeeting => 'New meeting';
 
   @override
-  String get alanyaPhone => 'Alanya phone';
+  String get alanyaPhone => 'Alanya ID';
 
   @override
   String get deletedMessage => 'Deleted message';
@@ -3145,7 +3145,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signupNoEmailWarningBody =>
-      'Without an email, you will not be able to recover your account if you forget your Alanya number or password.';
+      'Without an email, you will not be able to recover your account if you forget your Alanya ID or password.';
 
   @override
   String get signupAddEmail => 'Add an email';
@@ -3192,6 +3192,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'A verification code will be sent to the new address.';
 
   @override
+  String get changeEmailCurrentLabel => 'Current address';
+
+  @override
+  String get changeEmailNewLabel => 'New email address';
+
+  @override
+  String get changeEmailAddLabel => 'Your email address';
+
+  @override
+  String get changeEmailStep1 => '1. Address';
+
+  @override
+  String get changeEmailStep2 => '2. Verification';
+
+  @override
+  String get changeEmailWhyOtp =>
+      'To confirm you own this address, a 6-digit code will be sent by email.';
+
+  @override
+  String get changeEmailCheckInbox =>
+      'Open your inbox and enter the code you received. Check spam too.';
+
+  @override
+  String get changeEmailEditAddress => 'Edit address';
+
+  @override
   String get changeEmailSendCode => 'Send code';
 
   @override
@@ -3206,7 +3232,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeEmailResendCode => 'Resend code';
 
   @override
-  String get changeEmailConfirm => 'Confirm';
+  String get changeEmailConfirm => 'Verify and save';
 
   @override
   String get changeEmailSuccess => 'Email address updated';

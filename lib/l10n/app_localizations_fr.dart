@@ -869,7 +869,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get searchByNameUsernameOrPhone =>
-      'Rechercher par nom, pseudo ou téléphone…';
+      'Rechercher par nom, pseudo ou ID Alanya…';
 
   @override
   String get assignAReservedNumberOptional =>
@@ -1034,7 +1034,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get noConversationToDelete => 'Aucune discussion à supprimer';
 
   @override
-  String get phoneAlanyaPhone => 'Téléphone (Téléphone Alanya)';
+  String get phoneAlanyaPhone => 'ID Alanya';
 
   @override
   String get noOtherMembersToCall => 'Aucun autre membre à appeler';
@@ -1243,7 +1243,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addACaption => 'Ajouter une légende…';
 
   @override
-  String get alanyaNumberRequired => 'Numéro Alanya requis';
+  String get alanyaNumberRequired => 'ID Alanya requis';
 
   @override
   String get selectACountry => 'Sélectionnez un pays';
@@ -1441,7 +1441,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get newMeeting => 'Nouvelle réunion';
 
   @override
-  String get alanyaPhone => 'Téléphone Alanya';
+  String get alanyaPhone => 'ID Alanya';
 
   @override
   String get deletedMessage => 'Message supprimé';
@@ -3173,7 +3173,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get signupNoEmailWarningBody =>
-      'Sans e-mail, vous ne pourrez pas récupérer votre compte si vous oubliez votre numéro Alanya ou votre mot de passe.';
+      'Sans e-mail, vous ne pourrez pas récupérer votre compte si vous oubliez votre ID Alanya ou votre mot de passe.';
 
   @override
   String get signupAddEmail => 'Ajouter un e-mail';
@@ -3221,6 +3221,32 @@ class AppLocalizationsFr extends AppLocalizations {
       'Un code de vérification sera envoyé à la nouvelle adresse.';
 
   @override
+  String get changeEmailCurrentLabel => 'Adresse actuelle';
+
+  @override
+  String get changeEmailNewLabel => 'Nouvelle adresse e-mail';
+
+  @override
+  String get changeEmailAddLabel => 'Votre adresse e-mail';
+
+  @override
+  String get changeEmailStep1 => '1. Adresse';
+
+  @override
+  String get changeEmailStep2 => '2. Vérification';
+
+  @override
+  String get changeEmailWhyOtp =>
+      'Pour confirmer que vous avez accès à cette adresse, un code à 6 chiffres vous sera envoyé par e-mail.';
+
+  @override
+  String get changeEmailCheckInbox =>
+      'Ouvrez votre boîte mail et saisissez le code reçu. Vérifiez aussi les spams.';
+
+  @override
+  String get changeEmailEditAddress => 'Modifier l\'adresse';
+
+  @override
   String get changeEmailSendCode => 'Envoyer le code';
 
   @override
@@ -3235,7 +3261,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get changeEmailResendCode => 'Renvoyer le code';
 
   @override
-  String get changeEmailConfirm => 'Confirmer';
+  String get changeEmailConfirm => 'Valider et enregistrer';
 
   @override
   String get changeEmailSuccess => 'Adresse e-mail mise à jour';

@@ -378,9 +378,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ? null
                               : context.colors.error,
                         ),
-                        suffixIcon: Icon(
-                          Icons.chevron_right,
-                          color: context.colors.outlineVariant,
+                        suffixIcon: Padding(
+                          padding: const EdgeInsets.only(right: AppSpacing.sm),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                (_user?.email.trim().isNotEmpty ?? false)
+                                    ? context.l10n.changeEmailEditAddress
+                                    : context.l10n.signupAddEmail,
+                                style: context.text.labelMedium?.copyWith(
+                                  color: context.colors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                color: context.colors.primary,
+                              ),
+                            ],
+                          ),
                         ),
                         helperText: (_user?.email.trim().isEmpty ?? true)
                             ? context.l10n.emailNeededForRecovery
@@ -403,7 +420,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     readOnly: true,
                     decoration: InputDecoration(
                       labelText: context.l10n.phoneAlanyaPhone,
-                      prefixIcon: Icon(Icons.phone_outlined),
+                      prefixIcon: Icon(Icons.badge_outlined),
                     ),
                     controller: TextEditingController(
                         text: AlanyaPhoneFormatter.formatDisplay(

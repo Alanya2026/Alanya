@@ -1427,7 +1427,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchByNameUsernameOrPhone.
   ///
   /// In fr, this message translates to:
-  /// **'Rechercher par nom, pseudo ou téléphone…'**
+  /// **'Rechercher par nom, pseudo ou ID Alanya…'**
   String get searchByNameUsernameOrPhone;
 
   /// No description provided for @assignAReservedNumberOptional.
@@ -1727,7 +1727,7 @@ abstract class AppLocalizations {
   /// No description provided for @phoneAlanyaPhone.
   ///
   /// In fr, this message translates to:
-  /// **'Téléphone (Téléphone Alanya)'**
+  /// **'ID Alanya'**
   String get phoneAlanyaPhone;
 
   /// No description provided for @noOtherMembersToCall.
@@ -2141,7 +2141,7 @@ abstract class AppLocalizations {
   /// No description provided for @alanyaNumberRequired.
   ///
   /// In fr, this message translates to:
-  /// **'Numéro Alanya requis'**
+  /// **'ID Alanya requis'**
   String get alanyaNumberRequired;
 
   /// No description provided for @selectACountry.
@@ -2537,7 +2537,7 @@ abstract class AppLocalizations {
   /// No description provided for @alanyaPhone.
   ///
   /// In fr, this message translates to:
-  /// **'Téléphone Alanya'**
+  /// **'ID Alanya'**
   String get alanyaPhone;
 
   /// No description provided for @deletedMessage.
@@ -5561,7 +5561,7 @@ abstract class AppLocalizations {
   /// No description provided for @signupNoEmailWarningBody.
   ///
   /// In fr, this message translates to:
-  /// **'Sans e-mail, vous ne pourrez pas récupérer votre compte si vous oubliez votre numéro Alanya ou votre mot de passe.'**
+  /// **'Sans e-mail, vous ne pourrez pas récupérer votre compte si vous oubliez votre ID Alanya ou votre mot de passe.'**
   String get signupNoEmailWarningBody;
 
   /// No description provided for @signupAddEmail.
@@ -5642,6 +5642,54 @@ abstract class AppLocalizations {
   /// **'Un code de vérification sera envoyé à la nouvelle adresse.'**
   String get changeEmailSubtitleReplace;
 
+  /// No description provided for @changeEmailCurrentLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse actuelle'**
+  String get changeEmailCurrentLabel;
+
+  /// No description provided for @changeEmailNewLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle adresse e-mail'**
+  String get changeEmailNewLabel;
+
+  /// No description provided for @changeEmailAddLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre adresse e-mail'**
+  String get changeEmailAddLabel;
+
+  /// No description provided for @changeEmailStep1.
+  ///
+  /// In fr, this message translates to:
+  /// **'1. Adresse'**
+  String get changeEmailStep1;
+
+  /// No description provided for @changeEmailStep2.
+  ///
+  /// In fr, this message translates to:
+  /// **'2. Vérification'**
+  String get changeEmailStep2;
+
+  /// No description provided for @changeEmailWhyOtp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour confirmer que vous avez accès à cette adresse, un code à 6 chiffres vous sera envoyé par e-mail.'**
+  String get changeEmailWhyOtp;
+
+  /// No description provided for @changeEmailCheckInbox.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrez votre boîte mail et saisissez le code reçu. Vérifiez aussi les spams.'**
+  String get changeEmailCheckInbox;
+
+  /// No description provided for @changeEmailEditAddress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier l\'adresse'**
+  String get changeEmailEditAddress;
+
   /// No description provided for @changeEmailSendCode.
   ///
   /// In fr, this message translates to:
@@ -5669,7 +5717,7 @@ abstract class AppLocalizations {
   /// No description provided for @changeEmailConfirm.
   ///
   /// In fr, this message translates to:
-  /// **'Confirmer'**
+  /// **'Valider et enregistrer'**
   String get changeEmailConfirm;
 
   /// No description provided for @changeEmailSuccess.
