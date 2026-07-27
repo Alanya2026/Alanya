@@ -235,14 +235,21 @@ extension CallOneToOne on CallService {
       _startDurationTimer();
       _startSpeakingDetection(groupMode: false);
       // Notifier l'UI immédiatement : l'audio WebRTC est prêt. La session
-      // CallKit/FGS ne doit pas bloquer le passage à « En cours » (cold-start).
+      // CallKit/FGS ne doit pas bloquer le passage à « En cours » (cold-start),
+      // c'est pourquoi notify() est appelé avant _acquireCallSession ci-dessous.
       notify();
       if (!kIsWeb) {
         await _acquireCallSession(
           isVideo: _isVideo,
           displayName: _remoteUserName ?? LocaleController.instance.l10n.callNoun,
           handle: _remoteUserId.toString(),
-          startCallKit: false,
+          // startCallKit: true (et non false) même pour un appel entrant déjà
+          // accepté : enregistre explicitement l'appel via le plugin CallKit
+          // (ConnectionService sur Android), en plus du foreground service
+          // déclenché nativement au tap "Accepter". Filet de sécurité si ce
+          // dernier échoue silencieusement (OEM agressifs type MIUI/EMUI) —
+          // sans ce filet, l'appel accepté depuis une notification en
+          // arrière-plan pouvait être tué par l'OS sans envoyer end_call.
         );
         await _markCallSessionConnected();
       }
