@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/validators.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
@@ -33,6 +32,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   late List<User> _members;
   File? _photoFile;
   bool _creating = false;
+  bool _onlyAdminsCanSend = false;
+  bool _onlyAdminsCanEditInfo = false;
 
   @override
   void initState() {
@@ -62,8 +63,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_members.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(context.l10n.addAtLeastOneMember)),
+        SnackBar(content: Text(context.l10n.addAtLeastOneMember)),
       );
       return;
     }
@@ -85,6 +85,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         participantIDs: _members.map((m) => m.alanyaID).toList(),
         groupPhoto: photoUrl,
         description: description.isEmpty ? null : description,
+        onlyAdminsCanSend: _onlyAdminsCanSend,
+        onlyAdminsCanEditInfo: _onlyAdminsCanEditInfo,
       );
 
       await chat.refreshConversations(force: true);
@@ -124,126 +126,43 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.createAGroup)),
-      body: SingleChildScrollView(
-        padding: AppSpacing.card,
-        child: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: context.semantic.surfaceMuted,
+      appBar: AppBar(
+        backgroundColor: context.semantic.surfaceMuted,
+        centerTitle: true,
+        title: Text(context.l10n.createAGroup),
+      ),
+      body: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.xxl,
+          ),
           children: [
-            // Photo
-            Center(
-              child: GestureDetector(
-                onTap: _pickPhoto,
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSubtle,
-                    borderRadius: BorderRadius.circular(60),
-                    image: _photoFile != null
-                        ? DecorationImage(
-                            image: FileImage(_photoFile!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: _photoFile == null
-                      ? Icon(
-                          CupertinoIcons.camera,
-                          color: context.colors.onSurfaceVariant,
-                          size: 40,
-                        )
-                      : null,
-                ),
-              ),
-            ),
-            AppSpacing.vGapXxl,
-
-            // Name field
-            Text(context.l10n.groupName, style: context.text.titleSmall),
-            AppSpacing.vGapSm,
-            TextFormField(
-              controller: _nameController,
-              validator: Validators.required,
-              decoration: InputDecoration(
-                hintText: context.l10n.enterTheGroupName,
-              ),
+            _HeaderCard(
+              photoFile: _photoFile,
+              nameController: _nameController,
+              onPickPhoto: _pickPhoto,
             ),
             AppSpacing.vGapLg,
-
-            // Description — facultative, comme sur la fiche du groupe.
-            Text(context.l10n.groupDescription, style: context.text.titleSmall),
-            AppSpacing.vGapSm,
-            TextFormField(
-              controller: _descriptionController,
-              maxLength: 512,
-              maxLines: 3,
-              minLines: 2,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                hintText: context.l10n.groupDescriptionHint,
-              ),
+            _DescriptionCard(controller: _descriptionController),
+            AppSpacing.vGapLg,
+            _MembersCard(
+              members: _members,
+              onRemove: _removeMember,
+            ),
+            AppSpacing.vGapLg,
+            _GroupSettingsCard(
+              onlyAdminsCanSend: _onlyAdminsCanSend,
+              onlyAdminsCanEditInfo: _onlyAdminsCanEditInfo,
+              onSendChanged: (v) => setState(() => _onlyAdminsCanSend = v),
+              onEditChanged: (v) => setState(() => _onlyAdminsCanEditInfo = v),
             ),
             AppSpacing.vGapXxl,
-
-            // Members
-            Text(context.l10n.membersCount(_members.length),
-                style: context.text.titleSmall),
-            AppSpacing.vGapSm,
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _members.length,
-              separatorBuilder: (_, __) => AppSpacing.vGapSm,
-              itemBuilder: (_, idx) {
-                final member = _members[idx];
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceMuted,
-                    borderRadius: AppRadius.brSm,
-                  ),
-                  child: Row(
-                    children: [
-                      AppAvatar(
-                        name: member.nom,
-                        imageUrl: member.avatarUrl.isNotEmpty
-                            ? member.avatarUrl
-                            : null,
-                        size: AppSizes.avatarSm,
-                      ),
-                      AppSpacing.hGapMd,
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(member.nom,
-                                style: context.text.titleSmall),
-                            Text(
-                                AlanyaPhoneFormatter.formatDisplay(
-                                    member.alanyaPhone),
-                                style: context.text.bodySmall?.copyWith(
-                                    color:
-                                        context.colors.onSurfaceVariant)),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(CupertinoIcons.xmark),
-                        onPressed: () => _removeMember(member),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            AppSpacing.vGapXxl,
-
-            // Create button
             Consumer<ConnectivityProvider>(
               builder: (context, conn, _) {
                 final online = conn.isOnline;
@@ -253,10 +172,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   child: ElevatedButton.icon(
                     onPressed: disabled ? null : _create,
                     icon: _creating
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: context.colors.onPrimary,
+                            ),
                           )
                         : Icon(online
                             ? CupertinoIcons.check_mark
@@ -267,9 +189,11 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                             ? context.l10n.createGroup
                             : context.l10n.unavailableOffline)),
                     style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+                      minimumSize:
+                          const Size.fromHeight(AppSizes.buttonHeight),
                       shape: const RoundedRectangleBorder(
-                          borderRadius: AppRadius.brMd),
+                        borderRadius: AppRadius.brMd,
+                      ),
                       elevation: 0,
                     ),
                   ),
@@ -277,8 +201,327 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               },
             ),
           ],
-          ),
         ),
+      ),
+    );
+  }
+}
+
+// ── CARTE CONTENEUR ───────────────────────────────────────────────────
+
+class _CreateGroupCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsets padding;
+
+  const _CreateGroupCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(AppSpacing.lg),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? context.colors.surfaceContainerHigh
+            : context.colors.surface,
+        borderRadius: AppRadius.brMd,
+        boxShadow: isDark ? null : AppShadows.subtle,
+        border: isDark
+            ? Border.all(color: context.colors.outline.withValues(alpha: 0.55))
+            : null,
+      ),
+      child: Padding(padding: padding, child: child),
+    );
+  }
+}
+
+// ── EN-TÊTE (PHOTO + NOM) ─────────────────────────────────────────────
+
+class _HeaderCard extends StatelessWidget {
+  final File? photoFile;
+  final TextEditingController nameController;
+  final VoidCallback onPickPhoto;
+
+  const _HeaderCard({
+    required this.photoFile,
+    required this.nameController,
+    required this.onPickPhoto,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _CreateGroupCard(
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.xxxl,
+        horizontal: AppSpacing.lg,
+      ),
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              GestureDetector(
+                onTap: onPickPhoto,
+                child: CircleAvatar(
+                  radius: 60,
+                  backgroundColor: context.colors.surfaceContainerHighest,
+                  backgroundImage:
+                      photoFile != null ? FileImage(photoFile!) : null,
+                  child: photoFile == null
+                      ? Icon(
+                          CupertinoIcons.camera,
+                          color: context.colors.onSurfaceVariant,
+                          size: AppIconSize.lg,
+                        )
+                      : null,
+                ),
+              ),
+              GestureDetector(
+                onTap: onPickPhoto,
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: context.colors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: context.colors.surface,
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.photo_camera_rounded,
+                    size: AppIconSize.sm,
+                    color: context.colors.onPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.vGapLg,
+          TextFormField(
+            controller: nameController,
+            validator: Validators.required,
+            textAlign: TextAlign.center,
+            textCapitalization: TextCapitalization.words,
+            style: context.text.headlineSmall,
+            decoration: InputDecoration(
+              hintText: context.l10n.enterTheGroupName,
+              hintStyle: context.text.headlineSmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              focusedErrorBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+              isDense: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── DESCRIPTION ───────────────────────────────────────────────────────
+
+class _DescriptionCard extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _DescriptionCard({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return _CreateGroupCard(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(context.l10n.groupDescription, style: context.text.titleSmall),
+          AppSpacing.vGapSm,
+          TextFormField(
+            controller: controller,
+            maxLength: 512,
+            maxLines: 3,
+            minLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+            style: context.text.bodyMedium,
+            decoration: InputDecoration(
+              hintText: context.l10n.groupDescriptionHint,
+              hintStyle: context.text.bodyMedium?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+              counterStyle: context.text.bodySmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── MEMBRES ───────────────────────────────────────────────────────────
+
+class _MembersCard extends StatelessWidget {
+  final List<User> members;
+  final void Function(User) onRemove;
+
+  const _MembersCard({
+    required this.members,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _CreateGroupCard(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.membersCount(members.length),
+            style: context.text.titleSmall,
+          ),
+          AppSpacing.vGapMd,
+          ...members.map((member) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: context.semantic.surfaceMuted,
+                  borderRadius: AppRadius.brSm,
+                ),
+                child: Row(
+                  children: [
+                    AppAvatar(
+                      name: member.nom,
+                      imageUrl: member.avatarUrl.isNotEmpty
+                          ? member.avatarUrl
+                          : null,
+                      size: AppSizes.avatarSm,
+                    ),
+                    AppSpacing.hGapMd,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(member.nom, style: context.text.titleSmall),
+                          Text(
+                            AlanyaPhoneFormatter.formatDisplay(
+                              member.alanyaPhone,
+                            ),
+                            style: context.text.bodySmall?.copyWith(
+                              color: context.colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        CupertinoIcons.xmark,
+                        color: context.colors.onSurfaceVariant,
+                        size: AppIconSize.sm,
+                      ),
+                      onPressed: () => onRemove(member),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+// ── RÉGLAGES DU GROUPE ────────────────────────────────────────────────
+
+class _GroupSettingsCard extends StatelessWidget {
+  final bool onlyAdminsCanSend;
+  final bool onlyAdminsCanEditInfo;
+  final ValueChanged<bool> onSendChanged;
+  final ValueChanged<bool> onEditChanged;
+
+  const _GroupSettingsCard({
+    required this.onlyAdminsCanSend,
+    required this.onlyAdminsCanEditInfo,
+    required this.onSendChanged,
+    required this.onEditChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _CreateGroupCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
+            child: Text(
+              context.l10n.groupSettings,
+              style: context.text.titleSmall,
+            ),
+          ),
+          SwitchListTile(
+            value: onlyAdminsCanSend,
+            onChanged: onSendChanged,
+            title: Text(
+              context.l10n.onlyAdminsCanSendLabel,
+              style: context.text.bodyMedium,
+            ),
+            subtitle: Text(
+              context.l10n.onlyAdminsCanSendSubtitle,
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+          SwitchListTile(
+            value: onlyAdminsCanEditInfo,
+            onChanged: onEditChanged,
+            title: Text(
+              context.l10n.onlyAdminsCanEditInfoLabel,
+              style: context.text.bodyMedium,
+            ),
+            subtitle: Text(
+              context.l10n.onlyAdminsCanEditInfoSubtitle,
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

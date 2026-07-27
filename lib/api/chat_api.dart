@@ -23,12 +23,15 @@ extension ChatHttpApi on TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
-  /// Crée un groupe — le backend attend { participantIDs[], groupName, groupPhoto }
+  /// Crée un groupe — le backend attend { participantIDs[], groupName, groupPhoto,
+  /// description?, onlyAdminsCanSend?, onlyAdminsCanEditInfo? }
   Future<Map<String, dynamic>> createGroup({
     required List<int> participantIDs,
     required String groupName,
     String? groupPhoto,
     String? description,
+    bool onlyAdminsCanSend = false,
+    bool onlyAdminsCanEditInfo = false,
   }) async {
     final data = await _handleRequest(
       () => _client.post(
@@ -39,6 +42,8 @@ extension ChatHttpApi on TalkyApiClient {
           'groupName': groupName,
           if (groupPhoto != null) 'groupPhoto': groupPhoto,
           if (description != null) 'description': description,
+          if (onlyAdminsCanSend) 'onlyAdminsCanSend': 1,
+          if (onlyAdminsCanEditInfo) 'onlyAdminsCanEditInfo': 1,
         }),
       ),
     );
