@@ -548,7 +548,7 @@ class _Header extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.phone_iphone,
+              Icon(Icons.badge_outlined,
                   size: AppIconSize.sm, color: context.colors.primary),
               AppSpacing.hGapXs,
               AlanyaPhoneText(

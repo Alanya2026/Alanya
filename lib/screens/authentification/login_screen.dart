@@ -84,6 +84,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 AlanyaPhoneField(
                   controller: _alanyaPhoneController,
                   validator: (v) => Validators.alanyaPhone(v, l10n: l10n),
+                  decoration: InputDecoration(
+                    hintText: '00 00 00 00',
+                    labelText: context.l10n.alanyaPhone,
+                    prefixIcon: const Icon(Icons.badge_outlined),
+                  ),
                 ),
                 AppSpacing.vGapLg,
                 TextFormField(

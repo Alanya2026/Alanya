@@ -87,7 +87,7 @@ class _AlanyaPhoneFieldState extends State<AlanyaPhoneField> {
       decoration: widget.decoration ??
           const InputDecoration(
             hintText: '00 00 00 00',
-            prefixIcon: Icon(Icons.phone_outlined),
+            prefixIcon: Icon(Icons.badge_outlined),
           ),
       onChanged: _applyFormat,
     );

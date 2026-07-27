@@ -170,7 +170,7 @@ class _ProfileCard extends StatelessWidget {
           AppSpacing.vGapSm,
           _InfoRow(label: 'ID', value: '${user.alanyaID}'),
           _InfoRow(
-              label: context.l10n.phone,
+              label: context.l10n.alanyaPhone,
               value: AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone)),
           _InfoRow(label: context.l10n.email, value: user.email),
           if ((user.paysLibelle ?? '').isNotEmpty)
