@@ -3312,6 +3312,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get qrMyCodeShare => 'Partager';
 
   @override
+  String get qrMyCodeShareSheetTitle => 'Partager mon code';
+
+  @override
+  String get qrMyCodeShareLink => 'Partager le lien';
+
+  @override
+  String get qrMyCodeShareLinkHint => 'Lien cliquable et Alanya ID';
+
+  @override
+  String get qrMyCodeShareImage => 'Partager l\'image';
+
+  @override
+  String get qrMyCodeShareImageHint => 'La carte à scanner';
+
+  @override
   String get qrMyCodeSave => 'Enregistrer';
 
   @override

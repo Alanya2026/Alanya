@@ -5810,6 +5810,36 @@ abstract class AppLocalizations {
   /// **'Partager'**
   String get qrMyCodeShare;
 
+  /// No description provided for @qrMyCodeShareSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager mon code'**
+  String get qrMyCodeShareSheetTitle;
+
+  /// No description provided for @qrMyCodeShareLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager le lien'**
+  String get qrMyCodeShareLink;
+
+  /// No description provided for @qrMyCodeShareLinkHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lien cliquable et Alanya ID'**
+  String get qrMyCodeShareLinkHint;
+
+  /// No description provided for @qrMyCodeShareImage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager l\'image'**
+  String get qrMyCodeShareImage;
+
+  /// No description provided for @qrMyCodeShareImageHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La carte à scanner'**
+  String get qrMyCodeShareImageHint;
+
   /// No description provided for @qrMyCodeSave.
   ///
   /// In fr, this message translates to:

@@ -27,6 +27,10 @@ import 'qr_scanner_screen.dart';
 /// Diamètre du médaillon d'avatar qui déborde le haut de la carte.
 const double _kMedallionSize = 88;
 
+/// Ce que le partage envoie réellement — voir [_QrCodeScreenState._share] pour
+/// la raison de cette séparation.
+enum _ModePartage { lien, image }
+
 /// Écran d'identité QR : « Mon code » et « Scanner », deux volets d'un geste.
 class QrCodeScreen extends StatefulWidget {
   const QrCodeScreen({super.key});
@@ -171,7 +175,71 @@ class _QrCodeScreenState extends State<QrCodeScreen>
     ].join('\n');
   }
 
+  /// Deux partages distincts plutôt qu'un seul mélangeant image et texte.
+  ///
+  /// Sur Android, un partage de type `image/*` transporte bien `EXTRA_TEXT`,
+  /// mais la plupart des messageries l'ignorent dès qu'il y a une pièce
+  /// jointe — le lien et l'identifiant disparaissaient donc silencieusement.
+  /// On ne peut pas l'imposer depuis l'app émettrice : autant laisser choisir
+  /// explicitement ce qu'on envoie.
   Future<void> _share() async {
+    if (_identity == null) return;
+    final l10n = context.l10n;
+
+    final choix = await showModalBottomSheet<_ModePartage>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.md,
+              ),
+              child: Text(
+                l10n.qrMyCodeShareSheetTitle,
+                style: ctx.text.titleMedium,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: Text(l10n.qrMyCodeShareLink),
+              subtitle: Text(l10n.qrMyCodeShareLinkHint),
+              onTap: () => Navigator.pop(ctx, _ModePartage.lien),
+            ),
+            ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: Text(l10n.qrMyCodeShareImage),
+              subtitle: Text(l10n.qrMyCodeShareImageHint),
+              onTap: () => Navigator.pop(ctx, _ModePartage.image),
+            ),
+            AppSpacing.vGapSm,
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || choix == null) return;
+    await (choix == _ModePartage.lien ? _partagerLien() : _partagerImage());
+  }
+
+  Future<void> _partagerLien() async {
+    final identity = _identity;
+    if (identity == null) return;
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: _texteDePartage(identity),
+          sharePositionOrigin: _shareOrigin(),
+        ),
+      );
+    } catch (e, st) {
+      AppLog.e('QrCode', 'Partage du lien échoué', e, st);
+    }
+  }
+
+  Future<void> _partagerImage() async {
     final identity = _identity;
     if (identity == null) return;
 
@@ -181,18 +249,22 @@ class _QrCodeScreenState extends State<QrCodeScreen>
     final fichier = bytes == null ? null : await _ecrireFichierTemporaire(bytes);
     if (!mounted) return;
 
+    // Si la capture échoue, on n'envoie pas un partage vide : on retombe sur
+    // le lien, qui suffit à ajouter le contact.
+    if (fichier == null) return _partagerLien();
+
     try {
       await SharePlus.instance.share(
         ShareParams(
+          // Texte joint quand même : les applications qui l'honorent
+          // (souvent iOS, parfois Android) l'afficheront en légende.
           text: texte,
-          // L'image est un bonus : si la capture échoue, le partage part quand
-          // même avec le lien et l'identifiant, qui suffisent à ajouter.
-          files: fichier == null ? null : [XFile(fichier.path)],
+          files: [XFile(fichier.path)],
           sharePositionOrigin: origine,
         ),
       );
     } catch (e, st) {
-      AppLog.e('QrCode', 'Partage du code QR échoué', e, st);
+      AppLog.e('QrCode', 'Partage de l\'image échoué', e, st);
     }
   }
 
