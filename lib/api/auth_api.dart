@@ -10,6 +10,7 @@ extension AuthApi on TalkyApiClient {
     int? idPays,
     String? fcmToken,
     String? deviceId,
+    String? hardwareId,
   }) async {
     final deviceModel = await TalkyApiClient._currentDeviceModel();
     final cleanEmail = email?.trim();
@@ -24,6 +25,7 @@ extension AuthApi on TalkyApiClient {
         if (idPays != null) 'idPays': idPays,
         if (fcmToken != null) 'fcm_token': fcmToken,
         if (deviceId != null) 'device_ID': deviceId,
+        if (hardwareId != null) 'hardware_id': hardwareId,
         'device_model': deviceModel,
         'os_system': TalkyApiClient._currentOs(),
       }),
@@ -39,6 +41,7 @@ extension AuthApi on TalkyApiClient {
     required String password,
     String? fcmToken,
     String? deviceId,
+    String? hardwareId,
   }) async {
     final deviceModel = await TalkyApiClient._currentDeviceModel();
     final response = await _client.post(
@@ -49,6 +52,7 @@ extension AuthApi on TalkyApiClient {
         'password': password,
         if (fcmToken != null) 'fcm_token': fcmToken,
         if (deviceId != null) 'device_ID': deviceId,
+        if (hardwareId != null) 'hardware_id': hardwareId,
         'device_model': deviceModel,
         'os_system': TalkyApiClient._currentOs(),
       }),

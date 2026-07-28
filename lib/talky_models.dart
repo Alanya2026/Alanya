@@ -836,6 +836,11 @@ class SocketEvents {
   static const authError    = 'auth:error';
   static const authConflict = 'auth:conflict';
 
+  /// Un appareil du compte vient d'être déconnecté à distance. Payload :
+  /// { appareilId, deviceId } où `deviceId` est l'identifiant MATÉRIEL, à
+  /// comparer au sien : l'événement part à tout le compte, pas à une socket.
+  static const authDeviceRevoked = 'auth:device_revoked';
+
   // Présence
   static const presenceOnline   = 'presence:online';
   static const presenceOffline  = 'presence:offline';

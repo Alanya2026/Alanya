@@ -5779,6 +5779,426 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ajoutez un e-mail pour sécuriser votre compte'**
   String get profileNoEmailChip;
+
+  /// No description provided for @qrMyCodeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon code QR'**
+  String get qrMyCodeTitle;
+
+  /// No description provided for @qrMyCodeTabCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon code'**
+  String get qrMyCodeTabCode;
+
+  /// No description provided for @qrMyCodeTabScan.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanner'**
+  String get qrMyCodeTabScan;
+
+  /// No description provided for @qrMyCodeSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Faites scanner ce code pour être ajouté en contact préféré.'**
+  String get qrMyCodeSubtitle;
+
+  /// No description provided for @qrMyCodeShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager'**
+  String get qrMyCodeShare;
+
+  /// No description provided for @qrMyCodeRegenerate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer'**
+  String get qrMyCodeRegenerate;
+
+  /// No description provided for @qrMyCodeRegenerateConfirmTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer votre code ?'**
+  String get qrMyCodeRegenerateConfirmTitle;
+
+  /// No description provided for @qrMyCodeRegenerateConfirmBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ancien code cessera immédiatement de fonctionner. Les personnes qui l\'ont enregistré ne pourront plus vous ajouter avec.'**
+  String get qrMyCodeRegenerateConfirmBody;
+
+  /// No description provided for @qrMyCodeRegenerateDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau code généré'**
+  String get qrMyCodeRegenerateDone;
+
+  /// No description provided for @qrMyCodeShareText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez-moi sur Alanya : je suis {name}.'**
+  String qrMyCodeShareText(String name);
+
+  /// No description provided for @qrScanTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanner un code'**
+  String get qrScanTitle;
+
+  /// No description provided for @qrScanEntryButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanner un code'**
+  String get qrScanEntryButton;
+
+  /// No description provided for @qrScanInstruction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cadrez le code QR d\'un contact'**
+  String get qrScanInstruction;
+
+  /// No description provided for @qrScanErrorUnreadable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code illisible. Rapprochez-vous et réessayez.'**
+  String get qrScanErrorUnreadable;
+
+  /// No description provided for @qrScanErrorUnknown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code est expiré ou inconnu.'**
+  String get qrScanErrorUnknown;
+
+  /// No description provided for @qrScanOwnCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est votre propre code.'**
+  String get qrScanOwnCode;
+
+  /// No description provided for @qrScanAddSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été ajouté à vos contacts préférés'**
+  String qrScanAddSuccess(String name);
+
+  /// No description provided for @qrScanAlreadyContact.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est déjà dans vos contacts préférés'**
+  String qrScanAlreadyContact(String name);
+
+  /// No description provided for @qrScanUndo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get qrScanUndo;
+
+  /// No description provided for @qrScanUndone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a été retiré de vos contacts préférés'**
+  String qrScanUndone(String name);
+
+  /// No description provided for @qrScanUndoFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'annuler l\'ajout'**
+  String get qrScanUndoFailed;
+
+  /// No description provided for @qrScanCameraDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya a besoin d\'accéder à la caméra pour scanner un code.'**
+  String get qrScanCameraDenied;
+
+  /// No description provided for @qrScanOpenSettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir les réglages'**
+  String get qrScanOpenSettings;
+
+  /// No description provided for @qrScanTorchOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lampe allumée'**
+  String get qrScanTorchOn;
+
+  /// No description provided for @qrScanTorchOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lampe éteinte'**
+  String get qrScanTorchOff;
+
+  /// No description provided for @qrLoginTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion par QR code'**
+  String get qrLoginTitle;
+
+  /// No description provided for @qrLoginEntryButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se connecter avec un code QR'**
+  String get qrLoginEntryButton;
+
+  /// No description provided for @qrLoginUsePassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se connecter avec mon mot de passe'**
+  String get qrLoginUsePassword;
+
+  /// No description provided for @qrLoginExplanation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrez Alanya sur votre téléphone déjà connecté, allez dans Compte et sécurité, puis scannez ce code.'**
+  String get qrLoginExplanation;
+
+  /// No description provided for @qrLoginExpiresIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Expire dans {time}'**
+  String qrLoginExpiresIn(String time);
+
+  /// No description provided for @qrLoginStatusWaiting.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente de scan…'**
+  String get qrLoginStatusWaiting;
+
+  /// No description provided for @qrLoginStatusScanned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code scanné. Confirmez sur votre autre appareil.'**
+  String get qrLoginStatusScanned;
+
+  /// No description provided for @qrLoginStatusRejected.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion refusée depuis votre autre appareil.'**
+  String get qrLoginStatusRejected;
+
+  /// No description provided for @qrLoginStatusExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a expiré.'**
+  String get qrLoginStatusExpired;
+
+  /// No description provided for @qrLoginRegenerate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Générer un nouveau code'**
+  String get qrLoginRegenerate;
+
+  /// No description provided for @qrLoginNetworkError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion impossible. Vérifiez votre réseau et réessayez.'**
+  String get qrLoginNetworkError;
+
+  /// No description provided for @qrApproveTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle connexion'**
+  String get qrApproveTitle;
+
+  /// No description provided for @qrApproveIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code vient d\'être scanné depuis cet appareil :'**
+  String get qrApproveIntro;
+
+  /// No description provided for @qrApproveDeviceLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil (nom déclaré)'**
+  String get qrApproveDeviceLabel;
+
+  /// No description provided for @qrApprovePlatformLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plateforme'**
+  String get qrApprovePlatformLabel;
+
+  /// No description provided for @qrApproveRequestedLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demandé'**
+  String get qrApproveRequestedLabel;
+
+  /// No description provided for @qrApproveIpLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse IP'**
+  String get qrApproveIpLabel;
+
+  /// No description provided for @qrApproveLocationLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lieu approximatif'**
+  String get qrApproveLocationLabel;
+
+  /// No description provided for @qrApproveDeclaredNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le nom et la plateforme sont annoncés par l\'appareil qui demande la connexion : ils peuvent être falsifiés. Seule l\'adresse IP est constatée par Alanya.'**
+  String get qrApproveDeclaredNotice;
+
+  /// No description provided for @qrApproveSecurityWarning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Si vous n\'êtes pas à l\'origine de cette demande, refusez-la et changez votre mot de passe.'**
+  String get qrApproveSecurityWarning;
+
+  /// No description provided for @qrApproveReject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Refuser'**
+  String get qrApproveReject;
+
+  /// No description provided for @qrApproveConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer'**
+  String get qrApproveConfirm;
+
+  /// No description provided for @qrApproveDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil connecté'**
+  String get qrApproveDone;
+
+  /// No description provided for @qrApproveRejectDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion refusée'**
+  String get qrApproveRejectDone;
+
+  /// No description provided for @qrApproveSessionExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette demande a expiré. Faites afficher un nouveau code sur l\'autre appareil.'**
+  String get qrApproveSessionExpired;
+
+  /// No description provided for @qrDevicesTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareils connectés'**
+  String get qrDevicesTitle;
+
+  /// No description provided for @qrDevicesEntryTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareils connectés'**
+  String get qrDevicesEntryTitle;
+
+  /// No description provided for @qrDevicesEntrySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir où votre compte est ouvert'**
+  String get qrDevicesEntrySubtitle;
+
+  /// No description provided for @qrLinkDeviceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lier un nouvel appareil'**
+  String get qrLinkDeviceTitle;
+
+  /// No description provided for @qrLinkDeviceSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanner le code affiché sur l\'autre appareil'**
+  String get qrLinkDeviceSubtitle;
+
+  /// No description provided for @qrDevicesThisDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet appareil'**
+  String get qrDevicesThisDevice;
+
+  /// No description provided for @qrDevicesUnknownDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil inconnu'**
+  String get qrDevicesUnknownDevice;
+
+  /// No description provided for @qrDevicesMethodPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion par mot de passe'**
+  String get qrDevicesMethodPassword;
+
+  /// No description provided for @qrDevicesMethodSignup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil d\'inscription'**
+  String get qrDevicesMethodSignup;
+
+  /// No description provided for @qrDevicesMethodQr.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion par code QR'**
+  String get qrDevicesMethodQr;
+
+  /// No description provided for @qrDevicesLastActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Actif {date}'**
+  String qrDevicesLastActive(String date);
+
+  /// No description provided for @qrDevicesRevoke.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déconnecter'**
+  String get qrDevicesRevoke;
+
+  /// No description provided for @qrDevicesRevokeConfirmTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déconnecter cet appareil ?'**
+  String get qrDevicesRevokeConfirmTitle;
+
+  /// No description provided for @qrDevicesRevokeConfirmBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} sera déconnecté immédiatement. Il faudra saisir votre mot de passe pour s\'y reconnecter.'**
+  String qrDevicesRevokeConfirmBody(String name);
+
+  /// No description provided for @qrDevicesRevokeDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil déconnecté'**
+  String get qrDevicesRevokeDone;
+
+  /// No description provided for @qrDevicesEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun autre appareil connecté'**
+  String get qrDevicesEmpty;
+
+  /// No description provided for @qrDevicesLoadError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger vos appareils'**
+  String get qrDevicesLoadError;
+
+  /// No description provided for @qrDevicesIosNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur iPhone, un appareil peut réapparaître comme un nouvel appareil dans cette liste après une réinstallation d\'Alanya.'**
+  String get qrDevicesIosNote;
+
+  /// No description provided for @qrBannerNewDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvel appareil connecté : {name}'**
+  String qrBannerNewDevice(String name);
+
+  /// No description provided for @qrBannerSignedOutRemotely.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet appareil a été déconnecté depuis un autre appareil.'**
+  String get qrBannerSignedOutRemotely;
 }
 
 class _AppLocalizationsDelegate

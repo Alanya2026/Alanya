@@ -1,0 +1,213 @@
+% Fragment partage : inclus par qr-code.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Le besoin}
+
+\section{Ce qui existe déjà}
+
+Alanya n'a aujourd'hui \textbf{qu'un seul chemin} pour ajouter un contact préféré~: la
+recherche manuelle par nom, pseudo ou Alanya ID, depuis la feuille d'ajout du profil.
+Aucun lien d'invitation, aucun code, aucun geste plus rapide.
+
+\begin{constat}[Vérifié dans le code]
+\code{lib/widgets/add\_contact\_sheet.dart} interroge d'abord le cache local
+(\code{filterUsersBySearch}), puis \code{GET~/users/search} après 400~ms sans résultat.
+L'ajout appelle \code{POST~/contacts/:userId} --- la même route que celle que ce volet
+réutilisera pour l'ajout par QR.
+\end{constat}
+
+Côté connexion, Alanya n'a \textbf{qu'un seul appareil implicite}~: se connecter sur un
+second téléphone fonctionne déjà techniquement (rien ne l'empêche), mais rien ne le montre
+non plus. Il n'existe aucun écran « mes appareils », aucun moyen de savoir où son compte est
+ouvert, ni de fermer une session à distance.
+
+\begin{constat}[Vérifié dans le code]
+\code{lib/screens/profile/account\_security\_screen.dart} ne contient que deux
+sections~: \emph{Email} et \emph{Changer le mot de passe}. Rien sur les appareils.
+\end{constat}
+
+\section{Ce qu'on ajoute}
+
+Deux fonctionnalités, toutes deux fondées sur un QR code~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Un code personnel.} Chaque utilisateur a un QR code à son identité --- logo
+        Alanya au centre, traits arrondis, une vraie carte de visite plutôt qu'un carré
+        noir et blanc. Le scanner d'un autre utilisateur reconnaît la personne et l'ajoute
+        \emph{instantanément} en contact préféré.
+  \item \textbf{La connexion d'un second appareil.} Un nouvel appareil affiche un code ; un
+        appareil déjà connecté le scanne pour l'autoriser. L'utilisateur peut ensuite voir,
+        depuis son compte, la liste de tous les appareils connectés --- et en déconnecter un
+        à distance.
+\end{enumerate}
+
+\begin{note}[Une seule brique, deux usages]
+Les deux fonctionnalités ne partagent pas qu'un mot dans leur nom. Elles partagent un
+\textbf{composant scanner}, un \textbf{générateur de QR stylé}, et une manière commune de
+résoudre ce qu'un code scanné signifie. C'est pour cette raison qu'elles sont conçues dans
+un seul volet --- le même raisonnement qui a réuni compte officiel et diffusion dans
+l'étape~3.
+\end{note}
+
+\section{Les règles produit}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Qui peut scanner} & Un utilisateur \textbf{déjà connecté}, dans les deux cas. Scanner
+n'est jamais un geste public ; c'est toujours un compte qui en reconnaît un autre. \\
+\thd{Ajout de contact} & \textbf{Instantané}, sans écran de confirmation. Le filet de
+sécurité est un bandeau « Annuler » de 5~secondes, pas une étape supplémentaire. \\
+\thd{Connexion d'un appareil} & \textbf{Jamais instantanée.} L'appareil qui scanne voit
+toujours l'identité de l'appareil qu'il autorise, et doit confirmer explicitement. \\
+\thd{Durée du QR de connexion} & Environ \textbf{90~secondes}, puis régénération
+automatique --- comme un code à usage unique, pas comme une carte de visite. \\
+\thd{Régénération du QR d'identité} & À la demande. L'ancien code cesse immédiatement de
+mener à qui que ce soit. \\
+\thd{Emplacements} & Profil (mon code), feuille d'ajout de contact (scanner), Compte et
+sécurité (appareils connectés), écran de connexion (nouvel appareil). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\chapter{Mon code personnel}
+
+\section{Vue d'ensemble}
+
+Un seul écran, deux volets accessibles d'un geste~: \emph{Mon code} et \emph{Scanner} ---
+comme on bascule entre appareil photo avant et arrière.
+
+\begin{center}
+  \imageOuCadre{maquettes/qr-identite.png}{\linewidth}%
+    {Mon code (médaillon, logo au centre, partage et régénération) et l'écran Scanner
+     (reconnaissance instantanée, succès doux et annulable)\\
+     \texttt{maquettes/qr-identite.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/69e9cbec-ff13-48fc-903f-673648874b2a}%
+{\texttt{claude.ai/code/artifact/69e9cbec}}\\
+Source versionnée~: \code{docs/architecture/maquettes/qr-identite.html}
+\end{note}
+
+\section{Écran --- Mon code}
+
+Une carte blanche~: médaillon d'avatar débordant le haut, nom, Alanya ID, puis le QR
+code lui-même --- fond clair, points arrondis à la couleur de marque, logo Alanya au
+centre. En dessous, deux actions~: \textbf{Partager} et \textbf{Régénérer}.
+
+\begin{note}[Pourquoi le code reste toujours clair]
+Même en thème sombre, la carte du QR reste sur fond blanc. Un code sur fond sombre scanne
+moins bien --- la fiabilité du scan prime sur la cohérence du thème, à cet endroit
+précisément.
+\end{note}
+
+\section{Écran --- Scanner}
+
+Plein écran, viseur au centre, façon appareil photo. Dès qu'un code d'identité est
+reconnu, un bandeau apparaît en bas~: la personne ajoutée, avec un bouton
+\textbf{Annuler}. Pas d'écran intermédiaire, pas de confirmation à taper.
+
+Trois cas particuliers, traités comme des succès doux plutôt que des erreurs~: scanner son
+propre code (rien ne se passe, un message discret l'indique), scanner un contact déjà
+favori (le bandeau s'affiche quand même, sans nouvelle écriture), scanner un code expiré ou
+invalide (message clair, la caméra reste active).
+
+\section{Points d'entrée}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Le profil, une icône QR à côté de l'Alanya ID
+        (\code{lib/screens/profile/profile\_screen.dart}, en-tête).
+  \item La feuille d'ajout de contact, un bouton « Scanner un code » au-dessus de la
+        recherche existante (\code{lib/widgets/add\_contact\_sheet.dart}).
+\end{enumerate}
+
+\chapter{Connexion d'un second appareil}
+
+\section{Le principe}
+
+Contrairement à l'ajout de contact, une connexion ne s'approuve \textbf{jamais} au simple
+scan. Le nouvel appareil affiche un code ; c'est l'appareil \emph{déjà} connecté qui le
+scanne et confirme --- jamais l'inverse.
+
+\begin{alerte}[Pourquoi une confirmation, jamais une reconnaissance instantanée]
+Si le scan suffisait à connecter, un attaquant pourrait afficher le QR de connexion d'un
+appareil qu'il contrôle --- sur un écran, un site, une affiche --- et attendre qu'une
+victime le scanne par réflexe avec son propre compte déjà connecté. C'est une attaque
+documentée contre les connexions par QR (le «~quishing~»). L'écran de confirmation, qui
+montre \emph{quel} appareil demande la connexion avant de l'accepter, est le seul rempart~:
+il doit toujours s'afficher, sans exception ni raccourci.
+\end{alerte}
+
+\section{Écran --- Se connecter par QR}
+
+Sur le \textbf{nouvel} appareil, non encore connecté~: un code, un compte à rebours, un
+statut (« En attente de scan… »). Le code se régénère seul à l'expiration --- l'utilisateur
+n'a jamais un code mort sous les yeux.
+
+\begin{center}
+  \imageOuCadre{maquettes/qr-connexion-parcours.png}{\linewidth}%
+    {La poignée de main~: le nouvel appareil affiche, l'appareil de confiance confirme\\
+     \texttt{maquettes/qr-connexion-parcours.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/a69b2050-b2dc-4aa1-a204-59ada2526a86}%
+{\texttt{claude.ai/code/artifact/a69b2050}}\\
+Source versionnée~: \code{docs/architecture/maquettes/qr-connexion.html}
+\end{note}
+
+\section{Écran --- Confirmer la connexion}
+
+Sur l'appareil \textbf{déjà} connecté, après le scan~: une fiche décrivant ce qui vient
+d'être scanné --- type d'appareil, ville approximative, à l'instant --- suivie de deux
+boutons, \textbf{Refuser} et \textbf{Confirmer}. Un avertissement rappelle de refuser et de
+changer son mot de passe en cas de doute.
+
+\begin{note}[Pourquoi l'adresse compte plus que le nom de l'appareil]
+Le nom et la plateforme sont \emph{annoncés} par l'appareil qui demande la connexion~: rien
+n'empêche un attaquant d'appeler le sien « Alanya --- Vérification de sécurité ». La seule
+information que le serveur \emph{constate} lui-même est l'adresse d'où part la demande.
+C'est donc la seule sur laquelle fonder sa décision, et l'écran le dit explicitement.
+\end{note}
+
+\begin{note}[Une ville, pas une adresse technique]
+Cette adresse est traduite en lieu approximatif --- « Douala, Cameroun » --- avant d'être
+montrée. Sous sa forme brute (\code{41.202.219.14}), elle n'apprendrait rien à qui n'est pas
+technicien~: on afficherait la seule information fiable de l'écran sous la seule forme où
+elle est inutilisable. Sous forme de ville, le doute devient une évidence --- on sait
+immédiatement si la demande part d'où l'on se trouve. Si la traduction n'aboutit pas,
+l'adresse brute reste affichée plutôt que rien.
+\end{note}
+
+\section{Écran --- Mes appareils connectés}
+
+Un écran à part, indépendant de toute connexion en cours, atteint depuis \emph{Compte et
+sécurité}~: tous les appareils sur lesquels le compte est ouvert --- pas seulement ceux
+ajoutés par QR --- avec un repère « Cet appareil » et un bouton \textbf{Déconnecter} par
+ligne, à effet immédiat.
+
+\begin{center}
+  \imageOuCadre{maquettes/qr-connexion-appareils.png}{\linewidth}%
+    {Mes appareils connectés~: tous les logins, pas seulement ceux par QR\\
+     \texttt{maquettes/qr-connexion-appareils.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/a69b2050-b2dc-4aa1-a204-59ada2526a86}%
+{\texttt{claude.ai/code/artifact/a69b2050}} --- second panneau de la même maquette\\
+Source versionnée~: \code{docs/architecture/maquettes/qr-connexion.html}
+\end{note}
+
+\section{Points d'entrée}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item L'écran de connexion, un bouton « Se connecter avec un code QR »
+        (\code{screens/authentification/\allowbreak login\_screen.dart}), pour l'appareil
+        qui n'est pas encore connecté.
+  \item \emph{Compte et sécurité}, une nouvelle section « Appareils connectés »
+        (\code{screens/profile/\allowbreak account\_security\_\allowbreak screen.dart}),
+        pour lier un nouvel appareil ou consulter la liste depuis un appareil déjà
+        connecté.
+\end{enumerate}

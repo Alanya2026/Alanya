@@ -1,0 +1,479 @@
+<title>Alanya — Mon code QR</title>
+
+<style>
+  /* ------------------------------------------------------------------
+     Mêmes tokens que les autres maquettes : lib/core/theme/app_colors.dart
+     et app_dimens.dart. AlanyaInfo/AlanyaInfoContainer n'ont pas d'usage
+     ici (réservés à la maquette qr-connexion.html).
+     ------------------------------------------------------------------ */
+  :root {
+    --brand:            #3F51B5;
+    --brand-dark:       #1A237E;
+    --brand-container:  #E8EAF6;
+    --online:           #1FA363;
+
+    --bg:               #F6F7FB;
+    --surface:          #FFFFFF;
+    --surface-muted:    #F4F5F8;
+    --outline:          #E2E5EC;
+    --outline-strong:   #CBD0E0;
+
+    --ink:              #1A1D23;
+    --ink-2:            #5B6273;
+    --ink-3:             #9AA0AE;
+
+    --page-bg:          #EEF0F7;
+    --page-panel:       #FFFFFF;
+    --page-line:        #DDE1EC;
+    --page-ink:         #23283A;
+    --page-ink-2:       #626A82;
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px; --r-pill: 28px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #3A404C; --outline-strong: #3A404C;
+      --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand-container: #283593;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --outline-strong: #3A404C;
+    --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --brand-container: #E8EAF6;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    min-height: 100vh; padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 64ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px, 3.6vw, 38px); line-height: 1.12; letter-spacing: -0.02em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px, 3vw, 30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 70ch; }
+
+  /* ---------- Scène ---------- */
+  .stage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: clamp(18px, 2.6vw, 32px); align-items: start;
+  }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 32ch;
+  }
+  .device-caption b { display: block; color: var(--page-ink); font-weight: 600; letter-spacing: 0.06em; }
+  .device {
+    width: 100%; max-width: 330px; background: var(--bg);
+    border: 1px solid var(--outline); border-radius: 30px; padding: 8px;
+    box-shadow: 0 18px 44px rgba(26, 35, 126, 0.13), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 600px; color: var(--ink);
+    position: relative;
+  }
+
+  .appbar {
+    background: var(--surface); border-bottom: 1px solid var(--outline);
+    padding: 14px var(--s-lg) var(--s-md);
+    display: flex; align-items: center; gap: var(--s-md);
+  }
+  .appbar .back { width: 22px; height: 22px; color: var(--ink-2); flex: none; }
+  .appbar h3 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+  .appbar .spacer { flex: 1; }
+
+  /* ---------- Carte d'identité QR ---------- */
+  .id-wrap {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    padding: 30px var(--s-lg) var(--s-lg); gap: var(--s-lg); overflow: hidden;
+  }
+  .medaillon {
+    width: 68px; height: 68px; border-radius: 50%; flex: none;
+    display: grid; place-items: center; font-size: 21px; font-weight: 650; color: #fff;
+    background: linear-gradient(155deg, #5C6BC0, var(--brand-dark));
+    border: 3px solid var(--bg); margin-bottom: -34px; position: relative; z-index: 2;
+    box-shadow: 0 4px 10px rgba(26,35,126,0.28);
+  }
+  .id-card {
+    width: 100%; max-width: 264px; background: #FFFFFF; border-radius: var(--r-lg);
+    padding: 44px var(--s-lg) var(--s-lg); display: flex; flex-direction: column;
+    align-items: center; gap: var(--s-sm);
+    box-shadow: 0 10px 30px rgba(26,35,126,0.10), 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #ECEEF6;
+  }
+  .id-nom { font-size: 16.5px; font-weight: 650; color: #171A22; letter-spacing: -0.01em; }
+  .id-alanya {
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono);
+    font-size: 13px; color: var(--brand); font-variant-numeric: tabular-nums;
+    background: var(--brand-container); padding: 3px 10px 3px 8px; border-radius: var(--r-pill);
+    margin-bottom: 6px;
+  }
+  .id-alanya svg { width: 13px; height: 13px; }
+
+  .qr-frame { padding: 14px; background: #FFFFFF; border-radius: 18px; }
+  .qr-frame svg { width: 168px; height: 168px; display: block; }
+
+  .qr-note {
+    font-size: 11px; color: #9AA0AE; text-align: center; max-width: 30ch; line-height: 1.4;
+  }
+  .qr-note b { color: #5B6273; }
+
+  .id-actions { display: flex; gap: var(--s-sm); width: 100%; margin-top: 4px; }
+  .id-btn {
+    flex: 1; height: 42px; border-radius: var(--r-sm); border: 1px solid var(--outline-strong);
+    background: var(--surface); color: var(--ink-2); font-family: inherit; font-size: 13px;
+    font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .id-btn svg { width: 16px; height: 16px; }
+  .id-btn.primaire { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+  .flip {
+    margin-top: auto; padding-top: var(--s-lg); width: 100%; display: flex;
+    justify-content: center; gap: 22px; border-top: 1px solid var(--outline);
+  }
+  .flip-item {
+    padding: 10px 4px 0; font-size: 13px; font-weight: 600; color: var(--ink-3);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .flip-item.actif { color: var(--brand); }
+  .flip-item .barre { width: 28px; height: 2.5px; border-radius: 2px; background: transparent; }
+  .flip-item.actif .barre { background: var(--brand); }
+
+  /* ---------- Scanner plein écran ---------- */
+  .scan-screen {
+    flex: 1; position: relative; overflow: hidden; min-height: 600px;
+    background:
+      radial-gradient(120% 90% at 30% 18%, #3A4160 0%, #171A24 46%, #0B0D13 100%);
+  }
+  .scan-top {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px var(--s-lg); padding-top: 18px;
+  }
+  .roundbtn {
+    width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(255,255,255,0.14); backdrop-filter: blur(6px); color: #fff;
+  }
+  .roundbtn svg { width: 18px; height: 18px; }
+
+  .viewfinder {
+    position: absolute; inset: 0; display: grid; place-items: center; z-index: 2;
+  }
+  .vf-box { width: 208px; height: 208px; position: relative; }
+  .vf-corner {
+    position: absolute; width: 34px; height: 34px; border: 3px solid #fff;
+    opacity: 0.92;
+  }
+  .vf-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; border-top-left-radius: 14px; }
+  .vf-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; border-top-right-radius: 14px; }
+  .vf-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; border-bottom-left-radius: 14px; }
+  .vf-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; border-bottom-right-radius: 14px; }
+
+  .scan-hint {
+    position: absolute; left: 0; right: 0; z-index: 3; text-align: center;
+    top: calc(50% + 138px); color: rgba(255,255,255,0.82); font-size: 13px; padding: 0 32px;
+  }
+
+  .toast {
+    position: absolute; left: var(--s-lg); right: var(--s-lg); bottom: 26px; z-index: 4;
+    background: #171A22; color: #fff; border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+  }
+  .toast .puce {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--online);
+    display: grid; place-items: center; flex: none;
+  }
+  .toast .puce svg { width: 16px; height: 16px; color: #fff; }
+  .toast .txt { flex: 1; font-size: 12.5px; line-height: 1.35; }
+  .toast .txt b { display: block; font-size: 13.5px; }
+  .toast .annuler { font-size: 12.5px; font-weight: 700; color: #9FB2FF; flex: none; }
+
+  /* ---------- Modèle / notes ---------- */
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note {
+    border-left: 3px solid var(--brand); padding-left: var(--s-md);
+    font-size: 14px; color: var(--page-ink-2); max-width: 78ch;
+  }
+  .note.attention { border-left-color: #C0392B; }
+  .note b { color: var(--page-ink); font-weight: 650; }
+
+  footer.colophon {
+    display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-xl);
+    padding-top: var(--s-lg); border-top: 1px solid var(--page-line);
+    font-family: var(--mono); font-size: 11.5px; color: var(--page-ink-2);
+  }
+
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya · Identité et connexion par QR code · Étape 6</p>
+    <h1>Un code, une identité — pas un carré noir et blanc</h1>
+    <p>
+      Le code de chaque utilisateur porte le monogramme Alanya en son centre, des yeux et des
+      modules arrondis. Le scanner reconnaît la personne et l'ajoute en contact préféré
+      instantanément — sans écran de confirmation intermédiaire.
+    </p>
+  </header>
+
+  <!-- ============================================================ -->
+  <section class="panel">
+    <header>
+      <h2>Les deux écrans</h2>
+      <p>Un seul écran, deux volets accessibles par un geste&nbsp;: « Mon code » et « Scanner ».</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- ---------- 1. Mon code ---------- -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <h3>Mon code</h3>
+            <span class="spacer"></span>
+          </div>
+
+          <div class="id-wrap">
+            <span class="medaillon">CN</span>
+            <div class="id-card">
+              <span class="id-nom">Chris Ndomba</span>
+              <span class="id-alanya">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.5 6.5c0 3.6-3.8 8-7.4 11.1-.6.5-1.6.5-2.2 0C7.3 14.5 3.5 10.1 3.5 6.5A5.5 5.5 0 0 1 9 1a5 5 0 0 1 3 1 5 5 0 0 1 3-1 5.5 5.5 0 0 1 5.5 5.5Z"/>
+                </svg>
+                12 34 56 78
+              </span>
+
+              <div class="qr-frame">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Œil haut-gauche -->
+                  <rect x="0" y="0" width="7" height="7" rx="2" fill="#3F51B5"/>
+                  <rect x="1" y="1" width="5" height="5" rx="1.6" fill="#ffffff"/>
+                  <rect x="2.5" y="2.5" width="2" height="2" rx="0.8" fill="#3F51B5"/>
+                  <!-- Œil haut-droit -->
+                  <rect x="17" y="0" width="7" height="7" rx="2" fill="#3F51B5"/>
+                  <rect x="18" y="1" width="5" height="5" rx="1.6" fill="#ffffff"/>
+                  <rect x="19.5" y="2.5" width="2" height="2" rx="0.8" fill="#3F51B5"/>
+                  <!-- Œil bas-gauche -->
+                  <rect x="0" y="17" width="7" height="7" rx="2" fill="#3F51B5"/>
+                  <rect x="1" y="18" width="5" height="5" rx="1.6" fill="#ffffff"/>
+                  <rect x="2.5" y="19.5" width="2" height="2" rx="0.8" fill="#3F51B5"/>
+
+                  <!-- Modules de données (points arrondis) -->
+                  <g fill="#3F51B5">
+                    <circle cx="9.5" cy="1.5" r="0.42"/><circle cx="11.5" cy="1.5" r="0.42"/>
+                    <circle cx="13.5" cy="1.5" r="0.42"/><circle cx="15.5" cy="1.5" r="0.42"/>
+                    <circle cx="8.5" cy="3.5" r="0.42"/><circle cx="10.5" cy="3.5" r="0.42"/>
+                    <circle cx="12.5" cy="3.5" r="0.42"/><circle cx="14.5" cy="3.5" r="0.42"/>
+                    <circle cx="16.5" cy="3.5" r="0.42"/>
+                    <circle cx="9.5" cy="5.5" r="0.42"/><circle cx="12.5" cy="5.5" r="0.42"/>
+                    <circle cx="14.5" cy="5.5" r="0.42"/><circle cx="16.5" cy="5.5" r="0.42"/>
+
+                    <circle cx="19.5" cy="9.5" r="0.42"/><circle cx="21.5" cy="9.5" r="0.42"/>
+                    <circle cx="18.5" cy="11.5" r="0.42"/><circle cx="20.5" cy="11.5" r="0.42"/>
+                    <circle cx="22.5" cy="11.5" r="0.42"/>
+                    <circle cx="19.5" cy="13.5" r="0.42"/><circle cx="21.5" cy="13.5" r="0.42"/>
+                    <circle cx="23.5" cy="13.5" r="0.42"/>
+                    <circle cx="18.5" cy="15.5" r="0.42"/><circle cx="20.5" cy="15.5" r="0.42"/>
+                    <circle cx="22.5" cy="15.5" r="0.42"/>
+
+                    <circle cx="1.5" cy="9.5" r="0.42"/><circle cx="3.5" cy="9.5" r="0.42"/>
+                    <circle cx="5.5" cy="9.5" r="0.42"/>
+                    <circle cx="0.5" cy="11.5" r="0.42"/><circle cx="2.5" cy="11.5" r="0.42"/>
+                    <circle cx="4.5" cy="11.5" r="0.42"/><circle cx="6.5" cy="11.5" r="0.42"/>
+                    <circle cx="1.5" cy="13.5" r="0.42"/><circle cx="3.5" cy="13.5" r="0.42"/>
+                    <circle cx="5.5" cy="13.5" r="0.42"/>
+                    <circle cx="0.5" cy="15.5" r="0.42"/><circle cx="2.5" cy="15.5" r="0.42"/>
+                    <circle cx="4.5" cy="15.5" r="0.42"/><circle cx="6.5" cy="15.5" r="0.42"/>
+                    <circle cx="7.5" cy="15.5" r="0.42"/>
+
+                    <circle cx="9.5" cy="19.5" r="0.42"/><circle cx="11.5" cy="19.5" r="0.42"/>
+                    <circle cx="13.5" cy="19.5" r="0.42"/><circle cx="15.5" cy="19.5" r="0.42"/>
+                    <circle cx="8.5" cy="21.5" r="0.42"/><circle cx="10.5" cy="21.5" r="0.42"/>
+                    <circle cx="12.5" cy="21.5" r="0.42"/><circle cx="14.5" cy="21.5" r="0.42"/>
+                    <circle cx="16.5" cy="21.5" r="0.42"/>
+                    <circle cx="9.5" cy="23.5" r="0.42"/><circle cx="12.5" cy="23.5" r="0.42"/>
+                    <circle cx="14.5" cy="23.5" r="0.42"/>
+
+                    <circle cx="18.5" cy="18.5" r="0.42"/><circle cx="20.5" cy="18.5" r="0.42"/>
+                    <circle cx="22.5" cy="18.5" r="0.42"/>
+                    <circle cx="17.5" cy="19.5" r="0.42"/><circle cx="19.5" cy="19.5" r="0.42"/>
+                    <circle cx="21.5" cy="19.5" r="0.42"/><circle cx="23.5" cy="19.5" r="0.42"/>
+                    <circle cx="18.5" cy="20.5" r="0.42"/><circle cx="20.5" cy="20.5" r="0.42"/>
+                    <circle cx="22.5" cy="20.5" r="0.42"/>
+                    <circle cx="17.5" cy="21.5" r="0.42"/><circle cx="19.5" cy="21.5" r="0.42"/>
+                    <circle cx="21.5" cy="21.5" r="0.42"/><circle cx="23.5" cy="21.5" r="0.42"/>
+                    <circle cx="18.5" cy="22.5" r="0.42"/><circle cx="20.5" cy="22.5" r="0.42"/>
+                    <circle cx="22.5" cy="22.5" r="0.42"/>
+                    <circle cx="17.5" cy="23.5" r="0.42"/><circle cx="19.5" cy="23.5" r="0.42"/>
+                    <circle cx="21.5" cy="23.5" r="0.42"/><circle cx="23.5" cy="23.5" r="0.42"/>
+                  </g>
+
+                  <!-- Logo Alanya au centre, zone claire dédiée : anneau-bulle,
+                       combiné écouteur, trois points, queue de bulle
+                       (fidèle à assets/images/alanyalogo.png) -->
+                  <rect x="7.4" y="7.4" width="9.2" height="9.2" rx="3" fill="#ffffff"/>
+                  <circle cx="12" cy="11.3" r="3.3" fill="none" stroke="#3F51B5" stroke-width="1.05"/>
+                  <rect x="10.25" y="7.55" width="3.5" height="1.35" fill="#ffffff"/>
+                  <path d="M10.15 8.75 Q12 7.15 13.85 8.75" fill="none" stroke="#C0392B"
+                        stroke-width="1.2" stroke-linecap="round"/>
+                  <circle cx="10.15" cy="11.4" r="0.55" fill="#3F51B5"/>
+                  <circle cx="12" cy="11.4" r="0.55" fill="#3F51B5"/>
+                  <circle cx="13.85" cy="11.4" r="0.55" fill="#3F51B5"/>
+                  <path d="M13.9 13.3 L15.6 16.2 L12.6 14.1 Z" fill="#3F51B5"/>
+                </svg>
+              </div>
+
+              <p class="qr-note"><b>Toujours sur fond clair</b> — même en thème sombre, pour
+                garder le code fiable à scanner.</p>
+
+              <div class="id-actions">
+                <button class="id-btn" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/>
+                    <path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/>
+                  </svg>
+                  Partager
+                </button>
+                <button class="id-btn" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  Régénérer
+                </button>
+              </div>
+            </div>
+
+            <div class="flip">
+              <span class="flip-item actif">Mon code<span class="barre"></span></span>
+              <span class="flip-item">Scanner<span class="barre"></span></span>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Mon code</b>médaillon, logo au centre, partage et régénération</p>
+      </div>
+
+      <!-- ---------- 2. Scanner ---------- -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="scan-screen">
+            <div class="scan-top">
+              <span class="roundbtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </span>
+              <span class="roundbtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/>
+                </svg>
+              </span>
+            </div>
+
+            <div class="viewfinder">
+              <div class="vf-box">
+                <span class="vf-corner tl"></span><span class="vf-corner tr"></span>
+                <span class="vf-corner bl"></span><span class="vf-corner br"></span>
+              </div>
+            </div>
+            <p class="scan-hint">Cadrez le code QR d'un contact</p>
+
+            <div class="toast">
+              <span class="puce">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg>
+              </span>
+              <span class="txt"><b>Aline Ndongo</b>Ajoutée à vos contacts préférés</span>
+              <span class="annuler">Annuler</span>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Scanner</b>reconnaissance instantanée, succès doux et annulable</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note">
+        <b>Ajout instantané, sans écran de confirmation.</b> C'est la règle produit demandée —
+        scanner suffit. Le filet de sécurité est le bandeau « Annuler » (5&nbsp;s), pas un
+        écran intermédiaire.
+      </p>
+      <p class="note">
+        <b>Le code reste lisible en toute condition.</b> Correction d'erreur niveau H (30&nbsp;%
+        de redondance) pour tolérer le logo central sans nuire à la reconnaissance.
+      </p>
+      <p class="note attention">
+        <b>Régénérer invalide l'ancien code.</b> Utile si un code a été capturé par erreur ou
+        partagé publiquement — il ne mène alors plus à personne.
+      </p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Tokens : lib/core/theme/app_colors.dart</span>
+    <span>qr_flutter — eyeStyle/dataModuleStyle personnalisés, correction H</span>
+    <span>mobile_scanner — scan plein écran</span>
+    <span>Maquette de conception — aucun code applicatif</span>
+  </footer>
+
+</div>
+</div>

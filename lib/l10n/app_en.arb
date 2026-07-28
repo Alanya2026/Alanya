@@ -1242,5 +1242,121 @@
   "changePasswordSubmit": "Save",
   "changePasswordSuccess": "Password updated",
   "changePasswordSameAsCurrent": "New password must be different from the current one",
-  "profileNoEmailChip": "Add an email to secure your account"
+  "profileNoEmailChip": "Add an email to secure your account",
+
+  "qrMyCodeTitle": "My QR code",
+  "qrMyCodeTabCode": "My code",
+  "qrMyCodeTabScan": "Scan",
+  "qrMyCodeSubtitle": "Have this code scanned to be added as a preferred contact.",
+  "qrMyCodeShare": "Share",
+  "qrMyCodeRegenerate": "Regenerate",
+  "qrMyCodeRegenerateConfirmTitle": "Regenerate your code?",
+  "qrMyCodeRegenerateConfirmBody": "The old code will stop working right away. Anyone who saved it will no longer be able to add you with it.",
+  "qrMyCodeRegenerateDone": "New code generated",
+  "qrMyCodeShareText": "Add me on Alanya: I am {name}.",
+  "@qrMyCodeShareText": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "qrScanTitle": "Scan a code",
+  "qrScanEntryButton": "Scan a code",
+  "qrScanInstruction": "Point at a contact's QR code",
+  "qrScanErrorUnreadable": "Code unreadable. Move closer and try again.",
+  "qrScanErrorUnknown": "This code has expired or is unknown.",
+  "qrScanOwnCode": "This is your own code.",
+  "qrScanAddSuccess": "{name} was added to your preferred contacts",
+  "@qrScanAddSuccess": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanUndo": "Undo",
+  "qrScanUndone": "{name} was removed from your preferred contacts",
+  "@qrScanUndone": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanUndoFailed": "Could not undo the addition",
+  "qrScanAlreadyContact": "{name} is already in your preferred contacts",
+  "@qrScanAlreadyContact": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanCameraDenied": "Alanya needs camera access to scan a code.",
+  "qrScanOpenSettings": "Open settings",
+  "qrScanTorchOn": "Flashlight on",
+  "qrScanTorchOff": "Flashlight off",
+
+  "qrLoginTitle": "Sign in with QR code",
+  "qrLoginEntryButton": "Sign in with a QR code",
+  "qrLoginUsePassword": "Sign in with my password",
+  "qrLoginExplanation": "Open Alanya on the phone you are already signed in on, go to Account & security, then scan this code.",
+  "qrLoginExpiresIn": "Expires in {time}",
+  "@qrLoginExpiresIn": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "qrLoginStatusWaiting": "Waiting to be scanned…",
+  "qrLoginStatusScanned": "Code scanned. Confirm on your other device.",
+  "qrLoginStatusRejected": "Sign-in declined from your other device.",
+  "qrLoginStatusExpired": "This code has expired.",
+  "qrLoginRegenerate": "Generate a new code",
+  "qrLoginNetworkError": "Could not connect. Check your network and try again.",
+
+  "qrApproveTitle": "New sign-in",
+  "qrApproveIntro": "This code was just scanned from this device:",
+  "qrApproveDeviceLabel": "Device (declared name)",
+  "qrApprovePlatformLabel": "Platform",
+  "qrApproveRequestedLabel": "Requested",
+  "qrApproveIpLabel": "IP address",
+  "qrApproveLocationLabel": "Approximate location",
+  "qrApproveDeclaredNotice": "The name and platform are announced by the device requesting access and can be forged. Only the IP address is observed by Alanya.",
+  "qrApproveSecurityWarning": "If you did not start this request, decline it and change your password.",
+  "qrApproveReject": "Decline",
+  "qrApproveConfirm": "Confirm",
+  "qrApproveDone": "Device connected",
+  "qrApproveRejectDone": "Sign-in declined",
+  "qrApproveSessionExpired": "This request has expired. Show a new code on the other device.",
+
+  "qrDevicesTitle": "Connected devices",
+  "qrDevicesEntryTitle": "Connected devices",
+  "qrLinkDeviceTitle": "Link a new device",
+  "qrLinkDeviceSubtitle": "Scan the code shown on the other device",
+  "qrDevicesEntrySubtitle": "See where your account is open",
+  "qrDevicesThisDevice": "This device",
+  "qrDevicesUnknownDevice": "Unknown device",
+  "qrDevicesMethodPassword": "Signed in with password",
+  "qrDevicesMethodSignup": "Sign-up device",
+  "qrDevicesMethodQr": "Signed in with QR code",
+  "qrDevicesLastActive": "Active {date}",
+  "@qrDevicesLastActive": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "qrDevicesRevoke": "Sign out",
+  "qrDevicesRevokeConfirmTitle": "Sign this device out?",
+  "qrDevicesRevokeConfirmBody": "{name} will be signed out right away. Your password will be required to sign back in on it.",
+  "@qrDevicesRevokeConfirmBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrDevicesRevokeDone": "Device signed out",
+  "qrDevicesEmpty": "No other connected device",
+  "qrDevicesLoadError": "Could not load your devices",
+  "qrDevicesIosNote": "On iPhone, a device may show up again as a new device in this list after Alanya is reinstalled.",
+
+  "qrBannerNewDevice": "New device connected: {name}",
+  "@qrBannerNewDevice": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrBannerSignedOutRemotely": "This device was signed out from another device."
 }

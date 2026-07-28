@@ -7,6 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/account/warning_banner.dart';
 import 'change_email_screen.dart';
 import 'change_password_screen.dart';
+import 'connected_devices_screen.dart';
+import 'qr_scanner_screen.dart';
 
 /// Hub Compte et sécurité : email + mot de passe.
 class AccountSecurityScreen extends StatelessWidget {
@@ -137,6 +139,102 @@ class AccountSecurityScreen extends StatelessWidget {
               },
             ),
           ),
+          AppSpacing.vGapXxl,
+          _Group(
+            title: context.l10n.qrDevicesEntryTitle,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.sm,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: context.semantic.surfaceMuted,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.devices_outlined,
+                  color: context.colors.onSurfaceVariant,
+                  size: AppIconSize.md,
+                ),
+              ),
+              title: Text(
+                context.l10n.qrDevicesEntryTitle,
+                style: context.text.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                context.l10n.qrDevicesEntrySubtitle,
+                style: context.text.bodySmall?.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: context.colors.outlineVariant,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ConnectedDevicesScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          // L'écran « Se connecter par QR » de l'autre appareil dit d'aller
+          // dans Compte et sécurité pour scanner : sans cette entrée, cette
+          // instruction mènerait à une impasse pendant que le code expire.
+          _Group(
+            title: context.l10n.qrLinkDeviceTitle,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.sm,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: context.semantic.surfaceMuted,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.qr_code_scanner,
+                  color: context.colors.onSurfaceVariant,
+                  size: AppIconSize.md,
+                ),
+              ),
+              title: Text(
+                context.l10n.qrLinkDeviceTitle,
+                style: context.text.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                context.l10n.qrLinkDeviceSubtitle,
+                style: context.text.bodySmall?.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: context.colors.outlineVariant,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const QrScannerScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+          AppSpacing.vGapXxl,
         ],
       ),
     );

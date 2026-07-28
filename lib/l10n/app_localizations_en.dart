@@ -3264,4 +3264,242 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileNoEmailChip => 'Add an email to secure your account';
+
+  @override
+  String get qrMyCodeTitle => 'My QR code';
+
+  @override
+  String get qrMyCodeTabCode => 'My code';
+
+  @override
+  String get qrMyCodeTabScan => 'Scan';
+
+  @override
+  String get qrMyCodeSubtitle =>
+      'Have this code scanned to be added as a preferred contact.';
+
+  @override
+  String get qrMyCodeShare => 'Share';
+
+  @override
+  String get qrMyCodeRegenerate => 'Regenerate';
+
+  @override
+  String get qrMyCodeRegenerateConfirmTitle => 'Regenerate your code?';
+
+  @override
+  String get qrMyCodeRegenerateConfirmBody =>
+      'The old code will stop working right away. Anyone who saved it will no longer be able to add you with it.';
+
+  @override
+  String get qrMyCodeRegenerateDone => 'New code generated';
+
+  @override
+  String qrMyCodeShareText(String name) {
+    return 'Add me on Alanya: I am $name.';
+  }
+
+  @override
+  String get qrScanTitle => 'Scan a code';
+
+  @override
+  String get qrScanEntryButton => 'Scan a code';
+
+  @override
+  String get qrScanInstruction => 'Point at a contact\'s QR code';
+
+  @override
+  String get qrScanErrorUnreadable =>
+      'Code unreadable. Move closer and try again.';
+
+  @override
+  String get qrScanErrorUnknown => 'This code has expired or is unknown.';
+
+  @override
+  String get qrScanOwnCode => 'This is your own code.';
+
+  @override
+  String qrScanAddSuccess(String name) {
+    return '$name was added to your preferred contacts';
+  }
+
+  @override
+  String qrScanAlreadyContact(String name) {
+    return '$name is already in your preferred contacts';
+  }
+
+  @override
+  String get qrScanUndo => 'Undo';
+
+  @override
+  String qrScanUndone(String name) {
+    return '$name was removed from your preferred contacts';
+  }
+
+  @override
+  String get qrScanUndoFailed => 'Could not undo the addition';
+
+  @override
+  String get qrScanCameraDenied => 'Alanya needs camera access to scan a code.';
+
+  @override
+  String get qrScanOpenSettings => 'Open settings';
+
+  @override
+  String get qrScanTorchOn => 'Flashlight on';
+
+  @override
+  String get qrScanTorchOff => 'Flashlight off';
+
+  @override
+  String get qrLoginTitle => 'Sign in with QR code';
+
+  @override
+  String get qrLoginEntryButton => 'Sign in with a QR code';
+
+  @override
+  String get qrLoginUsePassword => 'Sign in with my password';
+
+  @override
+  String get qrLoginExplanation =>
+      'Open Alanya on the phone you are already signed in on, go to Account & security, then scan this code.';
+
+  @override
+  String qrLoginExpiresIn(String time) {
+    return 'Expires in $time';
+  }
+
+  @override
+  String get qrLoginStatusWaiting => 'Waiting to be scanned…';
+
+  @override
+  String get qrLoginStatusScanned =>
+      'Code scanned. Confirm on your other device.';
+
+  @override
+  String get qrLoginStatusRejected =>
+      'Sign-in declined from your other device.';
+
+  @override
+  String get qrLoginStatusExpired => 'This code has expired.';
+
+  @override
+  String get qrLoginRegenerate => 'Generate a new code';
+
+  @override
+  String get qrLoginNetworkError =>
+      'Could not connect. Check your network and try again.';
+
+  @override
+  String get qrApproveTitle => 'New sign-in';
+
+  @override
+  String get qrApproveIntro => 'This code was just scanned from this device:';
+
+  @override
+  String get qrApproveDeviceLabel => 'Device (declared name)';
+
+  @override
+  String get qrApprovePlatformLabel => 'Platform';
+
+  @override
+  String get qrApproveRequestedLabel => 'Requested';
+
+  @override
+  String get qrApproveIpLabel => 'IP address';
+
+  @override
+  String get qrApproveLocationLabel => 'Approximate location';
+
+  @override
+  String get qrApproveDeclaredNotice =>
+      'The name and platform are announced by the device requesting access and can be forged. Only the IP address is observed by Alanya.';
+
+  @override
+  String get qrApproveSecurityWarning =>
+      'If you did not start this request, decline it and change your password.';
+
+  @override
+  String get qrApproveReject => 'Decline';
+
+  @override
+  String get qrApproveConfirm => 'Confirm';
+
+  @override
+  String get qrApproveDone => 'Device connected';
+
+  @override
+  String get qrApproveRejectDone => 'Sign-in declined';
+
+  @override
+  String get qrApproveSessionExpired =>
+      'This request has expired. Show a new code on the other device.';
+
+  @override
+  String get qrDevicesTitle => 'Connected devices';
+
+  @override
+  String get qrDevicesEntryTitle => 'Connected devices';
+
+  @override
+  String get qrDevicesEntrySubtitle => 'See where your account is open';
+
+  @override
+  String get qrLinkDeviceTitle => 'Link a new device';
+
+  @override
+  String get qrLinkDeviceSubtitle => 'Scan the code shown on the other device';
+
+  @override
+  String get qrDevicesThisDevice => 'This device';
+
+  @override
+  String get qrDevicesUnknownDevice => 'Unknown device';
+
+  @override
+  String get qrDevicesMethodPassword => 'Signed in with password';
+
+  @override
+  String get qrDevicesMethodSignup => 'Sign-up device';
+
+  @override
+  String get qrDevicesMethodQr => 'Signed in with QR code';
+
+  @override
+  String qrDevicesLastActive(String date) {
+    return 'Active $date';
+  }
+
+  @override
+  String get qrDevicesRevoke => 'Sign out';
+
+  @override
+  String get qrDevicesRevokeConfirmTitle => 'Sign this device out?';
+
+  @override
+  String qrDevicesRevokeConfirmBody(String name) {
+    return '$name will be signed out right away. Your password will be required to sign back in on it.';
+  }
+
+  @override
+  String get qrDevicesRevokeDone => 'Device signed out';
+
+  @override
+  String get qrDevicesEmpty => 'No other connected device';
+
+  @override
+  String get qrDevicesLoadError => 'Could not load your devices';
+
+  @override
+  String get qrDevicesIosNote =>
+      'On iPhone, a device may show up again as a new device in this list after Alanya is reinstalled.';
+
+  @override
+  String qrBannerNewDevice(String name) {
+    return 'New device connected: $name';
+  }
+
+  @override
+  String get qrBannerSignedOutRemotely =>
+      'This device was signed out from another device.';
 }

@@ -263,6 +263,13 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   void Function(dynamic)? _onCallLogUpdated;
   Timer? _callSyncFallbackTimer;
 
+  /// Révocation de CET appareil depuis un autre appareil du compte. L'abonnement
+  /// vit ici et non dans un écran : l'événement peut tomber à tout moment, et un
+  /// abonné visible seulement sur l'écran « Appareils connectés » le laisserait
+  /// filer (flux broadcast, sans mémoire tampon) — l'app resterait alors sur
+  /// l'écran d'accueil avec une session morte.
+  StreamSubscription<void>? _deviceRevokedSub;
+
   @override
   void initState() {
     super.initState();
@@ -270,6 +277,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     debugPrint('[AuthWrapper] initState - Lancement de init()');
     _authProvider = Provider.of<AuthProvider>(context, listen: false);
     _authProvider!.addListener(_onAuthChanged);
+    _deviceRevokedSub = Provider.of<TalkyApiClient>(context, listen: false)
+        .thisDeviceRevoked
+        .listen((_) => unawaited(_authProvider?.handleRemoteRevocation() ?? Future.value()));
     Future.microtask(_bootstrap);
   }
 
@@ -277,6 +287,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _authProvider?.removeListener(_onAuthChanged);
+    _deviceRevokedSub?.cancel();
     _clearCallLogBindings();
     if (_onBackOnline != null && _connectivityForListener != null) {
       _connectivityForListener!.removeBackOnlineListener(_onBackOnline!);
@@ -549,7 +560,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         } catch (e) {
           debugPrint('[AuthWrapper] StatusProvider.unbind échoué: $e');
         }
-        if (endReason == SessionEndReason.explicitLogout) {
+        // Révocation à distance : c'est bien une décision de l'utilisateur,
+        // le cache local part avec, comme pour un logout explicite.
+        if (endReason == SessionEndReason.explicitLogout ||
+            endReason == SessionEndReason.revokedRemotely) {
           await _clearLocalSession();
         }
         _boundUserId = null;

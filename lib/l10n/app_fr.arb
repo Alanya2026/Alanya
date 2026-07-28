@@ -2124,5 +2124,121 @@
   "changePasswordSubmit": "Enregistrer",
   "changePasswordSuccess": "Mot de passe modifié",
   "changePasswordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'actuel",
-  "profileNoEmailChip": "Ajoutez un e-mail pour sécuriser votre compte"
+  "profileNoEmailChip": "Ajoutez un e-mail pour sécuriser votre compte",
+
+  "qrMyCodeTitle": "Mon code QR",
+  "qrMyCodeTabCode": "Mon code",
+  "qrMyCodeTabScan": "Scanner",
+  "qrMyCodeSubtitle": "Faites scanner ce code pour être ajouté en contact préféré.",
+  "qrMyCodeShare": "Partager",
+  "qrMyCodeRegenerate": "Régénérer",
+  "qrMyCodeRegenerateConfirmTitle": "Régénérer votre code ?",
+  "qrMyCodeRegenerateConfirmBody": "L'ancien code cessera immédiatement de fonctionner. Les personnes qui l'ont enregistré ne pourront plus vous ajouter avec.",
+  "qrMyCodeRegenerateDone": "Nouveau code généré",
+  "qrMyCodeShareText": "Ajoutez-moi sur Alanya : je suis {name}.",
+  "@qrMyCodeShareText": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "qrScanTitle": "Scanner un code",
+  "qrScanEntryButton": "Scanner un code",
+  "qrScanInstruction": "Cadrez le code QR d'un contact",
+  "qrScanErrorUnreadable": "Code illisible. Rapprochez-vous et réessayez.",
+  "qrScanErrorUnknown": "Ce code est expiré ou inconnu.",
+  "qrScanOwnCode": "C'est votre propre code.",
+  "qrScanAddSuccess": "{name} a été ajouté à vos contacts préférés",
+  "@qrScanAddSuccess": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanAlreadyContact": "{name} est déjà dans vos contacts préférés",
+  "@qrScanAlreadyContact": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanUndo": "Annuler",
+  "qrScanUndone": "{name} a été retiré de vos contacts préférés",
+  "@qrScanUndone": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanUndoFailed": "Impossible d'annuler l'ajout",
+  "qrScanCameraDenied": "Alanya a besoin d'accéder à la caméra pour scanner un code.",
+  "qrScanOpenSettings": "Ouvrir les réglages",
+  "qrScanTorchOn": "Lampe allumée",
+  "qrScanTorchOff": "Lampe éteinte",
+
+  "qrLoginTitle": "Connexion par QR code",
+  "qrLoginEntryButton": "Se connecter avec un code QR",
+  "qrLoginUsePassword": "Se connecter avec mon mot de passe",
+  "qrLoginExplanation": "Ouvrez Alanya sur votre téléphone déjà connecté, allez dans Compte et sécurité, puis scannez ce code.",
+  "qrLoginExpiresIn": "Expire dans {time}",
+  "@qrLoginExpiresIn": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "qrLoginStatusWaiting": "En attente de scan…",
+  "qrLoginStatusScanned": "Code scanné. Confirmez sur votre autre appareil.",
+  "qrLoginStatusRejected": "Connexion refusée depuis votre autre appareil.",
+  "qrLoginStatusExpired": "Ce code a expiré.",
+  "qrLoginRegenerate": "Générer un nouveau code",
+  "qrLoginNetworkError": "Connexion impossible. Vérifiez votre réseau et réessayez.",
+
+  "qrApproveTitle": "Nouvelle connexion",
+  "qrApproveIntro": "Ce code vient d'être scanné depuis cet appareil :",
+  "qrApproveDeviceLabel": "Appareil (nom déclaré)",
+  "qrApprovePlatformLabel": "Plateforme",
+  "qrApproveRequestedLabel": "Demandé",
+  "qrApproveIpLabel": "Adresse IP",
+  "qrApproveLocationLabel": "Lieu approximatif",
+  "qrApproveDeclaredNotice": "Le nom et la plateforme sont annoncés par l'appareil qui demande la connexion : ils peuvent être falsifiés. Seule l'adresse IP est constatée par Alanya.",
+  "qrApproveSecurityWarning": "Si vous n'êtes pas à l'origine de cette demande, refusez-la et changez votre mot de passe.",
+  "qrApproveReject": "Refuser",
+  "qrApproveConfirm": "Confirmer",
+  "qrApproveDone": "Appareil connecté",
+  "qrApproveRejectDone": "Connexion refusée",
+  "qrApproveSessionExpired": "Cette demande a expiré. Faites afficher un nouveau code sur l'autre appareil.",
+
+  "qrDevicesTitle": "Appareils connectés",
+  "qrDevicesEntryTitle": "Appareils connectés",
+  "qrDevicesEntrySubtitle": "Voir où votre compte est ouvert",
+  "qrLinkDeviceTitle": "Lier un nouvel appareil",
+  "qrLinkDeviceSubtitle": "Scanner le code affiché sur l'autre appareil",
+  "qrDevicesThisDevice": "Cet appareil",
+  "qrDevicesUnknownDevice": "Appareil inconnu",
+  "qrDevicesMethodPassword": "Connexion par mot de passe",
+  "qrDevicesMethodSignup": "Appareil d'inscription",
+  "qrDevicesMethodQr": "Connexion par code QR",
+  "qrDevicesLastActive": "Actif {date}",
+  "@qrDevicesLastActive": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "qrDevicesRevoke": "Déconnecter",
+  "qrDevicesRevokeConfirmTitle": "Déconnecter cet appareil ?",
+  "qrDevicesRevokeConfirmBody": "{name} sera déconnecté immédiatement. Il faudra saisir votre mot de passe pour s'y reconnecter.",
+  "@qrDevicesRevokeConfirmBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrDevicesRevokeDone": "Appareil déconnecté",
+  "qrDevicesEmpty": "Aucun autre appareil connecté",
+  "qrDevicesLoadError": "Impossible de charger vos appareils",
+  "qrDevicesIosNote": "Sur iPhone, un appareil peut réapparaître comme un nouvel appareil dans cette liste après une réinstallation d'Alanya.",
+
+  "qrBannerNewDevice": "Nouvel appareil connecté : {name}",
+  "@qrBannerNewDevice": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrBannerSignedOutRemotely": "Cet appareil a été déconnecté depuis un autre appareil."
 }

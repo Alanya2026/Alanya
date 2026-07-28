@@ -3294,4 +3294,245 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get profileNoEmailChip =>
       'Ajoutez un e-mail pour sécuriser votre compte';
+
+  @override
+  String get qrMyCodeTitle => 'Mon code QR';
+
+  @override
+  String get qrMyCodeTabCode => 'Mon code';
+
+  @override
+  String get qrMyCodeTabScan => 'Scanner';
+
+  @override
+  String get qrMyCodeSubtitle =>
+      'Faites scanner ce code pour être ajouté en contact préféré.';
+
+  @override
+  String get qrMyCodeShare => 'Partager';
+
+  @override
+  String get qrMyCodeRegenerate => 'Régénérer';
+
+  @override
+  String get qrMyCodeRegenerateConfirmTitle => 'Régénérer votre code ?';
+
+  @override
+  String get qrMyCodeRegenerateConfirmBody =>
+      'L\'ancien code cessera immédiatement de fonctionner. Les personnes qui l\'ont enregistré ne pourront plus vous ajouter avec.';
+
+  @override
+  String get qrMyCodeRegenerateDone => 'Nouveau code généré';
+
+  @override
+  String qrMyCodeShareText(String name) {
+    return 'Ajoutez-moi sur Alanya : je suis $name.';
+  }
+
+  @override
+  String get qrScanTitle => 'Scanner un code';
+
+  @override
+  String get qrScanEntryButton => 'Scanner un code';
+
+  @override
+  String get qrScanInstruction => 'Cadrez le code QR d\'un contact';
+
+  @override
+  String get qrScanErrorUnreadable =>
+      'Code illisible. Rapprochez-vous et réessayez.';
+
+  @override
+  String get qrScanErrorUnknown => 'Ce code est expiré ou inconnu.';
+
+  @override
+  String get qrScanOwnCode => 'C\'est votre propre code.';
+
+  @override
+  String qrScanAddSuccess(String name) {
+    return '$name a été ajouté à vos contacts préférés';
+  }
+
+  @override
+  String qrScanAlreadyContact(String name) {
+    return '$name est déjà dans vos contacts préférés';
+  }
+
+  @override
+  String get qrScanUndo => 'Annuler';
+
+  @override
+  String qrScanUndone(String name) {
+    return '$name a été retiré de vos contacts préférés';
+  }
+
+  @override
+  String get qrScanUndoFailed => 'Impossible d\'annuler l\'ajout';
+
+  @override
+  String get qrScanCameraDenied =>
+      'Alanya a besoin d\'accéder à la caméra pour scanner un code.';
+
+  @override
+  String get qrScanOpenSettings => 'Ouvrir les réglages';
+
+  @override
+  String get qrScanTorchOn => 'Lampe allumée';
+
+  @override
+  String get qrScanTorchOff => 'Lampe éteinte';
+
+  @override
+  String get qrLoginTitle => 'Connexion par QR code';
+
+  @override
+  String get qrLoginEntryButton => 'Se connecter avec un code QR';
+
+  @override
+  String get qrLoginUsePassword => 'Se connecter avec mon mot de passe';
+
+  @override
+  String get qrLoginExplanation =>
+      'Ouvrez Alanya sur votre téléphone déjà connecté, allez dans Compte et sécurité, puis scannez ce code.';
+
+  @override
+  String qrLoginExpiresIn(String time) {
+    return 'Expire dans $time';
+  }
+
+  @override
+  String get qrLoginStatusWaiting => 'En attente de scan…';
+
+  @override
+  String get qrLoginStatusScanned =>
+      'Code scanné. Confirmez sur votre autre appareil.';
+
+  @override
+  String get qrLoginStatusRejected =>
+      'Connexion refusée depuis votre autre appareil.';
+
+  @override
+  String get qrLoginStatusExpired => 'Ce code a expiré.';
+
+  @override
+  String get qrLoginRegenerate => 'Générer un nouveau code';
+
+  @override
+  String get qrLoginNetworkError =>
+      'Connexion impossible. Vérifiez votre réseau et réessayez.';
+
+  @override
+  String get qrApproveTitle => 'Nouvelle connexion';
+
+  @override
+  String get qrApproveIntro =>
+      'Ce code vient d\'être scanné depuis cet appareil :';
+
+  @override
+  String get qrApproveDeviceLabel => 'Appareil (nom déclaré)';
+
+  @override
+  String get qrApprovePlatformLabel => 'Plateforme';
+
+  @override
+  String get qrApproveRequestedLabel => 'Demandé';
+
+  @override
+  String get qrApproveIpLabel => 'Adresse IP';
+
+  @override
+  String get qrApproveLocationLabel => 'Lieu approximatif';
+
+  @override
+  String get qrApproveDeclaredNotice =>
+      'Le nom et la plateforme sont annoncés par l\'appareil qui demande la connexion : ils peuvent être falsifiés. Seule l\'adresse IP est constatée par Alanya.';
+
+  @override
+  String get qrApproveSecurityWarning =>
+      'Si vous n\'êtes pas à l\'origine de cette demande, refusez-la et changez votre mot de passe.';
+
+  @override
+  String get qrApproveReject => 'Refuser';
+
+  @override
+  String get qrApproveConfirm => 'Confirmer';
+
+  @override
+  String get qrApproveDone => 'Appareil connecté';
+
+  @override
+  String get qrApproveRejectDone => 'Connexion refusée';
+
+  @override
+  String get qrApproveSessionExpired =>
+      'Cette demande a expiré. Faites afficher un nouveau code sur l\'autre appareil.';
+
+  @override
+  String get qrDevicesTitle => 'Appareils connectés';
+
+  @override
+  String get qrDevicesEntryTitle => 'Appareils connectés';
+
+  @override
+  String get qrDevicesEntrySubtitle => 'Voir où votre compte est ouvert';
+
+  @override
+  String get qrLinkDeviceTitle => 'Lier un nouvel appareil';
+
+  @override
+  String get qrLinkDeviceSubtitle =>
+      'Scanner le code affiché sur l\'autre appareil';
+
+  @override
+  String get qrDevicesThisDevice => 'Cet appareil';
+
+  @override
+  String get qrDevicesUnknownDevice => 'Appareil inconnu';
+
+  @override
+  String get qrDevicesMethodPassword => 'Connexion par mot de passe';
+
+  @override
+  String get qrDevicesMethodSignup => 'Appareil d\'inscription';
+
+  @override
+  String get qrDevicesMethodQr => 'Connexion par code QR';
+
+  @override
+  String qrDevicesLastActive(String date) {
+    return 'Actif $date';
+  }
+
+  @override
+  String get qrDevicesRevoke => 'Déconnecter';
+
+  @override
+  String get qrDevicesRevokeConfirmTitle => 'Déconnecter cet appareil ?';
+
+  @override
+  String qrDevicesRevokeConfirmBody(String name) {
+    return '$name sera déconnecté immédiatement. Il faudra saisir votre mot de passe pour s\'y reconnecter.';
+  }
+
+  @override
+  String get qrDevicesRevokeDone => 'Appareil déconnecté';
+
+  @override
+  String get qrDevicesEmpty => 'Aucun autre appareil connecté';
+
+  @override
+  String get qrDevicesLoadError => 'Impossible de charger vos appareils';
+
+  @override
+  String get qrDevicesIosNote =>
+      'Sur iPhone, un appareil peut réapparaître comme un nouvel appareil dans cette liste après une réinstallation d\'Alanya.';
+
+  @override
+  String qrBannerNewDevice(String name) {
+    return 'Nouvel appareil connecté : $name';
+  }
+
+  @override
+  String get qrBannerSignedOutRemotely =>
+      'Cet appareil a été déconnecté depuis un autre appareil.';
 }

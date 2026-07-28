@@ -231,6 +231,11 @@ class AuthProvider extends ChangeNotifier {
       await _apiClient.login(
         alanyaPhone: AlanyaPhoneFormatter.normalize(alanyaPhone),
         password: password,
+        // `device_ID` reste l'UUID applicatif : c'est lui que le socket et le
+        // registre push annoncent, et la déduplication push legacy les compare.
+        // L'identifiant matériel part à part, pour la seule table `appareils`.
+        deviceId: await _apiClient.ensureStableDeviceId(),
+        hardwareId: await TalkyApiClient.currentHardwareId(),
       );
 
       await _storage.saveTokens(
@@ -254,6 +259,41 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Finalise une session à partir de tokens déjà émis par le backend : la
+  /// connexion par QR est autorisée depuis un autre appareil, il n'y a donc
+  /// aucune requête de login à jouer ici, seulement la fin de [login].
+  Future<void> loginWithQrTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      _apiClient.setToken(accessToken);
+      _apiClient.setRefreshToken(refreshToken);
+
+      await _storage.saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      final userData = await _apiClient.getMe();
+      _currentUser = User.fromJson(userData);
+      await _storage.saveUser(_currentUser!);
+      currentSessionEndReason = SessionEndReason.none;
+      // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
+    } on TalkyException catch (e) {
+      _error = e.message;
+      debugPrint('[AuthProvider] LoginQr TalkyException: ${e.message} (Status: ${e.statusCode})');
+    } catch (e) {
+      _error = LocaleController.instance.l10n.anErrorOccurred('$e');
+      debugPrint('[AuthProvider] LoginQr Exception: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> register({
     String? email,
     required String password,
@@ -272,6 +312,8 @@ class AuthProvider extends ChangeNotifier {
         nom: nom,
         pseudo: pseudo,
         idPays: idPays,
+        deviceId: await _apiClient.ensureStableDeviceId(),
+        hardwareId: await TalkyApiClient.currentHardwareId(),
       );
 
       await _storage.saveTokens(
@@ -372,6 +414,22 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     currentSessionEndReason = SessionEndReason.explicitLogout;
+    _apiClient.logout();
+    await _storage.clearAll();
+    _currentUser = null;
+    notifyListeners();
+  }
+
+  /// Cet appareil vient d'être déconnecté depuis un autre appareil du compte.
+  ///
+  /// `TalkyApiClient.logout()` n'efface que les tokens EN MÉMOIRE : sans ce
+  /// passage par le stockage, le refresh token persisté relancerait la session
+  /// au prochain démarrage, et l'UI resterait sur l'écran d'accueil avec un
+  /// compte qui répond « non authentifié » à chaque action.
+  Future<void> handleRemoteRevocation() async {
+    if (_currentUser == null && _apiClient.accessToken == null) return;
+    debugPrint('[AuthProvider] appareil révoqué à distance → session locale effacée');
+    currentSessionEndReason = SessionEndReason.revokedRemotely;
     _apiClient.logout();
     await _storage.clearAll();
     _currentUser = null;

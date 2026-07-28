@@ -93,6 +93,10 @@ dependencies:
   # ── UI : swipe actions sur listes / bulles ───────────────────────
   flutter_slidable: ^3.0.0
 
+  # ── QR : mon code d'identité et connexion d'un nouvel appareil ───
+  qr_flutter: ^4.1.0                  # Rendu du QR à l'écran (Dart pur)
+  mobile_scanner: ^7.4.0              # Scan du QR (CameraX + ML Kit / AVFoundation)
+
   # ── Identification appareil (marque + modèle pour userAccess) ────
   device_info_plus: ^10.1.2
   video_thumbnail: ^0.5.6

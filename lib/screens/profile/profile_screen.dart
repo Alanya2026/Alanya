@@ -22,6 +22,7 @@ import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
 import 'preferred_contacts_screen.dart';
+import 'qr_code_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -465,6 +466,20 @@ class _ProfileHeader extends StatelessWidget {
                     style: context.text.bodyMedium?.copyWith(
                       color: context.colors.primary,
                       fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  AppSpacing.hGapXs,
+                  InkResponse(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const QrCodeScreen()),
+                    ),
+                    radius: AppIconSize.md,
+                    child: Tooltip(
+                      message: context.l10n.qrMyCodeTitle,
+                      child: Icon(Icons.qr_code_2,
+                          size: AppIconSize.md,
+                          color: context.colors.primary),
                     ),
                   ),
                 ],
