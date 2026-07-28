@@ -3361,6 +3361,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get qrScanResultAdded => 'Added to your contacts';
+
+  @override
+  String get qrScanResultAlready => 'Already in your contacts';
+
+  @override
+  String get qrScanActionMessage => 'Message';
+
+  @override
+  String get qrScanActionDetails => 'View details';
+
+  @override
   String get qrScanUndo => 'Undo';
 
   @override

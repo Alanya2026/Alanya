@@ -5948,6 +5948,30 @@ abstract class AppLocalizations {
   /// **'{name} est déjà dans vos contacts préférés'**
   String qrScanAlreadyContact(String name);
 
+  /// No description provided for @qrScanResultAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouté à vos contacts'**
+  String get qrScanResultAdded;
+
+  /// No description provided for @qrScanResultAlready.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà dans vos contacts'**
+  String get qrScanResultAlready;
+
+  /// No description provided for @qrScanActionMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Message'**
+  String get qrScanActionMessage;
+
+  /// No description provided for @qrScanActionDetails.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir détails'**
+  String get qrScanActionDetails;
+
   /// No description provided for @qrScanUndo.
   ///
   /// In fr, this message translates to:

@@ -78,6 +78,18 @@ class QrContactFlow {
     );
   }
 
+  /// Retire un contact ajouté par erreur. Public : la carte de résultat du
+  /// scanner l'appelle aussi, avec son propre bouton d'annulation.
+  static Future<void> undoAdd({
+    required ScaffoldMessengerState messenger,
+    required TalkyApiClient apiClient,
+    required LocalCacheRepository cache,
+    required AppLocalizations l10n,
+    required User user,
+  }) =>
+      _undo(messenger, apiClient, cache, l10n, user,
+          user.nom.trim().isNotEmpty ? user.nom.trim() : user.pseudo);
+
   static Future<void> _undo(
     ScaffoldMessengerState messenger,
     TalkyApiClient apiClient,

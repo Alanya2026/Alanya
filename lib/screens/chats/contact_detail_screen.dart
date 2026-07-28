@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/call_service.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/document_file_style.dart';
@@ -228,6 +229,29 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   }
 
   // ── Actions ────────────────────────────────────────────────────────
+
+  /// Appel sortant depuis la fiche contact. Ces deux boutons affichaient
+  /// « bientôt disponible » alors que le service existait et servait déjà
+  /// ailleurs (widgets/profile_image_modal.dart) : ils étaient morts par
+  /// simple oubli de câblage.
+  Future<void> _startCall({required bool isVideo}) async {
+    final contact = _contact;
+    final me = context.read<AuthProvider>().currentUser;
+    if (contact == null || me == null) return;
+    try {
+      await context.read<CallService>().initiateCall(
+            targetUserId: widget.userId,
+            myId: me.alanyaID,
+            myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+            myPhoto: me.avatarUrl,
+            targetUserName: contact.nom,
+            targetUserPhoto: contact.avatarUrl,
+            isVideo: isVideo,
+          );
+    } catch (e, st) {
+      AppLog.e('ContactDetail', 'Appel sortant échoué', e, st);
+    }
+  }
 
   Future<void> _openChat() async {
     if (_contact == null) return;
@@ -473,8 +497,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         if (!isSelf) ...[
           _PrimaryActions(
             callsDisabled: _isBlocked || _blockedByThem,
-            onCall: () => _snack(context.l10n.callComingSoon),
-            onVideo: () => _snack(context.l10n.videoComingSoon),
+            onCall: () => unawaited(_startCall(isVideo: false)),
+            onVideo: () => unawaited(_startCall(isVideo: true)),
             onMessage: _openChat,
           ),
           AppSpacing.vGapLg,

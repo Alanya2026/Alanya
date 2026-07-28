@@ -1287,6 +1287,10 @@
       "name": { "type": "String" }
     }
   },
+  "qrScanResultAdded": "Added to your contacts",
+  "qrScanResultAlready": "Already in your contacts",
+  "qrScanActionMessage": "Message",
+  "qrScanActionDetails": "View details",
   "qrScanUndo": "Undo",
   "qrScanUndone": "{name} was removed from your preferred contacts",
   "@qrScanUndone": {

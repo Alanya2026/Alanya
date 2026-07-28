@@ -2175,6 +2175,10 @@
       "name": { "type": "String" }
     }
   },
+  "qrScanResultAdded": "Ajouté à vos contacts",
+  "qrScanResultAlready": "Déjà dans vos contacts",
+  "qrScanActionMessage": "Message",
+  "qrScanActionDetails": "Voir détails",
   "qrScanUndo": "Annuler",
   "qrScanUndone": "{name} a été retiré de vos contacts préférés",
   "@qrScanUndone": {

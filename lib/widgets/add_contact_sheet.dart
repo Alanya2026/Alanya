@@ -154,26 +154,28 @@ class _AddContactSheetState extends State<AddContactSheet> {
     }
   }
 
-  /// Le scanner a déjà écrit le contact dans le cache : on relit simplement
-  /// pour aligner la liste locale, comme après un ajout manuel.
+  /// Le scanner écrit lui-même les contacts dans le cache et permet d'en
+  /// ajouter plusieurs à la suite : il ne rend donc aucun résultat. On relit
+  /// simplement la liste à son retour, quel qu'ait été le nombre d'ajouts.
   Future<void> _openScanner() async {
-    final result = await Navigator.push<Object?>(
+    await Navigator.push<Object?>(
       context,
       MaterialPageRoute(builder: (_) => const QrScannerScreen()),
     );
-    if (!mounted || result is! QrScanContactResult) return;
+    if (!mounted) return;
     try {
       final cache = Provider.of<LocalCacheRepository>(context, listen: false);
       final updated = await cache.getPreferredContactsOnce();
       if (!mounted) return;
       setState(() {
         _preferredContacts = updated.map(localUserToUser).toList();
-        _existingIds.add(result.contact.alanyaID);
+        _existingIds
+          ..clear()
+          ..addAll(_preferredContacts.map((u) => u.alanyaID));
       });
     } catch (e, st) {
       AppLog.e('AddContact', 'Relecture des contacts préférés échouée', e, st);
     }
-    widget.onAdded(result.contact);
   }
 
   bool _isAlreadyContact(User user) =>

@@ -8,6 +8,12 @@ import 'package:provider/provider.dart';
 
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/qr_contact_flow.dart';
+import '../../core/utils/conversation_display.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../widgets/qr_scan_result_card.dart';
+import '../chats/chat_detail_screen.dart';
+import '../chats/contact_detail_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -16,18 +22,6 @@ import '../../models/qr_models.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'qr_login_confirm_screen.dart';
-
-/// Résultat rendu par [QrScannerScreen] quand le code scanné était une identité.
-/// L'appelant s'en sert pour rafraîchir sa liste sans refaire d'appel réseau.
-class QrScanContactResult {
-  final User contact;
-  final bool alreadyContact;
-
-  const QrScanContactResult({
-    required this.contact,
-    required this.alreadyContact,
-  });
-}
 
 /// Scanner de code QR plein écran : identité d'un contact ou demande de
 /// connexion d'un nouvel appareil. La résolution du payload est faite par le
@@ -50,6 +44,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   /// plusieurs dizaines de fois par seconde.
   bool _isHandling = false;
   bool _isBusy = false;
+
+  /// Contact ajouté par le dernier scan, affiché en carte de résultat.
+  User? _resultat;
+  bool _resultatDejaContact = false;
 
   @override
   void initState() {
@@ -160,31 +158,83 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     );
     if (!mounted) return;
 
-    // L'ajout est instantané, sans écran de confirmation : le filet de sécurité
-    // promis par la conception est ce bandeau annulable. Sans lui, cadrer par
-    // réflexe un code affiché en public écrit un contact sans recours.
-    // Les dépendances sont capturées AVANT le pop : le bandeau survit à cet
-    // écran (le ScaffoldMessenger est au-dessus de la route), donc son callback
-    // ne peut plus s'appuyer sur `context`.
+    // On ne referme plus le scanner : la carte de résultat s'affiche par-dessus
+    // la caméra restée vivante, pour pouvoir enchaîner plusieurs personnes.
+    setState(() {
+      _isBusy = false;
+      _resultat = user;
+      _resultatDejaContact = result.alreadyContact;
+    });
+  }
+
+  /// Retire la carte et réarme la détection.
+  void _fermerResultat() {
+    if (!mounted) return;
+    setState(() => _resultat = null);
+    _isHandling = false;
+  }
+
+  Future<void> _messagerResultat(User user) async {
+    final convId = await _conversationDirecte(user.alanyaID);
+    if (!mounted) return;
+    _fermerResultat();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatDetailScreen(
+          userName: user.nom.trim().isNotEmpty ? user.nom.trim() : user.pseudo,
+          conversationId: convId,
+          userId: user.alanyaID,
+          avatarUrl: user.avatarUrl,
+        ),
+      ),
+    );
+  }
+
+  /// Conversation directe déjà connue localement, s'il y en a une : sans elle
+  /// l'écran de conversation s'ouvrirait vide alors que l'historique existe.
+  Future<int?> _conversationDirecte(int peerId) async {
+    try {
+      final myId = context.read<AuthProvider>().currentUser?.alanyaID;
+      if (myId == null) return null;
+      final convs = await context
+          .read<ChatProvider>()
+          .repository
+          .dao
+          .getAllConversations();
+      return findLocalDirectConversationId(convs, myId, peerId);
+    } catch (e, st) {
+      AppLog.w('QrScanner', 'Résolution de la conversation échouée', e, st);
+      return null;
+    }
+  }
+
+  void _voirDetails(User user) {
+    _fermerResultat();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ContactDetailScreen(
+          userId: user.alanyaID,
+          initialName: user.nom.trim().isNotEmpty ? user.nom.trim() : user.pseudo,
+          initialAvatar: user.avatarUrl,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _annulerResultat(User user) async {
     final messenger = ScaffoldMessenger.of(context);
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final cache = Provider.of<LocalCacheRepository>(context, listen: false);
-
-    QrContactFlow.showAddedSnack(
+    final l10n = context.l10n;
+    _fermerResultat();
+    await QrContactFlow.undoAdd(
       messenger: messenger,
       apiClient: apiClient,
       cache: cache,
       l10n: l10n,
       user: user,
-      alreadyContact: result.alreadyContact,
-    );
-
-    Navigator.pop(
-      context,
-      QrScanContactResult(
-        contact: user,
-        alreadyContact: result.alreadyContact,
-      ),
     );
   }
 
@@ -266,6 +316,23 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             ),
           ),
 
+          if (_resultat != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                child: QrScanResultCard(
+                  key: ValueKey(_resultat!.alanyaID),
+                  user: _resultat!,
+                  alreadyContact: _resultatDejaContact,
+                  onMessage: () => unawaited(_messagerResultat(_resultat!)),
+                  onDetails: () => _voirDetails(_resultat!),
+                  onUndo: () => unawaited(_annulerResultat(_resultat!)),
+                  onDismissed: _fermerResultat,
+                ),
+              ),
+            ),
           Positioned(
             top: MediaQuery.paddingOf(context).top + 8,
             left: 0,
