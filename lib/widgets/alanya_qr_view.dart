@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../core/theme/app_colors.dart';
+import 'app_logo.dart';
 
 /// Rendu unique des QR d'Alanya — code d'identité comme code de connexion.
 ///
@@ -22,9 +23,10 @@ class AlanyaQrView extends StatelessWidget {
   /// Côté du carré, en pixels logiques.
   final double size;
 
-  /// Logo incrusté au centre. Le même que celui du QR d'identité : la variante
-  /// sans fond se confondrait avec les modules du code.
-  static const _logoAsset = 'assets/images/alanyalogo.png';
+  /// Logo incrusté au centre : la variante SANS arrière-plan
+  /// (`alanyalogorbg.png`, RVBA avec transparence). L'autre fichier,
+  /// `alanyalogo.png`, est en RVB opaque — il poserait un rectangle blanc au
+  /// milieu du code, visible sur la carte comme sur un partage.
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +47,7 @@ class AlanyaQrView extends StatelessWidget {
         dataModuleShape: QrDataModuleShape.circle,
         color: AppColors.brandPrimaryDark,
       ),
-      embeddedImage: const AssetImage(_logoAsset),
+      embeddedImage: const AssetImage(AppLogo.assetPath),
       embeddedImageStyle: QrEmbeddedImageStyle(
         size: Size(size * 0.18, size * 0.18),
       ),
