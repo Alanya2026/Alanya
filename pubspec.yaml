@@ -110,6 +110,7 @@ dependencies:
   # (AGP 8.9.1 / Kotlin 2.1.0 / Gradle 8.12) — « Could not find method kotlin() ».
   receive_sharing_intent: 1.8.1
   audio_metadata_reader: ^1.6.0
+  app_links: ^7.2.1
 
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la

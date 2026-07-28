@@ -7,7 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/local_cache_repository.dart';
-import '../../l10n/app_localizations.dart';
+import '../../core/services/qr_contact_flow.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -154,17 +154,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     }
 
     final user = User.fromJson(contact);
-    final name = user.nom.trim().isNotEmpty ? user.nom.trim() : user.pseudo;
-    try {
-      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
-      // Payload de résolution incomplet (ni email ni pays) : écriture partielle,
-      // puis relecture pour garantir que le cache est à jour avant de rendre
-      // la main à l'appelant.
-      await cache.upsertKnownUser(user, preferred: true, partial: true);
-      await cache.getPreferredContactsOnce();
-    } catch (e, st) {
-      AppLog.w('QrScanner', 'Mise à jour du cache local échouée', e, st);
-    }
+    await QrContactFlow.cacheContact(
+      Provider.of<LocalCacheRepository>(context, listen: false),
+      user,
+    );
     if (!mounted) return;
 
     // L'ajout est instantané, sans écran de confirmation : le filet de sécurité
@@ -177,29 +170,13 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     final cache = Provider.of<LocalCacheRepository>(context, listen: false);
 
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          result.alreadyContact
-              ? l10n.qrScanAlreadyContact(name)
-              : l10n.qrScanAddSuccess(name),
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 5),
-        // Rien à annuler si la personne était déjà un contact : la retirer
-        // supprimerait un lien que ce scan n'a pas créé.
-        action: result.alreadyContact
-            ? null
-            : SnackBarAction(
-                label: l10n.qrScanUndo,
-                textColor: AppColors.white,
-                onPressed: () => unawaited(
-                  _annulerAjout(messenger, apiClient, cache, user, name, l10n),
-                ),
-              ),
-      ),
+    QrContactFlow.showAddedSnack(
+      messenger: messenger,
+      apiClient: apiClient,
+      cache: cache,
+      l10n: l10n,
+      user: user,
+      alreadyContact: result.alreadyContact,
     );
 
     Navigator.pop(
@@ -209,40 +186,6 @@ class _QrScannerScreenState extends State<QrScannerScreen>
         alreadyContact: result.alreadyContact,
       ),
     );
-  }
-
-  /// Défait l'ajout déclenché par le scan. N'utilise aucun `BuildContext` :
-  /// l'écran scanner est déjà démonté quand l'utilisateur appuie sur « Annuler ».
-  static Future<void> _annulerAjout(
-    ScaffoldMessengerState messenger,
-    TalkyApiClient apiClient,
-    LocalCacheRepository cache,
-    User user,
-    String name,
-    AppLocalizations l10n,
-  ) async {
-    try {
-      await apiClient.removeContact(user.alanyaID);
-      await cache.upsertKnownUser(user, preferred: false, partial: true);
-      await cache.getPreferredContactsOnce();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.qrScanUndone(name)),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } catch (e, st) {
-      AppLog.e('QrScanner', 'Annulation de l\'ajout par QR échouée', e, st);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.qrScanUndoFailed),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.error,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
   }
 
   /// Aucune approbation ici : le scan ne fait que révéler la demande, seul

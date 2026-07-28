@@ -2131,6 +2131,16 @@
   "qrMyCodeTabScan": "Scanner",
   "qrMyCodeSubtitle": "Faites scanner ce code pour être ajouté en contact préféré.",
   "qrMyCodeShare": "Partager",
+  "qrMyCodeSave": "Enregistrer",
+  "qrMyCodeSaveDone": "Code enregistré dans vos photos",
+  "qrMyCodeSaveFailed": "Impossible d'enregistrer le code",
+  "qrMyCodeSaveDenied": "Autorisez l'accès aux photos pour enregistrer le code",
+  "qrMyCodeShareId": "Mon Alanya ID : {id}",
+  "@qrMyCodeShareId": {
+    "placeholders": {
+      "id": { "type": "String" }
+    }
+  },
   "qrMyCodeRegenerate": "Régénérer",
   "qrMyCodeRegenerateConfirmTitle": "Régénérer votre code ?",
   "qrMyCodeRegenerateConfirmBody": "L'ancien code cessera immédiatement de fonctionner. Les personnes qui l'ont enregistré ne pourront plus vous ajouter avec.",

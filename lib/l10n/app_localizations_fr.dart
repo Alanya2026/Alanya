@@ -3312,6 +3312,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String get qrMyCodeShare => 'Partager';
 
   @override
+  String get qrMyCodeSave => 'Enregistrer';
+
+  @override
+  String get qrMyCodeSaveDone => 'Code enregistré dans vos photos';
+
+  @override
+  String get qrMyCodeSaveFailed => 'Impossible d\'enregistrer le code';
+
+  @override
+  String get qrMyCodeSaveDenied =>
+      'Autorisez l\'accès aux photos pour enregistrer le code';
+
+  @override
+  String qrMyCodeShareId(String id) {
+    return 'Mon Alanya ID : $id';
+  }
+
+  @override
   String get qrMyCodeRegenerate => 'Régénérer';
 
   @override

@@ -59,6 +59,32 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Schéma applicatif : bouton « Ouvrir dans Alanya » de la page
+                 d'accueil d'un code QR. Fonctionne sans aucun certificat, donc
+                 c'est le chemin garanti tant que l'association ci-dessous
+                 n'est pas vérifiée. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="alanya"/>
+            </intent-filter>
+
+            <!-- App Links : ouverture directe depuis un lien https partagé.
+                 android:autoVerify exige que /.well-known/assetlinks.json soit
+                 servi avec l'empreinte SHA-256 de la clé qui signe l'APK
+                 installé. Après publication sur le Play Store, c'est
+                 l'empreinte du Play App Signing qu'il faut y ajouter, sinon
+                 le lien retombe sur le navigateur (dégradation, pas panne). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="www.alanya237.com"
+                      android:pathPrefix="/q/u/"/>
+            </intent-filter>
             <!-- Recevoir des partages depuis d'autres apps (Galerie, Fichiers…) -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

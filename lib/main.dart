@@ -33,6 +33,8 @@ import 'core/services/local_cache_repository.dart';
 import 'core/services/local_hidden_store.dart';
 import 'core/services/meeting_service.dart';
 import 'core/services/presence_service.dart';
+import 'core/services/qr_contact_flow.dart';
+import 'core/services/qr_deep_link_service.dart';
 import 'core/services/realtime_sync_service.dart';
 import 'core/services/voice_message_coordinator.dart';
 import 'core/services/voice_playback_service.dart';
@@ -270,6 +272,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   /// l'écran d'accueil avec une session morte.
   StreamSubscription<void>? _deviceRevokedSub;
 
+  /// Liens `…/q/u/<jeton>` ouverts depuis la page web d'un code QR partagé.
+  /// L'abonnement vit ici pour capter aussi bien le lien qui a démarré l'app
+  /// que ceux reçus pendant qu'elle tourne.
+  StreamSubscription<String>? _qrLinkSub;
+
   @override
   void initState() {
     super.initState();
@@ -280,6 +287,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     _deviceRevokedSub = Provider.of<TalkyApiClient>(context, listen: false)
         .thisDeviceRevoked
         .listen((_) => unawaited(_authProvider?.handleRemoteRevocation() ?? Future.value()));
+    _qrLinkSub = QrDeepLinkService.instance.identityTokens
+        .listen((token) => unawaited(_handleQrIdentityLink(token)));
+    unawaited(QrDeepLinkService.instance.start());
     Future.microtask(_bootstrap);
   }
 
@@ -288,6 +298,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _authProvider?.removeListener(_onAuthChanged);
     _deviceRevokedSub?.cancel();
+    _qrLinkSub?.cancel();
     _clearCallLogBindings();
     if (_onBackOnline != null && _connectivityForListener != null) {
       _connectivityForListener!.removeBackOnlineListener(_onBackOnline!);
@@ -528,6 +539,31 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
   /// Aligne l'état des providers (chat, status, admin) sur l'utilisateur
   /// actuellement loggé. Idempotent : ne re-bind pas si déjà bind pour cet ID.
+  /// Ajoute le contact désigné par un lien d'identité. Un lien reçu hors
+  /// session n'est pas perdu : il reste en attente et sera rejoué par
+  /// [_replayPendingQrLink] une fois la connexion faite.
+  Future<void> _handleQrIdentityLink(String token) async {
+    if (!mounted) return;
+    final auth = _authProvider;
+    if (auth == null || !auth.isLoggedIn) {
+      QrDeepLinkService.instance.stashToken(token);
+      return;
+    }
+    await QrContactFlow.handleToken(
+      token: token,
+      messenger: ScaffoldMessenger.of(context),
+      apiClient: Provider.of<TalkyApiClient>(context, listen: false),
+      cache: Provider.of<LocalCacheRepository>(context, listen: false),
+      l10n: context.l10n,
+    );
+  }
+
+  /// Rejoue un lien d'identité reçu avant l'ouverture de session.
+  Future<void> _replayPendingQrLink() async {
+    final token = QrDeepLinkService.instance.consumePendingToken();
+    if (token != null) await _handleQrIdentityLink(token);
+  }
+
   Future<void> _syncSessionBindings() async {
     if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -600,6 +636,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
     _boundUserId = myId;
     debugPrint('[AuthWrapper] Bind providers pour userID=$myId');
+
+    // Lien d'identité reçu avant l'ouverture de session (app démarrée par le
+    // lien, ou utilisateur qui devait d'abord se connecter) : c'est maintenant
+    // qu'on peut l'honorer.
+    unawaited(_replayPendingQrLink());
 
     if (!mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);

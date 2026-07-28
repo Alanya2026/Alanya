@@ -5810,6 +5810,36 @@ abstract class AppLocalizations {
   /// **'Partager'**
   String get qrMyCodeShare;
 
+  /// No description provided for @qrMyCodeSave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get qrMyCodeSave;
+
+  /// No description provided for @qrMyCodeSaveDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code enregistré dans vos photos'**
+  String get qrMyCodeSaveDone;
+
+  /// No description provided for @qrMyCodeSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer le code'**
+  String get qrMyCodeSaveFailed;
+
+  /// No description provided for @qrMyCodeSaveDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autorisez l\'accès aux photos pour enregistrer le code'**
+  String get qrMyCodeSaveDenied;
+
+  /// No description provided for @qrMyCodeShareId.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon Alanya ID : {id}'**
+  String qrMyCodeShareId(String id);
+
   /// No description provided for @qrMyCodeRegenerate.
   ///
   /// In fr, this message translates to:

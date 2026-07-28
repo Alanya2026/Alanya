@@ -1,11 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
@@ -31,6 +38,12 @@ class QrCodeScreen extends StatefulWidget {
 class _QrCodeScreenState extends State<QrCodeScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+
+  /// Ancre de capture de la carte : partage et enregistrement produisent la
+  /// même image, celle que l'utilisateur a sous les yeux.
+  final GlobalKey _carteKey = GlobalKey();
+
+  bool _isSaving = false;
 
   QrIdentity? _identity;
   String? _loadError;
@@ -105,21 +118,115 @@ class _QrCodeScreenState extends State<QrCodeScreen>
 
   // ── Actions ────────────────────────────────────────────────────────────
 
-  Future<void> _share() async {
-    final identity = _identity;
-    if (identity == null) return;
+  /// Capture la carte telle qu'elle est affichée, en PNG.
+  ///
+  /// `pixelRatio` 3 plutôt que celui de l'écran : l'image doit rester nette une
+  /// fois agrandie sur un autre appareil pour être scannable, et un QR flou ne
+  /// se lit pas.
+  Future<Uint8List?> _capturerCarte() async {
+    try {
+      final boundary =
+          _carteKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final image = await boundary.toImage(pixelRatio: 3);
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      return data?.buffer.asUint8List();
+    } catch (e, st) {
+      AppLog.e('QrCode', 'Capture de la carte échouée', e, st);
+      return null;
+    }
+  }
+
+  Future<File?> _ecrireFichierTemporaire(Uint8List bytes) async {
+    try {
+      final dir = await getTemporaryDirectory();
+      // Nom stable : réécrire le même fichier évite d'accumuler des captures
+      // dans le cache à chaque partage.
+      final file = File('${dir.path}/alanya-mon-code.png');
+      await file.writeAsBytes(bytes, flush: true);
+      return file;
+    } catch (e, st) {
+      AppLog.e('QrCode', 'Écriture du fichier temporaire échouée', e, st);
+      return null;
+    }
+  }
+
+  /// Légende du partage : le lien ET l'Alanya ID, en plus de l'image.
+  /// Les trois véhiculent la même identité par des chemins différents — le
+  /// destinataire scanne, tape le lien, ou saisit l'ID à la main selon ce dont
+  /// il dispose.
+  String _texteDePartage(QrIdentity identity) {
+    final l10n = context.l10n;
     final user = context.read<AuthProvider>().currentUser;
     final name = user?.nom.trim().isNotEmpty == true
         ? user!.nom.trim()
         : (user?.pseudo.trim() ?? '');
-    final text =
-        '${context.l10n.qrMyCodeShareText(name)}\n${identity.payload}';
+    final phone = (user?.alanyaPhone ?? '').trim();
+
+    return [
+      l10n.qrMyCodeShareText(name),
+      if (phone.isNotEmpty) l10n.qrMyCodeShareId(AlanyaPhoneFormatter.formatDisplay(phone)),
+      identity.payload,
+    ].join('\n');
+  }
+
+  Future<void> _share() async {
+    final identity = _identity;
+    if (identity == null) return;
+
+    final texte = _texteDePartage(identity);
+    final origine = _shareOrigin();
+    final bytes = await _capturerCarte();
+    final fichier = bytes == null ? null : await _ecrireFichierTemporaire(bytes);
+    if (!mounted) return;
+
     try {
       await SharePlus.instance.share(
-        ShareParams(text: text, sharePositionOrigin: _shareOrigin()),
+        ShareParams(
+          text: texte,
+          // L'image est un bonus : si la capture échoue, le partage part quand
+          // même avec le lien et l'identifiant, qui suffisent à ajouter.
+          files: fichier == null ? null : [XFile(fichier.path)],
+          sharePositionOrigin: origine,
+        ),
       );
     } catch (e, st) {
       AppLog.e('QrCode', 'Partage du code QR échoué', e, st);
+    }
+  }
+
+  Future<void> _enregistrerDansGalerie() async {
+    if (_isSaving || _identity == null) return;
+    final l10n = context.l10n;
+    setState(() => _isSaving = true);
+    try {
+      final bytes = await _capturerCarte();
+      if (bytes == null) throw StateError('capture vide');
+      final fichier = await _ecrireFichierTemporaire(bytes);
+      if (fichier == null) throw StateError('écriture impossible');
+
+      if (!await Gal.hasAccess(toAlbum: true)) {
+        await Gal.requestAccess(toAlbum: true);
+      }
+      await Gal.putImage(fichier.path, album: 'Alanya');
+      if (!mounted) return;
+      _showSnack(l10n.qrMyCodeSaveDone, AppColors.success);
+    } on GalException catch (e, st) {
+      AppLog.w('QrCode', 'Enregistrement galerie refusé', e, st);
+      if (!mounted) return;
+      _showSnack(
+        e.type == GalExceptionType.accessDenied
+            ? l10n.qrMyCodeSaveDenied
+            : l10n.qrMyCodeSaveFailed,
+        AppColors.error,
+      );
+    } catch (e, st) {
+      AppLog.e('QrCode', 'Enregistrement du code échoué', e, st);
+      if (!mounted) return;
+      _showSnack(l10n.qrMyCodeSaveFailed, AppColors.error);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -259,7 +366,9 @@ class _QrCodeScreenState extends State<QrCodeScreen>
         AppSpacing.xxl,
       ),
       children: [
-        Stack(
+        RepaintBoundary(
+          key: _carteKey,
+          child: Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.topCenter,
           children: [
@@ -325,8 +434,14 @@ class _QrCodeScreenState extends State<QrCodeScreen>
               ),
             ),
           ],
+          ),
         ),
         AppSpacing.vGapXl,
+        // Partager et Enregistrer sont deux façons d'exporter la même carte :
+        // même rangée, même poids visuel. Régénérer est plus bas et en faible
+        // emphase — c'est une action rare, et surtout irréversible : elle
+        // invalide le code déjà partagé. Lui donner l'allure d'un bouton
+        // courant inviterait à la déclencher par mégarde.
         Row(
           children: [
             Expanded(
@@ -339,8 +454,8 @@ class _QrCodeScreenState extends State<QrCodeScreen>
             AppSpacing.hGapMd,
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _isRegenerating ? null : _regenerate,
-                icon: _isRegenerating
+                onPressed: _isSaving ? null : _enregistrerDansGalerie,
+                icon: _isSaving
                     ? SizedBox(
                         width: AppIconSize.sm,
                         height: AppIconSize.sm,
@@ -349,11 +464,31 @@ class _QrCodeScreenState extends State<QrCodeScreen>
                           color: context.colors.primary,
                         ),
                       )
-                    : const Icon(Icons.autorenew, size: AppIconSize.sm),
-                label: Text(l10n.qrMyCodeRegenerate),
+                    : const Icon(Icons.download_outlined, size: AppIconSize.sm),
+                label: Text(l10n.qrMyCodeSave),
               ),
             ),
           ],
+        ),
+        AppSpacing.vGapMd,
+        Center(
+          child: TextButton.icon(
+            onPressed: _isRegenerating ? null : _regenerate,
+            icon: _isRegenerating
+                ? SizedBox(
+                    width: AppIconSize.sm,
+                    height: AppIconSize.sm,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: context.colors.onSurfaceVariant,
+                    ),
+                  )
+                : const Icon(Icons.autorenew, size: AppIconSize.sm),
+            style: TextButton.styleFrom(
+              foregroundColor: context.colors.onSurfaceVariant,
+            ),
+            label: Text(l10n.qrMyCodeRegenerate),
+          ),
         ),
       ],
     );
