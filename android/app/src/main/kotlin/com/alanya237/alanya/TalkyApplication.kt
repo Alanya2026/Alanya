@@ -1,4 +1,4 @@
-package com.example.talky_flutter
+package com.alanya237.alanya
 
 import android.app.Application
 import android.content.SharedPreferences

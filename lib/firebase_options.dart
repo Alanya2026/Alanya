@@ -41,57 +41,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCXkmcbAl8nY3T4PRaj2Am9AQNSO-jAjP4',
-    appId: '1:778851391746:web:2063bbd1924a0acb014a1b',
-    messagingSenderId: '778851391746',
-    projectId: 'talky-2026',
-    authDomain: 'talky-2026.firebaseapp.com',
-    databaseURL: 'https://talky-2026-default-rtdb.firebaseio.com',
-    storageBucket: 'talky-2026.firebasestorage.app',
-    measurementId: 'G-DZ0Y3LJJXJ',
+    apiKey: 'AIzaSyAoG_AApdh41yLcCsV4JTJs5P-9pFUNWUg',
+    appId: '1:205366376782:web:534a2eade1a204ebe1461f',
+    messagingSenderId: '205366376782',
+    projectId: 'alanya-9233f',
+    authDomain: 'alanya-9233f.firebaseapp.com',
+    storageBucket: 'alanya-9233f.firebasestorage.app',
+    measurementId: 'G-VTGC968PFB',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDZZ3-nee1i2BfMzxUSpyey7ZZO9yDTclM',
-    appId: '1:778851391746:android:c989a00085117a7a014a1b',
-    messagingSenderId: '778851391746',
-    projectId: 'talky-2026',
-    databaseURL: 'https://talky-2026-default-rtdb.firebaseio.com',
-    storageBucket: 'talky-2026.firebasestorage.app',
+    apiKey: 'AIzaSyAJehfBBKxyKxWoX4161gAAR5I-jJPj3Uw',
+    appId: '1:205366376782:android:35a2f010a750c4ade1461f',
+    messagingSenderId: '205366376782',
+    projectId: 'alanya-9233f',
+    storageBucket: 'alanya-9233f.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBlFSkqoytmJxDGiC-KUhpgkbOFdbRjc4A',
-    appId: '1:778851391746:ios:8e2b1c3d339a8918014a1b',
-    messagingSenderId: '778851391746',
-    projectId: 'talky-2026',
-    databaseURL: 'https://talky-2026-default-rtdb.firebaseio.com',
-    storageBucket: 'talky-2026.firebasestorage.app',
-    androidClientId: '778851391746-bbu44ab95l6nnskjcih3b2th14ie9mbp.apps.googleusercontent.com',
-    iosClientId: '778851391746-qli3npipbakbp5pqhh6gcncah9p5bdrq.apps.googleusercontent.com',
-    iosBundleId: 'com.example.talkyFlutter',
+    apiKey: 'AIzaSyCPmNTuwiiblUc8H8klDDcT90KKQG4-m5k',
+    appId: '1:205366376782:ios:4e3d62dc4c777eb1e1461f',
+    messagingSenderId: '205366376782',
+    projectId: 'alanya-9233f',
+    storageBucket: 'alanya-9233f.firebasestorage.app',
+    iosBundleId: 'com.alanya237.alanya',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBlFSkqoytmJxDGiC-KUhpgkbOFdbRjc4A',
-    appId: '1:778851391746:ios:8e2b1c3d339a8918014a1b',
-    messagingSenderId: '778851391746',
-    projectId: 'talky-2026',
-    databaseURL: 'https://talky-2026-default-rtdb.firebaseio.com',
-    storageBucket: 'talky-2026.firebasestorage.app',
-    androidClientId: '778851391746-bbu44ab95l6nnskjcih3b2th14ie9mbp.apps.googleusercontent.com',
-    iosClientId: '778851391746-qli3npipbakbp5pqhh6gcncah9p5bdrq.apps.googleusercontent.com',
-    iosBundleId: 'com.example.talkyFlutter',
+    apiKey: 'AIzaSyCPmNTuwiiblUc8H8klDDcT90KKQG4-m5k',
+    appId: '1:205366376782:ios:4e3d62dc4c777eb1e1461f',
+    messagingSenderId: '205366376782',
+    projectId: 'alanya-9233f',
+    storageBucket: 'alanya-9233f.firebasestorage.app',
+    iosBundleId: 'com.alanya237.alanya',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCXkmcbAl8nY3T4PRaj2Am9AQNSO-jAjP4',
-    appId: '1:778851391746:web:01ad7d17147cab86014a1b',
-    messagingSenderId: '778851391746',
-    projectId: 'talky-2026',
-    authDomain: 'talky-2026.firebaseapp.com',
-    databaseURL: 'https://talky-2026-default-rtdb.firebaseio.com',
-    storageBucket: 'talky-2026.firebasestorage.app',
-    measurementId: 'G-HE1LEXJ6SR',
+    apiKey: 'AIzaSyAoG_AApdh41yLcCsV4JTJs5P-9pFUNWUg',
+    appId: '1:205366376782:web:b827669977bfb554e1461f',
+    messagingSenderId: '205366376782',
+    projectId: 'alanya-9233f',
+    authDomain: 'alanya-9233f.firebaseapp.com',
+    storageBucket: 'alanya-9233f.firebasestorage.app',
+    measurementId: 'G-1BHKSXCX2Y',
   );
 }

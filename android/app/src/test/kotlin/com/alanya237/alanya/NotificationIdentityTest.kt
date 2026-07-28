@@ -1,4 +1,4 @@
-package com.example.talky_flutter
+package com.alanya237.alanya
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

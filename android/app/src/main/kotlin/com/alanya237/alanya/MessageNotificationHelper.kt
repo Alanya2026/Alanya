@@ -1,4 +1,4 @@
-package com.example.talky_flutter
+package com.alanya237.alanya
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -35,8 +35,8 @@ object MessageNotificationHelper {
     // que le son s'applique sans réinstallation.
     const val CHANNEL_ID = "talky_messages_v3"
     private const val LEGACY_CHANNEL_ID = "talky_messages_v2"
-    const val ACTION_REPLY = "com.example.talky_flutter.NOTIF_REPLY"
-    const val ACTION_MARK_READ = "com.example.talky_flutter.NOTIF_MARK_READ"
+    const val ACTION_REPLY = "com.alanya237.alanya.NOTIF_REPLY"
+    const val ACTION_MARK_READ = "com.alanya237.alanya.NOTIF_MARK_READ"
     const val EXTRA_CONVERSATION_ID = "conversationId"
     const val EXTRA_SENDER_NAME = "senderName"
     const val EXTRA_IS_GROUP = "isGroup"

@@ -1,4 +1,4 @@
-package com.example.talky_flutter
+package com.alanya237.alanya
 
 /**
  * Classification du code HTTP d'une action de notification : que faire de

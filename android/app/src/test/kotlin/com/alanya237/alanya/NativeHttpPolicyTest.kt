@@ -1,6 +1,6 @@
-package com.example.talky_flutter
+package com.alanya237.alanya
 
-import com.example.talky_flutter.NativeHttpPolicy.Outcome
+import com.alanya237.alanya.NativeHttpPolicy.Outcome
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
