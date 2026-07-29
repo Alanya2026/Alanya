@@ -2191,6 +2191,10 @@
   "qrScanOpenSettings": "Ouvrir les réglages",
   "qrScanTorchOn": "Lampe allumée",
   "qrScanTorchOff": "Lampe éteinte",
+  "qrScanImportImage": "Importer une image",
+  "qrScanImportNoCode": "Aucun code QR dans cette image.",
+  "qrScanImportNotAlanya": "Ce code QR n'est pas un code Alanya.",
+  "qrScanImportFailed": "Impossible de lire cette image.",
 
   "qrLoginTitle": "Connexion par QR code",
   "qrLoginEntryButton": "Se connecter avec un code QR",

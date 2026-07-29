@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -10,9 +11,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/chat/message_sound_service.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/qr_contact_flow.dart';
-import '../../core/utils/conversation_display.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/chat_provider.dart';
+import '../../widgets/qr_added_sheet.dart';
 import '../../widgets/qr_scan_result_card.dart';
 import '../chats/chat_detail_screen.dart';
 import '../chats/contact_detail_screen.dart';
@@ -85,10 +84,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   Future<void> _onDetect(BarcodeCapture capture) async {
     if (_isHandling) return;
 
-    final raw = capture.barcodes
-        .map((barcode) => barcode.rawValue?.trim() ?? '')
-        .firstWhere((value) => value.isNotEmpty, orElse: () => '');
-    if (raw.isEmpty) return;
+    final raw = _premierCode(capture);
+    if (raw == null) return;
 
     // Pré-filtrage local avant tout envoi. Sans lui, cadrer par mégarde un QR
     // Wi-Fi (`WIFI:S:…;P:motdepasse;`), un `otpauth://…?secret=…` ou un code de
@@ -102,6 +99,25 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     }
 
     _isHandling = true;
+    await _resoudre(raw);
+  }
+
+  /// Premier code non vide d'une capture, quelle qu'en soit l'origine — cadre
+  /// de la caméra ou image importée.
+  static String? _premierCode(BarcodeCapture capture) {
+    final raw = capture.barcodes
+        .map((barcode) => barcode.rawValue?.trim() ?? '')
+        .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+    return raw.isEmpty ? null : raw;
+  }
+
+  /// Résolution serveur d'un payload déjà reconnu comme code Alanya. Commun
+  /// aux deux sources : caméra et galerie doivent produire exactement le même
+  /// résultat, le même son et la même carte — l'origine du code ne regarde pas
+  /// l'utilisateur.
+  ///
+  /// L'appelant est responsable d'avoir armé `_isHandling`.
+  Future<void> _resoudre(String raw) async {
     setState(() => _isBusy = true);
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
@@ -124,6 +140,84 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       AppLog.e('QrScanner', 'Résolution du code scanné échouée', e, st);
       if (!mounted) return;
       _resume(context.l10n.qrLoginNetworkError);
+    }
+  }
+
+  // ── Import d'une image de la galerie ───────────────────────────────────
+
+  /// Analyse un QR déjà présent dans la pellicule : capture d'écran d'un code
+  /// reçu, ou photo d'un code affiché sur un autre écran. C'est le secours
+  /// quand le cadrage échoue — ou quand il n'y a rien à cadrer, le code ayant
+  /// été reçu par message.
+  Future<void> _importerDepuisGalerie() async {
+    if (_isHandling) return;
+    _isHandling = true;
+
+    final l10n = context.l10n;
+    setState(() => _isBusy = true);
+
+    String? chemin;
+    try {
+      final fichier =
+          await ImagePicker().pickImage(source: ImageSource.gallery);
+      chemin = fichier?.path;
+    } catch (e, st) {
+      AppLog.w('QrScanner', 'Sélection d\'image échouée', e, st);
+      if (!mounted) return;
+      await _reprendreCamera();
+      _resume(l10n.qrScanImportFailed);
+      return;
+    }
+
+    if (!mounted) return;
+
+    // Le sélecteur a mis l'app en arrière-plan, donc didChangeAppLifecycleState
+    // a coupé la caméra sans la relancer (`_isHandling` était armé). Il faut la
+    // rallumer nous-même, sinon l'écran reste noir derrière la carte.
+    await _reprendreCamera();
+    if (!mounted) return;
+
+    // Choix abandonné : ce n'est pas une erreur, on se contente de réarmer.
+    if (chemin == null) {
+      setState(() => _isBusy = false);
+      _isHandling = false;
+      return;
+    }
+
+    BarcodeCapture? capture;
+    try {
+      capture = await _controller.analyzeImage(chemin);
+    } catch (e, st) {
+      AppLog.w('QrScanner', 'Analyse de l\'image importée échouée', e, st);
+      if (!mounted) return;
+      _resume(l10n.qrScanImportFailed);
+      return;
+    }
+    if (!mounted) return;
+
+    // Trois issues distinctes, trois messages : confondre « pas de code » et
+    // « code d'une autre app » laisse croire que l'import est cassé.
+    final raw = capture == null ? null : _premierCode(capture);
+    if (raw == null) {
+      _resume(l10n.qrScanImportNoCode);
+      return;
+    }
+    if (!_estUnCodeAlanya(raw)) {
+      _resume(l10n.qrScanImportNotAlanya);
+      return;
+    }
+
+    await _resoudre(raw);
+  }
+
+  /// Relance la caméra si elle est à l'arrêt. Redémarrer un contrôleur déjà
+  /// démarré lève, d'où le test préalable.
+  Future<void> _reprendreCamera() async {
+    if (_controller.value.isRunning) return;
+    try {
+      await _controller.start();
+    } catch (e, st) {
+      AppLog.w('QrScanner', 'Reprise de la caméra échouée', e, st);
     }
   }
 
@@ -179,7 +273,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   }
 
   Future<void> _messagerResultat(User user) async {
-    final convId = await _conversationDirecte(user.alanyaID);
+    final convId = await conversationDirecteLocale(context, user.alanyaID);
     if (!mounted) return;
     _fermerResultat();
     await Navigator.push(
@@ -193,24 +287,6 @@ class _QrScannerScreenState extends State<QrScannerScreen>
         ),
       ),
     );
-  }
-
-  /// Conversation directe déjà connue localement, s'il y en a une : sans elle
-  /// l'écran de conversation s'ouvrirait vide alors que l'historique existe.
-  Future<int?> _conversationDirecte(int peerId) async {
-    try {
-      final myId = context.read<AuthProvider>().currentUser?.alanyaID;
-      if (myId == null) return null;
-      final convs = await context
-          .read<ChatProvider>()
-          .repository
-          .dao
-          .getAllConversations();
-      return findLocalDirectConversationId(convs, myId, peerId);
-    } catch (e, st) {
-      AppLog.w('QrScanner', 'Résolution de la conversation échouée', e, st);
-      return null;
-    }
   }
 
   void _voirDetails(User user) {
@@ -352,14 +428,37 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             child: _buildTopBar(),
           ),
 
+          // Instruction et secours au même endroit : c'est là que le regard
+          // revient quand le cadrage ne prend pas.
           Positioned(
-            bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.xxxl,
+            bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.xxl,
             left: AppSpacing.xl,
             right: AppSpacing.xl,
-            child: Text(
-              context.l10n.qrScanInstruction,
-              textAlign: TextAlign.center,
-              style: context.text.bodyMedium?.copyWith(color: AppColors.white),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.l10n.qrScanInstruction,
+                  textAlign: TextAlign.center,
+                  style:
+                      context.text.bodyMedium?.copyWith(color: AppColors.white),
+                ),
+                AppSpacing.vGapSm,
+                TextButton.icon(
+                  onPressed: () => unawaited(_importerDepuisGalerie()),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.white,
+                    backgroundColor: AppColors.black.withAlpha(100),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.sm,
+                    ),
+                  ),
+                  icon: const Icon(Icons.photo_library_outlined,
+                      size: AppIconSize.sm),
+                  label: Text(context.l10n.qrScanImportImage),
+                ),
+              ],
             ),
           ),
 

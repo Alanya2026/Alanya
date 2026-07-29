@@ -3396,6 +3396,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrScanTorchOff => 'Flashlight off';
 
   @override
+  String get qrScanImportImage => 'Import an image';
+
+  @override
+  String get qrScanImportNoCode => 'No QR code in this image.';
+
+  @override
+  String get qrScanImportNotAlanya => 'This QR code is not an Alanya code.';
+
+  @override
+  String get qrScanImportFailed => 'Could not read this image.';
+
+  @override
   String get qrLoginTitle => 'Sign in with QR code';
 
   @override

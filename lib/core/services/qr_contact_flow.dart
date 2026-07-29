@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/qr_models.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/qr_added_sheet.dart';
+import '../navigation/app_navigator.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_log.dart';
 import 'local_cache_repository.dart';
@@ -155,14 +159,35 @@ class QrContactFlow {
 
       final user = User.fromJson(contact);
       await cacheContact(cache, user);
-      showAddedSnack(
-        messenger: messenger,
-        apiClient: apiClient,
-        cache: cache,
-        l10n: l10n,
-        user: user,
-        alreadyContact: result.alreadyContact,
-      );
+
+      // Feuille modale quand un Navigator est disponible : l'utilisateur
+      // revient d'un navigateur et doit voir QUI a été ajouté. Le bandeau
+      // reste le repli — mieux vaut un retour faible qu'aucun retour si la
+      // navigation n'est pas encore montée (démarrage à froid).
+      final nav = appNavigator;
+      if (nav != null && nav.mounted) {
+        await showQrAddedSheet(
+          context: nav.context,
+          user: user,
+          alreadyContact: result.alreadyContact,
+          onUndo: () => unawaited(undoAdd(
+            messenger: messenger,
+            apiClient: apiClient,
+            cache: cache,
+            l10n: l10n,
+            user: user,
+          )),
+        );
+      } else {
+        showAddedSnack(
+          messenger: messenger,
+          apiClient: apiClient,
+          cache: cache,
+          l10n: l10n,
+          user: user,
+          alreadyContact: result.alreadyContact,
+        );
+      }
       return result;
     } on TalkyException catch (e) {
       messenger.showSnackBar(

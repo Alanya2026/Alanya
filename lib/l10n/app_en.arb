@@ -1309,6 +1309,10 @@
   "qrScanOpenSettings": "Open settings",
   "qrScanTorchOn": "Flashlight on",
   "qrScanTorchOff": "Flashlight off",
+  "qrScanImportImage": "Import an image",
+  "qrScanImportNoCode": "No QR code in this image.",
+  "qrScanImportNotAlanya": "This QR code is not an Alanya code.",
+  "qrScanImportFailed": "Could not read this image.",
 
   "qrLoginTitle": "Sign in with QR code",
   "qrLoginEntryButton": "Sign in with a QR code",

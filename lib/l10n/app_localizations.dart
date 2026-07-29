@@ -6014,6 +6014,30 @@ abstract class AppLocalizations {
   /// **'Lampe éteinte'**
   String get qrScanTorchOff;
 
+  /// No description provided for @qrScanImportImage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Importer une image'**
+  String get qrScanImportImage;
+
+  /// No description provided for @qrScanImportNoCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun code QR dans cette image.'**
+  String get qrScanImportNoCode;
+
+  /// No description provided for @qrScanImportNotAlanya.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code QR n\'est pas un code Alanya.'**
+  String get qrScanImportNotAlanya;
+
+  /// No description provided for @qrScanImportFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire cette image.'**
+  String get qrScanImportFailed;
+
   /// No description provided for @qrLoginTitle.
   ///
   /// In fr, this message translates to:

@@ -45,26 +45,49 @@ class QrScanResultCard extends StatefulWidget {
   /// retire la carte et réarme la détection.
   final VoidCallback onDismissed;
 
-  final Duration duree;
+  /// Délai avant disparition automatique. `null` la désactive : présentée en
+  /// feuille modale, la carte est le seul contenu à l'écran et s'évanouir
+  /// toute seule sous les yeux de l'utilisateur passerait pour un bug.
+  final Duration? duree;
 
   @override
   State<QrScanResultCard> createState() => _QrScanResultCardState();
 }
 
-class _QrScanResultCardState extends State<QrScanResultCard> {
+class _QrScanResultCardState extends State<QrScanResultCard>
+    with SingleTickerProviderStateMixin {
   Timer? _minuteur;
+
+  /// Éclosion de l'étoile « contact préféré ». Une seule impulsion avec
+  /// dépassement : répétée, elle deviendrait une alerte au lieu d'une
+  /// confirmation.
+  late final AnimationController _etoile = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 600),
+  );
 
   @override
   void initState() {
     super.initState();
-    _minuteur = Timer(widget.duree, () {
-      if (mounted) widget.onDismissed();
-    });
+    final duree = widget.duree;
+    if (duree != null) {
+      _minuteur = Timer(duree, () {
+        if (mounted) widget.onDismissed();
+      });
+    }
+    // Rien n'a été ajouté quand la personne était déjà un contact : animer
+    // l'étoile féliciterait l'utilisateur pour un geste qui n'a pas eu lieu.
+    if (widget.alreadyContact) {
+      _etoile.value = 1;
+    } else {
+      _etoile.forward();
+    }
   }
 
   @override
   void dispose() {
     _minuteur?.cancel();
+    _etoile.dispose();
     super.dispose();
   }
 
@@ -96,13 +119,7 @@ class _QrScanResultCardState extends State<QrScanResultCard> {
         children: [
           Row(
             children: [
-              AppAvatar(
-                imageUrl: widget.user.avatarUrl.isNotEmpty
-                    ? widget.user.avatarUrl
-                    : null,
-                name: nom,
-                size: 44,
-              ),
+              _avatarEtoile(nom),
               AppSpacing.hGapMd,
               Expanded(
                 child: Column(
@@ -171,6 +188,53 @@ class _QrScanResultCardState extends State<QrScanResultCard> {
               child: Text(l10n.qrScanUndo),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// Avatar surmonté de l'étoile des contacts préférés. L'étoile dit « ajouté
+  /// aux préférés » sans texte, et son éclosion apprend à l'utilisateur où vit
+  /// ce statut — la même étoile que sur la fiche du contact.
+  Widget _avatarEtoile(String nom) {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AppAvatar(
+            imageUrl:
+                widget.user.avatarUrl.isNotEmpty ? widget.user.avatarUrl : null,
+            name: nom,
+            size: 44,
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: ScaleTransition(
+              scale: CurvedAnimation(
+                parent: _etoile,
+                curve: Curves.easeOutBack,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  // Le liseré reprend le fond de la carte : sans lui l'étoile
+                  // se confond avec les avatars clairs.
+                  color: context.colors.surface,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.star,
+                  size: 14,
+                  // Même étoile ambre que la fiche du contact : c'est ce
+                  // rappel qui fait le lien entre les deux écrans.
+                  color: context.semantic.warning,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

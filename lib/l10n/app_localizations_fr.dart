@@ -3428,6 +3428,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get qrScanTorchOff => 'Lampe éteinte';
 
   @override
+  String get qrScanImportImage => 'Importer une image';
+
+  @override
+  String get qrScanImportNoCode => 'Aucun code QR dans cette image.';
+
+  @override
+  String get qrScanImportNotAlanya => 'Ce code QR n\'est pas un code Alanya.';
+
+  @override
+  String get qrScanImportFailed => 'Impossible de lire cette image.';
+
+  @override
   String get qrLoginTitle => 'Connexion par QR code';
 
   @override
