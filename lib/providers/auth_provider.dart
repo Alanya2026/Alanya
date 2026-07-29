@@ -231,6 +231,9 @@ class AuthProvider extends ChangeNotifier {
       await _apiClient.login(
         alanyaPhone: AlanyaPhoneFormatter.normalize(alanyaPhone),
         password: password,
+        // Sans identifiant d'appareil le backend refuse la connexion : aucune
+        // ligne `appareils` ne serait créée, la session serait irrévocable.
+        deviceId: await _apiClient.ensureStableDeviceId(),
       );
 
       await _storage.saveTokens(
@@ -272,6 +275,7 @@ class AuthProvider extends ChangeNotifier {
         nom: nom,
         pseudo: pseudo,
         idPays: idPays,
+        deviceId: await _apiClient.ensureStableDeviceId(),
       );
 
       await _storage.saveTokens(

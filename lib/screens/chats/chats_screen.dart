@@ -397,34 +397,47 @@ class _ChatsScreenState extends State<ChatsScreen> {
         }
         _enterSelectionMode(conv);
       },
-      leading: Stack(
-        children: [
-          if (hasStatus)
-            StatusRingedAvatar(
-              avatarUrl: displayAvatar,
-              name: displayName,
-              totalCount: statusProv.totalCount(otherId),
-              unseenCount: statusProv.unseenCount(otherId),
-              size: AppSizes.avatarLg,
-              onTap: () => _openContactStatus(context, statusProv, otherId),
-            )
-          else
-            ProfileAvatar(
-              imageUrl: displayAvatar,
-              name: displayName,
-              userId: otherId ?? (isSelf ? myId : 0),
-              isGroup: conv.isGroup,
-              conversationId: conv.conversID,
-              size: AppSizes.avatarLg,
-              borderRadius: AppSizes.avatarLg / 2,
-            ),
-          if (isOnline && !conv.isGroup)
-            const Positioned(
-              right: 0,
-              bottom: 0,
-              child: PresenceDot(online: true, size: 14),
-            ),
-        ],
+      // Emplacement fixe (avatarLg) pour TOUS les avatars → largeur du leading
+      // constante (titres alignés). La photo est légèrement réduite et centrée
+      // (avec ou sans statut) pour réserver la marge de l'anneau, dessiné autour
+      // façon onglet Statut.
+      leading: SizedBox(
+        width: AppSizes.avatarLg,
+        height: AppSizes.avatarLg,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (hasStatus)
+              StatusRingedAvatar(
+                avatarUrl: displayAvatar,
+                name: displayName,
+                totalCount: statusProv.totalCount(otherId),
+                unseenCount: statusProv.unseenCount(otherId),
+                size: AppSizes.avatarLg,
+                onTap: () => _openContactStatus(context, statusProv, otherId),
+              )
+            else
+              ProfileAvatar(
+                imageUrl: displayAvatar,
+                name: displayName,
+                userId: otherId ?? (isSelf ? myId : 0),
+                isGroup: conv.isGroup,
+                conversationId: conv.conversID,
+                // Même taille réduite que la photo sous l'anneau (marge réservée
+                // pour tous → homogène).
+                size: StatusRingedAvatar.innerPhotoSize(AppSizes.avatarLg, 3),
+                borderRadius:
+                    StatusRingedAvatar.innerPhotoSize(AppSizes.avatarLg, 3) / 2,
+              ),
+            if (isOnline && !conv.isGroup)
+              // Recalée sur le bord de la photo réduite (marge ≈ 5 px).
+              const Positioned(
+                right: 4,
+                bottom: 4,
+                child: PresenceDot(online: true, size: 14),
+              ),
+          ],
+        ),
       ),
       title: Text(
         displayName,

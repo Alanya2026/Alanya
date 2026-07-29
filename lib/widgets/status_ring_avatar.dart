@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
@@ -28,11 +29,19 @@ class StatusRingAvatar extends StatelessWidget {
     required this.unseenCount,
     this.size = 56,
     this.strokeWidth = 3,
-    this.gapDeg = 6,
+    this.gapDeg = 18,
     this.overlay,
     this.previewUrl,
     this.statusType,
   });
+
+  // Couleur non-vu par thème (aligné sur StatusRingedAvatar de la liste chats) :
+  // vert plein en sombre, dégradé indigo→cyan en clair.
+  static const Color _unseenDark = Color(0xFF25D366);
+  static const List<Color> _unseenLight = [
+    Color(0xFF4F46E5),
+    Color(0xFF22D3EE),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +50,7 @@ class StatusRingAvatar extends StatelessWidget {
     final showAvatar = hasValidAvatarUrl(avatarUrl);
 
     final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final center = showPreview
         ? CircleAvatar(
             radius: inner / 2,
@@ -86,7 +96,9 @@ class StatusRingAvatar extends StatelessWidget {
               unseen: unseenCount.clamp(0, totalCount),
               strokeWidth: strokeWidth,
               gapDeg: gapDeg,
-              seenColor: colors.outline,
+              seenColor: colors.onSurfaceVariant,
+              unseenColor: isDark ? _unseenDark : null,
+              unseenGradient: isDark ? null : _unseenLight,
             ),
           ),
           center,
@@ -137,35 +149,65 @@ class _RingPainter extends CustomPainter {
   final double gapDeg;
   final Color seenColor;
 
+  /// Couleur pleine des non-vus (thème sombre). Ignoré si [unseenGradient] est
+  /// fourni (thème clair).
+  final Color? unseenColor;
+  final List<Color>? unseenGradient;
+
   _RingPainter({
     required this.total,
     required this.unseen,
     required this.strokeWidth,
     required this.gapDeg,
     required this.seenColor,
+    this.unseenColor,
+    this.unseenGradient,
   });
 
-  // Vert non-vu intentionnel (style WhatsApp) — indépendant du thème.
-  static const _unseenColor = Color(0xFF25D366);
+  static const Color _fallbackUnseen = Color(0xFF25D366);
+
+  // Somme maximale des espaces (degrés) : au-delà, l'écartement se réduit pour
+  // garder des arcs lisibles quand il y a beaucoup de statuts (adaptatif).
+  static const double _kMaxTotalGapDeg = 90;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (total <= 0) return;
     final rect = Rect.fromCircle(
       center: Offset(size.width / 2, size.height / 2),
       radius: (size.width - strokeWidth) / 2,
     );
     final n = math.max(1, total);
-    final gap = n == 1 ? 0.0 : gapDeg;
+    // Écartement adaptatif : gapDeg (18°) tant qu'il y a peu de statuts, réduit
+    // au-delà pour que la somme des espaces ne dépasse pas _kMaxTotalGapDeg.
+    final gap = n == 1 ? 0.0 : math.min(gapDeg, _kMaxTotalGapDeg / n);
     final arcDeg = (360 - gap * n) / n;
     final arcRad = arcDeg * math.pi / 180;
     final gapRad = gap * math.pi / 180;
+
+    final ui.Shader? unseenShader = unseenGradient == null
+        ? null
+        : ui.Gradient.linear(
+            Offset(rect.left, rect.top),
+            Offset(rect.right, rect.bottom),
+            unseenGradient!,
+          );
+
     double start = -math.pi / 2 + gapRad / 2;
     for (var i = 0; i < n; i++) {
       final paint = Paint()
-        ..color = i < unseen ? _unseenColor : seenColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
+      if (i < unseen) {
+        if (unseenShader != null) {
+          paint.shader = unseenShader;
+        } else {
+          paint.color = unseenColor ?? _fallbackUnseen;
+        }
+      } else {
+        paint.color = seenColor;
+      }
       canvas.drawArc(rect, start, arcRad, false, paint);
       start += arcRad + gapRad;
     }
@@ -177,5 +219,7 @@ class _RingPainter extends CustomPainter {
       old.unseen != unseen ||
       old.strokeWidth != strokeWidth ||
       old.gapDeg != gapDeg ||
-      old.seenColor != seenColor;
+      old.seenColor != seenColor ||
+      old.unseenColor != unseenColor ||
+      old.unseenGradient != unseenGradient;
 }
