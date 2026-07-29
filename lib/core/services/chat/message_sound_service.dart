@@ -2,9 +2,10 @@ import 'package:audio_session/audio_session.dart' show AndroidAudioAttributes, A
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
-/// Retours sonores de la messagerie :
-///  - un son à l'envoi d'un message (texte, photo, vidéo, fichier, vocal),
-///  - un son à la réception d'un message (tous types).
+/// Retours sonores UI :
+///  - envoi / réception de message,
+///  - scan QR réussi (contact ou connexion appareil),
+///  - fin d'un appel qui était en cours.
 ///
 /// Les sons sont routés sur le canal **notification** Android
 /// (`AndroidAudioUsage.notification`) : ils sont donc automatiquement coupés
@@ -19,6 +20,8 @@ class MessageSoundService {
 
   static const _sentAsset = 'assets/sounds/ui/message_sent.ogg';
   static const _receivedAsset = 'assets/sounds/ui/message_received.ogg';
+  static const _qrScanSuccessAsset = 'assets/sounds/ui/qr_scan_success.ogg';
+  static const _callEndAsset = 'assets/sounds/ui/call_end.ogg';
 
   // Attributs « notification » → coupés en silencieux/vibreur par l'OS.
   static const _uiAttributes = AndroidAudioAttributes(
@@ -28,6 +31,8 @@ class MessageSoundService {
 
   AudioPlayer? _sentPlayer;
   AudioPlayer? _receivedPlayer;
+  AudioPlayer? _qrScanSuccessPlayer;
+  AudioPlayer? _callEndPlayer;
   bool _ready = false;
 
   /// Précharge les lecteurs (à appeler une fois au démarrage). Sans réseau :
@@ -49,12 +54,26 @@ class MessageSoundService {
         handleInterruptions: false,
         handleAudioSessionActivation: false,
       );
+      _qrScanSuccessPlayer = AudioPlayer(
+        handleInterruptions: false,
+        handleAudioSessionActivation: false,
+      );
+      _callEndPlayer = AudioPlayer(
+        handleInterruptions: false,
+        handleAudioSessionActivation: false,
+      );
       await _sentPlayer!.setAndroidAudioAttributes(_uiAttributes);
       await _receivedPlayer!.setAndroidAudioAttributes(_uiAttributes);
+      await _qrScanSuccessPlayer!.setAndroidAudioAttributes(_uiAttributes);
+      await _callEndPlayer!.setAndroidAudioAttributes(_uiAttributes);
       await _sentPlayer!.setAsset(_sentAsset);
       await _receivedPlayer!.setAsset(_receivedAsset);
+      await _qrScanSuccessPlayer!.setAsset(_qrScanSuccessAsset);
+      await _callEndPlayer!.setAsset(_callEndAsset);
       await _sentPlayer!.setVolume(0.55);
       await _receivedPlayer!.setVolume(0.7);
+      await _qrScanSuccessPlayer!.setVolume(0.75);
+      await _callEndPlayer!.setVolume(0.6);
       _ready = true;
     } catch (e) {
       debugPrint('[MessageSound] init échoué: $e');
@@ -68,6 +87,14 @@ class MessageSoundService {
   /// en arrière-plan c'est la notification qui sonne — voir appelant).
   void playReceived() => _replay(_receivedPlayer);
 
+  /// Son de scan QR réussi : contact ajouté / déjà connu, ou code de connexion
+  /// appareil reconnu. Pas d'erreur, pas son propre code.
+  void playQrScanSuccess() => _replay(_qrScanSuccessPlayer);
+
+  /// Son de fin d'appel : deux notes descendantes, joué seulement quand une
+  /// conversation était réellement établie (pas sur un rejet ou un échec).
+  void playCallEnd() => _replay(_callEndPlayer);
+
   void _replay(AudioPlayer? player) {
     if (kIsWeb || player == null || !_ready) return;
     // Rejoue depuis le début même si le son précédent n'est pas fini.
@@ -79,8 +106,12 @@ class MessageSoundService {
   Future<void> dispose() async {
     await _sentPlayer?.dispose();
     await _receivedPlayer?.dispose();
+    await _qrScanSuccessPlayer?.dispose();
+    await _callEndPlayer?.dispose();
     _sentPlayer = null;
     _receivedPlayer = null;
+    _qrScanSuccessPlayer = null;
+    _callEndPlayer = null;
     _ready = false;
   }
 }

@@ -4,12 +4,26 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../core/theme/app_colors.dart';
 import 'app_logo.dart';
 
+/// Côté de l'image incrustée / côté du QR.
+///
+/// ~22 % : assez large pour lire le logo, dans la marge safe de la correction H
+/// (~30 % de redondance). Augmenter si le logo paraît trop petit ; ne pas
+/// dépasser ~0.28.
+const double _kEmbeddedLogoRatio = 0.22;
+
 /// Rendu unique des QR d'Alanya — code d'identité comme code de connexion.
 ///
 /// Le style vit ici et non dans chaque écran : les deux rendus avaient déjà
 /// divergé (yeux ronds contre carrés, bicolore contre monochrome, et deux
 /// fichiers de logo différents), donnant deux identités visuelles à la même
 /// fonctionnalité.
+///
+/// L'image incrustée est [`AppLogo.qrAssetPath`] : logo sur pastille blanche
+/// circulaire (extérieur transparent). Le glyph transparent seul
+/// (`alanyalogorbg.png`) se fondait dans les modules ; le PNG carré opaque
+/// (`alanyalogo.png`) laisserait un rectangle visible. La pastille ronde
+/// bake le contraste nécessaire sans casser la cohérence avec les modules
+/// ronds. Correction H obligatoire : l'image masque des modules.
 class AlanyaQrView extends StatelessWidget {
   const AlanyaQrView({
     super.key,
@@ -23,13 +37,10 @@ class AlanyaQrView extends StatelessWidget {
   /// Côté du carré, en pixels logiques.
   final double size;
 
-  /// Logo incrusté au centre : la variante SANS arrière-plan
-  /// (`alanyalogorbg.png`, RVBA avec transparence). L'autre fichier,
-  /// `alanyalogo.png`, est en RVB opaque — il poserait un rectangle blanc au
-  /// milieu du code, visible sur la carte comme sur un partage.
-
   @override
   Widget build(BuildContext context) {
+    final embeddedSide = size * _kEmbeddedLogoRatio;
+
     return QrImageView(
       data: payload,
       size: size,
@@ -47,9 +58,9 @@ class AlanyaQrView extends StatelessWidget {
         dataModuleShape: QrDataModuleShape.circle,
         color: AppColors.brandPrimaryDark,
       ),
-      embeddedImage: const AssetImage(AppLogo.assetPath),
+      embeddedImage: const AssetImage(AppLogo.qrAssetPath),
       embeddedImageStyle: QrEmbeddedImageStyle(
-        size: Size(size * 0.18, size * 0.18),
+        size: Size(embeddedSide, embeddedSide),
       ),
     );
   }

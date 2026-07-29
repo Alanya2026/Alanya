@@ -2137,7 +2137,7 @@
   "qrMyCodeShareImage": "Partager l'image",
   "qrMyCodeShareImageHint": "La carte à scanner",
   "qrMyCodeSave": "Enregistrer",
-  "qrMyCodeSaveDone": "Code enregistré dans vos photos",
+  "qrMyCodeSaveDone": "Code QR enregistré dans vos photos",
   "qrMyCodeSaveFailed": "Impossible d'enregistrer le code",
   "qrMyCodeSaveDenied": "Autorisez l'accès aux photos pour enregistrer le code",
   "qrMyCodeShareId": "Mon Alanya ID : {id}",

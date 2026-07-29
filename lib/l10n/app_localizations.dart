@@ -5849,7 +5849,7 @@ abstract class AppLocalizations {
   /// No description provided for @qrMyCodeSaveDone.
   ///
   /// In fr, this message translates to:
-  /// **'Code enregistré dans vos photos'**
+  /// **'Code QR enregistré dans vos photos'**
   String get qrMyCodeSaveDone;
 
   /// No description provided for @qrMyCodeSaveFailed.

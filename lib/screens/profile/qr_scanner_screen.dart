@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/chat/message_sound_service.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/qr_contact_flow.dart';
 import '../../core/utils/conversation_display.dart';
@@ -158,6 +160,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     );
     if (!mounted) return;
 
+    _playScanSuccessFeedback();
+
     // On ne referme plus le scanner : la carte de résultat s'affiche par-dessus
     // la caméra restée vivante, pour pouvoir enchaîner plusieurs personnes.
     setState(() {
@@ -248,6 +252,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       _resume(context.l10n.qrScanErrorUnreadable);
       return;
     }
+    _playScanSuccessFeedback();
     await _controller.stop();
     if (!mounted) return;
     await Navigator.push<Object?>(
@@ -261,6 +266,13 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     );
     if (!mounted) return;
     Navigator.pop(context);
+  }
+
+  /// Accusé sonore + haptic au scan réussi (contact ou connexion appareil).
+  /// Coupé automatiquement en silencieux via le canal notification.
+  void _playScanSuccessFeedback() {
+    MessageSoundService.instance.playQrScanSuccess();
+    HapticFeedback.mediumImpact();
   }
 
   /// Réarme la détection après une erreur récupérable. Le délai évite que le

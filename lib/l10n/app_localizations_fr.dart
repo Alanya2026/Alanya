@@ -3330,7 +3330,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get qrMyCodeSave => 'Enregistrer';
 
   @override
-  String get qrMyCodeSaveDone => 'Code enregistré dans vos photos';
+  String get qrMyCodeSaveDone => 'Code QR enregistré dans vos photos';
 
   @override
   String get qrMyCodeSaveFailed => 'Impossible d\'enregistrer le code';

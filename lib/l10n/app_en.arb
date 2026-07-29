@@ -1255,7 +1255,7 @@
   "qrMyCodeShareImage": "Share the image",
   "qrMyCodeShareImageHint": "The card to scan",
   "qrMyCodeSave": "Save",
-  "qrMyCodeSaveDone": "Code saved to your photos",
+  "qrMyCodeSaveDone": "QR Code saved to your photos",
   "qrMyCodeSaveFailed": "Could not save the code",
   "qrMyCodeSaveDenied": "Allow photo access to save the code",
   "qrMyCodeShareId": "My Alanya ID: {id}",

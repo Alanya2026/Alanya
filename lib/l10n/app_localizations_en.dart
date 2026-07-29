@@ -3300,7 +3300,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrMyCodeSave => 'Save';
 
   @override
-  String get qrMyCodeSaveDone => 'Code saved to your photos';
+  String get qrMyCodeSaveDone => 'QR Code saved to your photos';
 
   @override
   String get qrMyCodeSaveFailed => 'Could not save the code';

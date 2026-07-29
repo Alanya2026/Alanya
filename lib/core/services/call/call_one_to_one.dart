@@ -334,6 +334,9 @@ extension CallOneToOne on CallService {
   }
 
   Future<void> _terminateCall() async {
+    // Capturé avant le teardown : le son ne doit sonner que si une conversation
+    // était établie, pas sur un rejet, un timeout ou un échec de connexion.
+    final wasConnected = _status == CallStatus.connected;
     speakingDetector.stop();
     _markTerminalCallId(_currentCallId);
     _cancelOutgoingRestoreTimeout();
@@ -344,6 +347,9 @@ extension CallOneToOne on CallService {
     await _callKit.endAll(callId: _currentCallId);
     await _webrtc.dispose();
     _durationTimer?.cancel();
+    // Après la libération de la session audio : le son part sur le canal
+    // notification (haut-parleur) et non plus dans l'écouteur de l'appel.
+    if (wasConnected) MessageSoundService.instance.playCallEnd();
     _resetCallState();
     _status = CallStatus.ended;
     notify();
