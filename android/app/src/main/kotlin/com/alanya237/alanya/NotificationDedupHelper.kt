@@ -1,4 +1,4 @@
-package com.example.talky_flutter
+package com.alanya237.alanya
 
 import android.content.Context
 import org.json.JSONObject

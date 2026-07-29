@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.talky_flutter"
+    namespace = "com.alanya237.alanya"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -25,7 +25,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.talky_flutter"
+        applicationId = "com.alanya237.alanya"
         // Firebase Messaging et flutter_callkit_incoming requièrent au moins API 23.
         minSdk = maxOf(23, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
