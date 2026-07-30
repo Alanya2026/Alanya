@@ -19,6 +19,12 @@ extension SocketApi on TalkyApiClient {
       StreamController<AccountDeviceLogin>.broadcast();
   static final StreamController<void> _deviceRevokedController =
       StreamController<void>.broadcast();
+  static final StreamController<QrContactScan> _qrContactScansController =
+      StreamController<QrContactScan>.broadcast();
+
+  /// Scan arrivé avant qu'AuthWrapper ne soit abonné (tap sur une notification
+  /// à froid) : le flux broadcast n'a pas de mémoire, on garde le dernier.
+  static QrContactScan? _pendingQrScan;
 
   /// Une session vient de s'ouvrir ailleurs sur le compte (mot de passe,
   /// inscription ou QR). Purement informatif : de quoi afficher un bandeau.
@@ -33,6 +39,32 @@ extension SocketApi on TalkyApiClient {
   /// `AuthWrapper`, qui termine la déconnexion et vide le stockage.
   Stream<void> get thisDeviceRevoked =>
       SocketApi._deviceRevokedController.stream;
+
+  /// Mon code contact éphémère vient d'être scanné : le jeton est à usage
+  /// unique, l'écran « Mon code » régénère à la réception, et AuthWrapper
+  /// propose d'ajouter le scanneur en retour (dialogue oui/non).
+  Stream<QrContactScan> get qrContactScans =>
+      SocketApi._qrContactScansController.stream;
+
+  /// Fait entrer un scan dans le flux, d'où qu'il vienne — événement socket ou
+  /// tap sur la notification push (app fermée au moment du scan, l'événement
+  /// socket est perdu ; la push transporte l'identité et la rejoue ici).
+  void injectQrContactScan(QrContactScan scan) {
+    if (scan.alanyaID == 0) return;
+    if (SocketApi._qrContactScansController.hasListener) {
+      SocketApi._qrContactScansController.add(scan);
+    } else {
+      SocketApi._pendingQrScan = scan;
+    }
+  }
+
+  /// Scan mis en attente faute d'abonné — se lit une seule fois, après que
+  /// AuthWrapper s'est abonné (démarrage à froid via notification).
+  QrContactScan? consumePendingQrContactScan() {
+    final scan = SocketApi._pendingQrScan;
+    SocketApi._pendingQrScan = null;
+    return scan;
+  }
 
   void setPendingMessagesCallback(Future<bool> Function() callback) {
     _pendingMessagesCallback = callback;
@@ -187,6 +219,14 @@ extension SocketApi on TalkyApiClient {
     _socket!.on(SocketEvents.authDeviceRevoked, (data) {
       _recordEvent();
       unawaited(_handleDeviceRevoked(data));
+    });
+
+    _socket!.on(SocketEvents.qrContactScanned, (data) {
+      _recordEvent();
+      if (data is! Map) return;
+      final scan = QrContactScan.fromJson(Map<String, dynamic>.from(data));
+      debugPrint('[Socket] Code QR scanné par ${scan.displayName}');
+      injectQrContactScan(scan);
     });
 
     _socket!.onDisconnect((_) {

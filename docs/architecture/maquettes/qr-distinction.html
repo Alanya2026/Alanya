@@ -1,0 +1,640 @@
+<title>Alanya — Contacts ajoutés par QR : maquettes</title>
+
+<style>
+  /* ------------------------------------------------------------------
+     Mêmes tokens que les maquettes du volet 6 (qr-identite.html) :
+     lib/core/theme/app_colors.dart et app_dimens.dart.
+     ------------------------------------------------------------------ */
+  :root {
+    --brand:            #3F51B5;
+    --brand-dark:       #1A237E;
+    --brand-container:  #E8EAF6;
+    --online:           #1FA363;
+
+    --bg:               #F6F7FB;
+    --surface:          #FFFFFF;
+    --surface-muted:    #F4F5F8;
+    --outline:          #E2E5EC;
+    --outline-strong:   #CBD0E0;
+
+    --ink:              #1A1D23;
+    --ink-2:            #5B6273;
+    --ink-3:            #9AA0AE;
+
+    --ava-g-bg: #E1F4EA; --ava-g-ink: #14704A;
+    --ava-a-bg: #FDF0DC; --ava-a-ink: #9A5B0B;
+
+    --page-bg:          #EEF0F7;
+    --page-panel:       #FFFFFF;
+    --page-line:        #DDE1EC;
+    --page-ink:         #23283A;
+    --page-ink-2:       #626A82;
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px; --r-pill: 28px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #3A404C; --outline-strong: #3A404C;
+      --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand-container: #283593;
+      --ava-g-bg: #14332A; --ava-g-ink: #54C08A;
+      --ava-a-bg: #33270F; --ava-a-ink: #E0A458;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --outline-strong: #3A404C;
+    --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593;
+    --ava-g-bg: #14332A; --ava-g-ink: #54C08A;
+    --ava-a-bg: #33270F; --ava-a-ink: #E0A458;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --brand-container: #E8EAF6;
+    --ava-g-bg: #E1F4EA; --ava-g-ink: #14704A;
+    --ava-a-bg: #FDF0DC; --ava-a-ink: #9A5B0B;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    min-height: 100vh; padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 68ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px, 3.6vw, 38px); line-height: 1.12; letter-spacing: -0.02em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px, 3vw, 30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 78ch; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: var(--r-pill);
+  }
+  .tag.open  { background: var(--brand-container); color: var(--brand); }
+  .tag.done  { background: var(--ava-g-bg); color: var(--ava-g-ink); }
+  :root[data-theme="dark"] .tag.open,
+  :root:not([data-theme="light"]) .tag.open { color: #AEB6FF; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .tag.open { color: var(--brand); } }
+
+  .stage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: clamp(18px, 2.6vw, 32px); align-items: start;
+  }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 36ch;
+    line-height: 1.6;
+  }
+  .device-caption b { display: block; color: var(--page-ink); font-weight: 600; letter-spacing: 0.06em; }
+  .device {
+    width: 100%; max-width: 330px; background: var(--bg);
+    border: 1px solid var(--outline); border-radius: 30px; padding: 8px;
+    box-shadow: 0 18px 44px rgba(26, 35, 126, 0.13), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 580px; color: var(--ink);
+  }
+
+  /* ---------- Barre d'app ---------- */
+  .appbar {
+    display: flex; align-items: center; gap: var(--s-md);
+    padding: 16px var(--s-lg) 12px; background: var(--bg);
+  }
+  .appbar .title { font-size: 18px; font-weight: 700; flex: 1; }
+  .appbar .back { width: 22px; height: 22px; color: var(--ink-2); flex: none; }
+  .appbar .action { width: 20px; height: 20px; color: var(--ink-2); flex: none; }
+
+  /* ---------- Ligne de conversation / contact ---------- */
+  .list { background: var(--surface); flex: 1; border-radius: var(--r-lg) var(--r-lg) 0 0; padding-top: var(--s-xs); }
+  .row { display: flex; align-items: center; gap: var(--s-md); padding: 11px var(--s-lg); }
+  .row + .row { border-top: 1px solid var(--surface-muted); }
+
+  .ava {
+    position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 650; font-size: 16px;
+    background: var(--brand-container); color: var(--brand);
+  }
+  :root[data-theme="dark"] .ava,
+  :root:not([data-theme="light"]) .ava { color: #AEB6FF; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .ava { color: var(--brand); } }
+  .ava.g { background: var(--ava-g-bg); color: var(--ava-g-ink); }
+  .ava.a { background: var(--ava-a-bg); color: var(--ava-a-ink); }
+
+  .dot-online {
+    position: absolute; right: -1px; bottom: -1px; width: 13px; height: 13px;
+    border-radius: 50%; background: var(--online); border: 2.5px solid var(--surface);
+  }
+
+  /* V1 — pastille QR en coin d'avatar (coin opposé au point de présence) */
+  .qr-pin {
+    position: absolute; left: -3px; bottom: -3px; width: 19px; height: 19px;
+    border-radius: 50%; background: var(--brand); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border: 2.5px solid var(--surface);
+  }
+  .qr-pin svg { width: 10px; height: 10px; }
+
+  .row .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .row .name-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .row .name {
+    font-size: 15.5px; font-weight: 600; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .row .preview {
+    font-size: 13.5px; color: var(--ink-2); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .row .sub { font-family: var(--mono); font-size: 12px; color: var(--ink-3); letter-spacing: 0.04em; }
+
+  /* V2 — icône QR près du nom */
+  .qr-inline { width: 14px; height: 14px; color: var(--brand); flex: none; }
+  :root[data-theme="dark"] .qr-inline,
+  :root:not([data-theme="light"]) .qr-inline { color: #AEB6FF; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .qr-inline { color: var(--brand); } }
+
+  .row .meta { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .row .time { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .row .time.active { color: var(--brand); font-weight: 600; }
+  :root[data-theme="dark"] .row .time.active,
+  :root:not([data-theme="light"]) .row .time.active { color: #AEB6FF; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .row .time.active { color: var(--brand); } }
+  .unread {
+    min-width: 19px; height: 19px; border-radius: 10px; background: var(--brand);
+    color: #fff; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; padding: 0 5px;
+  }
+
+  /* V3 — étiquette « QR » côté heure */
+  .qr-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    padding: 2px 7px; border-radius: var(--r-pill);
+    background: var(--brand-container); color: var(--brand);
+  }
+  :root[data-theme="dark"] .qr-chip,
+  :root:not([data-theme="light"]) .qr-chip { color: #AEB6FF; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .qr-chip { color: var(--brand); } }
+  .qr-chip svg { width: 10px; height: 10px; }
+
+  /* ---------- Filtre (écran contacts préférés) ---------- */
+  .chips { display: flex; gap: var(--s-sm); padding: var(--s-xs) var(--s-lg) var(--s-md); background: var(--bg); }
+  .chip {
+    font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-radius: var(--r-pill);
+    background: var(--surface); color: var(--ink-2); border: 1px solid var(--outline);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .chip .count { font-variant-numeric: tabular-nums; opacity: 0.75; font-weight: 700; }
+  .chip svg { width: 12px; height: 12px; }
+
+  /* ---------- Fiche contact ---------- */
+  .profile-head {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: var(--s-md) var(--s-lg) var(--s-xl); text-align: center;
+  }
+  .profile-head .ava { width: 82px; height: 82px; font-size: 30px; }
+  .profile-head .pname { font-size: 20px; font-weight: 700; margin-top: 6px; }
+  .profile-head .pseudo { font-size: 13.5px; color: var(--ink-2); }
+  .profile-head .pid { font-family: var(--mono); font-size: 13px; color: var(--ink-3); letter-spacing: 0.06em; }
+
+  .qr-mention {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin-top: var(--s-md); padding: 7px 14px; border-radius: var(--r-pill);
+    background: var(--brand-container); color: var(--ink);
+    font-size: 12.5px; font-weight: 550;
+  }
+  .qr-mention svg { width: 13px; height: 13px; color: var(--brand); }
+  :root[data-theme="dark"] .qr-mention svg,
+  :root:not([data-theme="light"]) .qr-mention svg { color: #AEB6FF; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .qr-mention svg { color: var(--brand); } }
+
+  .actions { display: flex; gap: var(--s-sm); padding: 0 var(--s-lg) var(--s-lg); }
+  .tile {
+    flex: 1; background: var(--surface); border-radius: var(--r-md);
+    padding: 12px 6px 10px; display: flex; flex-direction: column;
+    align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--brand);
+  }
+  :root[data-theme="dark"] .tile,
+  :root:not([data-theme="light"]) .tile { color: #AEB6FF; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .tile { color: var(--brand); } }
+  .tile svg { width: 20px; height: 20px; }
+
+  .info-card {
+    margin: 0 var(--s-lg) var(--s-lg); background: var(--surface);
+    border-radius: var(--r-md); padding: var(--s-md) var(--s-lg);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .info-card .line { display: flex; justify-content: space-between; font-size: 13.5px; }
+  .info-card .line span:first-child { color: var(--ink-2); }
+  .info-card .line span:last-child { font-weight: 550; }
+
+  /* ---------- Décisions actées ---------- */
+  .decided { display: flex; flex-direction: column; gap: var(--s-sm); }
+  .decided ul { margin: 0; padding-left: 20px; color: var(--page-ink-2); font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .decided li b { color: var(--page-ink); font-weight: 600; }
+</style>
+
+<svg hidden aria-hidden="true">
+  <symbol id="i-qr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+    <rect x="3.2" y="3.2" width="6.4" height="6.4" rx="1.4"/>
+    <rect x="14.4" y="3.2" width="6.4" height="6.4" rx="1.4"/>
+    <rect x="3.2" y="14.4" width="6.4" height="6.4" rx="1.4"/>
+    <path d="M14.4 14.4h2.6M20.8 14.4h0M14.4 20.8h0M18 17.6h0M20.8 18.6v2.2M17.4 20.8h0" stroke-width="2.6"/>
+  </symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 5l-7 7 7 7"/>
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+    <circle cx="11" cy="11" r="6.5"/><path d="M16.2 16.2 20.5 20.5"/>
+  </symbol>
+  <symbol id="i-call" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 4h4l1.8 4.2-2.2 1.8a13 13 0 0 0 5.4 5.4l1.8-2.2L20 15v4a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.2 2 2 0 0 1 5 4z"/>
+  </symbol>
+  <symbol id="i-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="6.5" width="12.5" height="11" rx="2.4"/><path d="M15.5 11.5 21 8v8l-5.5-3.5z"/>
+  </symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3-.4-4.3-1L3 21l1.6-4.8A8.5 8.5 0 1 1 21 12z"/>
+  </symbol>
+</svg>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Maquette · Volet 6 — itération 2</p>
+    <h1>Distinguer les contacts ajoutés par QR</h1>
+    <p>
+      Quatre surfaces portent la distinction : la liste des discussions (trois variantes à
+      trancher ci-dessous), la liste des contacts préférés avec son filtre, et la fiche
+      contact. Dans chaque écran, <b>Aïcha</b> et <b>Bruno</b> ont été ajoutés par QR —
+      les autres par recherche.
+    </p>
+  </header>
+
+  <!-- ============ 1 · LISTE DES DISCUSSIONS — 3 VARIANTES ============ -->
+  <section class="panel">
+    <header>
+      <span class="tag open">À trancher</span>
+      <h2>1 · Liste des discussions — trois variantes</h2>
+      <p>
+        Même liste, trois façons de marquer les conversations avec un contact ajouté par QR.
+        La variante retenue s'appliquera aussi aux listes de contacts (écran 2), pour une
+        seule et même grammaire visuelle.
+      </p>
+    </header>
+    <div class="stage">
+
+      <!-- V1 : pastille sur l'avatar -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <span class="title">Alanya</span>
+            <svg class="action"><use href="#i-search"/></svg>
+          </div>
+          <div class="list">
+            <div class="row">
+              <div class="ava">AB<span class="qr-pin"><svg><use href="#i-qr"/></svg></span><span class="dot-online"></span></div>
+              <div class="body"><div class="name-line"><span class="name">Aïcha Bello</span></div>
+                <span class="preview">Ravie de t'avoir rencontré !</span></div>
+              <div class="meta"><span class="time active">14:32</span><span class="unread">2</span></div>
+            </div>
+            <div class="row">
+              <div class="ava g">P</div>
+              <div class="body"><div class="name-line"><span class="name">Papa ❤️</span></div>
+                <span class="preview">Appelle-moi quand tu peux</span></div>
+              <div class="meta"><span class="time">13:05</span></div>
+            </div>
+            <div class="row">
+              <div class="ava a">ÉP</div>
+              <div class="body"><div class="name-line"><span class="name">Équipe Projet Alanya</span></div>
+                <span class="preview">Brice : la maquette est prête</span></div>
+              <div class="meta"><span class="time">12:48</span></div>
+            </div>
+            <div class="row">
+              <div class="ava">BE<span class="qr-pin"><svg><use href="#i-qr"/></svg></span></div>
+              <div class="body"><div class="name-line"><span class="name">Bruno Etoa</span></div>
+                <span class="preview">C'était top la conf 👌</span></div>
+              <div class="meta"><span class="time">11:20</span></div>
+            </div>
+            <div class="row">
+              <div class="ava g">SN</div>
+              <div class="body"><div class="name-line"><span class="name">Sandrine Nkoulou</span></div>
+                <span class="preview">🎙️ Message vocal · 0:42</span></div>
+              <div class="meta"><span class="time">Hier</span></div>
+            </div>
+            <div class="row">
+              <div class="ava a">MO</div>
+              <div class="body"><div class="name-line"><span class="name">Marc Ondoa</span></div>
+                <span class="preview">📷 Photo</span></div>
+              <div class="meta"><span class="time">Hier</span></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>V1 — Pastille sur l'avatar · recommandée</b>
+          Lisible d'un coup d'œil, même en balayant vite. Coin opposé au point de
+          présence : les deux cohabitent (voir Aïcha). Laisse la ligne du nom libre
+          pour les futurs badges de certification du volet 1.</p>
+      </div>
+
+      <!-- V2 : icône près du nom -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <span class="title">Alanya</span>
+            <svg class="action"><use href="#i-search"/></svg>
+          </div>
+          <div class="list">
+            <div class="row">
+              <div class="ava">AB<span class="dot-online"></span></div>
+              <div class="body"><div class="name-line"><span class="name">Aïcha Bello</span><svg class="qr-inline"><use href="#i-qr"/></svg></div>
+                <span class="preview">Ravie de t'avoir rencontré !</span></div>
+              <div class="meta"><span class="time active">14:32</span><span class="unread">2</span></div>
+            </div>
+            <div class="row">
+              <div class="ava g">P</div>
+              <div class="body"><div class="name-line"><span class="name">Papa ❤️</span></div>
+                <span class="preview">Appelle-moi quand tu peux</span></div>
+              <div class="meta"><span class="time">13:05</span></div>
+            </div>
+            <div class="row">
+              <div class="ava a">ÉP</div>
+              <div class="body"><div class="name-line"><span class="name">Équipe Projet Alanya</span></div>
+                <span class="preview">Brice : la maquette est prête</span></div>
+              <div class="meta"><span class="time">12:48</span></div>
+            </div>
+            <div class="row">
+              <div class="ava">BE</div>
+              <div class="body"><div class="name-line"><span class="name">Bruno Etoa</span><svg class="qr-inline"><use href="#i-qr"/></svg></div>
+                <span class="preview">C'était top la conf 👌</span></div>
+              <div class="meta"><span class="time">11:20</span></div>
+            </div>
+            <div class="row">
+              <div class="ava g">SN</div>
+              <div class="body"><div class="name-line"><span class="name">Sandrine Nkoulou</span></div>
+                <span class="preview">🎙️ Message vocal · 0:42</span></div>
+              <div class="meta"><span class="time">Hier</span></div>
+            </div>
+            <div class="row">
+              <div class="ava a">MO</div>
+              <div class="body"><div class="name-line"><span class="name">Marc Ondoa</span></div>
+                <span class="preview">📷 Photo</span></div>
+              <div class="meta"><span class="time">Hier</span></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>V2 — Icône près du nom</b>
+          Discrète et proche de l'identité. Mais cette place est celle que le volet 1
+          réserve aux badges de certification — les deux finiraient par se disputer
+          la ligne du nom.</p>
+      </div>
+
+      <!-- V3 : étiquette côté heure -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <span class="title">Alanya</span>
+            <svg class="action"><use href="#i-search"/></svg>
+          </div>
+          <div class="list">
+            <div class="row">
+              <div class="ava">AB<span class="dot-online"></span></div>
+              <div class="body"><div class="name-line"><span class="name">Aïcha Bello</span></div>
+                <span class="preview">Ravie de t'avoir rencontré !</span></div>
+              <div class="meta"><span class="time active">14:32</span><span class="qr-chip"><svg><use href="#i-qr"/></svg>QR</span></div>
+            </div>
+            <div class="row">
+              <div class="ava g">P</div>
+              <div class="body"><div class="name-line"><span class="name">Papa ❤️</span></div>
+                <span class="preview">Appelle-moi quand tu peux</span></div>
+              <div class="meta"><span class="time">13:05</span></div>
+            </div>
+            <div class="row">
+              <div class="ava a">ÉP</div>
+              <div class="body"><div class="name-line"><span class="name">Équipe Projet Alanya</span></div>
+                <span class="preview">Brice : la maquette est prête</span></div>
+              <div class="meta"><span class="time">12:48</span></div>
+            </div>
+            <div class="row">
+              <div class="ava">BE</div>
+              <div class="body"><div class="name-line"><span class="name">Bruno Etoa</span></div>
+                <span class="preview">C'était top la conf 👌</span></div>
+              <div class="meta"><span class="time">11:20</span><span class="qr-chip"><svg><use href="#i-qr"/></svg>QR</span></div>
+            </div>
+            <div class="row">
+              <div class="ava g">SN</div>
+              <div class="body"><div class="name-line"><span class="name">Sandrine Nkoulou</span></div>
+                <span class="preview">🎙️ Message vocal · 0:42</span></div>
+              <div class="meta"><span class="time">Hier</span></div>
+            </div>
+            <div class="row">
+              <div class="ava a">MO</div>
+              <div class="body"><div class="name-line"><span class="name">Marc Ondoa</span></div>
+                <span class="preview">📷 Photo</span></div>
+              <div class="meta"><span class="time">Hier</span></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>V3 — Étiquette côté heure</b>
+          La plus discrète, rien ne touche à l'identité. Mais elle occupe la place du
+          compteur de non-lus (voir Aïcha : l'étiquette l'a délogé) et passe
+          facilement inaperçue.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 2 · CONTACTS PRÉFÉRÉS — BADGE + FILTRE ============ -->
+  <section class="panel">
+    <header>
+      <span class="tag done">Acté — pour validation visuelle</span>
+      <h2>2 · Contacts préférés — badge et filtre</h2>
+      <p>
+        Le badge reprend la forme retenue en 1 (ici V1, la pastille). Le filtre en tête de
+        liste isole les contacts ajoutés par QR ; le compte est visible avant même de
+        filtrer.
+      </p>
+    </header>
+    <div class="stage">
+
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="back"><use href="#i-back"/></svg>
+            <span class="title">Contacts préférés</span>
+          </div>
+          <div class="chips">
+            <span class="chip active">Tous <span class="count">· 7</span></span>
+            <span class="chip"><svg><use href="#i-qr"/></svg> Par QR <span class="count">· 2</span></span>
+          </div>
+          <div class="list">
+            <div class="row">
+              <div class="ava">AB<span class="qr-pin"><svg><use href="#i-qr"/></svg></span><span class="dot-online"></span></div>
+              <div class="body"><div class="name-line"><span class="name">Aïcha Bello</span></div>
+                <span class="sub">72 21 43 90</span></div>
+            </div>
+            <div class="row">
+              <div class="ava">BE<span class="qr-pin"><svg><use href="#i-qr"/></svg></span></div>
+              <div class="body"><div class="name-line"><span class="name">Bruno Etoa</span></div>
+                <span class="sub">64 10 88 27</span></div>
+            </div>
+            <div class="row">
+              <div class="ava a">MO</div>
+              <div class="body"><div class="name-line"><span class="name">Marc Ondoa</span></div>
+                <span class="sub">51 39 07 66</span></div>
+            </div>
+            <div class="row">
+              <div class="ava g">P</div>
+              <div class="body"><div class="name-line"><span class="name">Papa ❤️</span></div>
+                <span class="sub">30 55 12 84</span></div>
+            </div>
+            <div class="row">
+              <div class="ava g">SN</div>
+              <div class="body"><div class="name-line"><span class="name">Sandrine Nkoulou</span></div>
+                <span class="sub">89 44 61 03</span></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Liste complète</b>
+          Vue « Tous » : les badges signalent Aïcha et Bruno sans gêner la lecture.</p>
+      </div>
+
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="back"><use href="#i-back"/></svg>
+            <span class="title">Contacts préférés</span>
+          </div>
+          <div class="chips">
+            <span class="chip">Tous <span class="count">· 7</span></span>
+            <span class="chip active"><svg><use href="#i-qr"/></svg> Par QR <span class="count">· 2</span></span>
+          </div>
+          <div class="list">
+            <div class="row">
+              <div class="ava">AB<span class="qr-pin"><svg><use href="#i-qr"/></svg></span><span class="dot-online"></span></div>
+              <div class="body"><div class="name-line"><span class="name">Aïcha Bello</span></div>
+                <span class="sub">72 21 43 90</span></div>
+            </div>
+            <div class="row">
+              <div class="ava">BE<span class="qr-pin"><svg><use href="#i-qr"/></svg></span></div>
+              <div class="body"><div class="name-line"><span class="name">Bruno Etoa</span></div>
+                <span class="sub">64 10 88 27</span></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Filtre actif</b>
+          Vue « Par QR » : on retrouve d'un geste les personnes rencontrées
+          physiquement — salon, conférence, soirée.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 3 · FICHE CONTACT — MENTION DATÉE ============ -->
+  <section class="panel">
+    <header>
+      <span class="tag done">Acté — pour validation visuelle</span>
+      <h2>3 · Fiche contact — mention datée</h2>
+      <p>
+        Sous l'identité, une mention rappelle le lien : où et comment ce contact est entré
+        dans votre liste. Les contacts ajoutés par recherche n'affichent rien — l'absence
+        de mention est l'état normal, pas un manque.
+      </p>
+    </header>
+    <div class="stage">
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="back"><use href="#i-back"/></svg>
+            <span class="title"></span>
+          </div>
+          <div class="profile-head">
+            <div class="ava">AB<span class="dot-online"></span></div>
+            <div class="pname">Aïcha Bello</div>
+            <div class="pseudo">@aicha.b</div>
+            <div class="pid">Alanya ID 72 21 43 90</div>
+            <span class="qr-mention"><svg><use href="#i-qr"/></svg> Ajoutée par QR code · 12 juillet 2026</span>
+          </div>
+          <div class="actions">
+            <div class="tile"><svg><use href="#i-call"/></svg> Appeler</div>
+            <div class="tile"><svg><use href="#i-video"/></svg> Vidéo</div>
+            <div class="tile"><svg><use href="#i-msg"/></svg> Message</div>
+          </div>
+          <div class="info-card">
+            <div class="line"><span>Pays</span><span>Cameroun</span></div>
+            <div class="line"><span>Statut</span><span>En ligne</span></div>
+            <div class="line"><span>Médias partagés</span><span>24</span></div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Mention sous l'identité</b>
+          « Ajoutée par QR code · 12 juillet 2026 » — la date vient de la colonne
+          d'ajout déjà existante, aucune donnée nouvelle à saisir.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DÉJÀ ACTÉ ============ -->
+  <section class="panel decided">
+    <header>
+      <span class="tag done">Rappel des décisions</span>
+      <h2>Déjà acté dans cette itération</h2>
+    </header>
+    <ul>
+      <li><b>QR personnel éphémère</b> — généré à la demande, valable 10 minutes, consommé au
+          premier scan ; l'écran « Mon code » régénère automatiquement et prévient quand
+          quelqu'un vous ajoute. Rendu toujours côté client, le serveur ne fournit que la donnée.</li>
+      <li><b>Codes permanents réservés aux futurs comptes business</b> — l'infrastructure reste,
+          verrouillée tant que le type de compte business n'existe pas (volet 1).</li>
+      <li><b>Partage conservé</b> avec la mention « valable 10 minutes, une seule personne » et
+          l'Alanya ID permanent en légende ; <b>enregistrement dans la galerie retiré</b>
+          (une image morte en 10 minutes finirait en code cassé dans la galerie).</li>
+      <li><b>Distinction complète</b> — badge dans les listes, mention datée sur la fiche,
+          filtre « Par QR » dans les contacts préférés, et la marque dans la liste des
+          discussions à choisir ci-dessus.</li>
+    </ul>
+  </section>
+
+</div>
+</div>

@@ -150,6 +150,71 @@ class QrLoginCreated {
   }
 }
 
+/// Code d'ajout de contact éphémère (`POST /api/qr/contact-token`) : dix
+/// minutes, consommé au premier scan. Un seul code actif par utilisateur.
+class QrContactCode {
+  final String token;
+  final String payload;
+  final DateTime? expiresAt;
+
+  /// Durée de vie annoncée par le serveur. On décompte à partir de l'instant
+  /// de réception plutôt que de comparer [expiresAt] à l'horloge locale.
+  final Duration ttl;
+
+  const QrContactCode({
+    required this.token,
+    required this.payload,
+    this.expiresAt,
+    this.ttl = const Duration(minutes: 10),
+  });
+
+  factory QrContactCode.fromJson(Map<String, dynamic> json) {
+    final ttlMs = int.tryParse('${json['ttlMs']}');
+    return QrContactCode(
+      token: json['token']?.toString() ?? '',
+      payload: json['payload']?.toString() ?? '',
+      expiresAt: _optDate(json['expiresAt']),
+      ttl: (ttlMs != null && ttlMs > 0)
+          ? Duration(milliseconds: ttlMs)
+          : const Duration(minutes: 10),
+    );
+  }
+}
+
+/// Événement `qr:contact_scanned` : quelqu'un vient d'utiliser mon code.
+/// [alreadyMutual] est vrai si je l'ai déjà en contact — le dialogue « ajouter
+/// en retour » n'a alors pas lieu d'être.
+class QrContactScan {
+  final int alanyaID;
+  final String nom;
+  final String pseudo;
+  final String? avatarUrl;
+  final bool alreadyMutual;
+
+  const QrContactScan({
+    required this.alanyaID,
+    required this.nom,
+    required this.pseudo,
+    this.avatarUrl,
+    this.alreadyMutual = false,
+  });
+
+  String get displayName => nom.trim().isNotEmpty ? nom.trim() : pseudo;
+
+  factory QrContactScan.fromJson(Map<String, dynamic> json) {
+    final by = json['by'] is Map
+        ? Map<String, dynamic>.from(json['by'] as Map)
+        : const <String, dynamic>{};
+    return QrContactScan(
+      alanyaID: int.tryParse('${by['alanyaID']}') ?? 0,
+      nom: by['nom']?.toString() ?? '',
+      pseudo: by['pseudo']?.toString() ?? '',
+      avatarUrl: _optString(by['avatar_url']),
+      alreadyMutual: json['alreadyMutual'] == true,
+    );
+  }
+}
+
 /// Réponse d'interrogation d'une session de connexion par QR.
 /// Les tokens ne sont présents que sur le premier statut 'approved' :
 /// la livraison est à usage unique côté serveur.

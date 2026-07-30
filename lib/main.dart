@@ -18,6 +18,7 @@ import 'core/db/app_database.dart';
 // import 'core/network/cert_pinning.dart'; // réactiver avec le bloc certificate pinning
 import 'core/navigation/app_navigator.dart';
 import 'core/utils/app_log.dart';
+import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/theme/locale_controller.dart';
@@ -35,6 +36,7 @@ import 'core/services/meeting_service.dart';
 import 'core/services/presence_service.dart';
 import 'core/services/qr_contact_flow.dart';
 import 'core/services/qr_deep_link_service.dart';
+import 'models/qr_models.dart';
 import 'core/services/realtime_sync_service.dart';
 import 'core/services/voice_message_coordinator.dart';
 import 'core/services/voice_playback_service.dart';
@@ -275,7 +277,13 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   /// Liens `…/q/u/<jeton>` ouverts depuis la page web d'un code QR partagé.
   /// L'abonnement vit ici pour capter aussi bien le lien qui a démarré l'app
   /// que ceux reçus pendant qu'elle tourne.
-  StreamSubscription<String>? _qrLinkSub;
+  StreamSubscription<({String kind, String token})>? _qrLinkSub;
+
+  /// Quelqu'un vient d'utiliser mon code QR : invitation à l'ajouter en
+  /// retour. L'abonnement vit ici et non sur l'écran « Mon code » — le code a
+  /// pu être partagé par lien, son propriétaire peut être n'importe où dans
+  /// l'app quand le scan survient.
+  StreamSubscription<QrContactScan>? _qrScanSub;
 
   @override
   void initState() {
@@ -288,7 +296,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         .thisDeviceRevoked
         .listen((_) => unawaited(_authProvider?.handleRemoteRevocation() ?? Future.value()));
     _qrLinkSub = QrDeepLinkService.instance.identityTokens
-        .listen((token) => unawaited(_handleQrIdentityLink(token)));
+        .listen((lien) => unawaited(_handleQrIdentityLink(lien)));
+    _qrScanSub = Provider.of<TalkyApiClient>(context, listen: false)
+        .qrContactScans
+        .listen((scan) => unawaited(_onQrContactScanned(scan)));
     unawaited(QrDeepLinkService.instance.start());
     Future.microtask(_bootstrap);
   }
@@ -299,6 +310,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     _authProvider?.removeListener(_onAuthChanged);
     _deviceRevokedSub?.cancel();
     _qrLinkSub?.cancel();
+    _qrScanSub?.cancel();
     _clearCallLogBindings();
     if (_onBackOnline != null && _connectivityForListener != null) {
       _connectivityForListener!.removeBackOnlineListener(_onBackOnline!);
@@ -421,31 +433,12 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       }
       await _syncSessionBindings();
 
-      // Refus CallKit persistés (app tuée) : rejouer dès que possible.
-      if (authProvider.isLoggedIn) {
-        final callService = Provider.of<CallService>(context, listen: false);
-        unawaited(callService.flushPendingRejects());
-        // Actions de notification en attente (réponse rapide, marquer lu) :
-        // rejouées ici aussi, pour le cas où le socket ne monte jamais
-        // (`auth:verified` n'arrive pas) alors que l'HTTP passe.
-        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-        unawaited(chatProvider.repository.flushPendingNotificationActions());
-      }
-
-      try {
-        await PushService.init(apiClient, navKey: navigatorKey);
-        onCallEndedNotification = ({callId, callerId}) async {
-          if (!mounted) return;
-          await Provider.of<CallService>(context, listen: false)
-              .notifyCallEndedFromExternal(
-            callId: callId,
-            callerId: callerId,
-          );
-        };
-      } catch (e) {
-        debugPrint('[AuthWrapper] PushService init failed: $e');
-      }
-
+      // Actions CallKit dispatchées AVANT PushService.init : un accept depuis
+      // la notification (app tuée) doit atteindre CallService dès que la
+      // session locale est restaurée. PushService.init fait du réseau
+      // (getToken FCM) et d'éventuels dialogues de permission — l'attendre
+      // ici retardait l'écran d'appel de plusieurs secondes après le tap
+      // « Accepter » (spinner → home → appel).
       void dispatch(IncomingCallAction action) {
         if (!mounted) return;
         final callService = Provider.of<CallService>(context, listen: false);
@@ -467,6 +460,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         // soit prêt. activeCalls() conserve isAccepted côté natif.
         final active = await CallKitService.instance.getActiveCall();
         if (!mounted) return;
+        if (active == null) {
+          // Rien de plausible : retirer d'éventuels débris (entrées trop
+          // vieilles) sans déclencher de reject natif (purge programmatique).
+          unawaited(CallKitService.instance.purgeStaleActiveCalls());
+        }
         if (active != null) {
           final callId = active['callId'] as String? ?? '';
           if (callId.startsWith('meeting_')) {
@@ -520,6 +518,32 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
           }
         }
       }
+
+      if (!mounted) return;
+      // Refus CallKit persistés (app tuée) : rejouer dès que possible.
+      if (authProvider.isLoggedIn) {
+        final callService = Provider.of<CallService>(context, listen: false);
+        unawaited(callService.flushPendingRejects());
+        // Actions de notification en attente (réponse rapide, marquer lu) :
+        // rejouées ici aussi, pour le cas où le socket ne monte jamais
+        // (`auth:verified` n'arrive pas) alors que l'HTTP passe.
+        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+        unawaited(chatProvider.repository.flushPendingNotificationActions());
+      }
+
+      try {
+        await PushService.init(apiClient, navKey: navigatorKey);
+        onCallEndedNotification = ({callId, callerId}) async {
+          if (!mounted) return;
+          await Provider.of<CallService>(context, listen: false)
+              .notifyCallEndedFromExternal(
+            callId: callId,
+            callerId: callerId,
+          );
+        };
+      } catch (e) {
+        debugPrint('[AuthWrapper] PushService init failed: $e');
+      }
     } catch (e) {
       debugPrint('[AuthWrapper] ** Erreur init: $e');
       debugPrint('[AuthWrapper] Stack: ${StackTrace.current}');
@@ -539,18 +563,159 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
   /// Aligne l'état des providers (chat, status, admin) sur l'utilisateur
   /// actuellement loggé. Idempotent : ne re-bind pas si déjà bind pour cet ID.
+  /// Quelqu'un vient d'utiliser mon code QR. Déjà en contact chez moi :
+  /// simple information. Sinon : dialogue oui/non pour l'ajouter en retour —
+  /// la rencontre physique doit pouvoir créer le lien dans les deux sens en
+  /// deux gestes.
+  Future<void> _onQrContactScanned(QrContactScan scan) async {
+    if (!mounted || scan.alanyaID == 0) return;
+    final l10n = context.l10n;
+    final messenger = appMessengerKey.currentState;
+
+    if (scan.alreadyMutual) {
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(l10n.qrScannedMutualInfo(scan.displayName)),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // La note de contexte vaut dans les deux sens : celui qui ajoute en
+    // retour vient de vivre la même rencontre que celui qui a scanné.
+    final noteCtrl = TextEditingController();
+    final accepter = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.qrScanReturnTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.qrScanReturnBody(scan.displayName)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: noteCtrl,
+              maxLength: 200,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: l10n.qrNoteFieldHint,
+                counterText: '',
+                isDense: true,
+                prefixIcon: const Icon(Icons.sticky_note_2_outlined, size: 20),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.qrScanReturnDecline),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.qrScanReturnAccept),
+          ),
+        ],
+      ),
+    );
+    final note = noteCtrl.text.trim();
+    noteCtrl.dispose();
+    if (accepter != true || !mounted) return;
+
+    // Capturées ici, sous la garde mounted : le catch s'exécute après des
+    // await et ne doit plus toucher au context.
+    final api = Provider.of<TalkyApiClient>(context, listen: false);
+    final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+
+    try {
+      // `viaQr` : les deux directions du lien portent la même origine — la
+      // pastille et le filtre « Par QR » valent pour l'ajout en retour aussi.
+      final body = await api.addContact(scan.alanyaID, viaQr: true);
+      await cache.upsertKnownUser(
+        User.fromJson(body),
+        preferred: true,
+        partial: true,
+      );
+      if (note.isNotEmpty) {
+        await QrContactFlow.saveNote(
+          apiClient: api,
+          cache: cache,
+          user: User.fromJson(body),
+          note: note,
+        );
+      }
+      await cache.getPreferredContactsOnce();
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(l10n.qrScanAddSuccess(scan.displayName)),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } on TalkyException catch (e) {
+      // 409 : déjà ajouté entre-temps (double scan, autre appareil) — ce n'est
+      // pas un échec du point de vue de l'utilisateur, et sa note reste
+      // pertinente : on la pose sur la relation existante.
+      final deja = e.statusCode == 409;
+      if (deja && note.isNotEmpty) {
+        unawaited(QrContactFlow.saveNote(
+          apiClient: api,
+          cache: cache,
+          user: User(
+            alanyaID: scan.alanyaID,
+            nom: scan.nom,
+            pseudo: scan.pseudo,
+            alanyaPhone: '',
+            email: '',
+            idPays: 0,
+            avatarUrl: scan.avatarUrl ?? '',
+            typeCompte: 0,
+            isOnline: false,
+            lastSeen: '',
+          ),
+          note: note,
+        ));
+      }
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(deja
+              ? l10n.qrScanAlreadyContact(scan.displayName)
+              : l10n.qrScanReturnFailed),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: deja ? null : AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e, st) {
+      AppLog.e('AuthWrapper', 'Ajout en retour échoué', e, st);
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(l10n.qrScanReturnFailed),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   /// Ajoute le contact désigné par un lien d'identité. Un lien reçu hors
   /// session n'est pas perdu : il reste en attente et sera rejoué par
   /// [_replayPendingQrLink] une fois la connexion faite.
-  Future<void> _handleQrIdentityLink(String token) async {
+  Future<void> _handleQrIdentityLink(({String kind, String token}) lien) async {
     if (!mounted) return;
     final auth = _authProvider;
     if (auth == null || !auth.isLoggedIn) {
-      QrDeepLinkService.instance.stashToken(token);
+      QrDeepLinkService.instance.stashToken(lien);
       return;
     }
     await QrContactFlow.handleToken(
-      token: token,
+      kind: lien.kind,
+      token: lien.token,
       messenger: ScaffoldMessenger.of(context),
       apiClient: Provider.of<TalkyApiClient>(context, listen: false),
       cache: Provider.of<LocalCacheRepository>(context, listen: false),
@@ -560,8 +725,16 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
   /// Rejoue un lien d'identité reçu avant l'ouverture de session.
   Future<void> _replayPendingQrLink() async {
+    final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+
     final token = QrDeepLinkService.instance.consumePendingToken();
     if (token != null) await _handleQrIdentityLink(token);
+
+    // Même logique pour un scan arrivé par notification quand personne
+    // n'écoutait encore (app lancée par le tap) : l'invitation d'ajout en
+    // retour ne doit pas se perdre entre le tap et le premier abonné.
+    final scan = apiClient.consumePendingQrContactScan();
+    if (scan != null && mounted) await _onQrContactScanned(scan);
   }
 
   Future<void> _syncSessionBindings() async {

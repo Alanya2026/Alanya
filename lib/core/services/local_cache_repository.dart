@@ -293,6 +293,19 @@ class LocalCacheRepository {
       typeCompte: Value(u.typeCompte),
       isPreferredContact:
           preferred != null ? Value(preferred) : const Value.absent(),
+      // Relation « ajouté par QR » : null = la source ne portait pas
+      // l'information, on n'écrase pas ce que le cache sait déjà.
+      addedViaQr: u.addedViaQr != null
+          ? Value(u.addedViaQr!)
+          : const Value.absent(),
+      preferredAddedAt: u.preferredAddedAt != null
+          ? Value(u.preferredAddedAt)
+          : const Value.absent(),
+      // Chaîne vide = « pas de note », connue — on efface. Null = source
+      // muette, on ne touche pas.
+      preferredNote: u.preferredNote != null
+          ? Value(u.preferredNote!.isEmpty ? null : u.preferredNote)
+          : const Value.absent(),
       cachedAt: Value(cachedAt),
     );
   }
@@ -339,8 +352,30 @@ class LocalCacheRepository {
           u.typeCompte > 0 ? Value(u.typeCompte) : const Value.absent(),
       isPreferredContact:
           preferred != null ? Value(preferred) : const Value.absent(),
+      addedViaQr: u.addedViaQr != null
+          ? Value(u.addedViaQr!)
+          : const Value.absent(),
+      preferredAddedAt: u.preferredAddedAt != null
+          ? Value(u.preferredAddedAt)
+          : const Value.absent(),
+      // Chaîne vide = « pas de note », connue — on efface. Null = source
+      // muette, on ne touche pas.
+      preferredNote: u.preferredNote != null
+          ? Value(u.preferredNote!.isEmpty ? null : u.preferredNote)
+          : const Value.absent(),
       cachedAt: Value(cachedAt),
     );
+  }
+
+  /// Pose (ou efface, si vide) la note contextuelle d'un contact — miroir
+  /// local de PUT /contacts/:id/note.
+  Future<void> setPreferredNote(int alanyaID, String? note) async {
+    final clean = (note ?? '').trim();
+    await (_db.update(_db.localUsers)
+          ..where((u) => u.alanyaID.equals(alanyaID)))
+        .write(LocalUsersCompanion(
+      preferredNote: Value(clean.isEmpty ? null : clean),
+    ));
   }
 
   Future<void> _upsertCall(Call c, {required int myId}) async {

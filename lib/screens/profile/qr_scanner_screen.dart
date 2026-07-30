@@ -229,7 +229,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     if (uri.scheme != 'https' && uri.scheme != 'http') return false;
     final segments = uri.pathSegments;
     if (segments.length < 3) return false;
-    return segments[0] == 'q' && (segments[1] == 'u' || segments[1] == 'l');
+    return segments[0] == 'q' &&
+        (segments[1] == 'u' || segments[1] == 'l' || segments[1] == 'c');
   }
 
   Future<void> _handleContact(QrResolveResult result) async {
@@ -301,6 +302,32 @@ class _QrScannerScreenState extends State<QrScannerScreen>
         ),
       ),
     );
+  }
+
+  /// Enregistre la note contextuelle saisie sur la carte de résultat —
+  /// serveur d'abord, miroir local ensuite, pour que la fiche l'affiche sans
+  /// attendre une synchronisation.
+  Future<bool> _enregistrerNote(User user, String note) async {
+    try {
+      final api = Provider.of<TalkyApiClient>(context, listen: false);
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      await api.setContactNote(user.alanyaID, note);
+      await cache.setPreferredNote(user.alanyaID, note);
+      return true;
+    } catch (e, st) {
+      AppLog.e('QrScanner', 'Enregistrement de la note échoué', e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.qrNoteFailed),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return false;
+    }
   }
 
   Future<void> _annulerResultat(User user) async {
@@ -404,6 +431,51 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             ),
           ),
 
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + 8,
+            left: 0,
+            right: 0,
+            child: _buildTopBar(),
+          ),
+
+          // Instruction et secours au même endroit : c'est là que le regard
+          // revient quand le cadrage ne prend pas. Masqués dès qu'une carte de
+          // résultat occupe le bas de l'écran — sinon les deux se superposent.
+          if (_resultat == null)
+            Positioned(
+              bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.xxl,
+              left: AppSpacing.xl,
+              right: AppSpacing.xl,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.l10n.qrScanInstruction,
+                    textAlign: TextAlign.center,
+                    style: context.text.bodyMedium
+                        ?.copyWith(color: AppColors.white),
+                  ),
+                  AppSpacing.vGapSm,
+                  TextButton.icon(
+                    onPressed: () => unawaited(_importerDepuisGalerie()),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.white,
+                      backgroundColor: AppColors.black.withAlpha(100),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.sm,
+                      ),
+                    ),
+                    icon: const Icon(Icons.photo_library_outlined,
+                        size: AppIconSize.sm),
+                    label: Text(context.l10n.qrScanImportImage),
+                  ),
+                ],
+              ),
+            ),
+
+          // Après l'instruction dans le Stack : la carte doit passer au-dessus
+          // de tout le reste, barre du haut comprise.
           if (_resultat != null)
             Positioned(
               left: 0,
@@ -417,50 +489,13 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                   onMessage: () => unawaited(_messagerResultat(_resultat!)),
                   onDetails: () => _voirDetails(_resultat!),
                   onUndo: () => unawaited(_annulerResultat(_resultat!)),
+                  onNote: _resultatDejaContact
+                      ? null
+                      : (note) => _enregistrerNote(_resultat!, note),
                   onDismissed: _fermerResultat,
                 ),
               ),
             ),
-          Positioned(
-            top: MediaQuery.paddingOf(context).top + 8,
-            left: 0,
-            right: 0,
-            child: _buildTopBar(),
-          ),
-
-          // Instruction et secours au même endroit : c'est là que le regard
-          // revient quand le cadrage ne prend pas.
-          Positioned(
-            bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.xxl,
-            left: AppSpacing.xl,
-            right: AppSpacing.xl,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  context.l10n.qrScanInstruction,
-                  textAlign: TextAlign.center,
-                  style:
-                      context.text.bodyMedium?.copyWith(color: AppColors.white),
-                ),
-                AppSpacing.vGapSm,
-                TextButton.icon(
-                  onPressed: () => unawaited(_importerDepuisGalerie()),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.white,
-                    backgroundColor: AppColors.black.withAlpha(100),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                      vertical: AppSpacing.sm,
-                    ),
-                  ),
-                  icon: const Icon(Icons.photo_library_outlined,
-                      size: AppIconSize.sm),
-                  label: Text(context.l10n.qrScanImportImage),
-                ),
-              ],
-            ),
-          ),
 
           if (_isBusy)
             const ColoredBox(

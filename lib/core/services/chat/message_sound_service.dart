@@ -72,8 +72,11 @@ class MessageSoundService {
       await _callEndPlayer!.setAsset(_callEndAsset);
       await _sentPlayer!.setVolume(0.55);
       await _receivedPlayer!.setVolume(0.7);
-      await _qrScanSuccessPlayer!.setVolume(0.75);
-      await _callEndPlayer!.setVolume(0.6);
+      // Accusés de scan / fin d'appel à plein volume : le canal notification
+      // les atténue déjà (volume sonnerie du téléphone, souvent bas), donc on
+      // ne réduit pas une deuxième fois côté lecteur.
+      await _qrScanSuccessPlayer!.setVolume(1.0);
+      await _callEndPlayer!.setVolume(1.0);
       _ready = true;
     } catch (e) {
       debugPrint('[MessageSound] init échoué: $e');

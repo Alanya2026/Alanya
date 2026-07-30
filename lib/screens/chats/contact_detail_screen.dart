@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -54,6 +55,12 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   User? _contact;
   bool _isLoading = true;
   bool _isFavorite = false;
+
+  /// Relation « ajouté par QR » lue du cache local — la seule source qui la
+  /// connaît, le profil réseau ne portant pas la relation.
+  bool _addedViaQr = false;
+  DateTime? _preferredAddedAt;
+  String? _preferredNote;
   bool _isBlocked = false;
   bool _blockedByThem = false;
   bool _busy = false;
@@ -186,6 +193,9 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
             paysLibelle: u.paysLibelle,
           );
           _isFavorite = u.isPreferredContact;
+          _addedViaQr = u.addedViaQr;
+          _preferredAddedAt = u.preferredAddedAt;
+          _preferredNote = u.preferredNote;
           _isLoading = false;
         });
       }
@@ -493,6 +503,76 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           AppSpacing.xxl),
       children: [
         _Header(user: u, hidePhoto: !isSelf && _blockedByThem),
+        if (!isSelf && _isFavorite && _addedViaQr) ...[
+          AppSpacing.vGapMd,
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: context.semantic.brandContainer,
+                borderRadius: AppRadius.brPill,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.qr_code_2,
+                    size: 15,
+                    color: context.colors.primary,
+                  ),
+                  AppSpacing.hGapXs,
+                  Text(
+                    _preferredAddedAt != null
+                        ? context.l10n.qrContactAddedViaQrOn(
+                            DateFormat.yMMMd(
+                                    Localizations.localeOf(context).toString())
+                                .format(_preferredAddedAt!))
+                        : context.l10n.qrContactAddedViaQr,
+                    style: context.text.labelMedium?.copyWith(
+                      color: context.colors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        // La note contextuelle saisie après un scan (« rencontré au salon de
+        // Douala ») — le souvenir appartient à la relation, il s'affiche donc
+        // ici, jamais sur le profil public de l'autre.
+        if (!isSelf &&
+            _isFavorite &&
+            (_preferredNote ?? '').trim().isNotEmpty) ...[
+          AppSpacing.vGapSm,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.sticky_note_2_outlined,
+                  size: 15,
+                  color: context.colors.onSurfaceVariant,
+                ),
+                AppSpacing.hGapXs,
+                Flexible(
+                  child: Text(
+                    '« ${_preferredNote!.trim()} »',
+                    textAlign: TextAlign.center,
+                    style: context.text.bodySmall?.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         AppSpacing.vGapXl,
         if (!isSelf) ...[
           _PrimaryActions(

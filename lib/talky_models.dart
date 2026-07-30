@@ -20,6 +20,20 @@ class User {
   final int typeCompte;
   final bool isOnline;
   final String lastSeen;
+  /// Vrai si ce contact préféré a été ajouté par code QR (scan ou lien).
+  /// Donnée de RELATION, pas d'identité — et nullable à dessein : null veut
+  /// dire « la source ne portait pas cette information » (recherche,
+  /// instantané d'appel), et le cache ne doit alors PAS écraser sa valeur.
+  final bool? addedViaQr;
+
+  /// Date d'ajout en contact préféré (`addedAt` du serveur). Même règle de
+  /// nullité que [addedViaQr].
+  final DateTime? preferredAddedAt;
+
+  /// Note contextuelle de la relation (`addedNote` du serveur). Null = la
+  /// source ne portait pas la relation ; chaîne vide = pas de note (connue).
+  final String? preferredNote;
+
   // Champs admin (optionnels — peuplés uniquement par les endpoints admin)
   final bool exclus;
   final String? excludeAt;
@@ -38,6 +52,9 @@ class User {
     required this.typeCompte,
     required this.isOnline,
     required this.lastSeen,
+    this.addedViaQr,
+    this.preferredAddedAt,
+    this.preferredNote,
     this.exclus = false,
     this.excludeAt,
     this.excludeReason,
@@ -56,6 +73,14 @@ class User {
         typeCompte: json['type_compte'] ?? 0,
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
         lastSeen: json['last_seen'] ?? '',
+        addedViaQr:
+            json.containsKey('addedVia') ? json['addedVia'] == 'qr' : null,
+        preferredAddedAt: json['addedAt'] != null
+            ? DateTime.tryParse(json['addedAt'].toString())
+            : null,
+        preferredNote: json.containsKey('addedNote')
+            ? (json['addedNote']?.toString() ?? '')
+            : null,
         exclus: json['exclus'] == 1 || json['exclus'] == true,
         excludeAt: json['exclude_at'],
         excludeReason: json['exclude_reason'],
@@ -840,6 +865,10 @@ class SocketEvents {
   /// { appareilId, deviceId } où `deviceId` est l'identifiant MATÉRIEL, à
   /// comparer au sien : l'événement part à tout le compte, pas à une socket.
   static const authDeviceRevoked = 'auth:device_revoked';
+
+  /// Votre code contact éphémère vient d'être scanné : { by, at }. L'écran
+  /// « Mon code » régénère à la réception — le jeton est à usage unique.
+  static const qrContactScanned = 'qr:contact_scanned';
 
   // Présence
   static const presenceOnline   = 'presence:online';

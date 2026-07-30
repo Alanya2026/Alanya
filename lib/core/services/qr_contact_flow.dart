@@ -20,12 +20,12 @@ import 'local_cache_repository.dart';
 class QrContactFlow {
   const QrContactFlow._();
 
-  /// Reconstruit l'URL d'identité à partir d'un jeton reçu par lien.
-  /// Le serveur reste l'autorité de résolution : on ne fait que lui redonner
-  /// la forme qu'il sait lire.
-  static String payloadForToken(String token) {
+  /// Reconstruit l'URL d'identité à partir d'un jeton reçu par lien, selon son
+  /// genre (`c` éphémère / `u` permanent). Le serveur reste l'autorité de
+  /// résolution : on ne fait que lui redonner la forme qu'il sait lire.
+  static String payloadForToken(String kind, String token) {
     final base = TalkyApiClient.baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
-    return '$base/q/u/$token';
+    return '$base/q/$kind/$token';
   }
 
   /// Met le contact fraîchement ajouté dans le cache local, puis relit la
@@ -82,6 +82,24 @@ class QrContactFlow {
     );
   }
 
+  /// Enregistre la note contextuelle — serveur puis miroir local. Retourne
+  /// vrai en cas de succès ; l'appelant décide de l'affichage d'erreur.
+  static Future<bool> saveNote({
+    required TalkyApiClient apiClient,
+    required LocalCacheRepository cache,
+    required User user,
+    required String note,
+  }) async {
+    try {
+      await apiClient.setContactNote(user.alanyaID, note);
+      await cache.setPreferredNote(user.alanyaID, note);
+      return true;
+    } catch (e, st) {
+      AppLog.e('QrContact', 'Enregistrement de la note échoué', e, st);
+      return false;
+    }
+  }
+
   /// Retire un contact ajouté par erreur. Public : la carte de résultat du
   /// scanner l'appelle aussi, avec son propre bouton d'annulation.
   static Future<void> undoAdd({
@@ -130,6 +148,7 @@ class QrContactFlow {
   /// pour que l'appelant décide de la suite (rien à faire dans le cas nominal,
   /// le bandeau est déjà affiché).
   static Future<QrResolveResult?> handleToken({
+    required String kind,
     required String token,
     required ScaffoldMessengerState messenger,
     required TalkyApiClient apiClient,
@@ -137,7 +156,7 @@ class QrContactFlow {
     required AppLocalizations l10n,
   }) async {
     try {
-      final result = await apiClient.resolveQr(payloadForToken(token));
+      final result = await apiClient.resolveQr(payloadForToken(kind, token));
 
       // Un lien de connexion n'a rien à faire ici : l'approbation exige un
       // scan et un écran de confirmation, jamais un lien cliqué.
@@ -170,6 +189,14 @@ class QrContactFlow {
           context: nav.context,
           user: user,
           alreadyContact: result.alreadyContact,
+          onNote: result.alreadyContact
+              ? null
+              : (note) => saveNote(
+                    apiClient: apiClient,
+                    cache: cache,
+                    user: user,
+                    note: note,
+                  ),
           onUndo: () => unawaited(undoAdd(
             messenger: messenger,
             apiClient: apiClient,

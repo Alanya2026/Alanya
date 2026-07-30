@@ -5810,6 +5810,108 @@ abstract class AppLocalizations {
   /// **'Partager'**
   String get qrMyCodeShare;
 
+  /// No description provided for @qrMyCodeExpiresIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Expire dans {time}'**
+  String qrMyCodeExpiresIn(String time);
+
+  /// No description provided for @qrMyCodeValidityNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valable 10 minutes et pour une seule personne. Un nouveau code est généré automatiquement.'**
+  String get qrMyCodeValidityNote;
+
+  /// No description provided for @qrMyCodeNewCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau code'**
+  String get qrMyCodeNewCode;
+
+  /// No description provided for @qrMyCodeShareValidity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code est valable 10 minutes et pour une seule personne.'**
+  String get qrMyCodeShareValidity;
+
+  /// No description provided for @qrScanReturnTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau contact'**
+  String get qrScanReturnTitle;
+
+  /// No description provided for @qrScanReturnBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} vous a ajouté à ses contacts préférés avec votre code QR. L\'ajouter en retour ?'**
+  String qrScanReturnBody(String name);
+
+  /// No description provided for @qrScanReturnAccept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get qrScanReturnAccept;
+
+  /// No description provided for @qrScanReturnDecline.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non merci'**
+  String get qrScanReturnDecline;
+
+  /// No description provided for @qrScanReturnFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ajouter ce contact'**
+  String get qrScanReturnFailed;
+
+  /// No description provided for @qrScannedMutualInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} vous a ajouté avec votre code QR'**
+  String qrScannedMutualInfo(String name);
+
+  /// No description provided for @qrNoteFieldHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter une note (lieu, contexte…)'**
+  String get qrNoteFieldHint;
+
+  /// No description provided for @qrNoteSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note enregistrée'**
+  String get qrNoteSaved;
+
+  /// No description provided for @qrNoteFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la note'**
+  String get qrNoteFailed;
+
+  /// No description provided for @qrContactsFilterAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous'**
+  String get qrContactsFilterAll;
+
+  /// No description provided for @qrContactsFilterQr.
+  ///
+  /// In fr, this message translates to:
+  /// **'Par QR'**
+  String get qrContactsFilterQr;
+
+  /// No description provided for @qrContactAddedViaQr.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouté par QR code'**
+  String get qrContactAddedViaQr;
+
+  /// No description provided for @qrContactAddedViaQrOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouté par QR code · {date}'**
+  String qrContactAddedViaQrOn(String date);
+
   /// No description provided for @qrMyCodeShareSheetTitle.
   ///
   /// In fr, this message translates to:
@@ -5839,30 +5941,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La carte à scanner'**
   String get qrMyCodeShareImageHint;
-
-  /// No description provided for @qrMyCodeSave.
-  ///
-  /// In fr, this message translates to:
-  /// **'Enregistrer'**
-  String get qrMyCodeSave;
-
-  /// No description provided for @qrMyCodeSaveDone.
-  ///
-  /// In fr, this message translates to:
-  /// **'Code QR enregistré dans vos photos'**
-  String get qrMyCodeSaveDone;
-
-  /// No description provided for @qrMyCodeSaveFailed.
-  ///
-  /// In fr, this message translates to:
-  /// **'Impossible d\'enregistrer le code'**
-  String get qrMyCodeSaveFailed;
-
-  /// No description provided for @qrMyCodeSaveDenied.
-  ///
-  /// In fr, this message translates to:
-  /// **'Autorisez l\'accès aux photos pour enregistrer le code'**
-  String get qrMyCodeSaveDenied;
 
   /// No description provided for @qrMyCodeShareId.
   ///

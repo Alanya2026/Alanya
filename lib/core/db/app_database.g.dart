@@ -3723,6 +3723,44 @@ class $LocalUsersTable extends LocalUsers
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _addedViaQrMeta = const VerificationMeta(
+    'addedViaQr',
+  );
+  @override
+  late final GeneratedColumn<bool> addedViaQr = GeneratedColumn<bool>(
+    'added_via_qr',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("added_via_qr" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _preferredAddedAtMeta = const VerificationMeta(
+    'preferredAddedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> preferredAddedAt =
+      GeneratedColumn<DateTime>(
+        'preferred_added_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _preferredNoteMeta = const VerificationMeta(
+    'preferredNote',
+  );
+  @override
+  late final GeneratedColumn<String> preferredNote = GeneratedColumn<String>(
+    'preferred_note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _typeCompteMeta = const VerificationMeta(
     'typeCompte',
   );
@@ -3759,6 +3797,9 @@ class $LocalUsersTable extends LocalUsers
     isOnline,
     lastSeen,
     isPreferredContact,
+    addedViaQr,
+    preferredAddedAt,
+    preferredNote,
     typeCompte,
     cachedAt,
   ];
@@ -3849,6 +3890,33 @@ class $LocalUsersTable extends LocalUsers
         ),
       );
     }
+    if (data.containsKey('added_via_qr')) {
+      context.handle(
+        _addedViaQrMeta,
+        addedViaQr.isAcceptableOrUnknown(
+          data['added_via_qr']!,
+          _addedViaQrMeta,
+        ),
+      );
+    }
+    if (data.containsKey('preferred_added_at')) {
+      context.handle(
+        _preferredAddedAtMeta,
+        preferredAddedAt.isAcceptableOrUnknown(
+          data['preferred_added_at']!,
+          _preferredAddedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('preferred_note')) {
+      context.handle(
+        _preferredNoteMeta,
+        preferredNote.isAcceptableOrUnknown(
+          data['preferred_note']!,
+          _preferredNoteMeta,
+        ),
+      );
+    }
     if (data.containsKey('type_compte')) {
       context.handle(
         _typeCompteMeta,
@@ -3916,6 +3984,18 @@ class $LocalUsersTable extends LocalUsers
         DriftSqlType.bool,
         data['${effectivePrefix}is_preferred_contact'],
       )!,
+      addedViaQr: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}added_via_qr'],
+      )!,
+      preferredAddedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}preferred_added_at'],
+      ),
+      preferredNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preferred_note'],
+      ),
       typeCompte: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}type_compte'],
@@ -3945,6 +4025,19 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
   final bool isOnline;
   final DateTime? lastSeen;
   final bool isPreferredContact;
+
+  /// Origine du lien de contact préféré : vrai si ajouté par code QR (scan ou
+  /// lien). Alimente la pastille des listes, le filtre « Par QR » et la
+  /// mention datée de la fiche.
+  final bool addedViaQr;
+
+  /// Date d'ajout en contact préféré (preferredContact.created_at côté
+  /// serveur) — pour la mention « Ajouté par QR code le … » de la fiche.
+  final DateTime? preferredAddedAt;
+
+  /// Note contextuelle saisie après un scan (« rencontré au salon de
+  /// Douala ») — affichée sur la fiche du contact.
+  final String? preferredNote;
   final int typeCompte;
   final DateTime cachedAt;
   const LocalUser({
@@ -3959,6 +4052,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     required this.isOnline,
     this.lastSeen,
     required this.isPreferredContact,
+    required this.addedViaQr,
+    this.preferredAddedAt,
+    this.preferredNote,
     required this.typeCompte,
     required this.cachedAt,
   });
@@ -3980,6 +4076,13 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       map['last_seen'] = Variable<DateTime>(lastSeen);
     }
     map['is_preferred_contact'] = Variable<bool>(isPreferredContact);
+    map['added_via_qr'] = Variable<bool>(addedViaQr);
+    if (!nullToAbsent || preferredAddedAt != null) {
+      map['preferred_added_at'] = Variable<DateTime>(preferredAddedAt);
+    }
+    if (!nullToAbsent || preferredNote != null) {
+      map['preferred_note'] = Variable<String>(preferredNote);
+    }
     map['type_compte'] = Variable<int>(typeCompte);
     map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
@@ -4002,6 +4105,13 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           ? const Value.absent()
           : Value(lastSeen),
       isPreferredContact: Value(isPreferredContact),
+      addedViaQr: Value(addedViaQr),
+      preferredAddedAt: preferredAddedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferredAddedAt),
+      preferredNote: preferredNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferredNote),
       typeCompte: Value(typeCompte),
       cachedAt: Value(cachedAt),
     );
@@ -4024,6 +4134,11 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       isOnline: serializer.fromJson<bool>(json['isOnline']),
       lastSeen: serializer.fromJson<DateTime?>(json['lastSeen']),
       isPreferredContact: serializer.fromJson<bool>(json['isPreferredContact']),
+      addedViaQr: serializer.fromJson<bool>(json['addedViaQr']),
+      preferredAddedAt: serializer.fromJson<DateTime?>(
+        json['preferredAddedAt'],
+      ),
+      preferredNote: serializer.fromJson<String?>(json['preferredNote']),
       typeCompte: serializer.fromJson<int>(json['typeCompte']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
@@ -4043,6 +4158,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       'isOnline': serializer.toJson<bool>(isOnline),
       'lastSeen': serializer.toJson<DateTime?>(lastSeen),
       'isPreferredContact': serializer.toJson<bool>(isPreferredContact),
+      'addedViaQr': serializer.toJson<bool>(addedViaQr),
+      'preferredAddedAt': serializer.toJson<DateTime?>(preferredAddedAt),
+      'preferredNote': serializer.toJson<String?>(preferredNote),
       'typeCompte': serializer.toJson<int>(typeCompte),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
@@ -4060,6 +4178,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     bool? isOnline,
     Value<DateTime?> lastSeen = const Value.absent(),
     bool? isPreferredContact,
+    bool? addedViaQr,
+    Value<DateTime?> preferredAddedAt = const Value.absent(),
+    Value<String?> preferredNote = const Value.absent(),
     int? typeCompte,
     DateTime? cachedAt,
   }) => LocalUser(
@@ -4074,6 +4195,13 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     isOnline: isOnline ?? this.isOnline,
     lastSeen: lastSeen.present ? lastSeen.value : this.lastSeen,
     isPreferredContact: isPreferredContact ?? this.isPreferredContact,
+    addedViaQr: addedViaQr ?? this.addedViaQr,
+    preferredAddedAt: preferredAddedAt.present
+        ? preferredAddedAt.value
+        : this.preferredAddedAt,
+    preferredNote: preferredNote.present
+        ? preferredNote.value
+        : this.preferredNote,
     typeCompte: typeCompte ?? this.typeCompte,
     cachedAt: cachedAt ?? this.cachedAt,
   );
@@ -4096,6 +4224,15 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       isPreferredContact: data.isPreferredContact.present
           ? data.isPreferredContact.value
           : this.isPreferredContact,
+      addedViaQr: data.addedViaQr.present
+          ? data.addedViaQr.value
+          : this.addedViaQr,
+      preferredAddedAt: data.preferredAddedAt.present
+          ? data.preferredAddedAt.value
+          : this.preferredAddedAt,
+      preferredNote: data.preferredNote.present
+          ? data.preferredNote.value
+          : this.preferredNote,
       typeCompte: data.typeCompte.present
           ? data.typeCompte.value
           : this.typeCompte,
@@ -4117,6 +4254,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           ..write('isOnline: $isOnline, ')
           ..write('lastSeen: $lastSeen, ')
           ..write('isPreferredContact: $isPreferredContact, ')
+          ..write('addedViaQr: $addedViaQr, ')
+          ..write('preferredAddedAt: $preferredAddedAt, ')
+          ..write('preferredNote: $preferredNote, ')
           ..write('typeCompte: $typeCompte, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
@@ -4136,6 +4276,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     isOnline,
     lastSeen,
     isPreferredContact,
+    addedViaQr,
+    preferredAddedAt,
+    preferredNote,
     typeCompte,
     cachedAt,
   );
@@ -4154,6 +4297,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           other.isOnline == this.isOnline &&
           other.lastSeen == this.lastSeen &&
           other.isPreferredContact == this.isPreferredContact &&
+          other.addedViaQr == this.addedViaQr &&
+          other.preferredAddedAt == this.preferredAddedAt &&
+          other.preferredNote == this.preferredNote &&
           other.typeCompte == this.typeCompte &&
           other.cachedAt == this.cachedAt);
 }
@@ -4170,6 +4316,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
   final Value<bool> isOnline;
   final Value<DateTime?> lastSeen;
   final Value<bool> isPreferredContact;
+  final Value<bool> addedViaQr;
+  final Value<DateTime?> preferredAddedAt;
+  final Value<String?> preferredNote;
   final Value<int> typeCompte;
   final Value<DateTime> cachedAt;
   const LocalUsersCompanion({
@@ -4184,6 +4333,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.isOnline = const Value.absent(),
     this.lastSeen = const Value.absent(),
     this.isPreferredContact = const Value.absent(),
+    this.addedViaQr = const Value.absent(),
+    this.preferredAddedAt = const Value.absent(),
+    this.preferredNote = const Value.absent(),
     this.typeCompte = const Value.absent(),
     this.cachedAt = const Value.absent(),
   });
@@ -4199,6 +4351,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.isOnline = const Value.absent(),
     this.lastSeen = const Value.absent(),
     this.isPreferredContact = const Value.absent(),
+    this.addedViaQr = const Value.absent(),
+    this.preferredAddedAt = const Value.absent(),
+    this.preferredNote = const Value.absent(),
     this.typeCompte = const Value.absent(),
     required DateTime cachedAt,
   }) : cachedAt = Value(cachedAt);
@@ -4214,6 +4369,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Expression<bool>? isOnline,
     Expression<DateTime>? lastSeen,
     Expression<bool>? isPreferredContact,
+    Expression<bool>? addedViaQr,
+    Expression<DateTime>? preferredAddedAt,
+    Expression<String>? preferredNote,
     Expression<int>? typeCompte,
     Expression<DateTime>? cachedAt,
   }) {
@@ -4230,6 +4388,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       if (lastSeen != null) 'last_seen': lastSeen,
       if (isPreferredContact != null)
         'is_preferred_contact': isPreferredContact,
+      if (addedViaQr != null) 'added_via_qr': addedViaQr,
+      if (preferredAddedAt != null) 'preferred_added_at': preferredAddedAt,
+      if (preferredNote != null) 'preferred_note': preferredNote,
       if (typeCompte != null) 'type_compte': typeCompte,
       if (cachedAt != null) 'cached_at': cachedAt,
     });
@@ -4247,6 +4408,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Value<bool>? isOnline,
     Value<DateTime?>? lastSeen,
     Value<bool>? isPreferredContact,
+    Value<bool>? addedViaQr,
+    Value<DateTime?>? preferredAddedAt,
+    Value<String?>? preferredNote,
     Value<int>? typeCompte,
     Value<DateTime>? cachedAt,
   }) {
@@ -4262,6 +4426,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       isOnline: isOnline ?? this.isOnline,
       lastSeen: lastSeen ?? this.lastSeen,
       isPreferredContact: isPreferredContact ?? this.isPreferredContact,
+      addedViaQr: addedViaQr ?? this.addedViaQr,
+      preferredAddedAt: preferredAddedAt ?? this.preferredAddedAt,
+      preferredNote: preferredNote ?? this.preferredNote,
       typeCompte: typeCompte ?? this.typeCompte,
       cachedAt: cachedAt ?? this.cachedAt,
     );
@@ -4303,6 +4470,15 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     if (isPreferredContact.present) {
       map['is_preferred_contact'] = Variable<bool>(isPreferredContact.value);
     }
+    if (addedViaQr.present) {
+      map['added_via_qr'] = Variable<bool>(addedViaQr.value);
+    }
+    if (preferredAddedAt.present) {
+      map['preferred_added_at'] = Variable<DateTime>(preferredAddedAt.value);
+    }
+    if (preferredNote.present) {
+      map['preferred_note'] = Variable<String>(preferredNote.value);
+    }
     if (typeCompte.present) {
       map['type_compte'] = Variable<int>(typeCompte.value);
     }
@@ -4326,6 +4502,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
           ..write('isOnline: $isOnline, ')
           ..write('lastSeen: $lastSeen, ')
           ..write('isPreferredContact: $isPreferredContact, ')
+          ..write('addedViaQr: $addedViaQr, ')
+          ..write('preferredAddedAt: $preferredAddedAt, ')
+          ..write('preferredNote: $preferredNote, ')
           ..write('typeCompte: $typeCompte, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
@@ -8218,6 +8397,9 @@ typedef $$LocalUsersTableCreateCompanionBuilder =
       Value<bool> isOnline,
       Value<DateTime?> lastSeen,
       Value<bool> isPreferredContact,
+      Value<bool> addedViaQr,
+      Value<DateTime?> preferredAddedAt,
+      Value<String?> preferredNote,
       Value<int> typeCompte,
       required DateTime cachedAt,
     });
@@ -8234,6 +8416,9 @@ typedef $$LocalUsersTableUpdateCompanionBuilder =
       Value<bool> isOnline,
       Value<DateTime?> lastSeen,
       Value<bool> isPreferredContact,
+      Value<bool> addedViaQr,
+      Value<DateTime?> preferredAddedAt,
+      Value<String?> preferredNote,
       Value<int> typeCompte,
       Value<DateTime> cachedAt,
     });
@@ -8299,6 +8484,21 @@ class $$LocalUsersTableFilterComposer
 
   ColumnFilters<bool> get isPreferredContact => $composableBuilder(
     column: $table.isPreferredContact,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get addedViaQr => $composableBuilder(
+    column: $table.addedViaQr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get preferredAddedAt => $composableBuilder(
+    column: $table.preferredAddedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preferredNote => $composableBuilder(
+    column: $table.preferredNote,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8377,6 +8577,21 @@ class $$LocalUsersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get addedViaQr => $composableBuilder(
+    column: $table.addedViaQr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get preferredAddedAt => $composableBuilder(
+    column: $table.preferredAddedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get preferredNote => $composableBuilder(
+    column: $table.preferredNote,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get typeCompte => $composableBuilder(
     column: $table.typeCompte,
     builder: (column) => ColumnOrderings(column),
@@ -8436,6 +8651,21 @@ class $$LocalUsersTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get addedViaQr => $composableBuilder(
+    column: $table.addedViaQr,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get preferredAddedAt => $composableBuilder(
+    column: $table.preferredAddedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get preferredNote => $composableBuilder(
+    column: $table.preferredNote,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get typeCompte => $composableBuilder(
     column: $table.typeCompte,
     builder: (column) => column,
@@ -8487,6 +8717,9 @@ class $$LocalUsersTableTableManager
                 Value<bool> isOnline = const Value.absent(),
                 Value<DateTime?> lastSeen = const Value.absent(),
                 Value<bool> isPreferredContact = const Value.absent(),
+                Value<bool> addedViaQr = const Value.absent(),
+                Value<DateTime?> preferredAddedAt = const Value.absent(),
+                Value<String?> preferredNote = const Value.absent(),
                 Value<int> typeCompte = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
               }) => LocalUsersCompanion(
@@ -8501,6 +8734,9 @@ class $$LocalUsersTableTableManager
                 isOnline: isOnline,
                 lastSeen: lastSeen,
                 isPreferredContact: isPreferredContact,
+                addedViaQr: addedViaQr,
+                preferredAddedAt: preferredAddedAt,
+                preferredNote: preferredNote,
                 typeCompte: typeCompte,
                 cachedAt: cachedAt,
               ),
@@ -8517,6 +8753,9 @@ class $$LocalUsersTableTableManager
                 Value<bool> isOnline = const Value.absent(),
                 Value<DateTime?> lastSeen = const Value.absent(),
                 Value<bool> isPreferredContact = const Value.absent(),
+                Value<bool> addedViaQr = const Value.absent(),
+                Value<DateTime?> preferredAddedAt = const Value.absent(),
+                Value<String?> preferredNote = const Value.absent(),
                 Value<int> typeCompte = const Value.absent(),
                 required DateTime cachedAt,
               }) => LocalUsersCompanion.insert(
@@ -8531,6 +8770,9 @@ class $$LocalUsersTableTableManager
                 isOnline: isOnline,
                 lastSeen: lastSeen,
                 isPreferredContact: isPreferredContact,
+                addedViaQr: addedViaQr,
+                preferredAddedAt: preferredAddedAt,
+                preferredNote: preferredNote,
                 typeCompte: typeCompte,
                 cachedAt: cachedAt,
               ),

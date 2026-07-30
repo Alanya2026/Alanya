@@ -84,6 +84,9 @@
                 <data android:scheme="https"
                       android:host="www.alanya237.com"
                       android:pathPrefix="/q/u/"/>
+                <data android:scheme="https"
+                      android:host="www.alanya237.com"
+                      android:pathPrefix="/q/c/"/>
             </intent-filter>
             <!-- Recevoir des partages depuis d'autres apps (Galerie, Fichiers…) -->
             <intent-filter>

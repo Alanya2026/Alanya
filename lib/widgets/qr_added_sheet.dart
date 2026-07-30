@@ -28,6 +28,7 @@ Future<void> showQrAddedSheet({
   required User user,
   required bool alreadyContact,
   required VoidCallback onUndo,
+  Future<bool> Function(String note)? onNote,
 }) {
   // Même accusé sonore et haptique qu'un scan réussi. Coupé automatiquement
   // en mode silencieux par le canal notification.
@@ -64,7 +65,8 @@ Future<void> showQrAddedSheet({
             fermer();
             _ouvrirFiche(context, user);
           },
-          onUndo: () {
+          onNote: onNote,
+        onUndo: () {
             fermer();
             onUndo();
           },

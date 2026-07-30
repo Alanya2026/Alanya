@@ -3,11 +3,13 @@ package com.alanya237.alanya
 import android.content.Context
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
+import com.hiennv.flutter_callkit_incoming.CallkitConstants
 import com.hiennv.flutter_callkit_incoming.CallkitNotificationManager
 import com.hiennv.flutter_callkit_incoming.CallkitNotificationService
 import com.hiennv.flutter_callkit_incoming.CallkitSoundPlayerManager
 import com.hiennv.flutter_callkit_incoming.Data
 import com.hiennv.flutter_callkit_incoming.addCall
+import com.hiennv.flutter_callkit_incoming.getDataActiveCalls
 import com.hiennv.flutter_callkit_incoming.removeAllCalls
 import com.hiennv.flutter_callkit_incoming.removeCall
 
@@ -158,6 +160,20 @@ object CallIncomingHelper {
             Log.e(TAG, "stopService (endCall) failed", e)
         }
         val callId = (data["callId"] ?: "").trim()
+        // Retrait piloté par le serveur (push call_ended) ou par Flutter — pas
+        // un refus utilisateur : marquer AVANT removeCall pour que le listener
+        // ACTIVE_CALLS de TalkyApplication ne POST pas /calls/reject.
+        try {
+            if (callId.isNotEmpty()) {
+                CallDismissRegistry.markProgrammaticDismiss(callId)
+            } else {
+                getDataActiveCalls(context.applicationContext).forEach {
+                    CallDismissRegistry.markProgrammaticDismiss(it.id)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "markProgrammaticDismiss (endCall) failed", e)
+        }
         try {
             if (callId.isEmpty()) {
                 soundManager?.stop()
@@ -193,6 +209,10 @@ object CallIncomingHelper {
             "callerPhoto" to photo,
             "isVideo" to isVideo,
             "roomId" to roomId,
+            // Fraîcheur pour le cold start Flutter (main.dart) : une entrée
+            // ACTIVE_CALLS résiduelle d'un essai précédent ne doit jamais
+            // déclencher une auto-réponse ou un écran entrant fantôme.
+            "shownAt" to System.currentTimeMillis(),
         )
 
         val args = hashMapOf<String, Any?>(
@@ -202,7 +222,9 @@ object CallIncomingHelper {
             "handle" to callerId,
             "avatar" to photo,
             "type" to if (isVideo) 1 else 0,
-            "duration" to 30000L,
+            // Sous le NO_ANSWER_MS serveur (45 s) : la notification doit expirer
+            // AVANT que le serveur classe l'appel « sans réponse », jamais après.
+            "duration" to 40000L,
             "textAccept" to "Accepter",
             "textDecline" to "Refuser",
             "extra" to extra,
@@ -222,6 +244,36 @@ object CallIncomingHelper {
                 "isShowFullLockedScreen" to true,
             ),
         )
-        return Data(args).toBundle()
+        val bundle = Data(args).toBundle()
+        // CRUCIAL — quand l'app est tuée, le tap « Accepter » déclenche
+        // ContextCompat.startForegroundService(CallkitNotificationService) alors
+        // que le service ne peut PAS appeler startForeground() : son
+        // CallkitNotificationManager vient de FlutterCallkitIncomingPlugin
+        // .getInstance(), null tant qu'aucun engine Flutter n'est attaché →
+        // ForegroundServiceDidNotStartInTimeException ~10 s après l'acceptation,
+        // le process meurt en plein appel. Avec ce flag à false, l'accept passe
+        // par startService + stopSelf (aucun contrat startForeground) ; le
+        // foreground service légitime est démarré ensuite par Dart
+        // (CallKitService.startOutgoingCall) une fois l'engine prêt.
+        bundle.putBoolean(CallkitConstants.EXTRA_CALLKIT_CALLING_SHOW, false)
+        return bundle
+    }
+
+    /**
+     * Efface la notification d'appel ENTRANT d'un [callId] (sonnerie comprise).
+     * Utilisé par TalkyApplication quand l'appel passe à isAccepted : la branche
+     * ACCEPT du service plugin ne peut pas le faire (manager null app tuée), et
+     * avec EXTRA_CALLKIT_CALLING_SHOW=false elle fait stopSelf() immédiatement.
+     */
+    fun clearIncomingNotification(context: Context, callId: String) {
+        val id = callId.trim()
+        if (id.isEmpty()) return
+        ensureInitialized(context)
+        try {
+            val bundle = Data(hashMapOf<String, Any?>("id" to id)).toBundle()
+            notificationManager?.clearIncomingNotification(bundle, true)
+        } catch (e: Exception) {
+            Log.e(TAG, "clearIncomingNotification failed", e)
+        }
     }
 }

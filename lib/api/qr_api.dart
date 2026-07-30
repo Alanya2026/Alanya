@@ -28,6 +28,18 @@ extension QrApi on TalkyApiClient {
   /// de payload (identité ou connexion). On retient uniquement le scanSecret
   /// qu'on vient de lire, indispensable pour approuver ensuite la session —
   /// le serveur ne le renvoie pas, il l'a déjà.
+  /// Génère mon code d'ajout de contact éphémère (10 minutes, usage unique).
+  /// Un seul code actif : en générer un nouveau invalide le précédent.
+  Future<QrContactCode> createContactQr() async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/qr/contact-token'),
+        headers: _headers,
+      ),
+    );
+    return QrContactCode.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
   Future<QrResolveResult> resolveQr(String rawPayload) async {
     final data = await _handleRequest(
       () => _client.post(

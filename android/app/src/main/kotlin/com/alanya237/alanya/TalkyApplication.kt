@@ -65,6 +65,23 @@ class TalkyApplication : Application() {
             // l'acceptation (l'appel reste présent avec isAccepted=true).
             CustomRingtonePlayer.stop()
         }
+        // Appel passé à isAccepted : retirer la notification entrante. La branche
+        // ACCEPT du service plugin ne peut pas le faire quand l'app était tuée
+        // (manager null), et avec EXTRA_CALLKIT_CALLING_SHOW=false elle fait
+        // stopSelf() sans rien nettoyer.
+        for (i in 0 until after.length()) {
+            val cur = after.optJSONObject(i) ?: continue
+            if (!cur.optBoolean("isAccepted", false)) continue
+            val id = cur.optString("id", "")
+            if (id.isEmpty()) continue
+            val wasAcceptedBefore = (0 until before.length()).any { j ->
+                val p = before.optJSONObject(j)
+                p?.optString("id") == id && p.optBoolean("isAccepted", false)
+            }
+            if (!wasAcceptedBefore) {
+                CallIncomingHelper.clearIncomingNotification(this, id)
+            }
+        }
         // Plus AUCUN appel actif → couper aussi le service d'appel en cours
         // (notification chronomètre + raccrocher). Le plugin ne le fait pas quand
         // getInstance() est null (app tuée), d'où une notification fantôme qui

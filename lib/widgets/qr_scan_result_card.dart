@@ -28,6 +28,7 @@ class QrScanResultCard extends StatefulWidget {
     required this.onDetails,
     required this.onUndo,
     required this.onDismissed,
+    this.onNote,
     this.duree = const Duration(seconds: 6),
   });
 
@@ -45,6 +46,11 @@ class QrScanResultCard extends StatefulWidget {
   /// retire la carte et réarme la détection.
   final VoidCallback onDismissed;
 
+  /// Enregistre la note contextuelle (« rencontré au salon de Douala »).
+  /// Retourne vrai en cas de succès. Null — ou contact déjà présent — masque
+  /// le champ : la note appartient au moment de l'ajout.
+  final Future<bool> Function(String note)? onNote;
+
   /// Délai avant disparition automatique. `null` la désactive : présentée en
   /// feuille modale, la carte est le seul contenu à l'écran et s'évanouir
   /// toute seule sous les yeux de l'utilisateur passerait pour un bug.
@@ -57,6 +63,10 @@ class QrScanResultCard extends StatefulWidget {
 class _QrScanResultCardState extends State<QrScanResultCard>
     with SingleTickerProviderStateMixin {
   Timer? _minuteur;
+
+  final TextEditingController _noteCtrl = TextEditingController();
+  bool _noteEnCours = false;
+  bool _noteEnvoyee = false;
 
   /// Éclosion de l'étoile « contact préféré ». Une seule impulsion avec
   /// dépassement : répétée, elle deviendrait une alerte au lieu d'une
@@ -87,8 +97,30 @@ class _QrScanResultCardState extends State<QrScanResultCard>
   @override
   void dispose() {
     _minuteur?.cancel();
+    _noteCtrl.dispose();
     _etoile.dispose();
     super.dispose();
+  }
+
+  /// Écrire prend plus de six secondes : dès que l'utilisateur touche le
+  /// champ, la carte cesse de s'effacer toute seule.
+  void _gelerDisparition() {
+    _minuteur?.cancel();
+    _minuteur = null;
+  }
+
+  Future<void> _envoyerNote() async {
+    final onNote = widget.onNote;
+    final texte = _noteCtrl.text.trim();
+    if (onNote == null || texte.isEmpty || _noteEnCours) return;
+    _gelerDisparition();
+    setState(() => _noteEnCours = true);
+    final ok = await onNote(texte);
+    if (!mounted) return;
+    setState(() {
+      _noteEnCours = false;
+      _noteEnvoyee = ok;
+    });
   }
 
   /// Toute action de l'utilisateur annule la disparition automatique : partir
@@ -178,6 +210,58 @@ class _QrScanResultCardState extends State<QrScanResultCard>
               ),
             ],
           ),
+          if (!widget.alreadyContact && widget.onNote != null) ...[
+            AppSpacing.vGapMd,
+            if (_noteEnvoyee)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle,
+                      size: AppIconSize.sm, color: AppColors.success),
+                  AppSpacing.hGapXs,
+                  Text(
+                    l10n.qrNoteSaved,
+                    style: context.text.bodySmall
+                        ?.copyWith(color: AppColors.success),
+                  ),
+                ],
+              )
+            else
+              TextField(
+                controller: _noteCtrl,
+                enabled: !_noteEnCours,
+                maxLength: 200,
+                textInputAction: TextInputAction.done,
+                onTap: _gelerDisparition,
+                onChanged: (_) => _gelerDisparition(),
+                onSubmitted: (_) => _envoyerNote(),
+                style: context.text.bodyMedium,
+                decoration: InputDecoration(
+                  hintText: l10n.qrNoteFieldHint,
+                  counterText: '',
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.sticky_note_2_outlined,
+                      size: AppIconSize.sm),
+                  suffixIcon: _noteEnCours
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.send, size: AppIconSize.sm),
+                          onPressed: _envoyerNote,
+                        ),
+                  border: OutlineInputBorder(
+                    borderRadius: AppRadius.brSm,
+                    borderSide: BorderSide(color: context.colors.outline),
+                  ),
+                ),
+              ),
+          ],
           if (!widget.alreadyContact) ...[
             AppSpacing.vGapXs,
             TextButton(

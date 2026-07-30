@@ -19,15 +19,17 @@ class QrDeepLinkService {
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _subscription;
 
-  final StreamController<String> _tokens = StreamController<String>.broadcast();
+  final StreamController<({String kind, String token})> _tokens =
+      StreamController<({String kind, String token})>.broadcast();
 
-  /// Jetons d'identité reçus par lien. Diffusion sans mémoire tampon : un
-  /// abonné arrivé trop tard rate l'événement, d'où [consumePendingToken].
-  Stream<String> get identityTokens => _tokens.stream;
+  /// Jetons d'identité reçus par lien, avec leur genre (`c` éphémère /
+  /// `u` permanent). Diffusion sans mémoire tampon : un abonné arrivé trop
+  /// tard rate l'événement, d'où [consumePendingToken].
+  Stream<({String kind, String token})> get identityTokens => _tokens.stream;
 
   /// Jeton reçu avant qu'un abonné soit prêt (démarrage à froid, ou session
   /// pas encore ouverte). Se lit une seule fois.
-  String? _pending;
+  ({String kind, String token})? _pending;
 
   bool _started = false;
 
@@ -58,11 +60,11 @@ class QrDeepLinkService {
 
   /// Met un jeton de côté faute de session ouverte. Il sera rejoué par
   /// [consumePendingToken] une fois la connexion faite.
-  void stashToken(String token) => _pending = token;
+  void stashToken(({String kind, String token}) token) => _pending = token;
 
   /// Récupère et efface le jeton en attente. Appelé une fois la session
   /// ouverte, pour rejouer un lien reçu avant la connexion.
-  String? consumePendingToken() {
+  ({String kind, String token})? consumePendingToken() {
     final token = _pending;
     _pending = null;
     return token;
@@ -81,26 +83,33 @@ class QrDeepLinkService {
     }
   }
 
-  /// Extrait le jeton de `alanya://q/u/<jeton>` comme de
-  /// `https://<hôte>/q/u/<jeton>`. Retourne null pour toute autre forme.
+  /// Extrait `(genre, jeton)` de `alanya://q/<genre>/<jeton>` comme de
+  /// `https://<hôte>/q/<genre>/<jeton>`. Genres connus : `c` (contact
+  /// éphémère, le régime des comptes personnels) et `u` (permanent, futurs
+  /// comptes business). Retourne null pour toute autre forme.
   ///
   /// Le schéma applicatif place `q` dans l'hôte et non dans le chemin
-  /// (`alanya://q/u/X` → host `q`, segments `[u, X]`), d'où les deux cas.
-  static String? extractIdentityToken(Uri uri) {
+  /// (`alanya://q/c/X` → host `q`, segments `[c, X]`), d'où les deux cas.
+  static ({String kind, String token})? extractIdentityToken(Uri uri) {
+    const genres = {'u', 'c'};
     final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
 
     if (uri.scheme == 'https' || uri.scheme == 'http') {
-      if (segments.length >= 3 && segments[0] == 'q' && segments[1] == 'u') {
-        return segments[2];
+      if (segments.length >= 3 &&
+          segments[0] == 'q' &&
+          genres.contains(segments[1])) {
+        return (kind: segments[1], token: segments[2]);
       }
       return null;
     }
 
-    if (uri.host == 'q' && segments.length >= 2 && segments[0] == 'u') {
-      return segments[1];
+    if (uri.host == 'q' && segments.length >= 2 && genres.contains(segments[0])) {
+      return (kind: segments[0], token: segments[1]);
     }
-    if (segments.length >= 3 && segments[0] == 'q' && segments[1] == 'u') {
-      return segments[2];
+    if (segments.length >= 3 &&
+        segments[0] == 'q' &&
+        genres.contains(segments[1])) {
+      return (kind: segments[1], token: segments[2]);
     }
     return null;
   }

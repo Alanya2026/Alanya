@@ -117,6 +117,9 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
     );
   }
 
+  /// Filtre d'origine : false = tous, true = seulement les ajoutés par QR.
+  bool _filtreQr = false;
+
   @override
   Widget build(BuildContext context) {
     final cache = context.read<LocalCacheRepository>();
@@ -139,9 +142,14 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
         builder: (context, snapshot) {
           final contacts =
               (snapshot.data ?? []).map(localUserToUser).toList();
-          final filteredContacts = hasQuery
-              ? filterUsersBySearch(contacts, _searchQuery)
+          final qrCount =
+              contacts.where((u) => u.addedViaQr == true).length;
+          final scoped = _filtreQr
+              ? contacts.where((u) => u.addedViaQr == true).toList()
               : contacts;
+          final filteredContacts = hasQuery
+              ? filterUsersBySearch(scoped, _searchQuery)
+              : scoped;
           final existingIds = contacts.map((u) => u.alanyaID).toSet();
 
           return Column(
@@ -181,6 +189,42 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      label: Text(
+                          '${context.l10n.qrContactsFilterAll} · ${contacts.length}'),
+                      selected: !_filtreQr,
+                      showCheckmark: false,
+                      onSelected: (_) => setState(() => _filtreQr = false),
+                    ),
+                    AppSpacing.hGapSm,
+                    ChoiceChip(
+                      avatar: Icon(
+                        Icons.qr_code_2,
+                        size: AppIconSize.sm,
+                        color: _filtreQr
+                            ? context.colors.onPrimary
+                            : context.colors.onSurfaceVariant,
+                      ),
+                      label:
+                          Text('${context.l10n.qrContactsFilterQr} · $qrCount'),
+                      selected: _filtreQr,
+                      showCheckmark: false,
+                      selectedColor: context.colors.primary,
+                      labelStyle: TextStyle(
+                        color: _filtreQr
+                            ? context.colors.onPrimary
+                            : context.colors.onSurface,
+                      ),
+                      onSelected: (_) => setState(() => _filtreQr = true),
+                    ),
+                  ],
+                ),
+              ),
+              AppSpacing.vGapSm,
               Expanded(
                 child: contacts.isEmpty
                     ? EmptyState(
@@ -267,6 +311,7 @@ class _ContactTile extends StatelessWidget {
                           user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
                       name: displayName,
                       size: AppSizes.avatarMd,
+                      qrBadge: user.addedViaQr == true,
                     ),
                     if (user.isOnline)
                       Positioned(

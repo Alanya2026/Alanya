@@ -6,7 +6,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -43,28 +42,48 @@ class _QrCodeScreenState extends State<QrCodeScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
-  /// Ancre de capture de la carte : partage et enregistrement produisent la
-  /// même image, celle que l'utilisateur a sous les yeux.
+  /// Ancre de capture de la carte : le partage d'image envoie exactement ce
+  /// que l'utilisateur a sous les yeux.
   final GlobalKey _carteKey = GlobalKey();
 
-  bool _isSaving = false;
-
-  QrIdentity? _identity;
+  QrContactCode? _code;
   String? _loadError;
   bool _isLoading = true;
   bool _isRegenerating = false;
   bool _scannerAlreadyOpened = false;
+
+  /// Instant de réception du code, origine du décompte : on ne compare jamais
+  /// l'horloge de l'appareil à celle du serveur (même patron que l'écran de
+  /// connexion par QR).
+  DateTime? _recueA;
+  Duration _restant = Duration.zero;
+  Timer? _timerCompteARebours;
+
+  /// Discrimine les réponses tardives d'un code déjà remplacé.
+  int _generation = 0;
+
+  /// Mon code vient d'être scanné : il est consommé (usage unique), on en
+  /// génère un neuf sans geste de l'utilisateur. Le dialogue « ajouter en
+  /// retour », lui, est global (AuthWrapper) — pas ici.
+  StreamSubscription<QrContactScan>? _scanSub;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
-    unawaited(_loadIdentity());
+    _scanSub = Provider.of<TalkyApiClient>(context, listen: false)
+        .qrContactScans
+        .listen((_) {
+      if (mounted) unawaited(_creerCode());
+    });
+    unawaited(_creerCode());
   }
 
   @override
   void dispose() {
+    _timerCompteARebours?.cancel();
+    _scanSub?.cancel();
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
@@ -87,25 +106,56 @@ class _QrCodeScreenState extends State<QrCodeScreen>
     );
   }
 
-  // ── Chargement du code d'identité ──────────────────────────────────────
+  // ── Cycle de vie du code éphémère ──────────────────────────────────────
 
-  Future<void> _loadIdentity() async {
+  /// Génère un code neuf (10 minutes, usage unique — le serveur invalide le
+  /// précédent). Appelé à l'ouverture, à l'expiration, après consommation, et
+  /// par le bouton « Nouveau code ».
+  Future<void> _creerCode() async {
+    _timerCompteARebours?.cancel();
+    final generation = ++_generation;
     try {
       final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final identity = await apiClient.getMyQr();
-      if (!mounted) return;
+      final code = await apiClient.createContactQr();
+      if (!mounted || generation != _generation) return;
       setState(() {
-        _identity = identity;
+        _code = code;
+        _recueA = DateTime.now();
+        _restant = code.ttl;
         _isLoading = false;
+        _isRegenerating = false;
+        _loadError = null;
       });
+      _timerCompteARebours =
+          Timer.periodic(const Duration(seconds: 1), (_) => _tick());
     } catch (e, st) {
-      AppLog.e('QrCode', 'Chargement du code QR échoué', e, st);
-      if (!mounted) return;
+      AppLog.e('QrCode', 'Création du code QR échouée', e, st);
+      if (!mounted || generation != _generation) return;
       setState(() {
         _isLoading = false;
+        _isRegenerating = false;
         _loadError = _errorMessage(e);
       });
     }
+  }
+
+  Duration _dureeRestante() {
+    final code = _code;
+    final origine = _recueA;
+    if (code == null || origine == null) return Duration.zero;
+    final restant = code.ttl - DateTime.now().difference(origine);
+    return restant.isNegative ? Duration.zero : restant;
+  }
+
+  /// Un code mort ne doit jamais rester sous les yeux de l'utilisateur : à
+  /// zéro, on régénère sans lui demander un geste.
+  void _tick() {
+    final restant = _dureeRestante();
+    if (restant > Duration.zero) {
+      setState(() => _restant = restant);
+      return;
+    }
+    unawaited(_creerCode());
   }
 
   void _retryLoad() {
@@ -113,7 +163,7 @@ class _QrCodeScreenState extends State<QrCodeScreen>
       _isLoading = true;
       _loadError = null;
     });
-    unawaited(_loadIdentity());
+    unawaited(_creerCode());
   }
 
   String _errorMessage(Object error) => error is TalkyException
@@ -160,7 +210,7 @@ class _QrCodeScreenState extends State<QrCodeScreen>
   /// Les trois véhiculent la même identité par des chemins différents — le
   /// destinataire scanne, tape le lien, ou saisit l'ID à la main selon ce dont
   /// il dispose.
-  String _texteDePartage(QrIdentity identity) {
+  String _texteDePartage(QrContactCode code) {
     final l10n = context.l10n;
     final user = context.read<AuthProvider>().currentUser;
     final name = user?.nom.trim().isNotEmpty == true
@@ -170,8 +220,11 @@ class _QrCodeScreenState extends State<QrCodeScreen>
 
     return [
       l10n.qrMyCodeShareText(name),
+      // Le code meurt en 10 minutes ; l'Alanya ID, lui, reste le chemin
+      // permanent — les deux doivent voyager ensemble.
+      l10n.qrMyCodeShareValidity,
       if (phone.isNotEmpty) l10n.qrMyCodeShareId(AlanyaPhoneFormatter.formatDisplay(phone)),
-      identity.payload,
+      code.payload,
     ].join('\n');
   }
 
@@ -183,7 +236,7 @@ class _QrCodeScreenState extends State<QrCodeScreen>
   /// On ne peut pas l'imposer depuis l'app émettrice : autant laisser choisir
   /// explicitement ce qu'on envoie.
   Future<void> _share() async {
-    if (_identity == null) return;
+    if (_code == null) return;
     final l10n = context.l10n;
 
     final choix = await showModalBottomSheet<_ModePartage>(
@@ -225,12 +278,12 @@ class _QrCodeScreenState extends State<QrCodeScreen>
   }
 
   Future<void> _partagerLien() async {
-    final identity = _identity;
-    if (identity == null) return;
+    final code = _code;
+    if (code == null) return;
     try {
       await SharePlus.instance.share(
         ShareParams(
-          text: _texteDePartage(identity),
+          text: _texteDePartage(code),
           sharePositionOrigin: _shareOrigin(),
         ),
       );
@@ -240,10 +293,10 @@ class _QrCodeScreenState extends State<QrCodeScreen>
   }
 
   Future<void> _partagerImage() async {
-    final identity = _identity;
-    if (identity == null) return;
+    final code = _code;
+    if (code == null) return;
 
-    final texte = _texteDePartage(identity);
+    final texte = _texteDePartage(code);
     final origine = _shareOrigin();
     final bytes = await _capturerCarte();
     final fichier = bytes == null ? null : await _ecrireFichierTemporaire(bytes);
@@ -268,40 +321,6 @@ class _QrCodeScreenState extends State<QrCodeScreen>
     }
   }
 
-  Future<void> _enregistrerDansGalerie() async {
-    if (_isSaving || _identity == null) return;
-    final l10n = context.l10n;
-    setState(() => _isSaving = true);
-    try {
-      final bytes = await _capturerCarte();
-      if (bytes == null) throw StateError('capture vide');
-      final fichier = await _ecrireFichierTemporaire(bytes);
-      if (fichier == null) throw StateError('écriture impossible');
-
-      if (!await Gal.hasAccess(toAlbum: true)) {
-        await Gal.requestAccess(toAlbum: true);
-      }
-      await Gal.putImage(fichier.path, album: 'Alanya');
-      if (!mounted) return;
-      _showSnack(l10n.qrMyCodeSaveDone, AppColors.success);
-    } on GalException catch (e, st) {
-      AppLog.w('QrCode', 'Enregistrement galerie refusé', e, st);
-      if (!mounted) return;
-      _showSnack(
-        e.type == GalExceptionType.accessDenied
-            ? l10n.qrMyCodeSaveDenied
-            : l10n.qrMyCodeSaveFailed,
-        AppColors.error,
-      );
-    } catch (e, st) {
-      AppLog.e('QrCode', 'Enregistrement du code échoué', e, st);
-      if (!mounted) return;
-      _showSnack(l10n.qrMyCodeSaveFailed, AppColors.error);
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
   /// Ancre du sheet de partage — obligatoire sur iPad, ignorée ailleurs.
   Rect? _shareOrigin() {
     final box = context.findRenderObject() as RenderBox?;
@@ -309,58 +328,12 @@ class _QrCodeScreenState extends State<QrCodeScreen>
     return box.localToGlobal(Offset.zero) & box.size;
   }
 
+  /// « Nouveau code » : pas de dialogue de confirmation — le code expire de
+  /// lui-même en 10 minutes, le renouveler n'a rien d'irréversible.
   Future<void> _regenerate() async {
-    final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.qrMyCodeRegenerateConfirmTitle),
-        content: Text(l10n.qrMyCodeRegenerateConfirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              l10n.qrMyCodeRegenerate,
-              style: TextStyle(color: ctx.colors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (!mounted) return;
-    if (confirmed != true) return;
-
+    if (_isRegenerating) return;
     setState(() => _isRegenerating = true);
-    try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      final identity = await apiClient.regenerateQr();
-      if (!mounted) return;
-      setState(() {
-        _identity = identity;
-        _isRegenerating = false;
-      });
-      _showSnack(l10n.qrMyCodeRegenerateDone, AppColors.success);
-    } catch (e, st) {
-      AppLog.e('QrCode', 'Régénération du code QR échouée', e, st);
-      if (!mounted) return;
-      setState(() => _isRegenerating = false);
-      _showSnack(_errorMessage(e), AppColors.error);
-    }
-  }
-
-  void _showSnack(String message, Color background) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: background,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    await _creerCode();
   }
 
   // ── UI ─────────────────────────────────────────────────────────────────
@@ -424,7 +397,7 @@ class _QrCodeScreenState extends State<QrCodeScreen>
     }
 
     final l10n = context.l10n;
-    final identity = _identity!;
+    final code = _code!;
     final user = context.watch<AuthProvider>().currentUser;
     final displayName = user?.nom.trim().isNotEmpty == true
         ? user!.nom.trim()
@@ -478,13 +451,52 @@ class _QrCodeScreenState extends State<QrCodeScreen>
                     ),
                   ],
                   AppSpacing.vGapXl,
-                  _buildQrImage(identity.payload),
-                  AppSpacing.vGapLg,
+                  _buildQrImage(code.payload),
+                  AppSpacing.vGapMd,
+                  // Le décompte vit SUR la carte : il fait partie de ce que
+                  // dit le code (« je suis temporaire »), y compris sur
+                  // l'image partagée.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandContainer,
+                      borderRadius: AppRadius.brPill,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          size: 16,
+                          color: AppColors.brandPrimaryDark,
+                        ),
+                        AppSpacing.hGapXs,
+                        Text(
+                          l10n.qrMyCodeExpiresIn(_formatRestant()),
+                          style: context.text.labelMedium?.copyWith(
+                            color: AppColors.brandPrimaryDark,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.vGapMd,
                   Text(
                     l10n.qrMyCodeSubtitle,
                     textAlign: TextAlign.center,
                     style: context.text.bodySmall
                         ?.copyWith(color: AppColors.textSecondary),
+                  ),
+                  AppSpacing.vGapXs,
+                  Text(
+                    l10n.qrMyCodeValidityNote,
+                    textAlign: TextAlign.center,
+                    style: context.text.bodySmall
+                        ?.copyWith(color: AppColors.textTertiary),
                   ),
                 ],
               ),
@@ -509,11 +521,6 @@ class _QrCodeScreenState extends State<QrCodeScreen>
           ),
         ),
         AppSpacing.vGapXl,
-        // Partager et Enregistrer sont deux façons d'exporter la même carte :
-        // même rangée, même poids visuel. Régénérer est plus bas et en faible
-        // emphase — c'est une action rare, et surtout irréversible : elle
-        // invalide le code déjà partagé. Lui donner l'allure d'un bouton
-        // courant inviterait à la déclencher par mégarde.
         Row(
           children: [
             Expanded(
@@ -526,8 +533,8 @@ class _QrCodeScreenState extends State<QrCodeScreen>
             AppSpacing.hGapMd,
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _isSaving ? null : _enregistrerDansGalerie,
-                icon: _isSaving
+                onPressed: _isRegenerating ? null : _regenerate,
+                icon: _isRegenerating
                     ? SizedBox(
                         width: AppIconSize.sm,
                         height: AppIconSize.sm,
@@ -536,34 +543,20 @@ class _QrCodeScreenState extends State<QrCodeScreen>
                           color: context.colors.primary,
                         ),
                       )
-                    : const Icon(Icons.download_outlined, size: AppIconSize.sm),
-                label: Text(l10n.qrMyCodeSave),
+                    : const Icon(Icons.autorenew, size: AppIconSize.sm),
+                label: Text(l10n.qrMyCodeNewCode),
               ),
             ),
           ],
         ),
-        AppSpacing.vGapMd,
-        Center(
-          child: TextButton.icon(
-            onPressed: _isRegenerating ? null : _regenerate,
-            icon: _isRegenerating
-                ? SizedBox(
-                    width: AppIconSize.sm,
-                    height: AppIconSize.sm,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: context.colors.onSurfaceVariant,
-                    ),
-                  )
-                : const Icon(Icons.autorenew, size: AppIconSize.sm),
-            style: TextButton.styleFrom(
-              foregroundColor: context.colors.onSurfaceVariant,
-            ),
-            label: Text(l10n.qrMyCodeRegenerate),
-          ),
-        ),
       ],
     );
+  }
+
+  String _formatRestant() {
+    final m = _restant.inMinutes;
+    final sec = _restant.inSeconds % 60;
+    return '$m:${sec.toString().padLeft(2, '0')}';
   }
 
   Widget _buildQrImage(String payload) {

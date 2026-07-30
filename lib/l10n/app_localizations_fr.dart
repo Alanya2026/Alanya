@@ -3312,6 +3312,67 @@ class AppLocalizationsFr extends AppLocalizations {
   String get qrMyCodeShare => 'Partager';
 
   @override
+  String qrMyCodeExpiresIn(String time) {
+    return 'Expire dans $time';
+  }
+
+  @override
+  String get qrMyCodeValidityNote =>
+      'Valable 10 minutes et pour une seule personne. Un nouveau code est généré automatiquement.';
+
+  @override
+  String get qrMyCodeNewCode => 'Nouveau code';
+
+  @override
+  String get qrMyCodeShareValidity =>
+      'Ce code est valable 10 minutes et pour une seule personne.';
+
+  @override
+  String get qrScanReturnTitle => 'Nouveau contact';
+
+  @override
+  String qrScanReturnBody(String name) {
+    return '$name vous a ajouté à ses contacts préférés avec votre code QR. L\'ajouter en retour ?';
+  }
+
+  @override
+  String get qrScanReturnAccept => 'Ajouter';
+
+  @override
+  String get qrScanReturnDecline => 'Non merci';
+
+  @override
+  String get qrScanReturnFailed => 'Impossible d\'ajouter ce contact';
+
+  @override
+  String qrScannedMutualInfo(String name) {
+    return '$name vous a ajouté avec votre code QR';
+  }
+
+  @override
+  String get qrNoteFieldHint => 'Ajouter une note (lieu, contexte…)';
+
+  @override
+  String get qrNoteSaved => 'Note enregistrée';
+
+  @override
+  String get qrNoteFailed => 'Impossible d\'enregistrer la note';
+
+  @override
+  String get qrContactsFilterAll => 'Tous';
+
+  @override
+  String get qrContactsFilterQr => 'Par QR';
+
+  @override
+  String get qrContactAddedViaQr => 'Ajouté par QR code';
+
+  @override
+  String qrContactAddedViaQrOn(String date) {
+    return 'Ajouté par QR code · $date';
+  }
+
+  @override
   String get qrMyCodeShareSheetTitle => 'Partager mon code';
 
   @override
@@ -3325,19 +3386,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get qrMyCodeShareImageHint => 'La carte à scanner';
-
-  @override
-  String get qrMyCodeSave => 'Enregistrer';
-
-  @override
-  String get qrMyCodeSaveDone => 'Code QR enregistré dans vos photos';
-
-  @override
-  String get qrMyCodeSaveFailed => 'Impossible d\'enregistrer le code';
-
-  @override
-  String get qrMyCodeSaveDenied =>
-      'Autorisez l\'accès aux photos pour enregistrer le code';
 
   @override
   String qrMyCodeShareId(String id) {

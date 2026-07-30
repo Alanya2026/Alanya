@@ -2131,15 +2131,48 @@
   "qrMyCodeTabScan": "Scanner",
   "qrMyCodeSubtitle": "Faites scanner ce code pour être ajouté en contact préféré.",
   "qrMyCodeShare": "Partager",
+  "qrMyCodeExpiresIn": "Expire dans {time}",
+  "@qrMyCodeExpiresIn": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "qrMyCodeValidityNote": "Valable 10 minutes et pour une seule personne. Un nouveau code est généré automatiquement.",
+  "qrMyCodeNewCode": "Nouveau code",
+  "qrMyCodeShareValidity": "Ce code est valable 10 minutes et pour une seule personne.",
+  "qrScanReturnTitle": "Nouveau contact",
+  "qrScanReturnBody": "{name} vous a ajouté à ses contacts préférés avec votre code QR. L'ajouter en retour ?",
+  "@qrScanReturnBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanReturnAccept": "Ajouter",
+  "qrScanReturnDecline": "Non merci",
+  "qrScanReturnFailed": "Impossible d'ajouter ce contact",
+  "qrScannedMutualInfo": "{name} vous a ajouté avec votre code QR",
+  "@qrScannedMutualInfo": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrNoteFieldHint": "Ajouter une note (lieu, contexte…)",
+  "qrNoteSaved": "Note enregistrée",
+  "qrNoteFailed": "Impossible d'enregistrer la note",
+  "qrContactsFilterAll": "Tous",
+  "qrContactsFilterQr": "Par QR",
+  "qrContactAddedViaQr": "Ajouté par QR code",
+  "qrContactAddedViaQrOn": "Ajouté par QR code · {date}",
+  "@qrContactAddedViaQrOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
   "qrMyCodeShareSheetTitle": "Partager mon code",
   "qrMyCodeShareLink": "Partager le lien",
   "qrMyCodeShareLinkHint": "Lien cliquable et Alanya ID",
   "qrMyCodeShareImage": "Partager l'image",
   "qrMyCodeShareImageHint": "La carte à scanner",
-  "qrMyCodeSave": "Enregistrer",
-  "qrMyCodeSaveDone": "Code QR enregistré dans vos photos",
-  "qrMyCodeSaveFailed": "Impossible d'enregistrer le code",
-  "qrMyCodeSaveDenied": "Autorisez l'accès aux photos pour enregistrer le code",
   "qrMyCodeShareId": "Mon Alanya ID : {id}",
   "@qrMyCodeShareId": {
     "placeholders": {

@@ -186,6 +186,20 @@ class LocalUsers extends Table {
   BoolColumn get isOnline => boolean().withDefault(const Constant(false))();
   DateTimeColumn get lastSeen => dateTime().nullable()();
   BoolColumn get isPreferredContact => boolean().withDefault(const Constant(false))();
+
+  /// Origine du lien de contact préféré : vrai si ajouté par code QR (scan ou
+  /// lien). Alimente la pastille des listes, le filtre « Par QR » et la
+  /// mention datée de la fiche.
+  BoolColumn get addedViaQr => boolean().withDefault(const Constant(false))();
+
+  /// Date d'ajout en contact préféré (preferredContact.created_at côté
+  /// serveur) — pour la mention « Ajouté par QR code le … » de la fiche.
+  DateTimeColumn get preferredAddedAt => dateTime().nullable()();
+
+  /// Note contextuelle saisie après un scan (« rencontré au salon de
+  /// Douala ») — affichée sur la fiche du contact.
+  TextColumn get preferredNote => text().nullable()();
+
   IntColumn get typeCompte => integer().withDefault(const Constant(0))();
   DateTimeColumn get cachedAt => dateTime()();
 
@@ -298,7 +312,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 17;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -437,6 +451,15 @@ class AppDatabase extends _$AppDatabase {
                 localConversations, localConversations.hasUnreadMention);
             await m.addColumn(localMessages, localMessages.mentionsJson);
             await m.addColumn(localMessages, localMessages.failureCode);
+          }
+          if (from < 16) {
+            // Origine des contacts préférés (migration serveur 027). Que des
+            // addColumn : le cache existant n'est pas vidé.
+            await m.addColumn(localUsers, localUsers.addedViaQr);
+            await m.addColumn(localUsers, localUsers.preferredAddedAt);
+          }
+          if (from < 17) {
+            await m.addColumn(localUsers, localUsers.preferredNote);
           }
         },
       );
