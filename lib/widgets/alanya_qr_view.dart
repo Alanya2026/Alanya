@@ -20,8 +20,8 @@ const double _kEmbeddedLogoRatio = 0.22;
 ///
 /// L'image incrustée est [`AppLogo.qrAssetPath`] : logo sur pastille blanche
 /// circulaire (extérieur transparent). Le glyph transparent seul
-/// (`alanyalogorbg.png`) se fondait dans les modules ; le PNG carré opaque
-/// (`alanyalogo.png`) laisserait un rectangle visible. La pastille ronde
+/// (`new_alanya_logorbg.png`) se fondait dans les modules ; le PNG carré opaque
+/// (`new_alanya_logo.png`) laisserait un rectangle visible. La pastille ronde
 /// bake le contraste nécessaire sans casser la cohérence avec les modules
 /// ronds. Correction H obligatoire : l'image masque des modules.
 class AlanyaQrView extends StatelessWidget {

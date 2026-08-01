@@ -137,25 +137,25 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/images/alanyalogo.png
+  image_path: assets/images/new_alanya_logo.png
   web:
     generate: true
-    image_path: assets/images/alanyalogo.png
+    image_path: assets/images/new_alanya_logo.png
     background_color: "#FFFFFF"
     theme_color: "#3F51B5"
   windows:
     generate: true
-    image_path: assets/images/alanyalogo.png
+    image_path: assets/images/new_alanya_logo.png
   macos:
     generate: true
-    image_path: assets/images/alanyalogo.png
+    image_path: assets/images/new_alanya_logo.png
 
 flutter_native_splash:
   color: "#FFFFFF"
-  image: assets/images/alanyalogo_splash.png
+  image: assets/images/new_alanya_logo_splash.png
   android_12:
     color: "#FFFFFF"
-    image: assets/images/alanyalogo_splash.png
+    image: assets/images/new_alanya_logo_splash.png
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
