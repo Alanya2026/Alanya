@@ -5360,6 +5360,72 @@ abstract class AppLocalizations {
   /// **'Le groupe a été mis à jour'**
   String get sysGroupEventFallback;
 
+  /// No description provided for @sysPreviewGroupCreated.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a créé « {value} »'**
+  String sysPreviewGroupCreated(String actor, String value);
+
+  /// No description provided for @sysPreviewGroupCreatedShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a créé le groupe'**
+  String sysPreviewGroupCreatedShort(String actor);
+
+  /// No description provided for @sysPreviewMemberAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a ajouté des membres'**
+  String sysPreviewMemberAdded(String actor);
+
+  /// No description provided for @sysPreviewMemberRemoved.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a retiré un membre'**
+  String sysPreviewMemberRemoved(String actor);
+
+  /// No description provided for @sysPreviewMemberLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a quitté le groupe'**
+  String sysPreviewMemberLeft(String actor);
+
+  /// No description provided for @sysPreviewGroupRenamed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a renommé le groupe'**
+  String sysPreviewGroupRenamed(String actor);
+
+  /// No description provided for @sysPreviewGroupPhotoChanged.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a changé la photo du groupe'**
+  String sysPreviewGroupPhotoChanged(String actor);
+
+  /// No description provided for @sysPreviewGroupDescriptionChanged.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a modifié la description'**
+  String sysPreviewGroupDescriptionChanged(String actor);
+
+  /// No description provided for @sysPreviewRolePromoted.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a nommé un administrateur'**
+  String sysPreviewRolePromoted(String actor);
+
+  /// No description provided for @sysPreviewRoleDemoted.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a retiré des droits d\'administrateur'**
+  String sysPreviewRoleDemoted(String actor);
+
+  /// No description provided for @sysPreviewSettingsChanged.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a modifié les réglages du groupe'**
+  String sysPreviewSettingsChanged(String actor);
+
   /// No description provided for @groupOwner.
   ///
   /// In fr, this message translates to:
@@ -5459,8 +5525,92 @@ abstract class AppLocalizations {
   /// No description provided for @onlyAdminsCanEditInfoSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Nom, photo, description et ajout de membres'**
+  /// **'Nom, photo et description'**
   String get onlyAdminsCanEditInfoSubtitle;
+
+  /// No description provided for @hideHistoryForNewMembersLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Masquer l\'historique pour les nouveaux'**
+  String get hideHistoryForNewMembersLabel;
+
+  /// No description provided for @hideHistoryForNewMembersSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les membres ajoutés ne verront pas les messages antérieurs'**
+  String get hideHistoryForNewMembersSubtitle;
+
+  /// No description provided for @onlyAdminsCanAddMembersLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les admins peuvent ajouter des membres'**
+  String get onlyAdminsCanAddMembersLabel;
+
+  /// No description provided for @onlyAdminsCanAddMembersSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inviter de nouveaux participants au groupe'**
+  String get onlyAdminsCanAddMembersSubtitle;
+
+  /// No description provided for @groupJoinBannerBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} vous a ajouté au groupe « {group} »'**
+  String groupJoinBannerBody(String actor, String group);
+
+  /// No description provided for @stay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rester'**
+  String get stay;
+
+  /// No description provided for @sysHideHistoryOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a masqué l\'historique pour les nouveaux membres'**
+  String sysHideHistoryOn(String actor);
+
+  /// No description provided for @sysHideHistoryOnByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez masqué l\'historique pour les nouveaux membres'**
+  String get sysHideHistoryOnByMe;
+
+  /// No description provided for @sysHideHistoryOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a rendu l\'historique visible pour les nouveaux membres'**
+  String sysHideHistoryOff(String actor);
+
+  /// No description provided for @sysHideHistoryOffByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez rendu l\'historique visible pour les nouveaux membres'**
+  String get sysHideHistoryOffByMe;
+
+  /// No description provided for @sysOnlyAdminsAddOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a réservé l\'ajout de membres aux administrateurs'**
+  String sysOnlyAdminsAddOn(String actor);
+
+  /// No description provided for @sysOnlyAdminsAddOnByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez réservé l\'ajout de membres aux administrateurs'**
+  String get sysOnlyAdminsAddOnByMe;
+
+  /// No description provided for @sysOnlyAdminsAddOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a autorisé tout le monde à ajouter des membres'**
+  String sysOnlyAdminsAddOff(String actor);
+
+  /// No description provided for @sysOnlyAdminsAddOffByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez autorisé tout le monde à ajouter des membres'**
+  String get sysOnlyAdminsAddOffByMe;
 
   /// No description provided for @mentionsOnlyLabel.
   ///

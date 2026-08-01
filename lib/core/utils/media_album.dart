@@ -3,6 +3,7 @@ import 'dart:math';
 
 import '../db/app_database.dart';
 import '../theme/locale_controller.dart';
+import 'system_event_payload.dart';
 
 /// Préfixe du marqueur album stocké dans [LocalMessage.content].
 const albumMarkerPrefix = '__talky_album__';
@@ -159,6 +160,13 @@ String normalizeConversationPreview(String? text) {
   if (text == null || text.isEmpty) return text ?? '';
   final marker = parseAlbumMarker(text);
   if (marker != null) return previewLabelForAlbumMarker(marker);
+  // Legacy : aperçu recalculé avant le support type 6 → JSON brut en base.
+  if (text.trimLeft().startsWith('{')) {
+    final payload = SystemEventPayload.tryParse(text);
+    if (payload != null) {
+      return payload.previewLabel(resolveL10n());
+    }
+  }
   return text;
 }
 

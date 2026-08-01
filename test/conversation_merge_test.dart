@@ -2,9 +2,12 @@ import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/services/chat/conversation_merge.dart';
+import 'package:talky_flutter/core/utils/system_event_payload.dart';
 import 'package:talky_flutter/talky_models.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ConversationMerge (preview monotonic, unread deferred to reducer)', () {
     LocalConversation localConv({
       required int unread,
@@ -28,6 +31,8 @@ void main() {
         participantsJson: '[]',
         onlyAdminsCanSend: false,
         onlyAdminsCanEditInfo: false,
+        hideHistoryForNewMembers: false,
+        onlyAdminsCanAddMembers: false,
         myRole: 0,
         muteForever: false,
         mentionsOnly: false,
@@ -198,6 +203,21 @@ void main() {
         ),
         isFalse,
       );
+    });
+  });
+
+  group('ConversationMerge.previewForMedia (type 6)', () {
+    test('member_added JSON → aperçu localisé, pas le JSON brut', () {
+      const json =
+          '{"e":"member_added","by":12,"byName":"Chris","ids":[45],"names":["Marc"]}';
+      final preview = ConversationMerge.previewForMedia(
+        kSystemMessageType,
+        json,
+        null,
+      );
+      expect(preview, isNot(contains('"e"')));
+      expect(preview, isNot(startsWith('{')));
+      expect(preview, contains('Chris'));
     });
   });
 }

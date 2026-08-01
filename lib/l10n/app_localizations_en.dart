@@ -3034,6 +3034,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sysGroupEventFallback => 'The group was updated';
 
   @override
+  String sysPreviewGroupCreated(String actor, String value) {
+    return '$actor created \"$value\"';
+  }
+
+  @override
+  String sysPreviewGroupCreatedShort(String actor) {
+    return '$actor created the group';
+  }
+
+  @override
+  String sysPreviewMemberAdded(String actor) {
+    return '$actor added members';
+  }
+
+  @override
+  String sysPreviewMemberRemoved(String actor) {
+    return '$actor removed a member';
+  }
+
+  @override
+  String sysPreviewMemberLeft(String actor) {
+    return '$actor left the group';
+  }
+
+  @override
+  String sysPreviewGroupRenamed(String actor) {
+    return '$actor renamed the group';
+  }
+
+  @override
+  String sysPreviewGroupPhotoChanged(String actor) {
+    return '$actor changed the group photo';
+  }
+
+  @override
+  String sysPreviewGroupDescriptionChanged(String actor) {
+    return '$actor changed the description';
+  }
+
+  @override
+  String sysPreviewRolePromoted(String actor) {
+    return '$actor made someone an admin';
+  }
+
+  @override
+  String sysPreviewRoleDemoted(String actor) {
+    return '$actor removed admin rights';
+  }
+
+  @override
+  String sysPreviewSettingsChanged(String actor) {
+    return '$actor changed group settings';
+  }
+
+  @override
   String get groupOwner => 'Owner';
 
   @override
@@ -3087,8 +3142,63 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onlyAdminsCanEditInfoLabel => 'Only admins can edit info';
 
   @override
-  String get onlyAdminsCanEditInfoSubtitle =>
-      'Name, photo, description and adding members';
+  String get onlyAdminsCanEditInfoSubtitle => 'Name, photo and description';
+
+  @override
+  String get hideHistoryForNewMembersLabel => 'Hide history for new members';
+
+  @override
+  String get hideHistoryForNewMembersSubtitle =>
+      'New members won\'t see messages sent before they joined';
+
+  @override
+  String get onlyAdminsCanAddMembersLabel => 'Only admins can add members';
+
+  @override
+  String get onlyAdminsCanAddMembersSubtitle =>
+      'Invite new participants to the group';
+
+  @override
+  String groupJoinBannerBody(String actor, String group) {
+    return '$actor added you to the group \"$group\"';
+  }
+
+  @override
+  String get stay => 'Stay';
+
+  @override
+  String sysHideHistoryOn(String actor) {
+    return '$actor hid chat history for new members';
+  }
+
+  @override
+  String get sysHideHistoryOnByMe => 'You hid chat history for new members';
+
+  @override
+  String sysHideHistoryOff(String actor) {
+    return '$actor made chat history visible for new members';
+  }
+
+  @override
+  String get sysHideHistoryOffByMe =>
+      'You made chat history visible for new members';
+
+  @override
+  String sysOnlyAdminsAddOn(String actor) {
+    return '$actor restricted adding members to admins';
+  }
+
+  @override
+  String get sysOnlyAdminsAddOnByMe =>
+      'You restricted adding members to admins';
+
+  @override
+  String sysOnlyAdminsAddOff(String actor) {
+    return '$actor allowed everyone to add members';
+  }
+
+  @override
+  String get sysOnlyAdminsAddOffByMe => 'You allowed everyone to add members';
 
   @override
   String get mentionsOnlyLabel => 'Mentions only';

@@ -1145,6 +1145,73 @@
   },
   "sysOnlyAdminsEditOffByMe": "You allowed everyone to edit group info",
   "sysGroupEventFallback": "The group was updated",
+  "sysPreviewGroupCreated": "{actor} created \"{value}\"",
+  "@sysPreviewGroupCreated": {
+    "placeholders": {
+      "actor": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupCreatedShort": "{actor} created the group",
+  "@sysPreviewGroupCreatedShort": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberAdded": "{actor} added members",
+  "@sysPreviewMemberAdded": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberRemoved": "{actor} removed a member",
+  "@sysPreviewMemberRemoved": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberLeft": "{actor} left the group",
+  "@sysPreviewMemberLeft": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupRenamed": "{actor} renamed the group",
+  "@sysPreviewGroupRenamed": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupPhotoChanged": "{actor} changed the group photo",
+  "@sysPreviewGroupPhotoChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupDescriptionChanged": "{actor} changed the description",
+  "@sysPreviewGroupDescriptionChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewRolePromoted": "{actor} made someone an admin",
+  "@sysPreviewRolePromoted": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewRoleDemoted": "{actor} removed admin rights",
+  "@sysPreviewRoleDemoted": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewSettingsChanged": "{actor} changed group settings",
+  "@sysPreviewSettingsChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
   "groupOwner": "Owner",
   "groupAdmin": "Admin",
   "removeFromGroup": "Remove from group",
@@ -1175,7 +1242,47 @@
   "onlyAdminsCanSendLabel": "Only admins can send messages",
   "onlyAdminsCanSendSubtitle": "Turns the group into an announcement channel",
   "onlyAdminsCanEditInfoLabel": "Only admins can edit info",
-  "onlyAdminsCanEditInfoSubtitle": "Name, photo, description and adding members",
+  "onlyAdminsCanEditInfoSubtitle": "Name, photo and description",
+  "hideHistoryForNewMembersLabel": "Hide history for new members",
+  "hideHistoryForNewMembersSubtitle": "New members won't see messages sent before they joined",
+  "onlyAdminsCanAddMembersLabel": "Only admins can add members",
+  "onlyAdminsCanAddMembersSubtitle": "Invite new participants to the group",
+  "groupJoinBannerBody": "{actor} added you to the group \"{group}\"",
+  "@groupJoinBannerBody": {
+    "placeholders": {
+      "actor": { "type": "String" },
+      "group": { "type": "String" }
+    }
+  },
+  "stay": "Stay",
+  "sysHideHistoryOn": "{actor} hid chat history for new members",
+  "@sysHideHistoryOn": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysHideHistoryOnByMe": "You hid chat history for new members",
+  "sysHideHistoryOff": "{actor} made chat history visible for new members",
+  "@sysHideHistoryOff": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysHideHistoryOffByMe": "You made chat history visible for new members",
+  "sysOnlyAdminsAddOn": "{actor} restricted adding members to admins",
+  "@sysOnlyAdminsAddOn": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysOnlyAdminsAddOnByMe": "You restricted adding members to admins",
+  "sysOnlyAdminsAddOff": "{actor} allowed everyone to add members",
+  "@sysOnlyAdminsAddOff": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysOnlyAdminsAddOffByMe": "You allowed everyone to add members",
   "mentionsOnlyLabel": "Mentions only",
   "mentionsOnlySubtitle": "Only get alerted when someone mentions you",
   "youWereRemovedFromGroup": "You are no longer part of this group",

@@ -62,7 +62,7 @@ class SystemEventPayload {
   final String? value;
 
   /// `role_changed` : rôle attribué. `settings_changed` : verrou concerné
-  /// (`send` / `edit`) et son nouvel état.
+  /// (`send` / `edit` / `history` / `add`) et son nouvel état.
   final int? role;
   final String? lock;
   final bool lockEnabled;
@@ -210,9 +210,66 @@ class SystemEventPayload {
               ? l10n.sysOnlyAdminsEditOffByMe
               : l10n.sysOnlyAdminsEditOff(actor);
         }
+        if (lock == 'history') {
+          if (lockEnabled) {
+            return byMe
+                ? l10n.sysHideHistoryOnByMe
+                : l10n.sysHideHistoryOn(actor);
+          }
+          return byMe
+              ? l10n.sysHideHistoryOffByMe
+              : l10n.sysHideHistoryOff(actor);
+        }
+        if (lock == 'add') {
+          if (lockEnabled) {
+            return byMe
+                ? l10n.sysOnlyAdminsAddOnByMe
+                : l10n.sysOnlyAdminsAddOn(actor);
+          }
+          return byMe
+              ? l10n.sysOnlyAdminsAddOffByMe
+              : l10n.sysOnlyAdminsAddOff(actor);
+        }
         return l10n.sysGroupEventFallback;
     }
     return null;
+  }
+
+  /// Aperçu court pour la liste de conversations — calqué sur
+  /// `systemPreviewFromContent()` côté serveur. Volontairement sans noms de
+  /// cibles : une ligne d'aperçu est tronquée, le fil porte la phrase complète.
+  String previewLabel(AppLocalizations l10n) {
+    final actor = actorName.trim().isNotEmpty
+        ? actorName.trim()
+        : l10n.unknownSender;
+    final v = value?.trim() ?? '';
+
+    switch (event) {
+      case SystemEvent.groupCreated:
+        return v.isNotEmpty
+            ? l10n.sysPreviewGroupCreated(actor, v)
+            : l10n.sysPreviewGroupCreatedShort(actor);
+      case SystemEvent.memberAdded:
+        return l10n.sysPreviewMemberAdded(actor);
+      case SystemEvent.memberRemoved:
+        return l10n.sysPreviewMemberRemoved(actor);
+      case SystemEvent.memberLeft:
+        return l10n.sysPreviewMemberLeft(actor);
+      case SystemEvent.groupRenamed:
+        return l10n.sysPreviewGroupRenamed(actor);
+      case SystemEvent.groupPhotoChanged:
+        return l10n.sysPreviewGroupPhotoChanged(actor);
+      case SystemEvent.groupDescriptionChanged:
+        return l10n.sysPreviewGroupDescriptionChanged(actor);
+      case SystemEvent.roleChanged:
+        return (role ?? 0) >= 1
+            ? l10n.sysPreviewRolePromoted(actor)
+            : l10n.sysPreviewRoleDemoted(actor);
+      case SystemEvent.settingsChanged:
+        return l10n.sysPreviewSettingsChanged(actor);
+      default:
+        return l10n.sysGroupEventFallback;
+    }
   }
 
   static List<int> _intList(Object? raw) {

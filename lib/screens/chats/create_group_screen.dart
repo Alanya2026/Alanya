@@ -34,6 +34,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   bool _creating = false;
   bool _onlyAdminsCanSend = false;
   bool _onlyAdminsCanEditInfo = false;
+  bool _hideHistoryForNewMembers = false;
+  bool _onlyAdminsCanAddMembers = false;
 
   @override
   void initState() {
@@ -87,6 +89,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         description: description.isEmpty ? null : description,
         onlyAdminsCanSend: _onlyAdminsCanSend,
         onlyAdminsCanEditInfo: _onlyAdminsCanEditInfo,
+        hideHistoryForNewMembers: _hideHistoryForNewMembers,
+        onlyAdminsCanAddMembers: _onlyAdminsCanAddMembers,
       );
 
       await chat.refreshConversations(force: true);
@@ -159,8 +163,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             _GroupSettingsCard(
               onlyAdminsCanSend: _onlyAdminsCanSend,
               onlyAdminsCanEditInfo: _onlyAdminsCanEditInfo,
+              hideHistoryForNewMembers: _hideHistoryForNewMembers,
+              onlyAdminsCanAddMembers: _onlyAdminsCanAddMembers,
               onSendChanged: (v) => setState(() => _onlyAdminsCanSend = v),
               onEditChanged: (v) => setState(() => _onlyAdminsCanEditInfo = v),
+              onHideHistoryChanged: (v) =>
+                  setState(() => _hideHistoryForNewMembers = v),
+              onAddMembersChanged: (v) =>
+                  setState(() => _onlyAdminsCanAddMembers = v),
             ),
             AppSpacing.vGapXxl,
             Consumer<ConnectivityProvider>(
@@ -464,14 +474,22 @@ class _MembersCard extends StatelessWidget {
 class _GroupSettingsCard extends StatelessWidget {
   final bool onlyAdminsCanSend;
   final bool onlyAdminsCanEditInfo;
+  final bool hideHistoryForNewMembers;
+  final bool onlyAdminsCanAddMembers;
   final ValueChanged<bool> onSendChanged;
   final ValueChanged<bool> onEditChanged;
+  final ValueChanged<bool> onHideHistoryChanged;
+  final ValueChanged<bool> onAddMembersChanged;
 
   const _GroupSettingsCard({
     required this.onlyAdminsCanSend,
     required this.onlyAdminsCanEditInfo,
+    required this.hideHistoryForNewMembers,
+    required this.onlyAdminsCanAddMembers,
     required this.onSendChanged,
     required this.onEditChanged,
+    required this.onHideHistoryChanged,
+    required this.onAddMembersChanged,
   });
 
   @override
@@ -516,6 +534,34 @@ class _GroupSettingsCard extends StatelessWidget {
             ),
             subtitle: Text(
               context.l10n.onlyAdminsCanEditInfoSubtitle,
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+          SwitchListTile(
+            value: hideHistoryForNewMembers,
+            onChanged: onHideHistoryChanged,
+            title: Text(
+              context.l10n.hideHistoryForNewMembersLabel,
+              style: context.text.bodyMedium,
+            ),
+            subtitle: Text(
+              context.l10n.hideHistoryForNewMembersSubtitle,
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+          SwitchListTile(
+            value: onlyAdminsCanAddMembers,
+            onChanged: onAddMembersChanged,
+            title: Text(
+              context.l10n.onlyAdminsCanAddMembersLabel,
+              style: context.text.bodyMedium,
+            ),
+            subtitle: Text(
+              context.l10n.onlyAdminsCanAddMembersSubtitle,
               style: context.text.bodySmall?.copyWith(
                 color: context.colors.onSurfaceVariant,
               ),

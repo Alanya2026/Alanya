@@ -530,8 +530,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         ? Text.rich(
                             TextSpan(
                               children: parseRichSpans(
-                                displayConversationPreview(
-                                  conv.lastMessage!,
+                                conversationListPreview(
+                                  conv,
+                                  myId,
                                   context.l10n,
                                 ),
                                 context.text.bodyMedium!.copyWith(

@@ -568,6 +568,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   /// la rencontre physique doit pouvoir créer le lien dans les deux sens en
   /// deux gestes.
   Future<void> _onQrContactScanned(QrContactScan scan) async {
+    debugPrint('[AuthWrapper] scan reçu de ${scan.displayName} '
+        '(id=${scan.alanyaID}, mutual=${scan.alreadyMutual}, mounted=$mounted)');
     if (!mounted || scan.alanyaID == 0) return;
     final l10n = context.l10n;
     final messenger = appMessengerKey.currentState;
@@ -590,24 +592,28 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.qrScanReturnTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.qrScanReturnBody(scan.displayName)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: noteCtrl,
-              maxLength: 200,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                hintText: l10n.qrNoteFieldHint,
-                counterText: '',
-                isDense: true,
-                prefixIcon: const Icon(Icons.sticky_note_2_outlined, size: 20),
-                border: const OutlineInputBorder(),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.qrScanReturnBody(scan.displayName)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: noteCtrl,
+                maxLength: 200,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  hintText: l10n.qrNoteFieldHint,
+                  counterText: '',
+                  isDense: true,
+                  prefixIcon:
+                      const Icon(Icons.sticky_note_2_outlined, size: 20),
+                  border: const OutlineInputBorder(),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(

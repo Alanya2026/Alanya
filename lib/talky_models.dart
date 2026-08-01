@@ -374,6 +374,8 @@ class Conversation {
   // Réglages de groupe
   final bool onlyAdminsCanSend;
   final bool onlyAdminsCanEditInfo;
+  final bool hideHistoryForNewMembers;
+  final bool onlyAdminsCanAddMembers;
   // conv_participants
   final int unreadCount;
   final bool isPinned;
@@ -382,6 +384,10 @@ class Conversation {
   final String? mutedUntil;
   final bool muteForever;
   final bool mentionsOnly;
+  /// msgID système en attente d'ack « Rester » (null = bannière absente).
+  final int? myPendingJoinMsgID;
+  /// Borne d'historique pour le viewer (ISO) — null = historique complet.
+  final String? myHistoryCutoffAt;
   // Jointure participants
   final List<Participant> participants;
 
@@ -400,6 +406,8 @@ class Conversation {
     this.updatedAt,
     this.onlyAdminsCanSend = false,
     this.onlyAdminsCanEditInfo = false,
+    this.hideHistoryForNewMembers = false,
+    this.onlyAdminsCanAddMembers = false,
     required this.unreadCount,
     required this.isPinned,
     required this.isArchived,
@@ -407,6 +415,8 @@ class Conversation {
     this.mutedUntil,
     this.muteForever = false,
     this.mentionsOnly = false,
+    this.myPendingJoinMsgID,
+    this.myHistoryCutoffAt,
     required this.participants,
   });
 
@@ -427,6 +437,8 @@ class Conversation {
         updatedAt: json['updatedAt']?.toString(),
         onlyAdminsCanSend: _flag(json['onlyAdminsCanSend']),
         onlyAdminsCanEditInfo: _flag(json['onlyAdminsCanEditInfo']),
+        hideHistoryForNewMembers: _flag(json['hideHistoryForNewMembers']),
+        onlyAdminsCanAddMembers: _flag(json['onlyAdminsCanAddMembers']),
         unreadCount: json['unreadCount'] ?? 0,
         isPinned: _flag(json['isPinned']),
         isArchived: _flag(json['isArchived']),
@@ -434,6 +446,8 @@ class Conversation {
         mutedUntil: json['mutedUntil']?.toString(),
         muteForever: _flag(json['muteForever']),
         mentionsOnly: _flag(json['mentionsOnly']),
+        myPendingJoinMsgID: (json['myPendingJoinMsgID'] as num?)?.toInt(),
+        myHistoryCutoffAt: json['myHistoryCutoffAt']?.toString(),
         participants: (json['participants'] as List?)
                 ?.map((e) => Participant.fromJson(e as Map<String, dynamic>))
                 .toList() ??

@@ -2027,6 +2027,73 @@
   },
   "sysOnlyAdminsEditOffByMe": "Vous avez autorisé tout le monde à modifier les infos",
   "sysGroupEventFallback": "Le groupe a été mis à jour",
+  "sysPreviewGroupCreated": "{actor} a créé « {value} »",
+  "@sysPreviewGroupCreated": {
+    "placeholders": {
+      "actor": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupCreatedShort": "{actor} a créé le groupe",
+  "@sysPreviewGroupCreatedShort": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberAdded": "{actor} a ajouté des membres",
+  "@sysPreviewMemberAdded": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberRemoved": "{actor} a retiré un membre",
+  "@sysPreviewMemberRemoved": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberLeft": "{actor} a quitté le groupe",
+  "@sysPreviewMemberLeft": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupRenamed": "{actor} a renommé le groupe",
+  "@sysPreviewGroupRenamed": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupPhotoChanged": "{actor} a changé la photo du groupe",
+  "@sysPreviewGroupPhotoChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupDescriptionChanged": "{actor} a modifié la description",
+  "@sysPreviewGroupDescriptionChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewRolePromoted": "{actor} a nommé un administrateur",
+  "@sysPreviewRolePromoted": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewRoleDemoted": "{actor} a retiré des droits d'administrateur",
+  "@sysPreviewRoleDemoted": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewSettingsChanged": "{actor} a modifié les réglages du groupe",
+  "@sysPreviewSettingsChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
   "groupOwner": "Propriétaire",
   "groupAdmin": "Admin",
   "removeFromGroup": "Retirer du groupe",
@@ -2057,7 +2124,47 @@
   "onlyAdminsCanSendLabel": "Seuls les admins peuvent écrire",
   "onlyAdminsCanSendSubtitle": "Le groupe devient un canal d'annonces",
   "onlyAdminsCanEditInfoLabel": "Seuls les admins modifient les infos",
-  "onlyAdminsCanEditInfoSubtitle": "Nom, photo, description et ajout de membres",
+  "onlyAdminsCanEditInfoSubtitle": "Nom, photo et description",
+  "hideHistoryForNewMembersLabel": "Masquer l'historique pour les nouveaux",
+  "hideHistoryForNewMembersSubtitle": "Les membres ajoutés ne verront pas les messages antérieurs",
+  "onlyAdminsCanAddMembersLabel": "Seuls les admins peuvent ajouter des membres",
+  "onlyAdminsCanAddMembersSubtitle": "Inviter de nouveaux participants au groupe",
+  "groupJoinBannerBody": "{actor} vous a ajouté au groupe « {group} »",
+  "@groupJoinBannerBody": {
+    "placeholders": {
+      "actor": { "type": "String" },
+      "group": { "type": "String" }
+    }
+  },
+  "stay": "Rester",
+  "sysHideHistoryOn": "{actor} a masqué l'historique pour les nouveaux membres",
+  "@sysHideHistoryOn": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysHideHistoryOnByMe": "Vous avez masqué l'historique pour les nouveaux membres",
+  "sysHideHistoryOff": "{actor} a rendu l'historique visible pour les nouveaux membres",
+  "@sysHideHistoryOff": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysHideHistoryOffByMe": "Vous avez rendu l'historique visible pour les nouveaux membres",
+  "sysOnlyAdminsAddOn": "{actor} a réservé l'ajout de membres aux administrateurs",
+  "@sysOnlyAdminsAddOn": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysOnlyAdminsAddOnByMe": "Vous avez réservé l'ajout de membres aux administrateurs",
+  "sysOnlyAdminsAddOff": "{actor} a autorisé tout le monde à ajouter des membres",
+  "@sysOnlyAdminsAddOff": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysOnlyAdminsAddOffByMe": "Vous avez autorisé tout le monde à ajouter des membres",
   "mentionsOnlyLabel": "Uniquement les mentions",
   "mentionsOnlySubtitle": "N'être alerté que si l'on vous mentionne",
   "youWereRemovedFromGroup": "Vous ne faites plus partie de ce groupe",

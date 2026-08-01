@@ -144,10 +144,20 @@ void main() {
       expect(canEditInfo(proprio, true), isTrue);
     });
 
-    test('ajouter des participants suit le verrou des infos', () {
+    test('ajouter des participants suit son propre verrou', () {
       expect(canAddParticipants(membre, false), isTrue);
       expect(canAddParticipants(membre, true), isFalse);
       expect(canAddParticipants(admin, true), isTrue);
+      expect(canAddParticipants(proprio, true), isTrue);
+    });
+
+    test('ajout et édition des infos sont indépendants', () {
+      // Edit verrouillé, ajout ouvert
+      expect(canEditInfo(membre, true), isFalse);
+      expect(canAddParticipants(membre, false), isTrue);
+      // Edit ouvert, ajout verrouillé
+      expect(canEditInfo(membre, false), isTrue);
+      expect(canAddParticipants(membre, true), isFalse);
     });
   });
 

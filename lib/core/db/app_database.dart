@@ -41,6 +41,14 @@ class LocalConversations extends Table {
   BoolColumn get onlyAdminsCanEditInfo =>
       boolean().withDefault(const Constant(false))();
 
+  /// Masquer l'historique pour les membres ajoutés après activation (défaut OFF).
+  BoolColumn get hideHistoryForNewMembers =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Seuls les admins peuvent ajouter des membres (défaut OFF = tout le monde).
+  BoolColumn get onlyAdminsCanAddMembers =>
+      boolean().withDefault(const Constant(false))();
+
   /// Mon rôle : 0=membre, 1=admin, 2=propriétaire (voir `GroupRole`).
   IntColumn get myRole => integer().withDefault(const Constant(0))();
 
@@ -49,6 +57,12 @@ class LocalConversations extends Table {
   BoolColumn get muteForever => boolean().withDefault(const Constant(false))();
   BoolColumn get mentionsOnly =>
       boolean().withDefault(const Constant(false))();
+
+  /// msgID système `member_added` en attente d'ack « Rester » (null = ok).
+  IntColumn get myPendingJoinMsgID => integer().nullable()();
+
+  /// Borne d'historique pour MOI : null = tout visible ; sinon sendAt >= cutoff.
+  DateTimeColumn get myHistoryCutoffAt => dateTime().nullable()();
 
   /// Au moins une mention non lue me ciblant.
   ///
@@ -312,7 +326,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 19;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -460,6 +474,19 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 17) {
             await m.addColumn(localUsers, localUsers.preferredNote);
+          }
+          if (from < 18) {
+            // Historique masqué + ack « Rester » (migration serveur 028).
+            await m.addColumn(
+                localConversations, localConversations.hideHistoryForNewMembers);
+            await m.addColumn(
+                localConversations, localConversations.myPendingJoinMsgID);
+            await m.addColumn(
+                localConversations, localConversations.myHistoryCutoffAt);
+          }
+          if (from < 19) {
+            await m.addColumn(
+                localConversations, localConversations.onlyAdminsCanAddMembers);
           }
         },
       );

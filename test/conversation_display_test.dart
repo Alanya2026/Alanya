@@ -25,6 +25,9 @@ void main() {
     bool isGroup = false,
     String? groupName,
     String? groupPhoto,
+    String? lastMessage,
+    int? lastMessageSenderID,
+    int lastMessageType = 0,
     List<Map<String, dynamic>> participants = const [],
   }) {
     return LocalConversation(
@@ -32,10 +35,10 @@ void main() {
       isGroup: isGroup,
       groupName: groupName,
       groupPhoto: groupPhoto,
-      lastMessage: null,
+      lastMessage: lastMessage,
       lastMessageAt: DateTime.utc(2026, 1, 1, 12),
-      lastMessageSenderID: null,
-      lastMessageType: 0,
+      lastMessageSenderID: lastMessageSenderID,
+      lastMessageType: lastMessageType,
       lastMessageStatus: 1,
       unreadCount: 0,
       isPinned: false,
@@ -43,6 +46,8 @@ void main() {
       participantsJson: jsonEncode(participants),
       onlyAdminsCanSend: false,
       onlyAdminsCanEditInfo: false,
+      hideHistoryForNewMembers: false,
+      onlyAdminsCanAddMembers: false,
       myRole: 0,
       muteForever: false,
       mentionsOnly: false,
@@ -164,6 +169,74 @@ void main() {
       expect(conversationDisplayName(groupe, me), 'Équipe');
       expect(conversationDisplayAvatar(groupe, me), 'http://a/g.png');
       expect(conversationCounterpartId(groupe, me), isNull);
+    });
+  });
+
+  group('conversationListPreview', () {
+    final l10n = resolveL10n();
+    final members = [part(me, 'Chris'), part(2, 'Bob')];
+
+    test('groupe, message texte entrant → préfixe nom', () {
+      final g = conv(
+        isGroup: true,
+        groupName: 'Équipe',
+        lastMessage: 'Bonjour tout le monde',
+        lastMessageSenderID: 2,
+        participants: members,
+      );
+      expect(
+        conversationListPreview(g, me, l10n),
+        'Bob: Bonjour tout le monde',
+      );
+    });
+
+    test('groupe, message sortant → Vous :', () {
+      final g = conv(
+        isGroup: true,
+        groupName: 'Équipe',
+        lastMessage: 'Salut',
+        lastMessageSenderID: me,
+        participants: members,
+      );
+      expect(conversationListPreview(g, me, l10n), '${l10n.youLabel}: Salut');
+    });
+
+    test('type 6 → pas de double préfixe', () {
+      final g = conv(
+        isGroup: true,
+        groupName: 'Équipe',
+        lastMessage: 'Bob a ajouté des membres',
+        lastMessageSenderID: 2,
+        lastMessageType: 6,
+        participants: members,
+      );
+      expect(
+        conversationListPreview(g, me, l10n),
+        'Bob a ajouté des membres',
+      );
+    });
+
+    test('1-1 inchangé (pas de préfixe)', () {
+      final c = conv(
+        lastMessage: 'Hey',
+        lastMessageSenderID: 2,
+        participants: [part(me, 'Chris'), part(2, 'Bob')],
+      );
+      expect(conversationListPreview(c, me, l10n), 'Hey');
+    });
+
+    test('expéditeur absent des participants → unknownSender', () {
+      final g = conv(
+        isGroup: true,
+        groupName: 'Équipe',
+        lastMessage: 'Au revoir',
+        lastMessageSenderID: 99,
+        participants: members,
+      );
+      expect(
+        conversationListPreview(g, me, l10n),
+        '${l10n.unknownSender}: Au revoir',
+      );
     });
   });
 }
