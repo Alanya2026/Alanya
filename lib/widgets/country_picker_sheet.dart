@@ -99,7 +99,7 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
                             ),
                             title: Text(p.libelle),
                             subtitle: p.prefix.isNotEmpty
-                                ? Text('+${p.prefix}')
+                                ? Text(_formatDialPrefix(p.prefix))
                                 : null,
                             trailing: selected
                                 ? Icon(Icons.check_circle,
@@ -116,4 +116,11 @@ class _CountryPickerSheetState extends State<CountryPickerSheet> {
       },
     );
   }
+}
+
+/// Affiche un seul `+` même si la base stocke déjà `+33`.
+String _formatDialPrefix(String prefix) {
+  final cleaned = prefix.trim().replaceFirst(RegExp(r'^\++'), '');
+  if (cleaned.isEmpty) return '';
+  return '+$cleaned';
 }
