@@ -10,13 +10,13 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.app.NotificationManager
 import android.util.Log
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.FileInputStream
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     companion object {
         const val EXTRA_NOTIFICATION_OPEN = "talky_notification_open"
         private const val TAG = "TalkyMainActivity"

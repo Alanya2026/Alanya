@@ -13,6 +13,7 @@ import '../../core/utils/country_utils.dart';
 import '../../core/utils/user_search.dart';
 import '../authentification/login_screen.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/utils/profile_bio.dart';
 import '../../widgets/alanya_phone_field.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/db/app_database.dart';
@@ -20,7 +21,9 @@ import '../../core/services/local_cache_repository.dart';
 import '../chats/contact_detail_screen.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'settings_screen.dart';
+import 'account_hub_screen.dart';
 import 'edit_profile_screen.dart';
+import 'my_media_screen.dart';
 import 'preferred_contacts_screen.dart';
 import 'qr_code_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
@@ -38,6 +41,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     unawaited(context.read<AuthProvider>().refreshProfile());
     unawaited(context.read<LocalCacheRepository>().syncPreferredContacts());
+  }
+
+  Future<void> _refreshProfile() async {
+    await context.read<AuthProvider>().refreshProfile();
+    if (!mounted) return;
+    await context.read<LocalCacheRepository>().syncPreferredContacts();
   }
 
   Future<void> _logout() async {
@@ -126,10 +135,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: Text(context.l10n.navProfile, style: context.text.headlineLarge),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
-        child: Column(
-          children: [
+      body: RefreshIndicator(
+        onRefresh: _refreshProfile,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: kGlassNavBarSpace),
+          child: Column(
+            children: [
             AppSpacing.vGapXl,
             _ProfileHeader(
               user: user,
@@ -150,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const EditProfileScreen(),
+                          builder: (_) => const AccountHubScreen(),
                         ),
                       );
                     },
@@ -260,11 +272,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  _buildMenuItem(CupertinoIcons.person, context.l10n.accountLabel, () {
+                  _buildMenuItem(CupertinoIcons.person, context.l10n.myAccountLabel, () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const EditProfileScreen()),
+                          builder: (_) => const AccountHubScreen()),
+                    );
+                  }),
+                  const Divider(height: 1),
+                  _buildMenuItem(Icons.photo_library_outlined, context.l10n.myMediaTitle, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MyMediaScreen()),
                     );
                   }),
                   const Divider(height: 1),
@@ -330,6 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -452,6 +473,19 @@ class _ProfileHeader extends StatelessWidget {
                     color: context.colors.onSurfaceVariant),
               ),
             ],
+            AppSpacing.vGapXs,
+            Text(
+              ProfileBio.display(
+                user?.bio ?? '',
+                context.l10n.profileBioDefault,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: context.text.bodyMedium?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
             if (phone.isNotEmpty) ...[
               AppSpacing.vGapSm,
               Row(

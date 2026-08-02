@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/app_settings_sync_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/locale_controller.dart';
 import '../../core/theme/theme_controller.dart';
-import '../../core/services/media_download_preferences.dart';
-import '../../core/services/ringtone_preferences.dart';
-import 'privacy_screen.dart';
+import '../../providers/chat_provider.dart';
+import '../../core/db/app_database.dart';
+import '../../widgets/profile/settings_group.dart';
+import 'about_legal_screen.dart';
+import 'accessibility_screen.dart';
+import 'muted_conversations_screen.dart' show isConversationMuted, MutedConversationsScreen;
+import 'network_data_screen.dart';
 import 'notification_settings_screen.dart';
 import 'ringtone_settings_screen.dart';
-import 'account_security_screen.dart';
+import 'playback_speed_screen.dart';
+import 'storage_screen.dart';
+import '../../core/services/ringtone_preferences.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  int _countMuted(List<LocalConversation> convs) =>
+      convs.where(isConversationMuted).length;
 
   @override
   Widget build(BuildContext context) {
@@ -30,51 +40,94 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           AppSpacing.vGapLg,
-          _SettingsGroup(
-            title: l10n.accountSecurityTitle,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.sm,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: context.semantic.surfaceMuted,
-                  shape: BoxShape.circle,
+          SettingsGroup(
+            title: l10n.settingsSectionCommunication,
+            child: Column(
+              children: [
+                SettingsNavTile(
+                  icon: Icons.notifications_outlined,
+                  title: l10n.settingsNotifications,
+                  subtitle: l10n.settingsNotificationsSubtitle,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationSettingsScreen(),
+                    ),
+                  ),
                 ),
-                child: Icon(
-                  Icons.shield_outlined,
-                  color: context.colors.onSurfaceVariant,
-                  size: AppIconSize.md,
+                StreamBuilder<List<LocalConversation>>(
+                  stream: context.read<ChatProvider>().watchConversations(),
+                  builder: (context, snapshot) {
+                    final count = _countMuted(snapshot.data ?? []);
+                    return SettingsNavTile(
+                      icon: Icons.notifications_off_outlined,
+                      title: l10n.settingsMutedConversations,
+                      subtitle: count == 0
+                          ? l10n.mutedConversationsEmpty
+                          : l10n.mutedConversationsCount(count),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MutedConversationsScreen(),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-              title: Text(
-                l10n.accountSecurityTitle,
-                style: context.text.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              subtitle: Text(
-                l10n.accountSecuritySubtitle,
-                style: context.text.bodySmall?.copyWith(
-                  color: context.colors.onSurfaceVariant,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: context.colors.outlineVariant,
-              ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AccountSecurityScreen(),
-                ),
-              ),
+              ],
             ),
           ),
           AppSpacing.vGapXxl,
-          _SettingsGroup(
+          SettingsGroup(
+            title: l10n.settingsSectionApplication,
+            child: Column(
+              children: [
+                SettingsNavTile(
+                  icon: Icons.sd_storage_outlined,
+                  title: l10n.settingsStorage,
+                  subtitle: l10n.settingsStorageSubtitle,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const StorageScreen()),
+                  ),
+                ),
+                SettingsNavTile(
+                  icon: Icons.wifi,
+                  title: l10n.settingsNetwork,
+                  subtitle: l10n.settingsNetworkSubtitle,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NetworkDataScreen(),
+                    ),
+                  ),
+                ),
+                SettingsNavTile(
+                  icon: Icons.speed_outlined,
+                  title: l10n.playbackSpeed,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PlaybackSpeedScreen(),
+                    ),
+                  ),
+                ),
+                SettingsNavTile(
+                  icon: Icons.accessibility_new_outlined,
+                  title: l10n.settingsAccessibility,
+                  subtitle: l10n.settingsAccessibilitySubtitle,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AccessibilityScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          SettingsGroup(
             title: l10n.settingsAppearance,
             child: Padding(
               padding: AppSpacing.card,
@@ -102,13 +155,26 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ],
                   selected: {tc.mode},
-                  onSelectionChanged: (s) => tc.setMode(s.first),
+                  onSelectionChanged: (s) async {
+                    final mode = s.first;
+                    await tc.setMode(mode);
+                    try {
+                      await context.read<AppSettingsSyncService>().patchAndSync(
+                            {
+                              'themeMode': context
+                                  .read<AppSettingsSyncService>()
+                                  .themeModeToString(mode),
+                            },
+                            theme: tc,
+                          );
+                    } catch (_) {}
+                  },
                 ),
               ),
             ),
           ),
           AppSpacing.vGapXxl,
-          _SettingsGroup(
+          SettingsGroup(
             title: l10n.settingsLanguage,
             child: Padding(
               padding: AppSpacing.card,
@@ -136,253 +202,58 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ],
                   selected: {lc.preference},
-                  onSelectionChanged: (s) => lc.setPreference(s.first),
+                  onSelectionChanged: (s) async {
+                    final pref = s.first;
+                    await lc.setPreference(pref);
+                    try {
+                      await context.read<AppSettingsSyncService>().patchAndSync(
+                            {
+                              'locale': context
+                                  .read<AppSettingsSyncService>()
+                                  .localeToString(pref),
+                            },
+                            locale: lc,
+                          );
+                    } catch (_) {}
+                  },
                 ),
               ),
             ),
           ),
           AppSpacing.vGapXxl,
-          _SettingsGroup(
-            title: l10n.settingsMedia,
-            child: Consumer<MediaDownloadPreferences>(
-              builder: (_, prefs, __) => Column(
-                children: [
-                  SwitchListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                      vertical: AppSpacing.sm,
-                    ),
-                    secondary: Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: context.semantic.surfaceMuted,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.download_rounded,
-                        color: context.colors.onSurfaceVariant,
-                        size: AppIconSize.md,
-                      ),
-                    ),
-                    title: Text(
-                      l10n.settingsAutoDownload,
-                      style: context.text.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: Text(
-                      l10n.settingsAutoDownloadSubtitle,
-                      style: context.text.bodySmall?.copyWith(
-                        color: context.colors.onSurfaceVariant,
-                      ),
-                    ),
-                    value: prefs.autoDownload,
-                    onChanged: prefs.setAutoDownload,
-                  ),
-                  SwitchListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                      vertical: AppSpacing.sm,
-                    ),
-                    secondary: Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: context.semantic.surfaceMuted,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.photo_library_outlined,
-                        color: context.colors.onSurfaceVariant,
-                        size: AppIconSize.md,
-                      ),
-                    ),
-                    title: Text(
-                      l10n.settingsMediaVisibility,
-                      style: context.text.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: Text(
-                      l10n.settingsMediaVisibilitySubtitle,
-                      style: context.text.bodySmall?.copyWith(
-                        color: context.colors.onSurfaceVariant,
-                      ),
-                    ),
-                    value: prefs.mediaVisibility,
-                    onChanged: prefs.setMediaVisibility,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AppSpacing.vGapXxl,
-          _SettingsGroup(
-            title: l10n.settingsNotifications,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.sm,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: context.semantic.surfaceMuted,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.notifications_outlined,
-                  color: context.colors.onSurfaceVariant,
-                  size: AppIconSize.md,
-                ),
-              ),
-              title: Text(
-                l10n.settingsNotifications,
-                style: context.text.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              subtitle: Text(
-                l10n.settingsNotificationsSubtitle,
-                style: context.text.bodySmall?.copyWith(
-                  color: context.colors.onSurfaceVariant,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: context.colors.outlineVariant,
-              ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const NotificationSettingsScreen(),
-                ),
-              ),
-            ),
-          ),
-          AppSpacing.vGapXxl,
-          _SettingsGroup(
+          SettingsGroup(
             title: l10n.settingsCalls,
             child: Consumer<RingtonePreferences>(
-              builder: (_, prefs, __) => ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.sm,
-                ),
-                leading: Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: context.semantic.surfaceMuted,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.music_note_outlined,
-                    color: context.colors.onSurfaceVariant,
-                    size: AppIconSize.md,
-                  ),
-                ),
-                title: Text(
-                  l10n.settingsRingtone,
-                  style: context.text.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                subtitle: Text(
-                  prefs.selectedId == RingtoneOption.systemId
-                      ? l10n.ringtoneSystemDefaultLabel
-                      : prefs.selected.label,
-                  style: context.text.bodySmall?.copyWith(
-                    color: context.colors.onSurfaceVariant,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: context.colors.outlineVariant,
-                ),
+              builder: (_, prefs, __) => SettingsNavTile(
+                icon: Icons.music_note_outlined,
+                title: l10n.settingsRingtone,
+                subtitle: prefs.selectedId == RingtoneOption.systemId
+                    ? l10n.ringtoneSystemDefaultLabel
+                    : prefs.selected.label,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const RingtoneSettingsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const RingtoneSettingsScreen(),
+                  ),
                 ),
               ),
             ),
           ),
           AppSpacing.vGapXxl,
-          _SettingsGroup(
-            title: l10n.settingsPrivacy,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.sm,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: context.semantic.surfaceMuted,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.lock_outline,
-                  color: context.colors.onSurfaceVariant,
-                  size: AppIconSize.md,
-                ),
-              ),
-              title: Text(
-                l10n.settingsPrivacy,
-                style: context.text.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              subtitle: Text(
-                l10n.settingsPrivacySubtitle,
-                style: context.text.bodySmall?.copyWith(
-                  color: context.colors.onSurfaceVariant,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: context.colors.outlineVariant,
-              ),
+          SettingsGroup(
+            title: l10n.settingsSectionInformation,
+            child: SettingsNavTile(
+              icon: Icons.info_outline,
+              title: l10n.settingsAbout,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                MaterialPageRoute(builder: (_) => const AboutLegalScreen()),
               ),
             ),
           ),
+          AppSpacing.vGapXxl,
         ],
       ),
-    );
-  }
-}
-
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.sm,
-          ),
-          child: Text(
-            title,
-            style: context.text.labelMedium?.copyWith(
-              color: context.colors.primary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        Container(
-          width: double.infinity,
-          color: context.colors.surface,
-          child: child,
-        ),
-      ],
     );
   }
 }

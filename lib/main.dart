@@ -46,11 +46,17 @@ import 'core/services/notifications/notification_prefs_cache.dart';
 import 'core/services/notifications/badge_sync_service.dart';
 import 'core/services/notifications/pending_delivery_ack_store.dart';
 import 'core/services/notifications/pending_notification_action_store.dart';
+import 'core/services/privacy_prefs_service.dart';
+import 'core/services/app_settings_sync_service.dart';
+import 'core/services/biometric_lock_service.dart';
+import 'core/services/storage_info_service.dart';
 import 'firebase_options.dart';
+import 'screens/onboarding/account_setup_flow.dart';
 import 'screens/authentification/login_screen.dart';
-import 'screens/home/home_screen.dart';
+import 'core/services/onboarding_service.dart';
 import 'talky_api_client.dart';
 import 'talky_models.dart';
+import 'widgets/session/biometric_lock_overlay.dart';
 import 'widgets/session/active_session_banner.dart';
 
 /// Clé globale exposée à PushService pour naviguer depuis les notifications.
@@ -118,17 +124,24 @@ void main() async {
   // la sonnerie sélectionnée de façon synchrone dès le premier appel entrant.
   await RingtonePreferences.preload();
 
+  await AppSettingsSyncService.preloadLocal();
+
+  final biometricLock = BiometricLockService();
+  await biometricLock.ensureLoaded();
+
   await IncomingShareService.instance.init();
 
   // Précharge les sons de messagerie (envoi/réception). Non bloquant : assets
   // embarqués, aucune dépendance réseau.
   unawaited(MessageSoundService.instance.init());
 
-  runApp(const TalkyApp());
+  runApp(TalkyApp(biometricLock: biometricLock));
 }
 
 class TalkyApp extends StatefulWidget {
-  const TalkyApp({super.key});
+  const TalkyApp({super.key, this.biometricLock});
+
+  final BiometricLockService? biometricLock;
 
   @override
   State<TalkyApp> createState() => _TalkyAppState();
@@ -158,6 +171,17 @@ class _TalkyAppState extends State<TalkyApp> {
             create: (_) => RingtonePreferences()..load()),
         ChangeNotifierProvider(
             create: (_) => AuthProvider(apiClient: _apiClient)),
+        ChangeNotifierProvider(
+          create: (ctx) => PrivacyPrefsService(api: ctx.read<TalkyApiClient>())
+            ..loadFromCache(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => widget.biometricLock ?? (BiometricLockService()..load()),
+        ),
+        ChangeNotifierProvider(create: (_) => StorageInfoService()),
+        ChangeNotifierProvider(
+          create: (ctx) => AppSettingsSyncService(api: ctx.read<TalkyApiClient>()),
+        ),
         // Déclaré avant CallService, qui s'y abonne dans son `create`.
         ChangeNotifierProvider(create: (_) => VoicePlaybackService()),
         ChangeNotifierProvider(create: (ctx) {
@@ -217,8 +241,8 @@ class _TalkyAppState extends State<TalkyApp> {
           dispose: (_, presence) => presence.dispose(),
         ),
       ],
-      child: Consumer2<ThemeController, LocaleController>(
-        builder: (_, tc, lc, __) => MaterialApp(
+      child: Consumer3<ThemeController, LocaleController, AppSettingsSyncService>(
+        builder: (_, tc, lc, __, ___) => MaterialApp(
           navigatorKey: navigatorKey,
           navigatorObservers: [appRouteObserver],
           scaffoldMessengerKey: appMessengerKey,
@@ -241,7 +265,20 @@ class _TalkyAppState extends State<TalkyApp> {
             }
             return const Locale('fr');
           },
-          builder: (context, child) => ActiveSessionChrome(child: child),
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            return ActiveSessionChrome(
+              child: MediaQuery(
+                data: media.copyWith(
+                  textScaler: TextScaler.linear(
+                    AppSettingsSyncService.fontScale,
+                  ),
+                  disableAnimations: AppSettingsSyncService.reduceMotion,
+                ),
+                child: child ?? const SizedBox.shrink(),
+              ),
+            );
+          },
           home: const AuthWrapper(),
         ),
       ),
@@ -831,6 +868,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
     unawaited(PushService.syncTokenWithBackend());
     unawaited(_loadNotificationPrefs(apiClient));
+    unawaited(_syncAccountSettings(apiClient));
 
     try {
       await chatProvider.bind(myId);
@@ -900,6 +938,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     final cache = Provider.of<LocalCacheRepository>(context, listen: false);
     final hidden = Provider.of<LocalHiddenStore>(context, listen: false);
     final status = Provider.of<StatusProvider>(context, listen: false);
+    final privacy = Provider.of<PrivacyPrefsService>(context, listen: false);
+    final biometric = Provider.of<BiometricLockService>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final userId = auth.currentUser?.alanyaID;
     try {
       await chat.clearLocalSession();
     } catch (e) {
@@ -931,9 +973,29 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     try {
       await BadgeSyncService.clear();
       await NotificationPrefsCache.clear();
+      await privacy.clear();
+      await biometric.clear();
+      if (userId != null) {
+        await OnboardingService().clear(userId);
+      }
       await PushService.onSessionEnded();
     } catch (e) {
       debugPrint('[AuthWrapper] clear notification session échoué: $e');
+    }
+  }
+
+  Future<void> _syncAccountSettings(TalkyApiClient api) async {
+    if (!mounted) return;
+    try {
+      final theme = Provider.of<ThemeController>(context, listen: false);
+      final locale = Provider.of<LocaleController>(context, listen: false);
+      final sync = Provider.of<AppSettingsSyncService>(context, listen: false);
+      final privacy =
+          Provider.of<PrivacyPrefsService>(context, listen: false);
+      await sync.syncFromServer(theme: theme, locale: locale);
+      await privacy.syncFromServer();
+    } catch (e) {
+      debugPrint('[AuthWrapper] syncAccountSettings échoué: $e');
     }
   }
 
@@ -960,7 +1022,12 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
             body: SizedBox.shrink(),
           );
         }
-        return auth.isLoggedIn ? const HomeScreen() : const LoginScreen();
+        return BiometricLockOverlay(
+          sessionActive: auth.isLoggedIn,
+          child: auth.isLoggedIn
+              ? PostAuthGate(key: ValueKey(auth.currentUser?.alanyaID ?? 0))
+              : const LoginScreen(),
+        );
       },
     );
   }

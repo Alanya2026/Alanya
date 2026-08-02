@@ -19,6 +19,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   bool _isInitialized = false;
+  bool _pendingOnboardingAfterRegister = false;
 
   AuthProvider({TalkyApiClient? apiClient, StorageService? storage})
       : _apiClient = apiClient ?? TalkyApiClient(),
@@ -29,6 +30,12 @@ class AuthProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isLoggedIn => _currentUser != null;
   bool get isInitialized => _isInitialized;
+  bool get pendingOnboardingAfterRegister => _pendingOnboardingAfterRegister;
+
+  void clearPendingOnboardingAfterRegister() {
+    _pendingOnboardingAfterRegister = false;
+  }
+
   bool get sessionExpired =>
       currentSessionEndReason == SessionEndReason.tokenExpired;
 
@@ -176,6 +183,7 @@ class AuthProvider extends ChangeNotifier {
     currentSessionEndReason = reason;
     _apiClient.logout();
     _currentUser = null;
+    _pendingOnboardingAfterRegister = false;
   }
 
   /// Au retour au premier plan : réhydrate et valide sans déconnecter offline.
@@ -295,23 +303,18 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> register({
-    String? email,
     required String password,
     required String nom,
     required String pseudo,
-    required int idPays,
   }) async {
     _setLoading(true);
     _clearError();
 
     try {
-      final cleanEmail = email?.trim();
-      await _apiClient.register(
-        email: (cleanEmail == null || cleanEmail.isEmpty) ? null : cleanEmail,
+      final regData = await _apiClient.register(
         password: password,
         nom: nom,
         pseudo: pseudo,
-        idPays: idPays,
         deviceId: await _apiClient.ensureStableDeviceId(),
         hardwareId: await TalkyApiClient.currentHardwareId(),
       );
@@ -321,10 +324,21 @@ class AuthProvider extends ChangeNotifier {
         refreshToken: _apiClient.currentRefreshToken!,
       );
 
-      final userData = await _apiClient.getMe();
+      Map<String, dynamic> userData;
+      try {
+        userData = await _apiClient.getMe();
+      } catch (e) {
+        debugPrint('[AuthProvider] getMe post-register échoué, fallback réponse register: $e');
+        final raw = regData['user'];
+        if (raw is! Map) rethrow;
+        userData = Map<String, dynamic>.from(raw);
+      }
+
       _currentUser = User.fromJson(userData);
       await _storage.saveUser(_currentUser!);
+      _pendingOnboardingAfterRegister = true;
       currentSessionEndReason = SessionEndReason.none;
+      notifyListeners();
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } on TalkyException catch (e) {
       _error = e.message;
@@ -383,9 +397,15 @@ class AuthProvider extends ChangeNotifier {
     await refreshProfile();
   }
 
-  /// Met à jour le nom et/ou le pseudo de l'utilisateur connecté.
-  Future<void> updateProfile({String? nom, String? pseudo}) async {
-    await _apiClient.updateMe(nom: nom, pseudo: pseudo);
+  /// Met à jour le nom, le pseudo et/ou la bio de l'utilisateur connecté.
+  Future<void> updateProfile({String? nom, String? pseudo, String? bio}) async {
+    await _apiClient.updateMe(nom: nom, pseudo: pseudo, bio: bio);
+    await refreshProfile();
+  }
+
+  /// Met à jour la bio de l'utilisateur connecté.
+  Future<void> updateBio(String bio) async {
+    await _apiClient.updateMe(bio: bio.trim());
     await refreshProfile();
   }
 
@@ -417,6 +437,7 @@ class AuthProvider extends ChangeNotifier {
     _apiClient.logout();
     await _storage.clearAll();
     _currentUser = null;
+    _pendingOnboardingAfterRegister = false;
     notifyListeners();
   }
 
@@ -433,6 +454,7 @@ class AuthProvider extends ChangeNotifier {
     _apiClient.logout();
     await _storage.clearAll();
     _currentUser = null;
+    _pendingOnboardingAfterRegister = false;
     notifyListeners();
   }
 
