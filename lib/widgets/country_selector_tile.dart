@@ -19,6 +19,7 @@ class CountrySelectorTile extends StatefulWidget {
     this.required = false,
     this.style = CountrySelectorStyle.formField,
     this.enabled = true,
+    this.decoration,
   });
 
   final List<Pays> countries;
@@ -28,6 +29,7 @@ class CountrySelectorTile extends StatefulWidget {
   final bool required;
   final CountrySelectorStyle style;
   final bool enabled;
+  final InputDecoration? decoration;
 
   @override
   State<CountrySelectorTile> createState() => _CountrySelectorTileState();
@@ -131,11 +133,13 @@ class _CountrySelectorTileState extends State<CountrySelectorTile> {
         child: TextField(
           readOnly: true,
           controller: _displayController,
-          decoration: InputDecoration(
-            hintText: context.l10n.country,
-            prefixIcon: Icon(Icons.public_outlined),
-            suffixIcon: Icon(Icons.arrow_drop_down),
-          ),
+          style: context.text.bodyLarge,
+          decoration: widget.decoration ??
+              InputDecoration(
+                hintText: context.l10n.country,
+                prefixIcon: const Icon(Icons.public_outlined),
+                suffixIcon: const Icon(Icons.arrow_drop_down),
+              ),
         ),
       ),
     );

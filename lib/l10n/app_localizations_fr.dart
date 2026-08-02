@@ -2020,6 +2020,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get playbackSpeed => 'Vitesse de lecture';
 
   @override
+  String get playbackSpeedVoiceLabel => 'Messages vocaux';
+
+  @override
+  String get playbackSpeedVideoLabel => 'Vidéos';
+
+  @override
+  String get playbackSpeedMusicLabel => 'Musique';
+
+  @override
   String get music => 'Musique';
 
   @override
@@ -3754,4 +3763,699 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get qrBannerSignedOutRemotely =>
       'Cet appareil a été déconnecté depuis un autre appareil.';
+
+  @override
+  String get myAccountLabel => 'Mon compte';
+
+  @override
+  String get accountHubTitle => 'Mon compte';
+
+  @override
+  String get accountHubSecurityScore => 'Score de sécurité';
+
+  @override
+  String accountHubSecurityScoreValue(int score, int max) {
+    return '$score / $max';
+  }
+
+  @override
+  String get securityScoreAddEmail =>
+      'Ajoutez un e-mail pour améliorer votre score.';
+
+  @override
+  String get securityScoreAddBiometric =>
+      'Activez la biométrie pour améliorer votre score.';
+
+  @override
+  String get accountHubSectionIdentity => 'Identité';
+
+  @override
+  String get accountHubSectionProtection => 'Protection';
+
+  @override
+  String get accountHubSectionData => 'Données';
+
+  @override
+  String get accountHubEditProfile => 'Modifier le profil';
+
+  @override
+  String get accountHubEditProfileSubtitle => 'Nom, pseudo, bio, photo';
+
+  @override
+  String get accountHubMyMedia => 'Mes médias';
+
+  @override
+  String get accountHubPrivacy => 'Confidentialité';
+
+  @override
+  String get accountHubPrivacySubtitle => 'Visibilité, blocage, lectures';
+
+  @override
+  String get accountHubSecurity => 'Sécurité du compte';
+
+  @override
+  String get accountHubSecuritySubtitle => 'Mot de passe, appareils, biométrie';
+
+  @override
+  String get accountHubDataAccount => 'Données et compte';
+
+  @override
+  String get accountHubDataAccountSubtitle => 'Export RGPD, suppression';
+
+  @override
+  String get accountHubProfilePreview => 'Aperçu profil';
+
+  @override
+  String get accountHubProfilePreviewSubtitle => 'Voir comme vos contacts';
+
+  @override
+  String get profileBioLabel => 'Bio';
+
+  @override
+  String get profileBioHint =>
+      'Parlez de vous en quelques mots (500 caractères max)';
+
+  @override
+  String get profilePreviewLink => 'Aperçu du profil';
+
+  @override
+  String get myMediaTitle => 'Mes médias';
+
+  @override
+  String get myMediaPlaceholder =>
+      'Vos photos et vidéos partagées apparaîtront ici.';
+
+  @override
+  String get storageTitle => 'Stockage et cache';
+
+  @override
+  String get storageUsed => 'Espace utilisé';
+
+  @override
+  String get storageBreakdownTitle => 'Répartition';
+
+  @override
+  String get storageMediaCache => 'Cache médias';
+
+  @override
+  String get storageDatabase => 'Base de données';
+
+  @override
+  String get storageTempFiles => 'Fichiers temporaires';
+
+  @override
+  String get storageOther => 'Autres données';
+
+  @override
+  String get storageClearMediaCache => 'Vider le cache médias';
+
+  @override
+  String get storageClearTemp => 'Vider les fichiers temporaires';
+
+  @override
+  String get storageClearCacheConfirm =>
+      'Les fichiers en cache seront supprimés. Les médias pourront être retéléchargés.';
+
+  @override
+  String get storageClearCacheDone => 'Cache médias vidé';
+
+  @override
+  String get storageClearTempDone => 'Fichiers temporaires supprimés';
+
+  @override
+  String get networkDataTitle => 'Réseau et données';
+
+  @override
+  String get networkDataSectionNetwork => 'Réseau';
+
+  @override
+  String get networkWifiOnly => 'Wi-Fi uniquement';
+
+  @override
+  String get networkWifiOnlySubtitle =>
+      'Ne télécharge les médias que sur Wi-Fi';
+
+  @override
+  String get networkDataSaver => 'Économiseur de données';
+
+  @override
+  String get networkDataSaverSubtitle =>
+      'Réduit la qualité et les téléchargements automatiques';
+
+  @override
+  String get settingsSectionCommunication => 'Communication';
+
+  @override
+  String get settingsSectionApplication => 'Application';
+
+  @override
+  String get settingsSectionInformation => 'Informations';
+
+  @override
+  String get settingsStorage => 'Stockage et cache';
+
+  @override
+  String get settingsStorageSubtitle => 'Espace utilisé et nettoyage';
+
+  @override
+  String get settingsNetwork => 'Réseau et données';
+
+  @override
+  String get settingsNetworkSubtitle => 'Wi-Fi, économiseur, médias';
+
+  @override
+  String get settingsAccessibility => 'Accessibilité';
+
+  @override
+  String get settingsAccessibilitySubtitle => 'Texte et animations';
+
+  @override
+  String get settingsAbout => 'À propos et mentions légales';
+
+  @override
+  String get settingsMutedConversations => 'Conversations silencieuses';
+
+  @override
+  String get accessibilityTitle => 'Accessibilité';
+
+  @override
+  String get accessibilitySectionDisplay => 'Affichage';
+
+  @override
+  String get accessibilityFontScale => 'Taille du texte';
+
+  @override
+  String get accessibilityFontScaleSmall => 'Petit';
+
+  @override
+  String get accessibilityFontScaleDefault => 'Normal';
+
+  @override
+  String get accessibilityFontScaleMedium => 'Grand';
+
+  @override
+  String get accessibilityFontScaleLarge => 'Très grand';
+
+  @override
+  String get accessibilityReduceMotion => 'Réduire les animations';
+
+  @override
+  String get accessibilityReduceMotionSubtitle =>
+      'Limite les transitions et effets visuels';
+
+  @override
+  String get accessibilitySaveFailed =>
+      'Impossible d\'enregistrer les préférences';
+
+  @override
+  String get mutedConversationsTitle => 'Conversations silencieuses';
+
+  @override
+  String get mutedConversationsEmpty => 'Aucune conversation silencieuse';
+
+  @override
+  String mutedConversationsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count conversations',
+      one: '1 conversation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mutedForeverLabel => 'Silencieux indéfiniment';
+
+  @override
+  String mutedUntilLabel(String date) {
+    return 'Jusqu\'au $date';
+  }
+
+  @override
+  String get dndScheduleTitle => 'Ne pas déranger';
+
+  @override
+  String get dndEnabled => 'Planifier';
+
+  @override
+  String get dndEnabledSubtitle =>
+      'Couper les notifications sur un créneau horaire';
+
+  @override
+  String get dndScheduleHours => 'Horaires';
+
+  @override
+  String get dndStartTime => 'Début';
+
+  @override
+  String get dndEndTime => 'Fin';
+
+  @override
+  String get dndDays => 'Jours actifs';
+
+  @override
+  String get dndDayMon => 'Lun';
+
+  @override
+  String get dndDayTue => 'Mar';
+
+  @override
+  String get dndDayWed => 'Mer';
+
+  @override
+  String get dndDayThu => 'Jeu';
+
+  @override
+  String get dndDayFri => 'Ven';
+
+  @override
+  String get dndDaySat => 'Sam';
+
+  @override
+  String get dndDaySun => 'Dim';
+
+  @override
+  String get dndSaveFailed => 'Impossible d\'enregistrer le planning';
+
+  @override
+  String get aboutTitle => 'À propos';
+
+  @override
+  String get aboutSectionLegal => 'Mentions légales';
+
+  @override
+  String aboutVersion(String version, String build) {
+    return 'Version $version (build $build)';
+  }
+
+  @override
+  String get aboutTerms => 'Conditions d\'utilisation';
+
+  @override
+  String get aboutPrivacy => 'Politique de confidentialité';
+
+  @override
+  String get aboutLicenses => 'Licences open source';
+
+  @override
+  String get aboutSupport => 'Contacter le support';
+
+  @override
+  String get aboutCopyright => '© 2026 Alanya · Fait avec soin à Douala';
+
+  @override
+  String get exportDataTitle => 'Données et compte';
+
+  @override
+  String get exportSectionYourData => 'Vos données';
+
+  @override
+  String get exportSectionDanger => 'Zone sensible';
+
+  @override
+  String get exportPhase1Title => 'Export rapide (RGPD)';
+
+  @override
+  String get exportPhase1Subtitle =>
+      'Profil, contacts, métadonnées — disponible immédiatement';
+
+  @override
+  String get exportPhase2Title => 'Export complet';
+
+  @override
+  String get exportPhase2Subtitle =>
+      'Inclut messages et médias — prêt sous ~24 h';
+
+  @override
+  String get exportRequestPhase1 => 'Exporter maintenant';
+
+  @override
+  String get exportRequestPhase2 => 'Demander l\'export complet';
+
+  @override
+  String get exportPhase1ReadyTitle => 'Export prêt';
+
+  @override
+  String get exportPhase2Started =>
+      'Export complet demandé — vous serez notifié';
+
+  @override
+  String get exportInProgress => 'Export en cours';
+
+  @override
+  String get exportInProgressHint =>
+      'Prêt dans ~24 h · notification à l\'achèvement';
+
+  @override
+  String get exportReady => 'Votre export est prêt';
+
+  @override
+  String get exportDownload => 'Télécharger';
+
+  @override
+  String exportFailed(String error) {
+    return 'Export impossible : $error';
+  }
+
+  @override
+  String get deleteAccountTitle => 'Supprimer le compte';
+
+  @override
+  String get deleteAccountEntrySubtitle => 'Action irréversible';
+
+  @override
+  String get deleteAccountStep1Title => 'Action irréversible';
+
+  @override
+  String get deleteAccountStep1Bullet1 => 'Suppression des messages et médias';
+
+  @override
+  String get deleteAccountStep1Bullet2 => 'Retrait de tous les groupes';
+
+  @override
+  String get deleteAccountStep1Bullet3 =>
+      'Numéro libéré après la période de grâce';
+
+  @override
+  String get deleteAccountContinue => 'Continuer';
+
+  @override
+  String get deleteAccountPassword => 'Mot de passe';
+
+  @override
+  String get deleteAccountConfirmLabel => 'Taper SUPPRIMER';
+
+  @override
+  String get deleteAccountConfirmWord => 'SUPPRIMER';
+
+  @override
+  String get deleteAccountConfirmMismatch => 'Tapez SUPPRIMER pour confirmer';
+
+  @override
+  String get deleteAccountSubmit => 'Supprimer mon compte';
+
+  @override
+  String get deleteAccountGraceTitle => 'Suppression planifiée';
+
+  @override
+  String deleteAccountGraceBody(String date) {
+    return 'Votre compte sera définitivement supprimé le $date. Vous pouvez annuler d\'ici là.';
+  }
+
+  @override
+  String deleteAccountFailed(String error) {
+    return 'Suppression impossible : $error';
+  }
+
+  @override
+  String get biometricLock => 'Verrouillage biométrique';
+
+  @override
+  String get biometricLockTitle => 'Alanya est verrouillé';
+
+  @override
+  String get biometricLockUnlock => 'Déverrouiller';
+
+  @override
+  String get biometricLockSubtitle =>
+      'Empreinte ou reconnaissance faciale à l\'ouverture';
+
+  @override
+  String get biometricLockEnableConfirm =>
+      'Confirmez votre empreinte pour activer le verrou';
+
+  @override
+  String get biometricLockUnavailable =>
+      'Biométrie indisponible sur cet appareil';
+
+  @override
+  String biometricLockFailed(String error) {
+    return 'Biométrie : $error';
+  }
+
+  @override
+  String get accountSecuritySectionProtection => 'Protection';
+
+  @override
+  String get logoutAllDevices => 'Déconnecter tous les appareils';
+
+  @override
+  String get logoutAllDevicesSubtitle =>
+      'Ferme toutes les sessions sauf celle-ci';
+
+  @override
+  String get logoutAllDevicesConfirm =>
+      'Tous les autres appareils seront déconnectés immédiatement.';
+
+  @override
+  String get logoutAllDevicesAction => 'Déconnecter';
+
+  @override
+  String get logoutAllDevicesDone => 'Autres appareils déconnectés';
+
+  @override
+  String get logoutAllDevicesFailed =>
+      'Impossible de déconnecter tous les appareils';
+
+  @override
+  String get privacySectionWhoCanSee => 'Qui peut me voir';
+
+  @override
+  String get privacySectionMessages => 'Messages';
+
+  @override
+  String get privacySectionLists => 'Listes et groupes';
+
+  @override
+  String get privacyLastSeen => 'Dernière connexion';
+
+  @override
+  String get privacyOnlineStatus => 'Statut en ligne';
+
+  @override
+  String get privacyProfilePhoto => 'Photo de profil';
+
+  @override
+  String get privacyReadReceipts => 'Accusés de lecture';
+
+  @override
+  String get privacyReadReceiptsSubtitle =>
+      'Envoyer et recevoir les confirmations de lecture';
+
+  @override
+  String get privacyNotificationPreview => 'Aperçu des notifications';
+
+  @override
+  String get privacyBlockedContacts => 'Contacts bloqués';
+
+  @override
+  String get privacyBlockedContactsEmpty => 'Aucun contact bloqué';
+
+  @override
+  String privacyBlockedContactsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count contacts',
+      one: '1 contact',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get privacyAddToGroups => 'Ajout aux groupes';
+
+  @override
+  String get privacyVisibilityEveryone => 'Tout le monde';
+
+  @override
+  String get privacyVisibilityContacts => 'Mes contacts';
+
+  @override
+  String get privacyVisibilityNobody => 'Personne';
+
+  @override
+  String get privacySaveFailed => 'Impossible d\'enregistrer les préglages';
+
+  @override
+  String get onboardingCredentialsTitle => 'Vos identifiants';
+
+  @override
+  String get onboardingCredentialsSubtitle =>
+      'Conservez ces informations en lieu sûr.';
+
+  @override
+  String get onboardingCredentialsBanner =>
+      'Notez votre numéro Alanya et votre mot de passe — ils ne seront plus affichés.';
+
+  @override
+  String get onboardingProfileTitle => 'Votre profil';
+
+  @override
+  String get onboardingProfileSubtitle =>
+      'Photo, pays, bio : complétez maintenant ou plus tard dans Mon compte.';
+
+  @override
+  String get profileBioDefault => 'Salut, je suis sur Alanya';
+
+  @override
+  String get onboardingPersonalizeTitle => 'Personnaliser Alanya';
+
+  @override
+  String get onboardingPersonalizeSubtitle =>
+      'Thème, langue et verrouillage. Modifiable à tout moment dans Paramètres.';
+
+  @override
+  String onboardingStepOf(int current, int total) {
+    return 'Étape $current sur $total';
+  }
+
+  @override
+  String get onboardingCountryTitle => 'Votre pays';
+
+  @override
+  String get onboardingCountrySubtitle =>
+      'Aide vos contacts à vous identifier.';
+
+  @override
+  String get onboardingPhotoTitle => 'Photo de profil';
+
+  @override
+  String get onboardingPhotoSubtitle =>
+      'Ajoutez une photo ou passez cette étape.';
+
+  @override
+  String get onboardingPhotoChooseGallery => 'Choisir dans la galerie';
+
+  @override
+  String get onboardingPhotoCamera => 'Prendre une photo';
+
+  @override
+  String get onboardingPhotoFailed => 'Impossible d\'ajouter la photo';
+
+  @override
+  String get onboardingBioTitle => 'Quelques mots sur vous';
+
+  @override
+  String get onboardingBioSubtitle =>
+      'Présentez-vous en une phrase (optionnel).';
+
+  @override
+  String get onboardingBioHint => 'Salut, je suis sur Alanya';
+
+  @override
+  String get onboardingEmailTitle => 'Adresse e-mail';
+
+  @override
+  String get onboardingEmailSubtitle =>
+      'Facilite la récupération de votre compte.';
+
+  @override
+  String get onboardingEmailVerify => 'Vérifier le code';
+
+  @override
+  String get onboardingPreferencesTitle => 'Préférences';
+
+  @override
+  String get onboardingPreferencesSubtitle =>
+      'Thème et langue de l\'application.';
+
+  @override
+  String get onboardingThemeLabel => 'Thème';
+
+  @override
+  String get onboardingLanguageLabel => 'Langue';
+
+  @override
+  String get onboardingBiometricTitle => 'Protéger l\'accès';
+
+  @override
+  String get onboardingBiometricSubtitle =>
+      'Un geste rapide à chaque retour dans l\'app.';
+
+  @override
+  String get onboardingBiometricFriendlyTitle =>
+      'Empreinte ou reconnaissance faciale';
+
+  @override
+  String get onboardingBiometricFriendlyBody =>
+      'Activez le déverrouillage rapide. Vous pourrez le modifier dans Paramètres.';
+
+  @override
+  String get onboardingBiometricUnavailable =>
+      'Biométrie indisponible — vous pourrez l\'activer plus tard dans les paramètres.';
+
+  @override
+  String get onboardingCompleteTitle => 'C\'est parti !';
+
+  @override
+  String get onboardingCompleteSubtitle => 'Votre compte est prêt.';
+
+  @override
+  String get onboardingCompleteMessage =>
+      'Explorez Alanya et restez connecté avec vos proches.';
+
+  @override
+  String get onboardingCompleteCta => 'Découvrir Alanya';
+
+  @override
+  String get onboardingContinue => 'Continuer';
+
+  @override
+  String get onboardingSkip => 'Passer';
+
+  @override
+  String get onboardingSkipAll => 'Configurer plus tard';
+
+  @override
+  String get onboardingSkipAllTitle => 'Passer la configuration ?';
+
+  @override
+  String get onboardingSkipAllBody =>
+      'Vous pourrez compléter votre profil à tout moment dans Mon compte.';
+
+  @override
+  String get onboardingSkipAllCredentialsBody =>
+      'Vous ne reverrez plus votre mot de passe ici. Complétez votre profil quand vous voulez dans Mon compte.';
+
+  @override
+  String get onboardingSaveFailed =>
+      'Enregistrement impossible — réessayez ou passez cette étape.';
+
+  @override
+  String deleteAccountGraceDays(int days) {
+    return 'Délai de grâce · $days jours';
+  }
+
+  @override
+  String get deleteAccountCancelDeletion => 'Annuler la suppression';
+
+  @override
+  String get deleteAccountCancelSuccess => 'Suppression annulée';
+
+  @override
+  String get deleteAccountCancelFailed =>
+      'Impossible d\'annuler la suppression';
+
+  @override
+  String get deleteAccountLogoutNow => 'Se déconnecter';
+
+  @override
+  String get myMediaEmpty => 'Aucun média partagé pour le moment';
+
+  @override
+  String get myMediaLoadFailed => 'Impossible de charger vos médias';
+
+  @override
+  String dndSummaryActive(String start, String end, String days) {
+    return '$start – $end · $days';
+  }
+
+  @override
+  String get dndSummaryInactive => 'Désactivé';
+
+  @override
+  String get exportPhase1ShareSubject =>
+      'Export Alanya (profil et métadonnées)';
 }

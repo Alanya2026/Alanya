@@ -619,6 +619,9 @@
   "admin": "Admin",
   "audio2": "Audio",
   "playbackSpeed": "Playback speed",
+  "playbackSpeedVoiceLabel": "Voice messages",
+  "playbackSpeedVideoLabel": "Videos",
+  "playbackSpeedMusicLabel": "Music",
   "music": "Music",
   "musicPreview": "🎵 {name}",
   "@musicPreview": {
@@ -1521,5 +1524,277 @@
       "name": { "type": "String" }
     }
   },
-  "qrBannerSignedOutRemotely": "This device was signed out from another device."
+  "qrBannerSignedOutRemotely": "This device was signed out from another device.",
+
+  "myAccountLabel": "My account",
+  "accountHubTitle": "My account",
+  "accountHubSecurityScore": "Security score",
+  "accountHubSecurityScoreValue": "{score} / {max}",
+  "@accountHubSecurityScoreValue": {
+    "placeholders": {
+      "score": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "securityScoreAddEmail": "Add an email to improve your score.",
+  "securityScoreAddBiometric": "Enable biometrics to improve your score.",
+  "accountHubSectionIdentity": "Identity",
+  "accountHubSectionProtection": "Protection",
+  "accountHubSectionData": "Data",
+  "accountHubEditProfile": "Edit profile",
+  "accountHubEditProfileSubtitle": "Name, username, bio, photo",
+  "accountHubMyMedia": "My media",
+  "accountHubPrivacy": "Privacy",
+  "accountHubPrivacySubtitle": "Visibility, blocking, read receipts",
+  "accountHubSecurity": "Account security",
+  "accountHubSecuritySubtitle": "Password, devices, biometrics",
+  "accountHubDataAccount": "Data & account",
+  "accountHubDataAccountSubtitle": "GDPR export, deletion",
+  "accountHubProfilePreview": "Profile preview",
+  "accountHubProfilePreviewSubtitle": "See how contacts view you",
+  "profileBioLabel": "Bio",
+  "profileBioHint": "Tell others about yourself (500 characters max)",
+  "profilePreviewLink": "Profile preview",
+  "myMediaTitle": "My media",
+  "myMediaPlaceholder": "Your shared photos and videos will appear here.",
+  "storageTitle": "Storage & cache",
+  "storageUsed": "Storage used",
+  "storageBreakdownTitle": "Breakdown",
+  "storageMediaCache": "Media cache",
+  "storageDatabase": "Database",
+  "storageTempFiles": "Temporary files",
+  "storageOther": "Other data",
+  "storageClearMediaCache": "Clear media cache",
+  "storageClearTemp": "Clear temporary files",
+  "storageClearCacheConfirm": "Cached files will be removed. Media can be downloaded again.",
+  "storageClearCacheDone": "Media cache cleared",
+  "storageClearTempDone": "Temporary files cleared",
+  "networkDataTitle": "Network & data",
+  "networkDataSectionNetwork": "Network",
+  "networkWifiOnly": "Wi-Fi only",
+  "networkWifiOnlySubtitle": "Only download media on Wi-Fi",
+  "networkDataSaver": "Data saver",
+  "networkDataSaverSubtitle": "Reduces quality and automatic downloads",
+  "settingsSectionCommunication": "Communication",
+  "settingsSectionApplication": "Application",
+  "settingsSectionInformation": "Information",
+  "settingsStorage": "Storage & cache",
+  "settingsStorageSubtitle": "Usage and cleanup",
+  "settingsNetwork": "Network & data",
+  "settingsNetworkSubtitle": "Wi-Fi, data saver, media",
+  "settingsAccessibility": "Accessibility",
+  "settingsAccessibilitySubtitle": "Text and motion",
+  "settingsAbout": "About & legal",
+  "settingsMutedConversations": "Muted conversations",
+  "accessibilityTitle": "Accessibility",
+  "accessibilitySectionDisplay": "Display",
+  "accessibilityFontScale": "Text size",
+  "accessibilityFontScaleSmall": "Small",
+  "accessibilityFontScaleDefault": "Normal",
+  "accessibilityFontScaleMedium": "Large",
+  "accessibilityFontScaleLarge": "Extra large",
+  "accessibilityReduceMotion": "Reduce motion",
+  "accessibilityReduceMotionSubtitle": "Limits transitions and visual effects",
+  "accessibilitySaveFailed": "Could not save preferences",
+  "mutedConversationsTitle": "Muted conversations",
+  "mutedConversationsEmpty": "No muted conversations",
+  "mutedConversationsCount": "{count, plural, =1{1 conversation} other{{count} conversations}}",
+  "@mutedConversationsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mutedForeverLabel": "Muted indefinitely",
+  "mutedUntilLabel": "Until {date}",
+  "@mutedUntilLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "dndScheduleTitle": "Do not disturb",
+  "dndEnabled": "Schedule",
+  "dndEnabledSubtitle": "Mute notifications on a time schedule",
+  "dndScheduleHours": "Hours",
+  "dndStartTime": "Start",
+  "dndEndTime": "End",
+  "dndDays": "Active days",
+  "dndDayMon": "Mon",
+  "dndDayTue": "Tue",
+  "dndDayWed": "Wed",
+  "dndDayThu": "Thu",
+  "dndDayFri": "Fri",
+  "dndDaySat": "Sat",
+  "dndDaySun": "Sun",
+  "dndSaveFailed": "Could not save schedule",
+  "aboutTitle": "About",
+  "aboutSectionLegal": "Legal",
+  "aboutVersion": "Version {version} (build {build})",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": { "type": "String" },
+      "build": { "type": "String" }
+    }
+  },
+  "aboutTerms": "Terms of service",
+  "aboutPrivacy": "Privacy policy",
+  "aboutLicenses": "Open source licenses",
+  "aboutSupport": "Contact support",
+  "aboutCopyright": "© 2026 Alanya · Made with care in Douala",
+  "exportDataTitle": "Data & account",
+  "exportSectionYourData": "Your data",
+  "exportSectionDanger": "Sensitive zone",
+  "exportPhase1Title": "Quick export (GDPR)",
+  "exportPhase1Subtitle": "Profile, contacts, metadata — available immediately",
+  "exportPhase2Title": "Full export",
+  "exportPhase2Subtitle": "Includes messages and media — ready in ~24 h",
+  "exportRequestPhase1": "Export now",
+  "exportRequestPhase2": "Request full export",
+  "exportPhase1ReadyTitle": "Export ready",
+  "exportPhase2Started": "Full export requested — you will be notified",
+  "exportInProgress": "Export in progress",
+  "exportInProgressHint": "Ready in ~24 h · notification when complete",
+  "exportReady": "Your export is ready",
+  "exportDownload": "Download",
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "deleteAccountTitle": "Delete account",
+  "deleteAccountEntrySubtitle": "Irreversible action",
+  "deleteAccountStep1Title": "Irreversible action",
+  "deleteAccountStep1Bullet1": "Messages and media will be deleted",
+  "deleteAccountStep1Bullet2": "Removed from all groups",
+  "deleteAccountStep1Bullet3": "Phone number released after the grace period",
+  "deleteAccountContinue": "Continue",
+  "deleteAccountPassword": "Password",
+  "deleteAccountConfirmLabel": "Type DELETE",
+  "deleteAccountConfirmWord": "DELETE",
+  "deleteAccountConfirmMismatch": "Type DELETE to confirm",
+  "deleteAccountSubmit": "Delete my account",
+  "deleteAccountGraceTitle": "Deletion scheduled",
+  "deleteAccountGraceBody": "Your account will be permanently deleted on {date}. You can cancel until then.",
+  "@deleteAccountGraceBody": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "deleteAccountFailed": "Deletion failed: {error}",
+  "@deleteAccountFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "biometricLock": "Biometric lock",
+  "biometricLockTitle": "Alanya is locked",
+  "biometricLockUnlock": "Unlock",
+  "biometricLockSubtitle": "Fingerprint or face unlock on open",
+  "biometricLockEnableConfirm": "Confirm your fingerprint to enable the lock",
+  "biometricLockUnavailable": "Biometrics unavailable on this device",
+  "biometricLockFailed": "Biometrics: {error}",
+  "@biometricLockFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "accountSecuritySectionProtection": "Protection",
+  "logoutAllDevices": "Sign out all devices",
+  "logoutAllDevicesSubtitle": "Ends all sessions except this one",
+  "logoutAllDevicesConfirm": "All other devices will be signed out immediately.",
+  "logoutAllDevicesAction": "Sign out",
+  "logoutAllDevicesDone": "Other devices signed out",
+  "logoutAllDevicesFailed": "Could not sign out all devices",
+  "privacySectionWhoCanSee": "Who can see me",
+  "privacySectionMessages": "Messages",
+  "privacySectionLists": "Lists & groups",
+  "privacyLastSeen": "Last seen",
+  "privacyOnlineStatus": "Online status",
+  "privacyProfilePhoto": "Profile photo",
+  "privacyReadReceipts": "Read receipts",
+  "privacyReadReceiptsSubtitle": "Send and receive read confirmations",
+  "privacyNotificationPreview": "Notification preview",
+  "privacyBlockedContacts": "Blocked contacts",
+  "privacyBlockedContactsEmpty": "No blocked contacts",
+  "privacyBlockedContactsCount": "{count, plural, =1{1 contact} other{{count} contacts}}",
+  "@privacyBlockedContactsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "privacyAddToGroups": "Add to groups",
+  "privacyVisibilityEveryone": "Everyone",
+  "privacyVisibilityContacts": "My contacts",
+  "privacyVisibilityNobody": "Nobody",
+  "privacySaveFailed": "Could not save privacy settings",
+  "onboardingCredentialsTitle": "Your credentials",
+  "onboardingCredentialsSubtitle": "Keep this information in a safe place.",
+  "onboardingCredentialsBanner": "Save your Alanya number and password — they won't be shown again.",
+  "onboardingProfileTitle": "Your profile",
+  "onboardingProfileSubtitle": "Photo, country, bio: fill in now or anytime in My account.",
+  "profileBioDefault": "Hi, I'm on Alanya",
+  "onboardingPersonalizeTitle": "Personalize Alanya",
+  "onboardingPersonalizeSubtitle": "Theme, language, and lock. Change anytime in Settings.",
+  "onboardingStepOf": "Step {current} of {total}",
+  "@onboardingStepOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "onboardingCountryTitle": "Your country",
+  "onboardingCountrySubtitle": "Helps contacts recognize you.",
+  "onboardingPhotoTitle": "Profile photo",
+  "onboardingPhotoSubtitle": "Add a photo or skip this step.",
+  "onboardingPhotoChooseGallery": "Choose from gallery",
+  "onboardingPhotoCamera": "Take a photo",
+  "onboardingPhotoFailed": "Could not add photo",
+  "onboardingBioTitle": "A few words about you",
+  "onboardingBioSubtitle": "Introduce yourself in one line (optional).",
+  "onboardingBioHint": "Hi, I'm on Alanya",
+  "onboardingEmailTitle": "Email address",
+  "onboardingEmailSubtitle": "Makes account recovery easier.",
+  "onboardingEmailVerify": "Verify code",
+  "onboardingPreferencesTitle": "Preferences",
+  "onboardingPreferencesSubtitle": "App theme and language.",
+  "onboardingThemeLabel": "Theme",
+  "onboardingLanguageLabel": "Language",
+  "onboardingBiometricTitle": "Protect access",
+  "onboardingBiometricSubtitle": "A quick gesture each time you return to the app.",
+  "onboardingBiometricFriendlyTitle": "Fingerprint or face unlock",
+  "onboardingBiometricFriendlyBody": "Turn on quick unlock. You can change this anytime in Settings.",
+  "onboardingBiometricUnavailable": "Biometrics unavailable — you can enable this later in settings.",
+  "onboardingCompleteTitle": "You're all set!",
+  "onboardingCompleteSubtitle": "Your account is ready.",
+  "onboardingCompleteMessage": "Explore Alanya and stay connected with people you care about.",
+  "onboardingCompleteCta": "Discover Alanya",
+  "onboardingContinue": "Continue",
+  "onboardingSkip": "Skip",
+  "onboardingSkipAll": "Set up later",
+  "onboardingSkipAllTitle": "Skip setup?",
+  "onboardingSkipAllBody": "You can complete your profile anytime in My account.",
+  "onboardingSkipAllCredentialsBody": "You won't see your password here again. Complete your profile anytime in My account.",
+  "onboardingSaveFailed": "Could not save — try again or skip this step.",
+  "deleteAccountGraceDays": "Grace period · {days} days",
+  "@deleteAccountGraceDays": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "deleteAccountCancelDeletion": "Cancel deletion",
+  "deleteAccountCancelSuccess": "Deletion cancelled",
+  "deleteAccountCancelFailed": "Could not cancel deletion",
+  "deleteAccountLogoutNow": "Sign out",
+  "myMediaEmpty": "No shared media yet",
+  "myMediaLoadFailed": "Could not load your media",
+  "dndSummaryActive": "{start} – {end} · {days}",
+  "@dndSummaryActive": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" },
+      "days": { "type": "String" }
+    }
+  },
+  "dndSummaryInactive": "Off",
+  "exportPhase1ShareSubject": "Alanya export (profile and metadata)"
 }

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alanya — Onboarding — terminé</title>
+<style>
+  :root {
+    --brand: #3F51B5; --brand-dark: #1A237E; --brand-container: #E8EAF6;
+    --error: #EF4444; --error-container: #FDECEC; --success: #1FA363;
+    --success-container: #E2F6EC; --warning: #F59E0B; --warning-container: #FDF1DC;
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #3A404C; --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand-container: #283593; --error-container: #3A1414;
+      --success-container: #143726; --warning-container: #3A2C10;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593; --error-container: #3A1414;
+    --success-container: #143726; --warning-container: #3A2C10;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page-bg); color: var(--page-ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  .page { max-width: 1180px; margin: 0 auto; padding: clamp(20px,5vw,56px) clamp(16px,4vw,40px) 72px; display: flex; flex-direction: column; gap: 40px; }
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 68ch; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--brand); font-weight: 600; }
+  h1 { margin: 0; font-size: clamp(1.5rem,3vw,2rem); font-weight: 700; letter-spacing: -.02em; }
+  .lead { margin: 0; color: var(--page-ink-2); max-width: 62ch; }
+  .section h2 { margin: 0 0 var(--s-lg); font-size: 13px; font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--page-ink-2); }
+  .stage { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(20px,3vw,36px); align-items: start; }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 32ch; }
+  .device { width: 100%; max-width: 340px; background: var(--bg); border: 1px solid var(--outline); border-radius: 30px; padding: 8px; box-shadow: 0 18px 44px rgba(26,35,126,.13), 0 2px 6px rgba(0,0,0,.05); }
+  .screen { background: var(--bg); border-radius: 23px; overflow: hidden; display: flex; flex-direction: column; min-height: 620px; color: var(--ink); }
+  .appbar { background: var(--surface); padding: 14px var(--s-lg); display: flex; align-items: center; gap: var(--s-md); border-bottom: 1px solid var(--outline); }
+  .appbar h3 { margin: 0; font-size: 20px; font-weight: 650; flex: 1; }
+  .back { width: 20px; height: 20px; color: var(--brand); flex: none; }
+  .body { flex: 1; overflow-y: auto; padding-bottom: var(--s-xxl); }
+  .card { margin: var(--s-lg) var(--s-lg) 0; background: var(--surface); border-radius: var(--r-md); box-shadow: 0 1px 3px rgba(0,0,0,.04); overflow: hidden; }
+  .profile-header { padding: var(--s-xxl) var(--s-lg); text-align: center; }
+  .avatar-lg { width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(135deg,#5C6BC0,#3949AB); color: #fff; font-size: 36px; font-weight: 650; display: grid; place-items: center; margin: 0 auto; position: relative; }
+  .avatar-sm { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg,#5C6BC0,#3949AB); color: #fff; font-size: 16px; font-weight: 650; display: grid; place-items: center; flex: none; }
+  .cam-badge { position: absolute; bottom: 0; right: -4px; width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 14px; display: grid; place-items: center; border: 2px solid var(--surface); }
+  .pseudo { color: var(--ink-2); font-size: 15px; margin-top: 4px; }
+  .phone-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; color: var(--brand); font-weight: 500; font-size: 14px; }
+  .chip-warn { margin: var(--s-md) var(--s-lg) 0; padding: 10px var(--s-md); background: var(--error-container); border-radius: var(--r-sm); display: flex; align-items: center; gap: var(--s-sm); font-size: 13px; color: var(--error); }
+  .chip-info { margin: var(--s-md) var(--s-lg) 0; padding: 10px var(--s-md); background: var(--warning-container); border-radius: var(--r-sm); font-size: 13px; color: var(--ink); }
+  .chip-success { margin: var(--s-md) var(--s-lg) 0; padding: 12px var(--s-md); background: var(--success-container); border-radius: var(--r-sm); }
+  .score-bar { height: 6px; background: var(--outline); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+  .score-fill { height: 100%; background: var(--success); border-radius: 999px; }
+  .score-fill.warn { background: var(--warning); }
+  .tile { display: flex; align-items: center; gap: var(--s-md); padding: 14px var(--s-lg); border-bottom: 1px solid var(--outline); }
+  .tile:last-child { border-bottom: none; }
+  .tile-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-muted); display: grid; place-items: center; font-size: 18px; flex: none; }
+  .tile-icon.brand { background: var(--brand-container); color: var(--brand); }
+  .tile-body { flex: 1; min-width: 0; }
+  .tile-title { font-size: 15px; font-weight: 500; }
+  .tile-sub { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+  .chev { color: var(--ink-3); font-size: 18px; }
+  .group-label { padding: var(--s-lg) var(--s-lg) var(--s-sm); font-size: 12px; font-weight: 600; color: var(--brand); text-transform: uppercase; letter-spacing: .04em; }
+  .seg { display: flex; gap: 4px; padding: var(--s-md); background: var(--surface-muted); border-radius: var(--r-sm); margin: 0 var(--s-lg) var(--s-md); }
+  .seg-btn { flex: 1; padding: 8px 4px; text-align: center; font-size: 11px; border-radius: 8px; color: var(--ink-2); }
+  .seg-btn.on { background: var(--surface); color: var(--brand); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .switch { width: 44px; height: 26px; border-radius: 999px; background: var(--brand); position: relative; flex: none; }
+  .switch.off { background: var(--outline); }
+  .switch::after { content: ''; position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .switch.off::after { right: auto; left: 3px; }
+  .contacts-row { display: flex; justify-content: space-evenly; padding: var(--s-lg); }
+  .contact-chip { text-align: center; width: 64px; }
+  .contact-chip .av { width: 48px; height: 48px; border-radius: 50%; background: var(--brand-container); color: var(--brand); font-weight: 650; display: grid; place-items: center; margin: 0 auto 4px; font-size: 16px; }
+  .contact-chip span { font-size: 11px; color: var(--ink-2); }
+  .field { margin: var(--s-md) var(--s-lg); }
+  .field label { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; font-weight: 500; }
+  .field input, .field textarea { width: 100%; padding: 12px; border: 1px solid var(--outline); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font-family: inherit; font-size: 15px; }
+  .field textarea { min-height: 80px; resize: none; }
+  .btn-primary { margin: var(--s-lg); padding: 14px; background: var(--brand); color: #fff; border: none; border-radius: var(--r-sm); font-weight: 600; font-size: 15px; width: calc(100% - 32px); }
+  .btn-danger { background: var(--error); }
+  .btn-outline { background: transparent; border: 1px solid var(--outline); color: var(--ink); }
+  .media-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; padding: var(--s-lg); }
+  .media-cell { aspect-ratio: 1; background: var(--surface-muted); border-radius: 4px; }
+  .media-cell:nth-child(1) { background: linear-gradient(135deg,#7986CB,#5C6BC0); }
+  .media-cell:nth-child(2) { background: linear-gradient(135deg,#4DB6AC,#00897B); }
+  .media-cell:nth-child(3) { background: linear-gradient(135deg,#FFB74D,#F57C00); }
+  .storage-bar { height: 8px; background: var(--outline); border-radius: 999px; overflow: hidden; display: flex; margin: var(--s-md) 0; }
+  .storage-seg { height: 100%; }
+  .step-dots { display: flex; justify-content: center; gap: 8px; padding: var(--s-lg); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--outline); }
+  .dot.on { background: var(--brand); width: 24px; border-radius: 999px; }
+  .theme-toggle { position: fixed; top: 16px; right: 16px; background: var(--page-panel); border: 1px solid var(--page-line); border-radius: var(--r-sm); padding: 6px 12px; font-size: 12px; font-family: var(--mono); cursor: pointer; color: var(--page-ink-2); z-index: 99; }
+  .nav-glass { position: absolute; bottom: 12px; left: 12px; right: 12px; height: 56px; background: rgba(255,255,255,.85); border-radius: 28px; border: 1px solid var(--outline); display: flex; align-items: center; justify-content: space-around; font-size: 10px; color: var(--ink-3); }
+  .nav-glass .on { color: var(--brand); font-weight: 600; }
+  .screen-rel { position: relative; padding-bottom: 72px; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" type="button" onclick="toggleTheme()">Thème clair / sombre</button>
+<div class="page">
+<header class="masthead">
+<span class="eyebrow">Onboarding · Phase 1</span>
+<h1>Onboarding — terminé</h1>
+<p class="lead">Écran de fin avec CTA « Découvrir Alanya ».</p>
+</header>
+<section class="section"><h2>Mode clair · Mode sombre</h2><div class="stage">
+<div class="device-block"><div class="device"><div class="screen">
+<div class="body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--s-xxl);text-align:center;min-height:520px;">
+<div style="font-size:56px;">🎉</div>
+<div style="font-weight:700;font-size:22px;margin-top:var(--s-lg);">C'est parti !</div>
+<div style="font-size:14px;color:var(--ink-2);margin-top:var(--s-sm);max-width:28ch;">Votre compte est prêt. Explorez Alanya.</div>
+<button class="btn-primary" type="button" style="margin-top:var(--s-xxl);">Découvrir Alanya</button>
+</div>
+</div></div><p class="device-caption">Mode clair</p></div>
+<div class="device-block"><div class="device"><div class="screen" style="background:#0F1115;color:#F2F4F8;">
+<div class="body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--s-xxl);text-align:center;min-height:520px;">
+<div style="font-size:56px;">🎉</div>
+<div style="font-weight:700;font-size:22px;margin-top:var(--s-lg);">C'est parti !</div>
+<div style="font-size:14px;color:var(--ink-2);margin-top:var(--s-sm);max-width:28ch;">Votre compte est prêt. Explorez Alanya.</div>
+<button class="btn-primary" type="button" style="margin-top:var(--s-xxl);">Découvrir Alanya</button>
+</div>
+</div></div><p class="device-caption">Mode sombre</p></div>
+</div></section>
+<footer style="font-family:var(--mono);font-size:11px;color:var(--page-ink-2);padding-top:var(--s-xl);border-top:1px solid var(--page-line);">
+Tokens : app_colors.dart · app_dimens.dart · Maquette Phase 0 — profils &amp; paramètres
+</footer>
+</div>
+<script>
+  function toggleTheme() {
+    const r = document.documentElement;
+    const c = r.getAttribute('data-theme');
+    if (c === 'dark') r.removeAttribute('data-theme');
+    else if (c === 'light') r.setAttribute('data-theme', 'dark');
+    else r.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+  }
+</script>
+</body>
+</html>

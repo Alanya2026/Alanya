@@ -3686,6 +3686,24 @@ abstract class AppLocalizations {
   /// **'Vitesse de lecture'**
   String get playbackSpeed;
 
+  /// No description provided for @playbackSpeedVoiceLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages vocaux'**
+  String get playbackSpeedVoiceLabel;
+
+  /// No description provided for @playbackSpeedVideoLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vidéos'**
+  String get playbackSpeedVideoLabel;
+
+  /// No description provided for @playbackSpeedMusicLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Musique'**
+  String get playbackSpeedMusicLabel;
+
   /// No description provided for @music.
   ///
   /// In fr, this message translates to:
@@ -6535,6 +6553,1242 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Cet appareil a été déconnecté depuis un autre appareil.'**
   String get qrBannerSignedOutRemotely;
+
+  /// No description provided for @myAccountLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon compte'**
+  String get myAccountLabel;
+
+  /// No description provided for @accountHubTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon compte'**
+  String get accountHubTitle;
+
+  /// No description provided for @accountHubSecurityScore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Score de sécurité'**
+  String get accountHubSecurityScore;
+
+  /// No description provided for @accountHubSecurityScoreValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{score} / {max}'**
+  String accountHubSecurityScoreValue(int score, int max);
+
+  /// No description provided for @securityScoreAddEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez un e-mail pour améliorer votre score.'**
+  String get securityScoreAddEmail;
+
+  /// No description provided for @securityScoreAddBiometric.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activez la biométrie pour améliorer votre score.'**
+  String get securityScoreAddBiometric;
+
+  /// No description provided for @accountHubSectionIdentity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Identité'**
+  String get accountHubSectionIdentity;
+
+  /// No description provided for @accountHubSectionProtection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Protection'**
+  String get accountHubSectionProtection;
+
+  /// No description provided for @accountHubSectionData.
+  ///
+  /// In fr, this message translates to:
+  /// **'Données'**
+  String get accountHubSectionData;
+
+  /// No description provided for @accountHubEditProfile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le profil'**
+  String get accountHubEditProfile;
+
+  /// No description provided for @accountHubEditProfileSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom, pseudo, bio, photo'**
+  String get accountHubEditProfileSubtitle;
+
+  /// No description provided for @accountHubMyMedia.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes médias'**
+  String get accountHubMyMedia;
+
+  /// No description provided for @accountHubPrivacy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confidentialité'**
+  String get accountHubPrivacy;
+
+  /// No description provided for @accountHubPrivacySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visibilité, blocage, lectures'**
+  String get accountHubPrivacySubtitle;
+
+  /// No description provided for @accountHubSecurity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sécurité du compte'**
+  String get accountHubSecurity;
+
+  /// No description provided for @accountHubSecuritySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe, appareils, biométrie'**
+  String get accountHubSecuritySubtitle;
+
+  /// No description provided for @accountHubDataAccount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Données et compte'**
+  String get accountHubDataAccount;
+
+  /// No description provided for @accountHubDataAccountSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export RGPD, suppression'**
+  String get accountHubDataAccountSubtitle;
+
+  /// No description provided for @accountHubProfilePreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu profil'**
+  String get accountHubProfilePreview;
+
+  /// No description provided for @accountHubProfilePreviewSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir comme vos contacts'**
+  String get accountHubProfilePreviewSubtitle;
+
+  /// No description provided for @profileBioLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bio'**
+  String get profileBioLabel;
+
+  /// No description provided for @profileBioHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parlez de vous en quelques mots (500 caractères max)'**
+  String get profileBioHint;
+
+  /// No description provided for @profilePreviewLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu du profil'**
+  String get profilePreviewLink;
+
+  /// No description provided for @myMediaTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes médias'**
+  String get myMediaTitle;
+
+  /// No description provided for @myMediaPlaceholder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos photos et vidéos partagées apparaîtront ici.'**
+  String get myMediaPlaceholder;
+
+  /// No description provided for @storageTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stockage et cache'**
+  String get storageTitle;
+
+  /// No description provided for @storageUsed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Espace utilisé'**
+  String get storageUsed;
+
+  /// No description provided for @storageBreakdownTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartition'**
+  String get storageBreakdownTitle;
+
+  /// No description provided for @storageMediaCache.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cache médias'**
+  String get storageMediaCache;
+
+  /// No description provided for @storageDatabase.
+  ///
+  /// In fr, this message translates to:
+  /// **'Base de données'**
+  String get storageDatabase;
+
+  /// No description provided for @storageTempFiles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers temporaires'**
+  String get storageTempFiles;
+
+  /// No description provided for @storageOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autres données'**
+  String get storageOther;
+
+  /// No description provided for @storageClearMediaCache.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vider le cache médias'**
+  String get storageClearMediaCache;
+
+  /// No description provided for @storageClearTemp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vider les fichiers temporaires'**
+  String get storageClearTemp;
+
+  /// No description provided for @storageClearCacheConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fichiers en cache seront supprimés. Les médias pourront être retéléchargés.'**
+  String get storageClearCacheConfirm;
+
+  /// No description provided for @storageClearCacheDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cache médias vidé'**
+  String get storageClearCacheDone;
+
+  /// No description provided for @storageClearTempDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers temporaires supprimés'**
+  String get storageClearTempDone;
+
+  /// No description provided for @networkDataTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réseau et données'**
+  String get networkDataTitle;
+
+  /// No description provided for @networkDataSectionNetwork.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réseau'**
+  String get networkDataSectionNetwork;
+
+  /// No description provided for @networkWifiOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Wi-Fi uniquement'**
+  String get networkWifiOnly;
+
+  /// No description provided for @networkWifiOnlySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne télécharge les médias que sur Wi-Fi'**
+  String get networkWifiOnlySubtitle;
+
+  /// No description provided for @networkDataSaver.
+  ///
+  /// In fr, this message translates to:
+  /// **'Économiseur de données'**
+  String get networkDataSaver;
+
+  /// No description provided for @networkDataSaverSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réduit la qualité et les téléchargements automatiques'**
+  String get networkDataSaverSubtitle;
+
+  /// No description provided for @settingsSectionCommunication.
+  ///
+  /// In fr, this message translates to:
+  /// **'Communication'**
+  String get settingsSectionCommunication;
+
+  /// No description provided for @settingsSectionApplication.
+  ///
+  /// In fr, this message translates to:
+  /// **'Application'**
+  String get settingsSectionApplication;
+
+  /// No description provided for @settingsSectionInformation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Informations'**
+  String get settingsSectionInformation;
+
+  /// No description provided for @settingsStorage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stockage et cache'**
+  String get settingsStorage;
+
+  /// No description provided for @settingsStorageSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Espace utilisé et nettoyage'**
+  String get settingsStorageSubtitle;
+
+  /// No description provided for @settingsNetwork.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réseau et données'**
+  String get settingsNetwork;
+
+  /// No description provided for @settingsNetworkSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Wi-Fi, économiseur, médias'**
+  String get settingsNetworkSubtitle;
+
+  /// No description provided for @settingsAccessibility.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accessibilité'**
+  String get settingsAccessibility;
+
+  /// No description provided for @settingsAccessibilitySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Texte et animations'**
+  String get settingsAccessibilitySubtitle;
+
+  /// No description provided for @settingsAbout.
+  ///
+  /// In fr, this message translates to:
+  /// **'À propos et mentions légales'**
+  String get settingsAbout;
+
+  /// No description provided for @settingsMutedConversations.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conversations silencieuses'**
+  String get settingsMutedConversations;
+
+  /// No description provided for @accessibilityTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accessibilité'**
+  String get accessibilityTitle;
+
+  /// No description provided for @accessibilitySectionDisplay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Affichage'**
+  String get accessibilitySectionDisplay;
+
+  /// No description provided for @accessibilityFontScale.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taille du texte'**
+  String get accessibilityFontScale;
+
+  /// No description provided for @accessibilityFontScaleSmall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Petit'**
+  String get accessibilityFontScaleSmall;
+
+  /// No description provided for @accessibilityFontScaleDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Normal'**
+  String get accessibilityFontScaleDefault;
+
+  /// No description provided for @accessibilityFontScaleMedium.
+  ///
+  /// In fr, this message translates to:
+  /// **'Grand'**
+  String get accessibilityFontScaleMedium;
+
+  /// No description provided for @accessibilityFontScaleLarge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Très grand'**
+  String get accessibilityFontScaleLarge;
+
+  /// No description provided for @accessibilityReduceMotion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réduire les animations'**
+  String get accessibilityReduceMotion;
+
+  /// No description provided for @accessibilityReduceMotionSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite les transitions et effets visuels'**
+  String get accessibilityReduceMotionSubtitle;
+
+  /// No description provided for @accessibilitySaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer les préférences'**
+  String get accessibilitySaveFailed;
+
+  /// No description provided for @mutedConversationsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conversations silencieuses'**
+  String get mutedConversationsTitle;
+
+  /// No description provided for @mutedConversationsEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune conversation silencieuse'**
+  String get mutedConversationsEmpty;
+
+  /// No description provided for @mutedConversationsCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 conversation} other{{count} conversations}}'**
+  String mutedConversationsCount(int count);
+
+  /// No description provided for @mutedForeverLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Silencieux indéfiniment'**
+  String get mutedForeverLabel;
+
+  /// No description provided for @mutedUntilLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'au {date}'**
+  String mutedUntilLabel(String date);
+
+  /// No description provided for @dndScheduleTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne pas déranger'**
+  String get dndScheduleTitle;
+
+  /// No description provided for @dndEnabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Planifier'**
+  String get dndEnabled;
+
+  /// No description provided for @dndEnabledSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couper les notifications sur un créneau horaire'**
+  String get dndEnabledSubtitle;
+
+  /// No description provided for @dndScheduleHours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Horaires'**
+  String get dndScheduleHours;
+
+  /// No description provided for @dndStartTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'Début'**
+  String get dndStartTime;
+
+  /// No description provided for @dndEndTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fin'**
+  String get dndEndTime;
+
+  /// No description provided for @dndDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jours actifs'**
+  String get dndDays;
+
+  /// No description provided for @dndDayMon.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lun'**
+  String get dndDayMon;
+
+  /// No description provided for @dndDayTue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mar'**
+  String get dndDayTue;
+
+  /// No description provided for @dndDayWed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mer'**
+  String get dndDayWed;
+
+  /// No description provided for @dndDayThu.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jeu'**
+  String get dndDayThu;
+
+  /// No description provided for @dndDayFri.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ven'**
+  String get dndDayFri;
+
+  /// No description provided for @dndDaySat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sam'**
+  String get dndDaySat;
+
+  /// No description provided for @dndDaySun.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dim'**
+  String get dndDaySun;
+
+  /// No description provided for @dndSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer le planning'**
+  String get dndSaveFailed;
+
+  /// No description provided for @aboutTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'À propos'**
+  String get aboutTitle;
+
+  /// No description provided for @aboutSectionLegal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mentions légales'**
+  String get aboutSectionLegal;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Version {version} (build {build})'**
+  String aboutVersion(String version, String build);
+
+  /// No description provided for @aboutTerms.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conditions d\'utilisation'**
+  String get aboutTerms;
+
+  /// No description provided for @aboutPrivacy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Politique de confidentialité'**
+  String get aboutPrivacy;
+
+  /// No description provided for @aboutLicenses.
+  ///
+  /// In fr, this message translates to:
+  /// **'Licences open source'**
+  String get aboutLicenses;
+
+  /// No description provided for @aboutSupport.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contacter le support'**
+  String get aboutSupport;
+
+  /// No description provided for @aboutCopyright.
+  ///
+  /// In fr, this message translates to:
+  /// **'© 2026 Alanya · Fait avec soin à Douala'**
+  String get aboutCopyright;
+
+  /// No description provided for @exportDataTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Données et compte'**
+  String get exportDataTitle;
+
+  /// No description provided for @exportSectionYourData.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos données'**
+  String get exportSectionYourData;
+
+  /// No description provided for @exportSectionDanger.
+  ///
+  /// In fr, this message translates to:
+  /// **'Zone sensible'**
+  String get exportSectionDanger;
+
+  /// No description provided for @exportPhase1Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export rapide (RGPD)'**
+  String get exportPhase1Title;
+
+  /// No description provided for @exportPhase1Subtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Profil, contacts, métadonnées — disponible immédiatement'**
+  String get exportPhase1Subtitle;
+
+  /// No description provided for @exportPhase2Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export complet'**
+  String get exportPhase2Title;
+
+  /// No description provided for @exportPhase2Subtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inclut messages et médias — prêt sous ~24 h'**
+  String get exportPhase2Subtitle;
+
+  /// No description provided for @exportRequestPhase1.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter maintenant'**
+  String get exportRequestPhase1;
+
+  /// No description provided for @exportRequestPhase2.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demander l\'export complet'**
+  String get exportRequestPhase2;
+
+  /// No description provided for @exportPhase1ReadyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export prêt'**
+  String get exportPhase1ReadyTitle;
+
+  /// No description provided for @exportPhase2Started.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export complet demandé — vous serez notifié'**
+  String get exportPhase2Started;
+
+  /// No description provided for @exportInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export en cours'**
+  String get exportInProgress;
+
+  /// No description provided for @exportInProgressHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prêt dans ~24 h · notification à l\'achèvement'**
+  String get exportInProgressHint;
+
+  /// No description provided for @exportReady.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre export est prêt'**
+  String get exportReady;
+
+  /// No description provided for @exportDownload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger'**
+  String get exportDownload;
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export impossible : {error}'**
+  String exportFailed(String error);
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer le compte'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountEntrySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action irréversible'**
+  String get deleteAccountEntrySubtitle;
+
+  /// No description provided for @deleteAccountStep1Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action irréversible'**
+  String get deleteAccountStep1Title;
+
+  /// No description provided for @deleteAccountStep1Bullet1.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suppression des messages et médias'**
+  String get deleteAccountStep1Bullet1;
+
+  /// No description provided for @deleteAccountStep1Bullet2.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retrait de tous les groupes'**
+  String get deleteAccountStep1Bullet2;
+
+  /// No description provided for @deleteAccountStep1Bullet3.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro libéré après la période de grâce'**
+  String get deleteAccountStep1Bullet3;
+
+  /// No description provided for @deleteAccountContinue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get deleteAccountContinue;
+
+  /// No description provided for @deleteAccountPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe'**
+  String get deleteAccountPassword;
+
+  /// No description provided for @deleteAccountConfirmLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taper SUPPRIMER'**
+  String get deleteAccountConfirmLabel;
+
+  /// No description provided for @deleteAccountConfirmWord.
+  ///
+  /// In fr, this message translates to:
+  /// **'SUPPRIMER'**
+  String get deleteAccountConfirmWord;
+
+  /// No description provided for @deleteAccountConfirmMismatch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tapez SUPPRIMER pour confirmer'**
+  String get deleteAccountConfirmMismatch;
+
+  /// No description provided for @deleteAccountSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer mon compte'**
+  String get deleteAccountSubmit;
+
+  /// No description provided for @deleteAccountGraceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suppression planifiée'**
+  String get deleteAccountGraceTitle;
+
+  /// No description provided for @deleteAccountGraceBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre compte sera définitivement supprimé le {date}. Vous pouvez annuler d\'ici là.'**
+  String deleteAccountGraceBody(String date);
+
+  /// No description provided for @deleteAccountFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suppression impossible : {error}'**
+  String deleteAccountFailed(String error);
+
+  /// No description provided for @biometricLock.
+  ///
+  /// In fr, this message translates to:
+  /// **'Verrouillage biométrique'**
+  String get biometricLock;
+
+  /// No description provided for @biometricLockTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya est verrouillé'**
+  String get biometricLockTitle;
+
+  /// No description provided for @biometricLockUnlock.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déverrouiller'**
+  String get biometricLockUnlock;
+
+  /// No description provided for @biometricLockSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Empreinte ou reconnaissance faciale à l\'ouverture'**
+  String get biometricLockSubtitle;
+
+  /// No description provided for @biometricLockEnableConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmez votre empreinte pour activer le verrou'**
+  String get biometricLockEnableConfirm;
+
+  /// No description provided for @biometricLockUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Biométrie indisponible sur cet appareil'**
+  String get biometricLockUnavailable;
+
+  /// No description provided for @biometricLockFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Biométrie : {error}'**
+  String biometricLockFailed(String error);
+
+  /// No description provided for @accountSecuritySectionProtection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Protection'**
+  String get accountSecuritySectionProtection;
+
+  /// No description provided for @logoutAllDevices.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déconnecter tous les appareils'**
+  String get logoutAllDevices;
+
+  /// No description provided for @logoutAllDevicesSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ferme toutes les sessions sauf celle-ci'**
+  String get logoutAllDevicesSubtitle;
+
+  /// No description provided for @logoutAllDevicesConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les autres appareils seront déconnectés immédiatement.'**
+  String get logoutAllDevicesConfirm;
+
+  /// No description provided for @logoutAllDevicesAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déconnecter'**
+  String get logoutAllDevicesAction;
+
+  /// No description provided for @logoutAllDevicesDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autres appareils déconnectés'**
+  String get logoutAllDevicesDone;
+
+  /// No description provided for @logoutAllDevicesFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de déconnecter tous les appareils'**
+  String get logoutAllDevicesFailed;
+
+  /// No description provided for @privacySectionWhoCanSee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui peut me voir'**
+  String get privacySectionWhoCanSee;
+
+  /// No description provided for @privacySectionMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages'**
+  String get privacySectionMessages;
+
+  /// No description provided for @privacySectionLists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Listes et groupes'**
+  String get privacySectionLists;
+
+  /// No description provided for @privacyLastSeen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernière connexion'**
+  String get privacyLastSeen;
+
+  /// No description provided for @privacyOnlineStatus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Statut en ligne'**
+  String get privacyOnlineStatus;
+
+  /// No description provided for @privacyProfilePhoto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo de profil'**
+  String get privacyProfilePhoto;
+
+  /// No description provided for @privacyReadReceipts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accusés de lecture'**
+  String get privacyReadReceipts;
+
+  /// No description provided for @privacyReadReceiptsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer et recevoir les confirmations de lecture'**
+  String get privacyReadReceiptsSubtitle;
+
+  /// No description provided for @privacyNotificationPreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu des notifications'**
+  String get privacyNotificationPreview;
+
+  /// No description provided for @privacyBlockedContacts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contacts bloqués'**
+  String get privacyBlockedContacts;
+
+  /// No description provided for @privacyBlockedContactsEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun contact bloqué'**
+  String get privacyBlockedContactsEmpty;
+
+  /// No description provided for @privacyBlockedContactsCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 contact} other{{count} contacts}}'**
+  String privacyBlockedContactsCount(int count);
+
+  /// No description provided for @privacyAddToGroups.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajout aux groupes'**
+  String get privacyAddToGroups;
+
+  /// No description provided for @privacyVisibilityEveryone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout le monde'**
+  String get privacyVisibilityEveryone;
+
+  /// No description provided for @privacyVisibilityContacts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes contacts'**
+  String get privacyVisibilityContacts;
+
+  /// No description provided for @privacyVisibilityNobody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne'**
+  String get privacyVisibilityNobody;
+
+  /// No description provided for @privacySaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer les préglages'**
+  String get privacySaveFailed;
+
+  /// No description provided for @onboardingCredentialsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos identifiants'**
+  String get onboardingCredentialsTitle;
+
+  /// No description provided for @onboardingCredentialsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conservez ces informations en lieu sûr.'**
+  String get onboardingCredentialsSubtitle;
+
+  /// No description provided for @onboardingCredentialsBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notez votre numéro Alanya et votre mot de passe — ils ne seront plus affichés.'**
+  String get onboardingCredentialsBanner;
+
+  /// No description provided for @onboardingProfileTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre profil'**
+  String get onboardingProfileTitle;
+
+  /// No description provided for @onboardingProfileSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo, pays, bio : complétez maintenant ou plus tard dans Mon compte.'**
+  String get onboardingProfileSubtitle;
+
+  /// No description provided for @profileBioDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Salut, je suis sur Alanya'**
+  String get profileBioDefault;
+
+  /// No description provided for @onboardingPersonalizeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnaliser Alanya'**
+  String get onboardingPersonalizeTitle;
+
+  /// No description provided for @onboardingPersonalizeSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Thème, langue et verrouillage. Modifiable à tout moment dans Paramètres.'**
+  String get onboardingPersonalizeSubtitle;
+
+  /// No description provided for @onboardingStepOf.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {current} sur {total}'**
+  String onboardingStepOf(int current, int total);
+
+  /// No description provided for @onboardingCountryTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre pays'**
+  String get onboardingCountryTitle;
+
+  /// No description provided for @onboardingCountrySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide vos contacts à vous identifier.'**
+  String get onboardingCountrySubtitle;
+
+  /// No description provided for @onboardingPhotoTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo de profil'**
+  String get onboardingPhotoTitle;
+
+  /// No description provided for @onboardingPhotoSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez une photo ou passez cette étape.'**
+  String get onboardingPhotoSubtitle;
+
+  /// No description provided for @onboardingPhotoChooseGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir dans la galerie'**
+  String get onboardingPhotoChooseGallery;
+
+  /// No description provided for @onboardingPhotoCamera.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get onboardingPhotoCamera;
+
+  /// No description provided for @onboardingPhotoFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ajouter la photo'**
+  String get onboardingPhotoFailed;
+
+  /// No description provided for @onboardingBioTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quelques mots sur vous'**
+  String get onboardingBioTitle;
+
+  /// No description provided for @onboardingBioSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Présentez-vous en une phrase (optionnel).'**
+  String get onboardingBioSubtitle;
+
+  /// No description provided for @onboardingBioHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Salut, je suis sur Alanya'**
+  String get onboardingBioHint;
+
+  /// No description provided for @onboardingEmailTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail'**
+  String get onboardingEmailTitle;
+
+  /// No description provided for @onboardingEmailSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Facilite la récupération de votre compte.'**
+  String get onboardingEmailSubtitle;
+
+  /// No description provided for @onboardingEmailVerify.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier le code'**
+  String get onboardingEmailVerify;
+
+  /// No description provided for @onboardingPreferencesTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préférences'**
+  String get onboardingPreferencesTitle;
+
+  /// No description provided for @onboardingPreferencesSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Thème et langue de l\'application.'**
+  String get onboardingPreferencesSubtitle;
+
+  /// No description provided for @onboardingThemeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Thème'**
+  String get onboardingThemeLabel;
+
+  /// No description provided for @onboardingLanguageLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Langue'**
+  String get onboardingLanguageLabel;
+
+  /// No description provided for @onboardingBiometricTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Protéger l\'accès'**
+  String get onboardingBiometricTitle;
+
+  /// No description provided for @onboardingBiometricSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un geste rapide à chaque retour dans l\'app.'**
+  String get onboardingBiometricSubtitle;
+
+  /// No description provided for @onboardingBiometricFriendlyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Empreinte ou reconnaissance faciale'**
+  String get onboardingBiometricFriendlyTitle;
+
+  /// No description provided for @onboardingBiometricFriendlyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activez le déverrouillage rapide. Vous pourrez le modifier dans Paramètres.'**
+  String get onboardingBiometricFriendlyBody;
+
+  /// No description provided for @onboardingBiometricUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Biométrie indisponible — vous pourrez l\'activer plus tard dans les paramètres.'**
+  String get onboardingBiometricUnavailable;
+
+  /// No description provided for @onboardingCompleteTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est parti !'**
+  String get onboardingCompleteTitle;
+
+  /// No description provided for @onboardingCompleteSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre compte est prêt.'**
+  String get onboardingCompleteSubtitle;
+
+  /// No description provided for @onboardingCompleteMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Explorez Alanya et restez connecté avec vos proches.'**
+  String get onboardingCompleteMessage;
+
+  /// No description provided for @onboardingCompleteCta.
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrir Alanya'**
+  String get onboardingCompleteCta;
+
+  /// No description provided for @onboardingContinue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get onboardingContinue;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingSkipAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Configurer plus tard'**
+  String get onboardingSkipAll;
+
+  /// No description provided for @onboardingSkipAllTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer la configuration ?'**
+  String get onboardingSkipAllTitle;
+
+  /// No description provided for @onboardingSkipAllBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous pourrez compléter votre profil à tout moment dans Mon compte.'**
+  String get onboardingSkipAllBody;
+
+  /// No description provided for @onboardingSkipAllCredentialsBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne reverrez plus votre mot de passe ici. Complétez votre profil quand vous voulez dans Mon compte.'**
+  String get onboardingSkipAllCredentialsBody;
+
+  /// No description provided for @onboardingSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrement impossible — réessayez ou passez cette étape.'**
+  String get onboardingSaveFailed;
+
+  /// No description provided for @deleteAccountGraceDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'Délai de grâce · {days} jours'**
+  String deleteAccountGraceDays(int days);
+
+  /// No description provided for @deleteAccountCancelDeletion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler la suppression'**
+  String get deleteAccountCancelDeletion;
+
+  /// No description provided for @deleteAccountCancelSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suppression annulée'**
+  String get deleteAccountCancelSuccess;
+
+  /// No description provided for @deleteAccountCancelFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'annuler la suppression'**
+  String get deleteAccountCancelFailed;
+
+  /// No description provided for @deleteAccountLogoutNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se déconnecter'**
+  String get deleteAccountLogoutNow;
+
+  /// No description provided for @myMediaEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun média partagé pour le moment'**
+  String get myMediaEmpty;
+
+  /// No description provided for @myMediaLoadFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger vos médias'**
+  String get myMediaLoadFailed;
+
+  /// No description provided for @dndSummaryActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'{start} – {end} · {days}'**
+  String dndSummaryActive(String start, String end, String days);
+
+  /// No description provided for @dndSummaryInactive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactivé'**
+  String get dndSummaryInactive;
+
+  /// No description provided for @exportPhase1ShareSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export Alanya (profil et métadonnées)'**
+  String get exportPhase1ShareSubject;
 }
 
 class _AppLocalizationsDelegate
