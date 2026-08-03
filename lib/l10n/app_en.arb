@@ -1196,7 +1196,6 @@
   "mentionYou": "You",
   "jumpToMention": "Go to next mention",
   "unreadMessagesSeparator": "Unread messages",
-
   "signupEmailOptionalHint": "Email address (optional)",
   "signupEmailOptionalSubtitle": "Only used to recover your password",
   "signupNoEmailWarningTitle": "No email address",
@@ -1205,7 +1204,6 @@
   "signupContinueWithoutEmail": "Continue",
   "signupCredentialsNoEmailReminder": "Without an email, account recovery is impossible. You can add one anytime in Profile → Account → Edit profile (OTP verification).",
   "signupCredentialsEmailOk": "Your email can be used to recover your password if you forget it.",
-
   "emailLabel": "Email",
   "emailNotSet": "Not set",
   "emailNeededForRecovery": "Required to recover your password",
@@ -1228,7 +1226,9 @@
   "changeEmailOtpSubtitle": "Enter the code sent to {email}",
   "@changeEmailOtpSubtitle": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "changeEmailResendCode": "Resend code",
@@ -1242,5 +1242,98 @@
   "changePasswordSubmit": "Save",
   "changePasswordSuccess": "Password updated",
   "changePasswordSameAsCurrent": "New password must be different from the current one",
-  "profileNoEmailChip": "Add an email to secure your account"
+  "profileNoEmailChip": "Add an email to secure your account",
+  "addToCall": "Add to call",
+  "confCallOfThree": "3-way call",
+  "confRinging": "Ringing…",
+  "confAddingInvitee": "Adding {name}",
+  "@confAddingInvitee": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confSomeoneAdds": "{who} is adding {name}",
+  "@confSomeoneAdds": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confJoinedCall": "{name} joined the call",
+  "@confJoinedCall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confLeftCall": "{name} left the call",
+  "@confLeftCall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confDeclined": "{name} declined to join",
+  "@confDeclined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confBusy": "{name} is already on a call",
+  "@confBusy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confNoAnswer": "{name} did not answer",
+  "@confNoAnswer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confNotJoined": "{name} did not join the call",
+  "@confNotJoined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddAlreadyUsed": "Someone has already been added to this call",
+  "confCannotAdd": "{name} cannot be added",
+  "@confCannotAdd": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddFailed": "The person could not be added",
+  "confInviteSubtitle": "is adding you to a call with {name}",
+  "@confInviteSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddSheetTitle": "Add to call",
+  "noContactsToAdd": "No contacts to add",
+  "confAlreadyInCall": "already here",
+  "confContactBusy": "on a call",
+  "confCancelInvite": "Cancel"
 }

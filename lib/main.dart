@@ -159,6 +159,23 @@ class _TalkyAppState extends State<TalkyApp> {
         ChangeNotifierProvider(create: (ctx) {
           final call = CallService(apiClient: _apiClient);
           final voice = ctx.read<VoicePlaybackService>();
+
+          // Les événements de session à trois arrivent par socket sans passer
+          // par un écran : le service doit connaître l'identité locale pour se
+          // placer lui-même dans le roster.
+          final auth = ctx.read<AuthProvider>();
+          void pushIdentity() {
+            final me = auth.currentUser;
+            if (me == null) return;
+            call.setLocalIdentity(
+              id: me.alanyaID,
+              name: me.nom.isNotEmpty ? me.nom : me.pseudo,
+              photo: me.avatarUrl,
+            );
+          }
+          pushIdentity();
+          auth.addListener(pushIdentity);
+
           // Un appel — sonnerie comprise — ne doit pas se superposer à la
           // lecture en cours. `isCallActive` ignore le statut `incoming`,
           // d'où le test sur idle/ended plutôt que sur ce getter.

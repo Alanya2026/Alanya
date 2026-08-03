@@ -86,7 +86,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     if (_navigated) return;
     _navigated = true;
     final cs = Provider.of<CallService>(context, listen: false);
-    if (cs.groupRoomId != null) {
+    if (cs.isConference) {
+      await cs.rejectConferenceInvite();
+    } else if (cs.groupRoomId != null) {
       await cs.rejectGroupCall();
     } else {
       await cs.rejectCall();
@@ -99,6 +101,17 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     _navigated = true;
 
     final cs = Provider.of<CallService>(context, listen: false);
+
+    // Invitation à rejoindre un appel en cours : ni un appel ordinaire (aucune
+    // offre à répondre), ni un appel de groupe (aucune room à rejoindre).
+    if (cs.isConference) {
+      await cs.acceptConferenceInvite();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const OngoingCallScreen()),
+      );
+      return;
+    }
 
     if (cs.groupRoomId != null) {
       final me = context.read<AuthProvider>().currentUser;
@@ -159,9 +172,22 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         final isVideo = cs.isVideo;
         final isGroup = cs.groupRoomId != null;
         final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : context.l10n.unknownSender;
-        final subtitle = isGroup
-            ? (isVideo ? context.l10n.groupVideoCall : context.l10n.groupCall)
-            : (isVideo ? context.l10n.videoCall : context.l10n.voiceCall);
+        // Invitation à rejoindre un appel : le motif prime sur le type d'appel.
+        // L'invité doit savoir qui l'ajoute, et à quelle conversation.
+        final otherPeer = cs.isConference
+            ? cs.groupRoster.values
+                .where((p) => p.id != cs.confInvitedBy?.id)
+                .map((p) => p.name)
+                .where((n) => n.isNotEmpty)
+                .join(', ')
+            : '';
+        final subtitle = cs.isConference
+            ? (otherPeer.isNotEmpty
+                ? context.l10n.confInviteSubtitle(otherPeer)
+                : context.l10n.confCallOfThree)
+            : isGroup
+                ? (isVideo ? context.l10n.groupVideoCall : context.l10n.groupCall)
+                : (isVideo ? context.l10n.videoCall : context.l10n.voiceCall);
         final subtitleIcon = isVideo
             ? CupertinoIcons.video_camera_solid
             : CupertinoIcons.phone_fill;

@@ -28,6 +28,7 @@ part 'call/call_incoming.dart';   // entrées push / CallKit
 part 'call/call_signaling.dart';  // listeners socket.io
 part 'call/call_one_to_one.dart'; // appels 1-à-1
 part 'call/call_group.dart';      // appels de groupe
+part 'call/call_conference.dart'; // « Ajouter à l'appel » (transfert assisté, 3 max)
 part 'call/call_controls.dart';   // contrôles médias + timer
 part 'call/call_session.dart';    // session audio / foreground en veille
 part 'call/call_ui.dart';         // bannière / minimiser l'écran d'appel
@@ -109,6 +110,38 @@ class CallService extends ChangeNotifier {
   // Roster de l'appel de groupe (userId → infos d'affichage).
   final Map<String, GroupParticipantInfo> _groupRoster = {};
 
+  //  « Ajouter à l'appel » — session à trois (transfert assisté)
+  //
+  // Un appel 1-à-1 ordinaire n'a pas de session. Elle naît au premier ajout et
+  // porte à elle seule le droit d'ajout : tant que _confSessionId est posé, le
+  // bouton reste caché — y compris après un départ, le droit étant consommé
+  // définitivement. Un échec d'invitation l'efface, ce qui rend le droit.
+  String? _confSessionId;
+
+  // Invité qui sonne encore : affiché en tuile « Sonnerie… » avant sa réponse.
+  GroupParticipantInfo? _confPendingInvitee;
+
+  // Côté invité : qui l'ajoute, pour l'écran d'appel entrant.
+  GroupParticipantInfo? _confInvitedBy;
+
+  // Vrai chez celui qui a lancé l'invitation : lui seul peut l'annuler.
+  bool _confInviteIsMine = false;
+
+  // Mon propre identifiant dans le roster, mémorisé à la bascule en maillage.
+  String? _myRosterId;
+
+  // Identité locale, poussée par AuthProvider. Les événements de session
+  // arrivent par socket à n'importe quel moment, sans passer par un écran :
+  // le service doit pouvoir se placer lui-même dans le roster.
+  int? _localUserId;
+  String _localUserName = '';
+  String? _localUserPhoto;
+
+  // Derniers faits marquants, consommés une fois par l'écran d'appel pour
+  // afficher un bandeau (« Untel a refusé », « Untel a quitté l'appel »).
+  String? _lastConfFailure;
+  String? _lastConfDeparture;
+
   // Auto-réponse (CallKit pré-accepté)
   bool _autoAnswerOnNextIncoming = false;
   String? _autoAnswerCallerId;
@@ -179,6 +212,61 @@ class CallService extends ChangeNotifier {
   Map<String, MediaStream> get groupRemoteStreams => _groupRemoteStreams;
   List<String> get groupParticipants => _groupParticipants;
   Map<String, GroupParticipantInfo> get groupRoster => _groupRoster;
+
+  //  « Ajouter à l'appel »
+  String? get confSessionId => _confSessionId;
+  bool get isConference => _confSessionId != null;
+  GroupParticipantInfo? get confPendingInvitee => _confPendingInvitee;
+  GroupParticipantInfo? get confInvitedBy => _confInvitedBy;
+  bool get confInviteIsMine => _confInviteIsMine;
+
+  /// Flux distant à afficher quand l'écran est en mode « à deux ».
+  ///
+  /// Après le départ d'un participant, le correspondant restant peut être celui
+  /// qui était arrivé par le maillage : son flux n'est alors pas celui de
+  /// `_webrtc`, mais une entrée de `_groupRemoteStreams`.
+  MediaStream? get activeRemoteStream {
+    final direct = _webrtc.remoteStream;
+    if (_groupRoomId != null) return direct;
+    final peerId = _remoteUserId?.toString();
+    if (peerId != null && _groupRemoteStreams.containsKey(peerId)) {
+      return _groupRemoteStreams[peerId];
+    }
+    return direct;
+  }
+
+  /// Renseigne l'identité locale (appelée par AuthProvider à chaque changement).
+  void setLocalIdentity({required int id, required String name, String? photo}) {
+    _localUserId = id;
+    _localUserName = name;
+    _localUserPhoto = photo;
+  }
+
+  /// Raison du dernier échec d'invitation, lue une seule fois par l'interface.
+  String? takeConfFailure() {
+    final v = _lastConfFailure;
+    _lastConfFailure = null;
+    return v;
+  }
+
+  /// Nom du dernier participant parti, lu une seule fois par l'interface.
+  String? takeConfDeparture() {
+    final v = _lastConfDeparture;
+    _lastConfDeparture = null;
+    return v;
+  }
+
+  /// Vrai quand le bouton « Ajouter à l'appel » doit être affiché.
+  ///
+  /// Absent plutôt que grisé dans tous les autres cas : un bouton grisé invite à
+  /// demander pourquoi, et « quelqu'un a déjà utilisé l'ajout » n'a aucune action
+  /// de rattrapage à proposer.
+  bool get canAddParticipant =>
+      _status == CallStatus.connected &&
+      _confSessionId == null &&      // droit ni verrouillé ni consommé
+      _groupRoomId == null &&        // pas un appel de groupe
+      _remoteUserId != null &&       // bien à deux
+      !_isMeetingActive();
 
   // Locuteur actif : Set des userId (groupe) ou {SpeakingDetector.localKey}
   // pour moi-même. Voir `speaking_detector.dart`.

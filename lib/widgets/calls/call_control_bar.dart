@@ -20,6 +20,8 @@ class CallControlBar extends StatelessWidget {
     required this.onCamera,
     required this.onSwitchCam,
     required this.onHangUp,
+    this.canAddParticipant = false,
+    this.onAddParticipant,
   });
 
   final bool isVideo;
@@ -32,6 +34,11 @@ class CallControlBar extends StatelessWidget {
   final VoidCallback onCamera;
   final VoidCallback onSwitchCam;
   final VoidCallback onHangUp;
+
+  /// Affiche le bouton « Ajouter à l'appel ». Absent plutôt que grisé quand
+  /// l'ajout n'est pas possible : il n'y a aucune action de rattrapage à offrir.
+  final bool canAddParticipant;
+  final VoidCallback? onAddParticipant;
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +133,19 @@ class CallControlBar extends StatelessWidget {
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onSwitchCam();
+                    },
+                  ),
+                ],
+                if (canAddParticipant) ...[
+                  AppSpacing.hGapMd,
+                  _ControlButton(
+                    icon: Icons.person_add_alt_1,
+                    active: false,
+                    useVideoChrome: useVideoChrome,
+                    semanticsLabel: context.l10n.addToCall,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onAddParticipant?.call();
                     },
                   ),
                 ],

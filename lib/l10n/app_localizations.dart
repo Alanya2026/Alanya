@@ -5779,6 +5779,126 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ajoutez un e-mail pour sécuriser votre compte'**
   String get profileNoEmailChip;
+
+  /// No description provided for @addToCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à l\'appel'**
+  String get addToCall;
+
+  /// No description provided for @confCallOfThree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel à 3'**
+  String get confCallOfThree;
+
+  /// No description provided for @confRinging.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sonnerie…'**
+  String get confRinging;
+
+  /// No description provided for @confAddingInvitee.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est en train d\'être ajouté'**
+  String confAddingInvitee(String name);
+
+  /// No description provided for @confSomeoneAdds.
+  ///
+  /// In fr, this message translates to:
+  /// **'{who} ajoute {name}'**
+  String confSomeoneAdds(String who, String name);
+
+  /// No description provided for @confJoinedCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a rejoint l\'appel'**
+  String confJoinedCall(String name);
+
+  /// No description provided for @confLeftCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a quitté l\'appel'**
+  String confLeftCall(String name);
+
+  /// No description provided for @confDeclined.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a refusé de rejoindre'**
+  String confDeclined(String name);
+
+  /// No description provided for @confBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est déjà en appel'**
+  String confBusy(String name);
+
+  /// No description provided for @confNoAnswer.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas répondu'**
+  String confNoAnswer(String name);
+
+  /// No description provided for @confNotJoined.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas rejoint l\'appel'**
+  String confNotJoined(String name);
+
+  /// No description provided for @confAddAlreadyUsed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un participant a déjà été ajouté à cet appel'**
+  String get confAddAlreadyUsed;
+
+  /// No description provided for @confCannotAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} ne peut pas être ajoutée'**
+  String confCannotAdd(String name);
+
+  /// No description provided for @confAddFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ajout n\'a pas pu aboutir'**
+  String get confAddFailed;
+
+  /// No description provided for @confInviteSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'vous ajoute à un appel avec {name}'**
+  String confInviteSubtitle(String name);
+
+  /// No description provided for @confAddSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à l\'appel'**
+  String get confAddSheetTitle;
+
+  /// No description provided for @noContactsToAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun contact à ajouter'**
+  String get noContactsToAdd;
+
+  /// No description provided for @confAlreadyInCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'déjà là'**
+  String get confAlreadyInCall;
+
+  /// No description provided for @confContactBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'en appel'**
+  String get confContactBusy;
+
+  /// No description provided for @confCancelInvite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get confCancelInvite;
 }
 
 class _AppLocalizationsDelegate

@@ -2078,7 +2078,6 @@
   "mentionYou": "Vous",
   "jumpToMention": "Aller à la mention suivante",
   "unreadMessagesSeparator": "Messages non lus",
-
   "signupEmailOptionalHint": "Adresse e-mail (optionnel)",
   "signupEmailOptionalSubtitle": "Uniquement pour récupérer votre mot de passe",
   "signupNoEmailWarningTitle": "Sans adresse e-mail",
@@ -2087,7 +2086,6 @@
   "signupContinueWithoutEmail": "Continuer",
   "signupCredentialsNoEmailReminder": "Sans e-mail, la récupération de compte est impossible. Vous pourrez en ajouter un à tout moment dans Profil → Compte → Modifier le profil (vérification par code OTP).",
   "signupCredentialsEmailOk": "Votre e-mail pourra servir à récupérer votre mot de passe en cas d'oubli.",
-
   "emailLabel": "E-mail",
   "emailNotSet": "Non renseigné",
   "emailNeededForRecovery": "Nécessaire pour récupérer votre mot de passe",
@@ -2110,7 +2108,9 @@
   "changeEmailOtpSubtitle": "Saisissez le code envoyé à {email}",
   "@changeEmailOtpSubtitle": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "changeEmailResendCode": "Renvoyer le code",
@@ -2124,5 +2124,98 @@
   "changePasswordSubmit": "Enregistrer",
   "changePasswordSuccess": "Mot de passe modifié",
   "changePasswordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'actuel",
-  "profileNoEmailChip": "Ajoutez un e-mail pour sécuriser votre compte"
+  "profileNoEmailChip": "Ajoutez un e-mail pour sécuriser votre compte",
+  "addToCall": "Ajouter à l'appel",
+  "confCallOfThree": "Appel à 3",
+  "confRinging": "Sonnerie…",
+  "confAddingInvitee": "{name} est en train d'être ajouté",
+  "@confAddingInvitee": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confSomeoneAdds": "{who} ajoute {name}",
+  "@confSomeoneAdds": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confJoinedCall": "{name} a rejoint l'appel",
+  "@confJoinedCall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confLeftCall": "{name} a quitté l'appel",
+  "@confLeftCall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confDeclined": "{name} a refusé de rejoindre",
+  "@confDeclined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confBusy": "{name} est déjà en appel",
+  "@confBusy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confNoAnswer": "{name} n'a pas répondu",
+  "@confNoAnswer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confNotJoined": "{name} n'a pas rejoint l'appel",
+  "@confNotJoined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddAlreadyUsed": "Un participant a déjà été ajouté à cet appel",
+  "confCannotAdd": "{name} ne peut pas être ajoutée",
+  "@confCannotAdd": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddFailed": "L'ajout n'a pas pu aboutir",
+  "confInviteSubtitle": "vous ajoute à un appel avec {name}",
+  "@confInviteSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddSheetTitle": "Ajouter à l'appel",
+  "noContactsToAdd": "Aucun contact à ajouter",
+  "confAlreadyInCall": "déjà là",
+  "confContactBusy": "en appel",
+  "confCancelInvite": "Annuler"
 }

@@ -380,5 +380,12 @@ extension CallOneToOne on CallService {
     _isAutoAnsweringFromPush = false;
     _isRestoringOutgoing = false;
     _cancelOutgoingRestoreTimeout();
+    // Session à trois : tout est soldé avec l'appel. Le droit d'ajout étant
+    // porté par _confSessionId, l'effacer ici rend son bouton au prochain appel.
+    _confSessionId = null;
+    _confPendingInvitee = null;
+    _confInvitedBy = null;
+    _confInviteIsMine = false;
+    _myRosterId = null;
   }
 }

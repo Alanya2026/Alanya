@@ -3264,4 +3264,85 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileNoEmailChip => 'Add an email to secure your account';
+
+  @override
+  String get addToCall => 'Add to call';
+
+  @override
+  String get confCallOfThree => '3-way call';
+
+  @override
+  String get confRinging => 'Ringing…';
+
+  @override
+  String confAddingInvitee(String name) {
+    return 'Adding $name';
+  }
+
+  @override
+  String confSomeoneAdds(String who, String name) {
+    return '$who is adding $name';
+  }
+
+  @override
+  String confJoinedCall(String name) {
+    return '$name joined the call';
+  }
+
+  @override
+  String confLeftCall(String name) {
+    return '$name left the call';
+  }
+
+  @override
+  String confDeclined(String name) {
+    return '$name declined to join';
+  }
+
+  @override
+  String confBusy(String name) {
+    return '$name is already on a call';
+  }
+
+  @override
+  String confNoAnswer(String name) {
+    return '$name did not answer';
+  }
+
+  @override
+  String confNotJoined(String name) {
+    return '$name did not join the call';
+  }
+
+  @override
+  String get confAddAlreadyUsed =>
+      'Someone has already been added to this call';
+
+  @override
+  String confCannotAdd(String name) {
+    return '$name cannot be added';
+  }
+
+  @override
+  String get confAddFailed => 'The person could not be added';
+
+  @override
+  String confInviteSubtitle(String name) {
+    return 'is adding you to a call with $name';
+  }
+
+  @override
+  String get confAddSheetTitle => 'Add to call';
+
+  @override
+  String get noContactsToAdd => 'No contacts to add';
+
+  @override
+  String get confAlreadyInCall => 'already here';
+
+  @override
+  String get confContactBusy => 'on a call';
+
+  @override
+  String get confCancelInvite => 'Cancel';
 }

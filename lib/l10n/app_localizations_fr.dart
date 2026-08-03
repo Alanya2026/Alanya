@@ -3294,4 +3294,85 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get profileNoEmailChip =>
       'Ajoutez un e-mail pour sécuriser votre compte';
+
+  @override
+  String get addToCall => 'Ajouter à l\'appel';
+
+  @override
+  String get confCallOfThree => 'Appel à 3';
+
+  @override
+  String get confRinging => 'Sonnerie…';
+
+  @override
+  String confAddingInvitee(String name) {
+    return '$name est en train d\'être ajouté';
+  }
+
+  @override
+  String confSomeoneAdds(String who, String name) {
+    return '$who ajoute $name';
+  }
+
+  @override
+  String confJoinedCall(String name) {
+    return '$name a rejoint l\'appel';
+  }
+
+  @override
+  String confLeftCall(String name) {
+    return '$name a quitté l\'appel';
+  }
+
+  @override
+  String confDeclined(String name) {
+    return '$name a refusé de rejoindre';
+  }
+
+  @override
+  String confBusy(String name) {
+    return '$name est déjà en appel';
+  }
+
+  @override
+  String confNoAnswer(String name) {
+    return '$name n\'a pas répondu';
+  }
+
+  @override
+  String confNotJoined(String name) {
+    return '$name n\'a pas rejoint l\'appel';
+  }
+
+  @override
+  String get confAddAlreadyUsed =>
+      'Un participant a déjà été ajouté à cet appel';
+
+  @override
+  String confCannotAdd(String name) {
+    return '$name ne peut pas être ajoutée';
+  }
+
+  @override
+  String get confAddFailed => 'L\'ajout n\'a pas pu aboutir';
+
+  @override
+  String confInviteSubtitle(String name) {
+    return 'vous ajoute à un appel avec $name';
+  }
+
+  @override
+  String get confAddSheetTitle => 'Ajouter à l\'appel';
+
+  @override
+  String get noContactsToAdd => 'Aucun contact à ajouter';
+
+  @override
+  String get confAlreadyInCall => 'déjà là';
+
+  @override
+  String get confContactBusy => 'en appel';
+
+  @override
+  String get confCancelInvite => 'Annuler';
 }
