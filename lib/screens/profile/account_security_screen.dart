@@ -13,6 +13,7 @@ import 'change_email_screen.dart';
 import 'change_password_screen.dart';
 import 'connected_devices_screen.dart';
 import 'qr_scanner_screen.dart';
+import 'recovery_code_screen.dart';
 
 /// Hub Compte et sécurité : email, mot de passe, appareils, biométrie.
 class AccountSecurityScreen extends StatefulWidget {
@@ -118,6 +119,21 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                   await context.read<AuthProvider>().refreshProfile();
                 }
               },
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          SettingsGroup(
+            title: l10n.recoveryCodeTitle,
+            child: SettingsNavTile(
+              icon: Icons.vpn_key_outlined,
+              title: l10n.recoveryCodeTitle,
+              subtitle: l10n.recoveryCodeEntrySubtitle,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const RecoveryCodeScreen(),
+                ),
+              ),
             ),
           ),
           AppSpacing.vGapXxl,

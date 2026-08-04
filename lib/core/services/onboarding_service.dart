@@ -18,8 +18,16 @@ class OnboardingService {
   static String _falseCompleteFixKey(int alanyaID) =>
       'onboarding_false_complete_fix_$alanyaID';
 
+  static String _startedKey(int alanyaID) => 'onboarding_started_$alanyaID';
+
   /// Mot de passe affiché une seule fois sur l'écran identifiants (post-signup).
   static String? pendingSignupPassword;
+
+  /// Code de récupération renvoyé par l'inscription. Il ne transite qu'une fois
+  /// (la réponse de `register`) : ni `getMe` ni aucun autre endpoint ne le
+  /// redonne sans le mot de passe. D'où ce passage de main en mémoire, comme
+  /// pour [pendingSignupPassword].
+  static String? pendingRecoveryCode;
 
   Future<bool> isCompleted(int alanyaID) async {
     final prefs = await SharedPreferences.getInstance();
@@ -30,12 +38,31 @@ class OnboardingService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_completedKey(alanyaID), true);
     await prefs.remove(_stepKey(alanyaID));
+    await prefs.remove(_startedKey(alanyaID));
   }
 
   Future<void> clear(int alanyaID) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_completedKey(alanyaID));
     await prefs.remove(_stepKey(alanyaID));
+    await prefs.remove(_startedKey(alanyaID));
+  }
+
+  /// Marque un compte comme « sorti tout juste de l'inscription ».
+  ///
+  /// Sans ce drapeau, un compte créé AVEC un e-mail satisfait déjà
+  /// [profileLooksComplete] : si l'app est tuée pendant l'onboarding, la reprise
+  /// (qui passe par [needsOnboarding] sans `afterRegister`) sauterait le
+  /// parcours — et l'écran identifiants, seul endroit où le code de récupération
+  /// est affiché, ne serait jamais revu.
+  Future<void> markStarted(int alanyaID) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_startedKey(alanyaID), true);
+  }
+
+  Future<bool> isStarted(int alanyaID) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_startedKey(alanyaID)) ?? false;
   }
 
   Future<int> getStepIndex(int alanyaID) async {
@@ -85,6 +112,11 @@ class OnboardingService {
     }
 
     if (await isCompleted(id)) return false;
+
+    // Un parcours commencé mais non terminé se reprend toujours, quel que soit
+    // l'état du profil : les raccourcis ci-dessous ne servent qu'aux comptes
+    // antérieurs à l'onboarding.
+    if (await isStarted(id)) return true;
 
     if (prefs.getBool(_legacySkipKey(id)) ?? false) return false;
 

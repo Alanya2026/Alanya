@@ -4294,7 +4294,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingProfileSubtitle =>
-      'Photo, pays, bio : complétez maintenant ou plus tard dans Mon compte.';
+      'Photo, genre, âge, pays, bio : complétez maintenant ou plus tard dans Mon compte.';
 
   @override
   String get profileBioDefault => 'Salut, je suis sur Alanya';
@@ -4343,16 +4343,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingBioHint => 'Salut, je suis sur Alanya';
-
-  @override
-  String get onboardingEmailTitle => 'Adresse e-mail';
-
-  @override
-  String get onboardingEmailSubtitle =>
-      'Facilite la récupération de votre compte.';
-
-  @override
-  String get onboardingEmailVerify => 'Vérifier le code';
 
   @override
   String get onboardingPreferencesTitle => 'Préférences';
@@ -4420,8 +4410,131 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vous ne reverrez plus votre mot de passe ici. Complétez votre profil quand vous voulez dans Mon compte.';
 
   @override
+  String get onboardingSkipAllRecoveryBody =>
+      'Vous ne reverrez plus votre mot de passe ici, et votre code de récupération ne réapparaîtra que dans Mon compte → Sécurité. Notez-les avant de continuer.';
+
+  @override
   String get onboardingSaveFailed =>
       'Enregistrement impossible — réessayez ou passez cette étape.';
+
+  @override
+  String get onboardingCredentialsBannerNoEmail =>
+      'Notez votre numéro Alanya, votre mot de passe et votre code de récupération — ils ne seront plus affichés ici.';
+
+  @override
+  String get onboardingPhotoAdd => 'Appuyez pour ajouter une photo';
+
+  @override
+  String get onboardingIdentityTitle => 'À propos de vous';
+
+  @override
+  String get onboardingIdentitySubtitle =>
+      'Genre et âge ne seront plus modifiables une fois enregistrés.';
+
+  @override
+  String get profileGenderLabel => 'Genre';
+
+  @override
+  String get profileGenderMale => 'Homme';
+
+  @override
+  String get profileGenderFemale => 'Femme';
+
+  @override
+  String get profileGenderOther => 'Autre';
+
+  @override
+  String get profileGenderUnspecified => 'Je préfère ne pas dire';
+
+  @override
+  String get profileAgeLabel => 'Âge';
+
+  @override
+  String get profileAgeSuffix => 'ans';
+
+  @override
+  String profileAgeBirthYear(int year) {
+    return 'Année de naissance ≈ $year';
+  }
+
+  @override
+  String profileAgeInvalid(int min, int max) {
+    return 'Âge invalide (entre $min et $max ans)';
+  }
+
+  @override
+  String get recoveryCodeTitle => 'Code de récupération';
+
+  @override
+  String get recoveryCodeKeepSafe => 'À conserver';
+
+  @override
+  String get recoveryCodeOnboardingHint =>
+      'Sans adresse e-mail, ce code est votre seule façon de reprendre la main sur votre compte. Notez-le ailleurs que sur ce téléphone.';
+
+  @override
+  String get recoveryCodeCopied => 'Code de récupération copié';
+
+  @override
+  String get recoveryCodeEntrySubtitle =>
+      'Réinitialiser votre mot de passe sans e-mail';
+
+  @override
+  String get recoveryCodeIntro =>
+      'Ce code réinitialise votre mot de passe sans passer par un e-mail. Il ne change jamais, même après un changement de mot de passe.';
+
+  @override
+  String get recoveryCodeSecurityWarning =>
+      'Toute personne connaissant ce code et votre ID Alanya peut changer votre mot de passe. Ne le partagez avec personne.';
+
+  @override
+  String get recoveryCodeReveal => 'Afficher le code';
+
+  @override
+  String get recoveryCodeHide => 'Masquer';
+
+  @override
+  String get recoveryCodePasswordPrompt =>
+      'Saisissez votre mot de passe pour afficher le code.';
+
+  @override
+  String get recoveryCodeRevealFailed => 'Impossible d\'afficher le code';
+
+  @override
+  String get forgotMethodTitle => 'Récupérer votre compte';
+
+  @override
+  String get forgotMethodSubtitle => 'Comment souhaitez-vous procéder ?';
+
+  @override
+  String get forgotMethodEmail => 'J\'ai une adresse e-mail';
+
+  @override
+  String get forgotMethodEmailSubtitle =>
+      'Recevez un code à 6 chiffres par e-mail.';
+
+  @override
+  String get forgotMethodCode => 'J\'ai un code de récupération';
+
+  @override
+  String get forgotMethodCodeSubtitle =>
+      'Le code affiché à la création de votre compte.';
+
+  @override
+  String get forgotCodeTitle => 'Votre code de récupération';
+
+  @override
+  String get forgotCodeSubtitle =>
+      'Saisissez votre ID Alanya et le code noté à l\'inscription.';
+
+  @override
+  String get forgotCodeHint => 'XXXX-XXXX-XXXX';
+
+  @override
+  String get forgotCodeSubmit => 'Valider le code';
+
+  @override
+  String get validatorRecoveryCode => 'Code de récupération à 12 caractères';
 
   @override
   String deleteAccountGraceDays(int days) {

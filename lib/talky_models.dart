@@ -9,6 +9,17 @@ import 'core/utils/self_chat.dart';
 
 // ── USER ─────────────────────────────────────────────────────────────
 
+/// MySQL renvoie les entiers tantôt en `int`, tantôt en chaîne selon le driver
+/// et le type de colonne (TINYINT/SMALLINT UNSIGNED notamment) ; le cache local
+/// les relit ensuite depuis du JSON. Un seul point de conversion évite d'avoir
+/// à s'en soucier partout.
+int? _asInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
 class User {
   final int alanyaID;
   final String nom;
@@ -35,6 +46,21 @@ class User {
   /// source ne portait pas la relation ; chaîne vide = pas de note (connue).
   final String? preferredNote;
 
+  /// Genre déclaré : `homme` | `femme` | `autre` | `non_precise`. Null = pas
+  /// encore renseigné, ce qui est distinct de `non_precise` (« je préfère ne pas
+  /// dire »), qui est une réponse. Non modifiable une fois posé.
+  final String? genre;
+
+  /// Âge déclaré à l'onboarding. Non modifiable une fois posé.
+  final int? age;
+
+  /// Année de naissance approximative, DÉDUITE de [age] par le serveur.
+  final int? anneeNaissance;
+
+  /// Ville déduite de l'adresse IP côté serveur — jamais saisie par
+  /// l'utilisateur, et souvent null (IP privée, fournisseur indisponible).
+  final String? ville;
+
   // Champs admin (optionnels — peuplés uniquement par les endpoints admin)
   final bool exclus;
   final String? excludeAt;
@@ -57,6 +83,10 @@ class User {
     this.addedViaQr,
     this.preferredAddedAt,
     this.preferredNote,
+    this.genre,
+    this.age,
+    this.anneeNaissance,
+    this.ville,
     this.exclus = false,
     this.excludeAt,
     this.excludeReason,
@@ -84,6 +114,10 @@ class User {
         preferredNote: json.containsKey('addedNote')
             ? (json['addedNote']?.toString() ?? '')
             : null,
+        genre: json['genre']?.toString(),
+        age: _asInt(json['age']),
+        anneeNaissance: _asInt(json['annee_naissance']),
+        ville: json['ville']?.toString(),
         exclus: json['exclus'] == 1 || json['exclus'] == true,
         excludeAt: json['exclude_at'],
         excludeReason: json['exclude_reason'],
@@ -103,6 +137,10 @@ class User {
         'type_compte': typeCompte,
         'is_online': isOnline,
         'last_seen': lastSeen,
+        'genre': genre,
+        'age': age,
+        'annee_naissance': anneeNaissance,
+        'ville': ville,
         'pays_libelle': paysLibelle,
         'exclus': exclus,
         'exclude_at': excludeAt,

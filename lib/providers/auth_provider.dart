@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/session_end_reason.dart';
 import '../core/services/call/pending_call_reject_store.dart';
+import '../core/services/onboarding_service.dart';
 import '../core/utils/app_log.dart';
 import '../core/utils/alanya_phone_formatter.dart';
 import '../talky_api_client.dart';
@@ -306,6 +307,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String nom,
     required String pseudo,
+    String? email,
   }) async {
     _setLoading(true);
     _clearError();
@@ -315,9 +317,18 @@ class AuthProvider extends ChangeNotifier {
         password: password,
         nom: nom,
         pseudo: pseudo,
+        email: email,
         deviceId: await _apiClient.ensureStableDeviceId(),
         hardwareId: await TalkyApiClient.currentHardwareId(),
       );
+
+      // Le code de récupération n'existe que dans CETTE réponse : ni getMe ni
+      // aucun autre endpoint ne le renvoie sans le mot de passe. On le capte
+      // avant tout appel susceptible d'échouer, sinon l'écran identifiants
+      // n'aurait plus rien à afficher.
+      final code = regData['recoveryCode']?.toString();
+      OnboardingService.pendingRecoveryCode =
+          (code != null && code.isNotEmpty) ? code : null;
 
       await _storage.saveTokens(
         accessToken: _apiClient.accessToken!,
@@ -337,6 +348,9 @@ class AuthProvider extends ChangeNotifier {
       _currentUser = User.fromJson(userData);
       await _storage.saveUser(_currentUser!);
       _pendingOnboardingAfterRegister = true;
+      // Drapeau persistant : survit à une fermeture de l'app en plein onboarding,
+      // contrairement à `_pendingOnboardingAfterRegister` qui vit en mémoire.
+      await OnboardingService().markStarted(_currentUser!.alanyaID);
       currentSessionEndReason = SessionEndReason.none;
       notifyListeners();
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
@@ -397,10 +411,44 @@ class AuthProvider extends ChangeNotifier {
     await refreshProfile();
   }
 
-  /// Met à jour le nom, le pseudo et/ou la bio de l'utilisateur connecté.
-  Future<void> updateProfile({String? nom, String? pseudo, String? bio}) async {
-    await _apiClient.updateMe(nom: nom, pseudo: pseudo, bio: bio);
+  /// Met à jour le profil de l'utilisateur connecté.
+  ///
+  /// [genre] et [age] sont à écriture unique côté serveur : les renvoyer sur un
+  /// compte qui les a déjà renseignés lève une [TalkyException] `409`.
+  Future<void> updateProfile({
+    String? nom,
+    String? pseudo,
+    String? bio,
+    String? genre,
+    int? age,
+    int? idPays,
+  }) async {
+    await _apiClient.updateMe(
+      nom: nom,
+      pseudo: pseudo,
+      bio: bio,
+      genre: genre,
+      age: age,
+      idPays: idPays,
+    );
     await refreshProfile();
+  }
+
+  /// Réaffiche le code de récupération (mot de passe requis).
+  Future<String> revealRecoveryCode(String password) =>
+      _apiClient.revealRecoveryCode(password);
+
+  /// Valide un code de récupération et retourne le `resetToken` associé.
+  /// Statique dans l'esprit : appelée hors session, avant toute connexion.
+  Future<String> validateRecoveryCode({
+    required String alanyaPhone,
+    required String recoveryCode,
+  }) async {
+    final data = await _apiClient.validateRecoveryCode(
+      alanyaPhone: alanyaPhone,
+      recoveryCode: recoveryCode,
+    );
+    return data['resetToken']?.toString() ?? '';
   }
 
   /// Met à jour la bio de l'utilisateur connecté.

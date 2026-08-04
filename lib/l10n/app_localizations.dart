@@ -7505,7 +7505,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingProfileSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Photo, pays, bio : complétez maintenant ou plus tard dans Mon compte.'**
+  /// **'Photo, genre, âge, pays, bio : complétez maintenant ou plus tard dans Mon compte.'**
   String get onboardingProfileSubtitle;
 
   /// No description provided for @profileBioDefault.
@@ -7591,24 +7591,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Salut, je suis sur Alanya'**
   String get onboardingBioHint;
-
-  /// No description provided for @onboardingEmailTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Adresse e-mail'**
-  String get onboardingEmailTitle;
-
-  /// No description provided for @onboardingEmailSubtitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Facilite la récupération de votre compte.'**
-  String get onboardingEmailSubtitle;
-
-  /// No description provided for @onboardingEmailVerify.
-  ///
-  /// In fr, this message translates to:
-  /// **'Vérifier le code'**
-  String get onboardingEmailVerify;
 
   /// No description provided for @onboardingPreferencesTitle.
   ///
@@ -7724,11 +7706,227 @@ abstract class AppLocalizations {
   /// **'Vous ne reverrez plus votre mot de passe ici. Complétez votre profil quand vous voulez dans Mon compte.'**
   String get onboardingSkipAllCredentialsBody;
 
+  /// No description provided for @onboardingSkipAllRecoveryBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne reverrez plus votre mot de passe ici, et votre code de récupération ne réapparaîtra que dans Mon compte → Sécurité. Notez-les avant de continuer.'**
+  String get onboardingSkipAllRecoveryBody;
+
   /// No description provided for @onboardingSaveFailed.
   ///
   /// In fr, this message translates to:
   /// **'Enregistrement impossible — réessayez ou passez cette étape.'**
   String get onboardingSaveFailed;
+
+  /// No description provided for @onboardingCredentialsBannerNoEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notez votre numéro Alanya, votre mot de passe et votre code de récupération — ils ne seront plus affichés ici.'**
+  String get onboardingCredentialsBannerNoEmail;
+
+  /// No description provided for @onboardingPhotoAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appuyez pour ajouter une photo'**
+  String get onboardingPhotoAdd;
+
+  /// No description provided for @onboardingIdentityTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'À propos de vous'**
+  String get onboardingIdentityTitle;
+
+  /// No description provided for @onboardingIdentitySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Genre et âge ne seront plus modifiables une fois enregistrés.'**
+  String get onboardingIdentitySubtitle;
+
+  /// No description provided for @profileGenderLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Genre'**
+  String get profileGenderLabel;
+
+  /// No description provided for @profileGenderMale.
+  ///
+  /// In fr, this message translates to:
+  /// **'Homme'**
+  String get profileGenderMale;
+
+  /// No description provided for @profileGenderFemale.
+  ///
+  /// In fr, this message translates to:
+  /// **'Femme'**
+  String get profileGenderFemale;
+
+  /// No description provided for @profileGenderOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autre'**
+  String get profileGenderOther;
+
+  /// No description provided for @profileGenderUnspecified.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je préfère ne pas dire'**
+  String get profileGenderUnspecified;
+
+  /// No description provided for @profileAgeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Âge'**
+  String get profileAgeLabel;
+
+  /// No description provided for @profileAgeSuffix.
+  ///
+  /// In fr, this message translates to:
+  /// **'ans'**
+  String get profileAgeSuffix;
+
+  /// No description provided for @profileAgeBirthYear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Année de naissance ≈ {year}'**
+  String profileAgeBirthYear(int year);
+
+  /// No description provided for @profileAgeInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Âge invalide (entre {min} et {max} ans)'**
+  String profileAgeInvalid(int min, int max);
+
+  /// No description provided for @recoveryCodeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de récupération'**
+  String get recoveryCodeTitle;
+
+  /// No description provided for @recoveryCodeKeepSafe.
+  ///
+  /// In fr, this message translates to:
+  /// **'À conserver'**
+  String get recoveryCodeKeepSafe;
+
+  /// No description provided for @recoveryCodeOnboardingHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans adresse e-mail, ce code est votre seule façon de reprendre la main sur votre compte. Notez-le ailleurs que sur ce téléphone.'**
+  String get recoveryCodeOnboardingHint;
+
+  /// No description provided for @recoveryCodeCopied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de récupération copié'**
+  String get recoveryCodeCopied;
+
+  /// No description provided for @recoveryCodeEntrySubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser votre mot de passe sans e-mail'**
+  String get recoveryCodeEntrySubtitle;
+
+  /// No description provided for @recoveryCodeIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code réinitialise votre mot de passe sans passer par un e-mail. Il ne change jamais, même après un changement de mot de passe.'**
+  String get recoveryCodeIntro;
+
+  /// No description provided for @recoveryCodeSecurityWarning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toute personne connaissant ce code et votre ID Alanya peut changer votre mot de passe. Ne le partagez avec personne.'**
+  String get recoveryCodeSecurityWarning;
+
+  /// No description provided for @recoveryCodeReveal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher le code'**
+  String get recoveryCodeReveal;
+
+  /// No description provided for @recoveryCodeHide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Masquer'**
+  String get recoveryCodeHide;
+
+  /// No description provided for @recoveryCodePasswordPrompt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez votre mot de passe pour afficher le code.'**
+  String get recoveryCodePasswordPrompt;
+
+  /// No description provided for @recoveryCodeRevealFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'afficher le code'**
+  String get recoveryCodeRevealFailed;
+
+  /// No description provided for @forgotMethodTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récupérer votre compte'**
+  String get forgotMethodTitle;
+
+  /// No description provided for @forgotMethodSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment souhaitez-vous procéder ?'**
+  String get forgotMethodSubtitle;
+
+  /// No description provided for @forgotMethodEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai une adresse e-mail'**
+  String get forgotMethodEmail;
+
+  /// No description provided for @forgotMethodEmailSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recevez un code à 6 chiffres par e-mail.'**
+  String get forgotMethodEmailSubtitle;
+
+  /// No description provided for @forgotMethodCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai un code de récupération'**
+  String get forgotMethodCode;
+
+  /// No description provided for @forgotMethodCodeSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code affiché à la création de votre compte.'**
+  String get forgotMethodCodeSubtitle;
+
+  /// No description provided for @forgotCodeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre code de récupération'**
+  String get forgotCodeTitle;
+
+  /// No description provided for @forgotCodeSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez votre ID Alanya et le code noté à l\'inscription.'**
+  String get forgotCodeSubtitle;
+
+  /// No description provided for @forgotCodeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'XXXX-XXXX-XXXX'**
+  String get forgotCodeHint;
+
+  /// No description provided for @forgotCodeSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider le code'**
+  String get forgotCodeSubmit;
+
+  /// No description provided for @validatorRecoveryCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de récupération à 12 caractères'**
+  String get validatorRecoveryCode;
 
   /// No description provided for @deleteAccountGraceDays.
   ///

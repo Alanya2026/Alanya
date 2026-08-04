@@ -4250,7 +4250,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingProfileSubtitle =>
-      'Photo, country, bio: fill in now or anytime in My account.';
+      'Photo, gender, age, country, bio: fill in now or anytime in My account.';
 
   @override
   String get profileBioDefault => 'Hi, I\'m on Alanya';
@@ -4297,15 +4297,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingBioHint => 'Hi, I\'m on Alanya';
-
-  @override
-  String get onboardingEmailTitle => 'Email address';
-
-  @override
-  String get onboardingEmailSubtitle => 'Makes account recovery easier.';
-
-  @override
-  String get onboardingEmailVerify => 'Verify code';
 
   @override
   String get onboardingPreferencesTitle => 'Preferences';
@@ -4371,8 +4362,130 @@ class AppLocalizationsEn extends AppLocalizations {
       'You won\'t see your password here again. Complete your profile anytime in My account.';
 
   @override
+  String get onboardingSkipAllRecoveryBody =>
+      'You won\'t see your password here again, and your recovery code will only reappear in My account → Security. Write them down before continuing.';
+
+  @override
   String get onboardingSaveFailed =>
       'Could not save — try again or skip this step.';
+
+  @override
+  String get onboardingCredentialsBannerNoEmail =>
+      'Write down your Alanya number, your password and your recovery code — they won\'t be shown here again.';
+
+  @override
+  String get onboardingPhotoAdd => 'Tap to add a photo';
+
+  @override
+  String get onboardingIdentityTitle => 'About you';
+
+  @override
+  String get onboardingIdentitySubtitle =>
+      'Gender and age can\'t be changed once saved.';
+
+  @override
+  String get profileGenderLabel => 'Gender';
+
+  @override
+  String get profileGenderMale => 'Male';
+
+  @override
+  String get profileGenderFemale => 'Female';
+
+  @override
+  String get profileGenderOther => 'Other';
+
+  @override
+  String get profileGenderUnspecified => 'Prefer not to say';
+
+  @override
+  String get profileAgeLabel => 'Age';
+
+  @override
+  String get profileAgeSuffix => 'yrs';
+
+  @override
+  String profileAgeBirthYear(int year) {
+    return 'Birth year ≈ $year';
+  }
+
+  @override
+  String profileAgeInvalid(int min, int max) {
+    return 'Invalid age (between $min and $max)';
+  }
+
+  @override
+  String get recoveryCodeTitle => 'Recovery code';
+
+  @override
+  String get recoveryCodeKeepSafe => 'Keep it safe';
+
+  @override
+  String get recoveryCodeOnboardingHint =>
+      'Without an email address, this code is your only way back into your account. Write it down somewhere other than this phone.';
+
+  @override
+  String get recoveryCodeCopied => 'Recovery code copied';
+
+  @override
+  String get recoveryCodeEntrySubtitle =>
+      'Reset your password without an email';
+
+  @override
+  String get recoveryCodeIntro =>
+      'This code resets your password without going through email. It never changes, not even after a password change.';
+
+  @override
+  String get recoveryCodeSecurityWarning =>
+      'Anyone who knows this code and your Alanya ID can change your password. Never share it.';
+
+  @override
+  String get recoveryCodeReveal => 'Show code';
+
+  @override
+  String get recoveryCodeHide => 'Hide';
+
+  @override
+  String get recoveryCodePasswordPrompt =>
+      'Enter your password to display the code.';
+
+  @override
+  String get recoveryCodeRevealFailed => 'Could not display the code';
+
+  @override
+  String get forgotMethodTitle => 'Recover your account';
+
+  @override
+  String get forgotMethodSubtitle => 'How would you like to proceed?';
+
+  @override
+  String get forgotMethodEmail => 'I have an email address';
+
+  @override
+  String get forgotMethodEmailSubtitle => 'Get a 6-digit code by email.';
+
+  @override
+  String get forgotMethodCode => 'I have a recovery code';
+
+  @override
+  String get forgotMethodCodeSubtitle =>
+      'The code shown when you created your account.';
+
+  @override
+  String get forgotCodeTitle => 'Your recovery code';
+
+  @override
+  String get forgotCodeSubtitle =>
+      'Enter your Alanya ID and the code you saved at sign-up.';
+
+  @override
+  String get forgotCodeHint => 'XXXX-XXXX-XXXX';
+
+  @override
+  String get forgotCodeSubmit => 'Validate code';
+
+  @override
+  String get validatorRecoveryCode => '12-character recovery code';
 
   @override
   String deleteAccountGraceDays(int days) {

@@ -85,6 +85,36 @@ extension AuthApi on TalkyApiClient {
     return _parseResponse(response);
   }
 
+  /// Voie de récupération des comptes sans e-mail : numéro Alanya + code.
+  /// Retourne le même `resetToken` que [validateOTP] — enchaîner ensuite sur
+  /// [completePasswordReset].
+  Future<Map<String, dynamic>> validateRecoveryCode({
+    required String alanyaPhone,
+    required String recoveryCode,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('${TalkyApiClient.baseUrl}/auth/recovery-code/validate'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'alanyaPhone': alanyaPhone,
+        'recoveryCode': recoveryCode,
+      }),
+    );
+    return _parseResponse(response) as Map<String, dynamic>;
+  }
+
+  /// Réaffiche le code de récupération du compte connecté (mot de passe requis).
+  Future<String> revealRecoveryCode(String password) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/auth/me/recovery-code/reveal'),
+        headers: _headers,
+        body: jsonEncode({'password': password}),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map)['recoveryCode']?.toString() ?? '';
+  }
+
   /// Étape 3: Compléter le reset password avec le reset token
   Future<Map<String, dynamic>> completePasswordReset(
     String resetToken,
@@ -156,6 +186,8 @@ extension AuthApi on TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
+  /// [genre] et [age] sont à écriture unique côté serveur : les renvoyer sur un
+  /// compte qui les a déjà renseignés répond `409 FIELD_IMMUTABLE`.
   Future<Map<String, dynamic>> updateMe({
     String? nom,
     String? pseudo,
@@ -165,6 +197,8 @@ extension AuthApi on TalkyApiClient {
     String? deviceId,
     bool? isOnline,
     int? idPays,
+    String? genre,
+    int? age,
   }) async {
     final data = await _handleRequest(
       () => _client.put(
@@ -179,6 +213,8 @@ extension AuthApi on TalkyApiClient {
           if (deviceId != null) 'device_ID': deviceId,
           if (isOnline != null) 'is_online': isOnline ? 1 : 0,
           if (idPays != null) 'idPays': idPays,
+          if (genre != null) 'genre': genre,
+          if (age != null) 'age': age,
         }),
       ),
     );

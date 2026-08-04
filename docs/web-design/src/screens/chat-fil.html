@@ -1,0 +1,282 @@
+<!--@ {"title":"Fil de discussion — 3 panneaux","group":"Écrans · Conversations","subtitle":"Layout large ≥1600px, panneau contact ouvert","w":1680,"h":940,"theme":"light"} -->
+<div class="app" data-w="wide">
+
+  <!-- Rail -->
+  <nav class="rail">
+    <div class="rail__mark"><span>A</span></div>
+    <button class="rail__btn" aria-current="page" title="Conversations"><svg width="21" height="21"><use href="#i-chat"/></svg><span class="dot">7</span></button>
+    <button class="rail__btn" title="Appels"><svg width="21" height="21"><use href="#i-phone"/></svg></button>
+    <button class="rail__btn" title="Statuts"><svg width="21" height="21"><use href="#i-status"/></svg></button>
+    <button class="rail__btn" title="Réunions"><svg width="21" height="21"><use href="#i-calendar"/></svg></button>
+    <div class="rail__spacer"></div>
+    <button class="rail__btn" title="Réglages"><svg width="21" height="21"><use href="#i-settings"/></svg></button>
+    <button class="rail__btn" title="Mon profil"><span class="avatar avatar--28 avatar--t5"><span>CN</span></span></button>
+  </nav>
+
+  <!-- Liste de conversations -->
+  <section class="list">
+    <header class="topbar">
+      <div class="grow"><div class="h2">Conversations</div></div>
+      <button class="iconbtn" title="Nouvelle conversation"><svg width="19" height="19"><use href="#i-plus"/></svg></button>
+    </header>
+
+    <div class="stack gap3" style="padding:var(--s3) var(--s4) var(--s2)">
+      <div class="search">
+        <svg width="16" height="16"><use href="#i-search"/></svg>
+        <input class="input" placeholder="Rechercher une conversation…">
+      </div>
+      <div class="segmented">
+        <button aria-selected="true">Toutes</button>
+        <button>Non lues</button>
+        <button>Groupes</button>
+      </div>
+    </div>
+
+    <ul class="convlist">
+      <li><button class="conv" aria-selected="true">
+        <span class="avatar avatar--44 avatar--t1"><span>MN</span><i class="presence" data-state="online"></i></span>
+        <span class="conv__body">
+          <span class="conv__top">
+            <span class="conv__name truncate">Marie Ngo Bell</span>
+            <svg class="seal seal--sm"><use href="#i-seal"/></svg>
+            <span class="conv__time">09:41</span>
+          </span>
+          <span class="conv__preview truncate">Je regarde ça et je te dis</span>
+        </span>
+      </button></li>
+
+      <li><button class="conv conv--unread">
+        <span class="avatar avatar--44 avatar--sq avatar--t3"><span>FN</span></span>
+        <span class="conv__body">
+          <span class="conv__top">
+            <span class="conv__name truncate">Famille Ngo Bell</span>
+            <span class="conv__time">09:28</span>
+          </span>
+          <span class="conv__preview truncate"><svg><use href="#i-image"/></svg> Aïcha : Photo</span>
+        </span>
+        <span class="conv__meta"><span class="pill">3</span></span>
+      </button></li>
+
+      <li><button class="conv conv--unread">
+        <span class="avatar avatar--44 avatar--t2"><span>PE</span><i class="presence" data-state="online"></i></span>
+        <span class="conv__body">
+          <span class="conv__top">
+            <span class="conv__name truncate">Paul Etoundi</span>
+            <span class="conv__time">08:55</span>
+          </span>
+          <span class="conv__preview truncate"><svg><use href="#i-mic"/></svg> Message vocal · 0:34</span>
+        </span>
+        <span class="conv__meta"><span class="pill">1</span></span>
+      </button></li>
+
+      <li><button class="conv">
+        <span class="avatar avatar--44 avatar--sq avatar--t6"><span>BD</span></span>
+        <span class="conv__body">
+          <span class="conv__top">
+            <span class="conv__name truncate">Bureau — Projet Douala</span>
+            <span class="conv__time">Hier</span>
+          </span>
+          <span class="conv__preview truncate"><svg class="receipt--read"><use href="#i-check2"/></svg> Vous : Parfait, on cale ça mardi</span>
+        </span>
+        <span class="conv__meta"><svg width="15" height="15" style="color:var(--ink-3)"><use href="#i-bell-off"/></svg></span>
+      </button></li>
+
+      <li><button class="conv">
+        <span class="avatar avatar--44 avatar--t4"><span>AB</span></span>
+        <span class="conv__body">
+          <span class="conv__top">
+            <span class="conv__name truncate">Aïcha Bakari</span>
+            <span class="conv__time">Hier</span>
+          </span>
+          <span class="conv__preview truncate"><svg><use href="#i-file"/></svg> Contrat_2026.pdf</span>
+        </span>
+        <span class="conv__meta"><svg width="14" height="14" style="color:var(--ink-3)"><use href="#i-pin"/></svg></span>
+      </button></li>
+
+      <li><button class="conv">
+        <span class="avatar avatar--44 avatar--t5"><span>LF</span></span>
+        <span class="conv__body">
+          <span class="conv__top">
+            <span class="conv__name truncate">Léa Fotso</span>
+            <span class="conv__time">Lun</span>
+          </span>
+          <span class="conv__preview truncate"><svg class="receipt--read"><use href="#i-check2"/></svg> Vous : À demain !</span>
+        </span>
+      </button></li>
+
+      <li><button class="conv">
+        <span class="avatar avatar--44 avatar--t6"><span>SM</span></span>
+        <span class="conv__body">
+          <span class="conv__top">
+            <span class="conv__name truncate">Samuel Mbarga</span>
+            <span class="conv__time">Dim</span>
+          </span>
+          <span class="conv__preview truncate"><svg><use href="#i-phone-miss"/></svg> Appel manqué</span>
+        </span>
+      </button></li>
+    </ul>
+  </section>
+
+  <!-- Fil -->
+  <section class="thread">
+    <header class="topbar">
+      <span class="avatar avatar--36 avatar--t1"><span>MN</span><i class="presence" data-state="online"></i></span>
+      <div class="topbar__title">
+        <div class="hstack gap1">
+          <span class="h4">Marie Ngo Bell</span>
+          <svg class="seal"><use href="#i-seal"/></svg>
+        </div>
+        <span class="tiny" style="color:var(--success)">en ligne</span>
+      </div>
+      <div class="topbar__actions">
+        <button class="iconbtn" title="Rechercher"><svg width="18" height="18"><use href="#i-search"/></svg></button>
+        <button class="iconbtn" title="Appel audio"><svg width="18" height="18"><use href="#i-phone"/></svg></button>
+        <button class="iconbtn" title="Appel vidéo"><svg width="18" height="18"><use href="#i-video"/></svg></button>
+        <button class="iconbtn iconbtn--active" title="Infos du contact"><svg width="18" height="18"><use href="#i-user"/></svg></button>
+      </div>
+    </header>
+
+    <div class="stream">
+      <div class="daybreak"><span>Aujourd'hui</span></div>
+
+      <div class="msg msg--group-start">
+        <span class="avatar avatar--28 avatar--t1"><span>MN</span></span>
+        <div class="bubble bubble--in">
+          <span class="quote"><b>Vous</b><span>Oui je viens de l'ouvrir, merci beaucoup 🙏</span></span>
+          Tu peux me dire ce que tu penses de la partie budget&nbsp;? C'est celle qui m'inquiète le plus.
+          <span class="bubble__meta">09:02</span>
+        </div>
+      </div>
+
+      <div class="msg msg--out msg--group-start">
+        <div class="bubble bubble--out">
+          <div class="voice">
+            <span class="voice__play"><svg width="16" height="16"><use href="#i-play"/></svg></span>
+            <span class="voice__wave">
+              <i class="on" style="height:8px"></i><i class="on" style="height:15px"></i><i class="on" style="height:22px"></i><i class="on" style="height:12px"></i>
+              <i class="on" style="height:19px"></i><i class="on" style="height:26px"></i><i class="on" style="height:14px"></i><i style="height:9px"></i>
+              <i style="height:18px"></i><i style="height:24px"></i><i style="height:11px"></i><i style="height:16px"></i>
+              <i style="height:21px"></i><i style="height:8px"></i><i style="height:13px"></i><i style="height:19px"></i>
+              <i style="height:10px"></i><i style="height:15px"></i><i style="height:7px"></i><i style="height:12px"></i>
+            </span>
+            <span class="voice__time">0:47</span>
+          </div>
+          <span class="bubble__meta">09:19 <svg class="receipt--read"><use href="#i-check2"/></svg></span>
+        </div>
+      </div>
+
+      <div class="msg msg--group-start">
+        <span class="avatar avatar--28 avatar--t1"><span>MN</span></span>
+        <div class="bubble bubble--in bubble--media" style="max-width:276px">
+          <div class="album album--2">
+            <div class="media" style="aspect-ratio:1;background:linear-gradient(150deg,#FFB74D,#E65100)"></div>
+            <div class="media" style="aspect-ratio:1;background:linear-gradient(150deg,#4DB6AC,#00695C)"></div>
+            <div class="media" style="aspect-ratio:1;background:linear-gradient(150deg,#7986CB,#303F9F)"></div>
+            <div class="media album__more" data-more="+4" style="aspect-ratio:1;background:linear-gradient(150deg,#F06292,#AD1457)"></div>
+          </div>
+          <div class="media__caption">Les visuels du stand, tu préfères lequel&nbsp;?</div>
+          <span class="bubble__meta" style="position:static;float:right;background:none;backdrop-filter:none;color:var(--ink-3);padding:0;margin:6px 4px 2px var(--s3)">09:31</span>
+        </div>
+      </div>
+
+      <div class="msg msg--out msg--group-start">
+        <div class="bubble bubble--out has-reactions">
+          Le deuxième, sans hésiter. Il ressort beaucoup mieux sur fond clair.
+          <span class="bubble__meta">09:38 <svg class="receipt--read"><use href="#i-check2"/></svg></span>
+          <div class="reactions">
+            <span class="reaction reaction--mine">👍 <b>2</b></span>
+            <span class="reaction">🔥 <b>1</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="msg msg--group-start">
+        <span class="avatar avatar--28 avatar--t1"><span>MN</span></span>
+        <div class="bubble bubble--in">
+          Je regarde ça et je te dis
+          <span class="bubble__meta">09:41</span>
+        </div>
+      </div>
+
+      <div class="msg">
+        <span class="avatar avatar--28 avatar--t1"><span>MN</span></span>
+        <div class="bubble bubble--in typing" style="padding:0">
+          <span class="typing"><i></i><i></i><i></i></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="composer__box">
+        <button class="iconbtn" title="Émoji"><svg width="20" height="20"><use href="#i-emoji"/></svg></button>
+        <button class="iconbtn" title="Joindre un fichier"><svg width="20" height="20"><use href="#i-clip"/></svg></button>
+        <textarea class="composer__input" rows="1" placeholder="Écrire un message…"></textarea>
+        <button class="iconbtn" title="Message vocal"><svg width="20" height="20"><use href="#i-mic"/></svg></button>
+        <button class="composer__send" title="Envoyer"><svg width="17" height="17"><use href="#i-send"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Panneau contact -->
+  <aside class="aside">
+    <div class="aside__hero">
+      <div class="hstack center"><span class="avatar avatar--80 avatar--t1"><span>MN</span><i class="presence" data-state="online"></i></span></div>
+      <div class="hstack center gap1" style="margin-top:var(--s3)">
+        <span class="h3">Marie Ngo Bell</span>
+        <svg class="seal"><use href="#i-seal"/></svg>
+      </div>
+      <div class="mono small muted" style="margin-top:2px">+237 6 91 04 22 18</div>
+      <div class="hstack center gap2" style="margin-top:var(--s4)">
+        <button class="iconbtn iconbtn--lg" style="background:var(--brand-container);color:var(--brand)" title="Appel audio"><svg width="19" height="19"><use href="#i-phone"/></svg></button>
+        <button class="iconbtn iconbtn--lg" style="background:var(--brand-container);color:var(--brand)" title="Appel vidéo"><svg width="19" height="19"><use href="#i-video"/></svg></button>
+        <button class="iconbtn iconbtn--lg" style="background:var(--brand-container);color:var(--brand)" title="Rechercher"><svg width="19" height="19"><use href="#i-search"/></svg></button>
+      </div>
+    </div>
+
+    <div class="aside__section">
+      <div class="hstack between">
+        <span class="eyebrow">Médias partagés</span>
+        <button class="tiny strong" style="color:var(--brand)">Tout voir</button>
+      </div>
+      <div class="aside__grid">
+        <div class="media" style="background:linear-gradient(150deg,#FFB74D,#E65100)"></div>
+        <div class="media" style="background:linear-gradient(150deg,#4DB6AC,#00695C)"></div>
+        <div class="media media--video" style="background:linear-gradient(150deg,#7986CB,#303F9F)"></div>
+        <div class="media" style="background:linear-gradient(150deg,#F06292,#AD1457)"></div>
+        <div class="media" style="background:linear-gradient(150deg,#9575CD,#4527A0)"></div>
+        <div class="media" style="background:linear-gradient(150deg,#4FC3F7,#01579B)"></div>
+      </div>
+    </div>
+
+    <div class="aside__section" style="gap:0;padding:var(--s2) var(--s3)">
+      <button class="row">
+        <span class="row__icon"><svg width="17" height="17"><use href="#i-file"/></svg></span>
+        <span class="row__body"><span class="small strong">Documents</span></span>
+        <span class="tiny faint">12</span>
+        <svg width="15" height="15" style="color:var(--ink-3)"><use href="#i-chevron"/></svg>
+      </button>
+      <button class="row">
+        <span class="row__icon"><svg width="17" height="17"><use href="#i-star"/></svg></span>
+        <span class="row__body"><span class="small strong">Messages favoris</span></span>
+        <span class="tiny faint">4</span>
+        <svg width="15" height="15" style="color:var(--ink-3)"><use href="#i-chevron"/></svg>
+      </button>
+      <div class="row">
+        <span class="row__icon"><svg width="17" height="17"><use href="#i-bell-off"/></svg></span>
+        <span class="row__body"><span class="small strong">Mettre en sourdine</span></span>
+        <span class="switch" data-on="false"></span>
+      </div>
+    </div>
+
+    <div class="aside__section" style="gap:0;padding:var(--s2) var(--s3);border-bottom:0">
+      <button class="row row--danger">
+        <span class="row__icon"><svg width="17" height="17"><use href="#i-block"/></svg></span>
+        <span class="row__body"><span class="small strong">Bloquer ce contact</span></span>
+      </button>
+      <button class="row row--danger">
+        <span class="row__icon"><svg width="17" height="17"><use href="#i-trash"/></svg></span>
+        <span class="row__body"><span class="small strong">Supprimer la conversation</span></span>
+      </button>
+    </div>
+  </aside>
+</div>

@@ -131,5 +131,90 @@ void main() {
         isTrue,
       );
     });
+
+    // Depuis que l'e-mail est saisi à l'inscription, un compte tout neuf
+    // satisfait `profileLooksComplete` dès sa création. Sans le drapeau
+    // « started », relancer l'app en plein onboarding sauterait le parcours —
+    // et l'écran identifiants, seul endroit où le code de récupération est
+    // montré, ne serait jamais revu.
+    test('markStarted forces resuming onboarding even if the profile looks complete',
+        () async {
+      final service = OnboardingService();
+      final user = User(
+        alanyaID: 55,
+        nom: 'Fresh',
+        pseudo: 'fresh',
+        alanyaPhone: '+237600000055',
+        email: 'fresh@example.com',
+        idPays: 10,
+        avatarUrl: 'NON DEFINI',
+        typeCompte: 0,
+        isOnline: false,
+        lastSeen: '',
+      );
+
+      // Sans le drapeau : l'e-mail seul suffisait à faire passer le compte
+      // pour « déjà configuré ».
+      expect(service.profileLooksComplete(user), isTrue);
+
+      await service.markStarted(55);
+      expect(await service.isStarted(55), isTrue);
+      expect(await service.needsOnboarding(user), isTrue);
+    });
+
+    test('markCompleted clears the started flag', () async {
+      final service = OnboardingService();
+      final user = User(
+        alanyaID: 56,
+        nom: 'Done',
+        pseudo: 'done',
+        alanyaPhone: '+237600000056',
+        email: 'done@example.com',
+        idPays: 10,
+        avatarUrl: 'https://example.com/a.jpg',
+        bio: 'bio',
+        typeCompte: 0,
+        isOnline: false,
+        lastSeen: '',
+      );
+      await service.markStarted(56);
+      await service.markCompleted(56);
+      expect(await service.isStarted(56), isFalse);
+      expect(await service.needsOnboarding(user), isFalse);
+    });
+
+    test('User keeps genre, age, birth year and city through the local cache',
+        () {
+      final user = User.fromJson({
+        'alanyaID': 3,
+        'nom': 'Demo',
+        'pseudo': 'demo',
+        'alanyaPhone': '12345678',
+        'email': '',
+        'idPays': 10,
+        'avatar_url': 'NON DEFINI',
+        'type_compte': 0,
+        'is_online': 0,
+        'last_seen': '',
+        'genre': 'femme',
+        // MySQL peut renvoyer les entiers en chaîne selon la colonne.
+        'age': '27',
+        'annee_naissance': 1999,
+        'ville': 'Douala',
+      });
+
+      expect(user.genre, 'femme');
+      expect(user.age, 27);
+      expect(user.anneeNaissance, 1999);
+      expect(user.ville, 'Douala');
+
+      // Aller-retour par le cache sécurisé (toJson → fromJson) : un champ
+      // oublié dans toJson disparaîtrait au redémarrage de l'app.
+      final relu = User.fromJson(user.toJson());
+      expect(relu.genre, 'femme');
+      expect(relu.age, 27);
+      expect(relu.anneeNaissance, 1999);
+      expect(relu.ville, 'Douala');
+    });
   });
 }
