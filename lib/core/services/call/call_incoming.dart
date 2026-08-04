@@ -12,6 +12,20 @@ extension CallIncoming on CallService {
   }) async {
     debugPrint('[CallService] 📲 acceptIncomingCallFromPush callId=$callId caller=$callerId');
 
+    // Idempotence : double événement CallKit (stream + pending), double clic
+    // sur « Accepter », ou repli activeCalls() après un accept déjà dispatché —
+    // si cet appel est déjà en cours de réponse, ne pas réarmer l'état (sinon
+    // _status repasse à incoming en pleine négociation WebRTC).
+    if (callId.isNotEmpty && _currentCallId == callId) {
+      final alreadyHandling = _status == CallStatus.connecting ||
+          _status == CallStatus.connected ||
+          (_status == CallStatus.incoming && _autoAnswerOnNextIncoming);
+      if (alreadyHandling) {
+        debugPrint('[CallService] 🛡 acceptIncoming ignoré (déjà en cours): $callId');
+        return;
+      }
+    }
+
     if (callId.isNotEmpty &&
         (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
       debugPrint('[CallService] 🛡 acceptIncoming ignoré (callId terminé): $callId');

@@ -69,6 +69,25 @@ class Validators {
     return null;
   }
 
+  /// Code de récupération : 12 caractères alphanumériques.
+  ///
+  /// La saisie est normalisée avant contrôle (majuscules, tirets et espaces
+  /// retirés) exactement comme côté serveur : un code recopié depuis un papier
+  /// arrive rarement avec la ponctuation d'origine, et refuser cette saisie-là
+  /// serait refuser le cas normal.
+  static String? recoveryCode(String? v, {AppLocalizations? l10n}) {
+    final canonical =
+        (v ?? '').toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (canonical.isEmpty) {
+      return l10n?.validatorRequired ?? LocaleController.instance.l10n.validatorRequired;
+    }
+    if (canonical.length != 12) {
+      return l10n?.validatorRecoveryCode ??
+          LocaleController.instance.l10n.validatorRecoveryCode;
+    }
+    return null;
+  }
+
   /// Délègue à [AlanyaPhoneFormatter.validate] (numéro canonique).
   static String? alanyaPhone(String? canonical, {AppLocalizations? l10n}) {
     if (canonical == null || canonical.trim().isEmpty) {

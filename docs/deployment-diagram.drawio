@@ -1,0 +1,136 @@
+<mxfile host="app.diagrams.net" type="device" version="24.0.0">
+  <diagram id="talky-deployment" name="Déploiement Talky">
+    <mxGraphModel dx="1422" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Titre -->
+        <mxCell id="title" value="Diagramme de déploiement UML — Talky (client Flutter) / Alanya-Backend" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="0" width="1000" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ============ SMARTPHONE A (device) ============ -->
+        <mxCell id="dev_phoneA" value="&lt;&lt;device&gt;&gt;&lt;br&gt;&lt;b&gt;Smartphone&lt;/b&gt; (Android / iOS)" style="shape=cube;size=12;direction=south;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="320" height="360" as="geometry" />
+        </mxCell>
+        <mxCell id="a_app" value="&lt;&lt;artifact&gt;&gt; talky_flutter (APK/IPA)" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="dev_phoneA">
+          <mxGeometry x="20" y="46" width="280" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="a_sqlite" value="&lt;&lt;artifact&gt;&gt; talky_chat.sqlite (drift)" style="shape=note;size=14;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="dev_phoneA">
+          <mxGeometry x="20" y="92" width="280" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="a_store" value="&lt;&lt;artifact&gt;&gt; Secure storage (JWT) + prefs" style="shape=note;size=14;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="dev_phoneA">
+          <mxGeometry x="20" y="132" width="280" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="a_webrtc" value="&lt;&lt;component&gt;&gt; Moteur WebRTC (flutter_webrtc)" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="dev_phoneA">
+          <mxGeometry x="20" y="172" width="280" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="a_cache" value="&lt;&lt;artifact&gt;&gt; Cache médias local" style="shape=note;size=14;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="dev_phoneA">
+          <mxGeometry x="20" y="218" width="280" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="a_fcm" value="&lt;&lt;component&gt;&gt; Client FCM (firebase_messaging)" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="dev_phoneA">
+          <mxGeometry x="20" y="258" width="280" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- ============ SMARTPHONE B (device — pair distant) ============ -->
+        <mxCell id="dev_phoneB" value="&lt;&lt;device&gt;&gt;&lt;br&gt;&lt;b&gt;Smartphone&lt;/b&gt; (pair distant)" style="shape=cube;size=12;direction=south;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="b_app" value="&lt;&lt;artifact&gt;&gt; talky_flutter" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="dev_phoneB">
+          <mxGeometry x="20" y="44" width="280" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="b_webrtc" value="&lt;&lt;component&gt;&gt; Moteur WebRTC" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="dev_phoneB">
+          <mxGeometry x="20" y="80" width="280" height="32" as="geometry" />
+        </mxCell>
+
+        <!-- ============ SERVEUR D'APPLICATION (device VPS) ============ -->
+        <mxCell id="dev_app" value="&lt;&lt;device&gt;&gt;&lt;br&gt;&lt;b&gt;Serveur d'application&lt;/b&gt; — VPS 158.220.107.211" style="shape=cube;size=12;direction=south;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="540" y="40" width="460" height="470" as="geometry" />
+        </mxCell>
+        <mxCell id="ee_node" value="&lt;&lt;execution environment&gt;&gt; Node.js ≥ 18" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;verticalAlign=top;container=1;collapsible=0;dashed=0;" vertex="1" parent="dev_app">
+          <mxGeometry x="24" y="46" width="410" height="405" as="geometry" />
+        </mxCell>
+        <mxCell id="s_rest" value="&lt;&lt;component&gt;&gt; Express — API REST (/api/*)" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="ee_node">
+          <mxGeometry x="20" y="40" width="370" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s_socket" value="&lt;&lt;component&gt;&gt; Socket.IO — signalisation / chat / présence" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="ee_node">
+          <mxGeometry x="20" y="82" width="370" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s_swagger" value="&lt;&lt;component&gt;&gt; Swagger UI (/api/docs)" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="ee_node">
+          <mxGeometry x="20" y="124" width="370" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s_sched" value="&lt;&lt;component&gt;&gt; meetingScheduler (tâche de fond)" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="ee_node">
+          <mxGeometry x="20" y="166" width="370" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s_turn" value="&lt;&lt;component&gt;&gt; TURN credentials (HMAC-SHA1)" style="shape=component;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;jettyWidth=14;jettyHeight=6;" vertex="1" parent="ee_node">
+          <mxGeometry x="20" y="208" width="370" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s_uploads" value="&lt;&lt;artifact&gt;&gt; uploads/ (images, audio, vidéo, fichiers)" style="shape=note;size=14;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="ee_node">
+          <mxGeometry x="20" y="254" width="370" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="s_key" value="&lt;&lt;artifact&gt;&gt; serviceAccountKey.json" style="shape=note;size=14;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="ee_node">
+          <mxGeometry x="20" y="304" width="370" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- ============ SERVEUR BASE DE DONNÉES (device) ============ -->
+        <mxCell id="dev_db" value="&lt;&lt;device&gt;&gt;&lt;br&gt;&lt;b&gt;Serveur BD&lt;/b&gt; — 163.123.183.89:17705" style="shape=cube;size=12;direction=south;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="40" width="300" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="db_artifact" value="&lt;&lt;artifact&gt;&gt; BD alanyBD2027 (MySQL 8)&#10;schéma = migrations 001→005" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=15;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="dev_db">
+          <mxGeometry x="40" y="48" width="220" height="86" as="geometry" />
+        </mxCell>
+
+        <!-- ============ SERVICES CLOUD EXTERNES ============ -->
+        <mxCell id="cl_fcm" value="&lt;&lt;cloud&gt;&gt;&lt;br&gt;&lt;b&gt;Firebase Cloud Messaging&lt;/b&gt;&lt;br&gt;projet talky-2026" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="230" width="280" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_smtp" value="&lt;&lt;cloud&gt;&gt;&lt;br&gt;&lt;b&gt;SMTP Gmail&lt;/b&gt;&lt;br&gt;smtp.gmail.com:587" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="360" width="280" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_stun" value="&lt;&lt;cloud&gt;&gt;&lt;br&gt;&lt;b&gt;STUN Google&lt;/b&gt;&lt;br&gt;stun(1).l.google.com:19302" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="560" width="260" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cl_turnm" value="&lt;&lt;cloud&gt;&gt;&lt;br&gt;&lt;b&gt;TURN Metered&lt;/b&gt;&lt;br&gt;global.relay.metered.ca:80/443" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="720" y="560" width="280" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="dev_turn" value="&lt;&lt;device&gt;&gt;&lt;br&gt;&lt;b&gt;TURN privé&lt;/b&gt;&lt;br&gt;76.13.44.253:3478" style="shape=cube;size=12;direction=south;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="690" width="260" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ============ CHEMINS DE COMMUNICATION ============ -->
+        <mxCell id="e1" value="&lt;&lt;HTTP&gt;&gt; REST /api (:80)" style="endArrow=open;html=1;fontSize=11;" edge="1" parent="1" source="dev_phoneA" target="dev_app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="&lt;&lt;WebSocket&gt;&gt; Socket.IO" style="endArrow=open;html=1;fontSize=11;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="dev_phoneA" target="dev_app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="&lt;&lt;TCP&gt;&gt; MySQL (:17705)" style="endArrow=open;html=1;fontSize=11;" edge="1" parent="1" source="dev_app" target="dev_db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="&lt;&lt;HTTPS&gt;&gt; Admin SDK" style="endArrow=open;html=1;fontSize=11;" edge="1" parent="1" source="dev_app" target="cl_fcm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="&lt;&lt;SMTP/TLS&gt;&gt; (:587)" style="endArrow=open;html=1;fontSize=11;" edge="1" parent="1" source="dev_app" target="cl_smtp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="&lt;&lt;HTTPS&gt;&gt; push" style="endArrow=open;html=1;dashed=1;fontSize=11;" edge="1" parent="1" source="dev_phoneA" target="cl_fcm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="&lt;&lt;STUN&gt;&gt;" style="endArrow=open;html=1;dashed=1;fontSize=11;" edge="1" parent="1" source="dev_phoneA" target="cl_stun">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="&lt;&lt;TURN&gt;&gt;" style="endArrow=open;html=1;dashed=1;fontSize=11;" edge="1" parent="1" source="dev_phoneA" target="cl_turnm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="&lt;&lt;TURN&gt;&gt;" style="endArrow=open;html=1;dashed=1;fontSize=11;" edge="1" parent="1" source="dev_phoneA" target="dev_turn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="WebRTC P2P &lt;&lt;SRTP/DTLS&gt;&gt;" style="endArrow=open;startArrow=open;html=1;fontSize=11;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1" source="dev_phoneA" target="dev_phoneB">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

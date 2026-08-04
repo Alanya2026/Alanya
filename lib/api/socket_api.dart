@@ -10,6 +10,62 @@ extension SocketApi on TalkyApiClient {
 
   DateTime? get lastEventReceivedAt => _lastEventReceivedAt;
 
+  /// Événements d'authentification du compte remontés à l'UI. Statiques faute
+  /// de pouvoir déclarer un champ d'instance depuis une extension ; l'app
+  /// n'instancie qu'un seul [TalkyApiClient] (main.dart). Diffusion, car
+  /// plusieurs écrans peuvent écouter, et jamais fermés : leur durée de vie est
+  /// celle du processus, un logout ne doit pas les condamner.
+  static final StreamController<AccountDeviceLogin> _accountLoginsController =
+      StreamController<AccountDeviceLogin>.broadcast();
+  static final StreamController<void> _deviceRevokedController =
+      StreamController<void>.broadcast();
+  static final StreamController<QrContactScan> _qrContactScansController =
+      StreamController<QrContactScan>.broadcast();
+
+  /// Scan arrivé avant qu'AuthWrapper ne soit abonné (tap sur une notification
+  /// à froid) : le flux broadcast n'a pas de mémoire, on garde le dernier.
+  static QrContactScan? _pendingQrScan;
+
+  /// Une session vient de s'ouvrir ailleurs sur le compte (mot de passe,
+  /// inscription ou QR). Purement informatif : de quoi afficher un bandeau.
+  Stream<AccountDeviceLogin> get accountLogins =>
+      SocketApi._accountLoginsController.stream;
+
+  /// CET appareil vient d'être déconnecté depuis un autre appareil du compte.
+  ///
+  /// Seuls les tokens EN MÉMOIRE sont effacés à l'émission ; le stockage
+  /// sécurisé, lui, contient encore le refresh token. C'est
+  /// `AuthProvider.handleRemoteRevocation()`, branché sur ce flux dans
+  /// `AuthWrapper`, qui termine la déconnexion et vide le stockage.
+  Stream<void> get thisDeviceRevoked =>
+      SocketApi._deviceRevokedController.stream;
+
+  /// Mon code contact éphémère vient d'être scanné : le jeton est à usage
+  /// unique, l'écran « Mon code » régénère à la réception, et AuthWrapper
+  /// propose d'ajouter le scanneur en retour (dialogue oui/non).
+  Stream<QrContactScan> get qrContactScans =>
+      SocketApi._qrContactScansController.stream;
+
+  /// Fait entrer un scan dans le flux, d'où qu'il vienne — événement socket ou
+  /// tap sur la notification push (app fermée au moment du scan, l'événement
+  /// socket est perdu ; la push transporte l'identité et la rejoue ici).
+  void injectQrContactScan(QrContactScan scan) {
+    if (scan.alanyaID == 0) return;
+    if (SocketApi._qrContactScansController.hasListener) {
+      SocketApi._qrContactScansController.add(scan);
+    } else {
+      SocketApi._pendingQrScan = scan;
+    }
+  }
+
+  /// Scan mis en attente faute d'abonné — se lit une seule fois, après que
+  /// AuthWrapper s'est abonné (démarrage à froid via notification).
+  QrContactScan? consumePendingQrContactScan() {
+    final scan = SocketApi._pendingQrScan;
+    SocketApi._pendingQrScan = null;
+    return scan;
+  }
+
   void setPendingMessagesCallback(Future<bool> Function() callback) {
     _pendingMessagesCallback = callback;
     if (_accessToken != null) _startConditionalHealthCheck();
@@ -149,8 +205,28 @@ extension SocketApi on TalkyApiClient {
       }
     });
 
+    // Émis à chaque nouvelle connexion du compte, sur tous les autres appareils.
     _socket!.on(SocketEvents.authConflict, (data) {
-      debugPrint('[Socket] Info multi-appareil: ${data is Map ? data['message'] : data}');
+      _recordEvent();
+      final login = AccountDeviceLogin.fromEvent(data);
+      debugPrint(
+        '[Socket] Nouvelle connexion sur le compte: '
+        '${login.deviceName ?? '?'} (${login.loginMethod ?? '?'})',
+      );
+      SocketApi._accountLoginsController.add(login);
+    });
+
+    _socket!.on(SocketEvents.authDeviceRevoked, (data) {
+      _recordEvent();
+      unawaited(_handleDeviceRevoked(data));
+    });
+
+    _socket!.on(SocketEvents.qrContactScanned, (data) {
+      _recordEvent();
+      if (data is! Map) return;
+      final scan = QrContactScan.fromJson(Map<String, dynamic>.from(data));
+      debugPrint('[Socket] Code QR scanné par ${scan.displayName}');
+      injectQrContactScan(scan);
     });
 
     _socket!.onDisconnect((_) {
@@ -234,6 +310,24 @@ extension SocketApi on TalkyApiClient {
         _forceReconnectInFlight = null;
       }
     }();
+  }
+
+  /// La révocation est diffusée à TOUT le compte : seul l'appareil dont
+  /// l'identifiant matériel correspond doit se déconnecter, les autres ignorent.
+  /// Le `logout()` local n'intervient qu'après l'`await` — détruire le socket
+  /// depuis l'intérieur d'un de ses propres handlers n'est pas sûr.
+  Future<void> _handleDeviceRevoked(dynamic data) async {
+    final revokedDeviceId =
+        (data is Map ? data['deviceId']?.toString().trim() : null) ?? '';
+    // 'INDEFINI' est le repli quand l'identifiant matériel est indisponible :
+    // deux appareils le partageraient et se déconnecteraient l'un l'autre.
+    if (revokedDeviceId.isEmpty || revokedDeviceId == 'INDEFINI') return;
+
+    if (revokedDeviceId != await TalkyApiClient.currentHardwareId()) return;
+
+    debugPrint('[Socket] Appareil révoqué à distance → session locale invalidée');
+    logout();
+    SocketApi._deviceRevokedController.add(null);
   }
 
   /// Rafraîchit le JWT (refresh token) suite à un `auth:error` TOKEN_EXPIRED,
@@ -342,5 +436,40 @@ extension SocketApi on TalkyApiClient {
     }
     final wrapped = _socketCallbackWrappers.remove(callback);
     _socket?.off(event, wrapped ?? callback);
+  }
+}
+
+/// Connexion d'un appareil au compte, telle qu'annoncée aux AUTRES appareils
+/// par `auth:conflict`. Aucun champ n'est garanti : le backend renvoie
+/// 'INDEFINI' quand l'appareil n'a pas su se nommer.
+class AccountDeviceLogin {
+  final String? deviceName;
+  final String? platform;
+
+  /// 'password' | 'register' | 'qr'
+  final String? loginMethod;
+  final DateTime? at;
+
+  const AccountDeviceLogin({
+    this.deviceName,
+    this.platform,
+    this.loginMethod,
+    this.at,
+  });
+
+  factory AccountDeviceLogin.fromEvent(dynamic data) {
+    if (data is! Map) return const AccountDeviceLogin();
+    return AccountDeviceLogin(
+      deviceName: _renseigne(data['deviceName']),
+      platform: _renseigne(data['platform']),
+      loginMethod: _renseigne(data['loginMethod']),
+      at: DateTime.tryParse(data['at']?.toString() ?? ''),
+    );
+  }
+
+  /// 'INDEFINI' est une absence d'information, pas un libellé à afficher.
+  static String? _renseigne(Object? value) {
+    final texte = value?.toString().trim() ?? '';
+    return texte.isEmpty || texte == 'INDEFINI' ? null : texte;
   }
 }

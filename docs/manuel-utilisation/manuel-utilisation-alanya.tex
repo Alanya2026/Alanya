@@ -1,0 +1,795 @@
+% =====================================================================
+%  MANUEL D'UTILISATION --- Alanya
+%  Application mobile de communication (Flutter / Android)
+%
+%  Compilation recommandee :
+%     pdflatex (x2)  |  latexmk -pdf  |  Overleaf (pdfLaTeX)
+%
+%  Captures d'ecran : deposer les PNG dans le sous-dossier captures/.
+%  Tant qu'une capture est absente, un cadre "Capture a inserer" s'affiche
+%  a sa place (le document compile quand meme).
+%       captures/01-login.png, captures/02-signup.png, ...
+%  Logos : images/logo-enspy.png , images/logo-Alanya.png
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+% --------------------------------------------------------------------
+%  Encodage, polices, langue
+% --------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage{microtype}
+\usepackage{amssymb}     % \checkmark
+
+% --------------------------------------------------------------------
+%  Mise en page
+% --------------------------------------------------------------------
+\usepackage[a4paper,margin=2.4cm,headheight=15pt]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[skins]{tcolorbox}
+
+% --------------------------------------------------------------------
+%  Schemas
+% --------------------------------------------------------------------
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,calc,backgrounds}
+
+% --------------------------------------------------------------------
+%  Liens (charge en dernier)
+% --------------------------------------------------------------------
+\usepackage[hidelinks]{hyperref}
+
+% --------------------------------------------------------------------
+%  Palette de marque Alanya
+% --------------------------------------------------------------------
+\definecolor{AlanyaIndigo}{HTML}{3F51B5}
+\definecolor{AlanyaIndigoDark}{HTML}{1A237E}
+\definecolor{AlanyaIndigoStrong}{HTML}{303F9F}
+\definecolor{AlanyaContainer}{HTML}{E8EAF6}
+\definecolor{AlanyaInk}{HTML}{1A1D23}
+\definecolor{AlanyaGray}{HTML}{5B6273}
+\definecolor{AlanyaLine}{HTML}{CBD0E0}
+\definecolor{AlanyaGreen}{HTML}{1FA363}
+\definecolor{AlanyaAmber}{HTML}{B7791F}
+\definecolor{AlanyaBlue}{HTML}{2E90FA}
+\definecolor{boxBg}{HTML}{F6F7FB}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Manuel d'utilisation - Alanya},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Guide utilisateur de l'application mobile Alanya}
+}
+
+% --------------------------------------------------------------------
+%  En-tetes / pieds de page
+% --------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\nouppercase{\leftmark}}
+\fancyhead[R]{\small\textcolor{AlanyaIndigo}{\textbf{Alanya}} --- Manuel d'utilisation}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}\fancyfoot[C]{\small\thepage}%
+  \renewcommand{\headrulewidth}{0pt}}
+
+% --------------------------------------------------------------------
+%  Titres de chapitres / sections
+% --------------------------------------------------------------------
+\titleformat{\chapter}[display]
+  {\normalfont\sffamily\bfseries\color{AlanyaIndigo}}
+  {\filright\large CHAPITRE\ \Huge\thechapter}
+  {0.6ex}{\Huge}
+\titlespacing*{\chapter}{0pt}{10pt}{30pt}
+\titleformat{\section}
+  {\normalfont\sffamily\Large\bfseries\color{AlanyaIndigoDark}}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\sffamily\large\bfseries\color{AlanyaIndigoStrong}}{\thesubsection}{1em}{}
+
+% --------------------------------------------------------------------
+%  Macros utilitaires
+% --------------------------------------------------------------------
+% Libelle de bouton / commande de l'interface
+\newcommand{\bouton}[1]{\textbf{\textsf{#1}}}
+% Libelle de champ de saisie / onglet (entre guillemets)
+\newcommand{\champ}[1]{\og{}#1\fg{}}
+% Titre de colonne de tableau
+\newcommand{\thd}[1]{\textbf{\textcolor{AlanyaIndigoDark}{#1}}}
+
+% Cadre de remplacement generique si image absente
+\newcommand{\imageOuCadre}[3]{%
+  \IfFileExists{#1}{\includegraphics[width=#2]{#1}}{%
+    \fbox{\begin{minipage}[c][4.2cm][c]{#2}%
+      \centering\sffamily\color{AlanyaGray}%
+      \textbf{[ Image manquante ]}\\[6pt]\small #3%
+    \end{minipage}}}%
+}
+
+% Capture d'ecran (format portrait telephone) numerotee automatiquement
+\newcommand{\capture}[2]{%
+  \begin{figure}[H]\centering
+    \IfFileExists{captures/#1}{\includegraphics[width=6cm]{captures/#1}}{%
+      \fbox{\begin{minipage}[c][8.5cm][c]{5.6cm}%
+        \centering\sffamily\color{AlanyaGray}%
+        \textbf{[ Capture a inserer ]}\\[10pt]\small #2\\[8pt]\texttt{captures/#1}%
+      \end{minipage}}}%
+    \caption{#2}%
+  \end{figure}%
+}
+
+% Encadres typés
+\newenvironment{note}[1][Note]{%
+  \begin{tcolorbox}[enhanced, frame hidden, interior hidden,
+    borderline west={3pt}{0pt}{AlanyaIndigo}, left=10pt, top=3pt, bottom=3pt,
+    sharp corners, colback=white, before skip=\medskipamount, after skip=\medskipamount]%
+  \small\textbf{\textcolor{AlanyaIndigoDark}{#1.}}\space\ignorespaces
+}{\end{tcolorbox}}
+
+\newenvironment{astuce}{%
+  \begin{tcolorbox}[enhanced, frame hidden, interior hidden,
+    borderline west={3pt}{0pt}{AlanyaGreen}, left=10pt, top=3pt, bottom=3pt,
+    sharp corners, colback=white, before skip=\medskipamount, after skip=\medskipamount]%
+  \small\textbf{\textcolor{AlanyaGreen}{Astuce.}}\space\ignorespaces
+}{\end{tcolorbox}}
+
+\newenvironment{attention}{%
+  \begin{tcolorbox}[enhanced, frame hidden, interior hidden,
+    borderline west={3pt}{0pt}{AlanyaAmber}, left=10pt, top=3pt, bottom=3pt,
+    sharp corners, colback=white, before skip=\medskipamount, after skip=\medskipamount]%
+  \small\textbf{\textcolor{AlanyaAmber}{Attention.}}\space\ignorespaces
+}{\end{tcolorbox}}
+
+\renewcommand{\arraystretch}{1.25}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+
+% --------------------------------------------------------------------
+\begin{document}
+
+% ====================================================================
+%  PAGE DE GARDE
+% ====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-7.8cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-7.8cm]current page.north west) rectangle ([yshift=-7.2cm]current page.north east);
+\end{tikzpicture}
+
+% -- Zone superieure : logos + nom de l'ecole --
+\vspace*{0.45cm}
+{\color{white}\sffamily
+\begin{minipage}[c]{0.38\linewidth}
+  \centering
+  \IfFileExists{images/logo-enspy.png}{%
+    \includegraphics[width=3.2cm]{images/logo-enspy.png}}{%
+    \fbox{\begin{minipage}[c][2.8cm][c]{3.4cm}
+      \centering\footnotesize\color{AlanyaGray}
+      \textbf{Logo ENSPY}\\[3pt]\texttt{images/logo-enspy.png}
+    \end{minipage}}}
+\end{minipage}%
+\hfill%
+\begin{minipage}[c]{0.58\linewidth}
+  \raggedleft
+  {\small UNIVERSIT\'{E} DE YAOUND\'{E}~I}\\[4pt]
+  {\small\bfseries \'{E}COLE NATIONALE SUP\'{E}RIEURE}\\
+  {\small\bfseries POLYTECHNIQUE DE YAOUND\'{E}}\\[5pt]
+  {\footnotesize D\'{e}partement G\'{e}nie Informatique}\\[3pt]
+  {\footnotesize\itshape\color{AlanyaContainer} Projet Base de Donn\'{e}es}
+\end{minipage}}
+
+\vspace{1.9cm}
+
+% -- Corps central --
+\begin{center}\sffamily
+  {\small\bfseries PROJET BASE DE DONN\'{E}ES}\\[10pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[22pt]
+  {\fontsize{34}{38}\selectfont\bfseries\color{AlanyaIndigoDark} Manuel d'utilisation}\\[8pt]
+  {\large\color{AlanyaGray} Application mobile de communication Alanya}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Messagerie \textbullet{} Appels \textbullet{} R\'{e}unions \textbullet{} Statuts}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[18pt]
+  \IfFileExists{images/logo-Alanya.png}{%
+    \includegraphics[width=5cm]{images/logo-Alanya.png}}{%
+    \fbox{\begin{minipage}[c][3.6cm][c]{5.5cm}
+      \centering\sffamily\color{AlanyaGray}
+      \textbf{Logo Alanya}\\[3pt]\texttt{images/logo-Alanya.png}
+    \end{minipage}}}
+\end{center}
+
+\vfill
+
+% -- Informations academiques --
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Groupe N\textsuperscript{o}}        & 1\\[3pt]
+    \thd{Sous la supervision de}             & Dr.\ NANA MBINKEU\\[3pt]
+    \thd{Ann\'{e}e acad\'{e}mique}           & 2025-2026\\[3pt]
+    \thd{Date}                               & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.6cm}
+\begin{center}\color{white}\small\sffamily
+  Guide destin\'{e} aux utilisateurs de l'application
+\end{center}
+\end{titlepage}
+
+% ====================================================================
+%  TABLE DES MATIERES
+% ====================================================================
+\renewcommand{\contentsname}{Table des mati\`{e}res}
+\tableofcontents
+\listoffigures
+
+% ====================================================================
+\chapter{Introduction}
+\label{chap:intro}
+
+\section{\`{A} propos d'Alanya}
+\textbf{Alanya} est une application mobile de communication qui r\'{e}unit, en un seul
+endroit, la \textbf{messagerie} instantan\'{e}e, les \textbf{appels} audio et vid\'{e}o, les
+\textbf{r\'{e}unions} en ligne et les \textbf{statuts} \'{e}ph\'{e}m\`{e}res. Elle vous permet
+d'\'{e}changer des messages (texte, photos, vid\'{e}os, fichiers, messages vocaux),
+de passer des appels individuels ou de groupe, d'organiser des visioconf\'{e}rences
+planifi\'{e}es et de partager des statuts visibles pendant 24~heures.
+
+\section{\`{A} qui s'adresse ce manuel}
+Ce guide s'adresse \`{a} \textbf{toute personne utilisant Alanya} au quotidien. Aucune
+connaissance technique n'est requise~: chaque fonctionnalit\'{e} est pr\'{e}sent\'{e}e
+\textbf{pas \`{a} pas}, accompagn\'{e}e de captures d'\'{e}cran. Un chapitre distinct
+(chapitre~\ref{chap:admin}) est r\'{e}serv\'{e} aux \textbf{administrateurs} de la plateforme.
+
+\section{Conventions du document}
+\begin{itemize}[leftmargin=1.3em]
+  \item \bouton{Boutons} et commandes \`{a} toucher apparaissent en \textbf{gras sans serif}~;
+  \item les noms de champs et d'onglets sont indiqu\'{e}s entre guillemets, par ex.\ \champ{Mot de passe}~;
+  \item les proc\'{e}dures num\'{e}rot\'{e}es se lisent dans l'ordre indiqu\'{e}.
+\end{itemize}
+Trois types d'encadr\'{e}s ponctuent le texte~:
+\begin{note}
+information utile ou pr\'{e}cision de contexte.
+\end{note}
+\begin{astuce}
+conseil pratique pour gagner du temps.
+\end{astuce}
+\begin{attention}
+point de vigilance \`{a} ne pas n\'{e}gliger.
+\end{attention}
+
+\section{Pr\'{e}requis}
+\begin{itemize}[leftmargin=1.3em]
+  \item Un t\'{e}l\'{e}phone \textbf{Android} compatible.
+  \item Une \textbf{connexion Internet} (Wi-Fi ou donn\'{e}es mobiles). Certaines actions
+        (envoyer un message, lire l'historique) restent disponibles \textbf{hors ligne}
+        et se synchronisent au retour du r\'{e}seau~; d'autres (nouvel appel, nouvelle
+        discussion) n\'{e}cessitent une connexion active.
+  \item Un \textbf{compte Alanya} (voir chapitre~\ref{chap:premierspas}).
+\end{itemize}
+
+% ====================================================================
+\chapter{Premiers pas}
+\label{chap:premierspas}
+
+\section{Installer l'application}
+Installez Alanya sur votre t\'{e}l\'{e}phone \`{a} partir du fichier d'installation (APK)
+qui vous a \'{e}t\'{e} fourni, ou depuis la boutique d'applications. Ouvrez ensuite
+l'application~: le premier \'{e}cran affich\'{e} est l'\'{e}cran de \textbf{connexion}.
+
+\section{Cr\'{e}er un compte (inscription)}
+Si vous n'avez pas encore de compte~:
+\begin{enumerate}[leftmargin=1.5em]
+  \item Sur l'\'{e}cran de connexion, touchez \bouton{S'inscrire}.
+  \item Renseignez les champs \champ{Nom complet}, \champ{Pseudo},
+        \champ{Adresse e-mail} et \champ{Mot de passe} (6\,caract\`{e}res minimum).
+        L'ic\^{o}ne en forme d'\oe il permet d'afficher ou masquer le mot de passe.
+  \item Touchez \bouton{Inscription} pour cr\'{e}er le compte.
+  \item Une fen\^{e}tre affiche alors votre \textbf{identifiant Alanya}
+        (\champ{Votre identifiant Talky})~: un num\'{e}ro \`{a} \textbf{6\,chiffres}.
+        \textbf{Notez-le pr\'{e}cieusement}~: c'est lui qui vous servira \`{a} vous
+        connecter et que vos contacts utiliseront pour vous joindre.
+\end{enumerate}
+
+\begin{attention}
+L'identifiant \`{a} 6\,chiffres remplace le num\'{e}ro de t\'{e}l\'{e}phone classique pour la
+connexion. Si vous l'oubliez, vous ne pourrez plus vous connecter~: conservez-le.
+\end{attention}
+
+\capture{01-signup.png}{\'{E}cran d'inscription et fen\^{e}tre affichant l'identifiant Alanya.}
+
+\section{Se connecter}
+\begin{enumerate}[leftmargin=1.5em]
+  \item Dans le champ \champ{T\'{e}l\'{e}phone Alanya}, saisissez votre identifiant \`{a}
+        6\,chiffres (par exemple \texttt{340364}).
+  \item Saisissez votre \champ{Mot de passe}.
+  \item Touchez \bouton{Se connecter}.
+\end{enumerate}
+En cas d'erreur (identifiant ou mot de passe incorrect), un message s'affiche en
+rouge sous le formulaire.
+
+\capture{02-login.png}{\'{E}cran de connexion.}
+
+\section{Mot de passe oubli\'{e}}
+Si vous avez oubli\'{e} votre mot de passe, touchez \bouton{Mot de passe oubli\'{e} ?}
+sur l'\'{e}cran de connexion, puis suivez les \textbf{trois \'{e}tapes}~:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Adresse e-mail}~: saisissez l'e-mail de votre compte et touchez
+        \bouton{Envoyer le code}. Un code \`{a} 6\,chiffres (OTP) vous est envoy\'{e} par e-mail.
+  \item \textbf{V\'{e}rification}~: saisissez le code re\c{c}u, puis validez. Si vous ne
+        l'avez pas re\c{c}u, touchez \bouton{Renvoyer le code}.
+  \item \textbf{Nouveau mot de passe}~: saisissez le \champ{Nouveau mot de passe} et
+        sa confirmation, puis validez. Le message \champ{Mot de passe r\'{e}initialis\'{e}
+        avec succ\`{e}s} confirme l'op\'{e}ration et vous ramène \`{a} la connexion.
+\end{enumerate}
+
+\begin{note}
+Le code OTP a une dur\'{e}e de validit\'{e} limit\'{e}e (10\,minutes). Pens\'{e} \`{a}
+v\'{e}rifier votre dossier \og{}courrier ind\'{e}sirable\fg{} si vous ne le voyez pas.
+\end{note}
+
+\capture{03-otp.png}{R\'{e}initialisation du mot de passe par code OTP.}
+
+\section{Autorisations demand\'{e}es}
+Lors de la premi\`{e}re utilisation de certaines fonctions, Android vous demande
+d'autoriser l'application. Acceptez pour que la fonction concern\'{e}e marche~:
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Autorisation} & \thd{Demand\'{e}e quand\ldots}\\
+\midrule
+Micro    & vous passez un appel, rejoignez une r\'{e}union ou enregistrez un message vocal.\\
+Cam\'{e}ra & vous passez un appel vid\'{e}o, rejoignez une r\'{e}union vid\'{e}o, ou prenez une photo (statut, profil).\\
+Notifications & au d\'{e}marrage, pour vous pr\'{e}venir des messages, appels et r\'{e}unions.\\
+Fichiers / Galerie & vous envoyez une photo, une vid\'{e}o ou un document.\\
+\bottomrule
+\end{tabularx}
+\caption{Autorisations et moment o\`{u} elles sont demand\'{e}es.}
+\end{table}
+
+\begin{attention}
+Si vous refusez le micro ou la cam\'{e}ra, les appels et r\'{e}unions ne pourront pas
+fonctionner correctement. Vous pourrez r\'{e}activer ces autorisations dans les
+r\'{e}glages Android de l'application.
+\end{attention}
+
+\section{D\'{e}couvrir l'\'{e}cran d'accueil}
+Une fois connect\'{e}, vous arrivez sur l'\'{e}cran d'accueil. Une \textbf{barre de
+navigation} en bas de l'\'{e}cran donne acc\`{e}s aux cinq sections de l'application.
+Touchez une ic\^{o}ne pour changer de section.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\sffamily\footnotesize]
+  \node[draw=AlanyaLine, rounded corners=8pt, fill=boxBg, minimum width=15cm,
+        minimum height=1.5cm] (bar) {};
+  \foreach \i/\lab [evaluate=\i as \x using {-6+\i*3}] in
+    {0/Discussions, 1/Appels, 2/Statuts, 3/R\'{e}unions, 4/Profil} {
+    \node[text=AlanyaIndigo] at (\x,0.28) {$\bullet$};
+    \node[text=AlanyaInk]    at (\x,-0.28) {\lab};
+  }
+\end{tikzpicture}
+\caption{Barre de navigation : les cinq sections de l'application.}
+\label{fig:nav}
+\end{figure}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Section} & \thd{R\^{o}le}\\
+\midrule
+\bouton{Discussions} & Vos conversations et messages (chapitre~\ref{chap:chats}).\\
+\bouton{Appels}      & Historique et lancement d'appels (chapitre~\ref{chap:appels}).\\
+\bouton{Statuts}     & Statuts \'{e}ph\'{e}m\`{e}res (chapitre~\ref{chap:statuts}).\\
+\bouton{R\'{e}unions} & R\'{e}unions planifi\'{e}es (chapitre~\ref{chap:reunions}).\\
+\bouton{Profil}      & Votre profil et les r\'{e}glages (chapitre~\ref{chap:profil}).\\
+\bottomrule
+\end{tabularx}
+\caption{Les cinq sections de la barre de navigation.}
+\end{table}
+
+% ====================================================================
+\chapter{Messagerie (Discussions)}
+\label{chap:chats}
+
+\section{La liste des discussions}
+La section \bouton{Discussions} affiche toutes vos conversations, la plus
+r\'{e}cente en haut. Chaque ligne montre la photo du contact, son nom, un aper\c{c}u du
+dernier message et l'heure. Un \textbf{point vert} sur la photo indique que le
+contact est en ligne~; un \textbf{badge} indique le nombre de messages non lus.
+
+\subsection{Rechercher et filtrer}
+\begin{itemize}[leftmargin=1.3em]
+  \item Touchez l'ic\^{o}ne \textbf{loupe} pour rechercher une conversation par nom ou pseudo.
+  \item Les filtres permettent d'afficher~: \champ{Tous}, \champ{Discussions} (\'{e}changes
+        individuels), \champ{Groupes}, \champ{Non lus} ou \champ{Archiv\'{e}s}.
+\end{itemize}
+
+\subsection{Actions rapides sur une conversation}
+Faites un \textbf{appui long} sur une conversation pour ouvrir le menu d'actions~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \bouton{\'{E}pingler} / \bouton{D\'{e}s\'{e}pingler}~: la conversation reste en haut de la liste~;
+  \item \bouton{Archiver} / \bouton{D\'{e}sarchiver}~: la range dans \champ{Archiv\'{e}s}~;
+  \item \bouton{Supprimer}~: retire la conversation de votre liste.
+\end{itemize}
+
+\capture{04-chats-liste.png}{Liste des discussions avec barre de recherche et filtres.}
+
+\section{D\'{e}marrer une nouvelle discussion}
+Touchez le bouton \textbf{+} (en bas \`{a} droite), choisissez un utilisateur, puis
+commencez \`{a} \'{e}changer.
+
+\begin{note}
+Le bouton \textbf{+} est indisponible hors ligne~: un message vous le signale.
+Reconnectez-vous pour d\'{e}marrer une nouvelle discussion.
+\end{note}
+
+\section{Cr\'{e}er un groupe}
+\begin{enumerate}[leftmargin=1.5em]
+  \item Touchez \bouton{Cr\'{e}er un groupe}.
+  \item S\'{e}lectionnez les membres \`{a} ajouter.
+  \item Donnez un \textbf{nom} (et \'{e}ventuellement une \textbf{photo}) au groupe.
+  \item Touchez \bouton{Cr\'{e}er le groupe}.
+\end{enumerate}
+Dans un groupe existant, ouvrez la fiche du groupe (en touchant son nom) pour voir
+les membres~; l'administrateur du groupe peut ajouter des membres
+(\bouton{Ajouter des participants}), renommer le groupe ou changer sa photo.
+
+\section{Envoyer un message}
+Ouvrez une conversation, puis~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \textbf{Texte}~: \'{e}crivez dans le champ de saisie et touchez le bouton d'envoi.
+  \item \textbf{\'{E}moji}~: touchez l'ic\^{o}ne \'{e}moji pour ouvrir le s\'{e}lecteur.
+  \item \textbf{Pi\`{e}ce jointe}~: touchez l'ic\^{o}ne \textbf{trombone} puis choisissez
+        \bouton{Galerie} (photo/vid\'{e}o existante), \bouton{Cam\'{e}ra} (prendre une photo),
+        ou un \textbf{fichier} (document, max 50\,Mo).
+  \item \textbf{Message vocal}~: \textbf{maintenez} l'ic\^{o}ne \textbf{micro} enfonc\'{e}e pour
+        enregistrer (un minuteur s'affiche), puis rel\^{a}chez pour envoyer. Pour annuler,
+        glissez le doigt avant de rel\^{a}cher.
+\end{itemize}
+
+\capture{05-chat-detail.png}{\'{E}cran de conversation et options d'envoi (pi\`{e}ce jointe, vocal).}
+
+\section{Agir sur un message}
+Faites un \textbf{appui long} sur un message pour~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \bouton{R\'{e}pondre}~: cite le message dans votre r\'{e}ponse~;
+  \item \bouton{Copier}~: copie le texte (messages texte uniquement)~;
+  \item \bouton{Modifier}~: \'{e}dite l'un de \emph{vos} messages texte~;
+  \item \bouton{Supprimer pour moi}~: le retire de votre affichage~;
+  \item \bouton{Supprimer pour tous}~: le retire pour tout le monde (vos messages).
+\end{itemize}
+Un message supprim\'{e} appara\^{i}t comme \champ{Ce message a \'{e}t\'{e} supprim\'{e}}.
+
+\section{Comprendre les accus\'{e}s et la saisie}
+Sous votre dernier message envoy\'{e}, une ic\^{o}ne indique son \'{e}tat~:
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}c l X@{}}
+\toprule
+\thd{Ic\^{o}ne} & \thd{\'{E}tat} & \thd{Signification}\\
+\midrule
+\textcolor{AlanyaGray}{$\circlearrowright$} & En attente & Le message est en cours d'envoi.\\
+$\checkmark$ & Envoy\'{e} & Le serveur a re\c{c}u le message.\\
+$\checkmark\checkmark$ \textcolor{AlanyaGray}{(gris)} & Distribu\'{e} & Le message est arriv\'{e} sur l'appareil du destinataire.\\
+$\checkmark\checkmark$ \textcolor{AlanyaBlue}{(bleu)} & Lu & Le destinataire a ouvert le message.\\
+\textcolor{red}{\textbf{!}} & \'{E}chec & L'envoi a \'{e}chou\'{e}~; touchez le message pour r\'{e}essayer.\\
+\bottomrule
+\end{tabularx}
+\caption{Ic\^{o}nes d'accus\'{e} de message.}
+\label{tab:accuses}
+\end{table}
+Lorsque votre interlocuteur \'{e}crit, la mention \champ{\ldots est en train d'\'{e}crire}
+appara\^{i}t en haut de la conversation.
+
+% ====================================================================
+\chapter{Appels}
+\label{chap:appels}
+
+\section{L'historique des appels}
+La section \bouton{Appels} liste vos appels r\'{e}cents avec, pour chacun~: la photo et
+le nom du contact, le type (\champ{Appel vocal} ou \champ{Appel vid\'{e}o}), le sens
+(\'{e}mis ou re\c{c}u), la dur\'{e}e et la date. La \textbf{loupe} permet de rechercher
+dans l'historique.
+
+\section{Passer un appel}
+Vous pouvez lancer un appel de trois fa\c{c}ons~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \textbf{Depuis une discussion}~: touchez l'ic\^{o}ne \textbf{combin\'{e}} (appel vocal)
+        ou \textbf{cam\'{e}ra} (appel vid\'{e}o) en haut de la conversation~;
+  \item \textbf{Depuis le clavier}~: dans \bouton{Appels}, ouvrez le clavier num\'{e}rique,
+        composez l'identifiant Alanya \`{a} 6\,chiffres (la fiche du contact appara\^{i}t
+        s'il existe), puis touchez le bouton d'appel~;
+  \item \textbf{Depuis un contact}~: ouvrez la fiche d'un contact et choisissez l'appel.
+\end{itemize}
+
+\capture{06-keypad.png}{Clavier de num\'{e}rotation par identifiant Alanya.}
+
+\section{Recevoir un appel}
+Lorsqu'un appel arrive, un \'{e}cran plein affiche le nom et la photo de l'appelant
+ainsi que le type d'appel~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \bouton{Accepter} (bouton vert)~: d\'{e}marre l'appel~;
+  \item \bouton{Refuser} (bouton rouge)~: rejette l'appel.
+\end{itemize}
+
+\section{Pendant l'appel}
+L'\'{e}cran d'appel affiche la dur\'{e}e \'{e}coul\'{e}e et l'\'{e}tat (\champ{Connexion\ldots}
+puis \champ{Connect\'{e}}). Les commandes disponibles~:
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Commande} & \thd{Effet}\\
+\midrule
+Micro       & Coupe ou r\'{e}active votre microphone.\\
+Haut-parleur & Bascule entre \'{e}couteur et haut-parleur.\\
+Cam\'{e}ra   & Active ou coupe votre vid\'{e}o (appels vid\'{e}o).\\
+Changer de cam\'{e}ra & Bascule entre cam\'{e}ra avant et arri\`{e}re.\\
+Raccrocher (rouge) & Termine l'appel.\\
+\bottomrule
+\end{tabularx}
+\caption{Commandes pendant un appel.}
+\end{table}
+
+\capture{07-appel.png}{\'{E}cran d'appel en cours et ses commandes.}
+
+\section{Appels de groupe}
+Alanya permet les appels \`{a} plusieurs (jusqu'\`{a} 9\,participants). Les vid\'{e}os des
+participants s'affichent en mosa\"{i}que~; les commandes (micro, haut-parleur,
+cam\'{e}ra, raccrocher) sont identiques \`{a} celles d'un appel individuel. Tant que
+personne n'a rejoint, l'\'{e}cran indique \champ{En attente des participants\ldots}.
+
+% ====================================================================
+\chapter{R\'{e}unions}
+\label{chap:reunions}
+
+\section{La liste des r\'{e}unions}
+La section \bouton{R\'{e}unions} organise vos r\'{e}unions en trois onglets~:
+\champ{\`{A} venir}, \champ{En cours} et \champ{Pass\'{e}es}. Chaque carte indique le
+titre, la date et l'heure, l'organisateur (\champ{H\^{o}te}) et le nombre de
+participants. La \textbf{loupe} permet de filtrer par titre.
+
+\section{Planifier une r\'{e}union}
+\begin{enumerate}[leftmargin=1.5em]
+  \item Touchez le bouton \textbf{+} pour ouvrir l'\'{e}cran de planification.
+  \item Saisissez le \textbf{titre}, la \textbf{date} et l'\textbf{heure}.
+  \item S\'{e}lectionnez les \textbf{participants} \`{a} inviter.
+  \item Choisissez le type (audio ou vid\'{e}o), puis validez.
+\end{enumerate}
+
+\section{Inviter, accepter, refuser}
+Depuis le \champ{D\'{e}tail de la r\'{e}union}, l'organisateur peut toucher
+\bouton{Ajouter des participants} pour inviter d'autres personnes. Les invit\'{e}s
+re\c{c}oivent une notification et peuvent \textbf{accepter} ou \textbf{refuser}
+l'invitation. L'organisateur peut aussi \bouton{Annuler la r\'{e}union}.
+
+\capture{08-meeting-detail.png}{D\'{e}tail d'une r\'{e}union et liste des participants.}
+
+\section{La salle d'attente}
+Avant d'entrer dans une r\'{e}union, vous passez par une \textbf{salle d'attente} qui
+affiche un aper\c{c}u de votre cam\'{e}ra. Vous pouvez y \textbf{activer ou couper} votre
+micro et votre cam\'{e}ra (\champ{Cam\'{e}ra active} / \champ{Cam\'{e}ra coup\'{e}e}) avant de
+toucher \bouton{Rejoindre}.
+
+\section{Participer \`{a} la r\'{e}union}
+Une fois entr\'{e}, les vid\'{e}os des participants s'affichent en mosa\"{i}que (votre
+propre vignette est rep\'{e}r\'{e}e). Les commandes permettent de couper le micro,
+d'activer/couper la cam\'{e}ra, d'ouvrir le \bouton{Chat} de la r\'{e}union et de
+\bouton{Quitter}.
+
+\capture{09-meeting-live.png}{R\'{e}union en cours (mosa\"{i}que des participants).}
+
+% ====================================================================
+\chapter{Statuts}
+\label{chap:statuts}
+
+\section{Voir les statuts}
+La section \bouton{Statuts} pr\'{e}sente d'abord \champ{Mon statut}, puis les statuts
+de vos contacts r\'{e}partis en \champ{R\'{e}cents} (non encore vus) et \champ{D\'{e}j\`{a}
+vus}. Touchez le statut d'un contact pour l'ouvrir en plein \'{e}cran~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \textbf{glissez} vers la gauche/droite pour passer au statut suivant/pr\'{e}c\'{e}dent~;
+  \item \textbf{touchez} pour mettre en pause, touchez \`{a} nouveau pour reprendre.
+\end{itemize}
+
+\section{Cr\'{e}er un statut}
+Touchez \champ{Appuyer pour ajouter votre statut} (ou le bouton de cr\'{e}ation), puis
+choisissez le type~:
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Type} & \thd{\'{E}tapes}\\
+\midrule
+Texte & \'{E}crivez votre texte, choisissez une \champ{Couleur de fond}, puis touchez \bouton{Publier}.\\
+Photo & Touchez \bouton{Ajouter une photo} (\bouton{Galerie} ou \bouton{Appareil}), ajoutez une description, puis \bouton{Publier}.\\
+Vid\'{e}o & Touchez \bouton{Ajouter une vid\'{e}o}, ajoutez une description, puis \bouton{Publier}.\\
+Audio & Enregistrez un \champ{Message vocal} (possibilit\'{e} de \bouton{R\'{e}enregistrer}), puis \bouton{Publier}.\\
+\bottomrule
+\end{tabularx}
+\caption{Les quatre types de statut.}
+\end{table}
+
+\begin{note}
+Un statut reste visible \textbf{24\,heures}, puis dispara\^{i}t automatiquement.
+\end{note}
+
+\capture{10-status-create.png}{Cr\'{e}ation d'un statut (texte avec couleur de fond).}
+
+\section{Qui a vu mon statut~? Aimer un statut}
+Ouvrez \champ{Mon statut} et touchez le nombre de vues pour voir \textbf{qui} a
+regard\'{e} votre statut et \textbf{quand} (\champ{Aucune vue} s'il n'y en a pas
+encore). En regardant le statut d'un contact, touchez l'ic\^{o}ne \textbf{c\oe ur} pour
+l'aimer, ou \champ{R\'{e}pondre au statut\ldots} pour envoyer une r\'{e}ponse en message
+priv\'{e}.
+
+% ====================================================================
+\chapter{Contacts}
+\label{chap:contacts}
+
+\section{Rechercher et ajouter un contact}
+Touchez \bouton{Nouveau contact} puis recherchez un utilisateur (par identifiant
+ou par nom). Vous pouvez l'ajouter \`{a} vos \textbf{contacts pr\'{e}f\'{e}r\'{e}s} pour le
+retrouver rapidement. \bouton{Nouveau groupe} permet de cr\'{e}er directement un groupe.
+
+\section{Contacts pr\'{e}f\'{e}r\'{e}s}
+Les \champ{Contacts pr\'{e}f\'{e}r\'{e}s} sont accessibles rapidement (notamment depuis votre
+profil et l'\'{e}cran d'appel). Ajoutez ou retirez un favori depuis la fiche du contact.
+
+\section{Bloquer un contact}
+Depuis la fiche d'un contact, touchez \bouton{Bloquer le contact} et confirmez
+(\champ{Bloquer ce contact ?}). Un contact bloqu\'{e} ne peut plus vous joindre. Pour
+annuler, touchez \bouton{D\'{e}bloquer}.
+
+\capture{11-contact.png}{Fiche d'un contact (appeler, message, favori, bloquer).}
+
+% ====================================================================
+\chapter{Profil et r\'{e}glages}
+\label{chap:profil}
+
+\section{Votre profil}
+La section \bouton{Profil} affiche votre photo, votre nom, votre pseudo, votre
+identifiant Alanya et vos contacts pr\'{e}f\'{e}r\'{e}s. De l\`{a}, vous pouvez ouvrir
+\bouton{Modifier le profil}, les \bouton{Param\`{e}tres}, l'espace \bouton{Admin}
+(si votre compte est administrateur) et vous \bouton{D\'{e}connecter}.
+
+\section{Modifier le profil}
+Dans \bouton{Modifier le profil}~:
+\begin{itemize}[leftmargin=1.3em]
+  \item touchez votre photo pour \bouton{Prendre une photo}, \bouton{Choisir depuis la
+        galerie} ou \bouton{Supprimer la photo}~;
+  \item modifiez votre \champ{Nom}, votre \champ{Pseudo}, votre e-mail, votre pays~;
+  \item touchez \bouton{Enregistrer}. Le message \champ{Profil mis \`{a} jour} confirme.
+\end{itemize}
+
+\capture{12-edit-profile.png}{\'{E}cran de modification du profil.}
+
+\section{R\'{e}glages}
+L'\'{e}cran \bouton{Param\`{e}tres} regroupe~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \champ{Apparence}~: th\`{e}me \champ{Clair} ou \champ{Sombre}~;
+  \item \champ{Notifications}~: sonneries de message, de groupe et d'appel~;
+  \item \champ{Confidentialit\'{e}}~: blocage de contacts, messages \'{e}ph\'{e}m\`{e}res~;
+  \item \champ{Compte} / \champ{S\'{e}curit\'{e}}~: gestion du compte~;
+  \item \champ{Stockage et donn\'{e}es}.
+\end{itemize}
+
+\section{Se d\'{e}connecter}
+Touchez \bouton{D\'{e}connexion} dans votre profil. Vous revenez \`{a} l'\'{e}cran de
+connexion. Vos donn\'{e}es restent associ\'{e}es \`{a} votre compte et seront restaur\'{e}es
+\`{a} la prochaine connexion.
+
+% ====================================================================
+\chapter{Espace administrateur}
+\label{chap:admin}
+
+\begin{note}
+Ce chapitre concerne uniquement les comptes \textbf{administrateur}. L'entr\'{e}e
+\bouton{Admin} appara\^{i}t alors dans la section \bouton{Profil}.
+\end{note}
+
+\section{Le tableau de bord}
+L'\'{e}cran \champ{Tableau de bord} pr\'{e}sente des statistiques globales sous forme de
+cartes~: nombre total d'utilisateurs, utilisateurs \champ{En ligne},
+\champ{Messages (7j)}, \champ{Appels (7j)}, \champ{Statuts (7j)} et nombre de
+comptes \champ{Bannis}.
+
+\capture{13-admin-dashboard.png}{Tableau de bord d'administration.}
+
+\section{Rechercher et filtrer les utilisateurs}
+Sous les statistiques, la liste des utilisateurs peut \^{e}tre~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \textbf{filtr\'{e}e} par \champ{Tous}, \champ{En ligne}, \champ{Bannis} ou \champ{Admins}~;
+  \item \textbf{recherch\'{e}e} par nom, pseudo, e-mail ou t\'{e}l\'{e}phone~;
+  \item \textbf{parcourue} page par page lorsqu'il y a beaucoup de comptes.
+\end{itemize}
+
+\section{G\'{e}rer un utilisateur}
+Touchez une ligne pour ouvrir la fiche d\'{e}taill\'{e}e d'un utilisateur~: profil,
+activit\'{e} (messages, appels, statuts) et \champ{Connexions r\'{e}centes}. Les actions
+disponibles~:
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Action} & \thd{Effet}\\
+\midrule
+\bouton{Bannir} & Emp\^{e}che l'utilisateur de se connecter (un motif peut \^{e}tre saisi).\\
+\bouton{D\'{e}bannir} & Lève le bannissement.\\
+\bouton{Rendre admin} / \bouton{R\'{e}trograder} & Change le r\^{o}le du compte.\\
+\bouton{Supprimer} & Supprime le compte (action irr\'{e}versible).\\
+\bottomrule
+\end{tabularx}
+\caption{Actions d'administration sur un utilisateur.}
+\end{table}
+
+\begin{attention}
+Le bannissement et la suppression ont un impact imm\'{e}diat sur l'utilisateur
+concern\'{e}. La suppression est \textbf{irr\'{e}versible}~: v\'{e}rifiez avant de confirmer.
+\end{attention}
+
+% ====================================================================
+\chapter{Foire aux questions \& d\'{e}pannage}
+\label{chap:faq}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}p{5.4cm} X@{}}
+\toprule
+\thd{Probl\`{e}me} & \thd{Que faire}\\
+\midrule
+Je ne re\c{c}ois pas le code OTP & V\'{e}rifiez votre dossier \og{}spam\fg{}, l'adresse e-mail saisie, puis touchez \bouton{Renvoyer le code} (le code expire au bout de 10\,minutes).\\
+Connexion impossible & V\'{e}rifiez votre identifiant \`{a} 6\,chiffres et votre mot de passe~; en cas d'oubli, utilisez \bouton{Mot de passe oubli\'{e} ?}. Un compte banni ne peut pas se connecter.\\
+Mon appel ne passe pas / pas de son ni d'image & Autorisez le \textbf{micro} et la \textbf{cam\'{e}ra} dans les r\'{e}glages Android, et v\'{e}rifiez votre connexion Internet.\\
+Je ne re\c{c}ois pas les notifications & Autorisez les \textbf{notifications} pour Alanya dans les r\'{e}glages Android et activez-les dans \bouton{Param\`{e}tres} \textrightarrow{} \champ{Notifications}.\\
+Mon message n'est pas envoy\'{e} (ic\^{o}ne d'erreur) & Vous \^{e}tes peut-\^{e}tre hors ligne~: le message part automatiquement au retour du r\'{e}seau. Vous pouvez aussi toucher le message pour r\'{e}essayer.\\
+\bouton{Nouvelle discussion} indisponible & Cette action n\'{e}cessite une connexion~: reconnectez-vous.\\
+\bottomrule
+\end{tabularx}
+\caption{Probl\`{e}mes courants et solutions.}
+\end{table}
+
+% ====================================================================
+\appendix
+\chapter{Annexe : glossaire et pictogrammes}
+
+\section{Glossaire}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Terme} & \thd{D\'{e}finition}\\
+\midrule
+Identifiant Alanya & Num\'{e}ro \`{a} 6\,chiffres servant \`{a} se connecter et \`{a} \^{e}tre joint.\\
+OTP & Code \`{a} usage unique re\c{c}u par e-mail pour r\'{e}initialiser le mot de passe.\\
+Statut & Publication \'{e}ph\'{e}m\`{e}re visible 24\,heures.\\
+Hors ligne & Sans connexion Internet~; certaines actions sont diff\'{e}r\'{e}es jusqu'au retour du r\'{e}seau.\\
+Contact pr\'{e}f\'{e}r\'{e} & Contact mis en favori pour un acc\`{e}s rapide.\\
+H\^{o}te & Organisateur d'une r\'{e}union.\\
+\bottomrule
+\end{tabularx}
+
+\section{Ic\^{o}nes d'accus\'{e} de message}
+Le rappel des ic\^{o}nes \champ{En attente}, \champ{Envoy\'{e}}, \champ{Distribu\'{e}},
+\champ{Lu} et \champ{\'{E}chec} figure au tableau~\ref{tab:accuses}
+(page~\pageref{tab:accuses}).
+
+\end{document}

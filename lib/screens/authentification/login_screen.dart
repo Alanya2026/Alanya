@@ -11,6 +11,7 @@ import '../../widgets/app_logo.dart';
 import '../home/home_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
+import 'qr_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -163,6 +164,21 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w600),
                           ),
+                  ),
+                ),
+                AppSpacing.vGapMd,
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const QrLoginScreen()),
+                  ),
+                  icon: const Icon(Icons.qr_code_scanner_rounded),
+                  label: Text(context.l10n.qrLoginEntryButton),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+                    shape: const RoundedRectangleBorder(
+                        borderRadius: AppRadius.brMd),
                   ),
                 ),
                 AppSpacing.vGapXxl,

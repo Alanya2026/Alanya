@@ -46,6 +46,17 @@ class ChatDao {
     await (db.delete(db.localMessageReactions)..where((r) => r.conversationID.equals(conversID))).go();
   }
 
+  /// Purge les messages antérieurs à [cutoff] (historique masqué / ré-ajout).
+  ///
+  /// Retourne le nombre de lignes effacées — l'appelant peut re-syncer si > 0.
+  Future<int> deleteMessagesBefore(int conversID, DateTime cutoff) {
+    return (db.delete(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversID) &
+              m.sendAt.isSmallerThanValue(cutoff)))
+        .go();
+  }
+
   Future<void> deleteConversations(List<int> conversIDs) async {
     if (conversIDs.isEmpty) return;
     if (conversIDs.length == 1) return deleteConversation(conversIDs.first);

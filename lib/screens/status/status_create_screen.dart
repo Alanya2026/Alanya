@@ -833,83 +833,110 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
         ? Icons.graphic_eq_rounded
         : (hasFiles ? Icons.audiotrack_rounded : Icons.mic_rounded);
 
+    // Centré verticalement comme Texte / EmptyState photo-vidéo.
+    // Sans ça, la Column min reste collée en haut → écran « demi vide ».
     return ColoredBox(
       color: context.semantic.surfaceMuted,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.xxl,
-          AppSpacing.xl,
-          AppSpacing.xxl,
-          AppSpacing.xl + bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ScaleTransition(
-              scale: _isRecording ? _pulseScale : const AlwaysStoppedAnimation(1),
-              child: Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: circleColor,
-                  shape: BoxShape.circle,
-                  boxShadow: _isRecording ? AppShadows.medium : null,
-                ),
-                child: Icon(circleIcon, size: 44, color: iconColor),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final pad = EdgeInsets.fromLTRB(
+            AppSpacing.xxl,
+            AppSpacing.xl,
+            AppSpacing.xxl,
+            AppSpacing.xl + bottom,
+          );
+          return SingleChildScrollView(
+            padding: pad,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: (constraints.maxHeight - pad.vertical)
+                    .clamp(0.0, double.infinity),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ScaleTransition(
+                    scale: _isRecording
+                        ? _pulseScale
+                        : const AlwaysStoppedAnimation(1),
+                    child: Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        color: circleColor,
+                        shape: BoxShape.circle,
+                        boxShadow: _isRecording ? AppShadows.medium : null,
+                      ),
+                      child: Icon(circleIcon, size: 44, color: iconColor),
+                    ),
+                  ),
+                  AppSpacing.vGapXl,
+                  Text(
+                    _isRecording
+                        ? '${context.l10n.recordingEllipsis} ${_formatDuration(_recordSeconds)}'
+                        : context.l10n.recordOrImportAudio,
+                    style: context.text.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.vGapXl,
+                  if (_isRecording)
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: AppSpacing.md,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () => _stopRecording(keep: false),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: AppIconSize.sm,
+                          ),
+                          label: Text(context.l10n.commonCancel),
+                        ),
+                        FilledButton.icon(
+                          onPressed: () => _stopRecording(keep: true),
+                          icon: const Icon(
+                            Icons.check_rounded,
+                            size: AppIconSize.sm,
+                          ),
+                          label: Text(context.l10n.finishAction),
+                        ),
+                      ],
+                    )
+                  else
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: AppSpacing.md,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _publishing ? null : _startRecording,
+                          icon: const Icon(
+                            Icons.mic_rounded,
+                            size: AppIconSize.sm,
+                          ),
+                          label: Text(context.l10n.recordAction),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _publishing ? null : _pickAudioFile,
+                          icon: const Icon(
+                            Icons.upload_file_rounded,
+                            size: AppIconSize.sm,
+                          ),
+                          label: Text(context.l10n.importAction),
+                        ),
+                      ],
+                    ),
+                  if (hasFiles && !_isRecording) ...[
+                    AppSpacing.vGapXl,
+                    for (var i = 0; i < _drafts.length; i++)
+                      _buildAudioDraftTile(i),
+                  ],
+                ],
               ),
             ),
-            AppSpacing.vGapXl,
-            Text(
-              _isRecording
-                  ? '${context.l10n.recordingEllipsis} ${_formatDuration(_recordSeconds)}'
-                  : context.l10n.recordOrImportAudio,
-              style: context.text.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            AppSpacing.vGapXl,
-            if (_isRecording)
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () => _stopRecording(keep: false),
-                    icon: const Icon(Icons.delete_outline, size: AppIconSize.sm),
-                    label: Text(context.l10n.commonCancel),
-                  ),
-                  FilledButton.icon(
-                    onPressed: () => _stopRecording(keep: true),
-                    icon: const Icon(Icons.check_rounded, size: AppIconSize.sm),
-                    label: Text(context.l10n.finishAction),
-                  ),
-                ],
-              )
-            else
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  FilledButton.icon(
-                    onPressed: _publishing ? null : _startRecording,
-                    icon: const Icon(Icons.mic_rounded, size: AppIconSize.sm),
-                    label: Text(context.l10n.recordAction),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _publishing ? null : _pickAudioFile,
-                    icon: const Icon(Icons.upload_file_rounded, size: AppIconSize.sm),
-                    label: Text(context.l10n.importAction),
-                  ),
-                ],
-              ),
-            if (hasFiles && !_isRecording) ...[
-              AppSpacing.vGapXl,
-              for (var i = 0; i < _drafts.length; i++)
-                _buildAudioDraftTile(i),
-            ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }

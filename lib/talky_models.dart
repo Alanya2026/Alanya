@@ -9,6 +9,17 @@ import 'core/utils/self_chat.dart';
 
 // ── USER ─────────────────────────────────────────────────────────────
 
+/// MySQL renvoie les entiers tantôt en `int`, tantôt en chaîne selon le driver
+/// et le type de colonne (TINYINT/SMALLINT UNSIGNED notamment) ; le cache local
+/// les relit ensuite depuis du JSON. Un seul point de conversion évite d'avoir
+/// à s'en soucier partout.
+int? _asInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
 class User {
   final int alanyaID;
   final String nom;
@@ -17,9 +28,39 @@ class User {
   final String email;
   final int idPays;
   final String avatarUrl;
+  final String bio;
   final int typeCompte;
   final bool isOnline;
   final String lastSeen;
+  /// Vrai si ce contact préféré a été ajouté par code QR (scan ou lien).
+  /// Donnée de RELATION, pas d'identité — et nullable à dessein : null veut
+  /// dire « la source ne portait pas cette information » (recherche,
+  /// instantané d'appel), et le cache ne doit alors PAS écraser sa valeur.
+  final bool? addedViaQr;
+
+  /// Date d'ajout en contact préféré (`addedAt` du serveur). Même règle de
+  /// nullité que [addedViaQr].
+  final DateTime? preferredAddedAt;
+
+  /// Note contextuelle de la relation (`addedNote` du serveur). Null = la
+  /// source ne portait pas la relation ; chaîne vide = pas de note (connue).
+  final String? preferredNote;
+
+  /// Genre déclaré : `homme` | `femme` | `autre` | `non_precise`. Null = pas
+  /// encore renseigné, ce qui est distinct de `non_precise` (« je préfère ne pas
+  /// dire »), qui est une réponse. Non modifiable une fois posé.
+  final String? genre;
+
+  /// Âge déclaré à l'onboarding. Non modifiable une fois posé.
+  final int? age;
+
+  /// Année de naissance approximative, DÉDUITE de [age] par le serveur.
+  final int? anneeNaissance;
+
+  /// Ville déduite de l'adresse IP côté serveur — jamais saisie par
+  /// l'utilisateur, et souvent null (IP privée, fournisseur indisponible).
+  final String? ville;
+
   // Champs admin (optionnels — peuplés uniquement par les endpoints admin)
   final bool exclus;
   final String? excludeAt;
@@ -35,9 +76,17 @@ class User {
     required this.email,
     required this.idPays,
     required this.avatarUrl,
+    this.bio = '',
     required this.typeCompte,
     required this.isOnline,
     required this.lastSeen,
+    this.addedViaQr,
+    this.preferredAddedAt,
+    this.preferredNote,
+    this.genre,
+    this.age,
+    this.anneeNaissance,
+    this.ville,
     this.exclus = false,
     this.excludeAt,
     this.excludeReason,
@@ -52,10 +101,23 @@ class User {
         alanyaPhone: json['alanyaPhone'] ?? '',
         email: json['email'] ?? '',
         idPays: json['idPays'] ?? 10,
-        avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()) ?? '',
+        avatarUrl: normalizeAvatarUrl(json['avatar_url']?.toString()),
+        bio: json['bio']?.toString() ?? '',
         typeCompte: json['type_compte'] ?? 0,
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
         lastSeen: json['last_seen'] ?? '',
+        addedViaQr:
+            json.containsKey('addedVia') ? json['addedVia'] == 'qr' : null,
+        preferredAddedAt: json['addedAt'] != null
+            ? DateTime.tryParse(json['addedAt'].toString())
+            : null,
+        preferredNote: json.containsKey('addedNote')
+            ? (json['addedNote']?.toString() ?? '')
+            : null,
+        genre: json['genre']?.toString(),
+        age: _asInt(json['age']),
+        anneeNaissance: _asInt(json['annee_naissance']),
+        ville: json['ville']?.toString(),
         exclus: json['exclus'] == 1 || json['exclus'] == true,
         excludeAt: json['exclude_at'],
         excludeReason: json['exclude_reason'],
@@ -71,15 +133,371 @@ class User {
         'email': email,
         'idPays': idPays,
         'avatar_url': avatarUrl,
+        'bio': bio,
         'type_compte': typeCompte,
         'is_online': isOnline,
         'last_seen': lastSeen,
+        'genre': genre,
+        'age': age,
+        'annee_naissance': anneeNaissance,
+        'ville': ville,
         'pays_libelle': paysLibelle,
         'exclus': exclus,
         'exclude_at': excludeAt,
         'exclude_reason': excludeReason,
         'created_at': createdAt,
       };
+}
+
+// ── ACCOUNT LIFECYCLE ────────────────────────────────────────────────
+
+class AccountDeletionSchedule {
+  final DateTime scheduledAt;
+  final int graceDays;
+
+  const AccountDeletionSchedule({
+    required this.scheduledAt,
+    required this.graceDays,
+  });
+
+  factory AccountDeletionSchedule.fromJson(Map<String, dynamic> json) {
+    final raw = json['scheduledAt']?.toString();
+    return AccountDeletionSchedule(
+      scheduledAt: raw != null
+          ? (DateTime.tryParse(raw) ?? DateTime.now())
+          : DateTime.now(),
+      graceDays: json['graceDays'] is int
+          ? json['graceDays'] as int
+          : int.tryParse(json['graceDays']?.toString() ?? '') ?? 7,
+    );
+  }
+}
+
+class MyMediaItem {
+  final int msgID;
+  final int conversationID;
+  final int type;
+  final String mediaUrl;
+  final String? mediaName;
+  final DateTime? sendAt;
+
+  const MyMediaItem({
+    required this.msgID,
+    required this.conversationID,
+    required this.type,
+    required this.mediaUrl,
+    this.mediaName,
+    this.sendAt,
+  });
+
+  factory MyMediaItem.fromJson(Map<String, dynamic> json) => MyMediaItem(
+        msgID: json['msgID'] is int
+            ? json['msgID'] as int
+            : int.tryParse(json['msgID']?.toString() ?? '') ?? 0,
+        conversationID: json['conversationID'] is int
+            ? json['conversationID'] as int
+            : int.tryParse(json['conversationID']?.toString() ?? '') ?? 0,
+        type: json['type'] is int
+            ? json['type'] as int
+            : int.tryParse(json['type']?.toString() ?? '') ?? 0,
+        mediaUrl: json['mediaUrl']?.toString() ?? '',
+        mediaName: json['mediaName']?.toString(),
+        sendAt: json['sendAt'] != null
+            ? DateTime.tryParse(json['sendAt'].toString())
+            : null,
+      );
+
+  bool get isVideo => type == 2;
+}
+
+class MyMediaPage {
+  final List<MyMediaItem> items;
+  final int? nextCursor;
+
+  const MyMediaPage({required this.items, this.nextCursor});
+
+  factory MyMediaPage.fromJson(Map<String, dynamic> json) {
+    final raw = json['items'];
+    final list = raw is List
+        ? raw
+            .whereType<Map>()
+            .map((e) => MyMediaItem.fromJson(Map<String, dynamic>.from(e)))
+            .toList()
+        : <MyMediaItem>[];
+    final nc = json['nextCursor'];
+    return MyMediaPage(
+      items: list,
+      nextCursor: nc == null
+          ? null
+          : (nc is int ? nc : int.tryParse(nc.toString())),
+    );
+  }
+}
+
+// ── PRIVACY PREFS ────────────────────────────────────────────────────
+// Table: user_privacy_prefs (migration 031)
+
+abstract final class PrivacyVisibility {
+  static const everyone = 'everyone';
+  static const contacts = 'contacts';
+  static const nobody = 'nobody';
+}
+
+abstract final class NotificationPreviewMode {
+  static const full = 'full';
+  static const nameOnly = 'name_only';
+  static const generic = 'generic';
+}
+
+class PrivacyPrefs {
+  final String lastSeenVisibility;
+  final String onlineVisibility;
+  final bool readReceiptsEnabled;
+  final String profilePhotoVisibility;
+  final String addMePolicy;
+  final String previewMode;
+
+  const PrivacyPrefs({
+    this.lastSeenVisibility = PrivacyVisibility.everyone,
+    this.onlineVisibility = PrivacyVisibility.everyone,
+    this.readReceiptsEnabled = true,
+    this.profilePhotoVisibility = PrivacyVisibility.everyone,
+    this.addMePolicy = PrivacyVisibility.everyone,
+    this.previewMode = NotificationPreviewMode.full,
+  });
+
+  factory PrivacyPrefs.fromJson(Map<String, dynamic> json) => PrivacyPrefs(
+        lastSeenVisibility:
+            json['lastSeenVisibility']?.toString() ?? PrivacyVisibility.everyone,
+        onlineVisibility:
+            json['onlineVisibility']?.toString() ?? PrivacyVisibility.everyone,
+        readReceiptsEnabled: json['readReceiptsEnabled'] == true ||
+            json['readReceiptsEnabled'] == 1,
+        profilePhotoVisibility: json['profilePhotoVisibility']?.toString() ??
+            PrivacyVisibility.everyone,
+        addMePolicy:
+            json['addMePolicy']?.toString() ?? PrivacyVisibility.everyone,
+        previewMode:
+            json['previewMode']?.toString() ?? NotificationPreviewMode.full,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'lastSeenVisibility': lastSeenVisibility,
+        'onlineVisibility': onlineVisibility,
+        'readReceiptsEnabled': readReceiptsEnabled,
+        'profilePhotoVisibility': profilePhotoVisibility,
+        'addMePolicy': addMePolicy,
+        'previewMode': previewMode,
+      };
+
+  PrivacyPrefs copyWith({
+    String? lastSeenVisibility,
+    String? onlineVisibility,
+    bool? readReceiptsEnabled,
+    String? profilePhotoVisibility,
+    String? addMePolicy,
+    String? previewMode,
+  }) =>
+      PrivacyPrefs(
+        lastSeenVisibility: lastSeenVisibility ?? this.lastSeenVisibility,
+        onlineVisibility: onlineVisibility ?? this.onlineVisibility,
+        readReceiptsEnabled: readReceiptsEnabled ?? this.readReceiptsEnabled,
+        profilePhotoVisibility:
+            profilePhotoVisibility ?? this.profilePhotoVisibility,
+        addMePolicy: addMePolicy ?? this.addMePolicy,
+        previewMode: previewMode ?? this.previewMode,
+      );
+}
+
+// ── APP SETTINGS ─────────────────────────────────────────────────────
+// Table: user_settings (migration 032)
+
+abstract final class AppThemeMode {
+  static const system = 'system';
+  static const light = 'light';
+  static const dark = 'dark';
+}
+
+class AppSettings {
+  final String themeMode;
+  final String locale;
+  final double playbackSpeedVoice;
+  final double playbackSpeedVideo;
+  final double playbackSpeedMusic;
+  final bool reduceMotion;
+  final double fontScale;
+
+  const AppSettings({
+    this.themeMode = AppThemeMode.system,
+    this.locale = 'fr',
+    this.playbackSpeedVoice = 1.0,
+    this.playbackSpeedVideo = 1.0,
+    this.playbackSpeedMusic = 1.0,
+    this.reduceMotion = false,
+    this.fontScale = 1.0,
+  });
+
+  factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
+        themeMode: json['themeMode']?.toString() ?? AppThemeMode.system,
+        locale: json['locale']?.toString() ?? 'fr',
+        playbackSpeedVoice:
+            _toDouble(json['playbackSpeedVoice'], fallback: 1.0),
+        playbackSpeedVideo:
+            _toDouble(json['playbackSpeedVideo'], fallback: 1.0),
+        playbackSpeedMusic:
+            _toDouble(json['playbackSpeedMusic'], fallback: 1.0),
+        reduceMotion: json['reduceMotion'] == true || json['reduceMotion'] == 1,
+        fontScale: _toDouble(json['fontScale'], fallback: 1.0),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'themeMode': themeMode,
+        'locale': locale,
+        'playbackSpeedVoice': playbackSpeedVoice,
+        'playbackSpeedVideo': playbackSpeedVideo,
+        'playbackSpeedMusic': playbackSpeedMusic,
+        'reduceMotion': reduceMotion,
+        'fontScale': fontScale,
+      };
+
+  AppSettings copyWith({
+    String? themeMode,
+    String? locale,
+    double? playbackSpeedVoice,
+    double? playbackSpeedVideo,
+    double? playbackSpeedMusic,
+    bool? reduceMotion,
+    double? fontScale,
+  }) =>
+      AppSettings(
+        themeMode: themeMode ?? this.themeMode,
+        locale: locale ?? this.locale,
+        playbackSpeedVoice: playbackSpeedVoice ?? this.playbackSpeedVoice,
+        playbackSpeedVideo: playbackSpeedVideo ?? this.playbackSpeedVideo,
+        playbackSpeedMusic: playbackSpeedMusic ?? this.playbackSpeedMusic,
+        reduceMotion: reduceMotion ?? this.reduceMotion,
+        fontScale: fontScale ?? this.fontScale,
+      );
+}
+
+double _toDouble(dynamic value, {required double fallback}) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
+// ── DND SCHEDULE ─────────────────────────────────────────────────────
+// Table: user_dnd_schedule (migration 033) — bit0=lundi … bit6=dimanche
+
+class DndSchedule {
+  final bool enabled;
+  final String startTime;
+  final String endTime;
+  final int daysBitmask;
+
+  const DndSchedule({
+    this.enabled = false,
+    this.startTime = '22:00',
+    this.endTime = '07:00',
+    this.daysBitmask = 127,
+  });
+
+  factory DndSchedule.fromJson(Map<String, dynamic> json) => DndSchedule(
+        enabled: json['enabled'] == true || json['enabled'] == 1,
+        startTime: json['startTime']?.toString() ?? '22:00',
+        endTime: json['endTime']?.toString() ?? '07:00',
+        daysBitmask: json['daysBitmask'] is int
+            ? json['daysBitmask'] as int
+            : int.tryParse(json['daysBitmask']?.toString() ?? '') ?? 127,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'enabled': enabled,
+        'startTime': startTime,
+        'endTime': endTime,
+        'daysBitmask': daysBitmask,
+      };
+
+  bool isDayEnabled(int mondayBasedIndex) {
+    if (mondayBasedIndex < 0 || mondayBasedIndex > 6) return false;
+    return (daysBitmask & (1 << mondayBasedIndex)) != 0;
+  }
+
+  DndSchedule copyWith({
+    bool? enabled,
+    String? startTime,
+    String? endTime,
+    int? daysBitmask,
+  }) =>
+      DndSchedule(
+        enabled: enabled ?? this.enabled,
+        startTime: startTime ?? this.startTime,
+        endTime: endTime ?? this.endTime,
+        daysBitmask: daysBitmask ?? this.daysBitmask,
+      );
+}
+
+// ── EXPORT JOB ───────────────────────────────────────────────────────
+// Table: user_export_jobs (migration 034)
+
+abstract final class ExportJobStatus {
+  static const pending = 'pending';
+  static const processing = 'processing';
+  static const ready = 'ready';
+  static const failed = 'failed';
+}
+
+class ExportJob {
+  final int jobId;
+  final String status;
+  final bool? includeMessages;
+  final String? errorMessage;
+  final DateTime? expiresAt;
+  final DateTime? createdAt;
+  final DateTime? completedAt;
+  final String? downloadUrl;
+
+  const ExportJob({
+    required this.jobId,
+    required this.status,
+    this.includeMessages,
+    this.errorMessage,
+    this.expiresAt,
+    this.createdAt,
+    this.completedAt,
+    this.downloadUrl,
+  });
+
+  bool get isPending =>
+      status == ExportJobStatus.pending || status == ExportJobStatus.processing;
+
+  bool get isReady => status == ExportJobStatus.ready;
+
+  bool get isFailed => status == ExportJobStatus.failed;
+
+  factory ExportJob.fromJson(Map<String, dynamic> json) {
+    final jobId = json['jobId'] is int
+        ? json['jobId'] as int
+        : int.tryParse(json['jobId']?.toString() ?? '') ??
+            int.tryParse(json['id']?.toString() ?? '') ??
+            0;
+    final status = json['status']?.toString() ?? ExportJobStatus.pending;
+    return ExportJob(
+      jobId: jobId,
+      status: status,
+      includeMessages: json['includeMessages'] == true ||
+          json['includeMessages'] == 1,
+      errorMessage: json['errorMessage']?.toString() ?? json['error']?.toString(),
+      expiresAt: _parseDateTime(json['expiresAt']),
+      createdAt: _parseDateTime(json['createdAt']),
+      completedAt: _parseDateTime(json['completedAt']),
+      downloadUrl: json['downloadUrl']?.toString(),
+    );
+  }
+}
+
+DateTime? _parseDateTime(dynamic value) {
+  if (value == null) return null;
+  return DateTime.tryParse(value.toString());
 }
 
 // ── PAYS ─────────────────────────────────────────────────────────────
@@ -349,6 +767,8 @@ class Conversation {
   // Réglages de groupe
   final bool onlyAdminsCanSend;
   final bool onlyAdminsCanEditInfo;
+  final bool hideHistoryForNewMembers;
+  final bool onlyAdminsCanAddMembers;
   // conv_participants
   final int unreadCount;
   final bool isPinned;
@@ -357,6 +777,10 @@ class Conversation {
   final String? mutedUntil;
   final bool muteForever;
   final bool mentionsOnly;
+  /// msgID système en attente d'ack « Rester » (null = bannière absente).
+  final int? myPendingJoinMsgID;
+  /// Borne d'historique pour le viewer (ISO) — null = historique complet.
+  final String? myHistoryCutoffAt;
   // Jointure participants
   final List<Participant> participants;
 
@@ -375,6 +799,8 @@ class Conversation {
     this.updatedAt,
     this.onlyAdminsCanSend = false,
     this.onlyAdminsCanEditInfo = false,
+    this.hideHistoryForNewMembers = false,
+    this.onlyAdminsCanAddMembers = false,
     required this.unreadCount,
     required this.isPinned,
     required this.isArchived,
@@ -382,6 +808,8 @@ class Conversation {
     this.mutedUntil,
     this.muteForever = false,
     this.mentionsOnly = false,
+    this.myPendingJoinMsgID,
+    this.myHistoryCutoffAt,
     required this.participants,
   });
 
@@ -402,6 +830,8 @@ class Conversation {
         updatedAt: json['updatedAt']?.toString(),
         onlyAdminsCanSend: _flag(json['onlyAdminsCanSend']),
         onlyAdminsCanEditInfo: _flag(json['onlyAdminsCanEditInfo']),
+        hideHistoryForNewMembers: _flag(json['hideHistoryForNewMembers']),
+        onlyAdminsCanAddMembers: _flag(json['onlyAdminsCanAddMembers']),
         unreadCount: json['unreadCount'] ?? 0,
         isPinned: _flag(json['isPinned']),
         isArchived: _flag(json['isArchived']),
@@ -409,6 +839,8 @@ class Conversation {
         mutedUntil: json['mutedUntil']?.toString(),
         muteForever: _flag(json['muteForever']),
         mentionsOnly: _flag(json['mentionsOnly']),
+        myPendingJoinMsgID: (json['myPendingJoinMsgID'] as num?)?.toInt(),
+        myHistoryCutoffAt: json['myHistoryCutoffAt']?.toString(),
         participants: (json['participants'] as List?)
                 ?.map((e) => Participant.fromJson(e as Map<String, dynamic>))
                 .toList() ??
@@ -835,6 +1267,15 @@ class SocketEvents {
   static const authVerified = 'auth:verified';
   static const authError    = 'auth:error';
   static const authConflict = 'auth:conflict';
+
+  /// Un appareil du compte vient d'être déconnecté à distance. Payload :
+  /// { appareilId, deviceId } où `deviceId` est l'identifiant MATÉRIEL, à
+  /// comparer au sien : l'événement part à tout le compte, pas à une socket.
+  static const authDeviceRevoked = 'auth:device_revoked';
+
+  /// Votre code contact éphémère vient d'être scanné : { by, at }. L'écran
+  /// « Mon code » régénère à la réception — le jeton est à usage unique.
+  static const qrContactScanned = 'qr:contact_scanned';
 
   // Présence
   static const presenceOnline   = 'presence:online';

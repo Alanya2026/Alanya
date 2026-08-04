@@ -5,6 +5,7 @@ import '../services/chat/conversation_merge.dart';
 import '../theme/locale_controller.dart';
 import 'media_album.dart';
 import 'self_chat.dart';
+import 'system_event_payload.dart';
 
 export 'self_chat.dart' show kSelfChatMarker;
 
@@ -144,4 +145,46 @@ String displayConversationPreview(String? text, AppLocalizations l10n) {
     return l10n.thisMessageWasDeleted;
   }
   return normalized;
+}
+
+/// Aperçu de la liste des discussions, avec préfixe expéditeur pour les groupes.
+///
+/// Ne modifie pas Drift : le stockage reste le texte brut / aperçu média.
+/// Format : « Chris : Bonjour » / « Vous : … ». Les messages système (type 6)
+/// ne sont pas préfixés — leur aperçu inclut déjà l'acteur.
+String conversationListPreview(
+  LocalConversation conv,
+  int myId,
+  AppLocalizations l10n,
+) {
+  final body = displayConversationPreview(conv.lastMessage, l10n);
+  if (!conv.isGroup || conv.lastMessage == null) return body;
+  if (conv.lastMessageType == kSystemMessageType) return body;
+
+  final senderId = conv.lastMessageSenderID;
+  final String who;
+  if (senderId != null && myId != 0 && senderId == myId) {
+    who = l10n.youLabel;
+  } else {
+    who = _participantName(conv, senderId, l10n);
+  }
+  if (who.isEmpty) return body;
+  return '$who: $body';
+}
+
+String _participantName(
+  LocalConversation conv,
+  int? senderId,
+  AppLocalizations l10n,
+) {
+  if (senderId == null || senderId == 0) return l10n.unknownSender;
+  for (final p in decodeParticipants(conv.participantsJson)) {
+    if (conversationParticipantId(p['alanyaID']) != senderId) continue;
+    final nom = (p['nom'] as String?)?.trim() ?? '';
+    if (nom.isNotEmpty) return nom;
+    final pseudo = (p['pseudo'] as String?)?.trim() ?? '';
+    if (pseudo.isNotEmpty) return pseudo;
+    break;
+  }
+  return l10n.unknownSender;
 }

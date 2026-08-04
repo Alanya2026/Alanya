@@ -1,0 +1,119 @@
+<!--@ {"title":"Couleurs","group":"Fondations","subtitle":"Palette alignée sur app_colors.dart + sceau or","w":1240,"h":1180,"theme":"light"} -->
+<div class="spec">
+  <header class="spec__head">
+    <div class="spec__kicker">Fondations</div>
+    <h1 class="h1" style="margin-top:4px">Couleurs</h1>
+    <p class="muted" style="margin-top:var(--s2);max-width:62ch">
+      Source de vérité : <code class="mono">lib/core/theme/app_colors.dart</code>. Les valeurs de marque et
+      de neutres sont reprises à l'identique pour que le web et le mobile soient indiscernables.
+      Deux ajouts propres au web sont signalés comme tels.
+    </p>
+  </header>
+
+  <section class="spec__group">
+    <span class="eyebrow">Marque — indigo unifié</span>
+    <div class="swatches">
+      <div><div class="swatch" style="background:#3F51B5"></div><div class="small strong" style="margin-top:6px">brand</div><div class="mono tiny faint">#3F51B5</div></div>
+      <div><div class="swatch" style="background:#303F9F"></div><div class="small strong" style="margin-top:6px">brand-strong</div><div class="mono tiny faint">#303F9F</div></div>
+      <div><div class="swatch" style="background:#1A237E"></div><div class="small strong" style="margin-top:6px">brand-dark</div><div class="mono tiny faint">#1A237E</div></div>
+      <div><div class="swatch" style="background:#0D123E"></div><div class="small strong" style="margin-top:6px">brand-darker</div><div class="mono tiny faint">#0D123E</div></div>
+      <div><div class="swatch" style="background:#7986CB"></div><div class="small strong" style="margin-top:6px">brand-lift</div><div class="mono tiny faint">#7986CB</div></div>
+      <div><div class="swatch" style="background:#E8EAF6"></div><div class="small strong" style="margin-top:6px">brand-container</div><div class="mono tiny faint">#E8EAF6</div></div>
+      <div><div class="swatch" style="background:#F2F3FB"></div><div class="small strong" style="margin-top:6px">brand-tint</div><div class="mono tiny faint">#F2F3FB</div></div>
+    </div>
+  </section>
+
+  <section class="spec__group">
+    <span class="eyebrow">Sceau officiel — l'accent</span>
+    <div class="spec__row">
+      <div style="flex:0 0 280px">
+        <div class="swatch" style="background:#C9A227;height:80px"></div>
+        <div class="small strong" style="margin-top:6px">gold</div>
+        <div class="mono tiny faint">#C9A227</div>
+      </div>
+      <p class="small muted" style="flex:1;min-width:280px;max-width:52ch">
+        Volontairement distinct de l'indigo. Il porte tout ce qui relève de l'<b>autorité</b> :
+        badge vérifié, compte officiel, ligne active de la liste de conversations, pastille du
+        rail. C'est la seule couleur chaude du système — elle ne doit jamais servir de couleur
+        d'action, sous peine de perdre son sens.
+      </p>
+      <div class="hstack gap3" style="flex:0 0 auto">
+        <span class="badge badge--gold"><svg class="seal seal--sm"><use href="#i-seal"/></svg> Vérifié</span>
+        <span class="badge badge--gold"><svg width="12" height="12"><use href="#i-briefcase"/></svg> Business</span>
+        <span class="pill pill--gold">4</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec__group">
+    <span class="eyebrow">Neutres — clair</span>
+    <div class="swatches">
+      <div><div class="swatch" style="background:#F6F7FB"></div><div class="small strong" style="margin-top:6px">paper</div><div class="mono tiny faint">#F6F7FB</div></div>
+      <div><div class="swatch" style="background:#FFFFFF"></div><div class="small strong" style="margin-top:6px">surface</div><div class="mono tiny faint">#FFFFFF</div></div>
+      <div><div class="swatch" style="background:#F4F5F8"></div><div class="small strong" style="margin-top:6px">surface-muted</div><div class="mono tiny faint">#F4F5F8</div></div>
+      <div><div class="swatch" style="background:#EDEFF4"></div><div class="small strong" style="margin-top:6px">surface-subtle</div><div class="mono tiny faint">#EDEFF4</div></div>
+      <div><div class="swatch" style="background:#E2E5EC"></div><div class="small strong" style="margin-top:6px">line</div><div class="mono tiny faint">#E2E5EC</div></div>
+      <div><div class="swatch" style="background:#CBD0E0"></div><div class="small strong" style="margin-top:6px">line-strong</div><div class="mono tiny faint">#CBD0E0</div></div>
+      <div><div class="swatch" style="background:#F1F2F8;border-style:dashed;border-color:#3F51B5"></div><div class="small strong" style="margin-top:6px">canvas <span class="badge badge--brand">web</span></div><div class="mono tiny faint">#F1F2F8</div></div>
+    </div>
+  </section>
+
+  <section class="spec__group">
+    <span class="eyebrow">Texte</span>
+    <div class="swatches">
+      <div><div class="swatch" style="background:#1A1D23"></div><div class="small strong" style="margin-top:6px">ink</div><div class="mono tiny faint">#1A1D23</div></div>
+      <div><div class="swatch" style="background:#5B6273"></div><div class="small strong" style="margin-top:6px">ink-2</div><div class="mono tiny faint">#5B6273</div></div>
+      <div><div class="swatch" style="background:#9AA0AE"></div><div class="small strong" style="margin-top:6px">ink-3</div><div class="mono tiny faint">#9AA0AE</div></div>
+    </div>
+  </section>
+
+  <section class="spec__group">
+    <span class="eyebrow">Sémantiques</span>
+    <div class="swatches">
+      <div><div class="swatch" style="background:#1FA363"></div><div class="small strong" style="margin-top:6px">success · online</div><div class="mono tiny faint">#1FA363</div></div>
+      <div><div class="swatch" style="background:#EF4444"></div><div class="small strong" style="margin-top:6px">error</div><div class="mono tiny faint">#EF4444</div></div>
+      <div><div class="swatch" style="background:#F59E0B"></div><div class="small strong" style="margin-top:6px">warning</div><div class="mono tiny faint">#F59E0B</div></div>
+      <div><div class="swatch" style="background:#2E90FA"></div><div class="small strong" style="margin-top:6px">info · accusé lu</div><div class="mono tiny faint">#2E90FA</div></div>
+    </div>
+  </section>
+
+  <section class="spec__group">
+    <span class="eyebrow">Listes de contacts — dossier de conception étape 2</span>
+    <div class="swatches">
+      <div><div class="swatch" style="background:#C2185B"></div><div class="small strong" style="margin-top:6px">Famille</div><div class="mono tiny faint">#C2185B</div></div>
+      <div><div class="swatch" style="background:#00796B"></div><div class="small strong" style="margin-top:6px">Amis</div><div class="mono tiny faint">#00796B</div></div>
+      <div><div class="swatch" style="background:#3949AB"></div><div class="small strong" style="margin-top:6px">Bureau</div><div class="mono tiny faint">#3949AB</div></div>
+    </div>
+  </section>
+
+  <section class="spec__group">
+    <span class="eyebrow">Immersif — appels & réunions</span>
+    <div class="spec__row">
+      <div style="flex:0 0 200px"><div class="swatch" style="background:#0E1330;height:70px"></div><div class="small strong" style="margin-top:6px">immersive-bg</div><div class="mono tiny faint">#0E1330</div></div>
+      <div style="flex:0 0 200px"><div class="swatch" style="background:#1B2147;height:70px"></div><div class="small strong" style="margin-top:6px">immersive-surface</div><div class="mono tiny faint">#1B2147</div></div>
+      <div class="spec__frame" style="flex:1;min-width:300px;height:120px;background:radial-gradient(600px 300px at 20% -10%,rgba(121,134,203,.3),transparent 60%),radial-gradient(400px 260px at 90% 110%,rgba(63,81,181,.26),transparent 60%),#0E1330;display:grid;place-items:center">
+        <span class="small" style="color:rgba(255,255,255,.72)">Dégradés radiaux appliqués sur <code class="mono">.immersive</code></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec__group" style="margin-bottom:0">
+    <span class="eyebrow">Mode sombre</span>
+    <div class="spec__frame" data-theme="dark" style="background:var(--paper);padding:var(--s5)">
+      <div class="swatches">
+        <div><div class="swatch" style="background:#0F1115"></div><div class="small strong" style="margin-top:6px">paper</div><div class="mono tiny faint">#0F1115</div></div>
+        <div><div class="swatch" style="background:#181B21"></div><div class="small strong" style="margin-top:6px">surface</div><div class="mono tiny faint">#181B21</div></div>
+        <div><div class="swatch" style="background:#1F232B"></div><div class="small strong" style="margin-top:6px">surface-muted</div><div class="mono tiny faint">#1F232B</div></div>
+        <div><div class="swatch" style="background:#2C313B"></div><div class="small strong" style="margin-top:6px">line</div><div class="mono tiny faint">#2C313B</div></div>
+        <div><div class="swatch" style="background:#F2F4F8"></div><div class="small strong" style="margin-top:6px">ink</div><div class="mono tiny faint">#F2F4F8</div></div>
+        <div><div class="swatch" style="background:#AAB1C0"></div><div class="small strong" style="margin-top:6px">ink-2</div><div class="mono tiny faint">#AAB1C0</div></div>
+        <div><div class="swatch" style="background:#101319;border-style:dashed;border-color:#7986CB"></div><div class="small strong" style="margin-top:6px">canvas <span class="badge badge--brand">web</span></div><div class="mono tiny faint">#101319</div></div>
+      </div>
+      <p class="small muted" style="margin-top:var(--s4)">
+        L'indigo <code class="mono">#3F51B5</code> reste la couleur de remplissage des boutons en sombre
+        (blanc sur indigo ≈ 5,9:1). Pour le <b>texte</b> accentué et les liens, on bascule sur
+        <code class="mono">brand-lift #7986CB</code>, l'indigo plein n'ayant pas un contraste suffisant sur fond noir.
+      </p>
+    </div>
+  </section>
+</div>

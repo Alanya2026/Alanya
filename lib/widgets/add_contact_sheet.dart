@@ -10,6 +10,7 @@ import '../talky_models.dart';
 import '../core/utils/alanya_phone_formatter.dart';
 import '../core/utils/app_log.dart';
 import '../core/utils/user_search.dart';
+import '../screens/profile/qr_scanner_screen.dart';
 import 'common/common.dart';
 
 class AddContactSheet extends StatefulWidget {
@@ -153,6 +154,30 @@ class _AddContactSheetState extends State<AddContactSheet> {
     }
   }
 
+  /// Le scanner écrit lui-même les contacts dans le cache et permet d'en
+  /// ajouter plusieurs à la suite : il ne rend donc aucun résultat. On relit
+  /// simplement la liste à son retour, quel qu'ait été le nombre d'ajouts.
+  Future<void> _openScanner() async {
+    await Navigator.push<Object?>(
+      context,
+      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+    );
+    if (!mounted) return;
+    try {
+      final cache = Provider.of<LocalCacheRepository>(context, listen: false);
+      final updated = await cache.getPreferredContactsOnce();
+      if (!mounted) return;
+      setState(() {
+        _preferredContacts = updated.map(localUserToUser).toList();
+        _existingIds
+          ..clear()
+          ..addAll(_preferredContacts.map((u) => u.alanyaID));
+      });
+    } catch (e, st) {
+      AppLog.e('AddContact', 'Relecture des contacts préférés échouée', e, st);
+    }
+  }
+
   bool _isAlreadyContact(User user) =>
       _existingIds.contains(user.alanyaID);
 
@@ -185,6 +210,47 @@ class _AddContactSheetState extends State<AddContactSheet> {
               style: context.text.titleLarge,
             ),
             AppSpacing.vGapLg,
+            Padding(
+              padding: AppSpacing.screenH,
+              child: Material(
+                color: context.semantic.brandContainer,
+                borderRadius: AppRadius.brSm,
+                child: InkWell(
+                  borderRadius: AppRadius.brSm,
+                  onTap: _openScanner,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.qr_code_scanner,
+                          size: AppIconSize.md,
+                          color: context.semantic.onBrandContainer,
+                        ),
+                        AppSpacing.hGapSm,
+                        Expanded(
+                          child: Text(
+                            context.l10n.qrScanEntryButton,
+                            style: context.text.titleSmall?.copyWith(
+                              color: context.semantic.onBrandContainer,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          size: AppIconSize.sm,
+                          color: context.semantic.onBrandContainer,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            AppSpacing.vGapMd,
             Padding(
               padding: AppSpacing.screenH,
               child: AppSearchField(
@@ -259,6 +325,7 @@ class AddContactItem extends StatelessWidget {
         imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
         name: user.nom.isNotEmpty ? user.nom : user.pseudo,
         size: AppSizes.avatarMd,
+        qrBadge: user.addedViaQr == true,
       ),
       title: Text(
         user.nom.isNotEmpty ? user.nom : user.pseudo,

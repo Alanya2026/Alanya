@@ -375,6 +375,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
             imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
             name: user.nom.isNotEmpty ? user.nom : user.pseudo,
             size: AppSizes.avatarMd,
+            qrBadge: user.addedViaQr == true,
           ),
           if (_selecting && isSelected)
             Positioned(

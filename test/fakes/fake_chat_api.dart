@@ -290,6 +290,8 @@ class FakeChatApi implements ChatApi {
     int conversID, {
     bool? onlyAdminsCanSend,
     bool? onlyAdminsCanEditInfo,
+    bool? hideHistoryForNewMembers,
+    bool? onlyAdminsCanAddMembers,
   }) async {
     httpLog.add('updateGroupSettings:$conversID');
     if (groupError != null) throw groupError!;
@@ -300,6 +302,25 @@ class FakeChatApi implements ChatApi {
     if (onlyAdminsCanEditInfo != null) {
       conv['onlyAdminsCanEditInfo'] = onlyAdminsCanEditInfo ? 1 : 0;
     }
+    if (hideHistoryForNewMembers != null) {
+      conv['hideHistoryForNewMembers'] = hideHistoryForNewMembers ? 1 : 0;
+    }
+    if (onlyAdminsCanAddMembers != null) {
+      conv['onlyAdminsCanAddMembers'] = onlyAdminsCanAddMembers ? 1 : 0;
+    }
+    conversationById[conversID] = conv;
+    return conv;
+  }
+
+  @override
+  Future<Map<String, dynamic>> ackGroupJoin(
+    int conversID, {
+    int? msgID,
+  }) async {
+    httpLog.add('ackGroupJoin:$conversID');
+    if (groupError != null) throw groupError!;
+    final conv = _conv(conversID);
+    conv['myPendingJoinMsgID'] = null;
     conversationById[conversID] = conv;
     return conv;
   }

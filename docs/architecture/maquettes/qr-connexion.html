@@ -1,0 +1,527 @@
+<title>Alanya — Connexion et appareils par QR code</title>
+
+<style>
+  /* ------------------------------------------------------------------
+     Mêmes tokens que qr-identite.html : lib/core/theme/app_colors.dart.
+     AlanyaInfo (#2E90FA) sert ici au badge « Cet appareil ».
+     ------------------------------------------------------------------ */
+  :root {
+    --brand:            #3F51B5;
+    --brand-dark:       #1A237E;
+    --brand-container:  #E8EAF6;
+    --online:           #1FA363;
+    --info:             #2E90FA;
+    --info-container:   #E5F1FF;
+    --danger:           #C0392B;
+
+    --bg:               #F6F7FB;
+    --surface:          #FFFFFF;
+    --surface-muted:    #F4F5F8;
+    --outline:          #E2E5EC;
+    --outline-strong:   #CBD0E0;
+
+    --ink:              #1A1D23;
+    --ink-2:            #5B6273;
+    --ink-3:             #9AA0AE;
+
+    --page-bg:          #EEF0F7;
+    --page-panel:       #FFFFFF;
+    --page-line:        #DDE1EC;
+    --page-ink:         #23283A;
+    --page-ink-2:       #626A82;
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px; --r-pill: 28px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #3A404C; --outline-strong: #3A404C;
+      --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand-container: #283593; --info-container: #17324F;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --outline-strong: #3A404C;
+    --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593; --info-container: #17324F;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --brand-container: #E8EAF6; --info-container: #E5F1FF;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    min-height: 100vh; padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 68ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px, 3.6vw, 38px); line-height: 1.12; letter-spacing: -0.02em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px, 3vw, 30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 70ch; }
+
+  .stage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: clamp(18px, 2.4vw, 28px); align-items: start;
+  }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 32ch;
+  }
+  .device-caption b { display: block; color: var(--page-ink); font-weight: 600; letter-spacing: 0.06em; }
+  .device {
+    width: 100%; max-width: 318px; background: var(--bg);
+    border: 1px solid var(--outline); border-radius: 30px; padding: 8px;
+    box-shadow: 0 18px 44px rgba(26, 35, 126, 0.13), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 600px; color: var(--ink);
+    position: relative;
+  }
+
+  .appbar {
+    background: var(--surface); border-bottom: 1px solid var(--outline);
+    padding: 14px var(--s-lg) var(--s-md);
+    display: flex; align-items: center; gap: var(--s-md);
+  }
+  .appbar .back { width: 22px; height: 22px; color: var(--ink-2); flex: none; }
+  .appbar h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+  .appbar .spacer { flex: 1; }
+
+  /* ---------- Écran 1 : QR de session (nouvel appareil) ---------- */
+  .qrlogin-wrap {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: var(--s-lg); padding: var(--s-xl) var(--s-lg);
+  }
+  .qrlogin-title { font-size: 15.5px; font-weight: 650; text-align: center; max-width: 26ch; }
+  .ring-wrap { position: relative; width: 220px; height: 220px; display: grid; place-items: center; }
+  .ring-wrap svg.ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .qr-frame-sm { background: #FFFFFF; border-radius: 16px; padding: 10px; position: relative; z-index: 1; }
+  .qr-frame-sm svg { width: 150px; height: 150px; display: block; }
+  .compte-a-rebours {
+    font-family: var(--mono); font-size: 12.5px; color: var(--ink-2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .compte-a-rebours b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .statut-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+    border-radius: var(--r-pill); background: var(--surface-muted);
+    font-size: 12.5px; color: var(--ink-2); font-weight: 600;
+  }
+  .statut-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
+  .qrlogin-hint {
+    font-size: 12.5px; color: var(--ink-3); text-align: center; max-width: 30ch; line-height: 1.5;
+  }
+  .qrlogin-alt {
+    margin-top: auto; padding: var(--s-lg); font-size: 13px; font-weight: 650;
+    color: var(--brand); text-align: center; width: 100%;
+    border-top: 1px solid var(--outline);
+  }
+
+  /* ---------- Écran 2 : confirmation ---------- */
+  .confirm-wrap { flex: 1; padding: var(--s-lg); display: flex; flex-direction: column; gap: var(--s-lg); }
+  .confirm-lead { font-size: 13.5px; color: var(--ink-2); text-align: center; padding: 0 6px; }
+  .device-card {
+    background: var(--surface); border: 1px solid var(--outline); border-radius: var(--r-md);
+    padding: var(--s-lg); display: flex; flex-direction: column; align-items: center; gap: var(--s-sm);
+  }
+  .device-icon {
+    width: 56px; height: 56px; border-radius: 50%; background: var(--brand-container);
+    display: grid; place-items: center; color: var(--brand-dark);
+  }
+  .device-icon svg { width: 27px; height: 27px; }
+  .device-nom { font-size: 16px; font-weight: 650; }
+  .device-meta { font-size: 12.5px; color: var(--ink-2); text-align: center; }
+  .device-meta .sep { color: var(--ink-3); margin: 0 4px; }
+  .device-meta.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-3); }
+
+  .avertissement {
+    display: flex; gap: 8px; background: #FBEAEA; border: 1px solid #F1D2D2;
+    border-radius: var(--r-sm); padding: 10px var(--s-md); font-size: 12px; color: #8A2E24;
+    line-height: 1.45;
+  }
+  :root[data-theme="dark"] .avertissement { background: #34181A; border-color: #5A2A2A; color: #E6A9A2; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .avertissement { background: #34181A; border-color: #5A2A2A; color: #E6A9A2; }
+  }
+  .avertissement svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+
+  .confirm-actions { margin-top: auto; display: flex; gap: var(--s-sm); padding-top: var(--s-md); }
+  .btn-confirm {
+    flex: 1; height: 46px; border-radius: var(--r-sm); border: none; font-family: inherit;
+    font-size: 14.5px; font-weight: 650; display: inline-flex; align-items: center;
+    justify-content: center; gap: 6px;
+  }
+  .btn-confirm.oui { background: var(--brand); color: #fff; }
+  .btn-confirm.non { background: var(--surface-muted); color: var(--ink-2); border: 1px solid var(--outline-strong); }
+
+  /* ---------- Écran 3 : appareils connectés ---------- */
+  .rows { background: var(--surface); flex: 1; display: flex; flex-direction: column; }
+  .drow {
+    display: flex; align-items: flex-start; gap: var(--s-md);
+    padding: 13px var(--s-lg); border-bottom: 1px solid var(--outline);
+  }
+  .drow:last-child { border-bottom: none; }
+  .dicone {
+    width: 40px; height: 40px; border-radius: var(--r-sm); flex: none;
+    background: var(--surface-muted); display: grid; place-items: center; color: var(--ink-2);
+  }
+  .dicone svg { width: 20px; height: 20px; }
+  .drow-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .drow-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .drow-nom { font-size: 14.5px; font-weight: 620; color: var(--ink); }
+  .badge-ici {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+    color: var(--info); background: var(--info-container); padding: 2px 8px; border-radius: var(--r-pill);
+  }
+  .drow-sous { font-size: 12px; color: var(--ink-3); }
+  .drow-sous.via-qr { color: var(--brand); }
+  .deconnecter {
+    flex: none; font-size: 12.5px; font-weight: 650; color: var(--danger);
+    padding: 6px 4px; margin-top: 2px;
+  }
+
+  .hint-bas {
+    margin: 0; padding: var(--s-md) var(--s-lg) var(--s-lg);
+    font-size: 12px; line-height: 1.5; color: var(--ink-3); background: var(--surface);
+  }
+  .fab {
+    position: absolute; right: var(--s-lg); bottom: var(--s-lg);
+    height: 48px; padding: 0 var(--s-lg); border-radius: var(--r-pill); border: none;
+    background: var(--brand); color: #fff; font-size: 14px; font-weight: 650;
+    font-family: inherit; display: inline-flex; align-items: center; gap: var(--s-sm);
+    box-shadow: 0 6px 16px rgba(63, 81, 181, 0.35);
+  }
+  .fab svg { width: 17px; height: 17px; }
+
+  /* ---------- Notes ---------- */
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note {
+    border-left: 3px solid var(--brand); padding-left: var(--s-md);
+    font-size: 14px; color: var(--page-ink-2); max-width: 78ch;
+  }
+  .note.attention { border-left-color: #C0392B; }
+  .note b { color: var(--page-ink); font-weight: 650; }
+
+  footer.colophon {
+    display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-xl);
+    padding-top: var(--s-lg); border-top: 1px solid var(--page-line);
+    font-family: var(--mono); font-size: 11.5px; color: var(--page-ink-2);
+  }
+
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya · Identité et connexion par QR code · Étape 6</p>
+    <h1>Connecter un second appareil, jamais en un seul geste</h1>
+    <p>
+      Contrairement à l'ajout de contact, une connexion ne s'approuve jamais au simple scan.
+      L'appareil déjà connecté doit voir qui il autorise et confirmer explicitement — le même
+      principe que la liste des appareils, consultable à tout moment depuis le compte.
+    </p>
+  </header>
+
+  <!-- ============================================================ -->
+  <section class="panel" id="panel-parcours">
+    <header>
+      <h2>La poignée de main</h2>
+      <p>Le nouvel appareil affiche, l'appareil de confiance scanne et confirme — deux écrans, un seul geste refusable.</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- ---------- 1. QR de session (nouvel appareil) ---------- -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <h3>Connexion par QR code</h3>
+          </div>
+
+          <div class="qrlogin-wrap">
+            <p class="qrlogin-title">Scannez ce code avec Alanya sur votre autre appareil</p>
+
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="46" fill="none" stroke="var(--outline)" stroke-width="4"/>
+                <circle cx="50" cy="50" r="46" fill="none" stroke="var(--brand)" stroke-width="4"
+                        stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="87"/>
+              </svg>
+              <div class="qr-frame-sm">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="7" height="7" rx="2" fill="#3F51B5"/>
+                  <rect x="1" y="1" width="5" height="5" rx="1.6" fill="#ffffff"/>
+                  <rect x="2.5" y="2.5" width="2" height="2" rx="0.8" fill="#3F51B5"/>
+                  <rect x="17" y="0" width="7" height="7" rx="2" fill="#3F51B5"/>
+                  <rect x="18" y="1" width="5" height="5" rx="1.6" fill="#ffffff"/>
+                  <rect x="19.5" y="2.5" width="2" height="2" rx="0.8" fill="#3F51B5"/>
+                  <rect x="0" y="17" width="7" height="7" rx="2" fill="#3F51B5"/>
+                  <rect x="1" y="18" width="5" height="5" rx="1.6" fill="#ffffff"/>
+                  <rect x="2.5" y="19.5" width="2" height="2" rx="0.8" fill="#3F51B5"/>
+                  <g fill="#3F51B5">
+                    <circle cx="9.5" cy="1.5" r="0.42"/><circle cx="11.5" cy="1.5" r="0.42"/>
+                    <circle cx="13.5" cy="1.5" r="0.42"/><circle cx="15.5" cy="1.5" r="0.42"/>
+                    <circle cx="8.5" cy="3.5" r="0.42"/><circle cx="10.5" cy="3.5" r="0.42"/>
+                    <circle cx="12.5" cy="3.5" r="0.42"/><circle cx="14.5" cy="3.5" r="0.42"/>
+                    <circle cx="16.5" cy="3.5" r="0.42"/>
+                    <circle cx="9.5" cy="5.5" r="0.42"/><circle cx="12.5" cy="5.5" r="0.42"/>
+                    <circle cx="19.5" cy="9.5" r="0.42"/><circle cx="21.5" cy="9.5" r="0.42"/>
+                    <circle cx="18.5" cy="11.5" r="0.42"/><circle cx="20.5" cy="11.5" r="0.42"/>
+                    <circle cx="22.5" cy="11.5" r="0.42"/>
+                    <circle cx="19.5" cy="13.5" r="0.42"/><circle cx="21.5" cy="13.5" r="0.42"/>
+                    <circle cx="1.5" cy="9.5" r="0.42"/><circle cx="3.5" cy="9.5" r="0.42"/>
+                    <circle cx="0.5" cy="11.5" r="0.42"/><circle cx="2.5" cy="11.5" r="0.42"/>
+                    <circle cx="4.5" cy="11.5" r="0.42"/>
+                    <circle cx="1.5" cy="13.5" r="0.42"/><circle cx="5.5" cy="13.5" r="0.42"/>
+                    <circle cx="9.5" cy="19.5" r="0.42"/><circle cx="11.5" cy="19.5" r="0.42"/>
+                    <circle cx="13.5" cy="19.5" r="0.42"/><circle cx="15.5" cy="19.5" r="0.42"/>
+                    <circle cx="8.5" cy="21.5" r="0.42"/><circle cx="10.5" cy="21.5" r="0.42"/>
+                    <circle cx="14.5" cy="21.5" r="0.42"/><circle cx="16.5" cy="21.5" r="0.42"/>
+                    <circle cx="9.5" cy="23.5" r="0.42"/><circle cx="12.5" cy="23.5" r="0.42"/>
+                    <circle cx="18.5" cy="18.5" r="0.42"/><circle cx="20.5" cy="18.5" r="0.42"/>
+                    <circle cx="22.5" cy="18.5" r="0.42"/>
+                    <circle cx="17.5" cy="19.5" r="0.42"/><circle cx="21.5" cy="19.5" r="0.42"/>
+                    <circle cx="23.5" cy="19.5" r="0.42"/>
+                    <circle cx="18.5" cy="20.5" r="0.42"/><circle cx="20.5" cy="20.5" r="0.42"/>
+                    <circle cx="17.5" cy="21.5" r="0.42"/><circle cx="19.5" cy="21.5" r="0.42"/>
+                    <circle cx="21.5" cy="21.5" r="0.42"/><circle cx="23.5" cy="21.5" r="0.42"/>
+                    <circle cx="18.5" cy="22.5" r="0.42"/><circle cx="22.5" cy="22.5" r="0.42"/>
+                    <circle cx="17.5" cy="23.5" r="0.42"/><circle cx="19.5" cy="23.5" r="0.42"/>
+                    <circle cx="23.5" cy="23.5" r="0.42"/>
+                  </g>
+                  <rect x="7.4" y="7.4" width="9.2" height="9.2" rx="3" fill="#ffffff"/>
+                  <circle cx="12" cy="11.3" r="3.3" fill="none" stroke="#3F51B5" stroke-width="1.05"/>
+                  <rect x="10.25" y="7.55" width="3.5" height="1.35" fill="#ffffff"/>
+                  <path d="M10.15 8.75 Q12 7.15 13.85 8.75" fill="none" stroke="#C0392B"
+                        stroke-width="1.2" stroke-linecap="round"/>
+                  <circle cx="10.15" cy="11.4" r="0.55" fill="#3F51B5"/>
+                  <circle cx="12" cy="11.4" r="0.55" fill="#3F51B5"/>
+                  <circle cx="13.85" cy="11.4" r="0.55" fill="#3F51B5"/>
+                  <path d="M13.9 13.3 L15.6 16.2 L12.6 14.1 Z" fill="#3F51B5"/>
+                </svg>
+              </div>
+            </div>
+
+            <span class="statut-pill"><span class="dot"></span>En attente de scan…</span>
+            <span class="compte-a-rebours">Expire dans <b>01:14</b> — régénéré automatiquement</span>
+
+            <p class="qrlogin-hint">
+              Sur votre autre appareil&nbsp;: Alanya → Compte et sécurité → Appareils connectés →
+              Ajouter un appareil.
+            </p>
+
+            <div class="qrlogin-alt">Se connecter avec mon mot de passe</div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Nouvel appareil</b>QR de session ~90&nbsp;s, régénération automatique</p>
+      </div>
+
+      <!-- ---------- 2. Confirmation ---------- -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <h3>Nouvelle connexion</h3>
+            <span class="spacer"></span>
+            <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </div>
+
+          <div class="confirm-wrap">
+            <p class="confirm-lead">Ce code a été scanné depuis&nbsp;:</p>
+
+            <div class="device-card">
+              <span class="device-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="13" rx="1.6"/><path d="M8 21h8M12 17v4"/>
+                </svg>
+              </span>
+              <span class="device-nom">Chrome sur Windows</span>
+              <span class="device-meta">Paris, France<span class="sep">·</span>à l'instant</span>
+              <span class="device-meta mono">IP 92.184.**.**</span>
+            </div>
+
+            <div class="avertissement">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 9v4M12 17h.01"/>
+                <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>
+              </svg>
+              <span>Si vous n'êtes pas à l'origine de cette demande, refusez et changez votre
+                mot de passe.</span>
+            </div>
+
+            <div class="confirm-actions">
+              <button class="btn-confirm non" type="button">Refuser</button>
+              <button class="btn-confirm oui" type="button">Confirmer</button>
+            </div>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Appareil déjà connecté</b>identité de l'appareil avant toute approbation</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note attention">
+        <b>Jamais d'approbation automatique au scan.</b> L'écran de confirmation est
+        obligatoire — sans lui, un QR de connexion affiché sur un site tiers et scanné par
+        erreur suffirait à connecter un attaquant («&nbsp;quishing&nbsp;»).
+      </p>
+      <p class="note">
+        <b>Le repli FCM ne fonctionne pas pour le nouvel appareil</b> — il n'a pas encore
+        d'<code>alanyaID</code> à cibler. La v1 mobile n'utilise que le polling REST (~2&nbsp;s)
+        ; le canal socket reste prêt côté serveur pour un futur onglet web, qui peut rester
+        ouvert et écouter en continu.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section class="panel" id="panel-appareils">
+    <header>
+      <h2>Mes appareils, à tout moment</h2>
+      <p>Un écran, atteint depuis Compte et sécurité — indépendant de toute connexion QR en cours.</p>
+    </header>
+
+    <div class="stage">
+
+      <!-- ---------- 3. Appareils connectés ---------- -->
+      <div class="device-block">
+        <div class="device"><div class="screen">
+          <div class="appbar">
+            <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <h3>Appareils connectés</h3>
+          </div>
+
+          <div class="rows">
+            <div class="drow">
+              <span class="dicone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="7" y="2" width="10" height="20" rx="2.2"/><path d="M11 18h2"/>
+                </svg>
+              </span>
+              <div class="drow-body">
+                <div class="drow-top">
+                  <span class="drow-nom">iPhone de Chris</span>
+                  <span class="badge-ici">Cet appareil</span>
+                </div>
+                <span class="drow-sous">Actif maintenant · connexion par mot de passe</span>
+              </div>
+            </div>
+
+            <div class="drow">
+              <span class="dicone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="13" rx="1.6"/><path d="M8 21h8M12 17v4"/>
+                </svg>
+              </span>
+              <div class="drow-body">
+                <div class="drow-top"><span class="drow-nom">Chrome sur Windows</span></div>
+                <span class="drow-sous via-qr">Ajouté par QR code le 25 juil.</span>
+                <span class="drow-sous">Actif il y a 2&nbsp;h · Paris, France</span>
+              </div>
+              <span class="deconnecter">Déconnecter</span>
+            </div>
+
+            <div class="drow">
+              <span class="dicone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="7" y="2" width="10" height="20" rx="2.2"/><path d="M11 18h2"/>
+                </svg>
+              </span>
+              <div class="drow-body">
+                <div class="drow-top"><span class="drow-nom">Pixel 8</span></div>
+                <span class="drow-sous via-qr">Ajouté par QR code le 20 juil.</span>
+                <span class="drow-sous">Actif hier · Douala, Cameroun</span>
+              </div>
+              <span class="deconnecter">Déconnecter</span>
+            </div>
+
+            <p class="hint-bas">
+              Déconnecter un appareil met fin à sa session immédiatement, même s'il est en
+              cours d'utilisation.
+            </p>
+          </div>
+        </div></div>
+        <p class="device-caption"><b>Mes appareils</b>tous les logins, pas seulement ceux par QR</p>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <p class="note">
+        <b>Un identifiant matériel, pas un UUID d'app.</b> <code>device_id</code> vient de
+        <code>device_info_plus</code> (déjà une dépendance) pour qu'un même téléphone reste le
+        même appareil après réinstallation — pas de doublon fantôme dans la liste.
+      </p>
+      <p class="note">
+        <b>Tous les logins, pas seulement ceux par QR.</b> Une connexion par mot de passe
+        alimente aussi cette table — sinon l'écran resterait vide pour la quasi-totalité des
+        comptes.
+      </p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Tokens : lib/core/theme/app_colors.dart</span>
+    <span>Table appareils — migration 026</span>
+    <span>Socket.IO room qr_session_* + polling REST</span>
+    <span>Maquette de conception — aucun code applicatif</span>
+  </footer>
+
+</div>
+</div>

@@ -183,6 +183,7 @@ class _ShareContactTile extends StatelessWidget {
                 imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
                 name: displayName,
                 size: AppSizes.avatarMd,
+                qrBadge: user.addedViaQr == true,
               ),
               AppSpacing.hGapMd,
               Expanded(

@@ -24,7 +24,8 @@ extension ChatHttpApi on TalkyApiClient {
   }
 
   /// Crée un groupe — le backend attend { participantIDs[], groupName, groupPhoto,
-  /// description?, onlyAdminsCanSend?, onlyAdminsCanEditInfo? }
+  /// description?, onlyAdminsCanSend?, onlyAdminsCanEditInfo?,
+  /// hideHistoryForNewMembers?, onlyAdminsCanAddMembers? }
   Future<Map<String, dynamic>> createGroup({
     required List<int> participantIDs,
     required String groupName,
@@ -32,6 +33,8 @@ extension ChatHttpApi on TalkyApiClient {
     String? description,
     bool onlyAdminsCanSend = false,
     bool onlyAdminsCanEditInfo = false,
+    bool hideHistoryForNewMembers = false,
+    bool onlyAdminsCanAddMembers = false,
   }) async {
     final data = await _handleRequest(
       () => _client.post(
@@ -44,6 +47,8 @@ extension ChatHttpApi on TalkyApiClient {
           if (description != null) 'description': description,
           if (onlyAdminsCanSend) 'onlyAdminsCanSend': 1,
           if (onlyAdminsCanEditInfo) 'onlyAdminsCanEditInfo': 1,
+          if (hideHistoryForNewMembers) 'hideHistoryForNewMembers': 1,
+          if (onlyAdminsCanAddMembers) 'onlyAdminsCanAddMembers': 1,
         }),
       ),
     );
@@ -111,11 +116,13 @@ extension ChatHttpApi on TalkyApiClient {
     return Map<String, dynamic>.from(data as Map);
   }
 
-  /// Verrous du groupe : mode annonce et édition des infos réservée.
+  /// Verrous du groupe : mode annonce, édition des infos, historique, ajout.
   Future<Map<String, dynamic>> updateGroupSettings(
     int conversID, {
     bool? onlyAdminsCanSend,
     bool? onlyAdminsCanEditInfo,
+    bool? hideHistoryForNewMembers,
+    bool? onlyAdminsCanAddMembers,
   }) async {
     final body = <String, dynamic>{};
     if (onlyAdminsCanSend != null) {
@@ -124,9 +131,32 @@ extension ChatHttpApi on TalkyApiClient {
     if (onlyAdminsCanEditInfo != null) {
       body['onlyAdminsCanEditInfo'] = onlyAdminsCanEditInfo ? 1 : 0;
     }
+    if (hideHistoryForNewMembers != null) {
+      body['hideHistoryForNewMembers'] = hideHistoryForNewMembers ? 1 : 0;
+    }
+    if (onlyAdminsCanAddMembers != null) {
+      body['onlyAdminsCanAddMembers'] = onlyAdminsCanAddMembers ? 1 : 0;
+    }
     final data = await _handleRequest(
       () => _client.patch(
         Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/settings'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Nouvel ajouté : « Rester » → clear pendingJoinMsgID (sync multi-appareil).
+  Future<Map<String, dynamic>> ackGroupJoin(
+    int conversID, {
+    int? msgID,
+  }) async {
+    final body = <String, dynamic>{};
+    if (msgID != null) body['msgID'] = msgID;
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/ack-join'),
         headers: _headers,
         body: jsonEncode(body),
       ),

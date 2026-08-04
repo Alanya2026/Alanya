@@ -5,6 +5,8 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/notifications/notification_prefs_cache.dart';
 import '../../talky_api_client.dart';
+import '../../talky_models.dart';
+import 'dnd_schedule_screen.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -26,6 +28,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   String _previewMode = 'full';
+  DndSchedule _dnd = const DndSchedule();
 
   @override
   void initState() {
@@ -36,13 +39,19 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   Future<void> _load() async {
     final api = context.read<TalkyApiClient>();
     try {
-      final prefs = await api.getNotificationPrefs();
+      final results = await Future.wait([
+        api.getNotificationPrefs(),
+        api.getDndSchedule(),
+      ]);
       if (!mounted) return;
       setState(() {
-        _applyPrefs(prefs);
+        _applyPrefs(Map<String, dynamic>.from(results[0] as Map));
+        _dnd = results[1] as DndSchedule;
         _loading = false;
       });
-      await NotificationPrefsCache.applyFromServer(prefs);
+      await NotificationPrefsCache.applyFromServer(
+        Map<String, dynamic>.from(results[0] as Map),
+      );
     } catch (_) {
       await NotificationPrefsCache.load();
       if (!mounted) return;
@@ -85,6 +94,31 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  String _dndSubtitle() {
+    final l10n = context.l10n;
+    if (!_dnd.enabled) return l10n.dndSummaryInactive;
+    final dayLabels = <String>[];
+    for (var i = 0; i < 7; i++) {
+      if (_dnd.isDayEnabled(i)) {
+        dayLabels.add(switch (i) {
+          0 => l10n.dndDayMon,
+          1 => l10n.dndDayTue,
+          2 => l10n.dndDayWed,
+          3 => l10n.dndDayThu,
+          4 => l10n.dndDayFri,
+          5 => l10n.dndDaySat,
+          _ => l10n.dndDaySun,
+        });
+      }
+    }
+    final days = dayLabels.length == 7
+        ? l10n.dndDayMon.substring(0, 1) == 'L'
+            ? 'Lun–Dim'
+            : 'Mon–Sun'
+        : dayLabels.join(', ');
+    return l10n.dndSummaryActive(_dnd.startTime, _dnd.endTime, days);
   }
 
   @override
@@ -203,6 +237,47 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                         _patch({'previewMode': mode});
                       },
                     ),
+                  ),
+                ),
+                AppSpacing.vGapXxl,
+                _Group(
+                  title: l10n.dndScheduleTitle,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.sm,
+                    ),
+                    leading: Icon(Icons.bedtime_outlined,
+                        color: context.colors.onSurfaceVariant),
+                    title: Text(
+                      l10n.dndScheduleTitle,
+                      style: context.text.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      _dndSubtitle(),
+                      style: context.text.bodySmall?.copyWith(
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                    trailing: Icon(Icons.chevron_right,
+                        color: context.colors.outlineVariant),
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DndScheduleScreen(),
+                        ),
+                      );
+                      if (mounted) {
+                        try {
+                          final schedule =
+                              await context.read<TalkyApiClient>().getDndSchedule();
+                          if (mounted) setState(() => _dnd = schedule);
+                        } catch (_) {}
+                      }
+                    },
                   ),
                 ),
               ],

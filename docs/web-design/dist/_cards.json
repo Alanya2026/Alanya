@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Fil de discussion — 3 panneaux",
+    "path": "chat-fil.html",
+    "group": "Écrans · Conversations",
+    "subtitle": "Layout large ≥1600px, panneau contact ouvert",
+    "viewport": {
+      "width": 1680,
+      "height": 940
+    }
+  },
+  {
+    "name": "Couleurs",
+    "path": "foundations/couleurs.html",
+    "group": "Fondations",
+    "subtitle": "Palette alignée sur app_colors.dart + sceau or",
+    "viewport": {
+      "width": 1240,
+      "height": 1180
+    }
+  },
+  {
+    "name": "Typographie",
+    "path": "foundations/typographie.html",
+    "group": "Fondations",
+    "subtitle": "Onest × Instrument Serif × DM Mono",
+    "viewport": {
+      "width": 1240,
+      "height": 1220
+    }
+  }
+]

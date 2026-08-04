@@ -4,6 +4,11 @@ enum SessionEndReason {
   none,
   explicitLogout,
   tokenExpired,
+
+  /// Cet appareil a été déconnecté depuis un autre appareil du compte
+  /// (écran « Appareils connectés »). Traité comme un logout explicite : c'est
+  /// bien une décision de l'utilisateur, le cache local doit partir avec.
+  revokedRemotely,
 }
 
 /// Dernière raison de fin de session (lue par AuthWrapper / LoginScreen).

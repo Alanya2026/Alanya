@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links
   connectivity_plus
   emoji_picker_flutter
   file_selector_windows
@@ -11,6 +12,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_webrtc
   gal
   geolocator_windows
+  local_auth_windows
   pdfx
   permission_handler_windows
   record_windows

@@ -1089,6 +1089,9 @@
   "admin": "Admin",
   "audio2": "Audio",
   "playbackSpeed": "Vitesse de lecture",
+  "playbackSpeedVoiceLabel": "Messages vocaux",
+  "playbackSpeedVideoLabel": "Vidéos",
+  "playbackSpeedMusicLabel": "Musique",
   "music": "Musique",
   "musicPreview": "🎵 {name}",
   "@musicPreview": {
@@ -2027,6 +2030,73 @@
   },
   "sysOnlyAdminsEditOffByMe": "Vous avez autorisé tout le monde à modifier les infos",
   "sysGroupEventFallback": "Le groupe a été mis à jour",
+  "sysPreviewGroupCreated": "{actor} a créé « {value} »",
+  "@sysPreviewGroupCreated": {
+    "placeholders": {
+      "actor": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupCreatedShort": "{actor} a créé le groupe",
+  "@sysPreviewGroupCreatedShort": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberAdded": "{actor} a ajouté des membres",
+  "@sysPreviewMemberAdded": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberRemoved": "{actor} a retiré un membre",
+  "@sysPreviewMemberRemoved": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberLeft": "{actor} a quitté le groupe",
+  "@sysPreviewMemberLeft": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupRenamed": "{actor} a renommé le groupe",
+  "@sysPreviewGroupRenamed": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupPhotoChanged": "{actor} a changé la photo du groupe",
+  "@sysPreviewGroupPhotoChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupDescriptionChanged": "{actor} a modifié la description",
+  "@sysPreviewGroupDescriptionChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewRolePromoted": "{actor} a nommé un administrateur",
+  "@sysPreviewRolePromoted": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewRoleDemoted": "{actor} a retiré des droits d'administrateur",
+  "@sysPreviewRoleDemoted": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewSettingsChanged": "{actor} a modifié les réglages du groupe",
+  "@sysPreviewSettingsChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
   "groupOwner": "Propriétaire",
   "groupAdmin": "Admin",
   "removeFromGroup": "Retirer du groupe",
@@ -2057,7 +2127,47 @@
   "onlyAdminsCanSendLabel": "Seuls les admins peuvent écrire",
   "onlyAdminsCanSendSubtitle": "Le groupe devient un canal d'annonces",
   "onlyAdminsCanEditInfoLabel": "Seuls les admins modifient les infos",
-  "onlyAdminsCanEditInfoSubtitle": "Nom, photo, description et ajout de membres",
+  "onlyAdminsCanEditInfoSubtitle": "Nom, photo et description",
+  "hideHistoryForNewMembersLabel": "Masquer l'historique pour les nouveaux",
+  "hideHistoryForNewMembersSubtitle": "Les membres ajoutés ne verront pas les messages antérieurs",
+  "onlyAdminsCanAddMembersLabel": "Seuls les admins peuvent ajouter des membres",
+  "onlyAdminsCanAddMembersSubtitle": "Inviter de nouveaux participants au groupe",
+  "groupJoinBannerBody": "{actor} vous a ajouté au groupe « {group} »",
+  "@groupJoinBannerBody": {
+    "placeholders": {
+      "actor": { "type": "String" },
+      "group": { "type": "String" }
+    }
+  },
+  "stay": "Rester",
+  "sysHideHistoryOn": "{actor} a masqué l'historique pour les nouveaux membres",
+  "@sysHideHistoryOn": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysHideHistoryOnByMe": "Vous avez masqué l'historique pour les nouveaux membres",
+  "sysHideHistoryOff": "{actor} a rendu l'historique visible pour les nouveaux membres",
+  "@sysHideHistoryOff": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysHideHistoryOffByMe": "Vous avez rendu l'historique visible pour les nouveaux membres",
+  "sysOnlyAdminsAddOn": "{actor} a réservé l'ajout de membres aux administrateurs",
+  "@sysOnlyAdminsAddOn": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysOnlyAdminsAddOnByMe": "Vous avez réservé l'ajout de membres aux administrateurs",
+  "sysOnlyAdminsAddOff": "{actor} a autorisé tout le monde à ajouter des membres",
+  "@sysOnlyAdminsAddOff": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysOnlyAdminsAddOffByMe": "Vous avez autorisé tout le monde à ajouter des membres",
   "mentionsOnlyLabel": "Uniquement les mentions",
   "mentionsOnlySubtitle": "N'être alerté que si l'on vous mentionne",
   "youWereRemovedFromGroup": "Vous ne faites plus partie de ce groupe",
@@ -2124,5 +2234,493 @@
   "changePasswordSubmit": "Enregistrer",
   "changePasswordSuccess": "Mot de passe modifié",
   "changePasswordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'actuel",
-  "profileNoEmailChip": "Ajoutez un e-mail pour sécuriser votre compte"
+  "profileNoEmailChip": "Ajoutez un e-mail pour sécuriser votre compte",
+
+  "qrMyCodeTitle": "Mon code QR",
+  "qrMyCodeTabCode": "Mon code",
+  "qrMyCodeTabScan": "Scanner",
+  "qrMyCodeSubtitle": "Faites scanner ce code pour être ajouté en contact préféré.",
+  "qrMyCodeShare": "Partager",
+  "qrMyCodeExpiresIn": "Expire dans {time}",
+  "@qrMyCodeExpiresIn": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "qrMyCodeValidityNote": "Valable 10 minutes et pour une seule personne. Un nouveau code est généré automatiquement.",
+  "qrMyCodeNewCode": "Nouveau code",
+  "qrMyCodeShareValidity": "Ce code est valable 10 minutes et pour une seule personne.",
+  "qrScanReturnTitle": "Nouveau contact",
+  "qrScanReturnBody": "{name} vous a ajouté à ses contacts préférés avec votre code QR. L'ajouter en retour ?",
+  "@qrScanReturnBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanReturnAccept": "Ajouter",
+  "qrScanReturnDecline": "Non merci",
+  "qrScanReturnFailed": "Impossible d'ajouter ce contact",
+  "qrScannedMutualInfo": "{name} vous a ajouté avec votre code QR",
+  "@qrScannedMutualInfo": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrNoteFieldHint": "Ajouter une note (lieu, contexte…)",
+  "qrNoteSaved": "Note enregistrée",
+  "qrNoteFailed": "Impossible d'enregistrer la note",
+  "qrContactsFilterAll": "Tous",
+  "qrContactsFilterQr": "Par QR",
+  "qrContactAddedViaQr": "Ajouté par QR code",
+  "qrContactAddedViaQrOn": "Ajouté par QR code · {date}",
+  "@qrContactAddedViaQrOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "qrMyCodeShareSheetTitle": "Partager mon code",
+  "qrMyCodeShareLink": "Partager le lien",
+  "qrMyCodeShareLinkHint": "Lien cliquable et Alanya ID",
+  "qrMyCodeShareImage": "Partager l'image",
+  "qrMyCodeShareImageHint": "La carte à scanner",
+  "qrMyCodeShareId": "Mon Alanya ID : {id}",
+  "@qrMyCodeShareId": {
+    "placeholders": {
+      "id": { "type": "String" }
+    }
+  },
+  "qrMyCodeRegenerate": "Régénérer",
+  "qrMyCodeRegenerateConfirmTitle": "Régénérer votre code ?",
+  "qrMyCodeRegenerateConfirmBody": "L'ancien code cessera immédiatement de fonctionner. Les personnes qui l'ont enregistré ne pourront plus vous ajouter avec.",
+  "qrMyCodeRegenerateDone": "Nouveau code généré",
+  "qrMyCodeShareText": "Ajoutez-moi sur Alanya : je suis {name}.",
+  "@qrMyCodeShareText": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "qrScanTitle": "Scanner un code",
+  "qrScanEntryButton": "Scanner un code",
+  "qrScanInstruction": "Cadrez le code QR d'un contact",
+  "qrScanErrorUnreadable": "Code illisible. Rapprochez-vous et réessayez.",
+  "qrScanErrorUnknown": "Ce code est expiré ou inconnu.",
+  "qrScanOwnCode": "C'est votre propre code.",
+  "qrScanAddSuccess": "{name} a été ajouté à vos contacts préférés",
+  "@qrScanAddSuccess": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanAlreadyContact": "{name} est déjà dans vos contacts préférés",
+  "@qrScanAlreadyContact": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanResultAdded": "Ajouté à vos contacts",
+  "qrScanResultAlready": "Déjà dans vos contacts",
+  "qrScanActionMessage": "Message",
+  "qrScanActionDetails": "Voir détails",
+  "qrScanUndo": "Annuler",
+  "qrScanUndone": "{name} a été retiré de vos contacts préférés",
+  "@qrScanUndone": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanUndoFailed": "Impossible d'annuler l'ajout",
+  "qrScanCameraDenied": "Alanya a besoin d'accéder à la caméra pour scanner un code.",
+  "qrScanOpenSettings": "Ouvrir les réglages",
+  "qrScanTorchOn": "Lampe allumée",
+  "qrScanTorchOff": "Lampe éteinte",
+  "qrScanImportImage": "Importer une image",
+  "qrScanImportNoCode": "Aucun code QR dans cette image.",
+  "qrScanImportNotAlanya": "Ce code QR n'est pas un code Alanya.",
+  "qrScanImportFailed": "Impossible de lire cette image.",
+
+  "qrLoginTitle": "Connexion par QR code",
+  "qrLoginEntryButton": "Se connecter avec un code QR",
+  "qrLoginUsePassword": "Se connecter avec mon mot de passe",
+  "qrLoginExplanation": "Ouvrez Alanya sur votre téléphone déjà connecté, allez dans Compte et sécurité, puis scannez ce code.",
+  "qrLoginExpiresIn": "Expire dans {time}",
+  "@qrLoginExpiresIn": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "qrLoginStatusWaiting": "En attente de scan…",
+  "qrLoginStatusScanned": "Code scanné. Confirmez sur votre autre appareil.",
+  "qrLoginStatusRejected": "Connexion refusée depuis votre autre appareil.",
+  "qrLoginStatusExpired": "Ce code a expiré.",
+  "qrLoginRegenerate": "Générer un nouveau code",
+  "qrLoginNetworkError": "Connexion impossible. Vérifiez votre réseau et réessayez.",
+
+  "qrApproveTitle": "Nouvelle connexion",
+  "qrApproveIntro": "Ce code vient d'être scanné depuis cet appareil :",
+  "qrApproveDeviceLabel": "Appareil (nom déclaré)",
+  "qrApprovePlatformLabel": "Plateforme",
+  "qrApproveRequestedLabel": "Demandé",
+  "qrApproveIpLabel": "Adresse IP",
+  "qrApproveLocationLabel": "Lieu approximatif",
+  "qrApproveDeclaredNotice": "Le nom et la plateforme sont annoncés par l'appareil qui demande la connexion : ils peuvent être falsifiés. Seule l'adresse IP est constatée par Alanya.",
+  "qrApproveSecurityWarning": "Si vous n'êtes pas à l'origine de cette demande, refusez-la et changez votre mot de passe.",
+  "qrApproveReject": "Refuser",
+  "qrApproveConfirm": "Confirmer",
+  "qrApproveDone": "Appareil connecté",
+  "qrApproveRejectDone": "Connexion refusée",
+  "qrApproveSessionExpired": "Cette demande a expiré. Faites afficher un nouveau code sur l'autre appareil.",
+
+  "qrDevicesTitle": "Appareils connectés",
+  "qrDevicesEntryTitle": "Appareils connectés",
+  "qrDevicesEntrySubtitle": "Voir où votre compte est ouvert",
+  "qrLinkDeviceTitle": "Lier un nouvel appareil",
+  "qrLinkDeviceSubtitle": "Scanner le code affiché sur l'autre appareil",
+  "qrDevicesThisDevice": "Cet appareil",
+  "qrDevicesUnknownDevice": "Appareil inconnu",
+  "qrDevicesMethodPassword": "Connexion par mot de passe",
+  "qrDevicesMethodSignup": "Appareil d'inscription",
+  "qrDevicesMethodQr": "Connexion par code QR",
+  "qrDevicesLastActive": "Actif {date}",
+  "@qrDevicesLastActive": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "qrDevicesRevoke": "Déconnecter",
+  "qrDevicesRevokeConfirmTitle": "Déconnecter cet appareil ?",
+  "qrDevicesRevokeConfirmBody": "{name} sera déconnecté immédiatement. Il faudra saisir votre mot de passe pour s'y reconnecter.",
+  "@qrDevicesRevokeConfirmBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrDevicesRevokeDone": "Appareil déconnecté",
+  "qrDevicesEmpty": "Aucun autre appareil connecté",
+  "qrDevicesLoadError": "Impossible de charger vos appareils",
+  "qrDevicesIosNote": "Sur iPhone, un appareil peut réapparaître comme un nouvel appareil dans cette liste après une réinstallation d'Alanya.",
+
+  "qrBannerNewDevice": "Nouvel appareil connecté : {name}",
+  "@qrBannerNewDevice": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrBannerSignedOutRemotely": "Cet appareil a été déconnecté depuis un autre appareil.",
+
+  "myAccountLabel": "Mon compte",
+  "accountHubTitle": "Mon compte",
+  "accountHubSecurityScore": "Score de sécurité",
+  "accountHubSecurityScoreValue": "{score} / {max}",
+  "@accountHubSecurityScoreValue": {
+    "placeholders": {
+      "score": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "securityScoreAddEmail": "Ajoutez un e-mail pour améliorer votre score.",
+  "securityScoreAddBiometric": "Activez la biométrie pour améliorer votre score.",
+  "accountHubSectionIdentity": "Identité",
+  "accountHubSectionProtection": "Protection",
+  "accountHubSectionData": "Données",
+  "accountHubEditProfile": "Modifier le profil",
+  "accountHubEditProfileSubtitle": "Nom, pseudo, bio, photo",
+  "accountHubMyMedia": "Mes médias",
+  "accountHubPrivacy": "Confidentialité",
+  "accountHubPrivacySubtitle": "Visibilité, blocage, lectures",
+  "accountHubSecurity": "Sécurité du compte",
+  "accountHubSecuritySubtitle": "Mot de passe, appareils, biométrie",
+  "accountHubDataAccount": "Données et compte",
+  "accountHubDataAccountSubtitle": "Export RGPD, suppression",
+  "accountHubProfilePreview": "Aperçu profil",
+  "accountHubProfilePreviewSubtitle": "Voir comme vos contacts",
+  "profileBioLabel": "Bio",
+  "profileBioHint": "Parlez de vous en quelques mots (500 caractères max)",
+  "profilePreviewLink": "Aperçu du profil",
+  "myMediaTitle": "Mes médias",
+  "myMediaPlaceholder": "Vos photos et vidéos partagées apparaîtront ici.",
+  "storageTitle": "Stockage et cache",
+  "storageUsed": "Espace utilisé",
+  "storageBreakdownTitle": "Répartition",
+  "storageMediaCache": "Cache médias",
+  "storageDatabase": "Base de données",
+  "storageTempFiles": "Fichiers temporaires",
+  "storageOther": "Autres données",
+  "storageClearMediaCache": "Vider le cache médias",
+  "storageClearTemp": "Vider les fichiers temporaires",
+  "storageClearCacheConfirm": "Les fichiers en cache seront supprimés. Les médias pourront être retéléchargés.",
+  "storageClearCacheDone": "Cache médias vidé",
+  "storageClearTempDone": "Fichiers temporaires supprimés",
+  "networkDataTitle": "Réseau et données",
+  "networkDataSectionNetwork": "Réseau",
+  "networkWifiOnly": "Wi-Fi uniquement",
+  "networkWifiOnlySubtitle": "Ne télécharge les médias que sur Wi-Fi",
+  "networkDataSaver": "Économiseur de données",
+  "networkDataSaverSubtitle": "Réduit la qualité et les téléchargements automatiques",
+  "settingsSectionCommunication": "Communication",
+  "settingsSectionApplication": "Application",
+  "settingsSectionInformation": "Informations",
+  "settingsStorage": "Stockage et cache",
+  "settingsStorageSubtitle": "Espace utilisé et nettoyage",
+  "settingsNetwork": "Réseau et données",
+  "settingsNetworkSubtitle": "Wi-Fi, économiseur, médias",
+  "settingsAccessibility": "Accessibilité",
+  "settingsAccessibilitySubtitle": "Texte et animations",
+  "settingsAbout": "À propos et mentions légales",
+  "settingsMutedConversations": "Conversations silencieuses",
+  "accessibilityTitle": "Accessibilité",
+  "accessibilitySectionDisplay": "Affichage",
+  "accessibilityFontScale": "Taille du texte",
+  "accessibilityFontScaleSmall": "Petit",
+  "accessibilityFontScaleDefault": "Normal",
+  "accessibilityFontScaleMedium": "Grand",
+  "accessibilityFontScaleLarge": "Très grand",
+  "accessibilityReduceMotion": "Réduire les animations",
+  "accessibilityReduceMotionSubtitle": "Limite les transitions et effets visuels",
+  "accessibilitySaveFailed": "Impossible d'enregistrer les préférences",
+  "mutedConversationsTitle": "Conversations silencieuses",
+  "mutedConversationsEmpty": "Aucune conversation silencieuse",
+  "mutedConversationsCount": "{count, plural, =1{1 conversation} other{{count} conversations}}",
+  "@mutedConversationsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mutedForeverLabel": "Silencieux indéfiniment",
+  "mutedUntilLabel": "Jusqu'au {date}",
+  "@mutedUntilLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "dndScheduleTitle": "Ne pas déranger",
+  "dndEnabled": "Planifier",
+  "dndEnabledSubtitle": "Couper les notifications sur un créneau horaire",
+  "dndScheduleHours": "Horaires",
+  "dndStartTime": "Début",
+  "dndEndTime": "Fin",
+  "dndDays": "Jours actifs",
+  "dndDayMon": "Lun",
+  "dndDayTue": "Mar",
+  "dndDayWed": "Mer",
+  "dndDayThu": "Jeu",
+  "dndDayFri": "Ven",
+  "dndDaySat": "Sam",
+  "dndDaySun": "Dim",
+  "dndSaveFailed": "Impossible d'enregistrer le planning",
+  "aboutTitle": "À propos",
+  "aboutSectionLegal": "Mentions légales",
+  "aboutVersion": "Version {version} (build {build})",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": { "type": "String" },
+      "build": { "type": "String" }
+    }
+  },
+  "aboutTerms": "Conditions d'utilisation",
+  "aboutPrivacy": "Politique de confidentialité",
+  "aboutLicenses": "Licences open source",
+  "aboutSupport": "Contacter le support",
+  "aboutCopyright": "© 2026 Alanya · Fait avec soin à Douala",
+  "exportDataTitle": "Données et compte",
+  "exportSectionYourData": "Vos données",
+  "exportSectionDanger": "Zone sensible",
+  "exportPhase1Title": "Export rapide (RGPD)",
+  "exportPhase1Subtitle": "Profil, contacts, métadonnées — disponible immédiatement",
+  "exportPhase2Title": "Export complet",
+  "exportPhase2Subtitle": "Inclut messages et médias — prêt sous ~24 h",
+  "exportRequestPhase1": "Exporter maintenant",
+  "exportRequestPhase2": "Demander l'export complet",
+  "exportPhase1ReadyTitle": "Export prêt",
+  "exportPhase2Started": "Export complet demandé — vous serez notifié",
+  "exportInProgress": "Export en cours",
+  "exportInProgressHint": "Prêt dans ~24 h · notification à l'achèvement",
+  "exportReady": "Votre export est prêt",
+  "exportDownload": "Télécharger",
+  "exportFailed": "Export impossible : {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "deleteAccountTitle": "Supprimer le compte",
+  "deleteAccountEntrySubtitle": "Action irréversible",
+  "deleteAccountStep1Title": "Action irréversible",
+  "deleteAccountStep1Bullet1": "Suppression des messages et médias",
+  "deleteAccountStep1Bullet2": "Retrait de tous les groupes",
+  "deleteAccountStep1Bullet3": "Numéro libéré après la période de grâce",
+  "deleteAccountContinue": "Continuer",
+  "deleteAccountPassword": "Mot de passe",
+  "deleteAccountConfirmLabel": "Taper SUPPRIMER",
+  "deleteAccountConfirmWord": "SUPPRIMER",
+  "deleteAccountConfirmMismatch": "Tapez SUPPRIMER pour confirmer",
+  "deleteAccountSubmit": "Supprimer mon compte",
+  "deleteAccountGraceTitle": "Suppression planifiée",
+  "deleteAccountGraceBody": "Votre compte sera définitivement supprimé le {date}. Vous pouvez annuler d'ici là.",
+  "@deleteAccountGraceBody": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "deleteAccountFailed": "Suppression impossible : {error}",
+  "@deleteAccountFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "biometricLock": "Verrouillage biométrique",
+  "biometricLockTitle": "Alanya est verrouillé",
+  "biometricLockUnlock": "Déverrouiller",
+  "biometricLockSubtitle": "Empreinte ou reconnaissance faciale à l'ouverture",
+  "biometricLockEnableConfirm": "Confirmez votre empreinte pour activer le verrou",
+  "biometricLockUnavailable": "Biométrie indisponible sur cet appareil",
+  "biometricLockFailed": "Biométrie : {error}",
+  "@biometricLockFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "accountSecuritySectionProtection": "Protection",
+  "logoutAllDevices": "Déconnecter tous les appareils",
+  "logoutAllDevicesSubtitle": "Ferme toutes les sessions sauf celle-ci",
+  "logoutAllDevicesConfirm": "Tous les autres appareils seront déconnectés immédiatement.",
+  "logoutAllDevicesAction": "Déconnecter",
+  "logoutAllDevicesDone": "Autres appareils déconnectés",
+  "logoutAllDevicesFailed": "Impossible de déconnecter tous les appareils",
+  "privacySectionWhoCanSee": "Qui peut me voir",
+  "privacySectionMessages": "Messages",
+  "privacySectionLists": "Listes et groupes",
+  "privacyLastSeen": "Dernière connexion",
+  "privacyOnlineStatus": "Statut en ligne",
+  "privacyProfilePhoto": "Photo de profil",
+  "privacyReadReceipts": "Accusés de lecture",
+  "privacyReadReceiptsSubtitle": "Envoyer et recevoir les confirmations de lecture",
+  "privacyNotificationPreview": "Aperçu des notifications",
+  "privacyBlockedContacts": "Contacts bloqués",
+  "privacyBlockedContactsEmpty": "Aucun contact bloqué",
+  "privacyBlockedContactsCount": "{count, plural, =1{1 contact} other{{count} contacts}}",
+  "@privacyBlockedContactsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "privacyAddToGroups": "Ajout aux groupes",
+  "privacyVisibilityEveryone": "Tout le monde",
+  "privacyVisibilityContacts": "Mes contacts",
+  "privacyVisibilityNobody": "Personne",
+  "privacySaveFailed": "Impossible d'enregistrer les préglages",
+  "onboardingCredentialsTitle": "Vos identifiants",
+  "onboardingCredentialsSubtitle": "Conservez ces informations en lieu sûr.",
+  "onboardingCredentialsBanner": "Notez votre numéro Alanya et votre mot de passe — ils ne seront plus affichés.",
+  "onboardingProfileTitle": "Votre profil",
+  "onboardingProfileSubtitle": "Photo, genre, âge, pays, bio : complétez maintenant ou plus tard dans Mon compte.",
+  "profileBioDefault": "Salut, je suis sur Alanya",
+  "onboardingPersonalizeTitle": "Personnaliser Alanya",
+  "onboardingPersonalizeSubtitle": "Thème, langue et verrouillage. Modifiable à tout moment dans Paramètres.",
+  "onboardingStepOf": "Étape {current} sur {total}",
+  "@onboardingStepOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "onboardingCountryTitle": "Votre pays",
+  "onboardingCountrySubtitle": "Aide vos contacts à vous identifier.",
+  "onboardingPhotoTitle": "Photo de profil",
+  "onboardingPhotoSubtitle": "Ajoutez une photo ou passez cette étape.",
+  "onboardingPhotoChooseGallery": "Choisir dans la galerie",
+  "onboardingPhotoCamera": "Prendre une photo",
+  "onboardingPhotoFailed": "Impossible d'ajouter la photo",
+  "onboardingBioTitle": "Quelques mots sur vous",
+  "onboardingBioSubtitle": "Présentez-vous en une phrase (optionnel).",
+  "onboardingBioHint": "Salut, je suis sur Alanya",
+  "onboardingPreferencesTitle": "Préférences",
+  "onboardingPreferencesSubtitle": "Thème et langue de l'application.",
+  "onboardingThemeLabel": "Thème",
+  "onboardingLanguageLabel": "Langue",
+  "onboardingBiometricTitle": "Protéger l'accès",
+  "onboardingBiometricSubtitle": "Un geste rapide à chaque retour dans l'app.",
+  "onboardingBiometricFriendlyTitle": "Empreinte ou reconnaissance faciale",
+  "onboardingBiometricFriendlyBody": "Activez le déverrouillage rapide. Vous pourrez le modifier dans Paramètres.",
+  "onboardingBiometricUnavailable": "Biométrie indisponible — vous pourrez l'activer plus tard dans les paramètres.",
+  "onboardingCompleteTitle": "C'est parti !",
+  "onboardingCompleteSubtitle": "Votre compte est prêt.",
+  "onboardingCompleteMessage": "Explorez Alanya et restez connecté avec vos proches.",
+  "onboardingCompleteCta": "Découvrir Alanya",
+  "onboardingContinue": "Continuer",
+  "onboardingSkip": "Passer",
+  "onboardingSkipAll": "Configurer plus tard",
+  "onboardingSkipAllTitle": "Passer la configuration ?",
+  "onboardingSkipAllBody": "Vous pourrez compléter votre profil à tout moment dans Mon compte.",
+  "onboardingSkipAllCredentialsBody": "Vous ne reverrez plus votre mot de passe ici. Complétez votre profil quand vous voulez dans Mon compte.",
+  "onboardingSkipAllRecoveryBody": "Vous ne reverrez plus votre mot de passe ici, et votre code de récupération ne réapparaîtra que dans Mon compte → Sécurité. Notez-les avant de continuer.",
+  "onboardingSaveFailed": "Enregistrement impossible — réessayez ou passez cette étape.",
+  "onboardingCredentialsBannerNoEmail": "Notez votre numéro Alanya, votre mot de passe et votre code de récupération — ils ne seront plus affichés ici.",
+  "onboardingPhotoAdd": "Appuyez pour ajouter une photo",
+  "onboardingIdentityTitle": "À propos de vous",
+  "onboardingIdentitySubtitle": "Genre et âge ne seront plus modifiables une fois enregistrés.",
+  "profileGenderLabel": "Genre",
+  "profileGenderMale": "Homme",
+  "profileGenderFemale": "Femme",
+  "profileGenderOther": "Autre",
+  "profileGenderUnspecified": "Je préfère ne pas dire",
+  "profileAgeLabel": "Âge",
+  "profileAgeSuffix": "ans",
+  "profileAgeBirthYear": "Année de naissance ≈ {year}",
+  "@profileAgeBirthYear": {
+    "placeholders": {
+      "year": { "type": "int" }
+    }
+  },
+  "profileAgeInvalid": "Âge invalide (entre {min} et {max} ans)",
+  "@profileAgeInvalid": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "recoveryCodeTitle": "Code de récupération",
+  "recoveryCodeKeepSafe": "À conserver",
+  "recoveryCodeOnboardingHint": "Sans adresse e-mail, ce code est votre seule façon de reprendre la main sur votre compte. Notez-le ailleurs que sur ce téléphone.",
+  "recoveryCodeCopied": "Code de récupération copié",
+  "recoveryCodeEntrySubtitle": "Réinitialiser votre mot de passe sans e-mail",
+  "recoveryCodeIntro": "Ce code réinitialise votre mot de passe sans passer par un e-mail. Il ne change jamais, même après un changement de mot de passe.",
+  "recoveryCodeSecurityWarning": "Toute personne connaissant ce code et votre ID Alanya peut changer votre mot de passe. Ne le partagez avec personne.",
+  "recoveryCodeReveal": "Afficher le code",
+  "recoveryCodeHide": "Masquer",
+  "recoveryCodePasswordPrompt": "Saisissez votre mot de passe pour afficher le code.",
+  "recoveryCodeRevealFailed": "Impossible d'afficher le code",
+  "forgotMethodTitle": "Récupérer votre compte",
+  "forgotMethodSubtitle": "Comment souhaitez-vous procéder ?",
+  "forgotMethodEmail": "J'ai une adresse e-mail",
+  "forgotMethodEmailSubtitle": "Recevez un code à 6 chiffres par e-mail.",
+  "forgotMethodCode": "J'ai un code de récupération",
+  "forgotMethodCodeSubtitle": "Le code affiché à la création de votre compte.",
+  "forgotCodeTitle": "Votre code de récupération",
+  "forgotCodeSubtitle": "Saisissez votre ID Alanya et le code noté à l'inscription.",
+  "forgotCodeHint": "XXXX-XXXX-XXXX",
+  "forgotCodeSubmit": "Valider le code",
+  "validatorRecoveryCode": "Code de récupération à 12 caractères",
+  "deleteAccountGraceDays": "Délai de grâce · {days} jours",
+  "@deleteAccountGraceDays": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "deleteAccountCancelDeletion": "Annuler la suppression",
+  "deleteAccountCancelSuccess": "Suppression annulée",
+  "deleteAccountCancelFailed": "Impossible d'annuler la suppression",
+  "deleteAccountLogoutNow": "Se déconnecter",
+  "myMediaEmpty": "Aucun média partagé pour le moment",
+  "myMediaLoadFailed": "Impossible de charger vos médias",
+  "dndSummaryActive": "{start} – {end} · {days}",
+  "@dndSummaryActive": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" },
+      "days": { "type": "String" }
+    }
+  },
+  "dndSummaryInactive": "Désactivé",
+  "exportPhase1ShareSubject": "Export Alanya (profil et métadonnées)"
 }

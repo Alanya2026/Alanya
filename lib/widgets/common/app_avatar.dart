@@ -7,6 +7,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../core/utils/backend_url.dart';
+import '../qr_pin.dart';
 
 /// Forme de l'avatar.
 enum AppAvatarShape { circle, squircle }
@@ -34,6 +35,7 @@ class AppAvatar extends StatelessWidget {
     this.foregroundColor,
     this.showShadow = false,
     this.cornerRadius,
+    this.qrBadge = false,
   });
 
   final String? imageUrl;
@@ -49,6 +51,12 @@ class AppAvatar extends StatelessWidget {
 
   /// Override explicite du rayon (sinon dérivé de [shape] et [size]).
   final double? cornerRadius;
+
+  /// Pastille « contact ajouté par QR » en coin bas-gauche (le bas-droit reste
+  /// au point de présence). Rendue ICI et non par chaque liste : toutes les
+  /// surfaces qui montrent ce contact doivent porter la même marque, au même
+  /// endroit.
+  final bool qrBadge;
 
   double get _radius {
     if (cornerRadius != null) return cornerRadius!;
@@ -76,6 +84,20 @@ class AppAvatar extends StatelessWidget {
         child: _buildContent(context),
       ),
     );
+
+    if (qrBadge) {
+      avatar = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatar,
+          Positioned(
+            left: -2,
+            bottom: -2,
+            child: QrPin(size: (size * 0.42).clamp(15.0, 20.0)),
+          ),
+        ],
+      );
+    }
 
     if (onTap != null) {
       avatar = GestureDetector(onTap: onTap, child: avatar);

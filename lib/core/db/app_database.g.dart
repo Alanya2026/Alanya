@@ -230,6 +230,36 @@ class $LocalConversationsTable extends LocalConversations
         ),
         defaultValue: const Constant(false),
       );
+  static const VerificationMeta _hideHistoryForNewMembersMeta =
+      const VerificationMeta('hideHistoryForNewMembers');
+  @override
+  late final GeneratedColumn<bool> hideHistoryForNewMembers =
+      GeneratedColumn<bool>(
+        'hide_history_for_new_members',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("hide_history_for_new_members" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _onlyAdminsCanAddMembersMeta =
+      const VerificationMeta('onlyAdminsCanAddMembers');
+  @override
+  late final GeneratedColumn<bool> onlyAdminsCanAddMembers =
+      GeneratedColumn<bool>(
+        'only_admins_can_add_members',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("only_admins_can_add_members" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
   static const VerificationMeta _myRoleMeta = const VerificationMeta('myRole');
   @override
   late final GeneratedColumn<int> myRole = GeneratedColumn<int>(
@@ -281,6 +311,28 @@ class $LocalConversationsTable extends LocalConversations
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _myPendingJoinMsgIDMeta =
+      const VerificationMeta('myPendingJoinMsgID');
+  @override
+  late final GeneratedColumn<int> myPendingJoinMsgID = GeneratedColumn<int>(
+    'my_pending_join_msg_i_d',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _myHistoryCutoffAtMeta = const VerificationMeta(
+    'myHistoryCutoffAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> myHistoryCutoffAt =
+      GeneratedColumn<DateTime>(
+        'my_history_cutoff_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _hasUnreadMentionMeta = const VerificationMeta(
     'hasUnreadMention',
   );
@@ -316,10 +368,14 @@ class $LocalConversationsTable extends LocalConversations
     metaUpdatedAt,
     onlyAdminsCanSend,
     onlyAdminsCanEditInfo,
+    hideHistoryForNewMembers,
+    onlyAdminsCanAddMembers,
     myRole,
     mutedUntil,
     muteForever,
     mentionsOnly,
+    myPendingJoinMsgID,
+    myHistoryCutoffAt,
     hasUnreadMention,
   ];
   @override
@@ -475,6 +531,24 @@ class $LocalConversationsTable extends LocalConversations
         ),
       );
     }
+    if (data.containsKey('hide_history_for_new_members')) {
+      context.handle(
+        _hideHistoryForNewMembersMeta,
+        hideHistoryForNewMembers.isAcceptableOrUnknown(
+          data['hide_history_for_new_members']!,
+          _hideHistoryForNewMembersMeta,
+        ),
+      );
+    }
+    if (data.containsKey('only_admins_can_add_members')) {
+      context.handle(
+        _onlyAdminsCanAddMembersMeta,
+        onlyAdminsCanAddMembers.isAcceptableOrUnknown(
+          data['only_admins_can_add_members']!,
+          _onlyAdminsCanAddMembersMeta,
+        ),
+      );
+    }
     if (data.containsKey('my_role')) {
       context.handle(
         _myRoleMeta,
@@ -502,6 +576,24 @@ class $LocalConversationsTable extends LocalConversations
         mentionsOnly.isAcceptableOrUnknown(
           data['mentions_only']!,
           _mentionsOnlyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('my_pending_join_msg_i_d')) {
+      context.handle(
+        _myPendingJoinMsgIDMeta,
+        myPendingJoinMsgID.isAcceptableOrUnknown(
+          data['my_pending_join_msg_i_d']!,
+          _myPendingJoinMsgIDMeta,
+        ),
+      );
+    }
+    if (data.containsKey('my_history_cutoff_at')) {
+      context.handle(
+        _myHistoryCutoffAtMeta,
+        myHistoryCutoffAt.isAcceptableOrUnknown(
+          data['my_history_cutoff_at']!,
+          _myHistoryCutoffAtMeta,
         ),
       );
     }
@@ -595,6 +687,14 @@ class $LocalConversationsTable extends LocalConversations
         DriftSqlType.bool,
         data['${effectivePrefix}only_admins_can_edit_info'],
       )!,
+      hideHistoryForNewMembers: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}hide_history_for_new_members'],
+      )!,
+      onlyAdminsCanAddMembers: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}only_admins_can_add_members'],
+      )!,
       myRole: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}my_role'],
@@ -611,6 +711,14 @@ class $LocalConversationsTable extends LocalConversations
         DriftSqlType.bool,
         data['${effectivePrefix}mentions_only'],
       )!,
+      myPendingJoinMsgID: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}my_pending_join_msg_i_d'],
+      ),
+      myHistoryCutoffAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}my_history_cutoff_at'],
+      ),
       hasUnreadMention: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}has_unread_mention'],
@@ -651,11 +759,23 @@ class LocalConversation extends DataClass
   final bool onlyAdminsCanSend;
   final bool onlyAdminsCanEditInfo;
 
+  /// Masquer l'historique pour les membres ajoutés après activation (défaut OFF).
+  final bool hideHistoryForNewMembers;
+
+  /// Seuls les admins peuvent ajouter des membres (défaut OFF = tout le monde).
+  final bool onlyAdminsCanAddMembers;
+
   /// Mon rôle : 0=membre, 1=admin, 2=propriétaire (voir `GroupRole`).
   final int myRole;
   final DateTime? mutedUntil;
   final bool muteForever;
   final bool mentionsOnly;
+
+  /// msgID système `member_added` en attente d'ack « Rester » (null = ok).
+  final int? myPendingJoinMsgID;
+
+  /// Borne d'historique pour MOI : null = tout visible ; sinon sendAt >= cutoff.
+  final DateTime? myHistoryCutoffAt;
 
   /// Au moins une mention non lue me ciblant.
   ///
@@ -682,10 +802,14 @@ class LocalConversation extends DataClass
     this.metaUpdatedAt,
     required this.onlyAdminsCanSend,
     required this.onlyAdminsCanEditInfo,
+    required this.hideHistoryForNewMembers,
+    required this.onlyAdminsCanAddMembers,
     required this.myRole,
     this.mutedUntil,
     required this.muteForever,
     required this.mentionsOnly,
+    this.myPendingJoinMsgID,
+    this.myHistoryCutoffAt,
     required this.hasUnreadMention,
   });
   @override
@@ -729,12 +853,24 @@ class LocalConversation extends DataClass
     }
     map['only_admins_can_send'] = Variable<bool>(onlyAdminsCanSend);
     map['only_admins_can_edit_info'] = Variable<bool>(onlyAdminsCanEditInfo);
+    map['hide_history_for_new_members'] = Variable<bool>(
+      hideHistoryForNewMembers,
+    );
+    map['only_admins_can_add_members'] = Variable<bool>(
+      onlyAdminsCanAddMembers,
+    );
     map['my_role'] = Variable<int>(myRole);
     if (!nullToAbsent || mutedUntil != null) {
       map['muted_until'] = Variable<DateTime>(mutedUntil);
     }
     map['mute_forever'] = Variable<bool>(muteForever);
     map['mentions_only'] = Variable<bool>(mentionsOnly);
+    if (!nullToAbsent || myPendingJoinMsgID != null) {
+      map['my_pending_join_msg_i_d'] = Variable<int>(myPendingJoinMsgID);
+    }
+    if (!nullToAbsent || myHistoryCutoffAt != null) {
+      map['my_history_cutoff_at'] = Variable<DateTime>(myHistoryCutoffAt);
+    }
     map['has_unread_mention'] = Variable<bool>(hasUnreadMention);
     return map;
   }
@@ -779,12 +915,20 @@ class LocalConversation extends DataClass
           : Value(metaUpdatedAt),
       onlyAdminsCanSend: Value(onlyAdminsCanSend),
       onlyAdminsCanEditInfo: Value(onlyAdminsCanEditInfo),
+      hideHistoryForNewMembers: Value(hideHistoryForNewMembers),
+      onlyAdminsCanAddMembers: Value(onlyAdminsCanAddMembers),
       myRole: Value(myRole),
       mutedUntil: mutedUntil == null && nullToAbsent
           ? const Value.absent()
           : Value(mutedUntil),
       muteForever: Value(muteForever),
       mentionsOnly: Value(mentionsOnly),
+      myPendingJoinMsgID: myPendingJoinMsgID == null && nullToAbsent
+          ? const Value.absent()
+          : Value(myPendingJoinMsgID),
+      myHistoryCutoffAt: myHistoryCutoffAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(myHistoryCutoffAt),
       hasUnreadMention: Value(hasUnreadMention),
     );
   }
@@ -817,10 +961,20 @@ class LocalConversation extends DataClass
       onlyAdminsCanEditInfo: serializer.fromJson<bool>(
         json['onlyAdminsCanEditInfo'],
       ),
+      hideHistoryForNewMembers: serializer.fromJson<bool>(
+        json['hideHistoryForNewMembers'],
+      ),
+      onlyAdminsCanAddMembers: serializer.fromJson<bool>(
+        json['onlyAdminsCanAddMembers'],
+      ),
       myRole: serializer.fromJson<int>(json['myRole']),
       mutedUntil: serializer.fromJson<DateTime?>(json['mutedUntil']),
       muteForever: serializer.fromJson<bool>(json['muteForever']),
       mentionsOnly: serializer.fromJson<bool>(json['mentionsOnly']),
+      myPendingJoinMsgID: serializer.fromJson<int?>(json['myPendingJoinMsgID']),
+      myHistoryCutoffAt: serializer.fromJson<DateTime?>(
+        json['myHistoryCutoffAt'],
+      ),
       hasUnreadMention: serializer.fromJson<bool>(json['hasUnreadMention']),
     );
   }
@@ -846,10 +1000,18 @@ class LocalConversation extends DataClass
       'metaUpdatedAt': serializer.toJson<DateTime?>(metaUpdatedAt),
       'onlyAdminsCanSend': serializer.toJson<bool>(onlyAdminsCanSend),
       'onlyAdminsCanEditInfo': serializer.toJson<bool>(onlyAdminsCanEditInfo),
+      'hideHistoryForNewMembers': serializer.toJson<bool>(
+        hideHistoryForNewMembers,
+      ),
+      'onlyAdminsCanAddMembers': serializer.toJson<bool>(
+        onlyAdminsCanAddMembers,
+      ),
       'myRole': serializer.toJson<int>(myRole),
       'mutedUntil': serializer.toJson<DateTime?>(mutedUntil),
       'muteForever': serializer.toJson<bool>(muteForever),
       'mentionsOnly': serializer.toJson<bool>(mentionsOnly),
+      'myPendingJoinMsgID': serializer.toJson<int?>(myPendingJoinMsgID),
+      'myHistoryCutoffAt': serializer.toJson<DateTime?>(myHistoryCutoffAt),
       'hasUnreadMention': serializer.toJson<bool>(hasUnreadMention),
     };
   }
@@ -873,10 +1035,14 @@ class LocalConversation extends DataClass
     Value<DateTime?> metaUpdatedAt = const Value.absent(),
     bool? onlyAdminsCanSend,
     bool? onlyAdminsCanEditInfo,
+    bool? hideHistoryForNewMembers,
+    bool? onlyAdminsCanAddMembers,
     int? myRole,
     Value<DateTime?> mutedUntil = const Value.absent(),
     bool? muteForever,
     bool? mentionsOnly,
+    Value<int?> myPendingJoinMsgID = const Value.absent(),
+    Value<DateTime?> myHistoryCutoffAt = const Value.absent(),
     bool? hasUnreadMention,
   }) => LocalConversation(
     conversID: conversID ?? this.conversID,
@@ -907,10 +1073,20 @@ class LocalConversation extends DataClass
         : this.metaUpdatedAt,
     onlyAdminsCanSend: onlyAdminsCanSend ?? this.onlyAdminsCanSend,
     onlyAdminsCanEditInfo: onlyAdminsCanEditInfo ?? this.onlyAdminsCanEditInfo,
+    hideHistoryForNewMembers:
+        hideHistoryForNewMembers ?? this.hideHistoryForNewMembers,
+    onlyAdminsCanAddMembers:
+        onlyAdminsCanAddMembers ?? this.onlyAdminsCanAddMembers,
     myRole: myRole ?? this.myRole,
     mutedUntil: mutedUntil.present ? mutedUntil.value : this.mutedUntil,
     muteForever: muteForever ?? this.muteForever,
     mentionsOnly: mentionsOnly ?? this.mentionsOnly,
+    myPendingJoinMsgID: myPendingJoinMsgID.present
+        ? myPendingJoinMsgID.value
+        : this.myPendingJoinMsgID,
+    myHistoryCutoffAt: myHistoryCutoffAt.present
+        ? myHistoryCutoffAt.value
+        : this.myHistoryCutoffAt,
     hasUnreadMention: hasUnreadMention ?? this.hasUnreadMention,
   );
   LocalConversation copyWithCompanion(LocalConversationsCompanion data) {
@@ -959,6 +1135,12 @@ class LocalConversation extends DataClass
       onlyAdminsCanEditInfo: data.onlyAdminsCanEditInfo.present
           ? data.onlyAdminsCanEditInfo.value
           : this.onlyAdminsCanEditInfo,
+      hideHistoryForNewMembers: data.hideHistoryForNewMembers.present
+          ? data.hideHistoryForNewMembers.value
+          : this.hideHistoryForNewMembers,
+      onlyAdminsCanAddMembers: data.onlyAdminsCanAddMembers.present
+          ? data.onlyAdminsCanAddMembers.value
+          : this.onlyAdminsCanAddMembers,
       myRole: data.myRole.present ? data.myRole.value : this.myRole,
       mutedUntil: data.mutedUntil.present
           ? data.mutedUntil.value
@@ -969,6 +1151,12 @@ class LocalConversation extends DataClass
       mentionsOnly: data.mentionsOnly.present
           ? data.mentionsOnly.value
           : this.mentionsOnly,
+      myPendingJoinMsgID: data.myPendingJoinMsgID.present
+          ? data.myPendingJoinMsgID.value
+          : this.myPendingJoinMsgID,
+      myHistoryCutoffAt: data.myHistoryCutoffAt.present
+          ? data.myHistoryCutoffAt.value
+          : this.myHistoryCutoffAt,
       hasUnreadMention: data.hasUnreadMention.present
           ? data.hasUnreadMention.value
           : this.hasUnreadMention,
@@ -996,10 +1184,14 @@ class LocalConversation extends DataClass
           ..write('metaUpdatedAt: $metaUpdatedAt, ')
           ..write('onlyAdminsCanSend: $onlyAdminsCanSend, ')
           ..write('onlyAdminsCanEditInfo: $onlyAdminsCanEditInfo, ')
+          ..write('hideHistoryForNewMembers: $hideHistoryForNewMembers, ')
+          ..write('onlyAdminsCanAddMembers: $onlyAdminsCanAddMembers, ')
           ..write('myRole: $myRole, ')
           ..write('mutedUntil: $mutedUntil, ')
           ..write('muteForever: $muteForever, ')
           ..write('mentionsOnly: $mentionsOnly, ')
+          ..write('myPendingJoinMsgID: $myPendingJoinMsgID, ')
+          ..write('myHistoryCutoffAt: $myHistoryCutoffAt, ')
           ..write('hasUnreadMention: $hasUnreadMention')
           ..write(')'))
         .toString();
@@ -1025,10 +1217,14 @@ class LocalConversation extends DataClass
     metaUpdatedAt,
     onlyAdminsCanSend,
     onlyAdminsCanEditInfo,
+    hideHistoryForNewMembers,
+    onlyAdminsCanAddMembers,
     myRole,
     mutedUntil,
     muteForever,
     mentionsOnly,
+    myPendingJoinMsgID,
+    myHistoryCutoffAt,
     hasUnreadMention,
   ]);
   @override
@@ -1053,10 +1249,14 @@ class LocalConversation extends DataClass
           other.metaUpdatedAt == this.metaUpdatedAt &&
           other.onlyAdminsCanSend == this.onlyAdminsCanSend &&
           other.onlyAdminsCanEditInfo == this.onlyAdminsCanEditInfo &&
+          other.hideHistoryForNewMembers == this.hideHistoryForNewMembers &&
+          other.onlyAdminsCanAddMembers == this.onlyAdminsCanAddMembers &&
           other.myRole == this.myRole &&
           other.mutedUntil == this.mutedUntil &&
           other.muteForever == this.muteForever &&
           other.mentionsOnly == this.mentionsOnly &&
+          other.myPendingJoinMsgID == this.myPendingJoinMsgID &&
+          other.myHistoryCutoffAt == this.myHistoryCutoffAt &&
           other.hasUnreadMention == this.hasUnreadMention);
 }
 
@@ -1079,10 +1279,14 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
   final Value<DateTime?> metaUpdatedAt;
   final Value<bool> onlyAdminsCanSend;
   final Value<bool> onlyAdminsCanEditInfo;
+  final Value<bool> hideHistoryForNewMembers;
+  final Value<bool> onlyAdminsCanAddMembers;
   final Value<int> myRole;
   final Value<DateTime?> mutedUntil;
   final Value<bool> muteForever;
   final Value<bool> mentionsOnly;
+  final Value<int?> myPendingJoinMsgID;
+  final Value<DateTime?> myHistoryCutoffAt;
   final Value<bool> hasUnreadMention;
   const LocalConversationsCompanion({
     this.conversID = const Value.absent(),
@@ -1103,10 +1307,14 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     this.metaUpdatedAt = const Value.absent(),
     this.onlyAdminsCanSend = const Value.absent(),
     this.onlyAdminsCanEditInfo = const Value.absent(),
+    this.hideHistoryForNewMembers = const Value.absent(),
+    this.onlyAdminsCanAddMembers = const Value.absent(),
     this.myRole = const Value.absent(),
     this.mutedUntil = const Value.absent(),
     this.muteForever = const Value.absent(),
     this.mentionsOnly = const Value.absent(),
+    this.myPendingJoinMsgID = const Value.absent(),
+    this.myHistoryCutoffAt = const Value.absent(),
     this.hasUnreadMention = const Value.absent(),
   });
   LocalConversationsCompanion.insert({
@@ -1128,10 +1336,14 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     this.metaUpdatedAt = const Value.absent(),
     this.onlyAdminsCanSend = const Value.absent(),
     this.onlyAdminsCanEditInfo = const Value.absent(),
+    this.hideHistoryForNewMembers = const Value.absent(),
+    this.onlyAdminsCanAddMembers = const Value.absent(),
     this.myRole = const Value.absent(),
     this.mutedUntil = const Value.absent(),
     this.muteForever = const Value.absent(),
     this.mentionsOnly = const Value.absent(),
+    this.myPendingJoinMsgID = const Value.absent(),
+    this.myHistoryCutoffAt = const Value.absent(),
     this.hasUnreadMention = const Value.absent(),
   });
   static Insertable<LocalConversation> custom({
@@ -1153,10 +1365,14 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     Expression<DateTime>? metaUpdatedAt,
     Expression<bool>? onlyAdminsCanSend,
     Expression<bool>? onlyAdminsCanEditInfo,
+    Expression<bool>? hideHistoryForNewMembers,
+    Expression<bool>? onlyAdminsCanAddMembers,
     Expression<int>? myRole,
     Expression<DateTime>? mutedUntil,
     Expression<bool>? muteForever,
     Expression<bool>? mentionsOnly,
+    Expression<int>? myPendingJoinMsgID,
+    Expression<DateTime>? myHistoryCutoffAt,
     Expression<bool>? hasUnreadMention,
   }) {
     return RawValuesInsertable({
@@ -1180,10 +1396,17 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
       if (onlyAdminsCanSend != null) 'only_admins_can_send': onlyAdminsCanSend,
       if (onlyAdminsCanEditInfo != null)
         'only_admins_can_edit_info': onlyAdminsCanEditInfo,
+      if (hideHistoryForNewMembers != null)
+        'hide_history_for_new_members': hideHistoryForNewMembers,
+      if (onlyAdminsCanAddMembers != null)
+        'only_admins_can_add_members': onlyAdminsCanAddMembers,
       if (myRole != null) 'my_role': myRole,
       if (mutedUntil != null) 'muted_until': mutedUntil,
       if (muteForever != null) 'mute_forever': muteForever,
       if (mentionsOnly != null) 'mentions_only': mentionsOnly,
+      if (myPendingJoinMsgID != null)
+        'my_pending_join_msg_i_d': myPendingJoinMsgID,
+      if (myHistoryCutoffAt != null) 'my_history_cutoff_at': myHistoryCutoffAt,
       if (hasUnreadMention != null) 'has_unread_mention': hasUnreadMention,
     });
   }
@@ -1207,10 +1430,14 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     Value<DateTime?>? metaUpdatedAt,
     Value<bool>? onlyAdminsCanSend,
     Value<bool>? onlyAdminsCanEditInfo,
+    Value<bool>? hideHistoryForNewMembers,
+    Value<bool>? onlyAdminsCanAddMembers,
     Value<int>? myRole,
     Value<DateTime?>? mutedUntil,
     Value<bool>? muteForever,
     Value<bool>? mentionsOnly,
+    Value<int?>? myPendingJoinMsgID,
+    Value<DateTime?>? myHistoryCutoffAt,
     Value<bool>? hasUnreadMention,
   }) {
     return LocalConversationsCompanion(
@@ -1233,10 +1460,16 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
       onlyAdminsCanSend: onlyAdminsCanSend ?? this.onlyAdminsCanSend,
       onlyAdminsCanEditInfo:
           onlyAdminsCanEditInfo ?? this.onlyAdminsCanEditInfo,
+      hideHistoryForNewMembers:
+          hideHistoryForNewMembers ?? this.hideHistoryForNewMembers,
+      onlyAdminsCanAddMembers:
+          onlyAdminsCanAddMembers ?? this.onlyAdminsCanAddMembers,
       myRole: myRole ?? this.myRole,
       mutedUntil: mutedUntil ?? this.mutedUntil,
       muteForever: muteForever ?? this.muteForever,
       mentionsOnly: mentionsOnly ?? this.mentionsOnly,
+      myPendingJoinMsgID: myPendingJoinMsgID ?? this.myPendingJoinMsgID,
+      myHistoryCutoffAt: myHistoryCutoffAt ?? this.myHistoryCutoffAt,
       hasUnreadMention: hasUnreadMention ?? this.hasUnreadMention,
     );
   }
@@ -1300,6 +1533,16 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
         onlyAdminsCanEditInfo.value,
       );
     }
+    if (hideHistoryForNewMembers.present) {
+      map['hide_history_for_new_members'] = Variable<bool>(
+        hideHistoryForNewMembers.value,
+      );
+    }
+    if (onlyAdminsCanAddMembers.present) {
+      map['only_admins_can_add_members'] = Variable<bool>(
+        onlyAdminsCanAddMembers.value,
+      );
+    }
     if (myRole.present) {
       map['my_role'] = Variable<int>(myRole.value);
     }
@@ -1311,6 +1554,12 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     }
     if (mentionsOnly.present) {
       map['mentions_only'] = Variable<bool>(mentionsOnly.value);
+    }
+    if (myPendingJoinMsgID.present) {
+      map['my_pending_join_msg_i_d'] = Variable<int>(myPendingJoinMsgID.value);
+    }
+    if (myHistoryCutoffAt.present) {
+      map['my_history_cutoff_at'] = Variable<DateTime>(myHistoryCutoffAt.value);
     }
     if (hasUnreadMention.present) {
       map['has_unread_mention'] = Variable<bool>(hasUnreadMention.value);
@@ -1339,10 +1588,14 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
           ..write('metaUpdatedAt: $metaUpdatedAt, ')
           ..write('onlyAdminsCanSend: $onlyAdminsCanSend, ')
           ..write('onlyAdminsCanEditInfo: $onlyAdminsCanEditInfo, ')
+          ..write('hideHistoryForNewMembers: $hideHistoryForNewMembers, ')
+          ..write('onlyAdminsCanAddMembers: $onlyAdminsCanAddMembers, ')
           ..write('myRole: $myRole, ')
           ..write('mutedUntil: $mutedUntil, ')
           ..write('muteForever: $muteForever, ')
           ..write('mentionsOnly: $mentionsOnly, ')
+          ..write('myPendingJoinMsgID: $myPendingJoinMsgID, ')
+          ..write('myHistoryCutoffAt: $myHistoryCutoffAt, ')
           ..write('hasUnreadMention: $hasUnreadMention')
           ..write(')'))
         .toString();
@@ -3723,6 +3976,44 @@ class $LocalUsersTable extends LocalUsers
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _addedViaQrMeta = const VerificationMeta(
+    'addedViaQr',
+  );
+  @override
+  late final GeneratedColumn<bool> addedViaQr = GeneratedColumn<bool>(
+    'added_via_qr',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("added_via_qr" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _preferredAddedAtMeta = const VerificationMeta(
+    'preferredAddedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> preferredAddedAt =
+      GeneratedColumn<DateTime>(
+        'preferred_added_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _preferredNoteMeta = const VerificationMeta(
+    'preferredNote',
+  );
+  @override
+  late final GeneratedColumn<String> preferredNote = GeneratedColumn<String>(
+    'preferred_note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _typeCompteMeta = const VerificationMeta(
     'typeCompte',
   );
@@ -3759,6 +4050,9 @@ class $LocalUsersTable extends LocalUsers
     isOnline,
     lastSeen,
     isPreferredContact,
+    addedViaQr,
+    preferredAddedAt,
+    preferredNote,
     typeCompte,
     cachedAt,
   ];
@@ -3849,6 +4143,33 @@ class $LocalUsersTable extends LocalUsers
         ),
       );
     }
+    if (data.containsKey('added_via_qr')) {
+      context.handle(
+        _addedViaQrMeta,
+        addedViaQr.isAcceptableOrUnknown(
+          data['added_via_qr']!,
+          _addedViaQrMeta,
+        ),
+      );
+    }
+    if (data.containsKey('preferred_added_at')) {
+      context.handle(
+        _preferredAddedAtMeta,
+        preferredAddedAt.isAcceptableOrUnknown(
+          data['preferred_added_at']!,
+          _preferredAddedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('preferred_note')) {
+      context.handle(
+        _preferredNoteMeta,
+        preferredNote.isAcceptableOrUnknown(
+          data['preferred_note']!,
+          _preferredNoteMeta,
+        ),
+      );
+    }
     if (data.containsKey('type_compte')) {
       context.handle(
         _typeCompteMeta,
@@ -3916,6 +4237,18 @@ class $LocalUsersTable extends LocalUsers
         DriftSqlType.bool,
         data['${effectivePrefix}is_preferred_contact'],
       )!,
+      addedViaQr: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}added_via_qr'],
+      )!,
+      preferredAddedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}preferred_added_at'],
+      ),
+      preferredNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preferred_note'],
+      ),
       typeCompte: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}type_compte'],
@@ -3945,6 +4278,19 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
   final bool isOnline;
   final DateTime? lastSeen;
   final bool isPreferredContact;
+
+  /// Origine du lien de contact préféré : vrai si ajouté par code QR (scan ou
+  /// lien). Alimente la pastille des listes, le filtre « Par QR » et la
+  /// mention datée de la fiche.
+  final bool addedViaQr;
+
+  /// Date d'ajout en contact préféré (preferredContact.created_at côté
+  /// serveur) — pour la mention « Ajouté par QR code le … » de la fiche.
+  final DateTime? preferredAddedAt;
+
+  /// Note contextuelle saisie après un scan (« rencontré au salon de
+  /// Douala ») — affichée sur la fiche du contact.
+  final String? preferredNote;
   final int typeCompte;
   final DateTime cachedAt;
   const LocalUser({
@@ -3959,6 +4305,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     required this.isOnline,
     this.lastSeen,
     required this.isPreferredContact,
+    required this.addedViaQr,
+    this.preferredAddedAt,
+    this.preferredNote,
     required this.typeCompte,
     required this.cachedAt,
   });
@@ -3980,6 +4329,13 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       map['last_seen'] = Variable<DateTime>(lastSeen);
     }
     map['is_preferred_contact'] = Variable<bool>(isPreferredContact);
+    map['added_via_qr'] = Variable<bool>(addedViaQr);
+    if (!nullToAbsent || preferredAddedAt != null) {
+      map['preferred_added_at'] = Variable<DateTime>(preferredAddedAt);
+    }
+    if (!nullToAbsent || preferredNote != null) {
+      map['preferred_note'] = Variable<String>(preferredNote);
+    }
     map['type_compte'] = Variable<int>(typeCompte);
     map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
@@ -4002,6 +4358,13 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           ? const Value.absent()
           : Value(lastSeen),
       isPreferredContact: Value(isPreferredContact),
+      addedViaQr: Value(addedViaQr),
+      preferredAddedAt: preferredAddedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferredAddedAt),
+      preferredNote: preferredNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferredNote),
       typeCompte: Value(typeCompte),
       cachedAt: Value(cachedAt),
     );
@@ -4024,6 +4387,11 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       isOnline: serializer.fromJson<bool>(json['isOnline']),
       lastSeen: serializer.fromJson<DateTime?>(json['lastSeen']),
       isPreferredContact: serializer.fromJson<bool>(json['isPreferredContact']),
+      addedViaQr: serializer.fromJson<bool>(json['addedViaQr']),
+      preferredAddedAt: serializer.fromJson<DateTime?>(
+        json['preferredAddedAt'],
+      ),
+      preferredNote: serializer.fromJson<String?>(json['preferredNote']),
       typeCompte: serializer.fromJson<int>(json['typeCompte']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
@@ -4043,6 +4411,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       'isOnline': serializer.toJson<bool>(isOnline),
       'lastSeen': serializer.toJson<DateTime?>(lastSeen),
       'isPreferredContact': serializer.toJson<bool>(isPreferredContact),
+      'addedViaQr': serializer.toJson<bool>(addedViaQr),
+      'preferredAddedAt': serializer.toJson<DateTime?>(preferredAddedAt),
+      'preferredNote': serializer.toJson<String?>(preferredNote),
       'typeCompte': serializer.toJson<int>(typeCompte),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
@@ -4060,6 +4431,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     bool? isOnline,
     Value<DateTime?> lastSeen = const Value.absent(),
     bool? isPreferredContact,
+    bool? addedViaQr,
+    Value<DateTime?> preferredAddedAt = const Value.absent(),
+    Value<String?> preferredNote = const Value.absent(),
     int? typeCompte,
     DateTime? cachedAt,
   }) => LocalUser(
@@ -4074,6 +4448,13 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     isOnline: isOnline ?? this.isOnline,
     lastSeen: lastSeen.present ? lastSeen.value : this.lastSeen,
     isPreferredContact: isPreferredContact ?? this.isPreferredContact,
+    addedViaQr: addedViaQr ?? this.addedViaQr,
+    preferredAddedAt: preferredAddedAt.present
+        ? preferredAddedAt.value
+        : this.preferredAddedAt,
+    preferredNote: preferredNote.present
+        ? preferredNote.value
+        : this.preferredNote,
     typeCompte: typeCompte ?? this.typeCompte,
     cachedAt: cachedAt ?? this.cachedAt,
   );
@@ -4096,6 +4477,15 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       isPreferredContact: data.isPreferredContact.present
           ? data.isPreferredContact.value
           : this.isPreferredContact,
+      addedViaQr: data.addedViaQr.present
+          ? data.addedViaQr.value
+          : this.addedViaQr,
+      preferredAddedAt: data.preferredAddedAt.present
+          ? data.preferredAddedAt.value
+          : this.preferredAddedAt,
+      preferredNote: data.preferredNote.present
+          ? data.preferredNote.value
+          : this.preferredNote,
       typeCompte: data.typeCompte.present
           ? data.typeCompte.value
           : this.typeCompte,
@@ -4117,6 +4507,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           ..write('isOnline: $isOnline, ')
           ..write('lastSeen: $lastSeen, ')
           ..write('isPreferredContact: $isPreferredContact, ')
+          ..write('addedViaQr: $addedViaQr, ')
+          ..write('preferredAddedAt: $preferredAddedAt, ')
+          ..write('preferredNote: $preferredNote, ')
           ..write('typeCompte: $typeCompte, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
@@ -4136,6 +4529,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     isOnline,
     lastSeen,
     isPreferredContact,
+    addedViaQr,
+    preferredAddedAt,
+    preferredNote,
     typeCompte,
     cachedAt,
   );
@@ -4154,6 +4550,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           other.isOnline == this.isOnline &&
           other.lastSeen == this.lastSeen &&
           other.isPreferredContact == this.isPreferredContact &&
+          other.addedViaQr == this.addedViaQr &&
+          other.preferredAddedAt == this.preferredAddedAt &&
+          other.preferredNote == this.preferredNote &&
           other.typeCompte == this.typeCompte &&
           other.cachedAt == this.cachedAt);
 }
@@ -4170,6 +4569,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
   final Value<bool> isOnline;
   final Value<DateTime?> lastSeen;
   final Value<bool> isPreferredContact;
+  final Value<bool> addedViaQr;
+  final Value<DateTime?> preferredAddedAt;
+  final Value<String?> preferredNote;
   final Value<int> typeCompte;
   final Value<DateTime> cachedAt;
   const LocalUsersCompanion({
@@ -4184,6 +4586,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.isOnline = const Value.absent(),
     this.lastSeen = const Value.absent(),
     this.isPreferredContact = const Value.absent(),
+    this.addedViaQr = const Value.absent(),
+    this.preferredAddedAt = const Value.absent(),
+    this.preferredNote = const Value.absent(),
     this.typeCompte = const Value.absent(),
     this.cachedAt = const Value.absent(),
   });
@@ -4199,6 +4604,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.isOnline = const Value.absent(),
     this.lastSeen = const Value.absent(),
     this.isPreferredContact = const Value.absent(),
+    this.addedViaQr = const Value.absent(),
+    this.preferredAddedAt = const Value.absent(),
+    this.preferredNote = const Value.absent(),
     this.typeCompte = const Value.absent(),
     required DateTime cachedAt,
   }) : cachedAt = Value(cachedAt);
@@ -4214,6 +4622,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Expression<bool>? isOnline,
     Expression<DateTime>? lastSeen,
     Expression<bool>? isPreferredContact,
+    Expression<bool>? addedViaQr,
+    Expression<DateTime>? preferredAddedAt,
+    Expression<String>? preferredNote,
     Expression<int>? typeCompte,
     Expression<DateTime>? cachedAt,
   }) {
@@ -4230,6 +4641,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       if (lastSeen != null) 'last_seen': lastSeen,
       if (isPreferredContact != null)
         'is_preferred_contact': isPreferredContact,
+      if (addedViaQr != null) 'added_via_qr': addedViaQr,
+      if (preferredAddedAt != null) 'preferred_added_at': preferredAddedAt,
+      if (preferredNote != null) 'preferred_note': preferredNote,
       if (typeCompte != null) 'type_compte': typeCompte,
       if (cachedAt != null) 'cached_at': cachedAt,
     });
@@ -4247,6 +4661,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Value<bool>? isOnline,
     Value<DateTime?>? lastSeen,
     Value<bool>? isPreferredContact,
+    Value<bool>? addedViaQr,
+    Value<DateTime?>? preferredAddedAt,
+    Value<String?>? preferredNote,
     Value<int>? typeCompte,
     Value<DateTime>? cachedAt,
   }) {
@@ -4262,6 +4679,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       isOnline: isOnline ?? this.isOnline,
       lastSeen: lastSeen ?? this.lastSeen,
       isPreferredContact: isPreferredContact ?? this.isPreferredContact,
+      addedViaQr: addedViaQr ?? this.addedViaQr,
+      preferredAddedAt: preferredAddedAt ?? this.preferredAddedAt,
+      preferredNote: preferredNote ?? this.preferredNote,
       typeCompte: typeCompte ?? this.typeCompte,
       cachedAt: cachedAt ?? this.cachedAt,
     );
@@ -4303,6 +4723,15 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     if (isPreferredContact.present) {
       map['is_preferred_contact'] = Variable<bool>(isPreferredContact.value);
     }
+    if (addedViaQr.present) {
+      map['added_via_qr'] = Variable<bool>(addedViaQr.value);
+    }
+    if (preferredAddedAt.present) {
+      map['preferred_added_at'] = Variable<DateTime>(preferredAddedAt.value);
+    }
+    if (preferredNote.present) {
+      map['preferred_note'] = Variable<String>(preferredNote.value);
+    }
     if (typeCompte.present) {
       map['type_compte'] = Variable<int>(typeCompte.value);
     }
@@ -4326,6 +4755,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
           ..write('isOnline: $isOnline, ')
           ..write('lastSeen: $lastSeen, ')
           ..write('isPreferredContact: $isPreferredContact, ')
+          ..write('addedViaQr: $addedViaQr, ')
+          ..write('preferredAddedAt: $preferredAddedAt, ')
+          ..write('preferredNote: $preferredNote, ')
           ..write('typeCompte: $typeCompte, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
@@ -6735,10 +7167,14 @@ typedef $$LocalConversationsTableCreateCompanionBuilder =
       Value<DateTime?> metaUpdatedAt,
       Value<bool> onlyAdminsCanSend,
       Value<bool> onlyAdminsCanEditInfo,
+      Value<bool> hideHistoryForNewMembers,
+      Value<bool> onlyAdminsCanAddMembers,
       Value<int> myRole,
       Value<DateTime?> mutedUntil,
       Value<bool> muteForever,
       Value<bool> mentionsOnly,
+      Value<int?> myPendingJoinMsgID,
+      Value<DateTime?> myHistoryCutoffAt,
       Value<bool> hasUnreadMention,
     });
 typedef $$LocalConversationsTableUpdateCompanionBuilder =
@@ -6761,10 +7197,14 @@ typedef $$LocalConversationsTableUpdateCompanionBuilder =
       Value<DateTime?> metaUpdatedAt,
       Value<bool> onlyAdminsCanSend,
       Value<bool> onlyAdminsCanEditInfo,
+      Value<bool> hideHistoryForNewMembers,
+      Value<bool> onlyAdminsCanAddMembers,
       Value<int> myRole,
       Value<DateTime?> mutedUntil,
       Value<bool> muteForever,
       Value<bool> mentionsOnly,
+      Value<int?> myPendingJoinMsgID,
+      Value<DateTime?> myHistoryCutoffAt,
       Value<bool> hasUnreadMention,
     });
 
@@ -6867,6 +7307,16 @@ class $$LocalConversationsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get hideHistoryForNewMembers => $composableBuilder(
+    column: $table.hideHistoryForNewMembers,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get onlyAdminsCanAddMembers => $composableBuilder(
+    column: $table.onlyAdminsCanAddMembers,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get myRole => $composableBuilder(
     column: $table.myRole,
     builder: (column) => ColumnFilters(column),
@@ -6884,6 +7334,16 @@ class $$LocalConversationsTableFilterComposer
 
   ColumnFilters<bool> get mentionsOnly => $composableBuilder(
     column: $table.mentionsOnly,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get myPendingJoinMsgID => $composableBuilder(
+    column: $table.myPendingJoinMsgID,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get myHistoryCutoffAt => $composableBuilder(
+    column: $table.myHistoryCutoffAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6992,6 +7452,16 @@ class $$LocalConversationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get hideHistoryForNewMembers => $composableBuilder(
+    column: $table.hideHistoryForNewMembers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get onlyAdminsCanAddMembers => $composableBuilder(
+    column: $table.onlyAdminsCanAddMembers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get myRole => $composableBuilder(
     column: $table.myRole,
     builder: (column) => ColumnOrderings(column),
@@ -7009,6 +7479,16 @@ class $$LocalConversationsTableOrderingComposer
 
   ColumnOrderings<bool> get mentionsOnly => $composableBuilder(
     column: $table.mentionsOnly,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get myPendingJoinMsgID => $composableBuilder(
+    column: $table.myPendingJoinMsgID,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get myHistoryCutoffAt => $composableBuilder(
+    column: $table.myHistoryCutoffAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7107,6 +7587,16 @@ class $$LocalConversationsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get hideHistoryForNewMembers => $composableBuilder(
+    column: $table.hideHistoryForNewMembers,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get onlyAdminsCanAddMembers => $composableBuilder(
+    column: $table.onlyAdminsCanAddMembers,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get myRole =>
       $composableBuilder(column: $table.myRole, builder: (column) => column);
 
@@ -7122,6 +7612,16 @@ class $$LocalConversationsTableAnnotationComposer
 
   GeneratedColumn<bool> get mentionsOnly => $composableBuilder(
     column: $table.mentionsOnly,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get myPendingJoinMsgID => $composableBuilder(
+    column: $table.myPendingJoinMsgID,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get myHistoryCutoffAt => $composableBuilder(
+    column: $table.myHistoryCutoffAt,
     builder: (column) => column,
   );
 
@@ -7189,10 +7689,14 @@ class $$LocalConversationsTableTableManager
                 Value<DateTime?> metaUpdatedAt = const Value.absent(),
                 Value<bool> onlyAdminsCanSend = const Value.absent(),
                 Value<bool> onlyAdminsCanEditInfo = const Value.absent(),
+                Value<bool> hideHistoryForNewMembers = const Value.absent(),
+                Value<bool> onlyAdminsCanAddMembers = const Value.absent(),
                 Value<int> myRole = const Value.absent(),
                 Value<DateTime?> mutedUntil = const Value.absent(),
                 Value<bool> muteForever = const Value.absent(),
                 Value<bool> mentionsOnly = const Value.absent(),
+                Value<int?> myPendingJoinMsgID = const Value.absent(),
+                Value<DateTime?> myHistoryCutoffAt = const Value.absent(),
                 Value<bool> hasUnreadMention = const Value.absent(),
               }) => LocalConversationsCompanion(
                 conversID: conversID,
@@ -7213,10 +7717,14 @@ class $$LocalConversationsTableTableManager
                 metaUpdatedAt: metaUpdatedAt,
                 onlyAdminsCanSend: onlyAdminsCanSend,
                 onlyAdminsCanEditInfo: onlyAdminsCanEditInfo,
+                hideHistoryForNewMembers: hideHistoryForNewMembers,
+                onlyAdminsCanAddMembers: onlyAdminsCanAddMembers,
                 myRole: myRole,
                 mutedUntil: mutedUntil,
                 muteForever: muteForever,
                 mentionsOnly: mentionsOnly,
+                myPendingJoinMsgID: myPendingJoinMsgID,
+                myHistoryCutoffAt: myHistoryCutoffAt,
                 hasUnreadMention: hasUnreadMention,
               ),
           createCompanionCallback:
@@ -7239,10 +7747,14 @@ class $$LocalConversationsTableTableManager
                 Value<DateTime?> metaUpdatedAt = const Value.absent(),
                 Value<bool> onlyAdminsCanSend = const Value.absent(),
                 Value<bool> onlyAdminsCanEditInfo = const Value.absent(),
+                Value<bool> hideHistoryForNewMembers = const Value.absent(),
+                Value<bool> onlyAdminsCanAddMembers = const Value.absent(),
                 Value<int> myRole = const Value.absent(),
                 Value<DateTime?> mutedUntil = const Value.absent(),
                 Value<bool> muteForever = const Value.absent(),
                 Value<bool> mentionsOnly = const Value.absent(),
+                Value<int?> myPendingJoinMsgID = const Value.absent(),
+                Value<DateTime?> myHistoryCutoffAt = const Value.absent(),
                 Value<bool> hasUnreadMention = const Value.absent(),
               }) => LocalConversationsCompanion.insert(
                 conversID: conversID,
@@ -7263,10 +7775,14 @@ class $$LocalConversationsTableTableManager
                 metaUpdatedAt: metaUpdatedAt,
                 onlyAdminsCanSend: onlyAdminsCanSend,
                 onlyAdminsCanEditInfo: onlyAdminsCanEditInfo,
+                hideHistoryForNewMembers: hideHistoryForNewMembers,
+                onlyAdminsCanAddMembers: onlyAdminsCanAddMembers,
                 myRole: myRole,
                 mutedUntil: mutedUntil,
                 muteForever: muteForever,
                 mentionsOnly: mentionsOnly,
+                myPendingJoinMsgID: myPendingJoinMsgID,
+                myHistoryCutoffAt: myHistoryCutoffAt,
                 hasUnreadMention: hasUnreadMention,
               ),
           withReferenceMapper: (p0) => p0
@@ -8218,6 +8734,9 @@ typedef $$LocalUsersTableCreateCompanionBuilder =
       Value<bool> isOnline,
       Value<DateTime?> lastSeen,
       Value<bool> isPreferredContact,
+      Value<bool> addedViaQr,
+      Value<DateTime?> preferredAddedAt,
+      Value<String?> preferredNote,
       Value<int> typeCompte,
       required DateTime cachedAt,
     });
@@ -8234,6 +8753,9 @@ typedef $$LocalUsersTableUpdateCompanionBuilder =
       Value<bool> isOnline,
       Value<DateTime?> lastSeen,
       Value<bool> isPreferredContact,
+      Value<bool> addedViaQr,
+      Value<DateTime?> preferredAddedAt,
+      Value<String?> preferredNote,
       Value<int> typeCompte,
       Value<DateTime> cachedAt,
     });
@@ -8299,6 +8821,21 @@ class $$LocalUsersTableFilterComposer
 
   ColumnFilters<bool> get isPreferredContact => $composableBuilder(
     column: $table.isPreferredContact,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get addedViaQr => $composableBuilder(
+    column: $table.addedViaQr,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get preferredAddedAt => $composableBuilder(
+    column: $table.preferredAddedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preferredNote => $composableBuilder(
+    column: $table.preferredNote,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8377,6 +8914,21 @@ class $$LocalUsersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get addedViaQr => $composableBuilder(
+    column: $table.addedViaQr,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get preferredAddedAt => $composableBuilder(
+    column: $table.preferredAddedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get preferredNote => $composableBuilder(
+    column: $table.preferredNote,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get typeCompte => $composableBuilder(
     column: $table.typeCompte,
     builder: (column) => ColumnOrderings(column),
@@ -8436,6 +8988,21 @@ class $$LocalUsersTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get addedViaQr => $composableBuilder(
+    column: $table.addedViaQr,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get preferredAddedAt => $composableBuilder(
+    column: $table.preferredAddedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get preferredNote => $composableBuilder(
+    column: $table.preferredNote,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get typeCompte => $composableBuilder(
     column: $table.typeCompte,
     builder: (column) => column,
@@ -8487,6 +9054,9 @@ class $$LocalUsersTableTableManager
                 Value<bool> isOnline = const Value.absent(),
                 Value<DateTime?> lastSeen = const Value.absent(),
                 Value<bool> isPreferredContact = const Value.absent(),
+                Value<bool> addedViaQr = const Value.absent(),
+                Value<DateTime?> preferredAddedAt = const Value.absent(),
+                Value<String?> preferredNote = const Value.absent(),
                 Value<int> typeCompte = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
               }) => LocalUsersCompanion(
@@ -8501,6 +9071,9 @@ class $$LocalUsersTableTableManager
                 isOnline: isOnline,
                 lastSeen: lastSeen,
                 isPreferredContact: isPreferredContact,
+                addedViaQr: addedViaQr,
+                preferredAddedAt: preferredAddedAt,
+                preferredNote: preferredNote,
                 typeCompte: typeCompte,
                 cachedAt: cachedAt,
               ),
@@ -8517,6 +9090,9 @@ class $$LocalUsersTableTableManager
                 Value<bool> isOnline = const Value.absent(),
                 Value<DateTime?> lastSeen = const Value.absent(),
                 Value<bool> isPreferredContact = const Value.absent(),
+                Value<bool> addedViaQr = const Value.absent(),
+                Value<DateTime?> preferredAddedAt = const Value.absent(),
+                Value<String?> preferredNote = const Value.absent(),
                 Value<int> typeCompte = const Value.absent(),
                 required DateTime cachedAt,
               }) => LocalUsersCompanion.insert(
@@ -8531,6 +9107,9 @@ class $$LocalUsersTableTableManager
                 isOnline: isOnline,
                 lastSeen: lastSeen,
                 isPreferredContact: isPreferredContact,
+                addedViaQr: addedViaQr,
+                preferredAddedAt: preferredAddedAt,
+                preferredNote: preferredNote,
                 typeCompte: typeCompte,
                 cachedAt: cachedAt,
               ),

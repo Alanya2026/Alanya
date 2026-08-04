@@ -89,11 +89,15 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         lastMessageStatus: c.lastMessageStatus,
         onlyAdminsCanSend: c.onlyAdminsCanSend,
         onlyAdminsCanEditInfo: c.onlyAdminsCanEditInfo,
+        hideHistoryForNewMembers: c.hideHistoryForNewMembers,
+        onlyAdminsCanAddMembers: c.onlyAdminsCanAddMembers,
         unreadCount: c.unreadCount,
         isPinned: c.isPinned,
         isArchived: c.isArchived,
         myRole: c.myRole,
         mentionsOnly: c.mentionsOnly,
+        myPendingJoinMsgID: c.myPendingJoinMsgID,
+        myHistoryCutoffAt: c.myHistoryCutoffAt?.toIso8601String(),
         participants: _parseParticipants(c.participantsJson),
       );
 
@@ -478,7 +482,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           final peutEditer =
               canEditInfo(group.myRole, group.onlyAdminsCanEditInfo);
           final peutAjouter =
-              canAddParticipants(group.myRole, group.onlyAdminsCanEditInfo);
+              canAddParticipants(group.myRole, group.onlyAdminsCanAddMembers);
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(
@@ -521,11 +525,16 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 _SettingsCard(
                   onlyAdminsCanSend: group.onlyAdminsCanSend,
                   onlyAdminsCanEditInfo: group.onlyAdminsCanEditInfo,
-                  onChanged: (send, edit) => _runGroupAction(
+                  hideHistoryForNewMembers: group.hideHistoryForNewMembers,
+                  onlyAdminsCanAddMembers: group.onlyAdminsCanAddMembers,
+                  onChanged: (send, edit, hideHistory, addMembers) =>
+                      _runGroupAction(
                     () => _chat.repository.updateGroupSettings(
                       widget.conversationId,
                       onlyAdminsCanSend: send,
                       onlyAdminsCanEditInfo: edit,
+                      hideHistoryForNewMembers: hideHistory,
+                      onlyAdminsCanAddMembers: addMembers,
                     ),
                   ),
                 ),
@@ -745,18 +754,27 @@ class _DescriptionCard extends StatelessWidget {
 
 // ── RÉGLAGES DU GROUPE ────────────────────────────────────────────────
 
-/// Les deux verrous, visibles des seuls administrateurs.
+/// Les quatre verrous, visibles des seuls administrateurs.
 ///
-/// Ce ne sont que des interrupteurs : c'est `groupSendPolicy` et
-/// `requireGroupAdmin` qui les font respecter côté serveur.
+/// Ce ne sont que des interrupteurs : le serveur (`groupSendPolicy`,
+/// `requireGroupAdmin`, `onlyAdminsCanAddMembers`) fait foi.
 class _SettingsCard extends StatelessWidget {
   final bool onlyAdminsCanSend;
   final bool onlyAdminsCanEditInfo;
-  final void Function(bool? send, bool? edit) onChanged;
+  final bool hideHistoryForNewMembers;
+  final bool onlyAdminsCanAddMembers;
+  final void Function(
+    bool? send,
+    bool? edit,
+    bool? hideHistory,
+    bool? addMembers,
+  ) onChanged;
 
   const _SettingsCard({
     required this.onlyAdminsCanSend,
     required this.onlyAdminsCanEditInfo,
+    required this.hideHistoryForNewMembers,
+    required this.onlyAdminsCanAddMembers,
     required this.onChanged,
   });
 
@@ -775,7 +793,7 @@ class _SettingsCard extends StatelessWidget {
           ),
           SwitchListTile(
             value: onlyAdminsCanSend,
-            onChanged: (v) => onChanged(v, null),
+            onChanged: (v) => onChanged(v, null, null, null),
             title: Text(context.l10n.onlyAdminsCanSendLabel,
                 style: context.text.bodyMedium),
             subtitle: Text(context.l10n.onlyAdminsCanSendSubtitle,
@@ -783,10 +801,26 @@ class _SettingsCard extends StatelessWidget {
           ),
           SwitchListTile(
             value: onlyAdminsCanEditInfo,
-            onChanged: (v) => onChanged(null, v),
+            onChanged: (v) => onChanged(null, v, null, null),
             title: Text(context.l10n.onlyAdminsCanEditInfoLabel,
                 style: context.text.bodyMedium),
             subtitle: Text(context.l10n.onlyAdminsCanEditInfoSubtitle,
+                style: context.text.bodySmall),
+          ),
+          SwitchListTile(
+            value: hideHistoryForNewMembers,
+            onChanged: (v) => onChanged(null, null, v, null),
+            title: Text(context.l10n.hideHistoryForNewMembersLabel,
+                style: context.text.bodyMedium),
+            subtitle: Text(context.l10n.hideHistoryForNewMembersSubtitle,
+                style: context.text.bodySmall),
+          ),
+          SwitchListTile(
+            value: onlyAdminsCanAddMembers,
+            onChanged: (v) => onChanged(null, null, null, v),
+            title: Text(context.l10n.onlyAdminsCanAddMembersLabel,
+                style: context.text.bodyMedium),
+            subtitle: Text(context.l10n.onlyAdminsCanAddMembersSubtitle,
                 style: context.text.bodySmall),
           ),
         ],

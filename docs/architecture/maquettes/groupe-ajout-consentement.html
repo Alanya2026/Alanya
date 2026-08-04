@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alanya — Ajout à un groupe · Rester ou quitter</title>
+<style>
+  /* Tokens : lib/core/theme/app_colors.dart + app_dimens.dart */
+  :root {
+    --brand:            #3F51B5;
+    --brand-dark:       #1A237E;
+    --brand-container:  #E8EAF6;
+    --error:            #EF4444;
+    --error-container:#FDECEC;
+    --online:           #1FA363;
+
+    --bg:               #F6F7FB;
+    --surface:          #FFFFFF;
+    --surface-muted:    #F4F5F8;
+    --outline:          #E2E5EC;
+    --outline-strong:   #CBD0E0;
+
+    --ink:              #1A1D23;
+    --ink-2:            #5B6273;
+    --ink-3:            #9AA0AE;
+
+    --page-bg:          #EEF0F7;
+    --page-panel:       #FFFFFF;
+    --page-line:        #DDE1EC;
+    --page-ink:         #23283A;
+    --page-ink-2:       #626A82;
+
+    --r-sm: 12px;
+    --r-md: 16px;
+    --r-lg: 20px;
+
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:             #0F1115;
+      --surface:        #181B21;
+      --surface-muted:  #1F232B;
+      --outline:        #3A404C;
+      --outline-strong: #3A404C;
+      --ink:            #F2F4F8;
+      --ink-2:          #AAB1C0;
+      --ink-3:          #6F7787;
+      --brand-container:#283593;
+      --error-container:#3A1414;
+      --page-bg:        #0A0C11;
+      --page-panel:     #14171E;
+      --page-line:      #262C38;
+      --page-ink:       #E8EBF2;
+      --page-ink-2:     #939BAF;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593; --error-container: #3A1414;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 68ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--brand); font-weight: 600;
+  }
+  h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; letter-spacing: -0.02em; }
+  .lead { margin: 0; color: var(--page-ink-2); max-width: 62ch; }
+
+  .section { display: flex; flex-direction: column; gap: var(--s-lg); }
+  .section h2 {
+    margin: 0; font-size: 13px; font-family: var(--mono);
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--page-ink-2);
+  }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: clamp(20px, 3vw, 36px);
+    align-items: start;
+  }
+
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 30ch;
+  }
+
+  .device {
+    width: 100%; max-width: 340px;
+    background: var(--bg);
+    border: 1px solid var(--outline);
+    border-radius: 30px;
+    padding: 8px;
+    box-shadow: 0 18px 44px rgba(26, 35, 126, 0.13), 0 2px 6px rgba(0,0,0,0.05);
+  }
+
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 580px; color: var(--ink);
+  }
+
+  /* App bar fil de discussion */
+  .chat-appbar {
+    background: var(--surface);
+    padding: 12px var(--s-lg);
+    display: flex; align-items: center; gap: var(--s-md);
+    border-bottom: 1px solid var(--outline);
+  }
+  .back { width: 20px; height: 20px; color: var(--brand); flex: none; }
+  .chat-appbar .avatar-sm {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #5C6BC0, #3949AB);
+    display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 650;
+    flex: none;
+  }
+  .chat-appbar .titles { flex: 1; min-width: 0; }
+  .chat-appbar .titles h3 {
+    margin: 0; font-size: 16px; font-weight: 650;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chat-appbar .titles span { font-size: 12px; color: var(--ink-2); }
+
+  /* Corps du chat : bannière fixe + fil scrollable */
+  .chat-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Bannière consentement — style WhatsApp : discrète, au-dessus du fil */
+  .consent-banner {
+    flex: none;
+    background: var(--surface-muted);
+    border-bottom: 1px solid var(--outline);
+    padding: 10px var(--s-lg) 11px;
+    text-align: center;
+  }
+
+  .consent-banner p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--ink-2);
+  }
+
+  .consent-banner p strong {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .consent-banner .group-name {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .consent-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  .consent-actions .sep {
+    color: var(--ink-3);
+    font-size: 11px;
+    user-select: none;
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1.2;
+  }
+  .link-btn:hover { text-decoration: underline; }
+
+  .link-stay { color: var(--brand); }
+  .link-leave { color: var(--error); }
+
+  /* Fil scrollable — sous la bannière */
+  .thread {
+    flex: 1;
+    padding: var(--s-md) var(--s-lg) var(--s-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-md);
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  /* Fil pleine hauteur (membres sans bannière) */
+  .screen > .thread {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .date-sep {
+    align-self: center;
+    font-size: 11.5px; color: var(--ink-3);
+    background: var(--surface-muted);
+    padding: 3px 10px; border-radius: var(--r-sm);
+  }
+
+  /* Message système classique (autres membres) */
+  .sys-msg {
+    align-self: center;
+    max-width: 85%;
+    background: var(--surface-muted);
+    color: var(--ink-2);
+    font-size: 12.5px;
+    text-align: center;
+    padding: 6px 14px;
+    border-radius: var(--r-sm);
+    line-height: 1.45;
+  }
+
+  /* Bulles messages normales (contexte) */
+  .bubble-row { display: flex; gap: var(--s-sm); align-items: flex-end; }
+  .bubble-row.incoming { justify-content: flex-start; }
+  .bubble-row.outgoing { justify-content: flex-end; }
+  .bubble {
+    max-width: 72%;
+    padding: 8px 12px;
+    border-radius: var(--r-md);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .bubble.in {
+    background: var(--surface-muted);
+    color: var(--ink);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.out {
+    background: var(--brand-container);
+    color: var(--ink);
+    border-bottom-right-radius: 4px;
+  }
+  .bubble .meta {
+    display: block; text-align: right;
+    font-size: 10.5px; color: var(--ink-3); margin-top: 3px;
+  }
+
+  /* Liste conversations (aperçu corrigé) */
+  .convo-list { display: flex; flex-direction: column; background: var(--surface); flex: 1; }
+  .convo {
+    display: flex; gap: var(--s-md); align-items: center;
+    padding: 11px var(--s-lg);
+    border-bottom: 1px solid var(--outline);
+  }
+  .avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: grid; place-items: center; flex: none;
+    font-size: 15px; font-weight: 650; color: #fff;
+    background: linear-gradient(135deg, #5C6BC0, #3949AB);
+  }
+  .convo-body { flex: 1; min-width: 0; }
+  .line-1 { display: flex; justify-content: space-between; gap: var(--s-sm); }
+  .nom { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .heure { font-size: 12px; color: var(--ink-3); flex: none; }
+  .apercu { font-size: 13.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .apercu.bad { color: var(--error); font-family: var(--mono); font-size: 11px; }
+  .apercu.good { color: var(--brand); }
+
+  .compare-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-sm);
+    padding: 0 var(--s-lg) var(--s-lg);
+  }
+  .compare-label {
+    font-size: 10px; font-family: var(--mono);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-3); margin-bottom: 4px;
+  }
+
+  /* Notes */
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note {
+    background: var(--page-panel);
+    border: 1px solid var(--page-line);
+    border-radius: var(--r-md);
+    padding: var(--s-lg) var(--s-xl);
+    margin: 0;
+    color: var(--page-ink-2);
+    font-size: 14px;
+  }
+  .note b { color: var(--page-ink); }
+  .note.warn { border-left: 3px solid var(--error); }
+
+  .spec-table {
+    width: 100%; border-collapse: collapse; font-size: 13.5px;
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-md); overflow: hidden;
+  }
+  .spec-table th, .spec-table td {
+    padding: 10px 14px; text-align: left;
+    border-bottom: 1px solid var(--page-line);
+  }
+  .spec-table th {
+    background: var(--surface-muted); font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--page-ink-2);
+  }
+  .spec-table tr:last-child td { border-bottom: none; }
+
+  .colophon {
+    font-family: var(--mono); font-size: 11px; color: var(--page-ink-2);
+    display: flex; flex-wrap: wrap; gap: var(--s-lg);
+    padding-top: var(--s-xl); border-top: 1px solid var(--page-line);
+  }
+
+  .theme-toggle {
+    position: fixed; top: 16px; right: 16px;
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-sm); padding: 6px 12px;
+    font-size: 12px; font-family: var(--mono); cursor: pointer;
+    color: var(--page-ink-2);
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Basculer le thème">Thème</button>
+
+<div class="page">
+
+  <header class="masthead">
+    <span class="eyebrow">Messagerie · Groupes</span>
+    <h1>Ajout à un groupe — Rester ou quitter</h1>
+    <p class="lead">
+      Quand Alice ajoute Marc à un groupe, Marc voit une <b>bannière discrète en haut du fil</b>
+      (style WhatsApp, au-dessus de tous les messages — pas de modal). Les autres membres voient
+      le message système classique dans le fil. Si Marc choisit <b>Rester</b>,
+      <code>POST /ack-join</code> clear <code>pendingJoinMsgID</code> (sync multi-appareil).
+      S'il choisit <b>Quitter</b>, on appelle <code>POST /conversations/:id/leave</code>.
+      Le réglage admin <b>masquer l'historique</b> (défaut OFF) décide si Marc voit les messages
+      antérieurs à son ajout.
+    </p>
+  </header>
+
+  <!-- Vue principale : fil de discussion -->
+  <section class="section">
+    <h2>Fil de discussion — historique visible (réglage OFF, défaut)</h2>
+    <div class="stage">
+
+      <!-- Nouvel ajouté -->
+      <div class="device-block">
+        <div class="device">
+          <div class="screen">
+            <div class="chat-appbar">
+              <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+              <div class="avatar-sm">PV</div>
+              <div class="titles">
+                <h3>Projet Vitrine</h3>
+                <span>Alice, Bob, Marc, +2</span>
+              </div>
+            </div>
+            <div class="chat-body">
+              <!-- Bannière fixe au-dessus du fil — ne scroll pas -->
+              <div class="consent-banner" role="group" aria-label="Ajout au groupe">
+                <p>
+                  <strong>Alice</strong> vous a ajouté au groupe
+                  <span class="group-name">«&nbsp;Projet Vitrine&nbsp;»</span>
+                </p>
+                <div class="consent-actions">
+                  <button class="link-btn link-stay" type="button">Rester</button>
+                  <span class="sep" aria-hidden="true">·</span>
+                  <button class="link-btn link-leave" type="button">Quitter</button>
+                </div>
+              </div>
+
+              <div class="thread">
+                <span class="date-sep">Hier</span>
+                <div class="bubble-row incoming">
+                  <div class="bubble in">On se voit demain pour la maquette ?<span class="meta">18:04</span></div>
+                </div>
+                <div class="bubble-row outgoing">
+                  <div class="bubble out">Oui, j'envoie les fichiers ce soir.<span class="meta">18:11</span></div>
+                </div>
+
+                <span class="date-sep">Aujourd'hui</span>
+
+                <div class="bubble-row incoming">
+                  <div class="bubble in">Salut tout le monde, on valide le brief ?<span class="meta">10:42</span></div>
+                </div>
+                <div class="bubble-row outgoing">
+                  <div class="bubble out">Oui, je regarde ça ce soir.<span class="meta">10:45</span></div>
+                </div>
+
+                <!-- Sys-msg visible dans le fil (Marc le voit aussi, sous la bannière) -->
+                <div class="sys-msg">Alice a ajouté Marc</div>
+
+                <div class="bubble-row incoming">
+                  <div class="bubble in">Bienvenue Marc !<span class="meta">11:02</span></div>
+                </div>
+                <div class="bubble-row incoming">
+                  <div class="bubble in">Tu peux nous envoyer ton retour sur le logo ?<span class="meta">11:05</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="device-caption">Marc — historique complet + bannière Rester / Quitter</p>
+      </div>
+
+      <!-- Autres membres -->
+      <div class="device-block">
+        <div class="device">
+          <div class="screen">
+            <div class="chat-appbar">
+              <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+              <div class="avatar-sm">PV</div>
+              <div class="titles">
+                <h3>Projet Vitrine</h3>
+                <span>Alice, Bob, Marc, +2</span>
+              </div>
+            </div>
+            <div class="thread">
+              <span class="date-sep">Aujourd'hui</span>
+
+              <div class="bubble-row incoming">
+                <div class="bubble in">Salut tout le monde, on valide le brief ?<span class="meta">10:42</span></div>
+              </div>
+              <div class="bubble-row outgoing">
+                <div class="bubble out">Oui, je regarde ça ce soir.<span class="meta">10:45</span></div>
+              </div>
+
+              <!-- Message système classique -->
+              <div class="sys-msg">Alice a ajouté Marc</div>
+
+              <div class="bubble-row incoming">
+                <div class="bubble in">Bienvenue Marc !<span class="meta">11:02</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="device-caption">Bob (membre existant) — message système centré, jamais la bannière</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Historique masqué -->
+  <section class="section">
+    <h2>Fil de discussion — historique masqué (réglage ON)</h2>
+    <div class="stage">
+
+      <div class="device-block">
+        <div class="device">
+          <div class="screen">
+            <div class="chat-appbar">
+              <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+              <div class="avatar-sm">PV</div>
+              <div class="titles">
+                <h3>Projet Vitrine</h3>
+                <span>Alice, Bob, Marc, +2</span>
+              </div>
+            </div>
+            <div class="chat-body">
+              <div class="consent-banner" role="group" aria-label="Ajout au groupe">
+                <p>
+                  <strong>Alice</strong> vous a ajouté au groupe
+                  <span class="group-name">«&nbsp;Projet Vitrine&nbsp;»</span>
+                </p>
+                <div class="consent-actions">
+                  <button class="link-btn link-stay" type="button">Rester</button>
+                  <span class="sep" aria-hidden="true">·</span>
+                  <button class="link-btn link-leave" type="button">Quitter</button>
+                </div>
+              </div>
+              <div class="thread">
+                <span class="date-sep">Aujourd'hui</span>
+                <div class="sys-msg">Alice a ajouté Marc</div>
+                <div class="bubble-row incoming">
+                  <div class="bubble in">Bienvenue Marc !<span class="meta">11:02</span></div>
+                </div>
+                <div class="bubble-row incoming">
+                  <div class="bubble in">Tu peux nous envoyer ton retour sur le logo ?<span class="meta">11:05</span></div>
+                </div>
+                <p style="text-align:center;font-size:12px;color:var(--ink-3);margin:var(--s-md) 0 0;">
+                  Les messages antérieurs à l'ajout ne sont pas renvoyés
+                  (<code>historyCutoffAt</code> sur <code>GET /messages</code>).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="device-caption">Marc — réglage « masquer l'historique » actif avant l'ajout</p>
+      </div>
+
+      <div class="device-block">
+        <div class="device">
+          <div class="screen">
+            <div class="chat-appbar">
+              <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+              <div class="avatar-sm">PV</div>
+              <div class="titles">
+                <h3>Réglages du groupe</h3>
+                <span>Admin seulement</span>
+              </div>
+            </div>
+            <div class="thread" style="gap:0;padding:0;">
+              <div style="background:var(--surface);padding:var(--s-lg);border-bottom:1px solid var(--outline);">
+                <div style="font-size:13px;font-weight:650;margin-bottom:var(--s-md);">Réglages du groupe</div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s-md);padding:10px 0;border-top:1px solid var(--outline);">
+                  <div>
+                    <div style="font-size:14px;">Seuls les admins peuvent écrire</div>
+                    <div style="font-size:12px;color:var(--ink-2);">Canal d'annonces</div>
+                  </div>
+                  <div style="width:40px;height:24px;border-radius:999px;background:var(--outline);flex:none;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s-md);padding:10px 0;border-top:1px solid var(--outline);">
+                  <div>
+                    <div style="font-size:14px;">Seuls les admins modifient les infos</div>
+                    <div style="font-size:12px;color:var(--ink-2);">Nom, photo, description</div>
+                  </div>
+                  <div style="width:40px;height:24px;border-radius:999px;background:var(--outline);flex:none;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s-md);padding:10px 0;border-top:1px solid var(--outline);">
+                  <div>
+                    <div style="font-size:14px;">Masquer l'historique pour les nouveaux</div>
+                    <div style="font-size:12px;color:var(--ink-2);">Les membres ajoutés ne verront pas les messages antérieurs</div>
+                  </div>
+                  <div style="width:40px;height:24px;border-radius:999px;background:var(--brand);flex:none;position:relative;">
+                    <div style="position:absolute;right:2px;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;"></div>
+                  </div>
+                </div>
+              </div>
+              <p style="padding:var(--s-lg);font-size:12px;color:var(--ink-3);margin:0;">
+                Aucune case à l'ajout : Alice active le switch <b>avant</b> d'ajouter Marc.
+              </p>
+            </div>
+          </div>
+        </div>
+        <p class="device-caption">Alice (admin) — 3ᵉ switch dans Paramètres du groupe</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- État après action -->
+  <section class="section">
+    <h2>Après le choix de Marc</h2>
+    <div class="stage">
+
+      <div class="device-block">
+        <div class="device">
+          <div class="screen">
+            <div class="chat-appbar">
+              <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+              <div class="avatar-sm">PV</div>
+              <div class="titles"><h3>Projet Vitrine</h3><span>5 membres</span></div>
+            </div>
+            <div class="thread">
+              <span class="date-sep">Aujourd'hui</span>
+              <div class="sys-msg">Alice a ajouté Marc</div>
+              <div class="bubble-row incoming">
+                <div class="bubble in">Bienvenue Marc !<span class="meta">11:02</span></div>
+              </div>
+              <p style="text-align:center;font-size:12px;color:var(--ink-3);margin:var(--s-md) 0 0;">
+                La bannière a disparu — le fil reprend normalement.
+              </p>
+            </div>
+          </div>
+        </div>
+        <p class="device-caption">Marc a tapé « Rester » — bannière retirée, fil seul</p>
+      </div>
+
+      <div class="device-block">
+        <div class="device">
+          <div class="screen" style="align-items:center;justify-content:center;">
+            <p style="color:var(--ink-2);font-size:14px;text-align:center;padding:var(--s-xxl);">
+              Marc a tapé « Quitter »<br><br>
+              → <code>POST /leave</code><br>
+              → conv retirée de sa liste<br>
+              → <code>group:participant:removed</code> côté socket
+            </p>
+          </div>
+        </div>
+        <p class="device-caption">Marc a tapé « Quitter » — sortie du groupe</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Aperçu liste -->
+  <section class="section">
+    <h2>Liste des discussions — aperçu corrigé</h2>
+    <div class="stage">
+      <div class="device-block">
+        <div class="device">
+          <div class="screen">
+            <div class="chat-appbar" style="border-bottom:none;">
+              <div class="titles"><h3 style="font-size:19px;">Discussions</h3></div>
+            </div>
+            <div class="convo-list">
+              <div class="convo">
+                <div class="avatar">PV</div>
+                <div class="convo-body">
+                  <div class="line-1">
+                    <span class="nom">Projet Vitrine</span>
+                    <span class="heure">11:02</span>
+                  </div>
+                  <div class="apercu good">Alice a ajouté des membres</div>
+                </div>
+              </div>
+            </div>
+            <div class="compare-row">
+              <div>
+                <div class="compare-label">Avant (bug)</div>
+                <div class="apercu bad">{"e":"member_added","by":12…</div>
+              </div>
+              <div>
+                <div class="compare-label">Après (fix)</div>
+                <div class="apercu good">Alice a ajouté des membres</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="device-caption">Aperçu localisé au lieu du JSON brut</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Spec -->
+  <section class="section">
+    <h2>Spécification comportementale</h2>
+    <table class="spec-table">
+      <thead>
+        <tr><th>Cas</th><th>Comportement</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Marc ajouté, fil ouvert</td>
+          <td>Bannière discrète fixée sous l'app bar, au-dessus de tous les messages (Marc seulement). Ne scroll pas avec le fil.</td>
+        </tr>
+        <tr>
+          <td>Marc tape Rester</td>
+          <td><code>POST /ack-join</code> → <code>pendingJoinMsgID = NULL</code> → bannière disparait sur tous ses appareils via <code>conversation:updated</code>. Le sys-msg reste dans le fil.</td>
+        </tr>
+        <tr>
+          <td>Marc tape Quitter</td>
+          <td><code>leaveGroup(conversID)</code> → conv supprimée localement, retour liste</td>
+        </tr>
+        <tr>
+          <td>Autres membres</td>
+          <td>Sys-msg classique « Alice a ajouté Marc », jamais la bannière</td>
+        </tr>
+        <tr>
+          <td>Multi-appareil</td>
+          <td><code>pendingJoinMsgID</code> serveur : Rester sur un appareil retire la bannière partout après sync</td>
+        </tr>
+        <tr>
+          <td>Historique masqué (ON)</td>
+          <td>À l'ajout : <code>historyCutoffAt = NOW()</code>. GET /messages et /messages/sync filtrés. Défaut OFF = historique complet.</td>
+        </tr>
+        <tr>
+          <td>Ré-ajout après exclusion</td>
+          <td>Re-afficher la bannière (nouveau <code>member_added</code> + nouveau pending) ; nouveau cutoff selon le réglage courant</td>
+        </tr>
+        <tr>
+          <td>Créateur du groupe</td>
+          <td>Pas de bannière (pas de pending pour le créateur)</td>
+        </tr>
+        <tr>
+          <td>Invités à la création</td>
+          <td>Même flux qu'un addParticipants : <code>member_added</code> + <code>pendingJoinMsgID</code> + bannière</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="notes">
+    <p class="note">
+      <b>Style WhatsApp.</b> Pas d'icône, pas de carte ombrée, pas de gros boutons pleins.
+      Texte gris 12,5 px centré, actions en liens texte (<span style="color:#3F51B5">Rester</span>
+      · <span style="color:#EF4444">Quitter</span>). Fond <code>surfaceMuted</code>, fine bordure basse.
+    </p>
+    <p class="note">
+      <b>Placement fixe.</b> La bannière est un sibling du fil scrollable, pas un item dedans :
+      elle reste visible en haut pendant que Marc scroll l'historique. Widget Flutter :
+      <code>Column([GroupJoinBanner?, Expanded(ListView)])</code> dans <code>chat_detail_screen</code>.
+    </p>
+    <p class="note">
+      <b>Pas de modal.</b> Marc peut lire l'historique et décider quand il veut — la bannière
+      reste affichée tant qu'il n'a pas choisi.
+    </p>
+    <p class="note warn">
+      <b>Liste vs fil.</b> La conversation apparaît dans la liste dès l'ajout
+      (comportement actuel). Masquer avant consentement = statut <code>pending</code> serveur, hors scope.
+    </p>
+  </div>
+
+  <footer class="colophon">
+    <span>Tokens : lib/core/theme/app_colors.dart</span>
+    <span>Sys-msg : lib/core/utils/system_event_payload.dart</span>
+    <span>Maquette de conception — aucun code applicatif</span>
+  </footer>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    const root = document.documentElement;
+    const cur = root.getAttribute('data-theme');
+    if (cur === 'dark') root.removeAttribute('data-theme');
+    else if (cur === 'light') root.setAttribute('data-theme', 'dark');
+    else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.setAttribute('data-theme', prefersDark ? 'light' : 'dark');
+    }
+  }
+</script>
+</body>
+</html>

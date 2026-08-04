@@ -1,0 +1,122 @@
+% =====================================================================
+%  ALANYA — Dossier de conception
+%  Étape 6 : identité et connexion par QR code
+%
+%  Compilation :  latexmk -pdf qr-code.tex
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{alanya-conception}
+\setAlanyaDocTitre{Identité et connexion QR}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Alanya - Identite et connexion par QR code},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Conception - QR code d'identite et connexion multi-appareils}
+}
+
+\begin{document}
+
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-6.4cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-6.4cm]current page.north west) rectangle ([yshift=-6.0cm]current page.north east);
+\end{tikzpicture}
+
+\vspace*{1.1cm}
+{\color{white}\sffamily
+\begin{center}
+  {\small\bfseries DOSSIER DE CONCEPTION}\\[6pt]
+  {\footnotesize\color{AlanyaContainer} Document de travail --- à valider avant développement}
+\end{center}}
+
+\vspace{3.4cm}
+
+\begin{center}\sffamily
+  {\small\bfseries ÉTAPE 6}\\[10pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[20pt]
+  {\fontsize{32}{36}\selectfont\bfseries\color{AlanyaIndigoDark}
+   Identité et connexion par QR code}\\[10pt]
+  {\large\color{AlanyaGray} Une seule brique de scan, deux usages}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Ajout de contact instantané --- connexion multi-appareils}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}
+\end{center}
+
+\vspace{1.4cm}
+
+\begin{center}
+\begin{tikzpicture}[x=1cm, y=1cm]
+  \foreach \x/\n in {0/Identité, 3.6/Connexion} {
+    \draw[AlanyaIndigo, line width=1pt, rounded corners=1.5pt] (\x-0.22,-0.22) rectangle (\x+0.22,0.22);
+    \fill[AlanyaIndigo] (\x-0.09,-0.09) rectangle (\x+0.09,0.09);
+    \node[font=\sffamily\small, text=AlanyaGray, anchor=west] at (\x+0.42,0) {\n};
+  }
+\end{tikzpicture}
+\end{center}
+
+\vfill
+
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Périmètre}   & Talky (Flutter) \textbullet{} Alanya-Backend\\[3pt]
+    \thd{Statut}      & Implémenté --- relu et corrigé\\[3pt]
+    \thd{Dépend de}   & Rien --- indépendant des cinq premiers volets\\[3pt]
+    \thd{Migration}   & \code{026\_qr\_appareils.sql}\\[3pt]
+    \thd{Date}        & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.8cm}
+\begin{center}\color{AlanyaGray}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% =====================================================================
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\markboth{Avant-propos}{}
+\thispagestyle{plain}
+
+Deux fonctionnalités demandées, toutes deux fondées sur le scan d'un QR code~: un code
+d'identité personnel qui ajoute instantanément un contact préféré, et une connexion
+multi-appareils façon « appareil de confiance qui en autorise un nouveau ». Elles sont
+traitées dans un seul dossier parce qu'elles partagent une vraie infrastructure --- le
+composant scanner, le générateur de QR stylé, l'enveloppe de résolution d'un code scanné ---
+au même titre que compte officiel et diffusion l'ont été à l'étape~3.
+
+\begin{note}[Comment lire ce document]
+La \textbf{partie I} décrit la fonctionnalité telle que l'utilisateur et le client la
+voient. La \textbf{partie II} décrit comment on la construit. On peut valider la partie~I
+sans lire la partie~II.
+\end{note}
+
+\tableofcontents
+
+% =====================================================================
+\part{Approche naïve}
+% =====================================================================
+
+\input{contenu/qr-code-naive}
+
+% =====================================================================
+\part{Approche technique}
+% =====================================================================
+
+\input{contenu/qr-code-technique}
+
+\vfill
+\begin{center}\small\color{AlanyaGray}\sffamily
+Fin du dossier --- étape 6. \\
+Volet indépendant --- peut se construire en parallèle des cinq premiers.
+\end{center}
+
+\end{document}

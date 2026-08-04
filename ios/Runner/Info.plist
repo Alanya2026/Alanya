@@ -62,6 +62,8 @@
 		<string>Alanya enregistre les photos et vidéos reçues dans l'album Alanya.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Alanya a besoin de votre position pour partager une localisation dans une conversation.</string>
+		<key>NSFaceIDUsageDescription</key>
+		<string>Alanya utilise Face ID ou Touch ID pour verrouiller l'accès à l'application.</string>
 		<key>UIFileSharingEnabled</key>
 		<true/>
 		<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -76,6 +78,21 @@
 				<key>CFBundleURLSchemes</key>
 				<array>
 					<string>ShareMedia-$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+				</array>
+			</dict>
+			<!-- Bouton « Ouvrir dans Alanya » de la page d'accueil d'un code QR.
+			     Les Universal Links (lien https ouvrant l'app directement)
+			     exigent un Team ID Apple et l'entitlement associated-domains,
+			     absents du projet : ce schéma est donc le seul chemin sur iOS
+			     pour l'instant. -->
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>com.alanya237.alanya.qr</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>alanya</string>
 				</array>
 			</dict>
 		</array>

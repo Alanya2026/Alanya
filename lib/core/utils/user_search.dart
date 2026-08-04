@@ -13,6 +13,9 @@ User localUserToUser(LocalUser u) => User(
       typeCompte: u.typeCompte,
       isOnline: u.isOnline,
       lastSeen: u.lastSeen?.toIso8601String() ?? '',
+      addedViaQr: u.addedViaQr,
+      preferredAddedAt: u.preferredAddedAt,
+      preferredNote: u.preferredNote ?? '',
       paysLibelle: u.paysLibelle,
     );
 

@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/services/local_hidden_store.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -14,6 +18,7 @@ import '../../talky_models.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/qr_pin.dart';
 import '../../widgets/status_ringed_avatar.dart';
 import '../../providers/status_provider.dart';
 import '../status/status_viewer_screen.dart';
@@ -32,7 +37,7 @@ class ChatsScreen extends StatefulWidget {
 
 class _ChatsScreenState extends State<ChatsScreen> {
   String _search = '';
-  String _filter = 'all'; // 'all', 'discussions', 'groups', 'unread', 'archived'
+  String _filter = 'all'; // 'all', 'discussions', 'groups', 'qr', 'unread', 'archived'
   bool _searchOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
   bool _selectionMode = false;
@@ -44,6 +49,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
   bool _awaitingInitialConversations = true;
   ChatProvider? _chatProvider;
 
+  /// Contacts préférés ajoutés par QR — pour la pastille sur l'avatar des
+  /// conversations. Observé depuis le cache : la liste vit déjà en Drift, un
+  /// Set évite toute lecture par ligne.
+  Set<int> _qrAddedIds = const {};
+  StreamSubscription<List<LocalUser>>? _qrIdsSub;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +64,18 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } else {
       _chatProvider!.addListener(_onChatProviderChanged);
     }
+    _qrIdsSub = context
+        .read<LocalCacheRepository>()
+        .watchPreferredContacts()
+        .listen((contacts) {
+      final ids = {
+        for (final c in contacts)
+          if (c.addedViaQr) c.alanyaID,
+      };
+      if (mounted && !setEquals(ids, _qrAddedIds)) {
+        setState(() => _qrAddedIds = ids);
+      }
+    });
     // Rafraîchit les statuts pour que les anneaux autour des avatars (1v1)
     // reflètent l'état courant dès l'ouverture de la liste des chats.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -76,6 +99,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   void dispose() {
     _chatProvider?.removeListener(_onChatProviderChanged);
     _chatProvider = null;
+    _qrIdsSub?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -238,6 +262,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 AppSpacing.hGapSm,
                 _buildFilterChip(context.l10n.groupsFilter, 'groups', Icons.groups_rounded),
                 AppSpacing.hGapSm,
+                _buildFilterChip(context.l10n.qrContactsFilterQr, 'qr', Icons.qr_code_2),
+                AppSpacing.hGapSm,
                 _buildFilterChip(context.l10n.unread, 'unread', Icons.mark_email_unread_outlined),
                 AppSpacing.hGapSm,
                 _buildFilterChip(context.l10n.archived, 'archived', Icons.archive_outlined),
@@ -263,7 +289,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 }
                 // Appliquer le filtre (chips). Le chip « Archivés » est seul à
                 // afficher les conv archivées ; les autres chips les excluent.
-                convs = _applyFilter(convs);
+                convs = _applyFilter(convs, myId);
 
                 // Skeleton seulement si le cache local est vide ET que le
                 // premier sync n'a pas encore répondu. Si Drift a déjà des
@@ -424,6 +450,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
               bottom: 0,
               child: PresenceDot(online: true, size: 14),
             ),
+          // Contact rencontré par QR : même pastille que dans les listes de
+          // contacts, coin opposé au point de présence.
+          if (!conv.isGroup &&
+              !isSelf &&
+              otherId != null &&
+              _qrAddedIds.contains(otherId))
+            const Positioned(
+              left: -2,
+              bottom: -2,
+              child: QrPin(size: 17),
+            ),
         ],
       ),
       title: Text(
@@ -493,8 +530,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         ? Text.rich(
                             TextSpan(
                               children: parseRichSpans(
-                                displayConversationPreview(
-                                  conv.lastMessage!,
+                                conversationListPreview(
+                                  conv,
+                                  myId,
                                   context.l10n,
                                 ),
                                 context.text.bodyMedium!.copyWith(
@@ -643,7 +681,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  List<LocalConversation> _applyFilter(List<LocalConversation> convs) {
+  List<LocalConversation> _applyFilter(List<LocalConversation> convs, int myId) {
     if (_filter == 'archived') {
       return convs.where((c) => c.isArchived).toList();
     }
@@ -654,6 +692,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
         return visible.where((c) => !c.isGroup).toList();
       case 'groups':
         return visible.where((c) => c.isGroup).toList();
+      case 'qr':
+        // Conversations avec un contact rencontré par QR — le pendant du
+        // filtre du même nom sur l'écran des contacts préférés.
+        return visible
+            .where((c) =>
+                !c.isGroup &&
+                _qrAddedIds.contains(conversationOtherUserId(c, myId)))
+            .toList();
       case 'unread':
         return visible.where((c) => c.unreadCount > 0).toList();
       case 'all':

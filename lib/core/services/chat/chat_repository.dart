@@ -391,6 +391,16 @@ class ChatRepository {
     }
 
     await _dao.upsertConversation(_convToPartialCompanion(conv, json));
+
+    // Ré-ajout avec historique masqué : purger le cache local antérieur au
+    // cutoff, sinon d'anciens messages d'un membership précédent ressurgissent.
+    final cutoff = _parseDate(conv.myHistoryCutoffAt);
+    if (cutoff != null) {
+      final removed = await _dao.deleteMessagesBefore(conv.conversID, cutoff);
+      if (removed > 0) {
+        unawaited(syncMessages(conv.conversID));
+      }
+    }
   }
 
   /// Un membre a quitté ou a été retiré.
@@ -1155,12 +1165,22 @@ class ChatRepository {
     int conversID, {
     bool? onlyAdminsCanSend,
     bool? onlyAdminsCanEditInfo,
+    bool? hideHistoryForNewMembers,
+    bool? onlyAdminsCanAddMembers,
   }) async {
     final raw = await _api.updateGroupSettings(
       conversID,
       onlyAdminsCanSend: onlyAdminsCanSend,
       onlyAdminsCanEditInfo: onlyAdminsCanEditInfo,
+      hideHistoryForNewMembers: hideHistoryForNewMembers,
+      onlyAdminsCanAddMembers: onlyAdminsCanAddMembers,
     );
+    await _upsertGroupResponse(raw);
+  }
+
+  /// Nouvel ajouté : « Rester » — clear pendingJoinMsgID côté serveur.
+  Future<void> ackGroupJoin(int conversID, {int? msgID}) async {
+    final raw = await _api.ackGroupJoin(conversID, msgID: msgID);
     await _upsertGroupResponse(raw);
   }
 
@@ -1227,6 +1247,10 @@ class ChatRepository {
     final conv = Conversation.fromJson(raw);
     if (conv.conversID <= 0) return;
     await _dao.upsertConversation(_convToCompanion(conv, raw));
+    final cutoff = _parseDate(conv.myHistoryCutoffAt);
+    if (cutoff != null) {
+      await _dao.deleteMessagesBefore(conv.conversID, cutoff);
+    }
     await _recomputeSummary(conv.conversID);
   }
 
@@ -1779,10 +1803,14 @@ class ChatRepository {
       metaUpdatedAt: Value(_parseDate(c.updatedAt)),
       onlyAdminsCanSend: Value(c.onlyAdminsCanSend),
       onlyAdminsCanEditInfo: Value(c.onlyAdminsCanEditInfo),
+      hideHistoryForNewMembers: Value(c.hideHistoryForNewMembers),
+      onlyAdminsCanAddMembers: Value(c.onlyAdminsCanAddMembers),
       myRole: Value(c.myRole),
       mutedUntil: Value(_parseDate(c.mutedUntil)),
       muteForever: Value(c.muteForever),
       mentionsOnly: Value(c.mentionsOnly),
+      myPendingJoinMsgID: Value(c.myPendingJoinMsgID),
+      myHistoryCutoffAt: Value(_parseDate(c.myHistoryCutoffAt)),
     );
   }
 
@@ -1813,6 +1841,12 @@ class ChatRepository {
       metaUpdatedAt: Value(_parseDate(c.updatedAt)),
       onlyAdminsCanSend: Value(c.onlyAdminsCanSend),
       onlyAdminsCanEditInfo: Value(c.onlyAdminsCanEditInfo),
+      hideHistoryForNewMembers: Value(c.hideHistoryForNewMembers),
+      onlyAdminsCanAddMembers: Value(c.onlyAdminsCanAddMembers),
+      // Champs par-utilisateur portés par les trames personnalisées
+      // (ack-join, nouvel ajouté après member_added).
+      myPendingJoinMsgID: Value(c.myPendingJoinMsgID),
+      myHistoryCutoffAt: Value(_parseDate(c.myHistoryCutoffAt)),
       participantsJson:
           Value(encodeParticipants(raw['participants'] as List? ?? [])),
     );
