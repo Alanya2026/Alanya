@@ -1846,5 +1846,9 @@
     }
   },
   "dndSummaryInactive": "Off",
-  "exportPhase1ShareSubject": "Alanya export (profile and metadata)"
+  "exportPhase1ShareSubject": "Alanya export (profile and metadata)",
+  "officialContactSupport": "Contact support",
+  "officialComingSoon": "Coming soon",
+  "officialHelpAndFaq": "Help and FAQ",
+  "officialHelpUnavailable": "Could not open the help page"
 }

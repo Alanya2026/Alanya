@@ -4590,4 +4590,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get exportPhase1ShareSubject =>
       'Export Alanya (profil et métadonnées)';
+
+  @override
+  String get officialContactSupport => 'Contacter le support';
+
+  @override
+  String get officialComingSoon => 'Bientôt disponible';
+
+  @override
+  String get officialHelpAndFaq => 'Aide et questions fréquentes';
+
+  @override
+  String get officialHelpUnavailable => 'Impossible d\'ouvrir la page d\'aide';
 }

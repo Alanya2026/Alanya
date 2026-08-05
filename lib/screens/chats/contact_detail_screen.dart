@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -482,11 +483,16 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     );
   }
 
+  /// Le compte officiel diffuse et ne converse pas : sa fiche cesse d'être une
+  /// fiche de contact pour devenir une carte d'identité de la marque.
+  bool _isOfficialUser(User u) => u.accountType == 2;
+
   Widget _buildContent(User u) {
     // Mon propre profil : en-tête, médias et gestion de la conversation. Tout
     // ce qui suppose un tiers (appels, blocage, contacts, mise en sourdine)
     // disparaît — aucune notification ne peut viser mes propres notes.
     final isSelf = _isSelf;
+    final isOfficial = _isOfficialUser(u);
     return ListView(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg,
           AppSpacing.xxl),
@@ -563,7 +569,10 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           ),
         ],
         AppSpacing.vGapXl,
-        if (!isSelf) ...[
+        // Le compte officiel n'est pas un contact : il ne se joint pas, ne
+        // s'ajoute pas aux favoris et ne se bloque pas. Le serveur refuse déjà
+        // ces trois actions ; les masquer évite d'offrir un bouton qui échoue.
+        if (!isSelf && !isOfficial) ...[
           _PrimaryActions(
             callsDisabled: _isBlocked || _blockedByThem,
             onCall: () => unawaited(_startCall(isVideo: false)),
@@ -572,9 +581,13 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           ),
           AppSpacing.vGapLg,
         ],
+        if (isOfficial) ...[
+          const _OfficialActionsCard(),
+          AppSpacing.vGapLg,
+        ],
         _QuickActionsCard(
           isFavorite: _isFavorite,
-          showFavorite: !isSelf,
+          showFavorite: !isSelf && !isOfficial,
           onToggleFavorite: _toggleFavorite,
           onSearch: () => _snack(context.l10n.searchComingSoon),
           onClear: _clearMessages,
@@ -599,8 +612,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         _DangerActionsCard(
           isBlocked: _isBlocked,
           isFavorite: _isFavorite,
-          showBlock: !isSelf,
-          showRemoveContact: !isSelf,
+          showBlock: !isSelf && !isOfficial,
+          showRemoveContact: !isSelf && !isOfficial,
           hasConversation: _effectiveConvId != null,
           onBlock: _toggleBlock,
           onDeleteConversation: _deleteConversation,
@@ -1114,6 +1127,67 @@ class _MediaCardState extends State<_MediaCard> {
       barrierDismissible: false,
       builder: (ctx) =>
           Center(child: CircularProgressIndicator(color: ctx.colors.primary)),
+    );
+  }
+}
+
+// ── COMPTE OFFICIEL ───────────────────────────────────────────────────
+
+/// L'assistance vit sur un compte distinct, à la logique bidirectionnelle, qui
+/// n'existe pas encore. Le raccourci est donc posé mais désactivé : allumer ce
+/// drapeau le jour où ce compte est créé suffira.
+const bool kSupportAccountEnabled = false;
+
+/// Page d'aide publique. À faire pointer vers l'URL réelle du site.
+const String kHelpUrl = 'https://www.alanya237.com/aide';
+
+class _OfficialActionsCard extends StatelessWidget {
+  const _OfficialActionsCard();
+
+  Future<void> _openHelp(BuildContext context) async {
+    final uri = Uri.parse(kHelpUrl);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.officialHelpUnavailable)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: Icon(
+              Icons.support_agent_outlined,
+              color: kSupportAccountEnabled
+                  ? context.colors.primary
+                  : context.colors.onSurfaceVariant,
+            ),
+            title: Text(context.l10n.officialContactSupport),
+            subtitle: kSupportAccountEnabled
+                ? null
+                : Text(context.l10n.officialComingSoon),
+            enabled: kSupportAccountEnabled,
+            onTap: kSupportAccountEnabled ? () {} : null,
+          ),
+          Divider(height: 1, color: context.colors.outlineVariant),
+          ListTile(
+            leading: Icon(Icons.help_outline, color: context.colors.primary),
+            title: Text(context.l10n.officialHelpAndFaq),
+            trailing: Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: context.colors.onSurfaceVariant,
+            ),
+            onTap: () => unawaited(_openHelp(context)),
+          ),
+        ],
+      ),
     );
   }
 }

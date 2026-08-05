@@ -4539,4 +4539,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportPhase1ShareSubject => 'Alanya export (profile and metadata)';
+
+  @override
+  String get officialContactSupport => 'Contact support';
+
+  @override
+  String get officialComingSoon => 'Coming soon';
+
+  @override
+  String get officialHelpAndFaq => 'Help and FAQ';
+
+  @override
+  String get officialHelpUnavailable => 'Could not open the help page';
 }

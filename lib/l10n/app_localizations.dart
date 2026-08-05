@@ -8023,6 +8023,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Export Alanya (profil et métadonnées)'**
   String get exportPhase1ShareSubject;
+
+  /// No description provided for @officialContactSupport.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contacter le support'**
+  String get officialContactSupport;
+
+  /// No description provided for @officialComingSoon.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bientôt disponible'**
+  String get officialComingSoon;
+
+  /// No description provided for @officialHelpAndFaq.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide et questions fréquentes'**
+  String get officialHelpAndFaq;
+
+  /// No description provided for @officialHelpUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir la page d\'aide'**
+  String get officialHelpUnavailable;
 }
 
 class _AppLocalizationsDelegate

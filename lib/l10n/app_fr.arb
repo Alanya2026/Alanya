@@ -2728,5 +2728,9 @@
     }
   },
   "dndSummaryInactive": "Désactivé",
-  "exportPhase1ShareSubject": "Export Alanya (profil et métadonnées)"
+  "exportPhase1ShareSubject": "Export Alanya (profil et métadonnées)",
+  "officialContactSupport": "Contacter le support",
+  "officialComingSoon": "Bientôt disponible",
+  "officialHelpAndFaq": "Aide et questions fréquentes",
+  "officialHelpUnavailable": "Impossible d'ouvrir la page d'aide"
 }
