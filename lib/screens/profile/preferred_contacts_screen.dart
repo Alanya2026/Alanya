@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/contact_list_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/utils/app_log.dart';
@@ -134,6 +135,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
   /// Rangée de puces : « Tous », « Par QR », une par liste, puis « Gérer ».
   Widget _buildFilterChips(
     List<LocalContactList> lists,
+    Map<int, String> couleurs,
     int? activeListId,
     int totalCount,
     int qrCount,
@@ -179,8 +181,8 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
             AppSpacing.hGapSm,
             Builder(builder: (context) {
               final selected = activeListId == list.idList;
-              final tint =
-                  parseListColor(list.color) ?? context.colors.primary;
+              final tint = parseListColor(couleurs[list.idList]) ??
+                  context.colors.primary;
               return ChoiceChip(
                 label: Text('${list.name} · ${list.memberCount}'),
                 selected: selected,
@@ -218,6 +220,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
     List<User> scoped,
     bool hasQuery,
     Map<int, List<LocalContactList>> memberships,
+    Map<int, String> couleurs,
   ) {
     final shown =
         hasQuery ? filterUsersBySearch(scoped, _searchQuery) : scoped;
@@ -242,6 +245,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
         return _ContactTile(
           user: user,
           lists: memberships[user.alanyaID] ?? const [],
+          couleurs: couleurs,
           onRemove: () => _showRemoveOptions(user),
         );
       },
@@ -288,6 +292,9 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                   lists.any((l) => l.idList == _selectedListId)
                       ? _selectedListId
                       : null;
+              // Teintes effectives de l'ensemble : puces de filtre et puces
+              // d'appartenance parlent alors de la même couleur.
+              final couleurs = resolveListColors(lists);
 
               return Column(
                 children: [
@@ -329,6 +336,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                   ),
                   _buildFilterChips(
                     lists,
+                    couleurs,
                     activeListId,
                     contacts.length,
                     qrCount,
@@ -366,6 +374,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                                 visible,
                                 hasQuery,
                                 memberships,
+                                couleurs,
                               );
                             },
                           ),
@@ -384,6 +393,7 @@ class _ContactTile extends StatelessWidget {
   const _ContactTile({
     required this.user,
     required this.lists,
+    required this.couleurs,
     required this.onRemove,
   });
 
@@ -392,6 +402,9 @@ class _ContactTile extends StatelessWidget {
   /// Listes auxquelles ce contact appartient — c'est le seul endroit de l'app
   /// où l'appartenance multiple se voit d'un coup d'œil.
   final List<LocalContactList> lists;
+
+  /// Teintes effectives, résolues pour l'ensemble des listes.
+  final Map<int, String> couleurs;
   final VoidCallback onRemove;
 
   @override
@@ -478,7 +491,10 @@ class _ContactTile extends StatelessWidget {
                           runSpacing: AppSpacing.xs,
                           children: [
                             for (final list in lists)
-                              _ListBadge(list: list),
+                              _ListBadge(
+                                list: list,
+                                hex: couleurs[list.idList],
+                              ),
                           ],
                         ),
                       ],
@@ -512,13 +528,14 @@ class _ContactTile extends StatelessWidget {
 /// Puce compacte d'appartenance, posée sous un contact. Reprend la couleur de
 /// la liste pour que l'œil fasse le lien avec la rangée de filtres au-dessus.
 class _ListBadge extends StatelessWidget {
-  const _ListBadge({required this.list});
+  const _ListBadge({required this.list, required this.hex});
 
   final LocalContactList list;
+  final String? hex;
 
   @override
   Widget build(BuildContext context) {
-    final tint = parseListColor(list.color) ?? context.colors.primary;
+    final tint = parseListColor(hex) ?? context.colors.primary;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,

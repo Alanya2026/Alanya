@@ -4665,4 +4665,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String createGroupNamed(String name) {
     return 'Créer un groupe « $name »';
   }
+
+  @override
+  String get manageLists => 'Gérer les listes';
+
+  @override
+  String get contactListsSheetSubtitle =>
+      'Ouvrir une liste, ou en faire un groupe.';
+
+  @override
+  String get markAllAsRead => 'Tout marquer comme lu';
+
+  @override
+  String markAllAsReadDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count discussions marquées comme lues',
+      one: '1 discussion marquée comme lue',
+      zero: 'Aucune discussion non lue',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get optionsAction => 'Options';
 }

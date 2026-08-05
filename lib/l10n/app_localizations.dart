@@ -8137,6 +8137,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Créer un groupe « {name} »'**
   String createGroupNamed(String name);
+
+  /// No description provided for @manageLists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gérer les listes'**
+  String get manageLists;
+
+  /// No description provided for @contactListsSheetSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir une liste, ou en faire un groupe.'**
+  String get contactListsSheetSubtitle;
+
+  /// No description provided for @markAllAsRead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout marquer comme lu'**
+  String get markAllAsRead;
+
+  /// No description provided for @markAllAsReadDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucune discussion non lue} =1{1 discussion marquée comme lue} other{{count} discussions marquées comme lues}}'**
+  String markAllAsReadDone(int count);
+
+  /// No description provided for @optionsAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Options'**
+  String get optionsAction;
 }
 
 class _AppLocalizationsDelegate

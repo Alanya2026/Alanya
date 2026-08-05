@@ -2767,5 +2767,15 @@
     "placeholders": {
       "name": { "type": "String" }
     }
-  }
+  },
+  "manageLists": "Gérer les listes",
+  "contactListsSheetSubtitle": "Ouvrir une liste, ou en faire un groupe.",
+  "markAllAsRead": "Tout marquer comme lu",
+  "markAllAsReadDone": "{count, plural, =0{Aucune discussion non lue} =1{1 discussion marquée comme lue} other{{count} discussions marquées comme lues}}",
+  "@markAllAsReadDone": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "optionsAction": "Options"
 }

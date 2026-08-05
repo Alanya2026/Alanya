@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/contact_list_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../talky_api_client.dart';
@@ -36,7 +37,14 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
 
   Future<void> _create() async {
     final l10n = context.l10n;
-    final result = await showListEditorSheet(context);
+    final cacheLecture = context.read<LocalCacheRepository>();
+    // La liste naît colorée : on propose la première teinte encore libre.
+    final proposee = nextFreeContactListColor({
+      for (final l in await cacheLecture.getContactListsOnce())
+        if (parseListColor(l.color) != null) l.color!.toUpperCase(),
+    });
+    if (!mounted) return;
+    final result = await showListEditorSheet(context, initialColor: proposee);
     if (result == null || !mounted) return;
     final cache = context.read<LocalCacheRepository>();
     try {
@@ -57,10 +65,15 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
 
   Future<void> _rename(LocalContactList list) async {
     final l10n = context.l10n;
+    final cacheLecture = context.read<LocalCacheRepository>();
+    // Une liste sans couleur en base en affiche déjà une : l'éditeur doit
+    // ouvrir sur la même pastille cochée, pas sur rien.
+    final couleurs = resolveListColors(await cacheLecture.getContactListsOnce());
+    if (!mounted) return;
     final result = await showListEditorSheet(
       context,
       initialName: list.name,
-      initialColor: list.color,
+      initialColor: couleurs[list.idList] ?? kContactListColors.first,
     );
     if (result == null || !mounted) return;
     final cache = context.read<LocalCacheRepository>();
@@ -68,8 +81,7 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
       await cache.updateContactList(
         list.idList,
         name: result.name,
-        // Chaîne vide = « efface la couleur » côté serveur.
-        color: result.color ?? '',
+        color: result.color,
       );
     } on TalkyException catch (e) {
       _showError(e.statusCode == 409
@@ -190,6 +202,7 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
         stream: cache.watchContactLists(),
         builder: (context, snapshot) {
           final lists = snapshot.data ?? const <LocalContactList>[];
+          final couleurs = resolveListColors(lists);
           if (lists.isEmpty) {
             return EmptyState(
               icon: Icons.folder_outlined,
@@ -215,6 +228,7 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
               for (final list in lists)
                 _ContactListTile(
                   list: list,
+                  color: couleurs[list.idList] ?? kContactListColors.first,
                   onTap: () => _openList(list),
                   onOptions: () => _showListOptions(list),
                 ),
@@ -238,17 +252,21 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
 class _ContactListTile extends StatelessWidget {
   const _ContactListTile({
     required this.list,
+    required this.color,
     required this.onTap,
     required this.onOptions,
   });
 
   final LocalContactList list;
+
+  /// Teinte effective, résolue pour l'ensemble des listes.
+  final String color;
   final VoidCallback onTap;
   final VoidCallback onOptions;
 
   @override
   Widget build(BuildContext context) {
-    final tint = parseListColor(list.color) ?? context.colors.primary;
+    final tint = parseListColor(color) ?? context.colors.primary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -268,15 +286,9 @@ class _ContactListTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: AppSizes.avatarSm,
-                  height: AppSizes.avatarSm,
-                  decoration: BoxDecoration(
-                    color: tint.withAlpha(38),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.folder_outlined, color: tint),
-                ),
+                // Dossier plein, glyphe blanc : c'est la couleur qui identifie
+                // la liste d'un coup d'œil, pas l'icône.
+                ContactListFolder(color: tint, size: AppSizes.avatarMd),
                 AppSpacing.hGapMd,
                 Expanded(
                   child: Column(
@@ -308,43 +320,14 @@ class _ContactListTile extends StatelessWidget {
 
 // ── Éditeur de liste (création / renommage) ──────────────────────────
 
-/// Palette proposée pour la puce d'une liste. Volontairement courte : la
-/// couleur sert à distinguer les puces d'un coup d'œil, pas à décorer.
-const List<String> kContactListColors = [
-  '#E53935',
-  '#FB8C00',
-  '#FDD835',
-  '#43A047',
-  '#00ACC1',
-  '#1E88E5',
-  '#8E24AA',
-  '#6D4C41',
-];
-
-/// `#RRGGBB` / `#RRGGBBAA` → [Color]. Null si vide ou illisible : l'appelant
-/// retombe alors sur la teinte du thème.
-Color? parseListColor(String? raw) {
-  if (raw == null || raw.isEmpty) return null;
-  var s = raw.trim();
-  if (s.startsWith('#')) s = s.substring(1);
-  if (s.length == 6) {
-    final v = int.tryParse(s, radix: 16);
-    if (v != null) return Color(0xFF000000 | v);
-  }
-  if (s.length == 8) {
-    final v = int.tryParse(s, radix: 16);
-    if (v != null) return Color(v);
-  }
-  return null;
-}
-
-/// Résultat de l'éditeur : `color` null = pas de couleur, [memberIds] vide en
-/// renommage (les membres se gèrent alors depuis l'écran détail).
+/// Résultat de l'éditeur. La couleur n'est jamais nulle — une liste est
+/// toujours colorée. [memberIds] est vide en renommage (les membres se gèrent
+/// alors depuis l'écran détail).
 class ContactListDraft {
   const ContactListDraft(this.name, this.color, {this.memberIds = const {}});
 
   final String name;
-  final String? color;
+  final String color;
   final Set<int> memberIds;
 }
 
@@ -354,7 +337,7 @@ class ContactListDraft {
 Future<ContactListDraft?> showListEditorSheet(
   BuildContext context, {
   String? initialName,
-  String? initialColor,
+  required String initialColor,
 }) {
   return showAppBottomSheet<ContactListDraft>(
     context: context,
@@ -366,10 +349,10 @@ Future<ContactListDraft?> showListEditorSheet(
 }
 
 class _ListEditorSheet extends StatefulWidget {
-  const _ListEditorSheet({this.initialName, this.initialColor});
+  const _ListEditorSheet({this.initialName, required this.initialColor});
 
   final String? initialName;
-  final String? initialColor;
+  final String initialColor;
 
   @override
   State<_ListEditorSheet> createState() => _ListEditorSheetState();
@@ -378,7 +361,7 @@ class _ListEditorSheet extends StatefulWidget {
 class _ListEditorSheetState extends State<_ListEditorSheet> {
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialName ?? '');
-  late String? _color = widget.initialColor;
+  late String _color = widget.initialColor;
 
   /// Membres choisis à la création (vide en renommage).
   final Set<int> _memberIds = {};
@@ -465,15 +448,10 @@ class _ListEditorSheetState extends State<_ListEditorSheet> {
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
-                _ColorDot(
-                  color: null,
-                  selected: _color == null,
-                  onTap: () => setState(() => _color = null),
-                ),
                 for (final hex in kContactListColors)
                   _ColorDot(
-                    color: parseListColor(hex),
-                    selected: _color?.toUpperCase() == hex,
+                    color: parseListColor(hex)!,
+                    selected: _color.toUpperCase() == hex,
                     onTap: () => setState(() => _color = hex),
                   ),
               ],
@@ -549,8 +527,7 @@ class _ColorDot extends StatelessWidget {
     required this.onTap,
   });
 
-  /// Null = « aucune couleur » (la puce reprend la teinte du thème).
-  final Color? color;
+  final Color color;
   final bool selected;
   final VoidCallback onTap;
 
@@ -563,19 +540,17 @@ class _ColorDot extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: color ?? context.colors.surfaceContainerHighest,
+          color: color,
           shape: BoxShape.circle,
           border: Border.all(
             color: selected ? context.colors.onSurface : context.colors.outline,
             width: selected ? 2.5 : 1,
           ),
         ),
-        child: color == null
-            ? Icon(
-                Icons.format_color_reset_outlined,
-                size: AppIconSize.sm,
-                color: context.colors.onSurfaceVariant,
-              )
+        // La coche évite de devoir deviner la teinte sélectionnée au seul
+        // liseré, peu lisible sur les couleurs sombres de la palette.
+        child: selected
+            ? const Icon(Icons.check, size: AppIconSize.sm, color: Colors.white)
             : null,
       ),
     );

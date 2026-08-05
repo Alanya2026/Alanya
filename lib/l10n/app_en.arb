@@ -1885,5 +1885,15 @@
     "placeholders": {
       "name": { "type": "String" }
     }
-  }
+  },
+  "manageLists": "Manage lists",
+  "contactListsSheetSubtitle": "Open a list, or turn it into a group.",
+  "markAllAsRead": "Mark all as read",
+  "markAllAsReadDone": "{count, plural, =0{No unread chats} =1{1 chat marked as read} other{{count} chats marked as read}}",
+  "@markAllAsReadDone": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "optionsAction": "Options"
 }

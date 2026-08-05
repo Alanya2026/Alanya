@@ -1,0 +1,822 @@
+<title>Alanya — Listes : couleurs et accès depuis les discussions</title>
+
+<style>
+  /* ------------------------------------------------------------------
+     Troisième maquette de la série « listes de contacts ». Mêmes tokens
+     que listes-contacts.html et liste-conversations-badges.html, donc
+     que lib/core/theme/app_colors.dart et app_dimens.dart.
+
+     Deux sujets : la palette des listes (les couleurs de dossier), et
+     l'accès aux listes depuis l'écran des discussions.
+     ------------------------------------------------------------------ */
+  :root {
+    --brand:            #3F51B5;
+    --brand-dark:       #1A237E;
+    --brand-container:  #E8EAF6;
+    --online:           #1FA363;
+
+    --bg:               #F6F7FB;
+    --surface:          #FFFFFF;
+    --surface-muted:    #F4F5F8;
+    --outline:          #E2E5EC;
+    --outline-strong:   #CBD0E0;
+
+    --ink:              #1A1D23;
+    --ink-2:            #5B6273;
+    --ink-3:            #9AA0AE;
+
+    --page-bg:          #EEF0F7;
+    --page-panel:       #FFFFFF;
+    --page-line:        #DDE1EC;
+    --page-ink:         #23283A;
+    --page-ink-2:       #626A82;
+
+    /* Palette des listes, dans l'ORDRE D'ATTRIBUTION. Les trois premières
+       sont celles de la maquette d'origine — les listes existantes ne
+       changent pas de couleur. */
+    --l-1: #C2185B;  /* framboise  — Famille   */
+    --l-2: #00796B;  /* sarcelle   — Amis      */
+    --l-3: #3949AB;  /* indigo     — Bureau    */
+    --l-4: #B7791F;  /* ocre       — Confiance */
+    --l-5: #5E35B1;  /* violet                 */
+    --l-6: #2E7D32;  /* vert forêt             */
+    --l-7: #C62828;  /* brique                 */
+    --l-8: #455A64;  /* ardoise                */
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px; --r-pill: 28px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #3A404C; --outline-strong: #3A404C;
+      --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand-container: #283593;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --outline-strong: #3A404C;
+    --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --brand-container: #E8EAF6;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    min-height: 100vh; padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 64ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px, 3.6vw, 38px); line-height: 1.12; letter-spacing: -0.02em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px, 3vw, 30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 70ch; }
+
+  /* ---------- Palette ---------- */
+  .palette {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: var(--s-md); list-style: none; margin: 0; padding: 0;
+  }
+  .teinte {
+    border: 1px solid var(--page-line); border-radius: var(--r-md);
+    padding: var(--s-md); display: flex; align-items: center; gap: var(--s-md);
+    background: var(--page-panel);
+  }
+  .teinte .carre { width: 40px; height: 40px; }
+  .teinte-txt { display: flex; flex-direction: column; min-width: 0; }
+  .teinte-nom { font-size: 13.5px; font-weight: 600; }
+  .teinte-hex {
+    font-family: var(--mono); font-size: 11.5px; color: var(--page-ink-2);
+    text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .teinte-usage {
+    font-size: 11px; color: var(--brand); font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .teinte[data-libre="1"] .teinte-usage { color: var(--page-ink-2); font-weight: 500; }
+  .teinte[data-neuf="1"] { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+
+  /* ---------- Scène ---------- */
+  .stage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: clamp(18px, 2.6vw, 32px); align-items: start;
+  }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 30ch;
+  }
+  .device-caption b { display: block; color: var(--page-ink); font-weight: 600; letter-spacing: 0.06em; }
+  .device {
+    width: 100%; max-width: 330px; background: var(--bg);
+    border: 1px solid var(--outline); border-radius: 30px; padding: 8px;
+    box-shadow: 0 18px 44px rgba(26, 35, 126, 0.13), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 560px; color: var(--ink);
+    position: relative;
+  }
+
+  .appbar {
+    background: var(--surface); border-bottom: 1px solid var(--outline);
+    padding: 14px var(--s-lg) var(--s-md);
+    display: flex; align-items: center; gap: var(--s-md);
+  }
+  .appbar .back { width: 22px; height: 22px; color: var(--ink-2); flex: none; }
+  .appbar h3 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+  .appbar .spacer { flex: 1; }
+  .appbar .icone { width: 21px; height: 21px; color: var(--ink-2); flex: none; }
+  .appbar .icone.actif { color: var(--brand); }
+
+  /* ---------- Puces de filtre ---------- */
+  .chips-wrap { position: relative; }
+  .chips-wrap::after {
+    content: ""; position: absolute; inset: 0 0 0 auto; width: 36px;
+    pointer-events: none;
+    background: linear-gradient(to right, transparent, var(--bg) 72%);
+  }
+  .chips {
+    display: flex; gap: var(--s-sm); padding: var(--s-sm) var(--s-lg) var(--s-md);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; flex: none;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    border: 1px solid var(--outline); background: var(--surface);
+    font-size: 12.5px; font-weight: 550; color: var(--ink-2); white-space: nowrap;
+  }
+  .chip svg { width: 14px; height: 14px; flex: none; }
+  .chip[aria-pressed="true"] {
+    background: var(--brand-container); border-color: transparent; color: var(--brand-dark);
+  }
+  :root[data-theme="dark"] .chip[aria-pressed="true"] { color: #C5CAE9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .chip[aria-pressed="true"] { color: #C5CAE9; }
+  }
+
+  /* ---------- Lignes ---------- */
+  .rows { background: var(--surface); flex: 1; display: flex; flex-direction: column; }
+  .rows.plat { background: transparent; padding: var(--s-sm) var(--s-lg); gap: var(--s-sm); }
+  .row {
+    display: flex; align-items: center; gap: var(--s-md);
+    padding: 11px var(--s-lg); border-bottom: 1px solid var(--outline);
+  }
+  .row:last-child { border-bottom: none; }
+  .rows.plat .row {
+    background: var(--surface); border: none; border-radius: var(--r-sm);
+    padding: 10px var(--s-md);
+  }
+
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    flex: none; position: relative; font-size: 14px; font-weight: 650; color: #fff;
+  }
+  .row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .row-nom {
+    font-size: 15px; font-weight: 600; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .row-sous { font-size: 12.5px; color: var(--ink-2); }
+  .row-sous.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .chevron { width: 18px; height: 18px; color: var(--ink-3); flex: none; }
+
+  /* Dossier coloré d'une liste — le sujet de cette maquette. */
+  .carre {
+    width: 44px; height: 44px; border-radius: var(--r-sm); flex: none;
+    display: grid; place-items: center; color: #fff;
+  }
+  .carre svg { width: 22px; height: 22px; }
+  .carre.petit { width: 34px; height: 34px; border-radius: 10px; }
+  .carre.petit svg { width: 18px; height: 18px; }
+
+  .voile { opacity: 0.38; filter: saturate(0.75); }
+
+  /* ---------- Menu ⋮ ---------- */
+  .menu {
+    position: absolute; top: 52px; right: var(--s-md);
+    background: var(--surface); border: 1px solid var(--outline);
+    border-radius: var(--r-md); padding: var(--s-sm) 0; min-width: 208px;
+    box-shadow: 0 12px 30px rgba(26, 35, 126, 0.18), 0 2px 6px rgba(0,0,0,0.08);
+    display: flex; flex-direction: column; z-index: 3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .menu { box-shadow: 0 12px 30px rgba(0,0,0,0.6); }
+  }
+  :root[data-theme="dark"] .menu { box-shadow: 0 12px 30px rgba(0,0,0,0.6); }
+  .menu-item {
+    display: flex; align-items: center; gap: var(--s-md);
+    padding: 10px var(--s-lg); font-size: 14px; color: var(--ink);
+  }
+  .menu-item svg { width: 19px; height: 19px; color: var(--ink-2); flex: none; }
+  .menu-item.vedette { color: var(--brand-dark); font-weight: 600; }
+  .menu-item.vedette svg { color: var(--brand); }
+  :root[data-theme="dark"] .menu-item.vedette { color: #C5CAE9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .menu-item.vedette { color: #C5CAE9; }
+  }
+  .menu-sep { height: 1px; background: var(--outline); margin: var(--s-sm) 0; }
+
+  /* ---------- Feuille ---------- */
+  .scrim { position: absolute; inset: 0; background: rgba(10, 12, 17, 0.42); z-index: 2; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+    background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0;
+    padding: var(--s-sm) 0 var(--s-lg); display: flex; flex-direction: column;
+    gap: var(--s-sm);
+  }
+  .poignee {
+    width: 40px; height: 4px; border-radius: 2px; background: var(--outline-strong);
+    margin: var(--s-sm) auto var(--s-xs);
+  }
+  .sheet h4 {
+    margin: 0; padding: 0 var(--s-lg); font-size: 15px; font-weight: 650;
+  }
+  .sheet .sous {
+    margin: 0; padding: 0 var(--s-lg) var(--s-xs);
+    font-size: 12.5px; color: var(--ink-2);
+  }
+  .sheet-rows { display: flex; flex-direction: column; }
+  .sheet-row {
+    display: flex; align-items: center; gap: var(--s-md);
+    padding: 9px var(--s-lg);
+  }
+  .sheet-pied {
+    margin-top: var(--s-xs); padding: var(--s-md) var(--s-lg) 0;
+    border-top: 1px solid var(--outline);
+    display: flex; align-items: center; gap: var(--s-md);
+    font-size: 14px; color: var(--brand-dark); font-weight: 600;
+  }
+  .sheet-pied svg { width: 19px; height: 19px; color: var(--brand); }
+  :root[data-theme="dark"] .sheet-pied { color: #C5CAE9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .sheet-pied { color: #C5CAE9; }
+  }
+
+  .hint {
+    margin: 0; padding: var(--s-lg);
+    font-size: 12.5px; line-height: 1.5; color: var(--ink-3);
+    background: transparent; flex: 1;
+  }
+  .fab {
+    position: absolute; right: var(--s-lg); bottom: var(--s-lg);
+    height: 48px; padding: 0 var(--s-lg); border-radius: var(--r-pill); border: none;
+    background: var(--brand); color: #fff; font-size: 14.5px; font-weight: 650;
+    font-family: inherit; display: inline-flex; align-items: center; gap: var(--s-sm);
+    box-shadow: 0 6px 16px rgba(63, 81, 181, 0.35);
+  }
+  .fab svg { width: 18px; height: 18px; }
+
+  /* ---------- Comparaison ---------- */
+  .duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: var(--s-lg); }
+  .carte {
+    border: 1px solid var(--page-line); border-radius: var(--r-md);
+    padding: var(--s-lg); display: flex; flex-direction: column; gap: var(--s-sm);
+  }
+  .carte[data-choix="1"] { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+  .carte h3 {
+    margin: 0; font-family: var(--mono); font-size: 12.5px; color: var(--brand);
+    letter-spacing: 0.02em; font-weight: 600; display: flex; align-items: center; gap: var(--s-sm);
+  }
+  .carte .badge {
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--brand-container); color: var(--brand-dark);
+    padding: 2px 8px; border-radius: var(--r-pill); font-weight: 700;
+  }
+  :root[data-theme="dark"] .carte .badge { color: #C5CAE9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .carte .badge { color: #C5CAE9; }
+  }
+  .carte p { margin: 0; font-size: 13.5px; color: var(--page-ink-2); }
+  .carte ul { margin: 0; padding-left: 1.1em; font-size: 13.5px; color: var(--page-ink-2); }
+  .carte li + li { margin-top: 3px; }
+  .carte li b { color: var(--page-ink); font-weight: 600; }
+
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note {
+    border-left: 3px solid var(--brand); padding-left: var(--s-md);
+    font-size: 13.5px; color: var(--page-ink-2);
+  }
+  .note b { color: var(--page-ink); }
+  .note code, .inline-code {
+    font-family: var(--mono); font-size: 12.5px;
+    background: var(--surface-muted); padding: 1px 5px; border-radius: 5px;
+    color: var(--page-ink);
+  }
+
+  .decisions { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  .decisions th, .decisions td {
+    text-align: left; padding: 9px var(--s-md); border-bottom: 1px solid var(--page-line);
+    vertical-align: top;
+  }
+  .decisions th { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--page-ink-2); font-weight: 600; }
+  .decisions td:first-child { font-weight: 600; white-space: nowrap; }
+  .decisions td:last-child { color: var(--page-ink-2); }
+  .table-wrap { overflow-x: auto; }
+
+  .pied {
+    text-align: center; font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--page-ink-2);
+  }
+</style>
+
+<div class="page">
+  <div class="wrap">
+
+    <header class="masthead">
+      <p class="eyebrow">Alanya · Listes de contacts · Revue de design</p>
+      <h1>Des dossiers colorés, et un accès depuis les discussions</h1>
+      <p>
+        Deux sujets, aucune ligne de code écrite. D'abord la couleur des listes :
+        elle devient un attribut posé d'office, plus une option à remplir. Ensuite
+        l'accès : le menu ⋮ de l'écran des discussions, aujourd'hui inerte, devient
+        le chemin court vers les listes.
+      </p>
+    </header>
+
+    <!-- ================= PALETTE ================= -->
+    <section class="panel">
+      <header>
+        <h2>1 — La palette des listes</h2>
+        <p>
+          Huit teintes profondes, de valeur voisine, qui tiennent sur fond clair
+          comme sur fond sombre. Les trois premières sont celles de la maquette
+          d'origine : <b>les listes existantes ne changent pas de couleur</b>.
+        </p>
+      </header>
+
+      <ul class="palette">
+        <li class="teinte">
+          <span class="carre" style="background: var(--l-1)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+          </span>
+          <span class="teinte-txt">
+            <span class="teinte-nom">Framboise</span>
+            <span class="teinte-hex">#C2185B</span>
+            <span class="teinte-usage">Famille</span>
+          </span>
+        </li>
+        <li class="teinte">
+          <span class="carre" style="background: var(--l-2)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+          </span>
+          <span class="teinte-txt">
+            <span class="teinte-nom">Sarcelle</span>
+            <span class="teinte-hex">#00796B</span>
+            <span class="teinte-usage">Amis</span>
+          </span>
+        </li>
+        <li class="teinte">
+          <span class="carre" style="background: var(--l-3)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+          </span>
+          <span class="teinte-txt">
+            <span class="teinte-nom">Indigo</span>
+            <span class="teinte-hex">#3949AB</span>
+            <span class="teinte-usage">Bureau</span>
+          </span>
+        </li>
+        <li class="teinte" data-neuf="1">
+          <span class="carre" style="background: var(--l-4)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+          </span>
+          <span class="teinte-txt">
+            <span class="teinte-nom">Ocre</span>
+            <span class="teinte-hex">#B7791F</span>
+            <span class="teinte-usage">Confiance</span>
+          </span>
+        </li>
+        <li class="teinte" data-libre="1">
+          <span class="carre" style="background: var(--l-5)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+          </span>
+          <span class="teinte-txt">
+            <span class="teinte-nom">Violet</span>
+            <span class="teinte-hex">#5E35B1</span>
+            <span class="teinte-usage">5<sup>e</sup> liste</span>
+          </span>
+        </li>
+        <li class="teinte" data-libre="1">
+          <span class="carre" style="background: var(--l-6)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+          </span>
+          <span class="teinte-txt">
+            <span class="teinte-nom">Vert forêt</span>
+            <span class="teinte-hex">#2E7D32</span>
+            <span class="teinte-usage">6<sup>e</sup> liste</span>
+          </span>
+        </li>
+        <li class="teinte" data-libre="1">
+          <span class="carre" style="background: var(--l-7)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+          </span>
+          <span class="teinte-txt">
+            <span class="teinte-nom">Brique</span>
+            <span class="teinte-hex">#C62828</span>
+            <span class="teinte-usage">7<sup>e</sup> liste</span>
+          </span>
+        </li>
+        <li class="teinte" data-libre="1">
+          <span class="carre" style="background: var(--l-8)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+          </span>
+          <span class="teinte-txt">
+            <span class="teinte-nom">Ardoise</span>
+            <span class="teinte-hex">#455A64</span>
+            <span class="teinte-usage">8<sup>e</sup> liste</span>
+          </span>
+        </li>
+      </ul>
+
+      <div class="notes">
+        <p class="note">
+          <b>Pourquoi l'ocre pour « Confiance ».</b> Framboise, sarcelle et indigo
+          occupent le rose, le vert-bleu et le bleu. L'ocre est la seule teinte
+          <b>chaude</b> du lot : à la taille d'une puce, sous un nom, elle ne peut
+          être confondue avec aucune des trois. Elle est déjà employée dans la
+          série de maquettes pour les avatars, elle n'introduit donc pas une
+          couleur étrangère à l'application. Le violet <span class="inline-code">#5E35B1</span>
+          est l'alternative — plus sobre, mais voisine de l'indigo de « Bureau ».
+        </p>
+        <p class="note">
+          <b>La couleur n'est plus une case à remplir.</b> Aujourd'hui une liste
+          naît sans couleur et affiche un dossier au bleu du thème — c'est pour
+          cela que « Confiance » est terne. Désormais : à la création, la liste
+          prend <b>la première teinte encore libre</b> de la palette, dans l'ordre
+          ci-dessus. L'utilisateur peut toujours en changer ; il ne peut plus se
+          retrouver sans.
+        </p>
+        <p class="note">
+          <b>Les listes déjà créées.</b> Celles qui n'ont pas de couleur en base
+          en dérivent une de leur rang de création — stable, sans migration SQL et
+          sans clignotement d'un lancement à l'autre.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= ACCÈS ================= -->
+    <section class="panel">
+      <header>
+        <h2>2 — L'accès depuis les discussions</h2>
+        <p>
+          Le bouton ⋮ de l'écran des discussions existe déjà mais ne fait rien
+          (<span class="inline-code">onPressed: () {}</span>). On lui donne son
+          premier contenu. Deux propositions, à trancher.
+        </p>
+      </header>
+
+      <div class="stage">
+
+        <!-- Écran 1 : menu ouvert -->
+        <div class="device-block">
+          <div class="device">
+            <div class="screen">
+              <div class="appbar">
+                <h3>Discussions</h3>
+                <span class="spacer"></span>
+                <svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+                <svg class="icone actif" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+              </div>
+
+              <div class="chips-wrap">
+                <div class="chips">
+                  <span class="chip" aria-pressed="true">Tous</span>
+                  <span class="chip">Discussions</span>
+                  <span class="chip">Groupes</span>
+                  <span class="chip">Non lus</span>
+                </div>
+              </div>
+
+              <div class="rows voile">
+                <div class="row">
+                  <span class="avatar" style="background:#C2185B">AN</span>
+                  <div class="row-body">
+                    <span class="row-nom">Aline Ndongo</span>
+                    <span class="row-sous">On se voit dimanche ?</span>
+                  </div>
+                  <span class="row-sous mono">12:04</span>
+                </div>
+                <div class="row">
+                  <span class="avatar" style="background:#3949AB">EB</span>
+                  <div class="row-body">
+                    <span class="row-nom">Équipe Bureau</span>
+                    <span class="row-sous">Joseph : le devis est parti</span>
+                  </div>
+                  <span class="row-sous mono">11:38</span>
+                </div>
+                <div class="row">
+                  <span class="avatar" style="background:#B7791F">PE</span>
+                  <div class="row-body">
+                    <span class="row-nom">Paul Etoundi</span>
+                    <span class="row-sous">Merci pour hier 🙏</span>
+                  </div>
+                  <span class="row-sous mono">Hier</span>
+                </div>
+              </div>
+
+              <div class="menu">
+                <span class="menu-item vedette">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                  Listes de contacts
+                </span>
+                <span class="menu-sep"></span>
+                <span class="menu-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+                  Nouveau groupe
+                </span>
+                <span class="menu-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 8.5 17 20 5.5"/><path d="M4 19h9"/></svg>
+                  Tout marquer comme lu
+                </span>
+              </div>
+            </div>
+          </div>
+          <p class="device-caption">
+            <b>Le menu ⋮</b>
+            « Listes de contacts » en tête, isolée par un séparateur
+          </p>
+        </div>
+
+        <!-- Écran 2 : feuille -->
+        <div class="device-block">
+          <div class="device">
+            <div class="screen">
+              <div class="appbar">
+                <h3>Discussions</h3>
+                <span class="spacer"></span>
+                <svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+                <svg class="icone" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+              </div>
+
+              <div class="rows">
+                <div class="row">
+                  <span class="avatar" style="background:#C2185B">AN</span>
+                  <div class="row-body">
+                    <span class="row-nom">Aline Ndongo</span>
+                    <span class="row-sous">On se voit dimanche ?</span>
+                  </div>
+                  <span class="row-sous mono">12:04</span>
+                </div>
+                <div class="row">
+                  <span class="avatar" style="background:#3949AB">EB</span>
+                  <div class="row-body">
+                    <span class="row-nom">Équipe Bureau</span>
+                    <span class="row-sous">Joseph : le devis est parti</span>
+                  </div>
+                  <span class="row-sous mono">11:38</span>
+                </div>
+              </div>
+
+              <div class="scrim"></div>
+
+              <div class="sheet">
+                <span class="poignee"></span>
+                <h4>Listes de contacts</h4>
+                <p class="sous">Ouvrir une liste, ou en faire un groupe.</p>
+                <div class="sheet-rows">
+                  <div class="sheet-row">
+                    <span class="carre petit" style="background: var(--l-1)">
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                    </span>
+                    <div class="row-body">
+                      <span class="row-nom">Famille</span>
+                      <span class="row-sous">6 membres</span>
+                    </div>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                  </div>
+                  <div class="sheet-row">
+                    <span class="carre petit" style="background: var(--l-2)">
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                    </span>
+                    <div class="row-body">
+                      <span class="row-nom">Amis</span>
+                      <span class="row-sous">9 membres</span>
+                    </div>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                  </div>
+                  <div class="sheet-row">
+                    <span class="carre petit" style="background: var(--l-3)">
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                    </span>
+                    <div class="row-body">
+                      <span class="row-nom">Bureau</span>
+                      <span class="row-sous">4 membres</span>
+                    </div>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                  </div>
+                  <div class="sheet-row">
+                    <span class="carre petit" style="background: var(--l-4)">
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                    </span>
+                    <div class="row-body">
+                      <span class="row-nom">Confiance</span>
+                      <span class="row-sous">3 membres</span>
+                    </div>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                  </div>
+                </div>
+                <div class="sheet-pied">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
+                  Gérer les listes
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="device-caption">
+            <b>Option B — la feuille</b>
+            Les listes sous la main, gestion reléguée en pied
+          </p>
+        </div>
+
+        <!-- Écran 3 : écran des listes -->
+        <div class="device-block">
+          <div class="device">
+            <div class="screen">
+              <div class="appbar">
+                <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
+                <h3>Listes de contacts</h3>
+              </div>
+
+              <div class="rows plat">
+                <div class="row">
+                  <span class="carre" style="background: var(--l-1)">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                  </span>
+                  <div class="row-body">
+                    <span class="row-nom">Famille</span>
+                    <span class="row-sous">6 membres</span>
+                  </div>
+                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                </div>
+                <div class="row">
+                  <span class="carre" style="background: var(--l-2)">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                  </span>
+                  <div class="row-body">
+                    <span class="row-nom">Amis</span>
+                    <span class="row-sous">9 membres</span>
+                  </div>
+                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                </div>
+                <div class="row">
+                  <span class="carre" style="background: var(--l-3)">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                  </span>
+                  <div class="row-body">
+                    <span class="row-nom">Bureau</span>
+                    <span class="row-sous">4 membres</span>
+                  </div>
+                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                </div>
+                <div class="row">
+                  <span class="carre" style="background: var(--l-4)">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+                  </span>
+                  <div class="row-body">
+                    <span class="row-nom">Confiance</span>
+                    <span class="row-sous">3 membres</span>
+                  </div>
+                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                </div>
+              </div>
+
+              <p class="hint">
+                Une liste ne peut contenir que des contacts déjà en favoris.
+                Un même contact peut appartenir à plusieurs listes.
+              </p>
+
+              <button class="fab" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                Nouvelle liste
+              </button>
+            </div>
+          </div>
+          <p class="device-caption">
+            <b>L'écran des listes</b>
+            Quatre dossiers, quatre teintes de la palette
+          </p>
+        </div>
+      </div>
+
+      <div class="duo">
+        <div class="carte">
+          <h3>Option A — l'entrée simple</h3>
+          <p>Le menu ⋮ mène à l'écran de gestion, comme le fait déjà le profil.</p>
+          <ul>
+            <li><b>Pour :</b> rien de neuf à apprendre, un seul chemin à maintenir.</li>
+            <li><b>Contre :</b> deux écrans à traverser avant d'écrire à une liste, alors qu'on partait de l'écran des discussions.</li>
+          </ul>
+        </div>
+        <div class="carte" data-choix="1">
+          <h3>Option B — la feuille <span class="badge">recommandée</span></h3>
+          <p>Le menu ⋮ ouvre une feuille qui montre les listes ; « Gérer les listes » en pied.</p>
+          <ul>
+            <li><b>Pour :</b> depuis les discussions, l'intention est d'écrire, pas d'administrer. La feuille répond à cette intention en un geste.</li>
+            <li><b>Contre :</b> un composant de plus à tenir, et deux endroits qui affichent les listes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="notes">
+        <p class="note">
+          <b>Le menu ne contient pas qu'une ligne.</b> Un ⋮ qui n'ouvre qu'une
+          seule entrée est un bouton déguisé. « Nouveau groupe » mène à la
+          sélection de membres existante ; « Tout marquer comme lu » vide les
+          pastilles des discussions non archivées. Les trois sont implémentées.
+        </p>
+        <p class="note">
+          <b>Le profil garde son entrée.</b> On ajoute un raccourci là où le besoin
+          naît ; on ne déplace pas celui qui existe. Trois chemins mènent aux
+          listes : le profil, la puce « Gérer » des contacts préférés, et désormais
+          le ⋮ des discussions.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= À TRANCHER ================= -->
+    <section class="panel">
+      <header>
+        <h2>3 — Décisions validées</h2>
+        <p>Arbitrées le 5 août 2026, puis implémentées.</p>
+      </header>
+
+      <div class="table-wrap">
+        <table class="decisions">
+          <thead>
+            <tr><th>Décision</th><th>Retenu</th><th>Conséquence</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Couleur de « Confiance »</td>
+              <td>Ocre <span class="inline-code">#B7791F</span></td>
+              <td>Seule teinte chaude : jamais confondue avec les trois autres.</td>
+            </tr>
+            <tr>
+              <td>Couleur par défaut</td>
+              <td>Attribuée d'office à la création</td>
+              <td>Plus aucune liste terne. L'option « sans couleur » disparaît de l'éditeur.</td>
+            </tr>
+            <tr>
+              <td>Listes existantes</td>
+              <td>Teinte dérivée du rang de création</td>
+              <td>Aucune migration SQL, couleur stable d'un lancement à l'autre.</td>
+            </tr>
+            <tr>
+              <td>Menu ⋮ des discussions</td>
+              <td>Option B — la feuille</td>
+              <td>Un composant neuf ; la gestion reste à un tap de plus.</td>
+            </tr>
+            <tr>
+              <td>Reste du menu ⋮</td>
+              <td>« Nouveau groupe » et « Tout marquer comme lu » implémentés</td>
+              <td>Le menu tient debout seul, il n'attend plus d'entrées à venir.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <p class="pied">Revue de design — validée et implémentée</p>
+  </div>
+</div>

@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
 import '../db/app_database.dart';
+import '../theme/contact_list_colors.dart';
 import '../utils/media_album.dart';
 import '../utils/user_search.dart';
 import '../../talky_api_client.dart';
@@ -212,8 +213,39 @@ class LocalCacheRepository {
       if (removed.isNotEmpty) {
         await _forgetLists(removed);
       }
+      await _backfillListColors();
     } catch (e) {
       debugPrint('[LocalCacheRepo] syncContactLists échouée: $e');
+    }
+  }
+
+  /// Écrit en base la couleur des listes qui n'en ont pas.
+  ///
+  /// Depuis que la couleur est attribuée d'office à la création, seules les
+  /// listes créées **avant** peuvent être sans teinte. L'UI en affiche déjà une
+  /// (via `resolveListColors`) ; ce rattrapage persiste exactement la même,
+  /// pour que tous les appareils du compte s'accordent. Idempotent : au tour
+  /// suivant il n'y a plus rien à faire.
+  Future<void> _backfillListColors() async {
+    final lists = await getContactListsOnce();
+    final aRepeindre =
+        lists.where((l) => parseListColor(l.color) == null).toList();
+    if (aRepeindre.isEmpty) return;
+
+    final resolved = resolveListColors(lists);
+    for (final list in aRepeindre) {
+      final hex = resolved[list.idList];
+      if (hex == null) continue;
+      try {
+        await _api.updateContactList(list.idList, color: hex);
+        await (_db.update(_db.localContactLists)
+              ..where((l) => l.idList.equals(list.idList)))
+            .write(LocalContactListsCompanion(color: Value(hex)));
+      } catch (e) {
+        // Best-effort : sans réseau la liste garde sa couleur d'affichage,
+        // le rattrapage se refera à la prochaine synchro.
+        debugPrint('[LocalCacheRepo] couleur de liste non persistée: $e');
+      }
     }
   }
 
@@ -323,7 +355,15 @@ class LocalCacheRepository {
     String? color,
     Iterable<int> memberIds = const [],
   }) async {
-    final raw = await _api.createContactList(name, color: color);
+    // Une liste naît toujours colorée : si l'appelant n'impose rien, elle prend
+    // la première teinte libre de la palette.
+    final teinte = parseListColor(color) != null
+        ? color
+        : nextFreeContactListColor({
+            for (final l in await getContactListsOnce())
+              if (parseListColor(l.color) != null) l.color!.toUpperCase(),
+          });
+    final raw = await _api.createContactList(name, color: teinte);
     final created = ContactList.fromJson(raw);
     if (created.idList != 0 && memberIds.isNotEmpty) {
       for (final id in memberIds) {

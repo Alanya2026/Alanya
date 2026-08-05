@@ -9,6 +9,7 @@ export 'app_badge.dart';
 export 'app_bottom_sheet.dart';
 export 'app_search_field.dart';
 export 'app_skeleton.dart';
+export 'contact_list_folder.dart';
 export 'empty_state.dart';
 export 'offline_banner.dart';
 export 'status_chip.dart';

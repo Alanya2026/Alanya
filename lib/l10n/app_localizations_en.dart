@@ -4613,4 +4613,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String createGroupNamed(String name) {
     return 'Create a group “$name”';
   }
+
+  @override
+  String get manageLists => 'Manage lists';
+
+  @override
+  String get contactListsSheetSubtitle =>
+      'Open a list, or turn it into a group.';
+
+  @override
+  String get markAllAsRead => 'Mark all as read';
+
+  @override
+  String markAllAsReadDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count chats marked as read',
+      one: '1 chat marked as read',
+      zero: 'No unread chats',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get optionsAction => 'Options';
 }

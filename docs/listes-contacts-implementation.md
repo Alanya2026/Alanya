@@ -584,3 +584,76 @@ Relecture point par point du dossier `docs/architecture/liste-contacts.tex`
 - **§6 — liste de contacts ≠ audience de diffusion** : arbitrage respecté par
   construction. `contact_list` n'a aucun moteur de critères et ne sert qu'à un
   utilisateur ; rien n'a été mutualisé avec la diffusion.
+
+---
+
+## 12. Couleurs des listes et accès depuis les discussions
+
+Deux retours de recette, tranchés sur maquette avant d'être codés :
+`docs/architecture/maquettes/listes-contacts-acces.html`.
+
+### 12.1 La couleur devient un attribut, plus une option
+
+Une liste naissait sans couleur et affichait un dossier au bleu du thème —
+d'où des listes ternes. Désormais **une liste est toujours colorée**.
+
+Nouveau fichier `lib/core/theme/contact_list_colors.dart` :
+
+- `kContactListColors` — huit teintes profondes de valeur voisine, **dans
+  l'ordre d'attribution** : framboise `#C2185B`, sarcelle `#00796B`, indigo
+  `#3949AB`, ocre `#B7791F`, violet `#5E35B1`, vert forêt `#2E7D32`, brique
+  `#C62828`, ardoise `#455A64`. Les trois premières sont celles de la maquette
+  d'origine : **les listes existantes ne changent pas de couleur**.
+- `nextFreeContactListColor(taken)` — la première teinte qu'aucune liste
+  n'utilise ; si les huit sont prises, on recommence (un doublon vaut mieux
+  qu'une liste terne).
+- `resolveListColors(lists)` — `idList → hex` pour tout l'ensemble : les listes
+  sans couleur en base en reçoivent une ici. **Une seule règle**, donc les
+  dossiers, les puces de filtre et les puces d'appartenance montrent la même
+  teinte, et c'est celle que la synchro finira par écrire.
+- `parseListColor(hex)` y déménage (elle vivait dans l'écran de gestion).
+
+Ocre pour « Confiance » : c'est la seule teinte **chaude** du lot, donc jamais
+confondue avec les trois autres à la taille d'une puce.
+
+Conséquences dans le code :
+
+- `createContactList` pose d'office la première teinte libre si l'appelant n'en
+  impose pas ; l'éditeur ouvre déjà sur cette proposition.
+- L'option **« sans couleur » disparaît** de l'éditeur, et la pastille
+  sélectionnée porte une coche blanche (le liseré seul se lisait mal sur les
+  teintes sombres).
+- `syncContactLists` fait un **rattrapage** (`_backfillListColors`) : toute
+  liste sans couleur en base reçoit par `PUT` exactement la teinte déjà
+  affichée. Idempotent, best-effort, et les appareils du compte s'accordent.
+- Nouveau widget `ContactListFolder` (`widgets/common/`) : carré arrondi
+  **plein** avec un dossier blanc, conforme à la maquette — la pastille pâle
+  d'avant ne laissait pas voir la couleur.
+
+### 12.2 Le menu ⋮ des discussions
+
+Le bouton existait mais ne faisait rien (`onPressed: () {}`). Il devient un
+`PopupMenuButton` à trois entrées, « Listes de contacts » en tête et isolée par
+un séparateur :
+
+| Entrée | Action |
+|---|---|
+| **Listes de contacts** | Ouvre `showContactListsSheet` — la feuille (option B de la maquette) |
+| **Nouveau groupe** | `SelectMembersScreen`, le flux de création existant |
+| **Tout marquer comme lu** | `markAsRead` sur chaque discussion non lue **non archivée**, puis un retour chiffré |
+
+`lib/widgets/contact_lists_sheet.dart` *(nouveau)* : les listes avec leur
+dossier coloré et leur nombre de membres, un appui ouvre le détail, et
+« Gérer les listes » en pied mène à l'écran complet. Depuis les discussions
+l'intention est d'écrire, pas d'administrer — la feuille répond à l'intention,
+la gestion reste à un tap de plus. Hauteur bornée à 45 % de l'écran au-delà de
+quelques listes.
+
+Les points d'entrée existants sont **conservés** : profil, puce « Gérer » des
+contacts préférés, et maintenant le ⋮ des discussions.
+
+### 12.3 Chaînes ajoutées
+
+`newList`, `contactListsHint`, `notInThisList`, `createGroupNamed` (§11), puis
+`manageLists`, `contactListsSheetSubtitle`, `markAllAsRead`, `markAllAsReadDone`
+(pluriel ICU), `optionsAction`.
