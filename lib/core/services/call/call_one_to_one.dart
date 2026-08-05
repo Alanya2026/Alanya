@@ -334,6 +334,15 @@ extension CallOneToOne on CallService {
   }
 
   Future<void> _terminateCall() async {
+    // Pendant une session à trois, terminer l'appel est presque toujours une
+    // erreur : on trace l'origine de l'appel pour la localiser.
+    if (_confSessionId != null) {
+      debugPrint(
+        '[CallService] ⚠ _terminateCall PENDANT une session '
+        '(session=$_confSessionId, invitéEnAttente=${_confPendingInvitee?.id})\n'
+        '${StackTrace.current}',
+      );
+    }
     speakingDetector.stop();
     _markTerminalCallId(_currentCallId);
     _cancelOutgoingRestoreTimeout();

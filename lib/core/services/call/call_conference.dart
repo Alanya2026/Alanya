@@ -152,8 +152,40 @@ extension CallConference on CallService {
     _myRosterId = myId.toString();
 
     _groupRoomId = _confSessionId;
+    _guardOriginLinkFailure(peerId);
     _startSpeakingDetection(groupMode: true);
     debugPrint('[CallService] 🔗 connexion 1-à-1 versée dans le maillage (pair=$peerId)');
+  }
+
+  /// Empêche la chute du lien d'origine d'emporter tout l'appel.
+  ///
+  /// En 1-à-1, `onConnectionFailure` termine l'appel : c'est correct, il n'y a
+  /// qu'un correspondant. Une fois ce lien versé dans le maillage, ce n'est plus
+  /// qu'une connexion parmi d'autres — la faire valoir fin d'appel coupait la
+  /// communication de celui qui restait alors qu'il devait continuer avec
+  /// l'arrivant. On la traite donc comme le départ de ce seul pair.
+  void _guardOriginLinkFailure(String peerId) {
+    _webrtc.onConnectionFailure = () {
+      // Hors session, le comportement 1-à-1 d'origine reprend ses droits.
+      if (_confSessionId == null) {
+        debugPrint('[CallService] ** lien tombé hors session : fin d\'appel');
+        _terminateCall();
+        return;
+      }
+
+      debugPrint('[CallService] 🔌 lien d\'origine ($peerId) tombé en session');
+      _removeGroupPeer(peerId);
+
+      // Plus aucun correspondant connecté : l'appel n'a plus d'objet.
+      if (_groupPeerConnections.isEmpty) {
+        debugPrint('[CallService] ** plus aucun pair : fin d\'appel');
+        _terminateCall();
+        return;
+      }
+
+      _demoteMeshToOneToOne();
+      notify();
+    };
   }
 
   // ── Réactions aux événements serveur ────────────────────────────────────────
