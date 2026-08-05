@@ -2758,5 +2758,14 @@
     "placeholders": {
       "count": { "type": "int" }
     }
+  },
+  "newList": "Nouvelle liste",
+  "contactListsHint": "Une liste ne peut contenir que des contacts déjà en favoris. Un même contact peut appartenir à plusieurs listes.",
+  "notInThisList": "Favori — pas dans cette liste",
+  "createGroupNamed": "Créer un groupe « {name} »",
+  "@createGroupNamed": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
   }
 }

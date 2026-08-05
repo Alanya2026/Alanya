@@ -184,7 +184,7 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _create,
         icon: const Icon(Icons.add),
-        label: Text(context.l10n.createList),
+        label: Text(context.l10n.newList),
       ),
       body: StreamBuilder<List<LocalContactList>>(
         stream: cache.watchContactLists(),
@@ -203,20 +203,31 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
             );
           }
 
-          return ListView.builder(
+          return ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.xl,
               AppSpacing.lg,
               AppSpacing.xl,
-              // Laisse passer le FAB étendu sous la dernière tuile.
+              // Laisse passer le FAB étendu sous le dernier élément.
               AppSpacing.xxxl * 3,
             ),
-            itemCount: lists.length,
-            itemBuilder: (context, index) => _ContactListTile(
-              list: lists[index],
-              onTap: () => _openList(lists[index]),
-              onOptions: () => _showListOptions(lists[index]),
-            ),
+            children: [
+              for (final list in lists)
+                _ContactListTile(
+                  list: list,
+                  onTap: () => _openList(list),
+                  onOptions: () => _showListOptions(list),
+                ),
+              AppSpacing.vGapLg,
+              // Rappel des deux règles qui surprennent : on ne range que des
+              // favoris, et un contact peut être dans plusieurs listes.
+              Text(
+                context.l10n.contactListsHint,
+                style: context.text.bodySmall?.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
+              ),
+            ],
           );
         },
       ),

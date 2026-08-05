@@ -1876,5 +1876,14 @@
     "placeholders": {
       "count": { "type": "int" }
     }
+  },
+  "newList": "New list",
+  "contactListsHint": "A list can only contain contacts already in your favourites. The same contact can belong to several lists.",
+  "notInThisList": "Favourite \u2014 not in this list",
+  "createGroupNamed": "Create a group \u201c{name}\u201d",
+  "@createGroupNamed": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
   }
 }

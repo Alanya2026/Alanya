@@ -236,12 +236,38 @@ class LocalCacheRepository {
   }
 
   /// Ids des membres d'une liste — assez pour filtrer une liste déjà streamée
-  /// (puces de l'écran Contacts préférés) sans re-jointure sur les profils.
+  /// sans re-jointure sur les profils.
   Stream<Set<int>> watchListMemberIds(int idList) {
     return (_db.select(_db.localContactListMembers)
           ..where((m) => m.idList.equals(idList)))
         .watch()
         .map((rows) => rows.map((m) => m.idFriend).toSet());
+  }
+
+  /// Appartenances vues depuis le contact : `alanyaID → listes`.
+  ///
+  /// L'écran des contacts préférés affiche sous chaque contact les puces de
+  /// ses listes ; un stream par contact serait une requête par ligne de liste.
+  /// Une seule jointure suffit, l'index se fait en mémoire.
+  Stream<Map<int, List<LocalContactList>>> watchListsByMember() {
+    final query = _db.select(_db.localContactListMembers).join([
+      innerJoin(
+        _db.localContactLists,
+        _db.localContactLists.idList
+            .equalsExp(_db.localContactListMembers.idList),
+      ),
+    ])
+      ..orderBy([OrderingTerm(expression: _db.localContactLists.name)]);
+    return query.watch().map((rows) {
+      final byMember = <int, List<LocalContactList>>{};
+      for (final row in rows) {
+        final member = row.readTable(_db.localContactListMembers);
+        byMember
+            .putIfAbsent(member.idFriend, () => [])
+            .add(row.readTable(_db.localContactLists));
+      }
+      return byMember;
+    });
   }
 
   Future<void> syncListMembers(int idList) async {

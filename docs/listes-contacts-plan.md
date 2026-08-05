@@ -1,5 +1,12 @@
 # Listes de contacts (Famille / Amis / Bureau…) — Plan d'implémentation
 
+> ⚠️ **Document remplacé.** La référence produit est désormais le dossier de
+> conception `docs/architecture/liste-contacts.tex` (PDF compilé à côté), qui
+> reprend cette spécification et l'affine — notamment sur l'écran de détail
+> (cases à cocher plutôt qu'une feuille de sélection), les puces
+> d'appartenance et le code 403. Ce plan est conservé pour l'historique.
+> Le rendu de ce qui a été construit : `docs/listes-contacts-implementation.md`.
+
 > Statut : **implémenté** (branche `listes`)
 > Périmètre : Talky (Flutter) + Alanya-Backend (Node/Express/MySQL)
 > Dernière mise à jour : 2026-08-05

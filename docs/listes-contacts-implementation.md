@@ -3,11 +3,14 @@
 > Statut : **implémenté**, non déployé (migration SQL à appliquer à la main)
 > Branche : `listes` (Talky **et** Alanya-Backend)
 > Date : 2026-08-05 *(révisé le même jour après la première recette — voir §10)*
-> Spécification d'origine : [`listes-contacts-plan.md`](listes-contacts-plan.md)
+> Référence produit : dossier de conception `docs/architecture/liste-contacts.tex`
+> (PDF compilé à côté), qui **remplace** [`listes-contacts-plan.md`](listes-contacts-plan.md)
+> — conformité détaillée en §11
 
 Ce document décrit ce qui a été **réellement écrit**, fichier par fichier, les
-décisions prises en cours de route, et les écarts par rapport au plan. Il se lit
-seul : le plan reste la référence produit, celui-ci la référence technique.
+décisions prises en cours de route, et les écarts par rapport à la conception.
+Il se lit seul : le dossier de conception reste la référence produit, celui-ci la
+référence technique.
 
 ---
 
@@ -99,7 +102,7 @@ Helpers privés :
 | `updateList` | `PUT /:idList` | `name` et `color` **optionnels indépendamment** (test `hasOwnProperty`) : `color:""` ou `null` efface, `color` absent conserve. 409 possible |
 | `deleteList` | `DELETE /:idList` | Le CASCADE emporte les membres ; les favoris ne bougent pas |
 | `getListMembers` | `GET /:idList/members` | **Même projection que `getPreferredContacts`** (+ `maskPresenceIfBlocked`, `sanitizeUrl`) ⇒ le client réutilise son modèle `User` |
-| `addMember` | `POST /:idList/members/:friendID` | Vérifie la propriété **puis** que `friendID` est un favori du propriétaire (`SELECT … FROM preferredContact`) sinon **400**. `INSERT IGNORE` ⇒ ré-ajout **idempotent** |
+| `addMember` | `POST /:idList/members/:friendID` | Vérifie la propriété **puis** que `friendID` est un favori du propriétaire (`SELECT … FROM preferredContact`) sinon **403** — requête valide, règle métier qui refuse. `INSERT IGNORE` ⇒ ré-ajout **idempotent** |
 | `removeMember` | `DELETE /:idList/members/:friendID` | 404 si le membre n'était pas là |
 
 Le masquage de présence (`maskPresenceIfBlocked`) est appliqué membre par
@@ -109,7 +112,7 @@ pas son `is_online` / `last_seen` par le biais d'une liste.
 ### 3.3 `src/routes/contactLists.js` *(nouveau)*
 
 Router Express, `auth` sur **chaque** route, blocs `@swagger` complets (tag
-`ContactLists`, codes 200/201/400/404/409 documentés).
+`ContactLists`, codes 200/201/400/403/404/409 documentés).
 
 ```
 GET    /                            → getLists
@@ -208,8 +211,11 @@ Nouvelle section « LISTES DE CONTACTS », calquée sur `watch/syncPreferredCont
 - `watchListMembers(idList)` — `innerJoin` `LocalContactListMembers` ×
   `LocalUsers`, rendu en `List<User>` via `localUserToUser`.
 - `watchListMemberIds(idList)` — juste les `idFriend`, pour filtrer une liste
-  déjà streamée sans repayer une jointure sur les profils (c'est ce qu'utilisent
-  les puces de l'écran Contacts préférés).
+  déjà streamée sans repayer une jointure sur les profils.
+- `watchListsByMember()` — l'appartenance vue **depuis le contact**
+  (`alanyaID → listes`), en une seule jointure indexée en mémoire. C'est ce qui
+  alimente les puces posées sous chaque contact de l'écran des favoris, et le
+  filtrage par liste active.
 
 **Synchronisation**
 
@@ -264,6 +270,12 @@ horizontal : **Tous · n**, **Par QR · n**, **une puce par liste** (teintée pa
 `color`, suffixée du nombre de membres), puis une `ActionChip` **« Gérer »** qui
 ouvre l'écran dédié.
 
+Sous chaque contact, une rangée de **puces d'appartenance** (`_ListBadge`)
+reprend la couleur de ses listes : c'est le seul endroit de l'app où
+l'appartenance multiple se voit d'un coup d'œil. Elles viennent d'un unique flux
+`watchListsByMember()` — un stream par ligne aurait fait une requête par contact
+affiché — qui sert **aussi** au filtrage par liste active.
+
 Trois filtres composables **en ET** : origine QR (`_filtreQr`), liste active
 (`_selectedListId`), recherche (`_searchQuery`, appliquée en dernier).
 
@@ -274,8 +286,9 @@ Deux points d'attention traités :
   **dérivé** à chaque build (`activeListId`) : si la liste filtrée vient d'être
   supprimée depuis l'écran de gestion, l'affichage retombe sur « Tous » dans la
   même passe, sans `setState` clandestin ni frame fantôme.
-- `_buildContactList(scoped, hasQuery)` factorise liste et états vides, pour que
-  la version filtrée par liste et la version non filtrée ne divergent pas.
+- `_buildContactList(scoped, hasQuery, memberships)` factorise liste et états
+  vides, pour que la version filtrée par liste et la version non filtrée ne
+  divergent pas.
 
 `initState` déclenche un `syncContactLists()` en tâche de fond.
 
@@ -283,8 +296,10 @@ Deux points d'attention traités :
 
 - `StreamBuilder` sur `watchContactLists()`, tuiles « pastille colorée + nom +
   n membres », `EmptyState` avec appel à l'action quand il n'y a rien.
-- FAB étendu **« Créer une liste »** (le padding bas du `ListView` laisse passer
-  le FAB sous la dernière tuile).
+- FAB étendu **« Nouvelle liste »** (le padding bas du `ListView` laisse passer
+  le FAB sous le dernier élément).
+- Sous la dernière tuile, le rappel des deux règles qui surprennent : on ne range
+  que des favoris, et un contact peut appartenir à plusieurs listes.
 - Menu par liste (icône `⋮` **ou** appui long) : **Renommer** / **Supprimer**.
   La suppression passe par un `AlertDialog` qui rappelle explicitement que
   *les contacts restent dans les favoris*.
@@ -308,27 +323,34 @@ Le fichier exporte aussi deux utilitaires réutilisés par les puces :
 
 ### 5.3 `contact_list_detail_screen.dart` *(nouveau)* — membres d'une liste
 
-- Titre suivi en direct (`watchContactLists()` filtré sur l'id) : renommer la
-  liste met l'en-tête à jour sans retour arrière.
-- Corps : `watchListMembers(idList)`, tuiles avec avatar / nom / numéro,
-  ouverture de `ContactDetailScreen` au tap, retrait au bouton.
-- `initState` : `syncListMembers` **et** `syncPreferredContacts` (la feuille
-  d'ajout a besoin d'un vivier de favoris à jour).
-- **Feuille d'ajout** : voir §5.4 — elle est partagée avec la création.
-- **« Créer un groupe »** : bouton pleine largeur en bas, visible dès qu'il y a
-  au moins un membre.
+**Ajouter et retirer se font au même endroit, sans écran intermédiaire.** La
+liste affiche les membres (cochés) *puis* les autres favoris, en retrait
+(opacité) et sous-titrés « Favori — pas dans cette liste ». Un appui sur la case
+bascule l'appartenance immédiatement.
+
+- Trois flux imbriqués : `watchContactLists()` (le titre suit un renommage en
+  direct), `watchListMembers(idList)` et `watchPreferredContacts()` — les
+  non-membres se déduisent de la différence.
+- Sous-titre des membres : présence réelle — « En ligne », « Vu à 12:04 »,
+  « Vu hier à … » — comme dans la maquette.
+- `_pending` neutralise la case le temps de l'aller-retour réseau : un double
+  appui n'envoie pas deux mutations contradictoires.
+- Le tap sur la ligne (hors case) ouvre `ContactDetailScreen`.
+- `initState` : `syncListMembers` **et** `syncPreferredContacts` — les
+  non-membres proposés viennent des favoris.
+- **« Créer un groupe « Famille » »** : bouton pleine largeur en bas, portant le
+  nom de la liste, visible dès qu'il y a au moins un membre.
 
 ### 5.4 `add_list_members_sheet.dart` *(nouveau)* — sélection de membres
 
-Feuille unique, appelée par **deux** flux : la création d'une liste (avant
-qu'elle n'existe côté serveur) et son écran détail. Multi-sélection par cases à
-cocher sur les **contacts préférés non déjà membres**, avec recherche
-(`filterUsersBySearch`) et compteur de sélection.
+Feuille utilisée **uniquement à la création** — tant que la liste n'existe pas
+côté serveur, il n'y a pas d'écran détail où cocher. Multi-sélection par cases à
+cocher sur les **contacts préférés**, avec recherche (`filterUsersBySearch`) et
+compteur de sélection.
 
-- `alreadyIn` retire du vivier les membres actuels ; `initialSelection` permet de
-  **rouvrir** la feuille sur une sélection en cours (cas de la création, où l'on
-  peut revenir décocher) ; `confirmLabel` donne « Ajouter » côté détail et
-  « Enregistrer » côté création.
+- `alreadyIn` retire du vivier des membres déjà posés ; `initialSelection` permet
+  de **rouvrir** la feuille sur la sélection en cours pour décocher ;
+  `confirmLabel` laisse l'appelant choisir « Ajouter » ou « Enregistrer ».
 - Hauteur fixe à 70 % de l'écran — même patron que
   `share_preferred_contact_sheet.dart` — parce qu'un `Expanded` n'a de sens que
   sous une contrainte bornée.
@@ -440,7 +462,7 @@ du retrait des favoris)*.
    `ContactLists`) avec un JWT valide :
    - créer une liste → **201** ;
    - recréer le même nom → **409** ;
-   - ajouter un utilisateur qui n'est **pas** un favori → **400** ;
+   - ajouter un utilisateur qui n'est **pas** un favori → **403** ;
    - ajouter deux fois le même favori → **201** les deux fois, un seul membre ;
    - `PUT` avec `{"color":""}` → couleur effacée ; sans `color` → inchangée ;
    - toucher la liste d'un autre compte → **404**.
@@ -512,3 +534,53 @@ incohérent, puisque être un favori est le prérequis pour y appartenir. Corrig
   d'entrée unique des cinq écrans concernés et purge le cache local (§4.4), ce
   qui rafraîchit immédiatement, via les streams Drift, les membres affichés et
   les compteurs des puces.
+
+---
+
+## 11. Conformité au dossier de conception
+
+Relecture point par point du dossier `docs/architecture/liste-contacts.tex`
+(« Étape 2 — Listes de contacts »), qui remplace le plan d'origine.
+
+### 11.1 Ce qui a été corrigé pour s'y conformer
+
+| § du dossier | Consigne | Correction apportée |
+|---|---|---|
+| §2.2 | « Chaque contact affiche les puces des listes auxquelles il appartient » | Puces `_ListBadge` sous chaque contact, alimentées par le nouveau flux `watchListsByMember()` |
+| §2.3 | Bouton flottant « Nouvelle liste » | Libellé du FAB corrigé (clé `newList`) ; l'éditeur garde « Créer une liste » comme titre |
+| §2.3 | Rappel des règles sous la liste | Note ajoutée sous la dernière tuile (clé `contactListsHint`) |
+| §2.4 | « Les membres, **plus les autres favoris en grisé avec une case à cocher** : ajouter et retirer se font au même endroit, sans écran intermédiaire » | Écran détail **entièrement refait** : liste unique membres + non-membres, bascule au clic. La feuille de sélection ne sert plus qu'à la création |
+| §2.4 | Sous-titres « En ligne » / « Vu à 12:04 » / « Favori — pas dans cette liste » | Présence réelle pour les membres, mention dédiée pour les non-membres (clé `notInThisList`) |
+| §2.4 | Bouton « Créer un groupe **« Famille »** » | Libellé paramétré par le nom de la liste (clé `createGroupNamed`) |
+| §4.1, §7.1 | Ajout d'un non-favori → **403** | `addMember` renvoie 403 (et non 400) ; Swagger et recette alignés |
+| §3.2, §7.3-1 | Retrait d'un favori : cascade applicative *ou* filtrage à la lecture ? | **Cascade applicative** retenue — celle que le dossier juge « plus propre » — serveur *et* cache (§3.5 et §4.4) |
+
+### 11.2 Écarts assumés
+
+| § | Consigne | Ce qui a été fait | Pourquoi |
+|---|---|---|---|
+| §3.1 | `migrations/024_contact_lists.sql` | **`038_contact_lists.sql`** | 024 → 037 étaient déjà pris dans le dépôt réel. Le contenu des deux tables est identique au listing 3.1 |
+| §5.1 | Drift **v15 → v16** | **v19 → v20** | `schemaVersion` valait 19, pas 14 : le dossier a vieilli sur ce point. La montée reste en `onUpgrade`, sans recréation |
+| §2.5-1 | Entrée « Listes de contacts » **à côté de** « Contacts préférés » dans l'en-tête | Ligne de menu dans la carte du profil, juste sous la grille des favoris | Demande explicite en recette : le bouton dans l'en-tête entrait en concurrence avec « +N › » (§10.1). Le point d'entrée « Profil → Listes de contacts » est conservé, seule sa forme change |
+
+### 11.3 Ajouts hors dossier
+
+- **Puce « Par QR »** dans la rangée de filtres : elle préexistait aux listes
+  (fonctionnalité QR) ; les puces de listes s'ajoutent à côté et se composent
+  avec elle.
+- **Sélection des membres dès la création** (§10.2) : demandée en recette, le
+  dossier ne décrivait que l'ajout après création.
+- **Cascade du retrait des favoris côté cache local** : le dossier ne parle que
+  du serveur ; sans le volet local, l'écran gardait des membres fantômes jusqu'à
+  la prochaine synchro.
+
+### 11.4 Points restés ouverts (§7.3 du dossier)
+
+- **Limite du nombre de listes** : aucune limite posée. La rangée de puces défile
+  horizontalement, donc elle ne casse pas, mais elle se lit mal au-delà d'une
+  dizaine de listes.
+- **Appel de groupe depuis une liste**, **diffusion de statut restreinte** :
+  toujours hors périmètre, faisables sans toucher aux tables.
+- **§6 — liste de contacts ≠ audience de diffusion** : arbitrage respecté par
+  construction. `contact_list` n'a aucun moteur de critères et ne sert qu'à un
+  utilisateur ; rien n'a été mutualisé avec la diffusion.

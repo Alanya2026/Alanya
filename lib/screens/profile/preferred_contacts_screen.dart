@@ -214,7 +214,11 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
 
   /// Liste (ou état vide) des contacts déjà réduits par les puces ; la
   /// recherche s'applique en dernier.
-  Widget _buildContactList(List<User> scoped, bool hasQuery) {
+  Widget _buildContactList(
+    List<User> scoped,
+    bool hasQuery,
+    Map<int, List<LocalContactList>> memberships,
+  ) {
     final shown =
         hasQuery ? filterUsersBySearch(scoped, _searchQuery) : scoped;
 
@@ -237,6 +241,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
         final user = shown[index];
         return _ContactTile(
           user: user,
+          lists: memberships[user.alanyaID] ?? const [],
           onRemove: () => _showRemoveOptions(user),
         );
       },
@@ -341,23 +346,29 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                               label: Text(context.l10n.add),
                             ),
                           )
-                        : activeListId == null
-                            ? _buildContactList(scoped, hasQuery)
-                            : StreamBuilder<Set<int>>(
-                                stream:
-                                    cache.watchListMemberIds(activeListId),
-                                builder: (context, memberSnapshot) {
-                                  final ids =
-                                      memberSnapshot.data ?? const <int>{};
-                                  return _buildContactList(
-                                    scoped
-                                        .where(
-                                            (u) => ids.contains(u.alanyaID))
-                                        .toList(),
-                                    hasQuery,
-                                  );
-                                },
-                              ),
+                        // Un seul flux d'appartenances sert les deux usages :
+                        // filtrer par liste active, et poser sous chaque
+                        // contact les puces de ses listes.
+                        : StreamBuilder<Map<int, List<LocalContactList>>>(
+                            stream: cache.watchListsByMember(),
+                            builder: (context, membershipSnapshot) {
+                              final memberships = membershipSnapshot.data ??
+                                  const <int, List<LocalContactList>>{};
+                              final visible = activeListId == null
+                                  ? scoped
+                                  : scoped
+                                      .where((u) =>
+                                          (memberships[u.alanyaID] ?? const [])
+                                              .any((l) =>
+                                                  l.idList == activeListId))
+                                      .toList();
+                              return _buildContactList(
+                                visible,
+                                hasQuery,
+                                memberships,
+                              );
+                            },
+                          ),
                   ),
                 ],
               );
@@ -370,9 +381,17 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
 }
 
 class _ContactTile extends StatelessWidget {
-  const _ContactTile({required this.user, required this.onRemove});
+  const _ContactTile({
+    required this.user,
+    required this.lists,
+    required this.onRemove,
+  });
 
   final User user;
+
+  /// Listes auxquelles ce contact appartient — c'est le seul endroit de l'app
+  /// où l'appartenance multiple se voit d'un coup d'œil.
+  final List<LocalContactList> lists;
   final VoidCallback onRemove;
 
   @override
@@ -452,6 +471,17 @@ class _ContactTile extends StatelessWidget {
                           color: context.colors.onSurfaceVariant,
                         ),
                       ),
+                      if (lists.isNotEmpty) ...[
+                        AppSpacing.vGapXs,
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          children: [
+                            for (final list in lists)
+                              _ListBadge(list: list),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -473,6 +503,36 @@ class _ContactTile extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Puce compacte d'appartenance, posée sous un contact. Reprend la couleur de
+/// la liste pour que l'œil fasse le lien avec la rangée de filtres au-dessus.
+class _ListBadge extends StatelessWidget {
+  const _ListBadge({required this.list});
+
+  final LocalContactList list;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = parseListColor(list.color) ?? context.colors.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: tint.withAlpha(38),
+        borderRadius: AppRadius.brPill,
+      ),
+      child: Text(
+        list.name,
+        style: context.text.labelSmall?.copyWith(
+          color: tint,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

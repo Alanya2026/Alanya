@@ -8113,6 +8113,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{count} sélectionné(s)'**
   String addMembersSelected(int count);
+
+  /// No description provided for @newList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle liste'**
+  String get newList;
+
+  /// No description provided for @contactListsHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une liste ne peut contenir que des contacts déjà en favoris. Un même contact peut appartenir à plusieurs listes.'**
+  String get contactListsHint;
+
+  /// No description provided for @notInThisList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Favori — pas dans cette liste'**
+  String get notInThisList;
+
+  /// No description provided for @createGroupNamed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer un groupe « {name} »'**
+  String createGroupNamed(String name);
 }
 
 class _AppLocalizationsDelegate

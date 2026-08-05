@@ -4598,4 +4598,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String addMembersSelected(int count) {
     return '$count selected';
   }
+
+  @override
+  String get newList => 'New list';
+
+  @override
+  String get contactListsHint =>
+      'A list can only contain contacts already in your favourites. The same contact can belong to several lists.';
+
+  @override
+  String get notInThisList => 'Favourite — not in this list';
+
+  @override
+  String createGroupNamed(String name) {
+    return 'Create a group “$name”';
+  }
 }
