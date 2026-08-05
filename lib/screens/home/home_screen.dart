@@ -240,14 +240,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else if (type == 'status_view') {
       if (action.fromTap) _switchToTab(_tabStatuses);
     } else if (type == 'broadcast') {
-      unawaited(
-        Provider.of<RealtimeSyncService>(context, listen: false)
-            .catchUp(force: true),
-      );
       if (action.fromTap) {
-        NotificationNavigation.openConversation(context, action.data);
+        unawaited(_handleBroadcastTap(action.data));
+      } else {
+        unawaited(
+          Provider.of<RealtimeSyncService>(context, listen: false)
+              .catchUp(force: true),
+        );
       }
     }
+  }
+
+  Future<void> _handleBroadcastTap(Map<String, String> data) async {
+    final sync = Provider.of<RealtimeSyncService>(context, listen: false);
+    await sync.catchUp(force: true);
+    if (!mounted) return;
+    await NotificationNavigation.openBroadcast(
+      context,
+      data,
+      switchToStatusesTab: () => _switchToTab(_tabStatuses),
+    );
   }
 
   Future<void> _handleCallNotification(Map<String, String> data) async {

@@ -8,12 +8,14 @@ import '../../core/services/countries_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
+import '../../core/utils/profile_identity.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/country_selector_tile.dart';
+import '../../widgets/profile/profile_identity_fields.dart';
 import '../chats/media_viewer_screen.dart';
 import 'profile_preview_screen.dart';
 
@@ -33,8 +35,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController();
   final _pseudoController = TextEditingController();
   final _bioController = TextEditingController();
+  final _ageController = TextEditingController();
   final _picker = ImagePicker();
   bool _saving = false;
+  ProfileGender? _genre;
+  bool _genreLocked = false;
+  bool _ageLocked = false;
+  String? _ageError;
   List<Pays> _countries = const [];
   Pays? _selectedCountry;
   bool _loadingCountries = true;
@@ -104,9 +111,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _nameController.text = cached.nom;
       _pseudoController.text = cached.pseudo;
       _bioController.text = cached.bio;
+      _genre = ProfileGenderApi.fromApi(cached.genre);
+      _genreLocked = cached.genre != null;
+      if (cached.age != null) {
+        _ageController.text = '${cached.age}';
+      }
+      _ageLocked = cached.age != null;
       _isLoading = false;
       _syncSelectedCountry();
     });
+  }
+
+  int? get _ageSaisi {
+    final brut = _ageController.text.trim();
+    if (brut.isEmpty) return null;
+    return int.tryParse(brut);
   }
 
   Future<void> _openAvatar() async {
@@ -275,22 +294,45 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final nom = _nameController.text.trim();
     final pseudo = _pseudoController.text.trim();
     final bio = _bioController.text.trim();
+    final age = _ageSaisi;
+
+    if (_ageController.text.trim().isNotEmpty &&
+        !_ageLocked &&
+        (age == null || age < kAgeMin || age > kAgeMax)) {
+      setState(() => _ageError = context.l10n.profileAgeInvalid(kAgeMin, kAgeMax));
+      return;
+    }
 
     final nomChanged = nom != (_user?.nom ?? '');
     final pseudoChanged = pseudo != (_user?.pseudo ?? '');
     final bioChanged = bio != (_user?.bio ?? '');
-    if (!nomChanged && !pseudoChanged && !bioChanged) {
+    final genreChanged = !_genreLocked &&
+        _genre != null &&
+        _genre!.apiValue != (_user?.genre ?? '');
+    final ageChanged =
+        !_ageLocked && age != null && age != (_user?.age ?? null);
+
+    if (!nomChanged &&
+        !pseudoChanged &&
+        !bioChanged &&
+        !genreChanged &&
+        !ageChanged) {
       Navigator.pop(context);
       return;
     }
 
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _ageError = null;
+    });
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       await auth.updateProfile(
         nom: nomChanged ? nom : null,
         pseudo: pseudoChanged ? pseudo : null,
         bio: bioChanged ? bio : null,
+        genre: genreChanged ? _genre!.apiValue : null,
+        age: ageChanged ? age : null,
       );
       if (!mounted) return;
       Navigator.pop(context);
@@ -385,6 +427,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       maxLength: 500,
                     ),
                     AppSpacing.vGapXxl,
+                    ProfileIdentityFields(
+                      genre: _genre,
+                      genreLocked: _genreLocked,
+                      onGenreSelected: (g) => setState(() => _genre = g),
+                      ageController: _ageController,
+                      ageLocked: _ageLocked,
+                      ageError: _ageError,
+                      enabled: !_saving,
+                      showSectionLabel: true,
+                      onAgeChanged: () => setState(() => _ageError = null),
+                    ),
+                    AppSpacing.vGapXxl,
                     TextField(
                       readOnly: true,
                       decoration: InputDecoration(
@@ -468,6 +522,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.dispose();
     _pseudoController.dispose();
     _bioController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 }

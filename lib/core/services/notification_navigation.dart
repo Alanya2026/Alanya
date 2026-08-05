@@ -8,7 +8,9 @@ import '../theme/app_theme.dart';
 import '../utils/conversation_display.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/status_provider.dart';
 import '../../screens/chats/chat_detail_screen.dart';
+import '../../screens/status/status_viewer_screen.dart';
 
 /// Action de navigation déclenchée par un tap (ou réception foreground) de notification.
 class NotificationAction {
@@ -150,5 +152,103 @@ class NotificationNavigation {
     final name = otherParticipant(conv, myId)?['nom']?.toString();
     if (name != null && name.isNotEmpty) return name;
     return fallback;
+  }
+
+  /// Ouvre la cible d'une diffusion officielle (message privé ou statut 24 h).
+  static Future<void> openBroadcast(
+    BuildContext context,
+    Map<String, String> data, {
+    required VoidCallback switchToStatusesTab,
+  }) async {
+    final kind = int.tryParse(data['kind'] ?? '') ?? 0;
+    if (kind == 1) {
+      switchToStatusesTab();
+      await _openBroadcastStatus(context, data);
+      return;
+    }
+    await _openBroadcastMessage(context, data);
+  }
+
+  static Future<void> _openBroadcastMessage(
+    BuildContext context,
+    Map<String, String> data,
+  ) async {
+    final senderId = int.tryParse(data['senderId'] ?? '') ?? 0;
+    if (senderId == 0) return;
+
+    final chat = context.read<ChatProvider>();
+    final myId = context.read<AuthProvider>().currentUser?.alanyaID ?? 0;
+    final fallbackName = data['title'] ?? context.l10n.discussionFallback;
+
+    await chat.refreshConversations(force: true);
+    if (!context.mounted) return;
+
+    final convs = await chat.repository.dao.getAllConversations();
+    final convId = findLocalDirectConversationId(convs, myId, senderId);
+
+    LocalConversation? conv;
+    if (convId != null) {
+      conv = await chat.repository.dao.watchConversation(convId).first;
+    }
+
+    if (!context.mounted) return;
+
+    if (conv != null) {
+      final resolved = conv;
+      final displayName = _displayName(context, resolved, myId, fallbackName);
+      final counterpartId = conversationCounterpartId(resolved, myId);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatDetailScreen(
+            userName: displayName,
+            conversationId: resolved.conversID,
+            userId: counterpartId ?? senderId,
+            isGroup: resolved.isGroup,
+            avatarUrl: conversationDisplayAvatar(resolved, myId),
+          ),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatDetailScreen(
+          userName: fallbackName,
+          userId: senderId,
+          isGroup: false,
+        ),
+      ),
+    );
+  }
+
+  static Future<void> _openBroadcastStatus(
+    BuildContext context,
+    Map<String, String> data,
+  ) async {
+    final senderId = int.tryParse(data['senderId'] ?? '') ?? 0;
+    final status = context.read<StatusProvider>();
+    await status.refresh();
+    if (!context.mounted) return;
+
+    if (senderId <= 0) return;
+
+    final statuses = status.byAuthor[senderId];
+    if (statuses == null || statuses.isEmpty) return;
+
+    final firstUnseen = statuses.indexWhere((s) => !s.seenByMe);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StatusViewerScreen(
+          contactGroups: [statuses],
+          startContactIndex: 0,
+          startItemIndex: firstUnseen >= 0 ? firstUnseen : 0,
+          isMine: false,
+        ),
+      ),
+    );
   }
 }

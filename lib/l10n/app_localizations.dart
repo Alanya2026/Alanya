@@ -7784,6 +7784,18 @@ abstract class AppLocalizations {
   /// **'Genre'**
   String get profileGenderLabel;
 
+  /// No description provided for @profileIdentitySection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Identité'**
+  String get profileIdentitySection;
+
+  /// No description provided for @profileGenderSegmentPreferNotSay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne pas dire'**
+  String get profileGenderSegmentPreferNotSay;
+
   /// No description provided for @profileGenderMale.
   ///
   /// In fr, this message translates to:

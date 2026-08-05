@@ -4406,6 +4406,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileGenderLabel => 'Gender';
 
   @override
+  String get profileIdentitySection => 'Identity';
+
+  @override
+  String get profileGenderSegmentPreferNotSay => 'Prefer not';
+
+  @override
   String get profileGenderMale => 'Male';
 
   @override

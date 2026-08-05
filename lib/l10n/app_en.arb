@@ -1784,6 +1784,8 @@
   "onboardingIdentityTitle": "About you",
   "onboardingIdentitySubtitle": "Gender and age can't be changed once saved.",
   "profileGenderLabel": "Gender",
+  "profileIdentitySection": "Identity",
+  "profileGenderSegmentPreferNotSay": "Prefer not",
   "profileGenderMale": "Male",
   "profileGenderFemale": "Female",
   "profileGenderOther": "Other",

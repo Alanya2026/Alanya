@@ -2666,6 +2666,8 @@
   "onboardingIdentityTitle": "À propos de vous",
   "onboardingIdentitySubtitle": "Genre et âge ne seront plus modifiables une fois enregistrés.",
   "profileGenderLabel": "Genre",
+  "profileIdentitySection": "Identité",
+  "profileGenderSegmentPreferNotSay": "Ne pas dire",
   "profileGenderMale": "Homme",
   "profileGenderFemale": "Femme",
   "profileGenderOther": "Autre",

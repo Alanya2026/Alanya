@@ -682,7 +682,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   }
 
   bool get _callsDisabled =>
-      !widget.isGroup && (_isSelfChat || _isBlocked || _blockedByThem);
+      !widget.isGroup &&
+      (_isSelfChat || _isBlocked || _blockedByThem || _isOfficialPeer);
 
   Future<void> _loadPeerAccountFromCache() async {
     final userId = widget.userId;
@@ -1211,11 +1212,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _chatTitle(context),
-                    style: context.text.titleMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  widget.isGroup
+                      ? Text(
+                          _chatTitle(context),
+                          style: context.text.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : AccountBadgeLabel(
+                          name: _chatTitle(context),
+                          accountType: _peerAccountType,
+                          verificationStatus: _peerVerificationStatus,
+                          style: context.text.titleMedium,
+                        ),
                   Builder(builder: (_) {
                     // Conversation avec soi-même : ni présence, ni frappe.
                     if (_isSelfChat) return const SizedBox.shrink();

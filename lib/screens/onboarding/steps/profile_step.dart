@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -10,6 +9,8 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/backend_url.dart';
 import '../../../core/utils/profile_bio.dart';
+import '../../../core/utils/profile_identity.dart';
+import '../../../widgets/profile/profile_identity_fields.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../talky_api_client.dart';
 import '../../../talky_models.dart';
@@ -17,36 +18,6 @@ import '../../../widgets/account/warning_banner.dart';
 import '../../../widgets/common/app_bottom_sheet.dart';
 import '../../../widgets/country_selector_tile.dart';
 import '../widgets/onboarding_shell.dart';
-
-/// Bornes alignées sur celles du serveur (`authCustomController.AGE_MIN/MAX`).
-const int kAgeMin = 13;
-const int kAgeMax = 120;
-
-/// Valeurs acceptées par la colonne `users.genre`.
-enum ProfileGender { homme, femme, autre, nonPrecise }
-
-extension ProfileGenderApi on ProfileGender {
-  String get apiValue => switch (this) {
-        ProfileGender.homme => 'homme',
-        ProfileGender.femme => 'femme',
-        ProfileGender.autre => 'autre',
-        ProfileGender.nonPrecise => 'non_precise',
-      };
-
-  String label(BuildContext context) => switch (this) {
-        ProfileGender.homme => context.l10n.profileGenderMale,
-        ProfileGender.femme => context.l10n.profileGenderFemale,
-        ProfileGender.autre => context.l10n.profileGenderOther,
-        ProfileGender.nonPrecise => context.l10n.profileGenderUnspecified,
-      };
-
-  static ProfileGender? fromApi(String? value) {
-    for (final g in ProfileGender.values) {
-      if (g.apiValue == value) return g;
-    }
-    return null;
-  }
-}
 
 /// Étape 2 : photo, genre, âge, pays, bio — tout facultatif, un seul écran.
 ///
@@ -234,10 +205,6 @@ class _ProfileStepState extends State<ProfileStep> {
     final avatarUrl = normalizeAvatarUrl(user?.avatarUrl);
     final initial =
         user?.nom.isNotEmpty == true ? user!.nom[0].toUpperCase() : 'U';
-    final age = _ageSaisi;
-    final anneeNaissance = (age != null && age >= kAgeMin && age <= kAgeMax)
-        ? DateTime.now().year - age
-        : null;
 
     return OnboardingShell(
       title: l10n.onboardingProfileTitle,
@@ -265,56 +232,15 @@ class _ProfileStepState extends State<ProfileStep> {
           ),
           AppSpacing.vGapXxl,
 
-          OnboardingSectionLabel(l10n.onboardingIdentityTitle),
-          AppSpacing.vGapXs,
-          Text(
-            l10n.onboardingIdentitySubtitle,
-            style: context.text.bodySmall?.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
-          ),
-          AppSpacing.vGapMd,
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final g in ProfileGender.values)
-                  ChoiceChip(
-                    label: Text(g.label(context)),
-                    selected: _genre == g,
-                    // Verrouillé : on garde la puce visible pour montrer la
-                    // valeur enregistrée, mais on n'en propose plus le changement.
-                    onSelected: (_genreLocked || _busy)
-                        ? null
-                        : (sel) => setState(() => _genre = sel ? g : null),
-                  ),
-              ],
-            ),
-          ),
-          AppSpacing.vGapLg,
-          TextField(
-            controller: _ageController,
-            enabled: !_ageLocked && !_busy,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(3),
-            ],
-            onChanged: (_) => setState(() => _ageError = null),
-            style: context.text.bodyLarge,
-            decoration: InputDecoration(
-              labelText: l10n.profileAgeLabel,
-              prefixIcon: const Icon(Icons.cake_outlined),
-              suffixText: l10n.profileAgeSuffix,
-              errorText: _ageError,
-              // L'année déduite s'affiche en direct : c'est ce que le serveur va
-              // réellement conserver, autant que ce ne soit pas une surprise.
-              helperText: anneeNaissance != null
-                  ? l10n.profileAgeBirthYear(anneeNaissance)
-                  : null,
-            ),
+          ProfileIdentityFields(
+            genre: _genre,
+            genreLocked: _genreLocked,
+            onGenreSelected: (g) => setState(() => _genre = g),
+            ageController: _ageController,
+            ageLocked: _ageLocked,
+            ageError: _ageError,
+            enabled: !_busy,
+            onAgeChanged: () => setState(() => _ageError = null),
           ),
           AppSpacing.vGapXxl,
 
