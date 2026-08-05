@@ -4026,6 +4026,41 @@ class $LocalUsersTable extends LocalUsers
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _accountTypeMeta = const VerificationMeta(
+    'accountType',
+  );
+  @override
+  late final GeneratedColumn<int> accountType = GeneratedColumn<int>(
+    'account_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _verificationStatusMeta =
+      const VerificationMeta('verificationStatus');
+  @override
+  late final GeneratedColumn<int> verificationStatus = GeneratedColumn<int>(
+    'verification_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _verifiedUntilMeta = const VerificationMeta(
+    'verifiedUntil',
+  );
+  @override
+  late final GeneratedColumn<DateTime> verifiedUntil =
+      GeneratedColumn<DateTime>(
+        'verified_until',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _cachedAtMeta = const VerificationMeta(
     'cachedAt',
   );
@@ -4054,6 +4089,9 @@ class $LocalUsersTable extends LocalUsers
     preferredAddedAt,
     preferredNote,
     typeCompte,
+    accountType,
+    verificationStatus,
+    verifiedUntil,
     cachedAt,
   ];
   @override
@@ -4176,6 +4214,33 @@ class $LocalUsersTable extends LocalUsers
         typeCompte.isAcceptableOrUnknown(data['type_compte']!, _typeCompteMeta),
       );
     }
+    if (data.containsKey('account_type')) {
+      context.handle(
+        _accountTypeMeta,
+        accountType.isAcceptableOrUnknown(
+          data['account_type']!,
+          _accountTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('verification_status')) {
+      context.handle(
+        _verificationStatusMeta,
+        verificationStatus.isAcceptableOrUnknown(
+          data['verification_status']!,
+          _verificationStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('verified_until')) {
+      context.handle(
+        _verifiedUntilMeta,
+        verifiedUntil.isAcceptableOrUnknown(
+          data['verified_until']!,
+          _verifiedUntilMeta,
+        ),
+      );
+    }
     if (data.containsKey('cached_at')) {
       context.handle(
         _cachedAtMeta,
@@ -4253,6 +4318,18 @@ class $LocalUsersTable extends LocalUsers
         DriftSqlType.int,
         data['${effectivePrefix}type_compte'],
       )!,
+      accountType: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}account_type'],
+      )!,
+      verificationStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}verification_status'],
+      )!,
+      verifiedUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}verified_until'],
+      ),
       cachedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cached_at'],
@@ -4292,6 +4369,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
   /// Douala ») — affichée sur la fiche du contact.
   final String? preferredNote;
   final int typeCompte;
+  final int accountType;
+  final int verificationStatus;
+  final DateTime? verifiedUntil;
   final DateTime cachedAt;
   const LocalUser({
     required this.alanyaID,
@@ -4309,6 +4389,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     this.preferredAddedAt,
     this.preferredNote,
     required this.typeCompte,
+    required this.accountType,
+    required this.verificationStatus,
+    this.verifiedUntil,
     required this.cachedAt,
   });
   @override
@@ -4337,6 +4420,11 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       map['preferred_note'] = Variable<String>(preferredNote);
     }
     map['type_compte'] = Variable<int>(typeCompte);
+    map['account_type'] = Variable<int>(accountType);
+    map['verification_status'] = Variable<int>(verificationStatus);
+    if (!nullToAbsent || verifiedUntil != null) {
+      map['verified_until'] = Variable<DateTime>(verifiedUntil);
+    }
     map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
   }
@@ -4366,6 +4454,11 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           ? const Value.absent()
           : Value(preferredNote),
       typeCompte: Value(typeCompte),
+      accountType: Value(accountType),
+      verificationStatus: Value(verificationStatus),
+      verifiedUntil: verifiedUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verifiedUntil),
       cachedAt: Value(cachedAt),
     );
   }
@@ -4393,6 +4486,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       ),
       preferredNote: serializer.fromJson<String?>(json['preferredNote']),
       typeCompte: serializer.fromJson<int>(json['typeCompte']),
+      accountType: serializer.fromJson<int>(json['accountType']),
+      verificationStatus: serializer.fromJson<int>(json['verificationStatus']),
+      verifiedUntil: serializer.fromJson<DateTime?>(json['verifiedUntil']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
   }
@@ -4415,6 +4511,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       'preferredAddedAt': serializer.toJson<DateTime?>(preferredAddedAt),
       'preferredNote': serializer.toJson<String?>(preferredNote),
       'typeCompte': serializer.toJson<int>(typeCompte),
+      'accountType': serializer.toJson<int>(accountType),
+      'verificationStatus': serializer.toJson<int>(verificationStatus),
+      'verifiedUntil': serializer.toJson<DateTime?>(verifiedUntil),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
   }
@@ -4435,6 +4534,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     Value<DateTime?> preferredAddedAt = const Value.absent(),
     Value<String?> preferredNote = const Value.absent(),
     int? typeCompte,
+    int? accountType,
+    int? verificationStatus,
+    Value<DateTime?> verifiedUntil = const Value.absent(),
     DateTime? cachedAt,
   }) => LocalUser(
     alanyaID: alanyaID ?? this.alanyaID,
@@ -4456,6 +4558,11 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
         ? preferredNote.value
         : this.preferredNote,
     typeCompte: typeCompte ?? this.typeCompte,
+    accountType: accountType ?? this.accountType,
+    verificationStatus: verificationStatus ?? this.verificationStatus,
+    verifiedUntil: verifiedUntil.present
+        ? verifiedUntil.value
+        : this.verifiedUntil,
     cachedAt: cachedAt ?? this.cachedAt,
   );
   LocalUser copyWithCompanion(LocalUsersCompanion data) {
@@ -4489,6 +4596,15 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       typeCompte: data.typeCompte.present
           ? data.typeCompte.value
           : this.typeCompte,
+      accountType: data.accountType.present
+          ? data.accountType.value
+          : this.accountType,
+      verificationStatus: data.verificationStatus.present
+          ? data.verificationStatus.value
+          : this.verificationStatus,
+      verifiedUntil: data.verifiedUntil.present
+          ? data.verifiedUntil.value
+          : this.verifiedUntil,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
     );
   }
@@ -4511,6 +4627,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           ..write('preferredAddedAt: $preferredAddedAt, ')
           ..write('preferredNote: $preferredNote, ')
           ..write('typeCompte: $typeCompte, ')
+          ..write('accountType: $accountType, ')
+          ..write('verificationStatus: $verificationStatus, ')
+          ..write('verifiedUntil: $verifiedUntil, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
         .toString();
@@ -4533,6 +4652,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     preferredAddedAt,
     preferredNote,
     typeCompte,
+    accountType,
+    verificationStatus,
+    verifiedUntil,
     cachedAt,
   );
   @override
@@ -4554,6 +4676,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           other.preferredAddedAt == this.preferredAddedAt &&
           other.preferredNote == this.preferredNote &&
           other.typeCompte == this.typeCompte &&
+          other.accountType == this.accountType &&
+          other.verificationStatus == this.verificationStatus &&
+          other.verifiedUntil == this.verifiedUntil &&
           other.cachedAt == this.cachedAt);
 }
 
@@ -4573,6 +4698,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
   final Value<DateTime?> preferredAddedAt;
   final Value<String?> preferredNote;
   final Value<int> typeCompte;
+  final Value<int> accountType;
+  final Value<int> verificationStatus;
+  final Value<DateTime?> verifiedUntil;
   final Value<DateTime> cachedAt;
   const LocalUsersCompanion({
     this.alanyaID = const Value.absent(),
@@ -4590,6 +4718,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.preferredAddedAt = const Value.absent(),
     this.preferredNote = const Value.absent(),
     this.typeCompte = const Value.absent(),
+    this.accountType = const Value.absent(),
+    this.verificationStatus = const Value.absent(),
+    this.verifiedUntil = const Value.absent(),
     this.cachedAt = const Value.absent(),
   });
   LocalUsersCompanion.insert({
@@ -4608,6 +4739,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.preferredAddedAt = const Value.absent(),
     this.preferredNote = const Value.absent(),
     this.typeCompte = const Value.absent(),
+    this.accountType = const Value.absent(),
+    this.verificationStatus = const Value.absent(),
+    this.verifiedUntil = const Value.absent(),
     required DateTime cachedAt,
   }) : cachedAt = Value(cachedAt);
   static Insertable<LocalUser> custom({
@@ -4626,6 +4760,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Expression<DateTime>? preferredAddedAt,
     Expression<String>? preferredNote,
     Expression<int>? typeCompte,
+    Expression<int>? accountType,
+    Expression<int>? verificationStatus,
+    Expression<DateTime>? verifiedUntil,
     Expression<DateTime>? cachedAt,
   }) {
     return RawValuesInsertable({
@@ -4645,6 +4782,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       if (preferredAddedAt != null) 'preferred_added_at': preferredAddedAt,
       if (preferredNote != null) 'preferred_note': preferredNote,
       if (typeCompte != null) 'type_compte': typeCompte,
+      if (accountType != null) 'account_type': accountType,
+      if (verificationStatus != null) 'verification_status': verificationStatus,
+      if (verifiedUntil != null) 'verified_until': verifiedUntil,
       if (cachedAt != null) 'cached_at': cachedAt,
     });
   }
@@ -4665,6 +4805,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Value<DateTime?>? preferredAddedAt,
     Value<String?>? preferredNote,
     Value<int>? typeCompte,
+    Value<int>? accountType,
+    Value<int>? verificationStatus,
+    Value<DateTime?>? verifiedUntil,
     Value<DateTime>? cachedAt,
   }) {
     return LocalUsersCompanion(
@@ -4683,6 +4826,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       preferredAddedAt: preferredAddedAt ?? this.preferredAddedAt,
       preferredNote: preferredNote ?? this.preferredNote,
       typeCompte: typeCompte ?? this.typeCompte,
+      accountType: accountType ?? this.accountType,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      verifiedUntil: verifiedUntil ?? this.verifiedUntil,
       cachedAt: cachedAt ?? this.cachedAt,
     );
   }
@@ -4735,6 +4881,15 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     if (typeCompte.present) {
       map['type_compte'] = Variable<int>(typeCompte.value);
     }
+    if (accountType.present) {
+      map['account_type'] = Variable<int>(accountType.value);
+    }
+    if (verificationStatus.present) {
+      map['verification_status'] = Variable<int>(verificationStatus.value);
+    }
+    if (verifiedUntil.present) {
+      map['verified_until'] = Variable<DateTime>(verifiedUntil.value);
+    }
     if (cachedAt.present) {
       map['cached_at'] = Variable<DateTime>(cachedAt.value);
     }
@@ -4759,6 +4914,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
           ..write('preferredAddedAt: $preferredAddedAt, ')
           ..write('preferredNote: $preferredNote, ')
           ..write('typeCompte: $typeCompte, ')
+          ..write('accountType: $accountType, ')
+          ..write('verificationStatus: $verificationStatus, ')
+          ..write('verifiedUntil: $verifiedUntil, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
         .toString();
@@ -8738,6 +8896,9 @@ typedef $$LocalUsersTableCreateCompanionBuilder =
       Value<DateTime?> preferredAddedAt,
       Value<String?> preferredNote,
       Value<int> typeCompte,
+      Value<int> accountType,
+      Value<int> verificationStatus,
+      Value<DateTime?> verifiedUntil,
       required DateTime cachedAt,
     });
 typedef $$LocalUsersTableUpdateCompanionBuilder =
@@ -8757,6 +8918,9 @@ typedef $$LocalUsersTableUpdateCompanionBuilder =
       Value<DateTime?> preferredAddedAt,
       Value<String?> preferredNote,
       Value<int> typeCompte,
+      Value<int> accountType,
+      Value<int> verificationStatus,
+      Value<DateTime?> verifiedUntil,
       Value<DateTime> cachedAt,
     });
 
@@ -8841,6 +9005,21 @@ class $$LocalUsersTableFilterComposer
 
   ColumnFilters<int> get typeCompte => $composableBuilder(
     column: $table.typeCompte,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get accountType => $composableBuilder(
+    column: $table.accountType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get verificationStatus => $composableBuilder(
+    column: $table.verificationStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get verifiedUntil => $composableBuilder(
+    column: $table.verifiedUntil,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8934,6 +9113,21 @@ class $$LocalUsersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get accountType => $composableBuilder(
+    column: $table.accountType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get verificationStatus => $composableBuilder(
+    column: $table.verificationStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get verifiedUntil => $composableBuilder(
+    column: $table.verifiedUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
     column: $table.cachedAt,
     builder: (column) => ColumnOrderings(column),
@@ -9008,6 +9202,21 @@ class $$LocalUsersTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get accountType => $composableBuilder(
+    column: $table.accountType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get verificationStatus => $composableBuilder(
+    column: $table.verificationStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get verifiedUntil => $composableBuilder(
+    column: $table.verifiedUntil,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get cachedAt =>
       $composableBuilder(column: $table.cachedAt, builder: (column) => column);
 }
@@ -9058,6 +9267,9 @@ class $$LocalUsersTableTableManager
                 Value<DateTime?> preferredAddedAt = const Value.absent(),
                 Value<String?> preferredNote = const Value.absent(),
                 Value<int> typeCompte = const Value.absent(),
+                Value<int> accountType = const Value.absent(),
+                Value<int> verificationStatus = const Value.absent(),
+                Value<DateTime?> verifiedUntil = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
               }) => LocalUsersCompanion(
                 alanyaID: alanyaID,
@@ -9075,6 +9287,9 @@ class $$LocalUsersTableTableManager
                 preferredAddedAt: preferredAddedAt,
                 preferredNote: preferredNote,
                 typeCompte: typeCompte,
+                accountType: accountType,
+                verificationStatus: verificationStatus,
+                verifiedUntil: verifiedUntil,
                 cachedAt: cachedAt,
               ),
           createCompanionCallback:
@@ -9094,6 +9309,9 @@ class $$LocalUsersTableTableManager
                 Value<DateTime?> preferredAddedAt = const Value.absent(),
                 Value<String?> preferredNote = const Value.absent(),
                 Value<int> typeCompte = const Value.absent(),
+                Value<int> accountType = const Value.absent(),
+                Value<int> verificationStatus = const Value.absent(),
+                Value<DateTime?> verifiedUntil = const Value.absent(),
                 required DateTime cachedAt,
               }) => LocalUsersCompanion.insert(
                 alanyaID: alanyaID,
@@ -9111,6 +9329,9 @@ class $$LocalUsersTableTableManager
                 preferredAddedAt: preferredAddedAt,
                 preferredNote: preferredNote,
                 typeCompte: typeCompte,
+                accountType: accountType,
+                verificationStatus: verificationStatus,
+                verifiedUntil: verifiedUntil,
                 cachedAt: cachedAt,
               ),
           withReferenceMapper: (p0) => p0

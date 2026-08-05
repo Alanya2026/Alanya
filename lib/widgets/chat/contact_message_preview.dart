@@ -34,6 +34,9 @@ class ContactMessagePreview extends StatefulWidget {
 class _ContactMessagePreviewState extends State<ContactMessagePreview> {
   bool _adding = false;
   bool? _isPreferred;
+  int _typeCompte = 0;
+  int _accountType = 0;
+  int _verificationStatus = 0;
 
   User get _asUser => User(
         alanyaID: widget.contact.alanyaID,
@@ -43,7 +46,9 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
         email: '',
         idPays: 0,
         avatarUrl: widget.contact.avatarUrl ?? '',
-        typeCompte: 0,
+        typeCompte: _typeCompte,
+        accountType: _accountType,
+        verificationStatus: _verificationStatus,
         isOnline: false,
         lastSeen: '',
       );
@@ -63,9 +68,14 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
     }
     final cache = context.read<LocalCacheRepository>();
     final api = context.read<TalkyApiClient>();
-    final local = await cache.getKnownUser(widget.contact.alanyaID);
+    final local = await cache.getKnownUserSocle(widget.contact.alanyaID);
     if (local != null && mounted) {
-      setState(() => _isPreferred = local.isPreferredContact);
+      setState(() {
+        _isPreferred = local.isPreferredContact;
+        _typeCompte = local.typeCompte;
+        _accountType = local.accountType;
+        _verificationStatus = local.verificationStatus;
+      });
       if (local.isPreferredContact) return;
     }
     try {

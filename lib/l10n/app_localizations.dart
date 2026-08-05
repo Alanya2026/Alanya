@@ -5114,6 +5114,12 @@ abstract class AppLocalizations {
   /// **'Vues de statut'**
   String get notifPrefStatusView;
 
+  /// No description provided for @notifPrefBroadcasts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annonces Alanya'**
+  String get notifPrefBroadcasts;
+
   /// No description provided for @notifPrefSound.
   ///
   /// In fr, this message translates to:
@@ -5677,6 +5683,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Seuls les administrateurs peuvent envoyer des messages'**
   String get announcementOnlyAdmins;
+
+  /// No description provided for @officialAccountReadonlyBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce compte diffuse des annonces. Vous ne pouvez pas y répondre.'**
+  String get officialAccountReadonlyBanner;
+
+  /// No description provided for @accountBadgeVerified.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compte vérifié'**
+  String get accountBadgeVerified;
+
+  /// No description provided for @accountBadgeBusinessDeclared.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commerce déclaré'**
+  String get accountBadgeBusinessDeclared;
+
+  /// No description provided for @accountBadgeBusinessVerified.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commerce vérifié'**
+  String get accountBadgeBusinessVerified;
+
+  /// No description provided for @accountBadgeOfficial.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compte officiel Alanya'**
+  String get accountBadgeOfficial;
 
   /// No description provided for @mentionAll.
   ///

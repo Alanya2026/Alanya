@@ -463,12 +463,20 @@ class _ChatsScreenState extends State<ChatsScreen> {
             ),
         ],
       ),
-      title: Text(
-        displayName,
-        style: context.text.titleMedium,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: conv.isGroup
+          ? Text(
+              displayName,
+              style: context.text.titleMedium,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+          : AccountBadgeLabel(
+              name: displayName,
+              accountType: participantJsonInt(other, 'account_type'),
+              verificationStatus:
+                  participantJsonInt(other, 'verification_status'),
+              style: context.text.titleMedium,
+            ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 2),
         child: isTyping

@@ -179,12 +179,18 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
   final data = Map<String, dynamic>.from(message.data);
   final type = data['type']?.toString();
 
-  if (type == 'message_read_sync') {
-    await _handleMessageReadSync(data);
-    return;
-  }
+    if (type == 'message_read_sync') {
+      await _handleMessageReadSync(data);
+      return;
+    }
 
-  final title = (data['title'] ?? message.notification?.title ?? '').toString();
+    if (type == 'broadcast') {
+      PushService._instance?._dispatchNotificationAction(
+        NotificationAction.fromMap(data, fromTap: false),
+      );
+    }
+
+    final title = (data['title'] ?? message.notification?.title ?? '').toString();
   final body = (data['body'] ?? message.notification?.body ?? '').toString();
   if (title.isEmpty && body.isEmpty) return;
 
@@ -194,7 +200,8 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
       (type == 'message' ||
           type == 'meeting_invite' ||
           type == 'meeting_reminder' ||
-          type == 'status_view');
+          type == 'status_view' ||
+          type == 'broadcast');
   if (iosHandledByApns) return;
 
   // Android messages : même si FCM a déjà posté un bloc `notification`
@@ -517,6 +524,26 @@ class PushService {
 
     if (type == 'message_read_sync') {
       await _handleMessageReadSync(data);
+      return;
+    }
+
+    if (type == 'broadcast') {
+      _dispatchNotificationAction(
+        NotificationAction.fromMap(data, fromTap: false),
+      );
+      if (!kIsWeb) {
+        final title =
+            (data['title'] ?? message.notification?.title ?? '').toString();
+        final body =
+            (data['body'] ?? message.notification?.body ?? '').toString();
+        if (title.isNotEmpty || body.isNotEmpty) {
+          await LocalNotificationHelper.showGenericNotification(
+            data,
+            title: title.isNotEmpty ? title : null,
+            body: body.isNotEmpty ? body : null,
+          );
+        }
+      }
       return;
     }
 

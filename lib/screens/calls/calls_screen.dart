@@ -34,6 +34,7 @@ class _CallsScreenState extends State<CallsScreen> {
   bool _searchOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
   String _search = '';
+  final Map<int, LocalUser> _knownUsers = {};
 
   @override
   void initState() {
@@ -71,6 +72,8 @@ class _CallsScreenState extends State<CallsScreen> {
       final localCalls = await cache.watchCalls().first;
       if (!mounted) return;
       if (localCalls.isNotEmpty) {
+        await _hydrateKnownUsers(localCalls, cache);
+        if (!mounted) return;
         setState(() {
           _recentCalls = localCalls.map(_localToCall).toList();
           _isLoading = false;
@@ -106,6 +109,39 @@ class _CallsScreenState extends State<CallsScreen> {
     }
   }
 
+  Future<void> _hydrateKnownUsers(
+    Iterable<LocalCall> calls,
+    LocalCacheRepository cache,
+  ) async {
+    for (final c in calls) {
+      final id = c.idCaller != _myId ? c.idCaller : c.idReceiver;
+      if (_knownUsers.containsKey(id)) continue;
+      final u = await cache.getKnownUser(id);
+      if (u != null) _knownUsers[id] = u;
+    }
+  }
+
+  User _otherUserFromLocal(LocalCall c) {
+    final id = c.idCaller != _myId ? c.idCaller : c.idReceiver;
+    final known = _knownUsers[id];
+    return User(
+      alanyaID: id,
+      nom: c.otherNom ?? '',
+      pseudo: known?.pseudo ?? '',
+      alanyaPhone: known?.alanyaPhone ?? '',
+      email: known?.email ?? '',
+      idPays: known?.idPays ?? 0,
+      avatarUrl: c.otherAvatar ?? known?.avatarUrl ?? '',
+      typeCompte: known?.typeCompte ?? 0,
+      accountType: known?.accountType ?? 0,
+      verificationStatus: known?.verificationStatus ?? 0,
+      verifiedUntil: known?.verifiedUntil?.toIso8601String(),
+      isOnline: known?.isOnline ?? false,
+      lastSeen: known?.lastSeen?.toIso8601String() ?? '',
+      paysLibelle: known?.paysLibelle,
+    );
+  }
+
   Call _localToCall(LocalCall c) {
     return Call(
       idCall: c.idCall,
@@ -115,34 +151,8 @@ class _CallsScreenState extends State<CallsScreen> {
       status: c.status,
       createdAt: c.createdAt.toIso8601String(),
       duree: c.duration,
-      caller: c.idCaller != _myId
-          ? User(
-              alanyaID: c.idCaller,
-              nom: c.otherNom ?? '',
-              pseudo: '',
-              alanyaPhone: '',
-              email: '',
-              idPays: 0,
-              avatarUrl: c.otherAvatar ?? '',
-              typeCompte: 0,
-              isOnline: false,
-              lastSeen: '',
-            )
-          : null,
-      receiver: c.idReceiver != _myId
-          ? User(
-              alanyaID: c.idReceiver,
-              nom: c.otherNom ?? '',
-              pseudo: '',
-              alanyaPhone: '',
-              email: '',
-              idPays: 0,
-              avatarUrl: c.otherAvatar ?? '',
-              typeCompte: 0,
-              isOnline: false,
-              lastSeen: '',
-            )
-          : null,
+      caller: c.idCaller != _myId ? _otherUserFromLocal(c) : null,
+      receiver: c.idReceiver != _myId ? _otherUserFromLocal(c) : null,
     );
   }
 

@@ -65,10 +65,38 @@ extension _ChatInput on _ChatDetailScreenState {
   }
 
   /// Bandeau affiché à la place du composeur, selon la cause du verrou.
-  Widget _buildComposerLockBanner() =>
-      _composerLock == ComposerLock.adminsOnly
-          ? _buildAnnouncementBanner()
-          : _buildBlockedBanner();
+  Widget _buildComposerLockBanner() => switch (_composerLock) {
+        ComposerLock.adminsOnly => _buildAnnouncementBanner(),
+        ComposerLock.official => _buildOfficialBanner(),
+        _ => _buildBlockedBanner(),
+      };
+
+  /// Compte officiel : diffusion en lecture seule, pas de réponse possible.
+  Widget _buildOfficialBanner() {
+    final colors = context.colors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      color: context.semantic.surfaceMuted,
+      child: Row(
+        children: [
+          Icon(Icons.campaign_outlined,
+              size: 18, color: colors.onSurfaceVariant),
+          AppSpacing.hGapSm,
+          Expanded(
+            child: Text(
+              context.l10n.officialAccountReadonlyBanner,
+              style: context.text.bodySmall
+                  ?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Mode annonce : contrairement au blocage, il n'y a rien à débloquer —
   /// seul un administrateur peut lever le verrou.

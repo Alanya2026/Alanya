@@ -7,7 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/status_provider.dart';
 import '../../talky_models.dart';
 import '../../widgets/animated_search_bar.dart';
-import '../../widgets/common/common.dart';
+import '../../widgets/common/account_badge.dart';
+import '../../widgets/common/empty_state.dart';
 import '../../widgets/status_ring_avatar.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'status_create_screen.dart';
@@ -334,8 +335,10 @@ class _ContactStatusTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    last.nom ?? context.l10n.contact2,
+                  AccountBadgeLabel(
+                    name: last.nom ?? context.l10n.contact2,
+                    accountType: last.accountType ?? 0,
+                    verificationStatus: last.verificationStatus ?? 0,
                     style: context.text.titleSmall,
                   ),
                   AppSpacing.vGapXs,

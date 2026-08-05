@@ -2864,6 +2864,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifPrefStatusView => 'Status views';
 
   @override
+  String get notifPrefBroadcasts => 'Alanya announcements';
+
+  @override
   String get notifPrefSound => 'Sound';
 
   @override
@@ -3234,6 +3237,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get announcementOnlyAdmins => 'Only admins can send messages';
+
+  @override
+  String get officialAccountReadonlyBanner =>
+      'This account sends announcements. You cannot reply.';
+
+  @override
+  String get accountBadgeVerified => 'Verified account';
+
+  @override
+  String get accountBadgeBusinessDeclared => 'Declared business';
+
+  @override
+  String get accountBadgeBusinessVerified => 'Verified business';
+
+  @override
+  String get accountBadgeOfficial => 'Official Alanya account';
 
   @override
   String get mentionAll => '@All';

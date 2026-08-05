@@ -4,6 +4,7 @@
 /// de tous les composants de base cohérents avec le design system.
 library;
 
+export 'account_badge.dart';
 export 'app_avatar.dart';
 export 'app_badge.dart';
 export 'app_bottom_sheet.dart';

@@ -75,6 +75,9 @@ class CallService extends ChangeNotifier {
   int? _remoteUserId;
   String? _remoteUserName;
   String? _remoteUserPhoto;
+  int _remoteTypeCompte = 0;
+  int _remoteAccountType = 0;
+  int _remoteVerificationStatus = 0;
   bool _isVideo = false;
   Map<String, dynamic>? _pendingOffer; // offer reçu avant réponse
   String? _currentCallId;   // callId backend, utilisé pour synchroniser CallKit
@@ -205,7 +208,9 @@ class CallService extends ChangeNotifier {
               email: '',
               idPays: 1,
               avatarUrl: _remoteUserPhoto ?? '',
-              typeCompte: 0,
+              typeCompte: _remoteTypeCompte,
+              accountType: _remoteAccountType,
+              verificationStatus: _remoteVerificationStatus,
               isOnline: false,
               lastSeen: '',
             )
@@ -443,6 +448,10 @@ class CallService extends ChangeNotifier {
       if (resolved.isEmpty) return;
       _remoteUserName = resolved;
       _remoteUserPhoto ??= normalizeBackendUrl(u['avatar_url'] as String?);
+      _remoteTypeCompte = (u['type_compte'] as num?)?.toInt() ?? 0;
+      _remoteAccountType = (u['account_type'] as num?)?.toInt() ?? 0;
+      _remoteVerificationStatus =
+          (u['verification_status'] as num?)?.toInt() ?? 0;
       notify();
     }).catchError((Object e) {
       debugPrint('[CallService] _ensureRemoteIdentityResolved($id) échec: $e');

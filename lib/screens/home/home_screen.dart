@@ -239,6 +239,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _handleMeetingNotification(action);
     } else if (type == 'status_view') {
       if (action.fromTap) _switchToTab(_tabStatuses);
+    } else if (type == 'broadcast') {
+      unawaited(
+        Provider.of<RealtimeSyncService>(context, listen: false)
+            .catchUp(force: true),
+      );
+      if (action.fromTap) {
+        NotificationNavigation.openConversation(context, action.data);
+      }
     }
   }
 

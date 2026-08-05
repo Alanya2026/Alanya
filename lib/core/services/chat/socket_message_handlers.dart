@@ -30,6 +30,7 @@ const Set<String> kTerminalSendFailures = {
   'NOT_A_MEMBER',
   'BLOCKED_BY_SENDER',
   'CONVERSATION_NOT_FOUND',
+  'OFFICIAL_READONLY',
 };
 
 class SocketMessageHandlers {

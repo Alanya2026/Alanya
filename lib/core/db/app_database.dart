@@ -215,6 +215,9 @@ class LocalUsers extends Table {
   TextColumn get preferredNote => text().nullable()();
 
   IntColumn get typeCompte => integer().withDefault(const Constant(0))();
+  IntColumn get accountType => integer().withDefault(const Constant(0))();
+  IntColumn get verificationStatus => integer().withDefault(const Constant(0))();
+  DateTimeColumn get verifiedUntil => dateTime().nullable()();
   DateTimeColumn get cachedAt => dateTime()();
 
   @override
@@ -326,7 +329,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -487,6 +490,11 @@ class AppDatabase extends _$AppDatabase {
           if (from < 19) {
             await m.addColumn(
                 localConversations, localConversations.onlyAdminsCanAddMembers);
+          }
+          if (from < 20) {
+            await m.addColumn(localUsers, localUsers.accountType);
+            await m.addColumn(localUsers, localUsers.verificationStatus);
+            await m.addColumn(localUsers, localUsers.verifiedUntil);
           }
         },
       );

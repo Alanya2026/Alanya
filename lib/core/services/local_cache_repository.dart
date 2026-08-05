@@ -134,6 +134,65 @@ class LocalCacheRepository {
         .getSingleOrNull();
   }
 
+  /// Socle compte + statut préféré depuis le cache (Drift schema ≥ 20).
+  Future<({
+    bool isPreferredContact,
+    int typeCompte,
+    int accountType,
+    int verificationStatus,
+  })?> getKnownUserSocle(int alanyaID) async {
+    final local = await getKnownUser(alanyaID);
+    if (local == null) return null;
+    return (
+      isPreferredContact: local.isPreferredContact,
+      typeCompte: local.typeCompte,
+      accountType: local.accountType,
+      verificationStatus: local.verificationStatus,
+    );
+  }
+
+  /// Profil contact depuis le cache local (null si jamais vu).
+  Future<User?> getKnownUserProfile(int alanyaID) async {
+    final u = await getKnownUser(alanyaID);
+    if (u == null) return null;
+    return User(
+      alanyaID: u.alanyaID,
+      nom: u.nom,
+      pseudo: u.pseudo,
+      alanyaPhone: u.alanyaPhone,
+      email: u.email,
+      idPays: u.idPays,
+      avatarUrl: u.avatarUrl,
+      typeCompte: u.typeCompte,
+      accountType: u.accountType,
+      verificationStatus: u.verificationStatus,
+      verifiedUntil: u.verifiedUntil?.toIso8601String(),
+      isOnline: u.isOnline,
+      lastSeen: u.lastSeen?.toIso8601String() ?? '',
+      paysLibelle: u.paysLibelle,
+      addedViaQr: u.addedViaQr,
+      preferredAddedAt: u.preferredAddedAt,
+      preferredNote: u.preferredNote,
+    );
+  }
+
+  /// Champs relation contact préféré depuis le cache.
+  Future<({
+    bool isPreferredContact,
+    bool addedViaQr,
+    DateTime? preferredAddedAt,
+    String? preferredNote,
+  })?> getKnownUserRelation(int alanyaID) async {
+    final u = await getKnownUser(alanyaID);
+    if (u == null) return null;
+    return (
+      isPreferredContact: u.isPreferredContact,
+      addedViaQr: u.addedViaQr,
+      preferredAddedAt: u.preferredAddedAt,
+      preferredNote: u.preferredNote,
+    );
+  }
+
   // ── HISTORIQUE D'APPELS ─────────────────────────────────────────────
 
   Stream<List<LocalCall>> watchCalls() {
@@ -291,6 +350,11 @@ class LocalCacheRepository {
       isOnline: Value(u.isOnline),
       lastSeen: Value(DateTime.tryParse(u.lastSeen)),
       typeCompte: Value(u.typeCompte),
+      accountType: Value(u.accountType),
+      verificationStatus: Value(u.verificationStatus),
+      verifiedUntil: u.verifiedUntil != null
+          ? Value(DateTime.tryParse(u.verifiedUntil!))
+          : const Value.absent(),
       isPreferredContact:
           preferred != null ? Value(preferred) : const Value.absent(),
       // Relation « ajouté par QR » : null = la source ne portait pas
@@ -350,6 +414,14 @@ class LocalCacheRepository {
           : const Value.absent(),
       typeCompte:
           u.typeCompte > 0 ? Value(u.typeCompte) : const Value.absent(),
+      accountType:
+          u.accountType != 0 ? Value(u.accountType) : const Value.absent(),
+      verificationStatus: u.verificationStatus != 0
+          ? Value(u.verificationStatus)
+          : const Value.absent(),
+      verifiedUntil: u.verifiedUntil != null
+          ? Value(DateTime.tryParse(u.verifiedUntil!))
+          : const Value.absent(),
       isPreferredContact:
           preferred != null ? Value(preferred) : const Value.absent(),
       addedViaQr: u.addedViaQr != null

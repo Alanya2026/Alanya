@@ -89,7 +89,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
       );
     }
 
-    if (swipeEnabled && message != null) {
+    final officialIncoming = !isMe && _isOfficialPeer;
+    if (swipeEnabled && message != null && !officialIncoming) {
       return SwipeableMessageBubble(
         message: message,
         isMe: isMe,
@@ -140,7 +141,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
     final selected = _isMessageSelected(msg);
     final selectable = _isSelectableMessage(msg);
-    final reactionGroups = groupReactions(reactions, _myId ?? 0);
+    final officialIncoming = !isMe && _isOfficialPeer;
+    final reactionGroups = officialIncoming
+        ? const <ReactionGroup>[]
+        : groupReactions(reactions, _myId ?? 0);
     return Column(
       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
@@ -153,7 +157,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
             selected: selected,
             selectable: selectable,
             message: msg,
-            swipeEnabled: !msg.isDeleted,
+            swipeEnabled: !msg.isDeleted && !officialIncoming,
             onLongPress: () => _showMessageMenu(msg, isMe),
             onTap: () => _toggleSelection(msg),
             bubble: Container(

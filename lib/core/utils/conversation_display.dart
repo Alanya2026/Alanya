@@ -15,6 +15,11 @@ int conversationParticipantId(dynamic v) {
   return int.tryParse(v?.toString() ?? '') ?? 0;
 }
 
+int participantJsonInt(Map<String, dynamic>? p, String key) {
+  if (p == null || !p.containsKey(key)) return 0;
+  return conversationParticipantId(p[key]);
+}
+
 Map<String, dynamic>? otherParticipant(LocalConversation conv, int myId) {
   final parts = decodeParticipants(conv.participantsJson);
   for (final p in parts) {

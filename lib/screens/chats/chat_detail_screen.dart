@@ -98,7 +98,7 @@ const int _maxSelectionCount = 50;
 /// Deux causes qui ne doivent pas être confondues : `blocked` est définitif
 /// tant que l'utilisateur ne débloque pas, `adminsOnly` peut être levé en
 /// direct par un administrateur. Elles n'affichent pas le même bandeau.
-enum ComposerLock { none, blocked, adminsOnly }
+enum ComposerLock { none, blocked, adminsOnly, official }
 
 /// Plafond au-delà duquel on renonce à sauter au premier non-lu.
 ///
@@ -248,6 +248,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   bool _mentionOfferAll = false;
   StreamSubscription<LocalConversation?>? _groupWatch;
   bool _blockedByThem = false;
+  int _peerAccountType = 0;
+  int _peerVerificationStatus = 0;
 
   bool _selectionMode = false;
   final Set<int> _selectedMsgIDs = {};
@@ -416,6 +418,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     // Inutile de demander au serveur si je me suis bloqué moi-même.
     if (!widget.isGroup && widget.userId != null && !_isSelfChat) {
       await _loadBlockStatus();
+      await _loadPeerAccountFromCache();
     }
 
     // Ouverture via userId seul (contacts préférés, nouvelle discussion…) :
@@ -681,12 +684,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   bool get _callsDisabled =>
       !widget.isGroup && (_isSelfChat || _isBlocked || _blockedByThem);
 
+  Future<void> _loadPeerAccountFromCache() async {
+    final userId = widget.userId;
+    if (userId == null || widget.isGroup) return;
+    try {
+      final socle =
+          await context.read<LocalCacheRepository>().getKnownUserSocle(userId);
+      if (!mounted || socle == null) return;
+      setState(() {
+        _peerAccountType = socle.accountType;
+        _peerVerificationStatus = socle.verificationStatus;
+      });
+    } catch (_) {}
+  }
+
+  bool get _isOfficialPeer =>
+      !widget.isGroup && !_isSelfChat && _peerAccountType == 2;
+
   /// Pourquoi le composeur est verrouillé — deux causes distinctes qu'il ne
   /// faut PAS confondre dans un seul booléen : elles n'affichent pas le même
   /// bandeau, et la seconde peut disparaître en direct (un admin peut lever le
   /// mode annonce pendant que l'écran est ouvert).
   ComposerLock get _composerLock {
     if (!widget.isGroup && _isBlocked) return ComposerLock.blocked;
+    if (_isOfficialPeer) return ComposerLock.official;
     if (widget.isGroup &&
         _groupOnlyAdminsCanSend &&
         !canSend(_myGroupRole, _groupOnlyAdminsCanSend)) {
@@ -766,17 +787,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     await _scrollToReply(cible, silent: true, highlight: false);
   }
 
-  /// Suit le mode annonce et mon rôle. Sans ça, le verrou ne serait évalué
-  /// qu'à l'ouverture de l'écran et resterait faux après une promotion.
+  /// Suit le mode annonce, mon rôle et le genre du correspondant 1-1.
+  /// Sans ça, le verrou ne serait évalué qu'à l'ouverture de l'écran.
   void _watchGroupState() {
     final convId = _convId;
-    if (!widget.isGroup || convId == null) return;
+    if (convId == null) return;
     _groupWatch?.cancel();
     _groupWatch = _chat.repository.watchConversation(convId).listen((conv) {
       if (!mounted || conv == null) return;
       final membres = decodeParticipants(conv.participantsJson)
           .map(Participant.fromJson)
           .toList();
+
+      if (!widget.isGroup && widget.userId != null && _myId != null) {
+        final other = otherParticipant(conv, _myId!);
+        final accountType = _participantInt(other, 'account_type') ?? 0;
+        final verificationStatus =
+            _participantInt(other, 'verification_status') ?? 0;
+        if (accountType != _peerAccountType ||
+            verificationStatus != _peerVerificationStatus) {
+          setState(() {
+            _peerAccountType = accountType;
+            _peerVerificationStatus = verificationStatus;
+          });
+        }
+        return;
+      }
+
+      if (!widget.isGroup) return;
       final groupName = (conv.groupName ?? '').trim().isNotEmpty
           ? conv.groupName!.trim()
           : widget.userName;
@@ -803,6 +841,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         _groupParticipants = membres;
       }
     });
+  }
+
+  int? _participantInt(Map<String, dynamic>? p, String key) {
+    if (p == null || !p.containsKey(key)) return null;
+    final v = p[key];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '');
   }
 
   void _maybeRefreshJoinBannerActor(List<LocalMessage> messages) {

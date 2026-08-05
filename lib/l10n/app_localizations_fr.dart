@@ -2886,6 +2886,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notifPrefStatusView => 'Vues de statut';
 
   @override
+  String get notifPrefBroadcasts => 'Annonces Alanya';
+
+  @override
   String get notifPrefSound => 'Son';
 
   @override
@@ -3266,6 +3269,22 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get announcementOnlyAdmins =>
       'Seuls les administrateurs peuvent envoyer des messages';
+
+  @override
+  String get officialAccountReadonlyBanner =>
+      'Ce compte diffuse des annonces. Vous ne pouvez pas y répondre.';
+
+  @override
+  String get accountBadgeVerified => 'Compte vérifié';
+
+  @override
+  String get accountBadgeBusinessDeclared => 'Commerce déclaré';
+
+  @override
+  String get accountBadgeBusinessVerified => 'Commerce vérifié';
+
+  @override
+  String get accountBadgeOfficial => 'Compte officiel Alanya';
 
   @override
   String get mentionAll => '@Tous';

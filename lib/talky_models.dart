@@ -30,6 +30,12 @@ class User {
   final String avatarUrl;
   final String bio;
   final int typeCompte;
+  /// Genre de compte : 0 personnel, 1 business, 2 officiel (`users.account_type`).
+  final int accountType;
+  /// État de certification : 2 = vérifié (`users.verification_status`).
+  final int verificationStatus;
+  /// Fin de validité de la certification (`users.verified_until`).
+  final String? verifiedUntil;
   final bool isOnline;
   final String lastSeen;
   /// Vrai si ce contact préféré a été ajouté par code QR (scan ou lien).
@@ -78,6 +84,9 @@ class User {
     required this.avatarUrl,
     this.bio = '',
     required this.typeCompte,
+    this.accountType = 0,
+    this.verificationStatus = 0,
+    this.verifiedUntil,
     required this.isOnline,
     required this.lastSeen,
     this.addedViaQr,
@@ -104,6 +113,9 @@ class User {
         avatarUrl: normalizeAvatarUrl(json['avatar_url']?.toString()),
         bio: json['bio']?.toString() ?? '',
         typeCompte: json['type_compte'] ?? 0,
+        accountType: _asInt(json['account_type']) ?? 0,
+        verificationStatus: _asInt(json['verification_status']) ?? 0,
+        verifiedUntil: json['verified_until']?.toString(),
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
         lastSeen: json['last_seen'] ?? '',
         addedViaQr:
@@ -135,6 +147,9 @@ class User {
         'avatar_url': avatarUrl,
         'bio': bio,
         'type_compte': typeCompte,
+        'account_type': accountType,
+        'verification_status': verificationStatus,
+        if (verifiedUntil != null) 'verified_until': verifiedUntil,
         'is_online': isOnline,
         'last_seen': lastSeen,
         'genre': genre,
@@ -735,6 +750,9 @@ class Participant {
 
   int get alanyaID => user.alanyaID;
   String get nom => user.nom;
+  int get accountType => user.accountType;
+  int get verificationStatus => user.verificationStatus;
+  String? get verifiedUntil => user.verifiedUntil;
 
   /// Le serveur aplatit le rôle dans l'objet utilisateur (`attachParticipants`),
   /// il n'y a donc pas d'objet imbriqué à déballer.
@@ -1102,6 +1120,8 @@ class Statut {
   final String? pseudo;
   final String? avatarUrl;
   final bool? isOnline;
+  final int? accountType;
+  final int? verificationStatus;
 
   Statut({
     required this.id,
@@ -1121,6 +1141,8 @@ class Statut {
     this.pseudo,
     this.avatarUrl,
     this.isOnline,
+    this.accountType,
+    this.verificationStatus,
   });
 
   factory Statut.fromJson(Map<String, dynamic> json) => Statut(
@@ -1141,6 +1163,8 @@ class Statut {
         pseudo: json['pseudo'],
         avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
         isOnline: json['is_online'] == 1 || json['is_online'] == true,
+        accountType: _asInt(json['account_type']),
+        verificationStatus: _asInt(json['verification_status']),
       );
 
   bool get isExpired =>
@@ -1170,6 +1194,8 @@ class Statut {
         pseudo: pseudo,
         avatarUrl: avatarUrl,
         isOnline: isOnline,
+        accountType: accountType,
+        verificationStatus: verificationStatus,
       );
 }
 

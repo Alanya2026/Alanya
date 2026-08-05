@@ -363,6 +363,7 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   void _showMessageMenu(LocalMessage msg, bool isMe) {
+    final officialIncoming = !isMe && _isOfficialPeer;
     final isText = msg.type == 0;
     final primary = context.colors.primary;
     final error = context.colors.error;
@@ -375,7 +376,8 @@ extension _ChatActions on _ChatDetailScreenState {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (msg.msgID != 0 && !msg.isDeleted) _buildQuickReactionBar(msg),
+            if (msg.msgID != 0 && !msg.isDeleted && !officialIncoming)
+              _buildQuickReactionBar(msg),
             if (_isSelectableMessage(msg))
               ListTile(
                 leading: Icon(Icons.check_circle_outline, color: primary),
@@ -395,15 +397,16 @@ extension _ChatActions on _ChatDetailScreenState {
                   _chat.repository.retryMessage(msg.clientId);
                 },
               ),
-            ListTile(
-              leading: Icon(Icons.reply, color: primary),
-              title: Text(context.l10n.reply),
-              onTap: () {
-                Navigator.pop(context);
-                rebuild(() => _replyTo = msg);
-                _inputFocus.requestFocus();
-              },
-            ),
+            if (!officialIncoming)
+              ListTile(
+                leading: Icon(Icons.reply, color: primary),
+                title: Text(context.l10n.reply),
+                onTap: () {
+                  Navigator.pop(context);
+                  rebuild(() => _replyTo = msg);
+                  _inputFocus.requestFocus();
+                },
+              ),
             if (canForwardMessage(msg))
               ListTile(
                 leading: Icon(Icons.forward, color: primary),

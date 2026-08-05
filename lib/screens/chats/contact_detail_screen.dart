@@ -176,26 +176,15 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       });
     }
     try {
-      final u = await cache.getKnownUser(widget.userId);
-      if (u != null && mounted && !_profileFromNetwork) {
+      final profile = await cache.getKnownUserProfile(widget.userId);
+      final relation = await cache.getKnownUserRelation(widget.userId);
+      if (profile != null && mounted && !_profileFromNetwork) {
         setState(() {
-          _contact = User(
-            alanyaID: u.alanyaID,
-            nom: u.nom,
-            pseudo: u.pseudo,
-            alanyaPhone: u.alanyaPhone,
-            email: u.email,
-            idPays: u.idPays,
-            avatarUrl: u.avatarUrl,
-            typeCompte: u.typeCompte,
-            isOnline: u.isOnline,
-            lastSeen: u.lastSeen?.toIso8601String() ?? '',
-            paysLibelle: u.paysLibelle,
-          );
-          _isFavorite = u.isPreferredContact;
-          _addedViaQr = u.addedViaQr;
-          _preferredAddedAt = u.preferredAddedAt;
-          _preferredNote = u.preferredNote;
+          _contact = profile;
+          _isFavorite = relation?.isPreferredContact ?? false;
+          _addedViaQr = relation?.addedViaQr ?? false;
+          _preferredAddedAt = relation?.preferredAddedAt;
+          _preferredNote = relation?.preferredNote;
           _isLoading = false;
         });
       }
@@ -641,6 +630,15 @@ class _Header extends StatelessWidget {
         ),
         AppSpacing.vGapMd,
         Text(name, style: context.text.headlineSmall, textAlign: TextAlign.center),
+        if (resolveAccountBadge(user.accountType, user.verificationStatus) !=
+            AccountBadge.none) ...[
+          AppSpacing.vGapXs,
+          AccountBadgeIcon(
+            accountType: user.accountType,
+            verificationStatus: user.verificationStatus,
+            size: 18,
+          ),
+        ],
         if (user.pseudo.isNotEmpty) ...[
           AppSpacing.vGapXs,
           Text('@${user.pseudo}',

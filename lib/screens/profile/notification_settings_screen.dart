@@ -25,6 +25,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   bool _callsEnabled = true;
   bool _meetingsEnabled = true;
   bool _statusViewEnabled = false;
+  bool _broadcastsEnabled = true;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   String _previewMode = 'full';
@@ -68,6 +69,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     _callsEnabled = prefs['callsEnabled'] == true;
     _meetingsEnabled = prefs['meetingsEnabled'] == true;
     _statusViewEnabled = prefs['statusViewEnabled'] == true;
+    _broadcastsEnabled = prefs['broadcastsEnabled'] != false;
     _soundEnabled = prefs['soundEnabled'] == true;
     _vibrationEnabled = prefs['vibrationEnabled'] == true;
     _previewMode = prefs['previewMode']?.toString() ?? 'full';
@@ -180,6 +182,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                         onChanged: (v) {
                           setState(() => _statusViewEnabled = v);
                           _patch({'statusViewEnabled': v});
+                        },
+                      ),
+                      _BoolTile(
+                        title: l10n.notifPrefBroadcasts,
+                        value: _broadcastsEnabled,
+                        onChanged: (v) {
+                          setState(() => _broadcastsEnabled = v);
+                          _patch({'broadcastsEnabled': v});
                         },
                       ),
                     ],
