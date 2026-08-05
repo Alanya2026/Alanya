@@ -1840,5 +1840,43 @@
     }
   },
   "dndSummaryInactive": "Off",
-  "exportPhase1ShareSubject": "Alanya export (profile and metadata)"
+  "exportPhase1ShareSubject": "Alanya export (profile and metadata)",
+  "contactLists": "Contact lists",
+  "contactListsSubtitle": "Family, Friends, Work…",
+  "contactListsManage": "Manage",
+  "createList": "Create a list",
+  "listName": "List name",
+  "listNameHint": "Family, Friends, Work…",
+  "renameList": "Rename list",
+  "deleteList": "Delete list",
+  "deleteListConfirm": "Delete \u201c{name}\u201d? Your contacts stay in your favourites.",
+  "@deleteListConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "listColor": "Chip colour",
+  "listColorNone": "None",
+  "listNameAlreadyExists": "A list with this name already exists",
+  "listSaveFailed": "Could not save the list. Try again.",
+  "listMembersUpdateFailed": "Could not update members. Try again.",
+  "listMembersCount": "{count, plural, =0{No members} =1{1 member} other{{count} members}}",
+  "@listMembersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "addToList": "Add members",
+  "removeFromList": "Remove from list",
+  "createGroupFromList": "Create a group",
+  "noLists": "No contact lists",
+  "noListsHint": "Sort your preferred contacts into Family, Friends, Work…",
+  "noListMembers": "No members in this list",
+  "noContactToAddToList": "All your preferred contacts are already in this list",
+  "addMembersSelected": "{count} selected",
+  "@addMembersSelected": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
 }

@@ -1,13 +1,12 @@
 # Listes de contacts (Famille / Amis / Bureau…) — Plan d'implémentation
 
-> Statut : **spécification / à implémenter**
+> Statut : **implémenté** (branche `listes`)
 > Périmètre : Talky (Flutter) + Alanya-Backend (Node/Express/MySQL)
-> Dernière mise à jour : 2026-07-25
+> Dernière mise à jour : 2026-08-05
 >
-> ⚠️ Migration renumérotée **023 → 025** : le numéro 023 est pris par le socle de
-> compte unifié (`docs/architecture/socle-compte.tex`), et le 024 par les groupes
-> enrichis (`docs/groupes-plan.md`), parti en implémentation avant cette feature.
-> Le bump Drift devient **15 → 16** pour la même raison.
+> ⚠️ Migration renumérotée **023 → 038** : 025 à 037 étaient déjà pris au moment
+> de l'implémentation (socle de compte, groupes enrichis, QR, réglages…).
+> Le bump Drift devient **19 → 20** pour la même raison.
 
 ---
 
@@ -53,13 +52,13 @@ les 3 couches.
 Stack : Node.js + Express 4 + MySQL (SQL brut via `mysql2/promise`, pas d'ORM).
 Auth : middleware JWT `src/middleware/auth.js` (`req.user.alanyaID`).
 
-### 2.1 Migration SQL — `migrations/025_contact_lists.sql` *(nouveau)*
+### 2.1 Migration SQL — `migrations/038_contact_lists.sql` *(nouveau)*
 
 Sur le modèle de `preferredContact` / `conv_participants`
 (`migrations/001_initial_schema.sql`).
 
 ```sql
--- 025_contact_lists.sql — listes de contacts + membres (many-to-many)
+-- 038_contact_lists.sql — listes de contacts + membres (many-to-many)
 
 CREATE TABLE IF NOT EXISTS contact_list (
   idList     BIGINT       NOT NULL AUTO_INCREMENT,
@@ -161,10 +160,10 @@ Deux nouvelles tables (modèle `LocalUsers` / `LocalMessageReactions`) :
 
 Puis :
 1. Les ajouter au `@DriftDatabase(tables: [...])`.
-2. **Bumper `schemaVersion` 15 → 16** (le 15 est pris par les groupes enrichis).
+2. **Bumper `schemaVersion` 19 → 20**.
 3. Dans `onUpgrade` :
    ```dart
-   if (from < 16) {
+   if (from < 20) {
      await m.createTable(localContactLists);
      await m.createTable(localContactListMembers);
    }
@@ -234,7 +233,7 @@ Chaînes dans `lib/l10n/app_localizations.dart` (abstrait), `_fr.dart`, `_en.dar
 ## 5. Récapitulatif des fichiers
 
 **Backend** *(nouveaux sauf mention)* :
-`migrations/025_contact_lists.sql`, `src/controllers/contactListController.js`,
+`migrations/038_contact_lists.sql`, `src/controllers/contactListController.js`,
 `src/routes/contactLists.js`, `server.js` *(modif : enregistrement)*.
 
 **Frontend — données** :
@@ -252,7 +251,7 @@ Chaînes dans `lib/l10n/app_localizations.dart` (abstrait), `_fr.dart`, `_en.dar
 
 ## 6. Vérification (test de bout en bout)
 
-1. **Backend** — appliquer `025_contact_lists.sql` sur MySQL, redémarrer le
+1. **Backend** — appliquer `038_contact_lists.sql` sur MySQL, redémarrer le
    serveur, tester chaque endpoint via Swagger/curl avec un JWT valide :
    créer liste → 201 ; doublon de nom → 409 ; ajouter un non-favori → 400/403 ;
    lister membres ; supprimer.
@@ -261,7 +260,7 @@ Chaînes dans `lib/l10n/app_localizations.dart` (abstrait), `_fr.dart`, `_en.dar
 3. **Scénario complet** — créer « Famille », y ajouter 2-3 contacts préférés →
    la puce « Famille » filtre la liste → « Créer un groupe » ouvre une
    conversation de groupe avec ces membres et le nom pré-rempli.
-4. **Migration v14 → v15** — sur un appareil déjà installé, vérifier que la mise
+4. **Migration v19 → v20** — sur un appareil déjà installé, vérifier que la mise
    à jour **ne vide pas** les données existantes (upgrade path, pas recreate).
 5. **Offline** — réseau coupé : listes + membres restent visibles depuis le cache
    Drift ; les mutations affichent un état hors-ligne cohérent.

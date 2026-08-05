@@ -25,6 +25,7 @@ import 'core/utils/app_log.dart';
 
 part 'api/auth_api.dart';
 part 'api/users_api.dart';
+part 'api/contact_lists_api.dart';
 part 'api/chat_api.dart';
 part 'api/calls_api.dart';
 part 'api/meetings_api.dart';

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../db/app_database.dart';
 import '../utils/media_album.dart';
+import '../utils/user_search.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'media_cache_service.dart';
@@ -132,6 +133,174 @@ class LocalCacheRepository {
   Future<LocalUser?> getKnownUser(int alanyaID) {
     return (_db.select(_db.localUsers)..where((u) => u.alanyaID.equals(alanyaID)))
         .getSingleOrNull();
+  }
+
+  // ── LISTES DE CONTACTS ──────────────────────────────────────────────
+
+  /// Listes de contacts en cache (offline-first, comme les contacts préférés).
+  Stream<List<LocalContactList>> watchContactLists() {
+    return (_db.select(_db.localContactLists)
+          ..orderBy([(l) => OrderingTerm(expression: l.name)]))
+        .watch();
+  }
+
+  Future<List<LocalContactList>> getContactListsOnce() {
+    return (_db.select(_db.localContactLists)
+          ..orderBy([(l) => OrderingTerm(expression: l.name)]))
+        .get();
+  }
+
+  /// Rafraîchit les listes depuis l'API. Best-effort : en cas d'erreur réseau,
+  /// le cache reste utilisable.
+  Future<void> syncContactLists() async {
+    try {
+      final raw = await _api.getContactLists();
+      final now = DateTime.now();
+      final previousIds =
+          (await getContactListsOnce()).map((l) => l.idList).toSet();
+      final newIds = <int>{};
+      await _db.batch((b) {
+        for (final r in raw.whereType<Map<String, dynamic>>()) {
+          final l = ContactList.fromJson(r);
+          if (l.idList == 0) continue;
+          newIds.add(l.idList);
+          final companion = LocalContactListsCompanion(
+            idList: Value(l.idList),
+            name: Value(l.name),
+            color: Value(l.color),
+            memberCount: Value(l.memberCount),
+            cachedAt: Value(now),
+          );
+          b.insert(
+            _db.localContactLists,
+            companion,
+            onConflict: DoUpdate((_) => companion),
+          );
+        }
+      });
+      // Listes supprimées ailleurs : on les retire vraiment (contrairement aux
+      // contacts préférés, une liste orpheline n'a aucune utilité en cache).
+      final removed = previousIds.difference(newIds);
+      if (removed.isNotEmpty) {
+        await _forgetLists(removed);
+      }
+    } catch (e) {
+      debugPrint('[LocalCacheRepo] syncContactLists échouée: $e');
+    }
+  }
+
+  /// Membres d'une liste, hydratés depuis [LocalUsers] — l'appartenance ne
+  /// duplique aucun profil.
+  Stream<List<User>> watchListMembers(int idList) {
+    final query = _db.select(_db.localContactListMembers).join([
+      innerJoin(
+        _db.localUsers,
+        _db.localUsers.alanyaID.equalsExp(_db.localContactListMembers.idFriend),
+      ),
+    ])
+      ..where(_db.localContactListMembers.idList.equals(idList))
+      ..orderBy([OrderingTerm(expression: _db.localUsers.nom)]);
+    return query.watch().map(
+          (rows) => rows
+              .map((r) => localUserToUser(r.readTable(_db.localUsers)))
+              .toList(),
+        );
+  }
+
+  /// Ids des membres d'une liste — assez pour filtrer une liste déjà streamée
+  /// (puces de l'écran Contacts préférés) sans re-jointure sur les profils.
+  Stream<Set<int>> watchListMemberIds(int idList) {
+    return (_db.select(_db.localContactListMembers)
+          ..where((m) => m.idList.equals(idList)))
+        .watch()
+        .map((rows) => rows.map((m) => m.idFriend).toSet());
+  }
+
+  Future<void> syncListMembers(int idList) async {
+    try {
+      final raw = await _api.getListMembers(idList);
+      final now = DateTime.now();
+      final ids = <int>{};
+      await _db.batch((b) {
+        for (final r in raw.whereType<Map<String, dynamic>>()) {
+          final u = User.fromJson(r);
+          if (u.alanyaID == 0) continue;
+          ids.add(u.alanyaID);
+          // Même projection partielle que les contacts préférés : ne pas
+          // écraser une fiche déjà complète avec un profil tronqué.
+          final companion = _partialUserToCompanion(
+            u,
+            cachedAt: now,
+            presenceKnown: true,
+          );
+          b.insert(
+            _db.localUsers,
+            companion,
+            onConflict: DoUpdate((_) => companion),
+          );
+          b.insert(
+            _db.localContactListMembers,
+            LocalContactListMembersCompanion(
+              idList: Value(idList),
+              idFriend: Value(u.alanyaID),
+            ),
+            onConflict: DoNothing(),
+          );
+        }
+      });
+      // Retraits faits ailleurs.
+      await (_db.delete(_db.localContactListMembers)
+            ..where((m) =>
+                m.idList.equals(idList) &
+                (ids.isEmpty ? const Constant(true) : m.idFriend.isNotIn(ids))))
+          .go();
+    } catch (e) {
+      debugPrint('[LocalCacheRepo] syncListMembers($idList) échouée: $e');
+    }
+  }
+
+  /// Crée une liste côté serveur puis resynchronise le cache. Comme
+  /// `addContact`, la mutation reste online : pas d'outbox pour les listes.
+  Future<ContactList> createContactList(String name, {String? color}) async {
+    final raw = await _api.createContactList(name, color: color);
+    final created = ContactList.fromJson(raw);
+    await syncContactLists();
+    return created;
+  }
+
+  Future<void> updateContactList(int idList,
+      {String? name, String? color}) async {
+    await _api.updateContactList(idList, name: name, color: color);
+    await syncContactLists();
+  }
+
+  Future<void> deleteContactList(int idList) async {
+    await _api.deleteContactList(idList);
+    await _forgetLists({idList});
+  }
+
+  Future<void> addListMember(int idList, int friendID) async {
+    await _api.addListMember(idList, friendID);
+    await syncListMembers(idList);
+    await syncContactLists();
+  }
+
+  Future<void> removeListMember(int idList, int friendID) async {
+    await _api.removeListMember(idList, friendID);
+    await syncListMembers(idList);
+    await syncContactLists();
+  }
+
+  /// Oublie localement des listes (et leurs appartenances) — les profils des
+  /// membres restent en cache, ils sont partagés avec le reste de l'app.
+  Future<void> _forgetLists(Set<int> idLists) async {
+    if (idLists.isEmpty) return;
+    await (_db.delete(_db.localContactListMembers)
+          ..where((m) => m.idList.isIn(idLists)))
+        .go();
+    await (_db.delete(_db.localContactLists)
+          ..where((l) => l.idList.isIn(idLists)))
+        .go();
   }
 
   // ── HISTORIQUE D'APPELS ─────────────────────────────────────────────
@@ -264,11 +433,13 @@ class LocalCacheRepository {
         .go();
   }
 
-  /// Vide les caches secondaires (contacts, appels, meetings, statuts).
+  /// Vide les caches secondaires (contacts, listes, appels, meetings, statuts).
   Future<void> clearSession() async {
     await _db.delete(_db.localStatuses).go();
     await _db.delete(_db.localMeetings).go();
     await _db.delete(_db.localCalls).go();
+    await _db.delete(_db.localContactListMembers).go();
+    await _db.delete(_db.localContactLists).go();
     await _db.delete(_db.localUsers).go();
   }
 

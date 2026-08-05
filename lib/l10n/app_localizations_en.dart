@@ -4520,4 +4520,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportPhase1ShareSubject => 'Alanya export (profile and metadata)';
+
+  @override
+  String get contactLists => 'Contact lists';
+
+  @override
+  String get contactListsSubtitle => 'Family, Friends, Work…';
+
+  @override
+  String get contactListsManage => 'Manage';
+
+  @override
+  String get createList => 'Create a list';
+
+  @override
+  String get listName => 'List name';
+
+  @override
+  String get listNameHint => 'Family, Friends, Work…';
+
+  @override
+  String get renameList => 'Rename list';
+
+  @override
+  String get deleteList => 'Delete list';
+
+  @override
+  String deleteListConfirm(String name) {
+    return 'Delete “$name”? Your contacts stay in your favourites.';
+  }
+
+  @override
+  String get listColor => 'Chip colour';
+
+  @override
+  String get listColorNone => 'None';
+
+  @override
+  String get listNameAlreadyExists => 'A list with this name already exists';
+
+  @override
+  String get listSaveFailed => 'Could not save the list. Try again.';
+
+  @override
+  String get listMembersUpdateFailed => 'Could not update members. Try again.';
+
+  @override
+  String listMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+      zero: 'No members',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addToList => 'Add members';
+
+  @override
+  String get removeFromList => 'Remove from list';
+
+  @override
+  String get createGroupFromList => 'Create a group';
+
+  @override
+  String get noLists => 'No contact lists';
+
+  @override
+  String get noListsHint =>
+      'Sort your preferred contacts into Family, Friends, Work…';
+
+  @override
+  String get noListMembers => 'No members in this list';
+
+  @override
+  String get noContactToAddToList =>
+      'All your preferred contacts are already in this list';
+
+  @override
+  String addMembersSelected(int count) {
+    return '$count selected';
+  }
 }

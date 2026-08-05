@@ -1258,6 +1258,45 @@ class PreferredContact {
       );
 }
 
+// ── CONTACT LIST ─────────────────────────────────────────────────────
+
+/// Liste nommée de contacts préférés (Famille, Amis, Bureau…).
+///
+/// Ne porte que l'entête : les membres se lisent séparément
+/// (`GET /contact-lists/:id/members`) et sont hydratés en [User], comme les
+/// contacts préférés.
+class ContactList {
+  final int idList;
+  final String name;
+
+  /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
+  final String? color;
+  final int memberCount;
+
+  ContactList({
+    required this.idList,
+    required this.name,
+    this.color,
+    this.memberCount = 0,
+  });
+
+  factory ContactList.fromJson(Map<String, dynamic> json) => ContactList(
+        idList: (json['idList'] as num?)?.toInt() ?? 0,
+        name: json['name']?.toString() ?? '',
+        color: (json['color']?.toString().isEmpty ?? true)
+            ? null
+            : json['color'].toString(),
+        memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'idList': idList,
+        'name': name,
+        'color': color,
+        'memberCount': memberCount,
+      };
+}
+
 // ── SOCKET EVENTS ────────────────────────────────────────────────────
 // Noms exacts utilisés par le backend Node.js
 

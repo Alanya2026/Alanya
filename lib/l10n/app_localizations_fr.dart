@@ -4571,4 +4571,89 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get exportPhase1ShareSubject =>
       'Export Alanya (profil et métadonnées)';
+
+  @override
+  String get contactLists => 'Listes de contacts';
+
+  @override
+  String get contactListsSubtitle => 'Famille, Amis, Bureau…';
+
+  @override
+  String get contactListsManage => 'Gérer';
+
+  @override
+  String get createList => 'Créer une liste';
+
+  @override
+  String get listName => 'Nom de la liste';
+
+  @override
+  String get listNameHint => 'Famille, Amis, Bureau…';
+
+  @override
+  String get renameList => 'Renommer la liste';
+
+  @override
+  String get deleteList => 'Supprimer la liste';
+
+  @override
+  String deleteListConfirm(String name) {
+    return 'Supprimer « $name » ? Vos contacts restent dans vos favoris.';
+  }
+
+  @override
+  String get listColor => 'Couleur de la puce';
+
+  @override
+  String get listColorNone => 'Aucune';
+
+  @override
+  String get listNameAlreadyExists => 'Une liste porte déjà ce nom';
+
+  @override
+  String get listSaveFailed => 'Impossible d\'enregistrer la liste. Réessayez.';
+
+  @override
+  String get listMembersUpdateFailed =>
+      'Impossible de modifier les membres. Réessayez.';
+
+  @override
+  String listMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '1 membre',
+      zero: 'Aucun membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addToList => 'Ajouter des membres';
+
+  @override
+  String get removeFromList => 'Retirer de la liste';
+
+  @override
+  String get createGroupFromList => 'Créer un groupe';
+
+  @override
+  String get noLists => 'Aucune liste de contacts';
+
+  @override
+  String get noListsHint =>
+      'Rangez vos contacts préférés par Famille, Amis, Bureau…';
+
+  @override
+  String get noListMembers => 'Aucun membre dans cette liste';
+
+  @override
+  String get noContactToAddToList =>
+      'Tous vos contacts préférés sont déjà dans cette liste';
+
+  @override
+  String addMembersSelected(int count) {
+    return '$count sélectionné(s)';
+  }
 }

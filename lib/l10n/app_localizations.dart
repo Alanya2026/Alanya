@@ -7987,6 +7987,144 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Export Alanya (profil et métadonnées)'**
   String get exportPhase1ShareSubject;
+
+  /// No description provided for @contactLists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Listes de contacts'**
+  String get contactLists;
+
+  /// No description provided for @contactListsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Famille, Amis, Bureau…'**
+  String get contactListsSubtitle;
+
+  /// No description provided for @contactListsManage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gérer'**
+  String get contactListsManage;
+
+  /// No description provided for @createList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer une liste'**
+  String get createList;
+
+  /// No description provided for @listName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom de la liste'**
+  String get listName;
+
+  /// No description provided for @listNameHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Famille, Amis, Bureau…'**
+  String get listNameHint;
+
+  /// No description provided for @renameList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renommer la liste'**
+  String get renameList;
+
+  /// No description provided for @deleteList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer la liste'**
+  String get deleteList;
+
+  /// No description provided for @deleteListConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer « {name} » ? Vos contacts restent dans vos favoris.'**
+  String deleteListConfirm(String name);
+
+  /// No description provided for @listColor.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couleur de la puce'**
+  String get listColor;
+
+  /// No description provided for @listColorNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune'**
+  String get listColorNone;
+
+  /// No description provided for @listNameAlreadyExists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une liste porte déjà ce nom'**
+  String get listNameAlreadyExists;
+
+  /// No description provided for @listSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la liste. Réessayez.'**
+  String get listSaveFailed;
+
+  /// No description provided for @listMembersUpdateFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de modifier les membres. Réessayez.'**
+  String get listMembersUpdateFailed;
+
+  /// No description provided for @listMembersCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun membre} =1{1 membre} other{{count} membres}}'**
+  String listMembersCount(int count);
+
+  /// No description provided for @addToList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des membres'**
+  String get addToList;
+
+  /// No description provided for @removeFromList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer de la liste'**
+  String get removeFromList;
+
+  /// No description provided for @createGroupFromList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer un groupe'**
+  String get createGroupFromList;
+
+  /// No description provided for @noLists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune liste de contacts'**
+  String get noLists;
+
+  /// No description provided for @noListsHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rangez vos contacts préférés par Famille, Amis, Bureau…'**
+  String get noListsHint;
+
+  /// No description provided for @noListMembers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun membre dans cette liste'**
+  String get noListMembers;
+
+  /// No description provided for @noContactToAddToList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous vos contacts préférés sont déjà dans cette liste'**
+  String get noContactToAddToList;
+
+  /// No description provided for @addMembersSelected.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} sélectionné(s)'**
+  String addMembersSelected(int count);
 }
 
 class _AppLocalizationsDelegate

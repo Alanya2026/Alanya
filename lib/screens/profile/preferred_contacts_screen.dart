@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +15,7 @@ import '../../talky_models.dart';
 import '../../widgets/add_contact_sheet.dart';
 import '../../widgets/common/common.dart';
 import '../chats/contact_detail_screen.dart';
+import 'contact_lists_screen.dart';
 
 class PreferredContactsScreen extends StatefulWidget {
   const PreferredContactsScreen({super.key});
@@ -30,6 +33,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    unawaited(context.read<LocalCacheRepository>().syncContactLists());
   }
 
   @override
@@ -120,6 +124,129 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
   /// Filtre d'origine : false = tous, true = seulement les ajoutés par QR.
   bool _filtreQr = false;
 
+  /// Liste de contacts active (null = toutes). Se compose avec [_filtreQr] et
+  /// la recherche : les trois filtres s'appliquent en ET.
+  int? _selectedListId;
+
+  void _openContactLists() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ContactListsScreen()),
+    );
+  }
+
+  /// Rangée de puces : « Tous », « Par QR », une par liste, puis « Gérer ».
+  Widget _buildFilterChips(
+    List<LocalContactList> lists,
+    int? activeListId,
+    int totalCount,
+    int qrCount,
+  ) {
+    final allSelected = !_filtreQr && activeListId == null;
+
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        children: [
+          ChoiceChip(
+            label: Text('${context.l10n.qrContactsFilterAll} · $totalCount'),
+            selected: allSelected,
+            showCheckmark: false,
+            onSelected: (_) => setState(() {
+              _filtreQr = false;
+              _selectedListId = null;
+            }),
+          ),
+          AppSpacing.hGapSm,
+          ChoiceChip(
+            avatar: Icon(
+              Icons.qr_code_2,
+              size: AppIconSize.sm,
+              color: _filtreQr
+                  ? context.colors.onPrimary
+                  : context.colors.onSurfaceVariant,
+            ),
+            label: Text('${context.l10n.qrContactsFilterQr} · $qrCount'),
+            selected: _filtreQr,
+            showCheckmark: false,
+            selectedColor: context.colors.primary,
+            labelStyle: TextStyle(
+              color: _filtreQr
+                  ? context.colors.onPrimary
+                  : context.colors.onSurface,
+            ),
+            onSelected: (_) => setState(() => _filtreQr = !_filtreQr),
+          ),
+          for (final list in lists) ...[
+            AppSpacing.hGapSm,
+            Builder(builder: (context) {
+              final selected = activeListId == list.idList;
+              final tint =
+                  parseListColor(list.color) ?? context.colors.primary;
+              return ChoiceChip(
+                label: Text('${list.name} · ${list.memberCount}'),
+                selected: selected,
+                showCheckmark: false,
+                selectedColor: tint,
+                labelStyle: TextStyle(
+                  color: selected
+                      ? context.colors.onPrimary
+                      : context.colors.onSurface,
+                ),
+                onSelected: (_) => setState(
+                  () => _selectedListId = selected ? null : list.idList,
+                ),
+              );
+            }),
+          ],
+          AppSpacing.hGapSm,
+          ActionChip(
+            avatar: Icon(
+              Icons.tune,
+              size: AppIconSize.sm,
+              color: context.colors.onSurfaceVariant,
+            ),
+            label: Text(context.l10n.contactListsManage),
+            onPressed: _openContactLists,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Liste (ou état vide) des contacts déjà réduits par les puces ; la
+  /// recherche s'applique en dernier.
+  Widget _buildContactList(List<User> scoped, bool hasQuery) {
+    final shown =
+        hasQuery ? filterUsersBySearch(scoped, _searchQuery) : scoped;
+
+    if (shown.isEmpty) {
+      return EmptyState(
+        icon: hasQuery ? Icons.person_search : CupertinoIcons.person_2,
+        title: hasQuery
+            ? context.l10n.noResults
+            : context.l10n.noPreferredContacts,
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.lg,
+      ),
+      itemCount: shown.length,
+      itemBuilder: (context, index) {
+        final user = shown[index];
+        return _ContactTile(
+          user: user,
+          onRemove: () => _showRemoveOptions(user),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cache = context.read<LocalCacheRepository>();
@@ -147,120 +274,98 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
           final scoped = _filtreQr
               ? contacts.where((u) => u.addedViaQr == true).toList()
               : contacts;
-          final filteredContacts = hasQuery
-              ? filterUsersBySearch(scoped, _searchQuery)
-              : scoped;
           final existingIds = contacts.map((u) => u.alanyaID).toSet();
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AppSearchField(
-                        controller: _searchController,
-                        hintText: context.l10n.searchByNameUsernameOrPhone,
-                        fillColor: context.colors.surface,
-                        borderColor: context.colors.outline,
-                        onChanged: (_) {},
-                        onClear: _clearSearch,
-                      ),
+          return StreamBuilder<List<LocalContactList>>(
+            stream: cache.watchContactLists(),
+            builder: (context, listsSnapshot) {
+              final lists = listsSnapshot.data ?? const <LocalContactList>[];
+              // Une liste supprimée ailleurs ne doit pas laisser un filtre
+              // fantôme : on retombe sur « Tous ». Dérivé à chaque build plutôt
+              // qu'écrit dans l'état — on ne mute rien pendant un build.
+              final activeListId =
+                  lists.any((l) => l.idList == _selectedListId)
+                      ? _selectedListId
+                      : null;
+
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.sm,
                     ),
-                    TextButton.icon(
-                      onPressed: () => _openAddContact(existingIds),
-                      icon: Icon(
-                        Icons.add,
-                        size: AppIconSize.sm,
-                        color: context.colors.primary,
-                      ),
-                      label: Text(
-                        context.l10n.add,
-                        style: TextStyle(
-                          color: context.colors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                child: Row(
-                  children: [
-                    ChoiceChip(
-                      label: Text(
-                          '${context.l10n.qrContactsFilterAll} · ${contacts.length}'),
-                      selected: !_filtreQr,
-                      showCheckmark: false,
-                      onSelected: (_) => setState(() => _filtreQr = false),
-                    ),
-                    AppSpacing.hGapSm,
-                    ChoiceChip(
-                      avatar: Icon(
-                        Icons.qr_code_2,
-                        size: AppIconSize.sm,
-                        color: _filtreQr
-                            ? context.colors.onPrimary
-                            : context.colors.onSurfaceVariant,
-                      ),
-                      label:
-                          Text('${context.l10n.qrContactsFilterQr} · $qrCount'),
-                      selected: _filtreQr,
-                      showCheckmark: false,
-                      selectedColor: context.colors.primary,
-                      labelStyle: TextStyle(
-                        color: _filtreQr
-                            ? context.colors.onPrimary
-                            : context.colors.onSurface,
-                      ),
-                      onSelected: (_) => setState(() => _filtreQr = true),
-                    ),
-                  ],
-                ),
-              ),
-              AppSpacing.vGapSm,
-              Expanded(
-                child: contacts.isEmpty
-                    ? EmptyState(
-                        icon: CupertinoIcons.person_2,
-                        title: context.l10n.noPreferredContacts,
-                        action: FilledButton.icon(
-                          onPressed: () => _openAddContact(existingIds),
-                          icon: const Icon(Icons.add, size: AppIconSize.sm),
-                          label: Text(context.l10n.add),
-                        ),
-                      )
-                    : filteredContacts.isEmpty
-                        ? EmptyState(
-                            icon: hasQuery
-                                ? Icons.person_search
-                                : CupertinoIcons.person_2,
-                            title: hasQuery
-                                ? context.l10n.noResults
-                                : context.l10n.noPreferredContacts,
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xl,
-                              vertical: AppSpacing.lg,
-                            ),
-                            itemCount: filteredContacts.length,
-                            itemBuilder: (context, index) {
-                              final user = filteredContacts[index];
-                              return _ContactTile(
-                                user: user,
-                                onRemove: () => _showRemoveOptions(user),
-                              );
-                            },
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: AppSearchField(
+                            controller: _searchController,
+                            hintText:
+                                context.l10n.searchByNameUsernameOrPhone,
+                            fillColor: context.colors.surface,
+                            borderColor: context.colors.outline,
+                            onChanged: (_) {},
+                            onClear: _clearSearch,
                           ),
-              ),
-            ],
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _openAddContact(existingIds),
+                          icon: Icon(
+                            Icons.add,
+                            size: AppIconSize.sm,
+                            color: context.colors.primary,
+                          ),
+                          label: Text(
+                            context.l10n.add,
+                            style: TextStyle(
+                              color: context.colors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildFilterChips(
+                    lists,
+                    activeListId,
+                    contacts.length,
+                    qrCount,
+                  ),
+                  AppSpacing.vGapSm,
+                  Expanded(
+                    child: contacts.isEmpty
+                        ? EmptyState(
+                            icon: CupertinoIcons.person_2,
+                            title: context.l10n.noPreferredContacts,
+                            action: FilledButton.icon(
+                              onPressed: () => _openAddContact(existingIds),
+                              icon: const Icon(Icons.add,
+                                  size: AppIconSize.sm),
+                              label: Text(context.l10n.add),
+                            ),
+                          )
+                        : activeListId == null
+                            ? _buildContactList(scoped, hasQuery)
+                            : StreamBuilder<Set<int>>(
+                                stream:
+                                    cache.watchListMemberIds(activeListId),
+                                builder: (context, memberSnapshot) {
+                                  final ids =
+                                      memberSnapshot.data ?? const <int>{};
+                                  return _buildContactList(
+                                    scoped
+                                        .where(
+                                            (u) => ids.contains(u.alanyaID))
+                                        .toList(),
+                                    hasQuery,
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),

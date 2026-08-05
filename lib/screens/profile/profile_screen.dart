@@ -24,6 +24,7 @@ import 'settings_screen.dart';
 import 'account_hub_screen.dart';
 import 'edit_profile_screen.dart';
 import 'my_media_screen.dart';
+import 'contact_lists_screen.dart';
 import 'preferred_contacts_screen.dart';
 import 'qr_code_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
@@ -81,6 +82,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const PreferredContactsScreen()),
+    );
+  }
+
+  void _openContactLists() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ContactListsScreen()),
     );
   }
 
@@ -221,25 +229,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             context.l10n.preferredContacts,
                             style: context.text.titleMedium,
                           ),
-                          if (contacts.length > 4)
-                            GestureDetector(
-                              onTap: _openPreferredContacts,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '+${contacts.length - 4}',
-                                    style: context.text.labelMedium?.copyWith(
-                                      color: context.colors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (contacts.length > 4)
+                                GestureDetector(
+                                  onTap: _openPreferredContacts,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '+${contacts.length - 4}',
+                                        style:
+                                            context.text.labelMedium?.copyWith(
+                                          color: context.colors.primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Icon(Icons.chevron_right,
+                                          size: AppIconSize.sm,
+                                          color: context.colors.primary),
+                                    ],
                                   ),
-                                  Icon(Icons.chevron_right,
-                                      size: AppIconSize.sm,
-                                      color: context.colors.primary),
-                                ],
+                                ),
+                              AppSpacing.hGapSm,
+                              TextButton.icon(
+                                onPressed: _openContactLists,
+                                icon: Icon(
+                                  Icons.folder_outlined,
+                                  size: AppIconSize.sm,
+                                  color: context.colors.primary,
+                                ),
+                                label: Text(
+                                  context.l10n.contactLists,
+                                  style: TextStyle(
+                                    color: context.colors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
+                          ),
                         ],
                       ),
                     ),

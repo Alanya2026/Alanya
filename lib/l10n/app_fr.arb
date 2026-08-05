@@ -2722,5 +2722,43 @@
     }
   },
   "dndSummaryInactive": "Désactivé",
-  "exportPhase1ShareSubject": "Export Alanya (profil et métadonnées)"
+  "exportPhase1ShareSubject": "Export Alanya (profil et métadonnées)",
+  "contactLists": "Listes de contacts",
+  "contactListsSubtitle": "Famille, Amis, Bureau…",
+  "contactListsManage": "Gérer",
+  "createList": "Créer une liste",
+  "listName": "Nom de la liste",
+  "listNameHint": "Famille, Amis, Bureau…",
+  "renameList": "Renommer la liste",
+  "deleteList": "Supprimer la liste",
+  "deleteListConfirm": "Supprimer « {name} » ? Vos contacts restent dans vos favoris.",
+  "@deleteListConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "listColor": "Couleur de la puce",
+  "listColorNone": "Aucune",
+  "listNameAlreadyExists": "Une liste porte déjà ce nom",
+  "listSaveFailed": "Impossible d'enregistrer la liste. Réessayez.",
+  "listMembersUpdateFailed": "Impossible de modifier les membres. Réessayez.",
+  "listMembersCount": "{count, plural, =0{Aucun membre} =1{1 membre} other{{count} membres}}",
+  "@listMembersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "addToList": "Ajouter des membres",
+  "removeFromList": "Retirer de la liste",
+  "createGroupFromList": "Créer un groupe",
+  "noLists": "Aucune liste de contacts",
+  "noListsHint": "Rangez vos contacts préférés par Famille, Amis, Bureau…",
+  "noListMembers": "Aucun membre dans cette liste",
+  "noContactToAddToList": "Tous vos contacts préférés sont déjà dans cette liste",
+  "addMembersSelected": "{count} sélectionné(s)",
+  "@addMembersSelected": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
 }
