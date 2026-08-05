@@ -4525,9 +4525,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactLists => 'Contact lists';
 
   @override
-  String get contactListsSubtitle => 'Family, Friends, Work…';
-
-  @override
   String get contactListsManage => 'Manage';
 
   @override
@@ -4552,9 +4549,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listColor => 'Chip colour';
-
-  @override
-  String get listColorNone => 'None';
 
   @override
   String get listNameAlreadyExists => 'A list with this name already exists';

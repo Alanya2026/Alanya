@@ -4576,9 +4576,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get contactLists => 'Listes de contacts';
 
   @override
-  String get contactListsSubtitle => 'Famille, Amis, Bureau…';
-
-  @override
   String get contactListsManage => 'Gérer';
 
   @override
@@ -4603,9 +4600,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get listColor => 'Couleur de la puce';
-
-  @override
-  String get listColorNone => 'Aucune';
 
   @override
   String get listNameAlreadyExists => 'Une liste porte déjà ce nom';

@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/common/common.dart';
+import 'add_list_members_sheet.dart';
 import 'contact_list_detail_screen.dart';
 
 /// Gestion des listes de contacts (Famille, Amis, Bureau…) : création,
@@ -26,7 +27,11 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(context.read<LocalCacheRepository>().syncContactLists());
+    final cache = context.read<LocalCacheRepository>();
+    unawaited(cache.syncContactLists());
+    // Le vivier de la feuille « ajouter des membres » : on peut arriver ici
+    // sans être passé par l'écran des contacts préférés.
+    unawaited(cache.syncPreferredContacts());
   }
 
   Future<void> _create() async {
@@ -35,7 +40,11 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
     if (result == null || !mounted) return;
     final cache = context.read<LocalCacheRepository>();
     try {
-      await cache.createContactList(result.name, color: result.color);
+      await cache.createContactList(
+        result.name,
+        color: result.color,
+        memberIds: result.memberIds,
+      );
     } on TalkyException catch (e) {
       _showError(e.statusCode == 409
           ? l10n.listNameAlreadyExists
@@ -318,14 +327,19 @@ Color? parseListColor(String? raw) {
   return null;
 }
 
-/// Résultat de l'éditeur : `color` null = pas de couleur.
+/// Résultat de l'éditeur : `color` null = pas de couleur, [memberIds] vide en
+/// renommage (les membres se gèrent alors depuis l'écran détail).
 class ContactListDraft {
-  const ContactListDraft(this.name, this.color);
+  const ContactListDraft(this.name, this.color, {this.memberIds = const {}});
 
   final String name;
   final String? color;
+  final Set<int> memberIds;
 }
 
+/// Éditeur de liste. En **création** ([initialName] null), il propose aussi de
+/// choisir les membres tout de suite : une liste vide n'a aucun intérêt, et
+/// obliger à créer puis rouvrir l'écran détail était un aller-retour de trop.
 Future<ContactListDraft?> showListEditorSheet(
   BuildContext context, {
   String? initialName,
@@ -355,6 +369,9 @@ class _ListEditorSheetState extends State<_ListEditorSheet> {
       TextEditingController(text: widget.initialName ?? '');
   late String? _color = widget.initialColor;
 
+  /// Membres choisis à la création (vide en renommage).
+  final Set<int> _memberIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -367,10 +384,29 @@ class _ListEditorSheetState extends State<_ListEditorSheet> {
     super.dispose();
   }
 
+  Future<void> _pickMembers() async {
+    // Le clavier masquerait la feuille de sélection empilée par-dessus.
+    FocusScope.of(context).unfocus();
+    final picked = await showAddListMembersSheet(
+      context,
+      initialSelection: _memberIds,
+      confirmLabel: context.l10n.commonSave,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _memberIds
+        ..clear()
+        ..addAll(picked);
+    });
+  }
+
   void _submit() {
     final name = _controller.text.trim();
     if (name.isEmpty) return;
-    Navigator.pop(context, ContactListDraft(name, _color));
+    Navigator.pop(
+      context,
+      ContactListDraft(name, _color, memberIds: {..._memberIds}),
+    );
   }
 
   @override
@@ -431,6 +467,52 @@ class _ListEditorSheetState extends State<_ListEditorSheet> {
                   ),
               ],
             ),
+            if (!isEdit) ...[
+              AppSpacing.vGapLg,
+              // Choix des membres dès la création — le renommage, lui, se fait
+              // depuis l'écran détail où les membres sont déjà sous les yeux.
+              Material(
+                color: context.semantic.surfaceMuted,
+                borderRadius: AppRadius.brSm,
+                child: InkWell(
+                  borderRadius: AppRadius.brSm,
+                  onTap: _pickMembers,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.person_add_alt_1_outlined,
+                          size: AppIconSize.md,
+                          color: context.colors.primary,
+                        ),
+                        AppSpacing.hGapMd,
+                        Expanded(
+                          child: Text(
+                            context.l10n.addToList,
+                            style: context.text.bodyLarge,
+                          ),
+                        ),
+                        Text(
+                          context.l10n.listMembersCount(_memberIds.length),
+                          style: context.text.bodySmall?.copyWith(
+                            color: context.colors.onSurfaceVariant,
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          size: AppIconSize.sm,
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
             AppSpacing.vGapXl,
             SizedBox(
               width: double.infinity,

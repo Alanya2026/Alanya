@@ -10,11 +10,11 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/utils/app_log.dart';
-import '../../core/utils/user_search.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../chats/contact_detail_screen.dart';
 import '../chats/create_group_screen.dart';
+import 'add_list_members_sheet.dart';
 
 /// Membres d'une liste de contacts : ajout depuis les contacts préférés,
 /// retrait, et création d'un groupe avec toute la liste.
@@ -48,16 +48,12 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
     final l10n = context.l10n;
     final cache = context.read<LocalCacheRepository>();
 
-    final selected = await showAppBottomSheet<Set<int>>(
-      context: context,
-      builder: (_) => _AddMembersSheet(alreadyIn: alreadyIn),
-    );
+    final selected =
+        await showAddListMembersSheet(context, alreadyIn: alreadyIn);
     if (selected == null || selected.isEmpty || !mounted) return;
 
     try {
-      for (final id in selected) {
-        await cache.addListMember(widget.idList, id);
-      }
+      await cache.addListMembers(widget.idList, selected);
     } catch (e, st) {
       AppLog.e('ContactListDetail', 'Ajout de membres échoué', e, st);
       _showError(l10n.listMembersUpdateFailed);
@@ -254,154 +250,6 @@ class _MemberTile extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Feuille d'ajout de membres ───────────────────────────────────────
-
-/// Multi-sélection sur les **contacts préférés uniquement** : une liste range
-/// les favoris, elle n'en crée pas (le backend refuse un non-favori).
-class _AddMembersSheet extends StatefulWidget {
-  const _AddMembersSheet({required this.alreadyIn});
-
-  final Set<int> alreadyIn;
-
-  @override
-  State<_AddMembersSheet> createState() => _AddMembersSheetState();
-}
-
-class _AddMembersSheetState extends State<_AddMembersSheet> {
-  final TextEditingController _searchController = TextEditingController();
-  final Set<int> _selectedIds = {};
-  String _searchQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(
-      () => setState(() => _searchQuery = _searchController.text.trim()),
-    );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cache = context.read<LocalCacheRepository>();
-
-    // Hauteur fixe (comme `share_preferred_contact_sheet`) : un Expanded n'a
-    // de sens que sous une contrainte bornée.
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.7;
-
-    return AppBottomSheet(
-      child: SizedBox(
-        height: maxHeight,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    context.l10n.addToList,
-                    style: context.text.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                if (_selectedIds.isNotEmpty)
-                  Text(
-                    context.l10n.addMembersSelected(_selectedIds.length),
-                    style: context.text.labelLarge?.copyWith(
-                      color: context.colors.primary,
-                    ),
-                  ),
-              ],
-            ),
-            AppSpacing.vGapMd,
-            AppSearchField(
-              controller: _searchController,
-              hintText: context.l10n.searchByNameUsernameOrPhone,
-              fillColor: context.semantic.surfaceMuted,
-              borderColor: context.colors.outline,
-              onChanged: (_) {},
-              onClear: () => _searchController.clear(),
-            ),
-            AppSpacing.vGapMd,
-            Expanded(
-              child: StreamBuilder<List<LocalUser>>(
-                stream: cache.watchPreferredContacts(),
-                builder: (context, snapshot) {
-                  final candidates = (snapshot.data ?? const <LocalUser>[])
-                      .map(localUserToUser)
-                      .where((u) => !widget.alreadyIn.contains(u.alanyaID))
-                      .toList();
-                  final shown = _searchQuery.isEmpty
-                      ? candidates
-                      : filterUsersBySearch(candidates, _searchQuery);
-
-                  if (candidates.isEmpty) {
-                    return EmptyState(
-                      icon: CupertinoIcons.person_2,
-                      title: context.l10n.noContactToAddToList,
-                    );
-                  }
-                  if (shown.isEmpty) {
-                    return EmptyState(
-                      icon: Icons.person_search,
-                      title: context.l10n.noResults,
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: shown.length,
-                    itemBuilder: (context, index) {
-                      final user = shown[index];
-                      final name =
-                          user.nom.isNotEmpty ? user.nom : user.pseudo;
-                      final selected = _selectedIds.contains(user.alanyaID);
-                      return CheckboxListTile(
-                        value: selected,
-                        onChanged: (_) => setState(() {
-                          if (selected) {
-                            _selectedIds.remove(user.alanyaID);
-                          } else {
-                            _selectedIds.add(user.alanyaID);
-                          }
-                        }),
-                        controlAffinity: ListTileControlAffinity.trailing,
-                        secondary: AppAvatar(
-                          imageUrl: user.avatarUrl.isNotEmpty
-                              ? user.avatarUrl
-                              : null,
-                          name: name,
-                          size: AppSizes.avatarSm,
-                        ),
-                        title: Text(name),
-                        subtitle: Text(
-                          AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-            AppSpacing.vGapSm,
-            FilledButton(
-              onPressed: _selectedIds.isEmpty
-                  ? null
-                  : () => Navigator.pop(context, _selectedIds),
-              child: Text(context.l10n.add),
-            ),
-          ],
         ),
       ),
     );

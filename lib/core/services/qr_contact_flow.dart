@@ -121,8 +121,7 @@ class QrContactFlow {
     String name,
   ) async {
     try {
-      await apiClient.removeContact(user.alanyaID);
-      await cache.upsertKnownUser(user, preferred: false, partial: true);
+      await cache.removePreferredContact(user.alanyaID, user: user);
       await cache.getPreferredContactsOnce();
       messenger.showSnackBar(
         SnackBar(

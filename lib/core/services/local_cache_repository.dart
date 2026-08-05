@@ -110,6 +110,34 @@ class LocalCacheRepository {
     }
   }
 
+  /// Retire un contact des favoris côté serveur **et** partout dans le cache.
+  ///
+  /// Point d'entrée unique pour tous les écrans : être un contact préféré est
+  /// le prérequis pour appartenir à une liste, donc un retrait des favoris doit
+  /// aussi sortir le contact de toutes les listes (le serveur fait la même
+  /// chose de son côté). Passer par `_api.removeContact` seul laisserait des
+  /// membres fantômes dans les listes en cache.
+  Future<void> removePreferredContact(int alanyaID, {User? user}) async {
+    await _api.removeContact(alanyaID);
+    await forgetPreferredContact(alanyaID, user: user);
+  }
+
+  /// Volet local de [removePreferredContact] — sans appel réseau.
+  Future<void> forgetPreferredContact(int alanyaID, {User? user}) async {
+    if (user != null) {
+      await upsertKnownUser(user, preferred: false, partial: true);
+    } else {
+      await (_db.update(_db.localUsers)
+            ..where((u) => u.alanyaID.equals(alanyaID)))
+          .write(const LocalUsersCompanion(isPreferredContact: Value(false)));
+    }
+    await (_db.delete(_db.localContactListMembers)
+          ..where((m) => m.idFriend.equals(alanyaID)))
+        .go();
+    // Les `memberCount` des listes touchées viennent du serveur.
+    await syncContactLists();
+  }
+
   /// Stocke un user vu de passage (résolu via getUserById) — utile pour
   /// peupler le roster d'appel groupe ou l'affichage de messages.
   ///
@@ -261,9 +289,22 @@ class LocalCacheRepository {
 
   /// Crée une liste côté serveur puis resynchronise le cache. Comme
   /// `addContact`, la mutation reste online : pas d'outbox pour les listes.
-  Future<ContactList> createContactList(String name, {String? color}) async {
+  ///
+  /// [memberIds] permet de peupler la liste dans la foulée : une liste vide
+  /// n'a aucun intérêt, on ne force donc pas un second aller-retour par l'UI.
+  Future<ContactList> createContactList(
+    String name, {
+    String? color,
+    Iterable<int> memberIds = const [],
+  }) async {
     final raw = await _api.createContactList(name, color: color);
     final created = ContactList.fromJson(raw);
+    if (created.idList != 0 && memberIds.isNotEmpty) {
+      for (final id in memberIds) {
+        await _api.addListMember(created.idList, id);
+      }
+      await syncListMembers(created.idList);
+    }
     await syncContactLists();
     return created;
   }
@@ -279,8 +320,16 @@ class LocalCacheRepository {
     await _forgetLists({idList});
   }
 
-  Future<void> addListMember(int idList, int friendID) async {
-    await _api.addListMember(idList, friendID);
+  Future<void> addListMember(int idList, int friendID) =>
+      addListMembers(idList, [friendID]);
+
+  /// Ajout groupé : une seule resynchro pour toute la sélection (la feuille
+  /// d'ajout en envoie souvent plusieurs d'un coup).
+  Future<void> addListMembers(int idList, Iterable<int> friendIDs) async {
+    if (friendIDs.isEmpty) return;
+    for (final id in friendIDs) {
+      await _api.addListMember(idList, id);
+    }
     await syncListMembers(idList);
     await syncContactLists();
   }

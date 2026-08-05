@@ -10,7 +10,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/utils/user_search.dart';
-import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/add_contact_sheet.dart';
 import '../../widgets/common/common.dart';
@@ -65,11 +64,8 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
 
   Future<void> _removeContact(User user) async {
     try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      await apiClient.removeContact(user.alanyaID);
-      if (!mounted) return;
       final cache = Provider.of<LocalCacheRepository>(context, listen: false);
-      await cache.upsertKnownUser(user, preferred: false);
+      await cache.removePreferredContact(user.alanyaID, user: user);
     } catch (e, st) {
       AppLog.e('PreferredContacts', 'Suppression contact préféré échouée', e, st);
       if (!mounted) return;

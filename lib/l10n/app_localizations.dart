@@ -7994,12 +7994,6 @@ abstract class AppLocalizations {
   /// **'Listes de contacts'**
   String get contactLists;
 
-  /// No description provided for @contactListsSubtitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Famille, Amis, Bureau…'**
-  String get contactListsSubtitle;
-
   /// No description provided for @contactListsManage.
   ///
   /// In fr, this message translates to:
@@ -8047,12 +8041,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Couleur de la puce'**
   String get listColor;
-
-  /// No description provided for @listColorNone.
-  ///
-  /// In fr, this message translates to:
-  /// **'Aucune'**
-  String get listColorNone;
 
   /// No description provided for @listNameAlreadyExists.
   ///

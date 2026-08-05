@@ -1842,7 +1842,6 @@
   "dndSummaryInactive": "Off",
   "exportPhase1ShareSubject": "Alanya export (profile and metadata)",
   "contactLists": "Contact lists",
-  "contactListsSubtitle": "Family, Friends, Work…",
   "contactListsManage": "Manage",
   "createList": "Create a list",
   "listName": "List name",
@@ -1856,7 +1855,6 @@
     }
   },
   "listColor": "Chip colour",
-  "listColorNone": "None",
   "listNameAlreadyExists": "A list with this name already exists",
   "listSaveFailed": "Could not save the list. Try again.",
   "listMembersUpdateFailed": "Could not update members. Try again.",

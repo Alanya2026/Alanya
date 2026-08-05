@@ -2724,7 +2724,6 @@
   "dndSummaryInactive": "Désactivé",
   "exportPhase1ShareSubject": "Export Alanya (profil et métadonnées)",
   "contactLists": "Listes de contacts",
-  "contactListsSubtitle": "Famille, Amis, Bureau…",
   "contactListsManage": "Gérer",
   "createList": "Créer une liste",
   "listName": "Nom de la liste",
@@ -2738,7 +2737,6 @@
     }
   },
   "listColor": "Couleur de la puce",
-  "listColorNone": "Aucune",
   "listNameAlreadyExists": "Une liste porte déjà ce nom",
   "listSaveFailed": "Impossible d'enregistrer la liste. Réessayez.",
   "listMembersUpdateFailed": "Impossible de modifier les membres. Réessayez.",

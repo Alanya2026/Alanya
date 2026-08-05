@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../talky_api_client.dart';
 import '../../core/utils/app_log.dart';
 import '../../talky_models.dart';
 import '../../core/theme/app_dimens.dart';
@@ -64,11 +63,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _removeContact(User user) async {
     try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      await apiClient.removeContact(user.alanyaID);
-      if (!mounted) return;
       final cache = Provider.of<LocalCacheRepository>(context, listen: false);
-      await cache.upsertKnownUser(user, preferred: false);
+      await cache.removePreferredContact(user.alanyaID, user: user);
     } catch (e, st) {
       AppLog.e('ProfileScreen', 'Suppression contact préféré échouée', e, st);
       if (!mounted) return;
@@ -229,47 +225,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             context.l10n.preferredContacts,
                             style: context.text.titleMedium,
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (contacts.length > 4)
-                                GestureDetector(
-                                  onTap: _openPreferredContacts,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        '+${contacts.length - 4}',
-                                        style:
-                                            context.text.labelMedium?.copyWith(
-                                          color: context.colors.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      Icon(Icons.chevron_right,
-                                          size: AppIconSize.sm,
-                                          color: context.colors.primary),
-                                    ],
+                          if (contacts.length > 4)
+                            GestureDetector(
+                              onTap: _openPreferredContacts,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '+${contacts.length - 4}',
+                                    style: context.text.labelMedium?.copyWith(
+                                      color: context.colors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                              AppSpacing.hGapSm,
-                              TextButton.icon(
-                                onPressed: _openContactLists,
-                                icon: Icon(
-                                  Icons.folder_outlined,
-                                  size: AppIconSize.sm,
-                                  color: context.colors.primary,
-                                ),
-                                label: Text(
-                                  context.l10n.contactLists,
-                                  style: TextStyle(
-                                    color: context.colors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                                  Icon(Icons.chevron_right,
+                                      size: AppIconSize.sm,
+                                      color: context.colors.primary),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
                         ],
                       ),
                     ),
@@ -309,6 +283,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           builder: (_) => const AccountHubScreen()),
                     );
                   }),
+                  const Divider(height: 1),
+                  // Juste sous la grille des contacts préférés : les listes
+                  // organisent ces contacts-là, la proximité fait le lien.
+                  _buildMenuItem(
+                    Icons.folder_outlined,
+                    context.l10n.contactLists,
+                    _openContactLists,
+                  ),
                   const Divider(height: 1),
                   _buildMenuItem(Icons.photo_library_outlined, context.l10n.myMediaTitle, () {
                     Navigator.push(
