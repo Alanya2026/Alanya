@@ -1900,6 +1900,10 @@ extension _ChatActions on _ChatDetailScreenState {
 
   String _presenceLabel() {
     if (_blockedByThem) return '';
+    // Le compte officiel diffuse et ne converse pas : sa saisie est verrouillée
+    // (ComposerLock.official). Afficher « en ligne » ou « Vu à 14:32 » y ferait
+    // croire à quelqu'un qui lit et pourrait répondre.
+    if (_isOfficialPeer) return '';
     final uid = widget.userId;
     if (uid == null) return '';
     return _chat.presenceLabel(uid);
