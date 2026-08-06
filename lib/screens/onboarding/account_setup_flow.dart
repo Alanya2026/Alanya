@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +11,7 @@ import 'steps/credentials_step.dart';
 import 'steps/personalize_step.dart';
 import 'steps/profile_step.dart';
 import 'widgets/onboarding_shell.dart';
+import '../../core/services/welcome_delivery_service.dart';
 
 /// Parcours post-inscription : identifiants → profil (optionnel) → personnalisation.
 class AccountSetupFlow extends StatefulWidget {
@@ -107,6 +110,11 @@ class _AccountSetupFlowState extends State<AccountSetupFlow> {
       MaterialPageRoute(builder: (_) => const HomeScreen()),
       (_) => false,
     );
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(WelcomeDeliveryService.deliverAndOpenChat(context));
+    });
   }
 
   Future<void> _skipAll() async {

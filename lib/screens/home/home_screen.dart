@@ -15,6 +15,7 @@ import '../../core/services/call/ended_call_registry.dart';
 import '../../core/services/callkit_service.dart';
 import '../../core/services/notification_navigation.dart';
 import '../../core/services/push_service.dart';
+import '../../core/services/welcome_delivery_service.dart';
 import '../chats/chats_screen.dart';
 import '../calls/calls_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
@@ -27,7 +28,10 @@ import '../../widgets/common/offline_banner.dart';
 import 'glass_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.initialTab = 0});
+
+  /// Onglet initial (0=discussions, 1=appels, 2=statuts…).
+  final int initialTab;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -67,7 +71,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _callService = Provider.of<CallService>(context, listen: false);
-    _pageController = PageController(initialPage: 0);
+    final tab = widget.initialTab.clamp(0, _screens.length - 1);
+    _selectedIndex = tab;
+    _pageController = PageController(initialPage: tab);
     unawaited(_loadCallsWatermark());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,6 +88,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Cold start : action reçue avant abonnement au stream
       final pending = PushService.consumePendingAction();
       if (pending != null) _onNotificationAction(pending);
+
+      // Rattrapage idempotent si la livraison a été manquée (app tuée, etc.)
+      unawaited(WelcomeDeliveryService.deliverAndOpenChat(context));
     });
   }
 

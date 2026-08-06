@@ -6,6 +6,7 @@ import 'core/utils/contact_payload.dart';
 import 'core/utils/location_payload.dart';
 import 'core/theme/locale_controller.dart';
 import 'core/utils/self_chat.dart';
+import 'core/utils/welcome_cta_payload.dart';
 
 // ── USER ─────────────────────────────────────────────────────────────
 
@@ -666,6 +667,13 @@ class Message {
       final contact = ContactPayload.tryParse(content);
       return contact?.previewLabel ?? LocaleController.instance.l10n.contact;
     }
+    if (type == 8) {
+      final cta = WelcomeCtaPayload.tryParse(content);
+      if (cta != null && cta.buttons.isNotEmpty) {
+        return cta.buttons.map((b) => b.label).join(' · ');
+      }
+      return LocaleController.instance.l10n.discussionFallback;
+    }
     if (content != null && content!.isNotEmpty) return content!;
     if (mediaName != null) return mediaName!;
     switch (type) {
@@ -1106,6 +1114,7 @@ class Statut {
   final int alanyaID;
   final int type; // 0=texte, 1=image, 2=vidéo, 3=audio
   final String? text;
+  final String? textEn;
   final String? mediaUrl;
   final int? mediaDurationMs;
   final String? backgroundColor;
@@ -1128,6 +1137,7 @@ class Statut {
     required this.alanyaID,
     required this.type,
     this.text,
+    this.textEn,
     this.mediaUrl,
     this.mediaDurationMs,
     this.backgroundColor,
@@ -1150,6 +1160,7 @@ class Statut {
         alanyaID: json['alanyaID'] ?? 0,
         type: json['type'] ?? 0,
         text: json['text'],
+        textEn: json['text_en'] ?? json['textEn'],
         mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
         mediaDurationMs: json['mediaDurationMs'],
         backgroundColor: json['backgroundColor'],
@@ -1170,6 +1181,16 @@ class Statut {
   bool get isExpired =>
       DateTime.now().isAfter(DateTime.tryParse(expiredAt) ?? DateTime.now());
 
+  /// Texte affiché selon la langue (EN si disponible, sinon FR).
+  String? localizedText(String languageCode) {
+    if (languageCode.startsWith('en') &&
+        textEn != null &&
+        textEn!.trim().isNotEmpty) {
+      return textEn;
+    }
+    return text;
+  }
+
   Statut copyWith({
     int? viewedBy,
     int? likedBy,
@@ -1181,6 +1202,7 @@ class Statut {
         alanyaID: alanyaID,
         type: type,
         text: text,
+        textEn: textEn,
         mediaUrl: mediaUrl,
         mediaDurationMs: mediaDurationMs,
         backgroundColor: backgroundColor,

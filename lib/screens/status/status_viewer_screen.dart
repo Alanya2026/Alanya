@@ -14,6 +14,7 @@ import '../../core/utils/status_reply_payload.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/locale_controller.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../../providers/chat_provider.dart';
@@ -349,7 +350,9 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
 
   String _statusPreviewLabel() {
     final s = _current;
-    if (s.text != null && s.text!.trim().isNotEmpty) return s.text!.trim();
+    final lang = context.read<LocaleController>().resolvedLocale.languageCode;
+    final localized = s.localizedText(lang);
+    if (localized != null && localized.trim().isNotEmpty) return localized.trim();
     switch (s.type) {
       case 1:
         return context.l10n.photo;
@@ -557,6 +560,10 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
   }
 
   Widget _buildCurrentPage(Statut s) {
+    final lang = context.read<LocaleController>().resolvedLocale.languageCode;
+    final caption = s.localizedText(lang);
+    final hasCaption = caption != null && caption.trim().isNotEmpty;
+
     return Stack(
       children: [
         Positioned.fill(child: _buildContent(s)),
@@ -628,8 +635,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
             ],
           ),
         ),
-        if ((s.type == 1 || s.type == 2) &&
-            (s.text != null && s.text!.trim().isNotEmpty))
+        if ((s.type == 1 || s.type == 2) && hasCaption)
           Positioned(
             left: AppSpacing.lg,
             right: AppSpacing.lg,
@@ -642,7 +648,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
                 borderRadius: AppRadius.brSm,
               ),
               child: Text(
-                s.text!,
+                caption!,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white, fontSize: 15),
               ),
@@ -836,12 +842,13 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       case 0:
         final bg = _parseColor(s.backgroundColor) ?? AppColors.brandPrimary;
         final fg = bg.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+        final lang = context.read<LocaleController>().resolvedLocale.languageCode;
         return Container(
           color: bg,
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Text(
-            s.text ?? '',
+            s.localizedText(lang) ?? '',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: fg,

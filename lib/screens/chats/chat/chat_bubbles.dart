@@ -918,7 +918,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
   /// Texte affiché sous un média : légende utilisateur, hors marqueur album.
   String? _captionText(LocalMessage msg) {
     // Localisation / contact : le content est du JSON, affiché via la bulle carte.
-    if (msg.type == 5 || msg.type == 7) return null;
+    if (msg.type == 5 || msg.type == 7 || msg.type == 8) return null;
     final content = msg.content;
     if (content == null || content.isEmpty) return null;
     if (isAlbumMarkerContent(content)) {
@@ -983,6 +983,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
         return _buildLocationMedia(msg, isMe);
       case 7:
         return _buildContactMedia(msg, isMe);
+      case 8:
+        return _buildWelcomeCtaMedia(msg, isMe);
       default:
         return Text(_mediaLabel(msg.type, mediaName: msg.mediaName),
             style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));
@@ -1011,6 +1013,25 @@ extension _ChatBubbles on _ChatDetailScreenState {
       behavior: HitTestBehavior.opaque,
       onTap: () => _openLocationInMaps(loc),
       child: LocationMessagePreview(location: loc),
+    );
+  }
+
+  Widget _buildWelcomeCtaMedia(LocalMessage msg, bool isMe) {
+    final payload = WelcomeCtaPayload.tryParse(msg.content);
+    if (payload == null) {
+      return Text(
+        context.l10n.discussionFallback,
+        style: context.text.bodyMedium?.copyWith(color: _bubbleText(isMe)),
+      );
+    }
+    return WelcomeCtaButtons(
+      payload: payload,
+      isMe: isMe,
+      onRoute: (route) => WelcomeDeliveryService.handleWelcomeRoute(
+        context,
+        route,
+        officialUserId: widget.userId,
+      ),
     );
   }
 

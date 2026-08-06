@@ -5,8 +5,13 @@ extension ChatHttpApi on TalkyApiClient {
   // ── CONVERSATIONS ─────────────────────────────────────────────────
 
   Future<List<dynamic>> getConversations() async {
+    final locale =
+        LocaleController.maybeInstance?.resolvedLocale.languageCode ?? 'fr';
     final data = await _handleRequest(
-      () => _client.get(Uri.parse('${TalkyApiClient.baseUrl}/conversations'), headers: _headers),
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations?locale=$locale'),
+        headers: _headers,
+      ),
     );
     return data is List ? data : [];
   }

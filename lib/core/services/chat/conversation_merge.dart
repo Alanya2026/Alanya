@@ -7,6 +7,7 @@ import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
 import '../../utils/system_event_payload.dart';
+import '../../utils/welcome_cta_payload.dart';
 import '../../theme/locale_controller.dart';
 
 /// Merge monotonic conversation list HTTP → cache local.
@@ -151,6 +152,13 @@ class ConversationMerge {
     }
     // type=7 : JSON contact — ne jamais exposer le content brut.
     if (type == 7) return contactPreviewLabel(content);
+    if (type == 8) {
+      final cta = WelcomeCtaPayload.tryParse(content);
+      if (cta != null && cta.buttons.isNotEmpty) {
+        return cta.buttons.map((b) => b.label).join(' · ');
+      }
+      return '';
+    }
 
     if (!isViewOnce) {
       final marker = parseAlbumMarker(content);

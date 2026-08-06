@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 
 import '../../../talky_api_client.dart';
+import '../../theme/locale_controller.dart';
 
 /// Synchronise l'état push de l'appareil avec le backend (throttle).
 class PushDeviceCoordinator {
@@ -28,9 +29,12 @@ class PushDeviceCoordinator {
 
   Future<void> registerToken(String fcmToken) async {
     try {
+      final locale =
+          LocaleController.maybeInstance?.resolvedLocale.languageCode ?? 'fr';
       await _api.registerPushDevice(
         fcmToken: fcmToken,
         platform: _platform,
+        locale: locale,
       );
     } catch (e) {
       debugPrint('[PushDevice] registerToken failed: $e');
