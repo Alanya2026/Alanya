@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/app_log.dart';
+import 'media_cache_service.dart';
 import 'media_download_preferences.dart';
 
 /// Exporte les médias reçus vers le stockage partagé, structure type WhatsApp :
@@ -112,8 +113,74 @@ class AlanyaMediaExportService {
     }
   }
 
-  Future<void> _ensureGalleryAccess() async {
-    if (_accessRequested) return;
+  /// True si ce message a déjà été copié vers le stockage de l'appareil.
+  ///
+  /// Information de bonne foi et non une certitude : la liste est plafonnée à
+  /// 2000 entrées (cf. [_markExported]) et ignore une suppression faite depuis
+  /// la galerie. En cas de doute on répond `false` — mieux vaut proposer un
+  /// enregistrement de trop que prétendre savoir.
+  Future<bool> isExported(int msgID) async {
+    if (msgID == 0) return false;
+    await _ensureIdsLoaded();
+    return _exportedIds.contains(msgID);
+  }
+
+  /// Enregistrement **manuel**, déclenché par un geste explicite.
+  ///
+  /// Contrairement à [exportIfNeeded], ignore délibérément le réglage global et
+  /// la liste des médias déjà exportés : un tap doit toujours faire ce qu'il
+  /// annonce, réglage éteint ou média déjà copié, et rester répétable.
+  /// Rapatrie le fichier si seule l'URL réseau est connue.
+  Future<bool> saveNow({
+    required int type,
+    String? localPath,
+    String? networkUrl,
+    String? mediaName,
+    int msgID = 0,
+  }) async {
+    if (type != 1 && type != 2 && type != 4) return false;
+
+    var path = localPath;
+    var isTemp = false;
+    if (path == null || !File(path).existsSync()) {
+      if (networkUrl == null || networkUrl.isEmpty) return false;
+      path = await MediaCacheService().downloadToTemp(networkUrl);
+      if (path == null) return false;
+      isTemp = true;
+    }
+
+    try {
+      await _exportToAlanyaFolder(
+        type: type,
+        localPath: path,
+        mediaName: mediaName,
+      );
+      if (type == 1 || type == 2) {
+        // Sur un geste manuel, l'échec galerie n'est pas rattrapable en
+        // silence : l'utilisateur attend sa photo dans la galerie, pas
+        // seulement dans Téléchargements.
+        await _exportToGallery(type: type, localPath: path, force: true);
+      }
+      if (msgID != 0) await _markExported(msgID);
+      return true;
+    } catch (e, st) {
+      AppLog.w('AlanyaExport', 'Enregistrement manuel échoué type=$type', e, st);
+      return false;
+    } finally {
+      // Le fichier n'a servi que de relais vers le stockage appareil.
+      if (isTemp) {
+        try {
+          await File(path).delete();
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// [force] rejoue la vérification de permission même si elle a déjà eu lieu :
+  /// un refus au premier média reçu ne doit pas condamner tous les
+  /// enregistrements manuels de la session.
+  Future<void> _ensureGalleryAccess({bool force = false}) async {
+    if (_accessRequested && !force) return;
     _accessRequested = true;
     try {
       final has = await Gal.hasAccess(toAlbum: true);
@@ -128,8 +195,9 @@ class AlanyaMediaExportService {
   Future<void> _exportToGallery({
     required int type,
     required String localPath,
+    bool force = false,
   }) async {
-    await _ensureGalleryAccess();
+    await _ensureGalleryAccess(force: force);
     if (type == 1) {
       await Gal.putImage(localPath, album: _albumName);
     } else {

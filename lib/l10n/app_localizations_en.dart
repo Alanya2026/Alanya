@@ -186,14 +186,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadSubtitle =>
-      'Automatically download received photos, videos and files in the app';
+      'Download received media inside the app';
 
   @override
-  String get settingsMediaVisibility => 'Media visibility';
+  String get settingsMediaVisibility => 'Save to gallery';
 
   @override
   String get settingsMediaVisibilitySubtitle =>
-      'Save received media to internal storage (Gallery and Downloads)';
+      'Received photos and videos show up in the device gallery';
+
+  @override
+  String get mediaSaveToGallery => 'Save to gallery';
+
+  @override
+  String get mediaSaveToDownloads => 'Save to Downloads';
+
+  @override
+  String get mediaSavedToGallery => 'Saved to gallery';
+
+  @override
+  String get mediaSavedToDownloads => 'Saved to Downloads';
+
+  @override
+  String get mediaAlreadyInGallery => 'Already in gallery';
+
+  @override
+  String get mediaAlreadyInDownloads => 'Already in Downloads';
+
+  @override
+  String get mediaSaveAgain => 'Save again';
+
+  @override
+  String get mediaSaveFailed => 'Could not save this media';
 
   @override
   String get settingsCalls => 'Calls';
@@ -3963,7 +3987,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNetwork => 'Network & data';
 
   @override
-  String get settingsNetworkSubtitle => 'Wi-Fi, data saver, media';
+  String get settingsNetworkSubtitle => 'Wi-Fi and data saver';
 
   @override
   String get settingsAccessibility => 'Accessibility';

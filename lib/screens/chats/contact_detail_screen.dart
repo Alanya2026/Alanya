@@ -977,6 +977,7 @@ class _MediaCardState extends State<_MediaCard> {
                                     localPath: msg.localMediaPath,
                                     networkUrl: msg.mediaUrl,
                                     title: msg.mediaName,
+                                    msgID: msg.msgID,
                                   ),
                                 ),
                               ),

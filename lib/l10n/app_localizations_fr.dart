@@ -186,14 +186,38 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadSubtitle =>
-      'Télécharge automatiquement les photos, vidéos et fichiers reçus dans l’app';
+      'Télécharge les médias reçus dans l’app';
 
   @override
-  String get settingsMediaVisibility => 'Visibilité des médias';
+  String get settingsMediaVisibility => 'Enregistrer dans la galerie';
 
   @override
   String get settingsMediaVisibilitySubtitle =>
-      'Enregistre les médias reçus dans le stockage interne (Galerie et Téléchargements)';
+      'Les photos et vidéos reçues apparaissent dans la galerie de l’appareil';
+
+  @override
+  String get mediaSaveToGallery => 'Enregistrer dans la galerie';
+
+  @override
+  String get mediaSaveToDownloads => 'Enregistrer dans Téléchargements';
+
+  @override
+  String get mediaSavedToGallery => 'Enregistré dans la galerie';
+
+  @override
+  String get mediaSavedToDownloads => 'Enregistré dans Téléchargements';
+
+  @override
+  String get mediaAlreadyInGallery => 'Déjà dans la galerie';
+
+  @override
+  String get mediaAlreadyInDownloads => 'Déjà dans Téléchargements';
+
+  @override
+  String get mediaSaveAgain => 'Enregistrer à nouveau';
+
+  @override
+  String get mediaSaveFailed => 'Impossible d’enregistrer ce média';
 
   @override
   String get settingsCalls => 'Appels';
@@ -4002,7 +4026,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsNetwork => 'Réseau et données';
 
   @override
-  String get settingsNetworkSubtitle => 'Wi-Fi, économiseur, médias';
+  String get settingsNetworkSubtitle => 'Wi-Fi et économiseur de données';
 
   @override
   String get settingsAccessibility => 'Accessibilité';

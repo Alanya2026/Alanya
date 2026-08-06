@@ -443,20 +443,68 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAutoDownloadSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Télécharge automatiquement les photos, vidéos et fichiers reçus dans l’app'**
+  /// **'Télécharge les médias reçus dans l’app'**
   String get settingsAutoDownloadSubtitle;
 
   /// No description provided for @settingsMediaVisibility.
   ///
   /// In fr, this message translates to:
-  /// **'Visibilité des médias'**
+  /// **'Enregistrer dans la galerie'**
   String get settingsMediaVisibility;
 
   /// No description provided for @settingsMediaVisibilitySubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Enregistre les médias reçus dans le stockage interne (Galerie et Téléchargements)'**
+  /// **'Les photos et vidéos reçues apparaissent dans la galerie de l’appareil'**
   String get settingsMediaVisibilitySubtitle;
+
+  /// No description provided for @mediaSaveToGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer dans la galerie'**
+  String get mediaSaveToGallery;
+
+  /// No description provided for @mediaSaveToDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer dans Téléchargements'**
+  String get mediaSaveToDownloads;
+
+  /// No description provided for @mediaSavedToGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistré dans la galerie'**
+  String get mediaSavedToGallery;
+
+  /// No description provided for @mediaSavedToDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistré dans Téléchargements'**
+  String get mediaSavedToDownloads;
+
+  /// No description provided for @mediaAlreadyInGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà dans la galerie'**
+  String get mediaAlreadyInGallery;
+
+  /// No description provided for @mediaAlreadyInDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà dans Téléchargements'**
+  String get mediaAlreadyInDownloads;
+
+  /// No description provided for @mediaSaveAgain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer à nouveau'**
+  String get mediaSaveAgain;
+
+  /// No description provided for @mediaSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d’enregistrer ce média'**
+  String get mediaSaveFailed;
 
   /// No description provided for @settingsCalls.
   ///
@@ -6067,6 +6115,7 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Annuler'**
   String get confCancelInvite;
+
   /// No description provided for @qrMyCodeTitle.
   ///
   /// In fr, this message translates to:
@@ -6970,7 +7019,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNetworkSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Wi-Fi, économiseur, médias'**
+  /// **'Wi-Fi et économiseur de données'**
   String get settingsNetworkSubtitle;
 
   /// No description provided for @settingsAccessibility.

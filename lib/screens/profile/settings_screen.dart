@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/app_settings_sync_service.dart';
+import '../../core/services/media_download_preferences.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/locale_controller.dart';
@@ -75,6 +76,33 @@ class SettingsScreen extends StatelessWidget {
                   },
                 ),
               ],
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          // Enregistrer dans la galerie était enfoui dans Réseau et données,
+          // sous un libellé qui ne disait pas « galerie ». Il remonte ici, avec
+          // le téléchargement automatique dont il ne se lit pas séparément.
+          SettingsGroup(
+            title: l10n.settingsMedia,
+            child: Consumer<MediaDownloadPreferences>(
+              builder: (_, prefs, __) => Column(
+                children: [
+                  SettingsBoolTile(
+                    icon: Icons.photo_library_outlined,
+                    title: l10n.settingsMediaVisibility,
+                    subtitle: l10n.settingsMediaVisibilitySubtitle,
+                    value: prefs.mediaVisibility,
+                    onChanged: prefs.setMediaVisibility,
+                  ),
+                  SettingsBoolTile(
+                    icon: Icons.download_rounded,
+                    title: l10n.settingsAutoDownload,
+                    subtitle: l10n.settingsAutoDownloadSubtitle,
+                    value: prefs.autoDownload,
+                    onChanged: prefs.setAutoDownload,
+                  ),
+                ],
+              ),
             ),
           ),
           AppSpacing.vGapXxl,

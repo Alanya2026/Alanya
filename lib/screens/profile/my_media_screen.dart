@@ -89,6 +89,7 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
             isVideo: m.isVideo,
             networkUrl: normalizeBackendUrl(m.mediaUrl),
             title: m.mediaName,
+            msgID: m.msgID,
           ),
         )
         .toList();
