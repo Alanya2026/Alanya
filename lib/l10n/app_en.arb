@@ -619,6 +619,9 @@
   "admin": "Admin",
   "audio2": "Audio",
   "playbackSpeed": "Playback speed",
+  "playbackSpeedVoiceLabel": "Voice messages",
+  "playbackSpeedVideoLabel": "Videos",
+  "playbackSpeedMusicLabel": "Music",
   "music": "Music",
   "musicPreview": "🎵 {name}",
   "@musicPreview": {
@@ -1145,6 +1148,73 @@
   },
   "sysOnlyAdminsEditOffByMe": "You allowed everyone to edit group info",
   "sysGroupEventFallback": "The group was updated",
+  "sysPreviewGroupCreated": "{actor} created \"{value}\"",
+  "@sysPreviewGroupCreated": {
+    "placeholders": {
+      "actor": { "type": "String" },
+      "value": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupCreatedShort": "{actor} created the group",
+  "@sysPreviewGroupCreatedShort": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberAdded": "{actor} added members",
+  "@sysPreviewMemberAdded": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberRemoved": "{actor} removed a member",
+  "@sysPreviewMemberRemoved": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewMemberLeft": "{actor} left the group",
+  "@sysPreviewMemberLeft": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupRenamed": "{actor} renamed the group",
+  "@sysPreviewGroupRenamed": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupPhotoChanged": "{actor} changed the group photo",
+  "@sysPreviewGroupPhotoChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewGroupDescriptionChanged": "{actor} changed the description",
+  "@sysPreviewGroupDescriptionChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewRolePromoted": "{actor} made someone an admin",
+  "@sysPreviewRolePromoted": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewRoleDemoted": "{actor} removed admin rights",
+  "@sysPreviewRoleDemoted": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysPreviewSettingsChanged": "{actor} changed group settings",
+  "@sysPreviewSettingsChanged": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
   "groupOwner": "Owner",
   "groupAdmin": "Admin",
   "removeFromGroup": "Remove from group",
@@ -1175,7 +1245,47 @@
   "onlyAdminsCanSendLabel": "Only admins can send messages",
   "onlyAdminsCanSendSubtitle": "Turns the group into an announcement channel",
   "onlyAdminsCanEditInfoLabel": "Only admins can edit info",
-  "onlyAdminsCanEditInfoSubtitle": "Name, photo, description and adding members",
+  "onlyAdminsCanEditInfoSubtitle": "Name, photo and description",
+  "hideHistoryForNewMembersLabel": "Hide history for new members",
+  "hideHistoryForNewMembersSubtitle": "New members won't see messages sent before they joined",
+  "onlyAdminsCanAddMembersLabel": "Only admins can add members",
+  "onlyAdminsCanAddMembersSubtitle": "Invite new participants to the group",
+  "groupJoinBannerBody": "{actor} added you to the group \"{group}\"",
+  "@groupJoinBannerBody": {
+    "placeholders": {
+      "actor": { "type": "String" },
+      "group": { "type": "String" }
+    }
+  },
+  "stay": "Stay",
+  "sysHideHistoryOn": "{actor} hid chat history for new members",
+  "@sysHideHistoryOn": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysHideHistoryOnByMe": "You hid chat history for new members",
+  "sysHideHistoryOff": "{actor} made chat history visible for new members",
+  "@sysHideHistoryOff": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysHideHistoryOffByMe": "You made chat history visible for new members",
+  "sysOnlyAdminsAddOn": "{actor} restricted adding members to admins",
+  "@sysOnlyAdminsAddOn": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysOnlyAdminsAddOnByMe": "You restricted adding members to admins",
+  "sysOnlyAdminsAddOff": "{actor} allowed everyone to add members",
+  "@sysOnlyAdminsAddOff": {
+    "placeholders": {
+      "actor": { "type": "String" }
+    }
+  },
+  "sysOnlyAdminsAddOffByMe": "You allowed everyone to add members",
   "mentionsOnlyLabel": "Mentions only",
   "mentionsOnlySubtitle": "Only get alerted when someone mentions you",
   "youWereRemovedFromGroup": "You are no longer part of this group",
@@ -1335,5 +1445,548 @@
   "noContactsToAdd": "No contacts to add",
   "confAlreadyInCall": "already here",
   "confContactBusy": "on a call",
-  "confCancelInvite": "Cancel"
+  "confCancelInvite": "Cancel",
+
+  "qrMyCodeTitle": "My QR code",
+  "qrMyCodeTabCode": "My code",
+  "qrMyCodeTabScan": "Scan",
+  "qrMyCodeSubtitle": "Have this code scanned to be added as a preferred contact.",
+  "qrMyCodeShare": "Share",
+  "qrMyCodeExpiresIn": "Expires in {time}",
+  "@qrMyCodeExpiresIn": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "qrMyCodeValidityNote": "Valid for 10 minutes and a single person. A new code is generated automatically.",
+  "qrMyCodeNewCode": "New code",
+  "qrMyCodeShareValidity": "This code is valid for 10 minutes and a single person.",
+  "qrScanReturnTitle": "New contact",
+  "qrScanReturnBody": "{name} added you to their preferred contacts with your QR code. Add them back?",
+  "@qrScanReturnBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanReturnAccept": "Add",
+  "qrScanReturnDecline": "No thanks",
+  "qrScanReturnFailed": "Could not add this contact",
+  "qrScannedMutualInfo": "{name} added you with your QR code",
+  "@qrScannedMutualInfo": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrNoteFieldHint": "Add a note (place, context…)",
+  "qrNoteSaved": "Note saved",
+  "qrNoteFailed": "Could not save the note",
+  "qrContactsFilterAll": "All",
+  "qrContactsFilterQr": "Via QR",
+  "qrContactAddedViaQr": "Added via QR code",
+  "qrContactAddedViaQrOn": "Added via QR code · {date}",
+  "@qrContactAddedViaQrOn": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "qrMyCodeShareSheetTitle": "Share my code",
+  "qrMyCodeShareLink": "Share the link",
+  "qrMyCodeShareLinkHint": "Tappable link and Alanya ID",
+  "qrMyCodeShareImage": "Share the image",
+  "qrMyCodeShareImageHint": "The card to scan",
+  "qrMyCodeShareId": "My Alanya ID: {id}",
+  "@qrMyCodeShareId": {
+    "placeholders": {
+      "id": { "type": "String" }
+    }
+  },
+  "qrMyCodeRegenerate": "Regenerate",
+  "qrMyCodeRegenerateConfirmTitle": "Regenerate your code?",
+  "qrMyCodeRegenerateConfirmBody": "The old code will stop working right away. Anyone who saved it will no longer be able to add you with it.",
+  "qrMyCodeRegenerateDone": "New code generated",
+  "qrMyCodeShareText": "Add me on Alanya: I am {name}.",
+  "@qrMyCodeShareText": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "qrScanTitle": "Scan a code",
+  "qrScanEntryButton": "Scan a code",
+  "qrScanInstruction": "Point at a contact's QR code",
+  "qrScanErrorUnreadable": "Code unreadable. Move closer and try again.",
+  "qrScanErrorUnknown": "This code has expired or is unknown.",
+  "qrScanOwnCode": "This is your own code.",
+  "qrScanAddSuccess": "{name} was added to your preferred contacts",
+  "@qrScanAddSuccess": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanResultAdded": "Added to your contacts",
+  "qrScanResultAlready": "Already in your contacts",
+  "qrScanActionMessage": "Message",
+  "qrScanActionDetails": "View details",
+  "qrScanUndo": "Undo",
+  "qrScanUndone": "{name} was removed from your preferred contacts",
+  "@qrScanUndone": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanUndoFailed": "Could not undo the addition",
+  "qrScanAlreadyContact": "{name} is already in your preferred contacts",
+  "@qrScanAlreadyContact": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrScanCameraDenied": "Alanya needs camera access to scan a code.",
+  "qrScanOpenSettings": "Open settings",
+  "qrScanTorchOn": "Flashlight on",
+  "qrScanTorchOff": "Flashlight off",
+  "qrScanImportImage": "Import an image",
+  "qrScanImportNoCode": "No QR code in this image.",
+  "qrScanImportNotAlanya": "This QR code is not an Alanya code.",
+  "qrScanImportFailed": "Could not read this image.",
+
+  "qrLoginTitle": "Sign in with QR code",
+  "qrLoginEntryButton": "Sign in with a QR code",
+  "qrLoginUsePassword": "Sign in with my password",
+  "qrLoginExplanation": "Open Alanya on the phone you are already signed in on, go to Account & security, then scan this code.",
+  "qrLoginExpiresIn": "Expires in {time}",
+  "@qrLoginExpiresIn": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "qrLoginStatusWaiting": "Waiting to be scanned…",
+  "qrLoginStatusScanned": "Code scanned. Confirm on your other device.",
+  "qrLoginStatusRejected": "Sign-in declined from your other device.",
+  "qrLoginStatusExpired": "This code has expired.",
+  "qrLoginRegenerate": "Generate a new code",
+  "qrLoginNetworkError": "Could not connect. Check your network and try again.",
+
+  "qrApproveTitle": "New sign-in",
+  "qrApproveIntro": "This code was just scanned from this device:",
+  "qrApproveDeviceLabel": "Device (declared name)",
+  "qrApprovePlatformLabel": "Platform",
+  "qrApproveRequestedLabel": "Requested",
+  "qrApproveIpLabel": "IP address",
+  "qrApproveLocationLabel": "Approximate location",
+  "qrApproveDeclaredNotice": "The name and platform are announced by the device requesting access and can be forged. Only the IP address is observed by Alanya.",
+  "qrApproveSecurityWarning": "If you did not start this request, decline it and change your password.",
+  "qrApproveReject": "Decline",
+  "qrApproveConfirm": "Confirm",
+  "qrApproveDone": "Device connected",
+  "qrApproveRejectDone": "Sign-in declined",
+  "qrApproveSessionExpired": "This request has expired. Show a new code on the other device.",
+
+  "qrDevicesTitle": "Connected devices",
+  "qrDevicesEntryTitle": "Connected devices",
+  "qrLinkDeviceTitle": "Link a new device",
+  "qrLinkDeviceSubtitle": "Scan the code shown on the other device",
+  "qrDevicesEntrySubtitle": "See where your account is open",
+  "qrDevicesThisDevice": "This device",
+  "qrDevicesUnknownDevice": "Unknown device",
+  "qrDevicesMethodPassword": "Signed in with password",
+  "qrDevicesMethodSignup": "Sign-up device",
+  "qrDevicesMethodQr": "Signed in with QR code",
+  "qrDevicesLastActive": "Active {date}",
+  "@qrDevicesLastActive": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "qrDevicesRevoke": "Sign out",
+  "qrDevicesRevokeConfirmTitle": "Sign this device out?",
+  "qrDevicesRevokeConfirmBody": "{name} will be signed out right away. Your password will be required to sign back in on it.",
+  "@qrDevicesRevokeConfirmBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrDevicesRevokeDone": "Device signed out",
+  "qrDevicesEmpty": "No other connected device",
+  "qrDevicesLoadError": "Could not load your devices",
+  "qrDevicesIosNote": "On iPhone, a device may show up again as a new device in this list after Alanya is reinstalled.",
+
+  "qrBannerNewDevice": "New device connected: {name}",
+  "@qrBannerNewDevice": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "qrBannerSignedOutRemotely": "This device was signed out from another device.",
+
+  "myAccountLabel": "My account",
+  "accountHubTitle": "My account",
+  "accountHubSecurityScore": "Security score",
+  "accountHubSecurityScoreValue": "{score} / {max}",
+  "@accountHubSecurityScoreValue": {
+    "placeholders": {
+      "score": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "securityScoreAddEmail": "Add an email to improve your score.",
+  "securityScoreAddBiometric": "Enable biometrics to improve your score.",
+  "accountHubSectionIdentity": "Identity",
+  "accountHubSectionProtection": "Protection",
+  "accountHubSectionData": "Data",
+  "accountHubEditProfile": "Edit profile",
+  "accountHubEditProfileSubtitle": "Name, username, bio, photo",
+  "accountHubMyMedia": "My media",
+  "accountHubPrivacy": "Privacy",
+  "accountHubPrivacySubtitle": "Visibility, blocking, read receipts",
+  "accountHubSecurity": "Account security",
+  "accountHubSecuritySubtitle": "Password, devices, biometrics",
+  "accountHubDataAccount": "Data & account",
+  "accountHubDataAccountSubtitle": "GDPR export, deletion",
+  "accountHubProfilePreview": "Profile preview",
+  "accountHubProfilePreviewSubtitle": "See how contacts view you",
+  "profileBioLabel": "Bio",
+  "profileBioHint": "Tell others about yourself (500 characters max)",
+  "profilePreviewLink": "Profile preview",
+  "myMediaTitle": "My media",
+  "myMediaPlaceholder": "Your shared photos and videos will appear here.",
+  "storageTitle": "Storage & cache",
+  "storageUsed": "Storage used",
+  "storageBreakdownTitle": "Breakdown",
+  "storageMediaCache": "Media cache",
+  "storageDatabase": "Database",
+  "storageTempFiles": "Temporary files",
+  "storageOther": "Other data",
+  "storageClearMediaCache": "Clear media cache",
+  "storageClearTemp": "Clear temporary files",
+  "storageClearCacheConfirm": "Cached files will be removed. Media can be downloaded again.",
+  "storageClearCacheDone": "Media cache cleared",
+  "storageClearTempDone": "Temporary files cleared",
+  "networkDataTitle": "Network & data",
+  "networkDataSectionNetwork": "Network",
+  "networkWifiOnly": "Wi-Fi only",
+  "networkWifiOnlySubtitle": "Only download media on Wi-Fi",
+  "networkDataSaver": "Data saver",
+  "networkDataSaverSubtitle": "Reduces quality and automatic downloads",
+  "settingsSectionCommunication": "Communication",
+  "settingsSectionApplication": "Application",
+  "settingsSectionInformation": "Information",
+  "settingsStorage": "Storage & cache",
+  "settingsStorageSubtitle": "Usage and cleanup",
+  "settingsNetwork": "Network & data",
+  "settingsNetworkSubtitle": "Wi-Fi, data saver, media",
+  "settingsAccessibility": "Accessibility",
+  "settingsAccessibilitySubtitle": "Text and motion",
+  "settingsAbout": "About & legal",
+  "settingsMutedConversations": "Muted conversations",
+  "accessibilityTitle": "Accessibility",
+  "accessibilitySectionDisplay": "Display",
+  "accessibilityFontScale": "Text size",
+  "accessibilityFontScaleSmall": "Small",
+  "accessibilityFontScaleDefault": "Normal",
+  "accessibilityFontScaleMedium": "Large",
+  "accessibilityFontScaleLarge": "Extra large",
+  "accessibilityReduceMotion": "Reduce motion",
+  "accessibilityReduceMotionSubtitle": "Limits transitions and visual effects",
+  "accessibilitySaveFailed": "Could not save preferences",
+  "mutedConversationsTitle": "Muted conversations",
+  "mutedConversationsEmpty": "No muted conversations",
+  "mutedConversationsCount": "{count, plural, =1{1 conversation} other{{count} conversations}}",
+  "@mutedConversationsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mutedForeverLabel": "Muted indefinitely",
+  "mutedUntilLabel": "Until {date}",
+  "@mutedUntilLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "dndScheduleTitle": "Do not disturb",
+  "dndEnabled": "Schedule",
+  "dndEnabledSubtitle": "Mute notifications on a time schedule",
+  "dndScheduleHours": "Hours",
+  "dndStartTime": "Start",
+  "dndEndTime": "End",
+  "dndDays": "Active days",
+  "dndDayMon": "Mon",
+  "dndDayTue": "Tue",
+  "dndDayWed": "Wed",
+  "dndDayThu": "Thu",
+  "dndDayFri": "Fri",
+  "dndDaySat": "Sat",
+  "dndDaySun": "Sun",
+  "dndSaveFailed": "Could not save schedule",
+  "aboutTitle": "About",
+  "aboutSectionLegal": "Legal",
+  "aboutVersion": "Version {version} (build {build})",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": { "type": "String" },
+      "build": { "type": "String" }
+    }
+  },
+  "aboutTerms": "Terms of service",
+  "aboutPrivacy": "Privacy policy",
+  "aboutLicenses": "Open source licenses",
+  "aboutSupport": "Contact support",
+  "aboutCopyright": "© 2026 Alanya · Made with care in Douala",
+  "exportDataTitle": "Data & account",
+  "exportSectionYourData": "Your data",
+  "exportSectionDanger": "Sensitive zone",
+  "exportPhase1Title": "Quick export (GDPR)",
+  "exportPhase1Subtitle": "Profile, contacts, metadata — available immediately",
+  "exportPhase2Title": "Full export",
+  "exportPhase2Subtitle": "Includes messages and media — ready in ~24 h",
+  "exportRequestPhase1": "Export now",
+  "exportRequestPhase2": "Request full export",
+  "exportPhase1ReadyTitle": "Export ready",
+  "exportPhase2Started": "Full export requested — you will be notified",
+  "exportInProgress": "Export in progress",
+  "exportInProgressHint": "Ready in ~24 h · notification when complete",
+  "exportReady": "Your export is ready",
+  "exportDownload": "Download",
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "deleteAccountTitle": "Delete account",
+  "deleteAccountEntrySubtitle": "Irreversible action",
+  "deleteAccountStep1Title": "Irreversible action",
+  "deleteAccountStep1Bullet1": "Messages and media will be deleted",
+  "deleteAccountStep1Bullet2": "Removed from all groups",
+  "deleteAccountStep1Bullet3": "Phone number released after the grace period",
+  "deleteAccountContinue": "Continue",
+  "deleteAccountPassword": "Password",
+  "deleteAccountConfirmLabel": "Type DELETE",
+  "deleteAccountConfirmWord": "DELETE",
+  "deleteAccountConfirmMismatch": "Type DELETE to confirm",
+  "deleteAccountSubmit": "Delete my account",
+  "deleteAccountGraceTitle": "Deletion scheduled",
+  "deleteAccountGraceBody": "Your account will be permanently deleted on {date}. You can cancel until then.",
+  "@deleteAccountGraceBody": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "deleteAccountFailed": "Deletion failed: {error}",
+  "@deleteAccountFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "biometricLock": "Biometric lock",
+  "biometricLockTitle": "Alanya is locked",
+  "biometricLockUnlock": "Unlock",
+  "biometricLockSubtitle": "Fingerprint or face unlock on open",
+  "biometricLockEnableConfirm": "Confirm your fingerprint to enable the lock",
+  "biometricLockUnavailable": "Biometrics unavailable on this device",
+  "biometricLockFailed": "Biometrics: {error}",
+  "@biometricLockFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "accountSecuritySectionProtection": "Protection",
+  "logoutAllDevices": "Sign out all devices",
+  "logoutAllDevicesSubtitle": "Ends all sessions except this one",
+  "logoutAllDevicesConfirm": "All other devices will be signed out immediately.",
+  "logoutAllDevicesAction": "Sign out",
+  "logoutAllDevicesDone": "Other devices signed out",
+  "logoutAllDevicesFailed": "Could not sign out all devices",
+  "privacySectionWhoCanSee": "Who can see me",
+  "privacySectionMessages": "Messages",
+  "privacySectionLists": "Lists & groups",
+  "privacyLastSeen": "Last seen",
+  "privacyOnlineStatus": "Online status",
+  "privacyProfilePhoto": "Profile photo",
+  "privacyReadReceipts": "Read receipts",
+  "privacyReadReceiptsSubtitle": "Send and receive read confirmations",
+  "privacyNotificationPreview": "Notification preview",
+  "privacyBlockedContacts": "Blocked contacts",
+  "privacyBlockedContactsEmpty": "No blocked contacts",
+  "privacyBlockedContactsCount": "{count, plural, =1{1 contact} other{{count} contacts}}",
+  "@privacyBlockedContactsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "privacyAddToGroups": "Add to groups",
+  "privacyVisibilityEveryone": "Everyone",
+  "privacyVisibilityContacts": "My contacts",
+  "privacyVisibilityNobody": "Nobody",
+  "privacySaveFailed": "Could not save privacy settings",
+  "onboardingCredentialsTitle": "Your credentials",
+  "onboardingCredentialsSubtitle": "Keep this information in a safe place.",
+  "onboardingCredentialsBanner": "Save your Alanya number and password — they won't be shown again.",
+  "onboardingProfileTitle": "Your profile",
+  "onboardingProfileSubtitle": "Photo, gender, age, country, bio: fill in now or anytime in My account.",
+  "profileBioDefault": "Hi, I'm on Alanya",
+  "onboardingPersonalizeTitle": "Personalize Alanya",
+  "onboardingPersonalizeSubtitle": "Theme, language, and lock. Change anytime in Settings.",
+  "onboardingStepOf": "Step {current} of {total}",
+  "@onboardingStepOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "onboardingCountryTitle": "Your country",
+  "onboardingCountrySubtitle": "Helps contacts recognize you.",
+  "onboardingPhotoTitle": "Profile photo",
+  "onboardingPhotoSubtitle": "Add a photo or skip this step.",
+  "onboardingPhotoChooseGallery": "Choose from gallery",
+  "onboardingPhotoCamera": "Take a photo",
+  "onboardingPhotoFailed": "Could not add photo",
+  "onboardingBioTitle": "A few words about you",
+  "onboardingBioSubtitle": "Introduce yourself in one line (optional).",
+  "onboardingBioHint": "Hi, I'm on Alanya",
+  "onboardingPreferencesTitle": "Preferences",
+  "onboardingPreferencesSubtitle": "App theme and language.",
+  "onboardingThemeLabel": "Theme",
+  "onboardingLanguageLabel": "Language",
+  "onboardingBiometricTitle": "Protect access",
+  "onboardingBiometricSubtitle": "A quick gesture each time you return to the app.",
+  "onboardingBiometricFriendlyTitle": "Fingerprint or face unlock",
+  "onboardingBiometricFriendlyBody": "Turn on quick unlock. You can change this anytime in Settings.",
+  "onboardingBiometricUnavailable": "Biometrics unavailable — you can enable this later in settings.",
+  "onboardingCompleteTitle": "You're all set!",
+  "onboardingCompleteSubtitle": "Your account is ready.",
+  "onboardingCompleteMessage": "Explore Alanya and stay connected with people you care about.",
+  "onboardingCompleteCta": "Discover Alanya",
+  "onboardingContinue": "Continue",
+  "onboardingSkip": "Skip",
+  "onboardingSkipAll": "Set up later",
+  "onboardingSkipAllTitle": "Skip setup?",
+  "onboardingSkipAllBody": "You can complete your profile anytime in My account.",
+  "onboardingSkipAllCredentialsBody": "You won't see your password here again. Complete your profile anytime in My account.",
+  "onboardingSkipAllRecoveryBody": "You won't see your password here again, and your recovery code will only reappear in My account → Security. Write them down before continuing.",
+  "onboardingSaveFailed": "Could not save — try again or skip this step.",
+  "onboardingCredentialsBannerNoEmail": "Write down your Alanya number, your password and your recovery code — they won't be shown here again.",
+  "onboardingPhotoAdd": "Tap to add a photo",
+  "onboardingIdentityTitle": "About you",
+  "onboardingIdentitySubtitle": "Gender and age can't be changed once saved.",
+  "profileGenderLabel": "Gender",
+  "profileGenderMale": "Male",
+  "profileGenderFemale": "Female",
+  "profileGenderOther": "Other",
+  "profileGenderUnspecified": "Prefer not to say",
+  "profileAgeLabel": "Age",
+  "profileAgeSuffix": "yrs",
+  "profileAgeBirthYear": "Birth year ≈ {year}",
+  "@profileAgeBirthYear": {
+    "placeholders": {
+      "year": { "type": "int" }
+    }
+  },
+  "profileAgeInvalid": "Invalid age (between {min} and {max})",
+  "@profileAgeInvalid": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "recoveryCodeTitle": "Recovery code",
+  "recoveryCodeKeepSafe": "Keep it safe",
+  "recoveryCodeOnboardingHint": "Without an email address, this code is your only way back into your account. Write it down somewhere other than this phone.",
+  "recoveryCodeCopied": "Recovery code copied",
+  "recoveryCodeEntrySubtitle": "Reset your password without an email",
+  "recoveryCodeIntro": "This code resets your password without going through email. It never changes, not even after a password change.",
+  "recoveryCodeSecurityWarning": "Anyone who knows this code and your Alanya ID can change your password. Never share it.",
+  "recoveryCodeReveal": "Show code",
+  "recoveryCodeHide": "Hide",
+  "recoveryCodePasswordPrompt": "Enter your password to display the code.",
+  "recoveryCodeRevealFailed": "Could not display the code",
+  "forgotMethodTitle": "Recover your account",
+  "forgotMethodSubtitle": "How would you like to proceed?",
+  "forgotMethodEmail": "I have an email address",
+  "forgotMethodEmailSubtitle": "Get a 6-digit code by email.",
+  "forgotMethodCode": "I have a recovery code",
+  "forgotMethodCodeSubtitle": "The code shown when you created your account.",
+  "forgotCodeTitle": "Your recovery code",
+  "forgotCodeSubtitle": "Enter your Alanya ID and the code you saved at sign-up.",
+  "forgotCodeHint": "XXXX-XXXX-XXXX",
+  "forgotCodeSubmit": "Validate code",
+  "validatorRecoveryCode": "12-character recovery code",
+  "deleteAccountGraceDays": "Grace period · {days} days",
+  "@deleteAccountGraceDays": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "deleteAccountCancelDeletion": "Cancel deletion",
+  "deleteAccountCancelSuccess": "Deletion cancelled",
+  "deleteAccountCancelFailed": "Could not cancel deletion",
+  "deleteAccountLogoutNow": "Sign out",
+  "myMediaEmpty": "No shared media yet",
+  "myMediaLoadFailed": "Could not load your media",
+  "dndSummaryActive": "{start} – {end} · {days}",
+  "@dndSummaryActive": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" },
+      "days": { "type": "String" }
+    }
+  },
+  "dndSummaryInactive": "Off",
+  "exportPhase1ShareSubject": "Alanya export (profile and metadata)",
+  "contactLists": "Contact lists",
+  "contactListsManage": "Manage",
+  "createList": "Create a list",
+  "listName": "List name",
+  "listNameHint": "Family, Friends, Work…",
+  "renameList": "Rename list",
+  "deleteList": "Delete list",
+  "deleteListConfirm": "Delete \u201c{name}\u201d? Your contacts stay in your favourites.",
+  "@deleteListConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "listColor": "Chip colour",
+  "listNameAlreadyExists": "A list with this name already exists",
+  "listSaveFailed": "Could not save the list. Try again.",
+  "listMembersUpdateFailed": "Could not update members. Try again.",
+  "listMembersCount": "{count, plural, =0{No members} =1{1 member} other{{count} members}}",
+  "@listMembersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "addToList": "Add members",
+  "removeFromList": "Remove from list",
+  "createGroupFromList": "Create a group",
+  "noLists": "No contact lists",
+  "noListsHint": "Sort your preferred contacts into Family, Friends, Work…",
+  "noListMembers": "No members in this list",
+  "noContactToAddToList": "All your preferred contacts are already in this list",
+  "addMembersSelected": "{count} selected",
+  "@addMembersSelected": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "newList": "New list",
+  "contactListsHint": "A list can only contain contacts already in your favourites. The same contact can belong to several lists.",
+  "notInThisList": "Favourite \u2014 not in this list",
+  "createGroupNamed": "Create a group \u201c{name}\u201d",
+  "@createGroupNamed": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "manageLists": "Manage lists",
+  "contactListsSheetSubtitle": "Open a list, or turn it into a group.",
+  "markAllAsRead": "Mark all as read",
+  "markAllAsReadDone": "{count, plural, =0{No unread chats} =1{1 chat marked as read} other{{count} chats marked as read}}",
+  "@markAllAsReadDone": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "optionsAction": "Options"
 }

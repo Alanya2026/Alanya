@@ -222,6 +222,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                                             ? user.nom
                                             : user.pseudo,
                                         size: AppSizes.avatarMd,
+                                        qrBadge: user.addedViaQr == true,
                                       ),
                                       if (user.isOnline)
                                         Positioned(

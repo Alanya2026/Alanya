@@ -170,12 +170,23 @@ class TalkyChatApi implements ChatApi {
     int conversID, {
     bool? onlyAdminsCanSend,
     bool? onlyAdminsCanEditInfo,
+    bool? hideHistoryForNewMembers,
+    bool? onlyAdminsCanAddMembers,
   }) =>
       _client.updateGroupSettings(
         conversID,
         onlyAdminsCanSend: onlyAdminsCanSend,
         onlyAdminsCanEditInfo: onlyAdminsCanEditInfo,
+        hideHistoryForNewMembers: hideHistoryForNewMembers,
+        onlyAdminsCanAddMembers: onlyAdminsCanAddMembers,
       );
+
+  @override
+  Future<Map<String, dynamic>> ackGroupJoin(
+    int conversID, {
+    int? msgID,
+  }) =>
+      _client.ackGroupJoin(conversID, msgID: msgID);
 
   @override
   Future<Map<String, dynamic>> addParticipants(

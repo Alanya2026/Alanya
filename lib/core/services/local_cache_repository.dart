@@ -5,7 +5,9 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
 import '../db/app_database.dart';
+import '../theme/contact_list_colors.dart';
 import '../utils/media_album.dart';
+import '../utils/user_search.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'media_cache_service.dart';
@@ -109,6 +111,34 @@ class LocalCacheRepository {
     }
   }
 
+  /// Retire un contact des favoris côté serveur **et** partout dans le cache.
+  ///
+  /// Point d'entrée unique pour tous les écrans : être un contact préféré est
+  /// le prérequis pour appartenir à une liste, donc un retrait des favoris doit
+  /// aussi sortir le contact de toutes les listes (le serveur fait la même
+  /// chose de son côté). Passer par `_api.removeContact` seul laisserait des
+  /// membres fantômes dans les listes en cache.
+  Future<void> removePreferredContact(int alanyaID, {User? user}) async {
+    await _api.removeContact(alanyaID);
+    await forgetPreferredContact(alanyaID, user: user);
+  }
+
+  /// Volet local de [removePreferredContact] — sans appel réseau.
+  Future<void> forgetPreferredContact(int alanyaID, {User? user}) async {
+    if (user != null) {
+      await upsertKnownUser(user, preferred: false, partial: true);
+    } else {
+      await (_db.update(_db.localUsers)
+            ..where((u) => u.alanyaID.equals(alanyaID)))
+          .write(const LocalUsersCompanion(isPreferredContact: Value(false)));
+    }
+    await (_db.delete(_db.localContactListMembers)
+          ..where((m) => m.idFriend.equals(alanyaID)))
+        .go();
+    // Les `memberCount` des listes touchées viennent du serveur.
+    await syncContactLists();
+  }
+
   /// Stocke un user vu de passage (résolu via getUserById) — utile pour
   /// peupler le roster d'appel groupe ou l'affichage de messages.
   ///
@@ -132,6 +162,260 @@ class LocalCacheRepository {
   Future<LocalUser?> getKnownUser(int alanyaID) {
     return (_db.select(_db.localUsers)..where((u) => u.alanyaID.equals(alanyaID)))
         .getSingleOrNull();
+  }
+
+  // ── LISTES DE CONTACTS ──────────────────────────────────────────────
+
+  /// Listes de contacts en cache (offline-first, comme les contacts préférés).
+  Stream<List<LocalContactList>> watchContactLists() {
+    return (_db.select(_db.localContactLists)
+          ..orderBy([(l) => OrderingTerm(expression: l.name)]))
+        .watch();
+  }
+
+  Future<List<LocalContactList>> getContactListsOnce() {
+    return (_db.select(_db.localContactLists)
+          ..orderBy([(l) => OrderingTerm(expression: l.name)]))
+        .get();
+  }
+
+  /// Rafraîchit les listes depuis l'API. Best-effort : en cas d'erreur réseau,
+  /// le cache reste utilisable.
+  Future<void> syncContactLists() async {
+    try {
+      final raw = await _api.getContactLists();
+      final now = DateTime.now();
+      final previousIds =
+          (await getContactListsOnce()).map((l) => l.idList).toSet();
+      final newIds = <int>{};
+      await _db.batch((b) {
+        for (final r in raw.whereType<Map<String, dynamic>>()) {
+          final l = ContactList.fromJson(r);
+          if (l.idList == 0) continue;
+          newIds.add(l.idList);
+          final companion = LocalContactListsCompanion(
+            idList: Value(l.idList),
+            name: Value(l.name),
+            color: Value(l.color),
+            memberCount: Value(l.memberCount),
+            cachedAt: Value(now),
+          );
+          b.insert(
+            _db.localContactLists,
+            companion,
+            onConflict: DoUpdate((_) => companion),
+          );
+        }
+      });
+      // Listes supprimées ailleurs : on les retire vraiment (contrairement aux
+      // contacts préférés, une liste orpheline n'a aucune utilité en cache).
+      final removed = previousIds.difference(newIds);
+      if (removed.isNotEmpty) {
+        await _forgetLists(removed);
+      }
+      await _backfillListColors();
+    } catch (e) {
+      debugPrint('[LocalCacheRepo] syncContactLists échouée: $e');
+    }
+  }
+
+  /// Écrit en base la couleur des listes qui n'en ont pas.
+  ///
+  /// Depuis que la couleur est attribuée d'office à la création, seules les
+  /// listes créées **avant** peuvent être sans teinte. L'UI en affiche déjà une
+  /// (via `resolveListColors`) ; ce rattrapage persiste exactement la même,
+  /// pour que tous les appareils du compte s'accordent. Idempotent : au tour
+  /// suivant il n'y a plus rien à faire.
+  Future<void> _backfillListColors() async {
+    final lists = await getContactListsOnce();
+    final aRepeindre =
+        lists.where((l) => parseListColor(l.color) == null).toList();
+    if (aRepeindre.isEmpty) return;
+
+    final resolved = resolveListColors(lists);
+    for (final list in aRepeindre) {
+      final hex = resolved[list.idList];
+      if (hex == null) continue;
+      try {
+        await _api.updateContactList(list.idList, color: hex);
+        await (_db.update(_db.localContactLists)
+              ..where((l) => l.idList.equals(list.idList)))
+            .write(LocalContactListsCompanion(color: Value(hex)));
+      } catch (e) {
+        // Best-effort : sans réseau la liste garde sa couleur d'affichage,
+        // le rattrapage se refera à la prochaine synchro.
+        debugPrint('[LocalCacheRepo] couleur de liste non persistée: $e');
+      }
+    }
+  }
+
+  /// Membres d'une liste, hydratés depuis [LocalUsers] — l'appartenance ne
+  /// duplique aucun profil.
+  Stream<List<User>> watchListMembers(int idList) {
+    final query = _db.select(_db.localContactListMembers).join([
+      innerJoin(
+        _db.localUsers,
+        _db.localUsers.alanyaID.equalsExp(_db.localContactListMembers.idFriend),
+      ),
+    ])
+      ..where(_db.localContactListMembers.idList.equals(idList))
+      ..orderBy([OrderingTerm(expression: _db.localUsers.nom)]);
+    return query.watch().map(
+          (rows) => rows
+              .map((r) => localUserToUser(r.readTable(_db.localUsers)))
+              .toList(),
+        );
+  }
+
+  /// Ids des membres d'une liste — assez pour filtrer une liste déjà streamée
+  /// sans re-jointure sur les profils.
+  Stream<Set<int>> watchListMemberIds(int idList) {
+    return (_db.select(_db.localContactListMembers)
+          ..where((m) => m.idList.equals(idList)))
+        .watch()
+        .map((rows) => rows.map((m) => m.idFriend).toSet());
+  }
+
+  /// Appartenances vues depuis le contact : `alanyaID → listes`.
+  ///
+  /// L'écran des contacts préférés affiche sous chaque contact les puces de
+  /// ses listes ; un stream par contact serait une requête par ligne de liste.
+  /// Une seule jointure suffit, l'index se fait en mémoire.
+  Stream<Map<int, List<LocalContactList>>> watchListsByMember() {
+    final query = _db.select(_db.localContactListMembers).join([
+      innerJoin(
+        _db.localContactLists,
+        _db.localContactLists.idList
+            .equalsExp(_db.localContactListMembers.idList),
+      ),
+    ])
+      ..orderBy([OrderingTerm(expression: _db.localContactLists.name)]);
+    return query.watch().map((rows) {
+      final byMember = <int, List<LocalContactList>>{};
+      for (final row in rows) {
+        final member = row.readTable(_db.localContactListMembers);
+        byMember
+            .putIfAbsent(member.idFriend, () => [])
+            .add(row.readTable(_db.localContactLists));
+      }
+      return byMember;
+    });
+  }
+
+  Future<void> syncListMembers(int idList) async {
+    try {
+      final raw = await _api.getListMembers(idList);
+      final now = DateTime.now();
+      final ids = <int>{};
+      await _db.batch((b) {
+        for (final r in raw.whereType<Map<String, dynamic>>()) {
+          final u = User.fromJson(r);
+          if (u.alanyaID == 0) continue;
+          ids.add(u.alanyaID);
+          // Même projection partielle que les contacts préférés : ne pas
+          // écraser une fiche déjà complète avec un profil tronqué.
+          final companion = _partialUserToCompanion(
+            u,
+            cachedAt: now,
+            presenceKnown: true,
+          );
+          b.insert(
+            _db.localUsers,
+            companion,
+            onConflict: DoUpdate((_) => companion),
+          );
+          b.insert(
+            _db.localContactListMembers,
+            LocalContactListMembersCompanion(
+              idList: Value(idList),
+              idFriend: Value(u.alanyaID),
+            ),
+            onConflict: DoNothing(),
+          );
+        }
+      });
+      // Retraits faits ailleurs.
+      await (_db.delete(_db.localContactListMembers)
+            ..where((m) =>
+                m.idList.equals(idList) &
+                (ids.isEmpty ? const Constant(true) : m.idFriend.isNotIn(ids))))
+          .go();
+    } catch (e) {
+      debugPrint('[LocalCacheRepo] syncListMembers($idList) échouée: $e');
+    }
+  }
+
+  /// Crée une liste côté serveur puis resynchronise le cache. Comme
+  /// `addContact`, la mutation reste online : pas d'outbox pour les listes.
+  ///
+  /// [memberIds] permet de peupler la liste dans la foulée : une liste vide
+  /// n'a aucun intérêt, on ne force donc pas un second aller-retour par l'UI.
+  Future<ContactList> createContactList(
+    String name, {
+    String? color,
+    Iterable<int> memberIds = const [],
+  }) async {
+    // Une liste naît toujours colorée : si l'appelant n'impose rien, elle prend
+    // la première teinte libre de la palette.
+    final teinte = parseListColor(color) != null
+        ? color
+        : nextFreeContactListColor({
+            for (final l in await getContactListsOnce())
+              if (parseListColor(l.color) != null) l.color!.toUpperCase(),
+          });
+    final raw = await _api.createContactList(name, color: teinte);
+    final created = ContactList.fromJson(raw);
+    if (created.idList != 0 && memberIds.isNotEmpty) {
+      for (final id in memberIds) {
+        await _api.addListMember(created.idList, id);
+      }
+      await syncListMembers(created.idList);
+    }
+    await syncContactLists();
+    return created;
+  }
+
+  Future<void> updateContactList(int idList,
+      {String? name, String? color}) async {
+    await _api.updateContactList(idList, name: name, color: color);
+    await syncContactLists();
+  }
+
+  Future<void> deleteContactList(int idList) async {
+    await _api.deleteContactList(idList);
+    await _forgetLists({idList});
+  }
+
+  Future<void> addListMember(int idList, int friendID) =>
+      addListMembers(idList, [friendID]);
+
+  /// Ajout groupé : une seule resynchro pour toute la sélection (la feuille
+  /// d'ajout en envoie souvent plusieurs d'un coup).
+  Future<void> addListMembers(int idList, Iterable<int> friendIDs) async {
+    if (friendIDs.isEmpty) return;
+    for (final id in friendIDs) {
+      await _api.addListMember(idList, id);
+    }
+    await syncListMembers(idList);
+    await syncContactLists();
+  }
+
+  Future<void> removeListMember(int idList, int friendID) async {
+    await _api.removeListMember(idList, friendID);
+    await syncListMembers(idList);
+    await syncContactLists();
+  }
+
+  /// Oublie localement des listes (et leurs appartenances) — les profils des
+  /// membres restent en cache, ils sont partagés avec le reste de l'app.
+  Future<void> _forgetLists(Set<int> idLists) async {
+    if (idLists.isEmpty) return;
+    await (_db.delete(_db.localContactListMembers)
+          ..where((m) => m.idList.isIn(idLists)))
+        .go();
+    await (_db.delete(_db.localContactLists)
+          ..where((l) => l.idList.isIn(idLists)))
+        .go();
   }
 
   // ── HISTORIQUE D'APPELS ─────────────────────────────────────────────
@@ -264,11 +548,13 @@ class LocalCacheRepository {
         .go();
   }
 
-  /// Vide les caches secondaires (contacts, appels, meetings, statuts).
+  /// Vide les caches secondaires (contacts, listes, appels, meetings, statuts).
   Future<void> clearSession() async {
     await _db.delete(_db.localStatuses).go();
     await _db.delete(_db.localMeetings).go();
     await _db.delete(_db.localCalls).go();
+    await _db.delete(_db.localContactListMembers).go();
+    await _db.delete(_db.localContactLists).go();
     await _db.delete(_db.localUsers).go();
   }
 
@@ -293,6 +579,19 @@ class LocalCacheRepository {
       typeCompte: Value(u.typeCompte),
       isPreferredContact:
           preferred != null ? Value(preferred) : const Value.absent(),
+      // Relation « ajouté par QR » : null = la source ne portait pas
+      // l'information, on n'écrase pas ce que le cache sait déjà.
+      addedViaQr: u.addedViaQr != null
+          ? Value(u.addedViaQr!)
+          : const Value.absent(),
+      preferredAddedAt: u.preferredAddedAt != null
+          ? Value(u.preferredAddedAt)
+          : const Value.absent(),
+      // Chaîne vide = « pas de note », connue — on efface. Null = source
+      // muette, on ne touche pas.
+      preferredNote: u.preferredNote != null
+          ? Value(u.preferredNote!.isEmpty ? null : u.preferredNote)
+          : const Value.absent(),
       cachedAt: Value(cachedAt),
     );
   }
@@ -339,8 +638,30 @@ class LocalCacheRepository {
           u.typeCompte > 0 ? Value(u.typeCompte) : const Value.absent(),
       isPreferredContact:
           preferred != null ? Value(preferred) : const Value.absent(),
+      addedViaQr: u.addedViaQr != null
+          ? Value(u.addedViaQr!)
+          : const Value.absent(),
+      preferredAddedAt: u.preferredAddedAt != null
+          ? Value(u.preferredAddedAt)
+          : const Value.absent(),
+      // Chaîne vide = « pas de note », connue — on efface. Null = source
+      // muette, on ne touche pas.
+      preferredNote: u.preferredNote != null
+          ? Value(u.preferredNote!.isEmpty ? null : u.preferredNote)
+          : const Value.absent(),
       cachedAt: Value(cachedAt),
     );
+  }
+
+  /// Pose (ou efface, si vide) la note contextuelle d'un contact — miroir
+  /// local de PUT /contacts/:id/note.
+  Future<void> setPreferredNote(int alanyaID, String? note) async {
+    final clean = (note ?? '').trim();
+    await (_db.update(_db.localUsers)
+          ..where((u) => u.alanyaID.equals(alanyaID)))
+        .write(LocalUsersCompanion(
+      preferredNote: Value(clean.isEmpty ? null : clean),
+    ));
   }
 
   Future<void> _upsertCall(Call c, {required int myId}) async {

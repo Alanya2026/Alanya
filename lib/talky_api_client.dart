@@ -11,18 +11,21 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' show MediaType;
 import 'package:mime/mime.dart' show lookupMimeType;
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'talky_models.dart';
+import 'models/qr_models.dart';
 import 'core/theme/locale_controller.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/app_log.dart';
 
 part 'api/auth_api.dart';
 part 'api/users_api.dart';
+part 'api/contact_lists_api.dart';
 part 'api/chat_api.dart';
 part 'api/calls_api.dart';
 part 'api/meetings_api.dart';
@@ -31,6 +34,8 @@ part 'api/socket_api.dart';
 part 'api/status_api.dart';
 part 'api/admin_api.dart';
 part 'api/misc_api.dart';
+part 'api/qr_api.dart';
+part 'api/qr_auth_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production
@@ -94,6 +99,11 @@ class TalkyApiClient {
     _stableDeviceIdFuture ??= StorageService().getOrCreateDeviceId();
     return _stableDeviceIdFuture!;
   }
+
+  /// Identifiant matériel du téléphone (`device_ID`) à envoyer au
+  /// login/register — voir [_currentHardwareId] pour le détail par
+  /// plateforme et la distinction avec [ensureStableDeviceId].
+  static Future<String> currentHardwareId() => _currentHardwareId();
 
   void setToken(String token) => _accessToken = token;
   void setRefreshToken(String token) => _refreshToken = token;
@@ -357,6 +367,53 @@ class TalkyApiClient {
       }
     } catch (_) {
       return 'INDEFINI';
+    }
+  }
+
+  static const _deviceIdentityChannel = MethodChannel('com.alanya/device_identity');
+
+  /// Identifiant matériel du téléphone, clé de la table `appareils` et donc de
+  /// toute la révocation de session. Distinct de [ensureStableDeviceId] (UUID
+  /// applicatif du push/socket, régénéré à la réinstallation).
+  ///
+  /// Android : `Settings.Secure.ANDROID_ID` via canal natif — unique par
+  /// (appareil, signature d'app, utilisateur) et survivant à la réinstallation.
+  /// Surtout PAS `AndroidDeviceInfo.id`, qui est `Build.ID` : l'empreinte du
+  /// firmware, identique sur tous les téléphones d'un même modèle et modifiée à
+  /// chaque mise à jour système. device_info_plus n'expose plus ANDROID_ID
+  /// depuis sa v9, d'où le canal natif.
+  ///
+  /// iOS : `identifierForVendor`, qui ne survit pas à une désinstallation de la
+  /// dernière app du vendeur — le téléphone réapparaît alors comme un nouvel
+  /// appareil. Limite assumée et signalée à l'utilisateur.
+  ///
+  /// Ailleurs (desktop, web) : repli sur l'UUID applicatif, pour que la
+  /// connexion par QR reste possible plutôt que de rejeter la session.
+  static Future<String> _currentHardwareId() async {
+    try {
+      // `Platform.operatingSystem` lève sur le web : garde avant tout accès.
+      if (kIsWeb) return StorageService().getOrCreateDeviceId();
+      switch (Platform.operatingSystem) {
+        case 'android':
+          final id = (await _deviceIdentityChannel.invokeMethod<String>('getAndroidId'))?.trim();
+          if (id != null && id.isNotEmpty) return id;
+          return StorageService().getOrCreateDeviceId();
+        case 'ios':
+          final i = await DeviceInfoPlugin().iosInfo;
+          final id = i.identifierForVendor?.trim() ?? '';
+          if (id.isNotEmpty) return id;
+          return StorageService().getOrCreateDeviceId();
+        default:
+          return StorageService().getOrCreateDeviceId();
+      }
+    } catch (_) {
+      // Dernier recours : mieux vaut un identifiant par installation qu'aucun,
+      // sinon la session devient invisible dans « Appareils connectés ».
+      try {
+        return await StorageService().getOrCreateDeviceId();
+      } catch (_) {
+        return 'INDEFINI';
+      }
     }
   }
 

@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../widgets/alanya_phone_field.dart';
 import '../../core/utils/country_utils.dart';
 import '../../core/services/call_service.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../core/utils/conversation_display.dart';
@@ -120,7 +121,9 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       if (next) {
         await _api.addContact(_userId);
       } else {
-        await _api.removeContact(_userId);
+        // Passe par le cache : retirer des favoris doit aussi sortir le
+        // contact de toutes les listes où il figure.
+        await context.read<LocalCacheRepository>().removePreferredContact(_userId);
       }
       if (mounted) setState(() => _isFavorite = next);
     } catch (e) {

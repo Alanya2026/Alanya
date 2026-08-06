@@ -1,0 +1,337 @@
+% Fragment partage : inclus par qr-code.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Le besoin}
+
+\section{Ce qui existe déjà}
+
+Alanya n'a aujourd'hui \textbf{qu'un seul chemin} pour ajouter un contact préféré~: la
+recherche manuelle par nom, pseudo ou Alanya ID, depuis la feuille d'ajout du profil.
+Aucun lien d'invitation, aucun code, aucun geste plus rapide.
+
+\begin{constat}[Vérifié dans le code]
+\code{lib/widgets/add\_contact\_sheet.dart} interroge d'abord le cache local
+(\code{filterUsersBySearch}), puis \code{GET~/users/search} après 400~ms sans résultat.
+L'ajout appelle \code{POST~/contacts/:userId} --- la même route que celle que ce volet
+réutilisera pour l'ajout par QR.
+\end{constat}
+
+Côté connexion, Alanya n'a \textbf{qu'un seul appareil implicite}~: se connecter sur un
+second téléphone fonctionne déjà techniquement (rien ne l'empêche), mais rien ne le montre
+non plus. Il n'existe aucun écran « mes appareils », aucun moyen de savoir où son compte est
+ouvert, ni de fermer une session à distance.
+
+\begin{constat}[Vérifié dans le code]
+\code{lib/screens/profile/account\_security\_screen.dart} ne contient que deux
+sections~: \emph{Email} et \emph{Changer le mot de passe}. Rien sur les appareils.
+\end{constat}
+
+\section{Ce qu'on ajoute}
+
+Deux fonctionnalités, toutes deux fondées sur un QR code~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Un code personnel éphémère.} Chaque utilisateur génère, en ouvrant
+        « Mon code », un QR à son identité --- logo Alanya au centre, traits arrondis,
+        une vraie carte de visite plutôt qu'un carré noir et blanc. Le scanner d'un autre
+        utilisateur reconnaît la personne et l'ajoute \emph{instantanément} en contact
+        préféré. Le code vit \textbf{dix minutes} et s'éteint au premier scan réussi~;
+        l'écran en régénère un neuf tout seul, et le propriétaire est prévenu --- et
+        invité à ajouter l'autre \textbf{en retour} --- chaque fois que son code est
+        utilisé.
+  \item \textbf{La connexion d'un second appareil.} Un nouvel appareil affiche un code ; un
+        appareil déjà connecté le scanne pour l'autoriser. L'utilisateur peut ensuite voir,
+        depuis son compte, la liste de tous les appareils connectés --- et en déconnecter un
+        à distance.
+\end{enumerate}
+
+\begin{note}[Une seule brique, deux usages]
+Les deux fonctionnalités ne partagent pas qu'un mot dans leur nom. Elles partagent un
+\textbf{composant scanner}, un \textbf{générateur de QR stylé}, et une manière commune de
+résoudre ce qu'un code scanné signifie. C'est pour cette raison qu'elles sont conçues dans
+un seul volet --- le même raisonnement qui a réuni compte officiel et diffusion dans
+l'étape~3.
+\end{note}
+
+\section{Les règles produit}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Qui peut scanner} & Un utilisateur \textbf{déjà connecté}, dans les deux cas. Scanner
+n'est jamais un geste public ; c'est toujours un compte qui en reconnaît un autre. \\
+\thd{Vie du code personnel} & \textbf{Dix minutes, une seule personne.} Généré à la
+demande à l'ouverture de « Mon code », consommé au premier scan réussi. L'écran affiche
+un compte à rebours et régénère automatiquement --- à l'expiration comme après
+consommation. \\
+\thd{Ajout de contact} & \textbf{Instantané}, sans écran de confirmation. Le filet de
+sécurité est une carte de résultat annulable, pas une étape supplémentaire. \\
+\thd{Retour au propriétaire} & Prévenu à \textbf{chaque scan} de son code, où qu'il soit
+dans l'application, et invité à ajouter l'autre en retour --- notification si l'app est
+en arrière-plan, simple information si le lien existait déjà. \\
+\thd{Contacts ajoutés par QR} & Reconnaissables partout~: pastille sur l'avatar, mention
+datée sur la fiche, filtre « Par QR » dans les contacts préférés \emph{et} dans la liste
+des discussions. \\
+\thd{Note de contexte} & Optionnelle, saisie juste après le scan --- « rencontré au salon
+de Douala » --- ou au moment d'ajouter en retour, et relue sur la fiche du contact. Elle
+appartient à la relation~: l'autre ne la voit jamais. \\
+\thd{Codes permanents} & \textbf{Réservés aux futurs comptes business} (volet~1). Aucun
+compte personnel n'a de code qui dure. \\
+\thd{Connexion d'un appareil} & \textbf{Jamais instantanée.} L'appareil qui scanne voit
+toujours l'identité de l'appareil qu'il autorise, et doit confirmer explicitement. \\
+\thd{Durée du QR de connexion} & Environ \textbf{90~secondes}, puis régénération
+automatique --- comme un code à usage unique, pas comme une carte de visite. \\
+\thd{Emplacements} & Profil (mon code), feuille d'ajout de contact (scanner), Compte et
+sécurité (appareils connectés), écran de connexion (nouvel appareil). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Pourquoi un code qui meurt]
+Un code permanent est une affiche~; un code de dix minutes est une poignée de main. Le
+code personnel sert à des rencontres --- on le montre, on l'envoie, la personne en face
+scanne, c'est fini. L'usage unique garantit que le code n'ajoute que la personne à qui on
+vient de le tendre~: une capture d'écran qui circule ensuite ne mène plus nulle part. Et
+comme l'écran régénère aussitôt, montrer son code à trois personnes d'affilée reste
+trois gestes de \emph{leur} côté, zéro du sien.
+\end{note}
+
+\begin{constat}[Vérifié dans le code --- pourquoi le permanent est verrouillé]
+L'infrastructure du code permanent (\code{users.qr\_public\_id}) existe et reste en
+place, mais son garde refuse aujourd'hui tout le monde --- et pour une raison précise~:
+la colonne \code{users.type\_compte}, qu'on prendrait volontiers pour un type de compte
+métier, est en réalité un \textbf{rôle d'administration} (0~utilisateur, 1~admin,
+2~super-admin, cf. la route \code{PUT~/users/:id/role} de \code{src/routes/admin.js},
+côté Alanya-Backend). Rien dans la base ne sait encore dire « ce compte est un
+commerce ». Le volet~1 (socle de compte) apportera \code{account\_type}~; le verrou des
+codes permanents s'y branchera alors.
+\end{constat}
+
+\chapter{Mon code personnel}
+
+\section{Vue d'ensemble}
+
+Un seul écran, deux volets accessibles d'un geste~: \emph{Mon code} et \emph{Scanner} ---
+comme on bascule entre appareil photo avant et arrière.
+
+\begin{center}
+  \imageOuCadre{maquettes/qr-identite.png}{\linewidth}%
+    {Mon code (médaillon, logo au centre, partage et régénération) et l'écran Scanner
+     (reconnaissance instantanée, succès doux et annulable)\\
+     \texttt{maquettes/qr-identite.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/69e9cbec-ff13-48fc-903f-673648874b2a}%
+{\texttt{claude.ai/code/artifact/69e9cbec}}\\
+Source versionnée~: \code{docs/architecture/maquettes/qr-identite.html}
+\end{note}
+
+\section{Écran --- Mon code}
+
+Une carte blanche~: médaillon d'avatar débordant le haut, nom, Alanya ID, puis le QR
+code lui-même --- fond clair, points arrondis à la couleur de marque, logo Alanya au
+centre. Sous le code, un \textbf{compte à rebours} (« Expire dans 9:41 ») et la mention
+« Valable 10~minutes et pour une seule personne ». En dessous, deux actions~:
+\textbf{Partager} et \textbf{Nouveau code}.
+
+À zéro --- comme après un scan réussi --- l'écran régénère un code neuf de lui-même~:
+l'utilisateur n'a jamais un code mort sous les yeux, exactement le comportement déjà
+retenu pour le QR de connexion (chapitre~\ref{ch:qr-naif-connexion}). « Nouveau code »
+reste disponible pour qui veut couper court sans attendre~; aucun dialogue de
+confirmation, renouveler un code qui expire tout seul n'a rien d'irréversible.
+
+\begin{note}[Pourquoi le code reste toujours clair]
+Même en thème sombre, la carte du QR reste sur fond blanc. Un code sur fond sombre scanne
+moins bien --- la fiabilité du scan prime sur la cohérence du thème, à cet endroit
+précisément.
+\end{note}
+
+\section{Être prévenu, ajouter en retour}
+\label{sec:qr-naif-retour}
+
+Quand quelqu'un utilise votre code --- scan ou lien ---, vous êtes prévenu
+immédiatement~: un dialogue propose d'ajouter la personne \textbf{en retour} (« untel
+vous a ajouté à ses contacts préférés avec votre code QR. L'ajouter en retour ? »,
+\emph{Ajouter} / \emph{Non merci}). Si l'application est en arrière-plan ou fermée, une
+notification prend le relais. Et si vous aviez déjà cette personne en contact, pas de
+question~: une simple information.
+
+\begin{note}[Le dialogue n'habite aucun écran]
+Le code a pu être partagé par lien~: à l'instant où il est utilisé, son propriétaire
+peut être n'importe où dans l'application --- pas forcément sur l'écran « Mon code ». Le
+dialogue est donc global, affiché où que l'on soit.
+\end{note}
+
+L'écran « Mon code », lui, réagit à sa manière~: le code venant d'être consommé, il en
+affiche un neuf aussitôt --- le propriétaire peut enchaîner plusieurs personnes sans un
+geste.
+
+\section{Reconnaître un contact ajouté par QR}
+
+Un contact ajouté par QR reste reconnaissable après coup, partout où il apparaît~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item une \textbf{pastille QR} au coin bas-gauche de l'avatar --- le bas-droit reste
+        réservé au point de présence en ligne, les deux cohabitent --- dans
+        \textbf{toutes} les listes~: contacts préférés, feuille d'ajout, nouvelle
+        discussion, sélection de membres, partage de contact\ldots{} et jusqu'à la liste
+        des discussions~;
+  \item une \textbf{mention datée} sur la fiche du contact~: « Ajouté par QR code ·
+        30~juil.~2026 »~;
+  \item un \textbf{filtre} « Tous / Par QR » sur l'écran des contacts préférés, chaque
+        option affichant son compte.
+\end{enumerate}
+
+L'ajout \emph{en retour} est marqué de la même façon~: les deux directions du lien
+portent la même origine.
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/0e095614-eb7c-43bd-8f14-b0d15e61c139}%
+{\texttt{claude.ai/code/artifact/0e095614}}\\
+Source versionnée~: \code{docs/architecture/maquettes/qr-distinction.html}
+\end{note}
+
+
+La liste des discussions porte le même filtre « Par QR » que l'écran des contacts
+préférés~: un chip parmi les filtres existants (Tous, Discussions, Groupes…), qui ne
+retient que les conversations avec un contact rencontré par QR.
+
+Enfin, la carte de résultat du scan propose un champ facultatif~: une \textbf{note de
+contexte}, quelques mots pour se souvenir de la rencontre. Elle se retrouve sur la fiche
+du contact, en italique sous la mention d'origine --- et nulle part ailleurs~: c'est un
+aide-mémoire personnel, jamais montré à l'intéressé.
+
+\section{Partager son code}
+
+\textbf{Partager} ouvre un choix explicite~: le \textbf{lien} (cliquable, accompagné de
+l'Alanya ID) ou l'\textbf{image} (la carte telle qu'affichée, compte à rebours compris).
+Dans les deux cas la légende annonce la couleur --- « Ce code est valable 10~minutes et
+pour une seule personne » --- suivie de l'Alanya ID~: le code meurt en dix minutes,
+l'Alanya ID reste le chemin permanent, les deux voyagent ensemble.
+
+\begin{note}[Pas d'enregistrement dans la galerie]
+Enregistrer la carte en image n'est volontairement pas proposé~: une image morte au bout
+de dix minutes finirait en code cassé au fond d'une pellicule. L'option reviendra avec
+les codes permanents des comptes business --- eux supportent l'impression et
+l'affichage.
+\end{note}
+
+\section{Écran --- Scanner}
+
+Plein écran, viseur au centre, façon appareil photo. Dès qu'un code d'identité est
+reconnu, une \textbf{carte de résultat} se pose en bas de l'écran~: la personne ajoutée
+(avatar, nom), « Ajouté à vos contacts », et trois suites possibles ---
+\textbf{Message}, \textbf{Voir détails}, \textbf{Annuler}. La caméra reste vivante
+derrière la carte~: on peut enchaîner plusieurs personnes sans ressortir de l'écran. Pas
+d'écran intermédiaire, pas de confirmation à taper.
+
+Trois cas particuliers, traités comme des succès doux plutôt que des erreurs~: scanner
+son propre code (rien ne se passe, un message discret l'indique --- et le code
+\emph{survit}), scanner un contact déjà favori (la carte s'affiche quand même, sans
+bouton Annuler~: rien n'a été écrit), scanner un code expiré, déjà utilisé ou illisible
+(message clair, la caméra reste active).
+
+Un bouton \textbf{Importer une image} couvre enfin le code reçu en capture d'écran ou en
+photo~: l'image choisie dans la galerie est analysée exactement comme le cadre de la
+caméra --- même résultat, même carte.
+
+\section{Points d'entrée}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Le profil, une icône QR à côté de l'Alanya ID
+        (\code{lib/screens/profile/profile\_screen.dart}, en-tête).
+  \item La feuille d'ajout de contact, un bouton « Scanner un code » au-dessus de la
+        recherche existante (\code{lib/widgets/add\_contact\_sheet.dart}).
+\end{enumerate}
+
+\chapter{Connexion d'un second appareil}
+\label{ch:qr-naif-connexion}
+
+\section{Le principe}
+
+Contrairement à l'ajout de contact, une connexion ne s'approuve \textbf{jamais} au simple
+scan. Le nouvel appareil affiche un code ; c'est l'appareil \emph{déjà} connecté qui le
+scanne et confirme --- jamais l'inverse.
+
+\begin{alerte}[Pourquoi une confirmation, jamais une reconnaissance instantanée]
+Si le scan suffisait à connecter, un attaquant pourrait afficher le QR de connexion d'un
+appareil qu'il contrôle --- sur un écran, un site, une affiche --- et attendre qu'une
+victime le scanne par réflexe avec son propre compte déjà connecté. C'est une attaque
+documentée contre les connexions par QR (le «~quishing~»). L'écran de confirmation, qui
+montre \emph{quel} appareil demande la connexion avant de l'accepter, est le seul rempart~:
+il doit toujours s'afficher, sans exception ni raccourci.
+\end{alerte}
+
+\section{Écran --- Se connecter par QR}
+
+Sur le \textbf{nouvel} appareil, non encore connecté~: un code, un compte à rebours, un
+statut (« En attente de scan… »). Le code se régénère seul à l'expiration --- l'utilisateur
+n'a jamais un code mort sous les yeux.
+
+\begin{center}
+  \imageOuCadre{maquettes/qr-connexion-parcours.png}{\linewidth}%
+    {La poignée de main~: le nouvel appareil affiche, l'appareil de confiance confirme\\
+     \texttt{maquettes/qr-connexion-parcours.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/a69b2050-b2dc-4aa1-a204-59ada2526a86}%
+{\texttt{claude.ai/code/artifact/a69b2050}}\\
+Source versionnée~: \code{docs/architecture/maquettes/qr-connexion.html}
+\end{note}
+
+\section{Écran --- Confirmer la connexion}
+
+Sur l'appareil \textbf{déjà} connecté, après le scan~: une fiche décrivant ce qui vient
+d'être scanné --- type d'appareil, ville approximative, à l'instant --- suivie de deux
+boutons, \textbf{Refuser} et \textbf{Confirmer}. Un avertissement rappelle de refuser et de
+changer son mot de passe en cas de doute.
+
+\begin{note}[Pourquoi l'adresse compte plus que le nom de l'appareil]
+Le nom et la plateforme sont \emph{annoncés} par l'appareil qui demande la connexion~: rien
+n'empêche un attaquant d'appeler le sien « Alanya --- Vérification de sécurité ». La seule
+information que le serveur \emph{constate} lui-même est l'adresse d'où part la demande.
+C'est donc la seule sur laquelle fonder sa décision, et l'écran le dit explicitement.
+\end{note}
+
+\begin{note}[Une ville, pas une adresse technique]
+Cette adresse est traduite en lieu approximatif --- « Douala, Cameroun » --- avant d'être
+montrée. Sous sa forme brute (\code{41.202.219.14}), elle n'apprendrait rien à qui n'est pas
+technicien~: on afficherait la seule information fiable de l'écran sous la seule forme où
+elle est inutilisable. Sous forme de ville, le doute devient une évidence --- on sait
+immédiatement si la demande part d'où l'on se trouve. Si la traduction n'aboutit pas,
+l'adresse brute reste affichée plutôt que rien.
+\end{note}
+
+\section{Écran --- Mes appareils connectés}
+
+Un écran à part, indépendant de toute connexion en cours, atteint depuis \emph{Compte et
+sécurité}~: tous les appareils sur lesquels le compte est ouvert --- pas seulement ceux
+ajoutés par QR --- avec un repère « Cet appareil » et un bouton \textbf{Déconnecter} par
+ligne, à effet immédiat.
+
+\begin{center}
+  \imageOuCadre{maquettes/qr-connexion-appareils.png}{\linewidth}%
+    {Mes appareils connectés~: tous les logins, pas seulement ceux par QR\\
+     \texttt{maquettes/qr-connexion-appareils.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/a69b2050-b2dc-4aa1-a204-59ada2526a86}%
+{\texttt{claude.ai/code/artifact/a69b2050}} --- second panneau de la même maquette\\
+Source versionnée~: \code{docs/architecture/maquettes/qr-connexion.html}
+\end{note}
+
+\section{Points d'entrée}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item L'écran de connexion, un bouton « Se connecter avec un code QR »
+        (\code{screens/authentification/\allowbreak login\_screen.dart}), pour l'appareil
+        qui n'est pas encore connecté.
+  \item \emph{Compte et sécurité}, une nouvelle section « Appareils connectés »
+        (\code{screens/profile/\allowbreak account\_security\_\allowbreak screen.dart}),
+        pour lier un nouvel appareil ou consulter la liste depuis un appareil déjà
+        connecté.
+\end{enumerate}

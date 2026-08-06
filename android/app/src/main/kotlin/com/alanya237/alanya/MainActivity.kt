@@ -10,13 +10,13 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.app.NotificationManager
 import android.util.Log
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.FileInputStream
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     companion object {
         const val EXTRA_NOTIFICATION_OPEN = "talky_notification_open"
         private const val TAG = "TalkyMainActivity"
@@ -25,6 +25,7 @@ class MainActivity : FlutterActivity() {
 
     private val mediaExportChannel = "com.alanya/media_export"
     private val callPermissionsChannel = "com.alanya/call_permissions"
+    private val deviceIdentityChannel = "com.alanya/device_identity"
 
     private var notificationOpenChannel: MethodChannel? = null
     private var pendingNotificationOpen: Map<String, String>? = null
@@ -104,6 +105,32 @@ class MainActivity : FlutterActivity() {
                             startActivity(intent)
                         }
                         result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        // Identifiant matériel pour la table `appareils` (révocation de session).
+        // ANDROID_ID et non Build.ID : Build.ID est l'empreinte du firmware, donc
+        // identique sur tous les téléphones d'un même modèle et modifiée à chaque
+        // mise à jour système — inutilisable comme clé d'appareil. ANDROID_ID est
+        // unique par (appareil, signature d'app, utilisateur) et survit à une
+        // réinstallation. device_info_plus ne l'expose plus depuis sa v9, d'où ce
+        // canal natif.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, deviceIdentityChannel)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getAndroidId" -> {
+                        try {
+                            val id = Settings.Secure.getString(
+                                contentResolver,
+                                Settings.Secure.ANDROID_ID,
+                            )
+                            result.success(if (id.isNullOrBlank()) null else id)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "ANDROID_ID indisponible: ${e.message}")
+                            result.success(null)
+                        }
                     }
                     else -> result.notImplemented()
                 }

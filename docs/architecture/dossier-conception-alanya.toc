@@ -1,0 +1,253 @@
+\babel@toc {french}{}\relax 
+\contentsline {chapter}{Résumé}{1}{chapter*.1}%
+\contentsline {chapter}{Comment lire ce dossier}{2}{chapter*.2}%
+\contentsline {part}{I\hspace {1em}Approche naïve}{11}{part.1}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~1 --- Socle de compte}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {1}Ce que l'on ajoute, et pourquoi}{13}{chapter.1}%
+\contentsline {section}{\numberline {1.1}La situation aujourd'hui}{13}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Deux questions, pas une}{13}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Ce que couvre l'étape 1 --- et ce qu'elle ne couvre pas}{13}{section.1.3}%
+\contentsline {chapter}{\numberline {2}Ce que l'utilisateur voit}{14}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Le principe du badge}{14}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Les cinq rendus}{14}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Où le badge apparaît}{15}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Pourquoi la distinction déclaré / vérifié est critique}{15}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Protéger le badge des contournements}{16}{section.2.5}%
+\contentsline {chapter}{\numberline {3}Les règles de vie d'un compte}{17}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Devenir un compte business, et revenir en arrière}{17}{section.3.1}%
+\contentsline {section}{\numberline {3.2}La vie d'une vérification}{17}{section.3.2}%
+\contentsline {section}{\numberline {3.3}L'expiration et sa relance}{17}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Le compte officiel}{18}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Un compte business ne peut pas être administrateur}{18}{section.3.5}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~2 --- Listes de contacts}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {4}Le besoin}{20}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Ce qui existe déjà}{20}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Ce qu'on ajoute}{20}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Les règles produit}{20}{section.4.3}%
+\contentsline {chapter}{\numberline {5}Les écrans}{21}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Vue d'ensemble}{21}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Écran 1 --- Contacts préférés, filtrés}{21}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Écran 2 --- Gestion des listes}{22}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Écran 3 --- Détail d'une liste}{22}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Points d'entrée}{22}{section.5.5}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~3 --- Compte officiel et diffusion}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {6}Ce que l'on ajoute}{24}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Le besoin}{24}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Ce qui a déjà été décidé}{24}{section.6.2}%
+\contentsline {chapter}{\numberline {7}Cibler une diffusion}{25}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Un critère, pas un choix parmi trois}{25}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Savoir qui recevra, avant d'envoyer}{25}{section.7.2}%
+\contentsline {section}{\numberline {7.3}L'historique}{26}{section.7.3}%
+\contentsline {chapter}{\numberline {8}Ce que voit l'utilisateur}{27}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Un message diffusé}{27}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Un statut diffusé}{27}{section.8.2}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~4 --- Comptes business}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {9}Ce qu'un commerçant peut présenter}{29}{chapter.9}%
+\contentsline {section}{\numberline {9.1}La fiche}{29}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Le lieu et la géolocalisation}{29}{section.9.2}%
+\contentsline {section}{\numberline {9.3}Médias de présentation}{30}{section.9.3}%
+\contentsline {section}{\numberline {9.4}Liens et présence en ligne}{30}{section.9.4}%
+\contentsline {section}{\numberline {9.5}Les quatre écrans}{31}{section.9.5}%
+\contentsline {section}{\numberline {9.6}Le badge fait son travail}{31}{section.9.6}%
+\contentsline {chapter}{\numberline {10}La catégorie et les mots-clés}{32}{chapter.10}%
+\contentsline {section}{\numberline {10.1}Une liste courte, pas une arborescence}{32}{section.10.1}%
+\contentsline {section}{\numberline {10.2}Une taxonomie est difficile à changer}{32}{section.10.2}%
+\contentsline {chapter}{\numberline {11}Les horaires, l'écran le plus difficile}{33}{chapter.11}%
+\contentsline {chapter}{\numberline {12}Le tableau de bord du commerçant}{34}{chapter.12}%
+\contentsline {section}{\numberline {12.1}Ce qu'il montre}{34}{section.12.1}%
+\contentsline {section}{\numberline {12.2}Ce que cela implique}{34}{section.12.2}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~5 --- Certification}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {13}Ce que la certification dit, et ne dit pas}{36}{chapter.13}%
+\contentsline {section}{\numberline {13.1}Une seule question}{36}{section.13.1}%
+\contentsline {section}{\numberline {13.2}Qui peut être vérifié}{36}{section.13.2}%
+\contentsline {chapter}{\numberline {14}Le parcours du demandeur}{37}{chapter.14}%
+\contentsline {section}{\numberline {14.1}Trois états}{37}{section.14.1}%
+\contentsline {section}{\numberline {14.2}Les pièces demandées}{37}{section.14.2}%
+\contentsline {section}{\numberline {14.3}Ce qui est promis, et ce qui ne l'est pas}{38}{section.14.3}%
+\contentsline {chapter}{\numberline {15}Le parcours de l'administrateur}{39}{chapter.15}%
+\contentsline {section}{\numberline {15.1}L'écran d'instruction}{39}{section.15.1}%
+\contentsline {section}{\numberline {15.2}Trois issues, pas deux}{39}{section.15.2}%
+\contentsline {section}{\numberline {15.3}Qui décide}{39}{section.15.3}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~6 --- Identité et connexion par QR code}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {16}Le besoin}{41}{chapter.16}%
+\contentsline {section}{\numberline {16.1}Ce qui existe déjà}{41}{section.16.1}%
+\contentsline {section}{\numberline {16.2}Ce qu'on ajoute}{41}{section.16.2}%
+\contentsline {section}{\numberline {16.3}Les règles produit}{42}{section.16.3}%
+\contentsline {chapter}{\numberline {17}Mon code personnel}{43}{chapter.17}%
+\contentsline {section}{\numberline {17.1}Vue d'ensemble}{43}{section.17.1}%
+\contentsline {section}{\numberline {17.2}Écran --- Mon code}{44}{section.17.2}%
+\contentsline {section}{\numberline {17.3}Être prévenu, ajouter en retour}{45}{section.17.3}%
+\contentsline {section}{\numberline {17.4}Reconnaître un contact ajouté par QR}{45}{section.17.4}%
+\contentsline {section}{\numberline {17.5}Partager son code}{46}{section.17.5}%
+\contentsline {section}{\numberline {17.6}Écran --- Scanner}{46}{section.17.6}%
+\contentsline {section}{\numberline {17.7}Points d'entrée}{46}{section.17.7}%
+\contentsline {chapter}{\numberline {18}Connexion d'un second appareil}{47}{chapter.18}%
+\contentsline {section}{\numberline {18.1}Le principe}{47}{section.18.1}%
+\contentsline {section}{\numberline {18.2}Écran --- Se connecter par QR}{47}{section.18.2}%
+\contentsline {section}{\numberline {18.3}Écran --- Confirmer la connexion}{49}{section.18.3}%
+\contentsline {section}{\numberline {18.4}Écran --- Mes appareils connectés}{49}{section.18.4}%
+\contentsline {section}{\numberline {18.5}Points d'entrée}{51}{section.18.5}%
+\contentsline {part}{II\hspace {1em}Approche technique}{52}{part.2}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~1 --- Socle de compte}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {19}Modèle de données}{54}{chapter.19}%
+\contentsline {section}{\numberline {19.1}Pourquoi étendre \texttt {\small users} plutôt que créer une table \texttt {\small accounts}}{54}{section.19.1}%
+\contentsline {section}{\numberline {19.2}La migration}{54}{section.19.2}%
+\contentsline {section}{\numberline {19.3}Les énumérations, côté Node}{55}{section.19.3}%
+\contentsline {section}{\numberline {19.4}Raccordement au schéma existant}{55}{section.19.4}%
+\contentsline {chapter}{\numberline {20}Dérivation du badge}{56}{chapter.20}%
+\contentsline {section}{\numberline {20.1}Une fonction pure, trois implémentations identiques}{56}{section.20.1}%
+\contentsline {section}{\numberline {20.2}Le piège à corriger avant tout}{57}{section.20.2}%
+\contentsline {section}{\numberline {20.3}Composant existant à ne pas confondre}{57}{section.20.3}%
+\contentsline {chapter}{\numberline {21}Règles appliquées par le serveur}{58}{chapter.21}%
+\contentsline {section}{\numberline {21.1}Exclusion business / administrateur}{58}{section.21.1}%
+\contentsline {section}{\numberline {21.2}Validation des noms d'affichage}{58}{section.21.2}%
+\contentsline {section}{\numberline {21.3}Interdire la réponse au compte officiel}{59}{section.21.3}%
+\contentsline {section}{\numberline {21.4}Expiration : réutiliser le mécanisme existant}{59}{section.21.4}%
+\contentsline {chapter}{\numberline {22}Impact fichier par fichier}{61}{chapter.22}%
+\contentsline {section}{\numberline {22.1}Backend --- Alanya-Backend}{61}{section.22.1}%
+\contentsline {section}{\numberline {22.2}Mobile --- Talky (Flutter)}{62}{section.22.2}%
+\contentsline {section}{\numberline {22.3}Administration --- Alanya Admin}{62}{section.22.3}%
+\contentsline {chapter}{\numberline {23}Points de vigilance et questions ouvertes}{63}{chapter.23}%
+\contentsline {section}{\numberline {23.1}À vérifier avant d'appliquer la migration}{63}{section.23.1}%
+\contentsline {section}{\numberline {23.2}Collision de numérotation}{63}{section.23.2}%
+\contentsline {section}{\numberline {23.3}Écart assumé avec la conception initiale}{63}{section.23.3}%
+\contentsline {section}{\numberline {23.4}Ce qui reste à décider}{63}{section.23.4}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~2 --- Listes de contacts}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {24}Modèle de données}{65}{chapter.24}%
+\contentsline {section}{\numberline {24.1}Deux tables}{65}{section.24.1}%
+\contentsline {section}{\numberline {24.2}L'appartenance n'est pas contrainte par la base}{66}{section.24.2}%
+\contentsline {chapter}{\numberline {25}API}{67}{chapter.25}%
+\contentsline {section}{\numberline {25.1}Contrôleur --- \texttt {\small src/controllers/contactListController.js}}{67}{section.25.1}%
+\contentsline {section}{\numberline {25.2}Routes --- \texttt {\small src/routes/contactLists.js}}{67}{section.25.2}%
+\contentsline {chapter}{\numberline {26}Client Flutter}{68}{chapter.26}%
+\contentsline {section}{\numberline {26.1}Couche données}{68}{section.26.1}%
+\contentsline {section}{\numberline {26.2}Interface}{69}{section.26.2}%
+\contentsline {chapter}{\numberline {27}Arbitrage : liste de contacts \emph {n'est pas} audience de diffusion}{70}{chapter.27}%
+\contentsline {chapter}{\numberline {28}Vérification}{71}{chapter.28}%
+\contentsline {section}{\numberline {28.1}Backend}{71}{section.28.1}%
+\contentsline {section}{\numberline {28.2}Client}{71}{section.28.2}%
+\contentsline {section}{\numberline {28.3}Points ouverts}{71}{section.28.3}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~3 --- Compte officiel et diffusion}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {29}La stratégie de livraison}{73}{chapter.29}%
+\contentsline {section}{\numberline {29.1}Le désaccord à trancher}{73}{section.29.1}%
+\contentsline {section}{\numberline {29.2}Les trois options, chiffrées}{73}{section.29.2}%
+\contentsline {section}{\numberline {29.3}Le moment de la matérialisation}{74}{section.29.3}%
+\contentsline {section}{\numberline {29.4}Le garde-fou contre la dérive}{74}{section.29.4}%
+\contentsline {chapter}{\numberline {30}Modèle de données}{75}{chapter.30}%
+\contentsline {section}{\numberline {30.1}Migration \texttt {\small 025\_broadcast.sql}}{75}{section.30.1}%
+\contentsline {chapter}{\numberline {31}Le résolveur de critères}{77}{chapter.31}%
+\contentsline {section}{\numberline {31.1}Format stocké}{77}{section.31.1}%
+\contentsline {section}{\numberline {31.2}Deux évaluateurs pour un même critère}{77}{section.31.2}%
+\contentsline {section}{\numberline {31.3}Sécurité : compiler n'est pas concaténer}{78}{section.31.3}%
+\contentsline {section}{\numberline {31.4}Ce qu'on n'accepte pas comme critère}{78}{section.31.4}%
+\contentsline {chapter}{\numberline {32}Les statuts officiels}{79}{chapter.32}%
+\contentsline {section}{\numberline {32.1}Le correctif de visibilité}{79}{section.32.1}%
+\contentsline {section}{\numberline {32.2}Les statuts n'ont pas besoin de matérialisation}{79}{section.32.2}%
+\contentsline {chapter}{\numberline {33}La file de jobs}{80}{chapter.33}%
+\contentsline {section}{\numberline {33.1}Pourquoi elle devient obligatoire ici}{80}{section.33.1}%
+\contentsline {section}{\numberline {33.2}Table plutôt que Redis}{80}{section.33.2}%
+\contentsline {section}{\numberline {33.3}Consommation concurrente}{80}{section.33.3}%
+\contentsline {section}{\numberline {33.4}Découpage du fan-out}{81}{section.33.4}%
+\contentsline {chapter}{\numberline {34}Impact fichier par fichier}{82}{chapter.34}%
+\contentsline {section}{\numberline {34.1}Backend}{82}{section.34.1}%
+\contentsline {section}{\numberline {34.2}Administration}{82}{section.34.2}%
+\contentsline {section}{\numberline {34.3}Mobile}{83}{section.34.3}%
+\contentsline {chapter}{\numberline {35}Points de vigilance et questions ouvertes}{84}{chapter.35}%
+\contentsline {section}{\numberline {35.1}Chantier d'infrastructure nommé}{84}{section.35.1}%
+\contentsline {section}{\numberline {35.2}Coût de la matérialisation sur le chemin chaud}{84}{section.35.2}%
+\contentsline {section}{\numberline {35.3}Questions ouvertes}{84}{section.35.3}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~4 --- Comptes business}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {36}Modèle de données}{86}{chapter.36}%
+\contentsline {section}{\numberline {36.1}Vue d'ensemble}{86}{section.36.1}%
+\contentsline {section}{\numberline {36.2}Le profil}{86}{section.36.2}%
+\contentsline {section}{\numberline {36.3}Liens, médias, mots-clés}{87}{section.36.3}%
+\contentsline {section}{\numberline {36.4}Horaires}{88}{section.36.4}%
+\contentsline {section}{\numberline {36.5}Catalogue}{89}{section.36.5}%
+\contentsline {chapter}{\numberline {37}Un lieu, ou plusieurs}{90}{chapter.37}%
+\contentsline {section}{\numberline {37.1}Ce qui est retenu}{90}{section.37.1}%
+\contentsline {section}{\numberline {37.2}La variante multi-lieux}{90}{section.37.2}%
+\contentsline {chapter}{\numberline {38}Annuaire et recherche de proximité}{91}{chapter.38}%
+\contentsline {section}{\numberline {38.1}L'état actuel}{91}{section.38.1}%
+\contentsline {section}{\numberline {38.2}La requête}{91}{section.38.2}%
+\contentsline {section}{\numberline {38.3}\guillemotleft ~Ouvert maintenant~\guillemotright }{91}{section.38.3}%
+\contentsline {chapter}{\numberline {39}Tableau de bord d'audience}{92}{chapter.39}%
+\contentsline {section}{\numberline {39.1}Journal d'événements}{92}{section.39.1}%
+\contentsline {section}{\numberline {39.2}Ce que le commerçant voit}{92}{section.39.2}%
+\contentsline {chapter}{\numberline {40}Médias : stockage et transcodage}{93}{chapter.40}%
+\contentsline {section}{\numberline {40.1}Ce que l'existant sait déjà faire}{93}{section.40.1}%
+\contentsline {section}{\numberline {40.2}Trois problèmes que la fiche business introduit}{93}{section.40.2}%
+\contentsline {section}{\numberline {40.3}La chaîne de traitement}{93}{section.40.3}%
+\contentsline {section}{\numberline {40.4}Limites à fixer}{93}{section.40.4}%
+\contentsline {chapter}{\numberline {41}Impact fichier par fichier}{95}{chapter.41}%
+\contentsline {section}{\numberline {41.1}Backend}{95}{section.41.1}%
+\contentsline {section}{\numberline {41.2}Mobile}{95}{section.41.2}%
+\contentsline {chapter}{\numberline {42}Points de vigilance et questions ouvertes}{96}{chapter.42}%
+\contentsline {section}{\numberline {42.1}Chantiers d'infrastructure nommés}{96}{section.42.1}%
+\contentsline {section}{\numberline {42.2}Questions ouvertes}{96}{section.42.2}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~5 --- Certification}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {43}Modèle de données}{98}{chapter.43}%
+\contentsline {section}{\numberline {43.1}Ce que le socle a déjà posé}{98}{section.43.1}%
+\contentsline {section}{\numberline {43.2}Migration \texttt {\small 027\_verification.sql}}{98}{section.43.2}%
+\contentsline {section}{\numberline {43.3}La machine à états du dossier}{99}{section.43.3}%
+\contentsline {chapter}{\numberline {44}Sécurité des pièces}{101}{chapter.44}%
+\contentsline {section}{\numberline {44.1}Chiffrement au repos}{101}{section.44.1}%
+\contentsline {section}{\numberline {44.2}La purge}{101}{section.44.2}%
+\contentsline {chapter}{\numberline {45}Abonnement et paiement --- conçus, dormants}{102}{chapter.45}%
+\contentsline {section}{\numberline {45.1}Pourquoi les concevoir maintenant}{102}{section.45.1}%
+\contentsline {section}{\numberline {45.2}Renouvellement manuel, pas prélèvement}{103}{section.45.2}%
+\contentsline {section}{\numberline {45.3}La règle à ne jamais enfreindre}{103}{section.45.3}%
+\contentsline {section}{\numberline {45.4}Une contrainte de plateforme à anticiper}{103}{section.45.4}%
+\contentsline {chapter}{\numberline {46}Impact fichier par fichier}{104}{chapter.46}%
+\contentsline {section}{\numberline {46.1}Backend}{104}{section.46.1}%
+\contentsline {section}{\numberline {46.2}Administration et mobile}{104}{section.46.2}%
+\contentsline {chapter}{\numberline {47}Points de vigilance et questions ouvertes}{105}{chapter.47}%
+\contentsline {section}{\numberline {47.1}Chantiers nommés}{105}{section.47.1}%
+\contentsline {section}{\numberline {47.2}Questions ouvertes}{105}{section.47.2}%
+\vspace {10pt}
+\noindent {\sffamily \bfseries \color {AlanyaIndigoDark} VOLET~6 --- Identité et connexion par QR code}\par \vspace {3pt}
+\contentsline {chapter}{\numberline {48}Enveloppe de payload et résolution}{107}{chapter.48}%
+\contentsline {chapter}{\numberline {49}Modèle de données}{108}{chapter.49}%
+\contentsline {section}{\numberline {49.1}Le jeton d'identité permanent, et son verrou}{108}{section.49.1}%
+\contentsline {section}{\numberline {49.2}La nature de \texttt {\small device\_id}}{108}{section.49.2}%
+\contentsline {section}{\numberline {49.3}Le jeton et la table \texttt {\small appareils}}{109}{section.49.3}%
+\contentsline {section}{\numberline {49.4}L'origine d'un contact}{110}{section.49.4}%
+\contentsline {chapter}{\numberline {50}Rendre la révocation réelle}{112}{chapter.50}%
+\contentsline {section}{\numberline {50.1}Ce que fait vraiment la révocation}{113}{section.50.1}%
+\contentsline {chapter}{\numberline {51}Ajout de contact instantané}{114}{chapter.51}%
+\contentsline {section}{\numberline {51.1}Le jeton éphémère, en mémoire}{114}{section.51.1}%
+\contentsline {section}{\numberline {51.2}Résolution et consommation}{115}{section.51.2}%
+\contentsline {section}{\numberline {51.3}Prévenir le propriétaire}{116}{section.51.3}%
+\contentsline {section}{\numberline {51.4}L'ajout en retour}{116}{section.51.4}%
+\contentsline {chapter}{\numberline {52}La session de connexion éphémère}{117}{chapter.52}%
+\contentsline {section}{\numberline {52.1}Une structure en mémoire, pas une table}{117}{section.52.1}%
+\contentsline {section}{\numberline {52.2}Deux secrets par session, jamais interchangeables}{117}{section.52.2}%
+\contentsline {section}{\numberline {52.3}Cycle de vie}{118}{section.52.3}%
+\contentsline {section}{\numberline {52.4}L'exception d'authentification socket}{119}{section.52.4}%
+\contentsline {chapter}{\numberline {53}API}{120}{chapter.53}%
+\contentsline {section}{\numberline {53.1}Limitation de débit}{121}{section.53.1}%
+\contentsline {chapter}{\numberline {54}Client Flutter}{122}{chapter.54}%
+\contentsline {section}{\numberline {54.1}Couche données}{122}{section.54.1}%
+\contentsline {section}{\numberline {54.2}Interface}{124}{section.54.2}%
+\contentsline {section}{\numberline {54.3}Mon code~: décompte, consommation, régénération}{125}{section.54.3}%
+\contentsline {section}{\numberline {54.4}La pastille, rendue à un seul endroit}{125}{section.54.4}%
+\contentsline {section}{\numberline {54.5}Le dialogue global d'ajout en retour}{125}{section.54.5}%
+\contentsline {section}{\numberline {54.6}Liens profonds}{126}{section.54.6}%
+\contentsline {chapter}{\numberline {55}Impact fichier par fichier}{127}{chapter.55}%
+\contentsline {section}{\numberline {55.1}Backend --- Alanya-Backend}{128}{section.55.1}%
+\contentsline {section}{\numberline {55.2}Mobile --- Talky (Flutter)}{130}{section.55.2}%
+\contentsline {chapter}{\numberline {56}Vérification}{132}{chapter.56}%
+\contentsline {section}{\numberline {56.1}Backend}{132}{section.56.1}%
+\contentsline {section}{\numberline {56.2}Client}{132}{section.56.2}%
+\contentsline {chapter}{\numberline {57}Points de vigilance et questions ouvertes}{134}{chapter.57}%
+\contentsline {chapter}{Ce qui reste à construire}{136}{chapter*.4}%

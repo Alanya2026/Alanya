@@ -1,0 +1,1427 @@
+% Fragment partage : inclus par qr-code.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Enveloppe de payload et résolution}
+\label{ch:qr-payload}
+
+Tous les QR d'Alanya encodent la même chose~: une URL portant un \textbf{jeton opaque},
+jamais une donnée brute. Ni l'\code{alanyaID} interne (auto-incrémenté, donc énumérable),
+ni l'Alanya ID (\code{alanyaPhone}) --- ce dernier est aussi un identifiant de connexion,
+et l'exposer sur un support scannable par n'importe qui affaiblirait sa fonction
+actuelle. Trois familles de chemins, reconnues par une seule expression
+(\code{\_QR\_PATH\_RE} dans \code{qrController.js})~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.4cm}X@{}}
+\toprule
+\thd{Chemin encodé} & \thd{Ce qu'il résout} \\
+\midrule
+\code{/q/c/:token} & un contact --- code \textbf{éphémère} d'un compte personnel, en
+mémoire (section~\ref{sec:qr-jeton-ephemere}) \\
+\code{/q/u/:qrPublicId} & un contact --- code \textbf{permanent}
+(\code{users.qr\_public\_id}), verrouillé jusqu'aux comptes business
+(section~\ref{sec:qr-verrou-business}) \\
+\code{/q/l/:sessionId.:scanSecret} & une session de connexion en attente, en mémoire
+(chapitre~\ref{ch:qr-ephemere}) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Une seule base d'URL, dans un seul fichier]
+\code{src/utils/qrToken.js} porte \code{QR\_BASE\_URL} (variable d'environnement, par
+défaut \code{https://\allowbreak www.\allowbreak alanya237.com}) ainsi que les trois
+fabricants de payload, \code{identityPayload}, \code{contactPayload} et
+\code{loginPayload}. Ils vivent ensemble et non dans leurs contrôleurs respectifs parce
+qu'un seul contrôleur, \code{qrController}, les \emph{reparse} tous~: deux constantes
+séparées ont déjà divergé une fois, laissant les QR de connexion sur l'ancien domaine. Le
+même fichier porte aussi \code{generateOpaqueToken} et \code{secretMatches}, la
+comparaison à temps constant des secrets. Le point qui sépare \code{sessionId} de
+\code{scanSecret} n'est jamais ambigu~: les deux jetons sont en \code{base64url}, dont
+l'alphabet ne contient pas le point.
+\end{note}
+
+Les trois types partagent un seul point d'entrée~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\mPOST{}~\code{/api/qr/resolve} & Corps~: \code{\{ payload \}}, la chaîne \textbf{brute}
+scannée --- le client ne l'interprète jamais. Réponse~: \code{\{type:'contact',
+\ldots{}\}} (chapitre~\ref{ch:qr-contact}) ou \code{\{type:'login', session\}}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Le domaine n'est pas vérifié au parsing]
+\code{\_parsePayload} n'extrait que le \emph{chemin} de l'URL scannée~: l'autorité de
+résolution est le jeton, pas l'hôte. Un QR déjà imprimé sous un ancien domaine continue
+donc de fonctionner, et un QR forgé sous un autre domaine ne gagne rien --- il faudrait
+qu'il porte un jeton valide, ce que le contrôle d'autorisation vérifie ensuite.
+\end{note}
+
+\begin{alerte}[Le scanneur doit toujours être authentifié]
+Les deux flux exigent que \textbf{qui scanne} soit déjà connecté --- pas seulement qui
+possède un compte. Scanner un contact sans être soi-même connecté n'a pas de sens (à qui
+l'ajouter~?) ; scanner une session de connexion sans l'être serait la faille elle-même. Le
+middleware \code{authCustom} garde donc \code{/api/qr/resolve} au même titre que le reste
+de l'API, doublé de \code{qrResolveLimiter} (30~résolutions par minute et par~IP) --- une
+défense en profondeur contre l'énumération des jetons, pas une contrainte fonctionnelle.
+\end{alerte}
+
+\chapter{Modèle de données}
+\label{ch:qr-donnees}
+
+\section{Le jeton d'identité permanent, et son verrou}
+\label{sec:qr-verrou-business}
+
+Une colonne sur \code{users}, indépendante de \code{alanyaPhone}~: régénérable sans effet
+sur la connexion, sans capacité de connexion elle-même. Elle est posée par la
+migration~026 ci-dessous, mais \textbf{réservée aux futurs comptes business}~: le garde
+\code{\_qrPermanentAutorise} (\code{qrController.js}) refuse aujourd'hui tout le monde.
+\mGET{}~\code{/api/qr/me} et \mPOST{}~\code{/api/qr/me/\allowbreak regenerate} répondent
+403 \code{BUSINESS\_ONLY}~; la résolution d'un \code{/q/u/} et sa page publique répondent
+« inconnu ou expiré » --- y compris pour les \code{qr\_public\_id} déjà renseignés par
+des comptes d'essai antérieurs au verrouillage. Les comptes personnels vivent sur les
+jetons éphémères de la section~\ref{sec:qr-jeton-ephemere}.
+
+\begin{constat}[\code{users.type\_compte} n'est pas un type de compte]
+Le réflexe serait de brancher ce verrou sur \code{users.type\_compte}. Ce champ est en
+réalité un \textbf{rôle d'administration} --- 0~utilisateur, 1~admin, 2~super-admin,
+posé par \code{PUT~/users/:id/role} dans \code{src/routes/admin.js} --- pas un type de
+compte métier~: s'y brancher ouvrirait les codes permanents\ldots{} aux administrateurs.
+Rien en base ne sait encore dire « ce compte est un commerce »~; c'est le volet~1 (socle
+de compte, \code{account\_type}) qui l'apportera, et \code{\_qrPermanentAutorise} s'y
+branchera alors --- le TODO est posé dans le code, à côté du garde.
+\end{constat}
+
+\section{La nature de \code{device\_id}}
+\label{sec:qr-device-id}
+
+\begin{note}[Un identifiant matériel, pas un UUID d'application]
+\code{lib/\allowbreak core/\allowbreak services/\allowbreak storage\_service.dart}, méthode
+\code{getOrCreateDeviceId()}, génère un UUID
+aléatoire persisté par \code{flutter\_secure\_storage} --- stable tant que l'app reste
+installée, mais \textbf{réinitialisé à la réinstallation}. Un appareil réinstallé
+apparaîtrait alors comme un second appareil fantôme dans la liste. Le \code{device\_id} de
+la table \code{appareils} est donc un identifiant \textbf{matériel}, calculé par
+\code{TalkyApiClient.\_currentHardwareId()} et distinct de l'UUID applicatif, que le push
+et le socket continuent d'utiliser de leur côté.
+\end{note}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{2.5cm}X@{}}
+\toprule
+\thd{Plateforme} & \thd{Source de \code{device\_id}} \\
+\midrule
+Android & \code{Settings.\allowbreak Secure.\allowbreak ANDROID\_ID}, lu par un
+\textbf{canal natif Kotlin} --- \code{MethodChannel} \code{com.alanya/\allowbreak
+device\_identity}, méthode \code{getAndroidId}, déclaré dans
+\code{android/\allowbreak app/\allowbreak src/main/\allowbreak kotlin/\allowbreak
+com/\allowbreak alanya237/\allowbreak alanya/\allowbreak MainActivity.kt}. Unique par
+(appareil, signature d'app, utilisateur) et survivant à une réinstallation. \\
+iOS & \code{identifierForVendor}, via \code{device\_info\_plus}. \\
+Autres & repli direct sur l'UUID applicatif. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Pourquoi un canal natif et non \code{device\_info\_plus}]
+\code{device\_info\_plus} n'expose plus \code{ANDROID\_ID} depuis sa \textbf{v9} --- le
+paquet reste une dépendance et sert toujours au libellé lisible de l'appareil
+(\code{\_currentDeviceModel()}) et à l'\code{identifierForVendor} d'iOS, mais il ne peut
+plus fournir la clé d'appareil sur Android. Le piège à éviter est
+\code{AndroidDeviceInfo.id}, qu'on prendrait volontiers pour son remplaçant~: ce champ est
+\code{Build.ID}, c'est-à-dire l'\textbf{empreinte du firmware}~: identique sur tous les
+téléphones d'un même modèle, et modifiée à chaque mise à jour système. Comme l'unicité
+porte sur le couple (\code{alanyaID}, \code{device\_id}), deux téléphones du même modèle
+appartenant au \emph{même} compte se retrouveraient sur une seule ligne --- en déconnecter
+un déconnecterait l'autre --- pendant qu'une simple mise à jour ferait réapparaître chaque
+téléphone comme neuf. Et un identifiant que tout possesseur du même modèle connaît n'est
+plus un identifiant. Strictement inutilisable comme clé d'appareil~; d'où le canal natif.
+\end{alerte}
+
+\begin{note}[La chaîne de repli, jusqu'au bout]
+Si \code{ANDROID\_ID} est indisponible (exception ou valeur vide), et hors Android/iOS
+(web, macOS, Windows, Linux), \code{\_currentHardwareId()} retombe sur l'UUID applicatif
+\code{StorageService().getOrCreateDeviceId()} --- puis, en dernier recours, sur
+\code{'INDEFINI'}. Mieux vaut un identifiant par installation qu'aucun~: sans
+\code{device\_id}, aucune ligne \code{appareils} n'est créée, donc aucun jeton n'est émis
+(chapitre~\ref{ch:revocation}) et la connexion échoue. Le prix de ce repli est la seule
+imperfection assumée du dispositif~: sur ces plateformes, une réinstallation crée une
+seconde ligne.
+\end{note}
+
+\begin{alerte}[Asymétrie de persistance entre plateformes]
+Le Keychain iOS --- et donc potentiellement l'UUID applicatif lui-même --- survit
+généralement à une réinstallation ; les données d'application Android, dont l'UUID
+applicatif, sont effacées à la désinstallation. \code{ANDROID\_ID} est donc le seul des
+deux identifiants qui apporte une vraie amélioration côté Android. Côté iOS,
+\code{identifierForVendor} ne survit pas à la désinstallation de la \emph{dernière}
+application du vendeur~: le téléphone réapparaît alors comme un nouvel appareil. Limite
+assumée, et signalée à l'utilisateur dans l'écran « Appareils connectés ».
+\end{alerte}
+
+Conséquence assumée~: \code{appareils.device\_id} et \code{user\_push\_devices.deviceId}
+ne sont \textbf{pas} directement joignables --- ce sont deux identifiants différents. La
+table \code{appareils} porte donc un \code{push\_device\_id} nullable, réservé à
+l'affichage optionnel du statut « notifications activées » dans la liste des appareils.
+\textbf{Aucun code ne l'écrit à ce jour}~: la colonne est posée pour cet usage futur, et
+l'écran doit se comporter comme si elle était toujours vide.
+
+\section{Le jeton et la table \code{appareils}}
+
+\begin{lstlisting}[language=SQL, caption={\code{migrations/026\_qr\_appareils.sql}}]
+-- Identite QR (users.qr_public_id) + registre des appareils connectes
+-- (appareils), alimente par toute connexion (login, register, QR).
+--
+-- MySQL 8 ne supporte pas ADD COLUMN IF NOT EXISTS (cf. migration 008) : si
+-- relancee apres un premier passage reussi, ignorer les erreurs 1060
+-- (Duplicate column name) / 1061 (Duplicate key name).
+
+ALTER TABLE users
+  ADD COLUMN qr_public_id VARCHAR(64) NULL,
+  ADD UNIQUE KEY uq_users_qr_public_id (qr_public_id);
+
+CREATE TABLE IF NOT EXISTS appareils (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  alanyaID INT NOT NULL,
+  device_id VARCHAR(128) NOT NULL,
+  push_device_id VARCHAR(128) NULL,
+  device_name VARCHAR(120) NULL,
+  -- VARCHAR et non ENUM : le client envoie aussi macOS / Windows / Linux, et
+  -- ajouter une plateforme ne doit pas demander un ALTER TABLE.
+  platform VARCHAR(20) NOT NULL DEFAULT 'unknown',
+  ip_address VARCHAR(64) NULL,
+  login_method ENUM('password','register','qr') NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_active_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  revoked_at DATETIME NULL,
+  UNIQUE KEY uq_appareils_user_device (alanyaID, device_id),
+  KEY idx_appareils_user (alanyaID, revoked_at),
+  CONSTRAINT fk_appareils_user FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+\end{lstlisting}
+
+\begin{alerte}[Ordre de déploiement --- la migration d'abord, le code ensuite]
+Les trois gardes d'authentification (\code{src/middleware/auth.js},
+\code{src/middleware/authCustom.js}, \code{src/socket/handlers/auth.js}) joignent
+\code{appareils} à \textbf{chaque} requête authentifiée. Déployer le code sans la table,
+c'est un \code{ER\_NO\_SUCH\_TABLE} sur \emph{toute} l'API --- messages, appels et
+\code{/auth/me} compris, pas seulement le QR. Le dépôt n'a pas de \emph{runner} de
+migrations~: elles s'appliquent à la main, c'est donc à vérifier explicitement au
+déploiement. L'avertissement figure en tête du fichier SQL.
+\end{alerte}
+
+\begin{note}[Pourquoi ni \code{user\_push\_devices} ni \code{userAccess}]
+Deux autres tables évoquent déjà « appareil », chacune pour une raison différente.
+\code{user\_push\_devices} (migration 020) a une portée strictement push --- heartbeat,
+\code{appState}, jeton FCM~: des écritures fréquentes et peu sensibles. \code{userAccess}
+est un journal en écriture seule, jamais muté, consultable seulement par un admin. Aucune
+des deux n'est un état de session vivant et révocable. Mélanger \code{revoked\_at} --- un
+champ sensible, rarement écrit --- avec le flux à haute fréquence de
+\code{user\_push\_devices} aurait été le genre de raccourci qui coûte cher plus tard.
+\end{note}
+
+\begin{note}[\code{platform} en \code{VARCHAR(20)}, \code{login\_method} en \code{ENUM}]
+Les deux colonnes sont un vocabulaire fermé~; une seule est déclarée comme tel, et
+l'écart est délibéré. \code{platform} est \textbf{ouvert dans le temps}~: le client envoie
+déjà \code{android}, \code{ios}, \code{web}, \code{macos}, \code{windows}, \code{linux} et
+\code{unknown}, et une plateforme de plus ne doit pas coûter un \code{ALTER TABLE} sur une
+table de session --- d'où le \code{VARCHAR(20)}, sur le modèle de
+\code{user\_push\_devices.platform}. \code{login\_method}, lui, est \textbf{fermé par
+nature}~: on ne se connecte que par mot de passe, par inscription ou par QR, et un
+quatrième moyen serait de toute façon un chantier, pas une valeur de plus. La validation
+n'est donc pas laissée à la seule base~: \code{deviceSessionService} normalise
+\code{platform} contre une liste blanche (\code{\_normalizePlatform}, repli sur
+\code{'unknown'}) et \textbf{lève} sur un \code{login\_method} inconnu, avant l'insertion.
+\end{note}
+
+\section{L'origine d'un contact}
+
+\begin{lstlisting}[language=SQL, caption={\code{migrations/027\_pref\_contact\_added\_via.sql}}]
+-- Origine d'un contact prefere -- 'search' (recherche manuelle) ou 'qr'
+-- (scan ou lien) -- et note contextuelle optionnelle saisie juste apres un
+-- scan. Alimentent la pastille, les filtres << Par QR >> et la fiche.
+
+ALTER TABLE preferredContact
+  ADD COLUMN added_via VARCHAR(16) NOT NULL DEFAULT 'search',
+  ADD COLUMN added_note VARCHAR(200) NULL;
+\end{lstlisting}
+
+\code{VARCHAR} et non \code{ENUM}, même leçon que \code{appareils.platform} ci-dessus~:
+le vocabulaire est ouvert dans le temps (un partage de fiche, un import de répertoire
+ajouteraient chacun leur origine), et une valeur de plus ne doit pas coûter un
+\code{ALTER TABLE}. Le \code{DEFAULT 'search'} requalifie d'un coup tout l'existant ---
+exact, puisque la recherche était jusqu'ici le seul chemin d'ajout.
+
+\code{added\_note} est la note de contexte, posée \emph{après} l'ajout par
+\mPUT~\code{/api/contacts/:id/note} (corps \code{\{note\}}, 200
+caractères, vide = effacement, 404 si la personne n'est pas un contact préféré). Elle vit
+sur la ligne de la relation --- \code{alanyaID} $\to$ \code{idFriend} --- et n'est donc
+jamais visible de l'intéressé~; \code{GET /contacts} la restitue en \code{addedNote}, le
+client Flutter la reflète en local (\code{local\_users.preferredNote}, schéma v17) et la
+fiche l'affiche en italique sous la mention d'origine.
+
+\begin{alerte}[Migration 027 avant le code, comme la 026]
+\code{contactService} \emph{nomme} la colonne dans son \code{INSERT} et ses
+\code{SELECT}~: déployer le code sans la migration casse l'ajout de contact --- REST
+comme QR. Même discipline que pour la 026~: appliquer d'abord, déployer ensuite.
+L'avertissement figure en tête du fichier SQL.
+\end{alerte}
+
+\begin{alerte}[Pas de table pour la session éphémère]
+La session de connexion (le pont entre le nouvel appareil et celui qui l'autorise) ne vit
+\textbf{pas} dans une table SQL --- voir la justification au
+chapitre~\ref{ch:qr-ephemere}, une fois son mécanisme introduit. Le jeton de contact
+éphémère (section~\ref{sec:qr-jeton-ephemere}) suit le même régime.
+\end{alerte}
+
+\chapter{Rendre la révocation réelle}
+\label{ch:revocation}
+
+\begin{constat}[Le point de départ, avant ce volet]
+L'authentification était \textbf{100~\% sans état}~: un jeton d'accès (15~min) et un
+jeton de rafraîchissement (30~jours, secret distinct), tous deux de simples JWT signés.
+Aucune table \code{sessions} ni \code{tokens} n'existait, et
+\code{POST~/api/auth/\allowbreak refresh} (\code{authCustomController.js}) se contentait de
+vérifier la signature pour réémettre une nouvelle paire --- sans jamais rien invalider. Un
+jeton de rafraîchissement qui fuyait restait valide 30~jours, quoi qu'il arrive. Ce
+chapitre est la réponse à ce constat~: la même route refuse désormais de renouveler quoi
+que ce soit si l'\code{appareilId} du jeton désigne une ligne révoquée.
+\end{constat}
+
+\begin{constat}[Chiffré]
+Sur 78~comptes en production, \textbf{69} ont encore \code{users.device\_ID = 'INDEFINI'}
+(la valeur par défaut de la colonne) et seulement \textbf{9} portent un vrai identifiant ---
+hérité non pas du login, mais d'un effet de bord de
+\code{pushDevicesController.js::registerPushDevice}, qui écrase par rétrocompatibilité
+l'ancienne colonne mono-appareil à chaque enregistrement push réussi. Ce chemin ne couvre
+ni les comptes qui refusent les notifications, ni le moment précis de la connexion. La
+table \code{appareils} ne peut donc pas être un sous-produit d'un autre flux~: elle doit
+être alimentée \textbf{directement} par \code{register}, \code{login} et l'approbation
+d'une session QR.
+\end{constat}
+
+\begin{alerte}[Table dédiée, pas une extension de \code{user\_push\_devices}]
+Réutiliser \code{user\_push\_devices} pour porter aussi la session d'authentification a été
+envisagé, puis écarté~: les deux concepts ont des cycles de vie incompatibles sur une même
+ligne. Un enregistrement push doit pouvoir survivre à la révocation d'une session --- c'est
+précisément ce qui permet de notifier un appareil qu'il vient d'être déconnecté. Les
+fusionner aurait rendu cette notification impossible au moment même où elle est la plus
+utile.
+\end{alerte}
+
+Le JWT est étendu d'un champ \code{appareilId}~:
+
+\begin{lstlisting}[language=JavaScript, caption={\code{src/middleware/authCustom.js} --- extension du payload}]
+const generateAccessToken = (payload) =>
+  jwt.sign({ ...payload, type: 'access' }, JWT_SECRET, { expiresIn: '15m' });
+  // payload devient { alanyaID, email, appareilId }
+\end{lstlisting}
+
+La vérification de \code{appareils.revoked\_at IS NULL} se fait dans les gardes
+d'authentification, à \textbf{chaque} requête --- pas seulement au rafraîchissement. Elles
+sont \textbf{trois}, toutes sous \code{src/}~: \code{middleware/\allowbreak
+authCustom.js}, \code{middleware/\allowbreak auth.js} et \code{socket/\allowbreak
+handlers/\allowbreak auth.js}. Oublier la troisième laisserait un appareil révoqué en
+401 sur tout le REST mais parfaitement vivant en temps réel~: il continuerait de recevoir
+les messages du compte.
+
+\begin{lstlisting}[language=SQL, caption={La jointure commune aux trois gardes}]
+SELECT u.alanyaID, u.alanyaPhone, u.email
+  FROM users u
+  LEFT JOIN appareils a ON a.id = ? AND a.alanyaID = u.alanyaID
+ WHERE u.alanyaID = ? AND u.exclus = 0
+   AND (a.id IS NULL OR a.revoked_at IS NULL);
+\end{lstlisting}
+
+\begin{note}[Pourquoi une jointure \emph{externe}, et ce qu'elle concède]
+Le \code{LEFT JOIN} et la clause \code{a.id IS NULL} laissent passer les jetons émis
+\textbf{avant} la migration~026, qui ne portent pas d'\code{appareilId} --- sans quoi le
+déploiement déconnecterait tout le monde d'un coup. La contrepartie est explicite~: la
+révocation n'est réelle que pour les sessions ouvertes \emph{après} la migration. Les
+anciennes s'éteignent d'elles-mêmes à l'expiration de leur jeton de rafraîchissement, au
+plus tard 30~jours après.
+\end{note}
+
+\begin{note}[Le coût assumé]
+Cela ajoute un \code{SELECT} indexé (\code{idx\_appareils\_user}) sur le chemin le plus
+chaud de l'application --- en pratique, une jointure de plus sur une requête déjà faite.
+Alternative plus légère~: ne vérifier qu'au rafraîchissement, avec un délai de grâce allant
+jusqu'à 15~minutes. Choix retenu~: vérifier à chaque requête. Un bouton « Déconnecter » qui
+met jusqu'à un quart d'heure à faire effet se comporterait, du point de vue de
+l'utilisateur, comme un bouton cassé.
+\end{note}
+
+\section{Ce que fait vraiment la révocation}
+
+\code{DELETE~/api/auth/device-sessions/:id} pose \code{revoked\_at = NOW()}, puis enchaîne
+deux gestes de nature très différente~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Un signal de confort} --- l'événement \code{auth:\allowbreak
+        device\_revoked} part vers \emph{tout} le compte, dans la room
+        \code{user\_\allowbreak \$\{alanyaID\}}, avec l'\textbf{identifiant matériel} de
+        l'appareil coupé. Chaque client compare cette
+        valeur à son propre \code{currentHardwareId()}~: seul l'appareil visé se
+        reconnaît, et il efface alors sa session locale --- stockage sécurisé compris ---
+        au lieu d'attendre son prochain 401. Diffuser à tout le compte plutôt que cibler
+        une socket est
+        volontaire~: l'appareil révoqué peut très bien ne pas avoir de socket ouverte à cet
+        instant, et son identifiant matériel ne dit rien d'exploitable aux autres appareils
+        du \emph{même} compte.
+  \item \textbf{La garantie dure} --- le 401 des trois gardes. Elle ne dépend d'aucune
+        coopération du client. \code{disconnectAppareilSockets}
+        (\code{src/utils/userSocketRegistry.js}) ferme en outre les sockets encore ouvertes
+        de cet appareil, \emph{après} l'\code{emit} pour que l'événement parte avant la
+        fermeture.
+\end{enumerate}
+
+\begin{alerte}[La clé de fermeture des sockets est \code{appareilId}, pas \code{device\_id}]
+\code{disconnectAppareilSockets} filtre sur \code{socket.appareilId} --- l'identifiant de
+\emph{ligne}, porté par le JWT et posé sur la socket à son authentification. Filtrer sur un
+\code{socket.deviceId} ne marcherait pas~: cette propriété-là porte l'UUID
+\textbf{applicatif} du push, qui n'a aucun rapport avec \code{appareils.device\_id}
+(section~\ref{sec:qr-device-id}). Les deux champs se ressemblent assez pour qu'on les
+confonde, et l'erreur serait silencieuse~: aucune socket ne correspondrait, aucune
+exception ne serait levée, et la fermeture ne ferait simplement rien.
+\end{alerte}
+
+\begin{alerte}[Un appareil révoqué ne se \emph{réactive} jamais]
+Quand un appareil précédemment révoqué se reconnecte, \code{deviceSessionService.\allowbreak
+recordLogin} ne remet pas \code{revoked\_at} à \code{NULL}~: il \textbf{supprime} la ligne
+morte et en insère une neuve. La raison tient à l'\code{id}. Réactiver la ligne
+conserverait son identifiant, donc l'\code{appareilId} porté par les anciens jetons~: le
+jeton de rafraîchissement de 30~jours qu'on venait précisément de couper redeviendrait
+valide, et l'appareil volé retrouverait l'accès sans rien faire d'autre qu'attendre une
+reconnexion légitime du propriétaire. Un \code{id} neuf ne figure dans aucun jeton déjà
+émis.
+\end{alerte}
+
+\begin{alerte}[Pas de ligne \code{appareils}, pas de jeton]
+\code{register} et \code{login} exigent un identifiant d'appareil
+(\code{hardware\_id}, à défaut \code{device\_ID}) et refusent la valeur sentinelle
+\code{'INDEFINI'}~: sans lui, c'est un 400. Et si \code{recordLogin} échoue malgré tout,
+ils répondent \textbf{503} sans émettre le moindre jeton, plutôt que de laisser passer une
+connexion. Une session sans ligne \code{appareils} serait en effet invisible dans
+« Appareils connectés » \emph{et} irrévocable --- exactement ce que ce chapitre entier
+cherche à éliminer. Mieux vaut une connexion qui échoue franchement qu'une session
+fantôme. Le même refus s'applique à l'approbation d'une session QR.
+\end{alerte}
+
+\chapter{Ajout de contact instantané}
+\label{ch:qr-contact}
+
+\code{addPreferredContact} (\code{src/controllers/preferredContactController.js}) faisait
+déjà exactement ce qu'il faut~: rejet si l'utilisateur se scanne lui-même, vérification que
+la cible existe et n'est pas exclue, vérification de non-blocage, vérification de
+non-appartenance déjà acquise, puis \code{INSERT}. Cette logique est extraite en service
+--- \code{src/services/contactService.js}, fonction
+\code{addContactByFriendId(alanyaID, friendID, \{addedVia\})} --- partagé par le
+contrôleur REST existant \textbf{et} par le résolveur QR, sans dupliquer les règles.
+L'option \code{addedVia} (\code{'search'} par défaut, \code{'qr'} pour les deux chemins
+QR) alimente la colonne de la migration~027, et \code{\_contactBody} restitue
+\code{addedVia} et \code{addedAt} dans chaque réponse --- la ligne telle qu'elle
+s'affichera. Le même fichier exporte \code{sanitizeUrl}, le filtre des sentinelles
+historiques de \code{users.avatar\_url} (\code{'NON DEFINI'}, \code{'null'}\ldots{}),
+pour la même raison~: recopié, il diverge et l'avatar s'affiche différemment d'un écran à
+l'autre.
+
+\begin{note}[L'origine restituée est celle de l'ajout initial]
+Sur \code{already}, le service relit \code{added\_via} et \code{created\_at} de la ligne
+\emph{existante}~: rescanner quelqu'un qu'on avait ajouté par recherche ne réécrit pas
+l'histoire, et la mention datée de la fiche reste celle du premier geste.
+\end{note}
+
+\begin{note}[Le service ne connaît aucun code HTTP]
+\code{addContactByFriendId} renvoie un résultat discriminé ---
+\code{\{ok, reason, contact\}} avec \code{reason} $\in$ \code{added}, \code{self},
+\code{not\_found}, \code{blocked}, \code{already} --- et laisse chaque appelant choisir sa
+sémantique. C'est indispensable ici, parce que les deux appelants \emph{divergent
+volontairement} sur deux cas~: là où la route REST \code{POST~/api/contacts/:id} répond
+400 (soi-même) et 409 (déjà contact), la résolution d'un QR répond 200 dans les deux cas.
+Un service qui aurait choisi les codes à leur place aurait forcé le QR à mentir sur ce qui
+s'est passé.
+\end{note}
+
+\section{Le jeton éphémère, en mémoire}
+\label{sec:qr-jeton-ephemere}
+
+Le code que l'écran « Mon code » affiche pour un compte personnel est un jeton de
+\textbf{dix minutes}, à \textbf{usage unique}, qui ne touche jamais la base~: nouveau
+fichier \code{src/\allowbreak socket/\allowbreak state/\allowbreak qrContactTokens.js},
+calque assumé de \code{qrLoginSessions.js} (chapitre~\ref{ch:qr-ephemere}, où le choix
+« une \code{Map} en mémoire, pas une table » est justifié --- mono-processus compris).
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Structure} & \code{Map} \code{token} $\rightarrow$ \code{\{token, alanyaID,
+createdAt, expiresAt\}}, jeton \code{generateOpaqueToken(16)} \\
+\thd{Durée de vie} & \code{TTL\_MS} $=$ 10~min, renvoyée au client en \code{ttlMs} \\
+\thd{Un seul jeton actif} & index \code{alanyaID} $\rightarrow$ jeton~;
+\code{create()} invalide le précédent du même compte \\
+\thd{Usage unique} & \code{consume()} $=$ lecture $+$ suppression~; \code{get()} reste
+non destructif \\
+\thd{Nettoyage} & expiration paresseuse, balayage d'un échantillon à chaque création
+(\code{SWEEP\_PER\_CREATE} $=$ 20), éviction FIFO au-delà de \code{MAX\_TOKENS} $=$
+10\,000 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[La création est autolimitante]
+Un seul jeton vivant par utilisateur~: en générer un nouveau tue le précédent. Marteler
+\mPOST{}~\code{/api/qr/contact-token} ne fait donc jamais grossir la \code{Map} --- c'est
+pourquoi la route, déjà authentifiée, n'a pas de limiteur dédié. Le balayage et le
+plafond restent, même filet que \code{qrLoginSessions}~: une \code{Map} bornée, pas
+seulement expirante.
+\end{note}
+
+\begin{note}[Testé avec la session de connexion]
+\code{qrContactTokens.test.js} (création, invalidation du précédent, consommation
+unique, expiration paresseuse) est chaîné à \code{qrLoginSessions.test.js} dans le
+script \code{npm run test:qr}.
+\end{note}
+
+\section{Résolution et consommation}
+
+\code{\_resolveContactEphemere} (\code{qrController.js}) lit le jeton
+\emph{sans} le consommer, applique \code{addContactByFriendId} avec
+\code{\{addedVia:\allowbreak 'qr'\}}, puis décide du sort du jeton selon l'issue~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{7.1cm}X@{}}
+\toprule
+\thd{Réponse de \mPOST{}~\code{/api/qr/resolve}} & \thd{Cas --- sort du jeton} \\
+\midrule
+\code{\{type:'contact', added:true,} \code{alreadyContact:false, contact\}} & ajouté ---
+jeton \textbf{consommé} \\
+\code{\{type:'contact', added:false,} \code{alreadyContact:true, contact\}} & déjà favori
+--- succès doux, aucune écriture, jeton \textbf{consommé} quand même \\
+\code{200 \{type:'contact', self:true\}} & code correspondant à soi-même --- le jeton
+\textbf{survit} \\
+\code{403} & bloqué, dans un sens ou dans l'autre --- le jeton \textbf{survit} \\
+\code{404} & jeton inconnu, expiré, déjà utilisé, ou compte exclu \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Qui a le droit de tuer un code]
+La règle produit « scanné $=$ expiré » est lue littéralement~: le jeton est consommé dès
+qu'il a rempli son office --- contact ajouté, \emph{ou} déjà présent (le scan a bien
+« réussi » du point de vue de qui scanne). Il survit en revanche à un scan de son propre
+code et à un scan par un compte bloqué~: ni une maladresse du propriétaire, ni un bloqué,
+ne doivent pouvoir tuer le code d'autrui. Et la consommation vient \textbf{après}
+l'écriture, jamais avant~: consommer d'abord laisserait un \code{INSERT} en échec
+détruire un code encore valide, pour rien.
+\end{alerte}
+
+\begin{alerte}[Se scanner soi-même est un 200, pas un 400]
+La partie~I range ce cas parmi les \textbf{succès doux}~: « rien ne se passe, un message
+discret l'indique ». Une erreur~400 obligerait le client à distinguer, dans une même
+branche d'échec, le code illisible (400 lui aussi) de son propre code --- et le moindre
+raccourci d'affichage transformerait un geste anodin en message d'erreur rouge. Le
+serveur répond donc 200 avec un drapeau \code{self}, que le client lit explicitement
+(\code{isSelf} dans \code{lib/models/qr\_models.dart}). Même logique pour un contact déjà
+enregistré~: la carte de résultat s'affiche, sans nouvelle écriture. Le champ s'appelle
+bien \code{contact} et non \code{user}~: c'est la ligne \code{preferredContact} telle
+qu'elle apparaîtra dans la liste, \code{idPrefContact}, \code{addedVia} et
+\code{addedAt} compris, pas la fiche de l'utilisateur.
+\end{alerte}
+
+\begin{note}[La page publique ne consomme jamais]
+\code{GET~/q/c/:token} (\code{src/controllers/\allowbreak qrLandingController.js}, monté
+hors \code{/api} par \code{src/routes/\allowbreak qrLanding.js}) sert la page qu'un
+appareil photo générique ouvre en scannant le code~: identité du propriétaire, bouton
+« Ouvrir dans Alanya » en schéma applicatif, mention « valable une dizaine de minutes et
+pour une seule personne ». Elle n'est pas authentifiée, ne sait pas qui la consulte, et
+\textbf{ne consomme pas} le jeton~: seule la résolution par un utilisateur connecté dans
+l'app le fait. La page du code permanent (\code{GET~/q/u/:token}) suit le verrou
+business~: tant qu'il est fermé, elle répond « Ce code n'est plus valide ».
+\end{note}
+
+\section{Prévenir le propriétaire}
+\label{sec:qr-prevenir}
+
+Après consommation, \code{\_prevenirProprietaire} avertit le compte dont le code vient
+d'être utilisé --- c'est ce qui alimente le dialogue « ajouter en retour » de la
+partie~I. Deux canaux, jamais les deux à la fois~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item l'événement socket \textbf{\code{qr:contact\_scanned}}, vers la room
+        \code{user\_\$\{alanyaID\}} du propriétaire~: \code{\{by: \{alanyaID, nom,
+        pseudo, avatar\_url\}, alreadyMutual, at\}}. \code{alreadyMutual} dit si le
+        propriétaire a \emph{déjà} le scanneur en contact --- le client affiche alors une
+        simple information au lieu du dialogue oui/non~;
+  \item la notification push \code{qr\_contact\_scanned}
+        (\code{notificationService.\allowbreak notifyQrContactScanned}),
+        \textbf{seulement} si \code{hasForegroundSocket} (\code{src/utils/\allowbreak
+        userSocketRegistry.js}) ne trouve aucune socket du compte déclarée au premier
+        plan~: app visible, le dialogue in-app suffit et la push ferait doublon~; app en
+        arrière-plan ou fermée, la push prend le relais.
+\end{enumerate}
+
+Le tout est \emph{best-effort}~: l'appel n'est pas attendu et ses erreurs sont
+journalisées sans jamais faire échouer l'ajout --- le scanneur a son contact, prévenir
+le propriétaire est un bonus, pas une condition.
+
+\section{L'ajout en retour}
+
+Accepter le dialogue rejoue simplement la route existante,
+\mPOST{}~\code{/api/contacts/:id}, avec un corps \code{\{addedVia:'qr'\}}. Le contrôleur
+n'accepte que cette valeur en \textbf{liste blanche} --- tout le reste retombe sur
+\code{'search'}~: cette métadonnée est cosmétique (pastille, filtre, mention datée), pas
+de la sécurité, mais on ne laisse pas le client inventer des origines. Les deux
+directions du lien portent ainsi la même origine, et \mGET{}~\code{/api/contacts}
+restitue \code{addedVia} et \code{addedAt} pour toute la liste.
+
+\chapter{La session de connexion éphémère}
+\label{ch:qr-ephemere}
+
+\section{Une structure en mémoire, pas une table}
+
+\begin{constat}[Vérifié dans le déploiement]
+\code{Alanya-Backend} tourne en \textbf{un seul processus Node} --- \code{npm start} lance
+\code{node server.js}, le déploiement fait \code{pm2 restart alanya-backend} sans mode
+cluster, et aucun \code{ecosystem.config.js} n'existe. Un état partagé uniquement en
+mémoire est donc visible de toutes les requêtes, sans risque qu'une requête tombe sur un
+autre processus qui ignore la session.
+\end{constat}
+
+La session de connexion vit dans une \code{Map} en mémoire, sur le modèle exact de
+\code{src/\allowbreak socket/\allowbreak state/\allowbreak pendingCalls.js}~:
+\code{TTL\_MS}, \code{createdAt}~/ \code{expiresAt}, et un nettoyage porté par la structure
+elle-même plutôt que par un job externe. Nouveau fichier~: \code{src/\allowbreak
+socket/\allowbreak state/\allowbreak qrLoginSessions.js} --- dont le jeton de contact
+éphémère (section~\ref{sec:qr-jeton-ephemere}) est le calque.
+
+\begin{note}[Ce que ça évite]
+Ni migration, ni colonne, ni politique de rétention à trancher (une ligne de table qui
+traînerait des semaines n'existe plus, par construction --- l'entrée disparaît de la
+\code{Map} à l'expiration). Ce que ça coûte, en échange~: une session en cours ne survit
+pas à un redémarrage du serveur --- l'utilisateur relance simplement le QR, un cas déjà
+géré par la régénération automatique ci-dessous.
+\end{note}
+
+\begin{note}[Une \code{Map} bornée, pas seulement expirante]
+L'expiration est \emph{paresseuse}~: pas de \code{setInterval}, une entrée périmée
+disparaît à la première lecture qui la rencontre. Cela suffit tant qu'on lit ; or la route
+de création n'est pas authentifiée, et son \code{authLimiter} a
+\code{skipSuccessfulRequests}~: les créations \emph{réussies} ne consomment aucun quota.
+Un client qui créerait sans jamais interroger ferait donc croître la \code{Map}
+indéfiniment, dans le processus qui héberge aussi tous les sockets. Chaque création balaie
+donc un échantillon d'entrées (\code{SWEEP\_PER\_CREATE}) et évince en FIFO au-delà de
+\code{MAX\_SESSIONS} --- une \code{Map} JavaScript itère dans l'ordre d'insertion, l'éviction
+est donc gratuite.
+\end{note}
+
+\section{Deux secrets par session, jamais interchangeables}
+\label{sec:qr-deux-secrets}
+
+C'est la pièce la moins évidente du dispositif, et celle dont dépend tout le reste~:
+\textbf{le QR ne suffit pas à récupérer les jetons}.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{2.5cm}p{3.1cm}X@{}}
+\toprule
+\thd{Secret} & \thd{Dans le QR~?} & \thd{À qui, et pour quoi} \\
+\midrule
+\code{scanSecret} & \textbf{oui} & À l'appareil qui \textbf{scanne}~: il prouve qu'on a vu
+le code. Exigé par \code{/resolve}, \code{/approve} et \code{/deny}. \\
+\code{pollToken} & \textbf{jamais} & À l'appareil qui a \textbf{créé} la session, et à lui
+seul --- remis une unique fois, dans la réponse à la création. Exigé pour interroger le
+statut et retirer les jetons. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Sans cette séparation, photographier le QR suffirait]
+Avec un secret unique, quiconque prend en photo l'écran du nouvel appareil pourrait
+interroger la session en boucle et \textbf{récupérer les jetons à la place du demandeur},
+à l'instant précis où l'utilisateur approuve --- l'écran de confirmation, lui, aurait
+montré un appareil parfaitement légitime. Le \code{pollToken} coupe cette attaque à la
+racine~: il n'a jamais été affiché nulle part.
+\end{alerte}
+
+\begin{note}[En-tête \code{X-Poll-Token}, et non paramètre d'URL]
+\code{GET~/api/auth/qr-session/:sessionId} lit le \code{pollToken} dans un \textbf{en-tête}
+HTTP. Une \emph{query string} serait fonctionnellement identique et discrètement
+désastreuse~: nginx et Cloudflare journalisent l'URL complète par défaut, et la réponse à
+cette requête précise transporte \code{accessToken} et \code{refreshToken}. Le
+\code{sessionId} étant public --- il est dans le QR --- le \code{pollToken} est le
+\emph{seul} facteur~: il ne doit pas finir en clair dans un journal d'accès.
+\end{note}
+
+\begin{note}[Livraison des jetons à usage unique]
+Dès que l'interrogation renvoie \code{approved} avec la paire de jetons, l'entrée est
+\textbf{effacée} de la \code{Map} (\code{clear}). Les jetons ne repassent jamais par ce
+canal~: un second appel, avec le même \code{pollToken}, ne trouve plus rien. Une session
+inconnue et un \code{pollToken} faux donnent d'ailleurs la même réponse
+--- \code{\{status:'expired'\}} --- pour qu'on ne puisse pas, avec le seul
+\code{sessionId} public, sonder l'existence d'une session vivante. Même principe côté
+scan~: un \code{scanSecret} invalide et une session inconnue renvoient tous deux 404.
+\end{note}
+
+\section{Cycle de vie}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{2.4cm}X@{}}
+\toprule
+\thd{Statut} & \thd{Déclencheur} \\
+\midrule
+\code{pending}   & créée par le nouvel appareil, \code{expiresAt} $=$ maintenant $+$ 90~s \\
+\code{scanned}   & un appareil authentifié a résolu le jeton \\
+\code{approving} & réservation interne pendant l'approbation, jamais exposée \\
+\code{approved}  & confirmation explicite --- crée la ligne \code{appareils}, puis livre
+les jetons une seule fois \\
+\code{denied}    & refus explicite. L'entrée est \textbf{conservée} jusqu'à son TTL~: la
+supprimer afficherait « expiré » au demandeur, un message trompeur \\
+\code{expired}   & statut \emph{synthétique} --- l'entrée n'est plus dans la \code{Map},
+qu'elle ait expiré ou déjà livré ses jetons \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+À expiration, le nouvel appareil régénère seul une nouvelle session --- l'utilisateur ne
+voit jamais un code mort.
+
+\begin{alerte}[Réservation atomique de l'approbation]
+L'approbation n'est pas instantanée~: elle enchaîne plusieurs \code{await} --- lecture du
+compte, écriture dans \code{appareils}, signature des jetons. Deux confirmations quasi
+simultanées franchiraient donc toutes deux la garde de statut, et la \textbf{seconde
+écraserait le résultat de la première}~: l'appareil demandeur ouvrirait le compte du
+second approbateur. \code{qrLoginSessions.beginApproval()} bascule le statut en
+\code{approving} \emph{avant} le premier \code{await}~; comme rien n'est asynchrone entre
+la lecture et l'écriture du statut, la transition est atomique en JavaScript mono-thread.
+La seconde confirmation reçoit alors un 409. \code{abortApproval()} rend la session à son
+statut précédent si l'approbation échoue en cours de route --- compte introuvable,
+\code{recordLogin} en échec --- pour qu'un incident ne condamne pas un code encore valide.
+\end{alerte}
+
+\begin{note}[Le cas où la session expire \emph{pendant} l'approbation]
+\code{approve()} peut échouer après que la ligne \code{appareils} a été créée. Le
+contrôleur teste donc son retour~: en cas d'échec, il \textbf{supprime la ligne} qu'il
+vient d'insérer et répond 410 \code{QR\_SESSION\_EXPIRED}. Sans ce test, on annoncerait
+« approuvé », on émettrait une paire de jetons que personne ne viendrait chercher, et on
+laisserait un appareil orphelin dans la liste « Appareils connectés ».
+\end{note}
+
+\section{L'exception d'authentification socket}
+\label{sec:qr-socket-exception}
+
+\begin{constat}
+Chaque handler socket existant --- chat, appels, réunions, accusés de réception --- ouvre
+par la même garde~: \code{if~(!socket.authenticated)~return;}. C'est la règle universelle
+du fichier \code{server.js} et de \code{src/socket/handlers/}.
+\end{constat}
+
+Le nouvel appareil n'est, par définition, pas encore authentifié quand il attend une
+approbation. Un nouveau handler \code{src/\allowbreak socket/\allowbreak
+handlers/\allowbreak qrLogin.js} déroge donc --- seule exception du dépôt --- à cette
+garde~: \code{socket.on(\allowbreak 'qr\_session:join', \ldots{})} valide directement
+contre la \code{Map} de \code{qrLoginSessions.js} plutôt que contre une session
+utilisateur, puis rejoint la room \code{qr\_session\_\allowbreak \$\{sessionId\}}.
+
+\begin{note}[Une exception bornée par construction]
+Elle exige le \textbf{\code{pollToken}} (section~\ref{sec:qr-deux-secrets}), pas le
+\code{scanSecret}~: photographier le QR ne suffit donc pas à entrer dans la room. Le socket
+ne devient jamais \code{authenticated}, ne rejoint jamais \code{user\_*} et ne reçoit donc
+aucun autre événement du serveur. La room ne transporte que le \emph{statut}, jamais de
+jeton --- la livraison des jetons reste sur le \emph{poll} HTTP à usage unique. Et la
+session s'auto-détruit au bout de 90~secondes. Quatre bornes, aucune reposant sur la
+bonne volonté du client.
+\end{note}
+
+\begin{note}[Le repli FCM ne fonctionne pas ici]
+\code{notificationService.js::sendToUser} cible par \code{alanyaID} --- une donnée que le
+nouvel appareil n'a, par construction, pas encore. Le repli habituel (push en complément du
+socket, comme pour les appels) est donc \textbf{impossible} sur ce chemin précis. Le seul
+canal qui fonctionne avant authentification est celui que l'appareil a lui-même ouvert~: la
+room socket, ou le polling REST.
+\end{note}
+
+\begin{alerte}[Décision~v1~: polling seul côté mobile]
+Le socket authentifié de \code{TalkyApiClient} suppose systématiquement un jeton d'accès
+valide --- toute la mécanique de reconnexion et de \emph{watchdog} est bâtie autour d'une
+session déjà établie. Faire cohabiter un mode « anonyme, scellé à un jeton de 90~s » dans
+cette même classe est un risque de régression sur un composant déjà complexe. \textbf{Le
+client mobile v1 n'utilise que le polling REST} (\code{GET~/api/auth/qr-session/:sessionId},
+toutes les 2~s) --- le délai perçu est négligeable face au temps humain de déverrouiller
+l'autre téléphone et de confirmer. La room \code{qr\_session\_\$\{sessionId\}} reste
+implémentée côté serveur~: elle ne coûte rien et prépare la voie web
+(chapitre~\ref{ch:qr-web}), qui peut se permettre un socket ouvert en continu.
+\end{alerte}
+
+\begin{note}[\code{ttlMs} plutôt qu'une simple date de fin]
+La création renvoie \code{expiresAt} \textbf{et} \code{ttlMs}. Le client décompte à partir
+de \code{ttlMs} et de l'instant de \emph{réception}, sans jamais comparer son horloge à
+celle du serveur. Un téléphone dont l'horloge avance de plus de 90~secondes --- ce qui
+n'a rien d'exotique --- verrait sinon son code expiré dès son affichage, et le
+régénérerait en boucle sans jamais laisser le temps de le scanner.
+\end{note}
+
+\begin{alerte}[Confirmation explicite, jamais d'approbation automatique]
+Rappel technique du choix produit~: \code{POST~/api/qr/resolve} sur un jeton de type
+\code{login} ne fait que passer le statut à \code{scanned} et renvoyer les informations de
+l'appareil demandeur --- il est \emph{strictement en lecture seule} côté autorisation. Seul
+\code{POST~/api/auth/qr-session/:sessionId/approve}, appelé après une action explicite de
+l'utilisateur sur un écran dédié, crée la ligne \code{appareils} et émet les jetons. Sans
+cette séparation en deux appels, le scan seul suffirait à connecter --- exactement le
+scénario de « quishing » que la partie~I met en garde.
+\end{alerte}
+
+\begin{alerte}[Les informations affichées viennent d'un appelant non authentifié]
+\code{deviceName} et \code{platform} sont fournis par l'appareil qui \emph{crée} la
+session --- lequel n'est, par construction, pas encore connecté. Ils s'affichent pourtant
+tels quels sur l'écran de confirmation, seul rempart contre le quishing. La plateforme est
+donc contrainte à un vocabulaire fermé \textbf{dès la création} (et non au moment de
+l'insertion en base, trop tard car après l'approbation), et le libellé libre est borné à
+60~caractères puis présenté côté client comme « déclaré par l'appareil », jamais comme un
+fait vérifié.
+\end{alerte}
+
+\chapter{API}
+
+Trois routeurs~: \code{src/\allowbreak routes/\allowbreak qr.js}, monté sur
+\code{/api/qr} par \code{server.js}~; \code{src/\allowbreak routes/\allowbreak
+authCustom.js}, qui accueille les chemins \code{/api/\allowbreak auth/\allowbreak
+qr-session*} et \code{/api/\allowbreak auth/\allowbreak device-sessions*} --- exactement
+comme il accueille déjà \code{push-devices} et \code{notification-prefs}~; et
+\code{src/\allowbreak routes/\allowbreak qrLanding.js}, les pages \textbf{publiques}
+servies à la racine du domaine (\code{/q/c/}, \code{/q/u/},
+section~\ref{sec:qr-prevenir}) ainsi que les deux fichiers d'association des liens
+universels, \code{/.well-known/\allowbreak assetlinks.json} et
+\code{/.well-known/\allowbreak apple-app-site-association} (404 tant que l'empreinte de
+signature Android, resp. le Team ID Apple, ne sont pas fournis en variables
+d'environnement --- le lien ouvre alors le navigateur, dégradation et non panne).
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{5.9cm}
+                             >{\raggedright\arraybackslash}p{3.2cm}X@{}}
+\toprule
+\thd{Endpoint} & \thd{Garde} & \thd{Effet} \\
+\midrule
+\mPOST{}~\code{/api/qr/\allowbreak contact-token} & \code{authCustom} &
+jeton éphémère du compte~; renvoie \code{\{token, payload, ttlMs, expiresAt\}} et
+invalide le précédent \\
+\mGET{}~\code{/api/qr/me} & \code{authCustom} &
+\emph{mint-if-absent} de \code{qr\_public\_id}~; \textbf{403}
+\code{BUSINESS\_ONLY} tant que le verrou est fermé \\
+\mPOST{}~\code{/api/qr/me/\allowbreak regenerate} & \code{authCustom} &
+nouveau jeton permanent, l'ancien devient invalide~; même \textbf{403} que ci-dessus \\
+\mPOST{}~\code{/api/qr/resolve} & \code{authCustom} $+$ \code{qrResolveLimiter} &
+résout un jeton scanné (contact éphémère, permanent ou login) \\
+\mGET{}~\code{/q/c/:token},~\code{/q/u/:token} & aucune (public) &
+pages d'accueil des codes contact --- jamais de consommation ni d'écriture \\
+\mPOST{}~\code{/api/auth/\allowbreak qr-session} & \code{authLimiter} (public) &
+crée une session~; renvoie \code{scanSecret}, \code{pollToken}, \code{payload},
+\code{expiresAt}, \code{ttlMs} \\
+\mGET{}~\code{/api/auth/\allowbreak qr-session/:sessionId} & en-tête
+\code{X-Poll-Token} (public) & interrogation par le nouvel appareil~; livre les jetons
+une seule fois \\
+\mPOST{}~\code{/api/auth/\allowbreak qr-session/:sessionId/\allowbreak approve} &
+\code{authCustom} $+$ \code{scanSecret} & crée \code{appareils}, émet les jetons \\
+\mPOST{}~\code{/api/auth/\allowbreak qr-session/:sessionId/\allowbreak deny} &
+\code{authCustom} $+$ \code{scanSecret} & marque \code{denied} \\
+\mGET{}~\code{/api/auth/\allowbreak device-sessions} & \code{authCustom} &
+liste des appareils non révoqués \\
+\mDEL{}~\code{/api/auth/\allowbreak device-sessions/:id} & \code{authCustom} &
+révocation immédiate \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.6cm}X@{}}
+\toprule
+\thd{Module} & \thd{Rôle} \\
+\midrule
+\code{src/controllers/qrController.js} & \code{/api/qr/*} --- jeton éphémère, verrou du
+permanent, résolution, notification du propriétaire \\
+\code{src/controllers/qrLandingController.js} & pages publiques \code{/q/c/} et
+\code{/q/u/} \\
+\code{src/controllers/qrAuthController.js} & \code{/api/\allowbreak auth/\allowbreak
+qr-session*} \textbf{et} \code{/api/\allowbreak auth/\allowbreak device-sessions*}~: un
+seul contrôleur, parce que les deux familles manipulent le même objet --- la session d'un
+appareil --- l'une pour l'ouvrir, l'autre pour la fermer \\
+\code{src/services/deviceSessionService.js} & \code{recordLogin} /
+\code{touchLastActive} / \code{normalizePlatform} --- la table \code{appareils}, partagée
+avec \code{login} et \code{register} \\
+\code{src/services/contactService.js} & \code{addContactByFriendId} (option
+\code{addedVia}), partagé avec \mPOST{}~\code{/api/\allowbreak contacts/:id} \\
+\code{src/utils/qrToken.js} & jetons opaques, payloads, comparaison à temps constant \\
+\code{src/socket/state/qrLoginSessions.js} & la \code{Map} des sessions de connexion
+éphémères \\
+\code{src/socket/state/qrContactTokens.js} & la \code{Map} des jetons de contact
+éphémères, un seul actif par compte \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Limitation de débit}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{4.9cm}
+                             >{\raggedright\arraybackslash}p{3.4cm}X@{}}
+\toprule
+\thd{Route} & \thd{Limiteur} & \thd{Pourquoi ce calibre} \\
+\midrule
+\mPOST{}~\code{/api/qr/\allowbreak contact-token} & aucun limiteur dédié &
+Route authentifiée et création \textbf{autolimitante}~: un seul jeton actif par compte,
+chaque création invalide le précédent (section~\ref{sec:qr-jeton-ephemere}). \\
+\mPOST{}~\code{/api/auth/\allowbreak qr-session} & \code{authLimiter}
+(10~/~15~min~/~IP) & Création, \emph{une} par code affiché. Le limiteur a
+\code{skipSuccessfulRequests}~: seuls les échecs consomment le quota. \\
+\mPOST{}~\code{/api/qr/resolve} & \code{qrResolveLimiter} (30~/~min~/~IP) &
+Un humain qui scanne dépasse rarement quelques codes par minute. \\
+\mGET{}~\code{/api/auth/\allowbreak qr-session/:sessionId} & un limiteur
+\textbf{dédié}, de l'ordre de 60~/~min~/~IP & Interrogation toutes les 2~s pendant
+90~s~: environ 45~appels \emph{par code affiché}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[Ne jamais poser \code{authLimiter} sur l'interrogation de statut]
+Le réflexe serait d'aligner l'interrogation sur la création, toutes deux publiques. Il
+casserait la fonctionnalité~: \code{authLimiter} autorise 10~requêtes par 15~minutes,
+quand un seul code en consomme environ 45 en 90~secondes. L'utilisateur verrait son écran
+se figer au bout de vingt secondes, puis échouer --- et le symptôme ressemblerait à une
+panne réseau, pas à un plafond. Cette route a besoin d'un limiteur \emph{dimensionné pour
+du polling}, de l'ordre de 60~requêtes par minute et par~IP~: assez large pour deux
+appareils derrière un même NAT, assez étroit pour rendre coûteux le sondage massif de
+\code{sessionId}. \textbf{À ce jour, aucun limiteur dédié n'est posé sur cette route}~: elle
+n'est couverte que par le \code{generalLimiter} global (300~/~min~/~IP), qui la protège
+d'un abus grossier mais n'est pas calibré pour elle.
+\end{alerte}
+
+\chapter{Client Flutter}
+
+\section{Couche données}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Contenu} \\
+\midrule
+\code{lib/api/qr\_api.dart} \emph{(nouveau)} & Extension \code{QrApi on TalkyApiClient},
+\code{part of} le client, sur le modèle de \code{auth\_api.dart} / \code{users\_api.dart}~:
+\code{createContactQr} (le code éphémère de « Mon code »), \code{resolveQr}, et les
+dormants \code{getMyQr} / \code{regenerateQr} --- 403 \code{BUSINESS\_ONLY} tant que le
+verrou du permanent est fermé, gardés pour les comptes business. \\
+\code{lib/api/qr\_auth\_api.dart} \emph{(nouveau)} & Extension \code{QrAuthApi}~:
+\code{createQrSession}, \code{pollQrSession} (qui pose l'en-tête \code{X-Poll-Token}),
+\code{approveQrSession}, \code{denyQrSession}, \code{listDeviceSessions},
+\code{revokeDeviceSession}. Séparée de la précédente parce qu'elle vise
+\code{/api/auth/*} et qu'une partie de ses appels se fait \textbf{sans} jeton d'accès. \\
+\code{lib/models/qr\_models.dart} \emph{(nouveau)} & \code{QrIdentity},
+\code{QrContactCode} (\code{token}, \code{payload}, \code{ttl}),
+\code{QrResolveResult} (\code{isSelf}, \code{added}, \code{alreadyContact}),
+\code{QrContactScan} (\code{by}, \code{alreadyMutual}), \code{QrLoginCreated},
+\code{QrLoginPollResult}, \code{AppareilSession}. \\
+\code{lib/api/users\_api.dart} \emph{(modifié)} & \code{addContact(userId,
+\{viaQr\})}~: l'ajout \emph{en retour} envoie \code{\{addedVia:'qr'\}} à la route
+existante. \\
+\code{lib/providers/auth\_provider.dart} \emph{(corrigé)} & \code{login()} /
+\code{register()} transmettent désormais \code{hardwareId:
+await~TalkyApiClient.\allowbreak currentHardwareId()} --- l'identifiant matériel du
+chapitre~\ref{ch:qr-donnees}, jusqu'ici absent malgré le paramètre déjà accepté. \\
+\code{lib/api/socket\_api.dart} \emph{(modifié)} & Écoute \code{auth:device\_revoked},
+\code{auth:conflict} et \code{qr:contact\_scanned} --- ce dernier exposé en flux
+\code{qrContactScans}, consommé par le dialogue global \emph{et} par l'écran
+« Mon code ». \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Ce qui passe par Drift, et ce qui n'y passe pas]
+Le code personnel ne touche pas le cache~: éphémère par nature, il se redemande au
+serveur à chaque affichage. La liste des appareils non plus~: donnée de
+\textbf{sécurité}, un cache périmé --- appareil révoqué encore affiché, appareil suspect
+masqué --- serait activement trompeur. L'\textbf{origine} des contacts, elle, est
+exactement une donnée de cache~: \code{lib/core/db/app\_database.dart} passe de
+\code{schemaVersion}~15 à \textbf{16}, \code{local\_users} gagne \code{addedViaQr}
+(booléen) et \code{preferredAddedAt} (date, nullable) --- que des \code{addColumn}, le
+cache existant n'est pas vidé.
+\end{note}
+
+\begin{alerte}[\code{User.addedViaQr} est nullable à dessein]
+Côté modèle (\code{lib/talky\_models.dart}), \code{addedViaQr} est un \code{bool?}~:
+\code{null} signifie « la source ne portait pas cette information » (résultat de
+recherche, instantané d'appel), pas « faux ». \code{\_partialUserToCompanion}
+(\code{local\_cache\_repository.dart}) traduit \code{null} en \code{Value.absent()}~:
+une écriture partielle laisse la colonne telle quelle au lieu de l'écraser. Un booléen
+non nullable aurait fait perdre la pastille au premier passage d'une source qui ignore
+la relation --- silencieusement, et de façon intermittente.
+\end{alerte}
+
+\section{Interface}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{8.4cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Objet} \\
+\midrule
+\code{screens/profile/\allowbreak qr\_scanner\_screen.dart} \emph{(nouveau)} & Scanner
+plein écran (\code{mobile\_scanner}), gabarit
+\code{screens/chats/\allowbreak camera\_screen.dart}. Autonome~: appelle \code{resolveQr},
+branche selon \code{type}. Carte de résultat par-dessus la caméra restée vivante, import
+d'une image de la galerie (\code{analyzeImage}). \\
+\code{screens/profile/qr\_code\_screen.dart} \emph{(nouveau)} & « Mon code »~: deux
+onglets, \emph{Mon code} et \emph{Scanner}~; code éphémère, compte à rebours, partage
+lien ou image, régénération. \\
+\code{widgets/qr\_scan\_result\_card.dart} \emph{(nouveau)} & Carte de résultat du
+scanner~: avatar, Message / Voir détails / Annuler, disparition différée. Sans bouton
+d'appel~: à côté d'« Annuler », une action bruyante et irréversible invite à la faute de
+doigt. \\
+\code{widgets/qr\_added\_sheet.dart} \emph{(nouveau)} & La même carte, en feuille
+modale~: confirmation d'un ajout venu d'un \emph{lien} --- l'utilisateur revient d'un
+navigateur et doit voir \emph{qui} a été ajouté. \\
+\code{widgets/qr\_pin.dart} \emph{(nouveau)} & La pastille « ajouté par QR »
+(section~\ref{sec:qr-pastille}). \\
+\code{core/services/qr\_contact\_flow.dart} \emph{(nouveau)} & Flux d'ajout partagé
+scan / lien~: écriture du cache, carte ou bandeau, annulation
+(\code{undoAdd}). \\
+\code{core/services/qr\_deep\_link\_service.dart} \emph{(nouveau)} & Réception des liens
+\code{/q/c/} et \code{/q/u/} (section~\ref{sec:qr-liens}). \\
+\code{widgets/alanya\_qr\_view.dart} \emph{(nouveau)} & Rendu unique des QR --- identité
+comme connexion. \\
+\code{screens/profile/\allowbreak qr\_login\_confirm\_screen.dart} \emph{(nouveau)} & Fiche
+de l'appareil scanné, Confirmer / Refuser. \\
+\code{screens/authentification/\allowbreak qr\_login\_screen.dart} \emph{(nouveau)} & QR de
+session, compte à rebours fondé sur \code{ttlMs}, \code{Timer.periodic} de \emph{polling}
+toutes les 2~s. \\
+\code{screens/profile/\allowbreak connected\_devices\_screen.dart} \emph{(nouveau)} & Liste
+\code{appareils}. Le repère « Cet appareil » vient du drapeau \code{current} \textbf{calculé
+par le serveur} (comparaison de \code{appareils.id} à l'\code{appareilId} du jeton), pas
+d'une comparaison locale. \\
+\code{screens/profile/profile\_screen.dart} & Icône QR dans l'en-tête. \\
+\code{widgets/add\_contact\_sheet.dart} & Bouton « Scanner un code », pastille sur les
+résultats. \\
+\code{main.dart} & Dialogue global « ajouter en retour », rejeu des liens reçus hors
+session. \\
+\code{screens/profile/\allowbreak preferred\_contacts\_screen.dart} & Filtre
+« Tous / Par QR » avec comptes. \\
+\code{screens/chats/\allowbreak contact\_detail\_screen.dart} & Mention « Ajouté par QR
+code · date » sur la fiche. \\
+\code{screens/chats/chats\_screen.dart} & Pastille dans la liste des discussions
+(section~\ref{sec:qr-pastille}). \\
+\code{screens/profile/\allowbreak account\_security\_screen.dart} & Sections « Appareils
+connectés » et « Lier un appareil ». \\
+\code{screens/authentification/login\_screen.dart} & Bouton « Se connecter avec un code
+QR ». \\
+\code{pubspec.yaml} & \code{+ qr\_flutter}, \code{+ mobile\_scanner},
+\code{+ app\_links}. \\
+\code{lib/l10n/*} & Cinq familles de clés~: \code{qrMyCode*}, \code{qrScan*},
+\code{qrLogin*} / \code{qrApprove*}, \code{qrDevices*}, \code{qrContact*} (pastille,
+filtre, mention datée), plus \code{qrBannerNewDevice} et
+\code{qrBannerSignedOutRemotely}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Rendu du QR]
+\code{qr\_flutter} (\code{QrImageView}) permet \code{eyeStyle} et \code{dataModuleStyle}
+personnalisés (points arrondis, couleur \code{brandPrimary}), un \code{embeddedImage} pour
+le logo, et un niveau de correction d'erreur \code{QrErrorCorrectLevel.H} (30~\% de
+redondance) --- nécessaire pour tolérer l'occlusion du logo central sans nuire à la
+lecture. Le scan repose sur \code{mobile\_scanner} (CameraX et ML~Kit sur Android,
+AVFoundation/Vision sur iOS), retenu plutôt que \code{qr\_code\_scanner} pour son socle
+natif et son entretien plus actif dans l'écosystème Flutter récent.
+\end{note}
+
+\begin{note}[Un seul widget de rendu, et pourquoi]
+\code{alanya\_qr\_view.dart} existe parce que les deux rendus avaient \emph{déjà} divergé
+--- yeux ronds contre carrés, bicolore contre monochrome, deux fichiers de logo différents
+--- donnant deux identités visuelles à la même fonctionnalité. Le fond blanc en thème
+sombre et le niveau~H y sont posés une fois pour toutes~: ce ne sont pas des choix
+esthétiques mais des conditions de lisibilité, et les laisser à chaque écran, c'était les
+perdre au premier oubli.
+\end{note}
+
+\section{Mon code~: décompte, consommation, régénération}
+
+L'écran « Mon code » appelle \code{createContactQr()} à l'ouverture, puis décompte à
+partir du \code{ttlMs} serveur et de l'\emph{instant de réception} --- jamais en
+comparant son horloge à \code{expiresAt}, pour la raison déjà donnée à la
+section~\ref{sec:qr-socket-exception} (note « \code{ttlMs} plutôt qu'une simple date de
+fin »). À zéro, il régénère sans geste~; un compteur de génération écarte les réponses
+tardives d'un code déjà remplacé. Il s'abonne aussi au flux \code{qrContactScans}~: à la
+consommation, le code affiché est mort par définition, l'écran en recrée un aussitôt ---
+c'est ce qui permet d'enchaîner plusieurs personnes. Le décompte est peint \emph{sur} la
+carte capturée pour le partage d'image~: l'image dit elle-même qu'elle est temporaire.
+
+\begin{note}[Partage~: le lien ou l'image, jamais un mélange]
+Sur Android, un partage de type \code{image/*} transporte bien \code{EXTRA\_TEXT}, mais
+la plupart des messageries l'ignorent dès qu'il y a une pièce jointe --- le lien et
+l'Alanya ID disparaissaient silencieusement. L'écran fait donc choisir explicitement~:
+\emph{Partager le lien} (texte~: invitation, mention de validité, Alanya ID, payload) ou
+\emph{Partager l'image} (la carte en PNG, texte joint pour les applications qui
+l'honorent). Aucun enregistrement en galerie~: une image morte en dix minutes y finirait
+en code cassé --- l'option reviendra avec les codes permanents business.
+\end{note}
+
+\section{La pastille, rendue à un seul endroit}
+\label{sec:qr-pastille}
+
+\code{lib/widgets/qr\_pin.dart} dessine la pastille --- coin \textbf{bas-gauche}, le
+bas-droit appartient au point de présence, liseré à la couleur du fond porteur --- et
+\code{AppAvatar} (\code{lib/widgets/\allowbreak common/\allowbreak app\_avatar.dart})
+l'expose en option \code{qrBadge}. Toutes les listes passant par \code{AppAvatar}
+(contacts préférés, feuille d'ajout, nouvelle discussion, sélection de membres, partage
+de contact, clavier d'appel\ldots{}), la marque est identique partout~: la poser écran
+par écran, c'était la perdre au premier oubli --- même argument que
+\code{alanya\_qr\_view.dart} ci-dessus.
+
+\begin{note}[La liste des discussions n'a pas de \code{User}]
+Ses lignes sont des conversations, pas des contacts~: \code{chats\_screen.dart} observe
+donc \code{watchPreferredContacts()} et en dérive un \code{Set} d'identifiants ajoutés
+par QR, mis à jour au fil de l'eau --- une lecture Drift déjà chaude, aucune requête par
+ligne, et la pastille suit automatiquement un ajout ou une annulation.
+\end{note}
+
+\section{Le dialogue global d'ajout en retour}
+
+L'abonnement au flux \code{qrContactScans} qui porte le dialogue oui/non vit dans
+\code{AuthWrapper} (\code{main.dart}), pas sur un écran~: le code a pu être partagé par
+lien, et son propriétaire peut être n'importe où dans l'application quand le scan
+survient --- un abonné visible seulement sur « Mon code » raterait l'événement (flux
+\emph{broadcast}, sans mémoire tampon). \code{alreadyMutual} vrai court-circuite le
+dialogue en simple information. Accepter appelle \code{addContact(\ldots, viaQr:~true)}
+puis met le cache à jour en écriture partielle~; un 409 (déjà ajouté entre-temps, par
+double scan ou depuis un autre appareil) est présenté comme un succès, pas comme une
+erreur.
+
+\section{Liens profonds}
+\label{sec:qr-liens}
+
+Le QR encode une URL \code{https} précisément pour qu'un scan hors application mène
+quelque part (la page publique du chapitre~\ref{ch:qr-contact})~; les liens profonds
+referment la boucle en ramenant cette URL dans l'app~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Android}~: \code{intent-filter} sur
+        \code{www.alanya237.com} avec \code{pathPrefix} \code{/q/u/} et \code{/q/c/}
+        (\code{AndroidManifest.xml})~;
+  \item \textbf{iOS}~: le fichier \code{apple-app-site-association} servi par le backend
+        déclare \code{/q/u/*} et \code{/q/c/*}~;
+  \item \textbf{schéma applicatif} \code{alanya://q/<genre>/<jeton>}, utilisé par le
+        bouton « Ouvrir dans Alanya » de la page publique --- il fonctionne sans
+        empreinte de signature ni Team ID.
+\end{enumerate}
+
+\code{QrDeepLinkService} (\code{app\_links}) extrait du lien un couple
+\textbf{(genre, jeton)} --- \code{extractIdentityToken}, genres \code{c} et \code{u} ---
+sans jamais le résoudre lui-même~: \code{QrContactFlow} reconstruit le payload et
+appelle \code{POST~/api/qr/resolve}, exactement comme après un scan caméra. Un lien reçu
+hors session est mis de côté (\code{stashToken}) et rejoué à la connexion~; un lien de
+type \code{login} est ignoré par construction --- l'approbation d'un appareil exige un
+scan et l'écran de confirmation, jamais un lien cliqué.
+\label{ch:qr-web}
+
+Rien dans l'API n'est spécifique au mobile~: une session de connexion se crée, s'interroge
+et s'approuve par de simples appels REST, et la room socket
+\code{qr\_session\_\$\{sessionId\}} (section~\ref{sec:qr-socket-exception}) fonctionne
+identiquement pour n'importe quel client. La colonne \code{appareils.platform} traite déjà
+\code{'web'} comme une valeur de premier ordre --- exactement le même choix que fait
+\code{user\_push\_devices.platform} depuis la migration~020.
+
+Un onglet de navigateur serait même un \textbf{meilleur} client que l'application mobile
+pour ce flux~: il reste ouvert en continu, ce qui rend le canal socket --- volontairement
+laissé de côté côté mobile (section~\ref{sec:qr-socket-exception}) --- immédiatement utile
+plutôt qu'à préparer pour plus tard. Seul le rendu du code changerait (un \code{canvas} ou
+un \code{svg} plutôt que \code{qr\_flutter}). Aucun écran web n'est conçu dans ce volet.
+
+\chapter{Impact fichier par fichier}
+
+\section{Backend --- Alanya-Backend}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{9.0cm}p{1.3cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{migrations/026\_qr\_appareils.sql} & nouveau & \code{qr\_public\_id},
+\code{appareils} \\
+\code{migrations/027\_pref\_contact\_added\_via.sql} & nouveau &
+\code{preferredContact.added\_via} \\
+\code{src/utils/qrToken.js} & nouveau & Jetons opaques, \code{QR\_BASE\_URL}, les trois
+payloads, \code{secretMatches} \\
+\code{src/services/contactService.js} & nouveau & \code{addContactByFriendId} (option
+\code{addedVia}) et \code{sanitizeUrl}, extraits d'\code{addPreferredContact} \\
+\code{src/services/deviceSessionService.js} & nouveau & \code{recordLogin},
+\code{touchLastActive}, \code{normalizePlatform} \\
+\code{src/socket/state/qrLoginSessions.js} & nouveau & \code{Map} en mémoire des sessions
+de connexion, sur le modèle de \code{pendingCalls.js} \\
+\code{src/socket/state/qrContactTokens.js} & nouveau & \code{Map} des jetons de contact
+éphémères (10~min, usage unique, un seul actif par compte)~; test
+\code{qrContactTokens.test.js} chaîné dans \code{test:qr} \\
+\code{src/controllers/qrController.js} & nouveau & \code{/api/qr/*} --- jeton éphémère,
+verrou du permanent, résolution, notification du propriétaire \\
+\code{src/controllers/qrLandingController.js} & nouveau & Pages publiques \code{/q/c/}
+et \code{/q/u/} \\
+\code{src/controllers/qrAuthController.js} & nouveau & \code{/api/auth/qr-session*} et
+\code{/api/auth/device-sessions*} \\
+\code{src/routes/qr.js} & nouveau & Monte \code{/api/qr}, dont \code{contact-token} \\
+\code{src/routes/qrLanding.js} & nouveau & Monte \code{/q/*} et les fichiers
+d'association \code{/.well-known/*} \\
+\code{src/socket/handlers/qrLogin.js} & nouveau & \code{qr\_session:join}, seule exception
+à la garde d'authentification \\
+\code{server.js} & modifié & Montage des routes (dont les pages publiques à la racine),
+enregistrement du handler socket \\
+\code{src/routes/authCustom.js} & modifié & Routes \code{qr-session*} et
+\code{device-sessions*} \\
+\code{src/middleware/rateLimiter.js} & modifié & \code{qrResolveLimiter} \\
+\code{src/middleware/authCustom.js} & modifié & Payload JWT étendu, vérification
+\code{revoked\_at} \\
+\code{src/middleware/auth.js} & modifié & Idem, pour rester cohérent avec
+\code{authCustom.js} \\
+\code{src/socket/handlers/auth.js} & modifié & Même vérification côté socket~;
+\code{socket.appareilId} \\
+\code{src/controllers/authCustomController.js} & modifié & \code{register} / \code{login}~:
+\code{recordLogin} obligatoire, 503 sinon~; \code{refreshToken}~: refus si l'appareil est
+révoqué \\
+\code{src/controllers/preferredContactController.js} & modifié & Appelle le service
+extrait~; liste blanche \code{addedVia}, \code{GET} restituant \code{addedVia} /
+\code{addedAt} \\
+\code{src/services/notificationService.js} & modifié & \code{notifyQrContactScanned}
+(push \code{qr\_contact\_scanned}) \\
+\code{src/utils/userSocketRegistry.js} & modifié & \code{disconnectAppareilSockets},
+filtrant sur \code{socket.appareilId}~; \code{hasForegroundSocket} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Trois fichiers que le dossier avait prévus et qui n'existent pas]
+La conception initiale annonçait \code{src/constants/qrSessionStatus.js},
+\code{src/services/qrIdentityService.js} et \code{src/services/qrLoginService.js}. Aucun
+n'a été écrit, et c'est délibéré~: les statuts sont des chaînes déjà exhaustivement
+énumérées par les transitions de \code{qrLoginSessions.js}, et les deux services
+n'auraient fait que déléguer, l'un à \code{qrController}, l'autre à
+\code{qrLoginSessions}. Trois indirections vides valent moins qu'un contrôleur qu'on lit
+d'un bout à l'autre.
+\end{note}
+
+\section{Mobile --- Talky (Flutter)}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{9.0cm}p{1.3cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{lib/api/qr\_api.dart} & nouveau & Jeton éphémère et résolution \\
+\code{lib/api/qr\_auth\_api.dart} & nouveau & Sessions de connexion et appareils \\
+\code{lib/models/qr\_models.dart} & nouveau & Modèles de la couche données QR, dont
+\code{QrContactCode} et \code{QrContactScan} \\
+\code{lib/screens/profile/qr\_code\_screen.dart} & nouveau & Mon code (compte à rebours,
+partage lien / image) \\
+\code{lib/screens/profile/qr\_scanner\_screen.dart} & nouveau & Scanner (carte de
+résultat, import galerie) \\
+\code{lib/widgets/alanya\_qr\_view.dart} & nouveau & Rendu unique des QR \\
+\code{lib/widgets/qr\_scan\_result\_card.dart} & nouveau & Carte de résultat \\
+\code{lib/widgets/qr\_added\_sheet.dart} & nouveau & La même carte, en feuille modale
+(ajout par lien) \\
+\code{lib/widgets/qr\_pin.dart} & nouveau & Pastille « ajouté par QR » \\
+\code{lib/core/services/qr\_contact\_flow.dart} & nouveau & Flux d'ajout partagé
+scan / lien, annulation \\
+\code{lib/core/services/qr\_deep\_link\_service.dart} & nouveau & Liens \code{/q/c/} et
+\code{/q/u/} $\rightarrow$ (genre, jeton) \\
+\code{lib/screens/profile/qr\_login\_confirm\_screen.dart} & nouveau & Confirmation \\
+\code{lib/screens/authentification/qr\_login\_screen.dart} & nouveau & QR de session \\
+\code{lib/screens/profile/connected\_devices\_screen.dart} & nouveau & Mes appareils \\
+\code{android/\ldots{}/alanya237/alanya/MainActivity.kt} & modifié & Canal natif
+\code{com.alanya/device\_identity} $\rightarrow$ \code{ANDROID\_ID} \\
+\code{android/\ldots{}/main/AndroidManifest.xml} & modifié & \code{intent-filter}
+\code{/q/u/} et \code{/q/c/} \\
+\code{lib/talky\_api\_client.dart} & modifié & \code{currentHardwareId()}, \code{part}
+des deux nouvelles extensions \\
+\code{lib/providers/auth\_provider.dart} & \textbf{corrigé} & \code{hardwareId} transmis au
+login / register \\
+\code{lib/api/auth\_api.dart} & modifié & Champ \code{hardware\_id} dans le corps \\
+\code{lib/api/users\_api.dart} & modifié & \code{addContact(\ldots, viaQr:)} \\
+\code{lib/api/socket\_api.dart} & modifié & \code{auth:device\_revoked},
+\code{auth:conflict}, \code{qr:contact\_scanned} \\
+\code{lib/talky\_models.dart} & modifié & \code{SocketEvents.\allowbreak
+authDeviceRevoked} / \code{qrContactScanned}, \code{AccountDeviceLogin},
+\code{User.addedViaQr} / \code{preferredAddedAt} \\
+\code{lib/core/db/app\_database.dart} & modifié & \code{schemaVersion} 15 $\rightarrow$
+16~: \code{addedViaQr}, \code{preferredAddedAt} \\
+\code{lib/core/services/local\_cache\_repository.dart} & modifié & Écritures partielles
+de l'origine, \code{watchPreferredContacts} \\
+\code{lib/main.dart} & modifié & Dialogue global « ajouter en retour », rejeu des liens \\
+\code{lib/widgets/common/app\_avatar.dart} & modifié & Option \code{qrBadge} \\
+\code{lib/screens/chats/chats\_screen.dart} & modifié & Pastille dans la liste des
+discussions \\
+\code{lib/screens/chats/contact\_detail\_screen.dart} & modifié & Mention datée \\
+\code{lib/screens/profile/preferred\_contacts\_screen.dart} & modifié & Filtre
+« Tous / Par QR » \\
+\code{lib/screens/profile/profile\_screen.dart} & modifié & Icône QR \\
+\code{lib/widgets/add\_contact\_sheet.dart} & modifié & Bouton « Scanner un code »,
+pastille \\
+\code{lib/screens/profile/account\_security\_screen.dart} & modifié & Sections « Appareils
+connectés » et « Lier un appareil » \\
+\code{lib/screens/authentification/login\_screen.dart} & modifié & Bouton « Se connecter
+avec un code QR » \\
+\code{pubspec.yaml} & modifié & \code{qr\_flutter}, \code{mobile\_scanner},
+\code{app\_links} \\
+\code{lib/l10n/*} & modifié & Nouvelles clés \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Administration --- hors périmètre]
+Aucun écran \code{talky-admin} n'est nécessaire à ce volet. Une vue support « appareils
+connectés d'un compte » serait une extension naturelle mais n'a pas été demandée --- signalée
+au chapitre suivant, pas conçue ici.
+\end{note}
+
+\chapter{Vérification}
+
+\section{Backend}
+
+Appliquer \code{026\_qr\_appareils.sql} \textbf{et} \code{027\_pref\_contact\_added\_via.sql}
+\textbf{avant} de déployer le code, redémarrer, puis~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \code{npm run test:qr} $\rightarrow$ les deux stores en mémoire passent
+        (\code{qrLoginSessions}, \code{qrContactTokens}) ;
+  \item \code{POST~/api/qr/contact-token} deux fois $\rightarrow$ deux jetons
+        différents, et le \emph{premier} ne résout plus (un seul actif par compte)~;
+        \code{GET~/api/qr/me} et \code{POST~/regenerate} $\rightarrow$ 403
+        \code{BUSINESS\_ONLY}~; résoudre un \code{/q/u/} même valide en base
+        $\rightarrow$ 404 ;
+  \item résoudre le jeton \code{/q/c/} d'un autre compte $\rightarrow$ ligne
+        \code{preferredContact} avec \code{added\_via = 'qr'}, événement
+        \code{qr:contact\_scanned} reçu par le propriétaire (\code{alreadyMutual}
+        correct), et le \textbf{rejouer} $\rightarrow$ 404~: le jeton est consommé.
+        Propriétaire sans socket au premier plan $\rightarrow$ push
+        \code{qr\_contact\_scanned}~; au premier plan $\rightarrow$ pas de push ;
+  \item scanner \emph{son propre} jeton $\rightarrow$ 200 \code{\{self:true\}}, jamais
+        une erreur --- et le jeton \textbf{survit}~; même survie après le 403 d'un
+        compte bloqué ;
+  \item \code{GET~/q/c/:token} dans un navigateur $\rightarrow$ la page d'identité, et
+        le jeton résout toujours ensuite (la page ne consomme pas)~;
+        \code{GET~/q/u/:token} $\rightarrow$ « Ce code n'est plus valide » ;
+  \item \code{POST~/api/contacts/:id} avec \code{\{addedVia:'qr'\}} $\rightarrow$ ligne
+        marquée \code{qr}~; avec \code{\{addedVia:'pigeon'\}} $\rightarrow$ ligne
+        marquée \code{search} (liste blanche) ;
+  \item créer une session QR, la laisser expirer $\rightarrow$ \code{status = expired} au
+        polling suivant ;
+  \item interroger une session avec un \code{X-Poll-Token} erroné $\rightarrow$
+        \code{expired}, indistinguable d'une session inconnue~; sans en-tête du tout
+        $\rightarrow$ 400 ;
+  \item créer une session, la résoudre depuis un second compte, \textbf{approuver}
+        $\rightarrow$ ligne \code{appareils} créée, jetons valides, \code{appareilId}
+        présent dans leur charge utile. Rejouer l'interrogation $\rightarrow$
+        \code{expired}~: les jetons ne sont livrés qu'une fois ;
+  \item approuver \textbf{deux fois} la même session, quasi simultanément $\rightarrow$
+        la seconde reçoit 409, jamais une seconde paire de jetons ;
+  \item \code{DELETE~/api/auth/device-sessions/:id} sur un appareil actif $\rightarrow$
+        sa requête authentifiée \textbf{suivante} échoue immédiatement, socket fermée ;
+        le même appareil qui se reconnecte obtient une ligne au \code{id} \textbf{différent}.
+\end{enumerate}
+
+\section{Client}
+
+\code{flutter pub get} $\rightarrow$ \code{flutter run}.
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Ouvrir « Mon code » $\rightarrow$ compte à rebours à 10:00, fondé sur
+        \code{ttlMs}~; à zéro, un code neuf s'affiche sans geste.
+  \item Scanner le code d'un contact $\rightarrow$ ajout instantané, carte de résultat
+        avec « Annuler » fonctionnel, caméra toujours vivante derrière~; enchaîner un
+        second scan sans ressortir de l'écran. Rejouer le même code $\rightarrow$
+        « code inconnu ou expiré ».
+  \item Côté propriétaire, au scan~: dialogue « ajouter en retour » où qu'on soit dans
+        l'app (accepter $\rightarrow$ pastille des deux côtés)~; app en arrière-plan
+        $\rightarrow$ notification~; scanneur déjà en contact $\rightarrow$ simple
+        information. L'écran « Mon code », s'il est ouvert, affiche un code neuf.
+  \item Vérifier la distinction~: pastille sur l'avatar dans les listes \emph{et} la
+        liste des discussions, mention « Ajouté par QR code · date » sur la fiche,
+        filtre « Tous / Par QR » avec les bons comptes --- y compris après redémarrage
+        de l'app (cache Drift).
+  \item Importer depuis la galerie une capture d'un code $\rightarrow$ même carte de
+        résultat que par la caméra~; une image sans code et un code d'une autre app
+        $\rightarrow$ deux messages distincts.
+  \item Scanner son propre code, puis un code expiré $\rightarrow$ messages distincts,
+        caméra jamais bloquée.
+  \item Connecter un second appareil de bout en bout~: code affiché, scan depuis le
+        premier, fiche correcte, confirmation, jetons reçus par polling.
+  \item \textbf{Thème sombre}~: la carte du QR personnel reste blanche.
+  \item Réinstaller l'app sur le même appareil physique~: sur \textbf{Android}, il ne
+        réapparaît \emph{pas} comme un second appareil dans la liste (\code{ANDROID\_ID}
+        stable). Sur iOS, il réapparaît si c'était la dernière application du vendeur ---
+        limite connue.
+  \item Déconnecter un appareil depuis un autre~: l'appareil visé se déconnecte
+        \textbf{tout seul} à la réception d'\code{auth:device\_revoked}, sans attendre un
+        appel réseau. Refaire le test \emph{application fermée}~: il doit alors tomber au
+        premier 401.
+  \item Régler l'horloge du téléphone avec 5~minutes d'avance, puis afficher un QR de
+        connexion~: le compte à rebours doit partir de 90~s (\code{ttlMs}) et non expirer
+        immédiatement.
+\end{enumerate}
+
+\chapter{Points de vigilance et questions ouvertes}
+
+\begin{alerte}[Ajout instantané~: le garde-fou est devenu structurel]
+La règle produit --- ajouter sans confirmation --- garde pour seul filet côté scanneur
+la carte de résultat annulable. Mais le régime éphémère borne désormais l'exposition
+côté propriétaire~: dix minutes de vie, usage unique, et un propriétaire prévenu à
+chaque consommation. Le scénario du code affiché en contexte public (vitrine, affiche)
+ne concerne plus que les codes permanents --- à réexaminer au moment d'ouvrir le verrou
+business (section~\ref{sec:qr-verrou-business}).
+\end{alerte}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Coût de la vérification en garde} (chapitre~\ref{ch:revocation})~:
+        une jointure de plus par requête authentifiée, dans \textbf{trois} fichiers quasi
+        dupliqués (\code{auth.js}, \code{authCustom.js}, \code{socket/handlers/auth.js}).
+        Assumé ici ; leur fusion serait une occasion naturelle, mais indépendante de ce
+        volet --- et le risque, en l'état, est qu'une évolution future n'en corrige que
+        deux sur trois.
+  \item \textbf{Pas de limiteur dédié sur l'interrogation de statut.}
+        \code{GET~/api/auth/qr-session/:sessionId} n'est couvert que par le
+        \code{generalLimiter} global (300~/~min~/~IP). Un limiteur calibré pour du
+        \emph{polling} (${\sim}60$~/~min~/~IP) reste à poser --- en aucun cas
+        \code{authLimiter}, qui casserait la fonctionnalité.
+  \item \textbf{\code{auth:conflict} a désormais un émetteur.} L'événement, qui existait
+        côté mobile sans jamais être émis, est maintenant diffusé par
+        \code{authCustomController.js} (connexion par mot de passe) et par
+        \code{qrAuthController.js} (approbation d'une session QR). Son nom reste
+        discutable~: il annonce une \emph{nouvelle connexion sur le compte}, pas un
+        conflit. Le renommer reste ouvert, et coûterait un déploiement coordonné des deux
+        côtés.
+  \item \textbf{Aucune limite} au nombre d'appareils simultanés n'est proposée. Rien dans
+        la demande ne l'impose ; un garde-fou futur (avertissement au-delà d'un seuil, à
+        la manière de certains services bancaires) resterait compatible avec ce schéma.
+  \item \textbf{\code{push\_device\_id} n'est écrit par personne.} La colonne existe,
+        nullable, et \emph{aucun} code ne la renseigne à ce jour --- ni le client, ni le
+        backend. Elle reste posée pour le badge « notifications activées », qui demanderait
+        de faire remonter le \code{deviceId} push au moment du login. En attendant, l'écran
+        « Appareils connectés » doit se comporter comme si elle était toujours vide (aucun
+        badge, pas d'erreur), ce qui est le cas aujourd'hui. Rappel~: un utilisateur qui
+        refuse les notifications n'aura de toute façon jamais de correspondance dans
+        \code{user\_push\_devices}.
+  \item \textbf{L'identifiant matériel n'est pas un secret.} \code{ANDROID\_ID} est
+        diffusé à tout le compte dans \code{auth:device\_revoked}, et
+        \code{identifierForVendor} est lisible par toute application du même vendeur. Cela
+        reste acceptable~: connaître le \code{device\_id} d'un appareil ne permet ni de
+        s'y substituer ni de le révoquer --- ces deux gestes demandent un jeton valide du
+        compte. Mais c'est une raison de plus pour que l'API n'expose jamais ce champ dans
+        la liste des appareils, ce qu'elle ne fait pas (pas plus que l'adresse~IP).
+  \item \textbf{La push « code scanné » informe, elle ne rejoue pas.} Le dialogue
+        d'ajout en retour n'est déclenché que par l'événement socket
+        \code{qr:contact\_scanned}, reçu app ouverte. La notification
+        \code{qr\_contact\_scanned} (émise seulement quand aucun socket n'est au premier
+        plan) n'est pas mise en attente côté client~: un propriétaire qui ouvre l'app
+        \emph{après} l'avoir balayée ne revoit pas l'invitation --- il lui reste la
+        pastille et la fiche du nouveau contact pour l'ajouter à la main. Limite
+        assumée~; un rejeu demanderait de router ce type de push jusqu'au dialogue.
+  \item \textbf{Le verrou business est un TODO nommé.} \code{\_qrPermanentAutorise}
+        refuse tout le monde tant que \code{account\_type} (volet~1) n'existe pas
+        (section~\ref{sec:qr-verrou-business}). Toute l'infrastructure du permanent ---
+        colonne, \emph{mint-if-absent}, régénération, page publique, extensions client
+        dormantes --- attend derrière ce seul prédicat.
+\end{enumerate}

@@ -104,6 +104,13 @@ abstract class ChatApi {
     int conversID, {
     bool? onlyAdminsCanSend,
     bool? onlyAdminsCanEditInfo,
+    bool? hideHistoryForNewMembers,
+    bool? onlyAdminsCanAddMembers,
+  });
+
+  Future<Map<String, dynamic>> ackGroupJoin(
+    int conversID, {
+    int? msgID,
   });
 
   Future<Map<String, dynamic>> addParticipants(

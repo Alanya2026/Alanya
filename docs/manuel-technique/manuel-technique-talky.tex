@@ -1,0 +1,1828 @@
+% =====================================================================
+%  MANUEL TECHNIQUE --- Alanya
+%  Application Flutter (client) + Serveur Alanya-Backend
+%
+%  Compilation recommandee :
+%     pdflatex (x2)  |  latexmk -pdf  |  Overleaf (pdfLaTeX)
+%
+%  Images manquantes : placer les PNG dans les sous-dossiers :
+%       images/logo-enspy.png
+%       images/logo-Alanya.png
+%       diagrammes/CONTEXTE_ALANYA_BD.drawio.png
+%       diagrammes/PACKAGE_ALANYA_BD.drawio.png
+%       diagrammes/MCD_ALANYA_BD.png
+%       diagrammes/DEPLOIEMENT_ALANYA_BD.drawio.png
+%       images/diagramme-cas-utilisation.png
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+% --------------------------------------------------------------------
+%  Encodage, polices, langue
+% --------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage{microtype}
+
+% --------------------------------------------------------------------
+%  Mise en page
+% --------------------------------------------------------------------
+\usepackage[a4paper,margin=2.4cm,headheight=15pt]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage[skins]{tcolorbox}
+
+% --------------------------------------------------------------------
+%  Diagrammes
+% --------------------------------------------------------------------
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,calc,backgrounds}
+
+% --------------------------------------------------------------------
+%  Liens (charge en dernier)
+% --------------------------------------------------------------------
+\usepackage[hidelinks]{hyperref}
+
+% --------------------------------------------------------------------
+%  Palette de marque Alanya
+% --------------------------------------------------------------------
+\definecolor{AlanyaIndigo}{HTML}{3F51B5}
+\definecolor{AlanyaIndigoDark}{HTML}{1A237E}
+\definecolor{AlanyaIndigoStrong}{HTML}{303F9F}
+\definecolor{AlanyaContainer}{HTML}{E8EAF6}
+\definecolor{AlanyaInk}{HTML}{1A1D23}
+\definecolor{AlanyaGray}{HTML}{5B6273}
+\definecolor{AlanyaLine}{HTML}{CBD0E0}
+\definecolor{codeBg}{HTML}{F6F7FB}
+\definecolor{codeKw}{HTML}{303F9F}
+\definecolor{codeStr}{HTML}{1FA363}
+\definecolor{codeCom}{HTML}{9AA0AE}
+\definecolor{warning}{HTML}{B7791F}
+\definecolor{danger}{HTML}{C0392B}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  citecolor=AlanyaIndigoStrong,
+  pdftitle={Manuel technique - Alanya},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Documentation technique - Application Flutter et serveur Alanya-Backend}
+}
+
+% --------------------------------------------------------------------
+%  En-tetes / pieds de page
+% --------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\nouppercase{\leftmark}}
+\fancyhead[R]{\small\textcolor{AlanyaIndigo}{\textbf{Alanya}} --- Manuel technique}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.0pt}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}\fancyfoot[C]{\small\thepage}%
+  \renewcommand{\headrulewidth}{0pt}}
+
+% --------------------------------------------------------------------
+%  Titres de chapitres / sections
+% --------------------------------------------------------------------
+\titleformat{\chapter}[display]
+  {\normalfont\sffamily\bfseries\color{AlanyaIndigo}}
+  {\filright\large CHAPITRE\ \Huge\thechapter}
+  {0.6ex}{\Huge}
+\titlespacing*{\chapter}{0pt}{10pt}{30pt}
+
+\titleformat{\section}
+  {\normalfont\sffamily\Large\bfseries\color{AlanyaIndigoDark}}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\sffamily\large\bfseries\color{AlanyaIndigoStrong}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\sffamily\normalsize\bfseries\color{AlanyaInk}}{\thesubsubsection}{1em}{}
+
+% --------------------------------------------------------------------
+%  Listings (code source) -- fleche de continuation supprimee
+% --------------------------------------------------------------------
+\lstdefinelanguage{Dart}{
+  morekeywords={abstract,async,await,class,const,extends,final,Future,if,else,
+    import,in,new,return,static,super,this,var,void,bool,int,double,String,
+    List,Map,true,false,null,override,late,required,factory,get,set,enum,yield},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]'
+}
+\lstdefinelanguage{JavaScript}{
+  morekeywords={async,await,break,case,catch,class,const,continue,default,
+    delete,do,else,export,extends,false,finally,for,function,if,import,in,
+    instanceof,let,new,null,of,require,return,super,switch,this,throw,true,
+    try,typeof,var,void,while,yield},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]'
+}
+\lstdefinelanguage{EnvFile}{
+  morecomment=[l]{\#},
+  sensitive=false
+}
+
+\lstdefinestyle{Alanya}{
+  backgroundcolor=\color{codeBg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codeKw}\bfseries,
+  commentstyle=\color{codeCom}\itshape,
+  stringstyle=\color{codeStr},
+  numberstyle=\tiny\color{codeCom},
+  numbers=left,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2,
+  frame=single,
+  rulecolor=\color{AlanyaLine},
+  framesep=6pt,
+  xleftmargin=14pt,
+  aboveskip=10pt,
+  belowskip=8pt,
+  captionpos=b
+}
+\lstset{style=Alanya}
+
+% --------------------------------------------------------------------
+%  Macros utilitaires
+% --------------------------------------------------------------------
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+\newcommand{\mGET}{\textcolor{codeStr}{\textbf{GET}}}
+\newcommand{\mPOST}{\textcolor{AlanyaIndigoStrong}{\textbf{POST}}}
+\newcommand{\mPUT}{\textcolor{warning}{\textbf{PUT}}}
+\newcommand{\mDEL}{\textcolor{danger}{\textbf{DELETE}}}
+
+% Cadre de remplacement si image absente
+% Cadre fallback si l'image est absente
+\newcommand{\imageOuCadre}[3]{%
+  \IfFileExists{#1}{%
+    \includegraphics[width=#2]{#1}%
+  }{%
+    \fbox{\begin{minipage}[c][4.2cm][c]{#2}%
+      \centering\sffamily\color{AlanyaGray}%
+      \textbf{[ Image manquante ]}\\[6pt]%
+      \small #3%
+    \end{minipage}}%
+  }%
+}
+% Encadre note
+\newenvironment{note}[1][Note]{%
+  \begin{tcolorbox}[enhanced, frame hidden, interior hidden,
+    borderline west={3pt}{0pt}{AlanyaIndigo},
+    left=10pt, top=3pt, bottom=3pt, sharp corners, colback=white,
+    before skip=\medskipamount, after skip=\medskipamount]%
+  \small\textbf{\textcolor{AlanyaIndigoDark}{#1.}}\space\ignorespaces
+}{\end{tcolorbox}}
+
+\newcommand{\thd}[1]{\textbf{\textcolor{AlanyaIndigoDark}{#1}}}
+
+\renewcommand{\arraystretch}{1.25}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+
+% --------------------------------------------------------------------
+\begin{document}
+
+% ====================================================================
+%  PAGE DE GARDE -- VERSION ACADEMIQUE
+% ====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  % Bande superieure : logos + universite
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-7.8cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-7.8cm]current page.north west) rectangle ([yshift=-7.2cm]current page.north east);
+  % % Bande inferieure
+  % \fill[AlanyaIndigo]
+  %   (current page.south west) rectangle ([yshift=1.4cm]current page.south east);
+\end{tikzpicture}
+
+% -- Zone superieure : logos + nom de l'ecole ---
+\vspace*{0.45cm}
+{\color{white}\sffamily
+\begin{minipage}[c]{0.38\linewidth}
+  \centering
+  \IfFileExists{logopo-rbg.png}{%
+    \includegraphics[width=3.2cm]{logopo-rbg.png}}{%
+    \fbox{\begin{minipage}[c][2.8cm][c]{3.4cm}
+      \centering\footnotesize\color{AlanyaGray}
+      \textbf{Logo ENSPY}\\[3pt]images/ogorbg.png
+    \end{minipage}}}
+\end{minipage}%
+\hfill%
+\begin{minipage}[c]{0.58\linewidth}
+  \raggedleft
+  {\small UNIVERSIT\'{E} DE YAOUND\'{E}~I}\\[4pt]
+  {\small\bfseries \'{E}COLE NATIONALE SUP\'{E}RIEURE}\\
+  {\small\bfseries POLYTECHNIQUE DE YAOUND\'{E}}\\[5pt]
+  {\footnotesize D\'{e}partement G\'{e}nie Informatique}\\[3pt]
+  {\footnotesize\itshape\color{AlanyaContainer} Projet Base de Donn\'{e}es}
+\end{minipage}}
+
+\vspace{1.9cm}
+
+% -- Corps central --
+\begin{center}\sffamily
+  {\small\bfseries PROJET BASE DE DONN\'{E}ES \\[10pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[22pt]
+  {\fontsize{34}{38}\selectfont\bfseries\color{AlanyaIndigoDark} Manuel technique}\\[8pt]
+  {\large\color{AlanyaGray} Application Flutter de messagerie unifi\'{e}e}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+ Flutter \textbullet{} Serveur Node js \textbullet{} MySQL \textbullet{} Firebase \textbullet{} WebRTC}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[18pt]
+  \IfFileExists{images/logo-Alanya.png}{%
+    \includegraphics[width=5cm]{images/logo-Alanya.png}}{%
+    \fbox{\begin{minipage}[c][3.6cm][c]{5.5cm}
+      \centering\sffamily\color{AlanyaGray}
+      \textbf{Logo Alanya}\\[3pt]\texttt{images/logo-Alanya.png}
+    \end{minipage}}}
+\end{center}
+
+\vfill
+
+% -- Informations academiques --
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Groupe N° }         & 1\\[3pt]
+    \thd{Sous la supervision de : }          & Dr.\ NANA MBINKEU\\[3pt] 
+    \thd{Ann\'{e}e académique}    & 2025-2026\\[3pt]
+    \thd{Date}               & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.6cm}
+\begin{center}\color{white}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% ====================================================================
+%  RESUME (francais)
+% ====================================================================
+\chapter*{R\'{e}sum\'{e}}
+\addcontentsline{toc}{chapter}{R\'{e}sum\'{e}}
+\markboth{R\'{e}sum\'{e}}{}
+\thispagestyle{plain}
+
+Alanya est une application mobile de communication unifi\'{e}e compos\'{e}e d'un client
+\textbf{Flutter} (Android) et d'un serveur \textbf{Node.js\,/\,Express} assurant l'API REST,
+la signalisation WebRTC et la persistance MySQL\@.
+Elle int\`{e}gre la messagerie instantan\'{e}e 1-\`{a}-1 et de groupe (texte, images,
+vid\'{e}os, audio, fichiers), les appels audio et vid\'{e}o en pair-\`{a}-pair (WebRTC),
+les r\'{e}unions planifi\'{e}es avec salle d'attente, les statuts \'{e}ph\'{e}m\`{e}res de 24~h,
+la gestion des contacts pr\'{e}f\'{e}r\'{e}s et un tableau de bord d'administration.
+
+La persistance des donn\'{e}es repose sur \textbf{MySQL\,8} (13~tables) c\^{o}t\'{e} serveur
+et \textbf{Drift\,/\,SQLite} c\^{o}t\'{e} client pour le fonctionnement hors-ligne
+(\emph{offline-first}).
+La communication temps r\'{e}el est assur\'{e}e par \textbf{Socket.IO} ; les flux m\'{e}dias
+audio/vid\'{e}o utilisent le protocole \textbf{WebRTC} en mode pair-\`{a}-pair ;
+les notifications push sont achemin\'{e}es par \textbf{Firebase Cloud Messaging} (FCM).
+
+Ce document d\'{e}crit l'architecture technique, la r\'{e}f\'{e}rence compl\`{e}te des API REST,
+le mod\`{e}le de donn\'{e}es, les flux de communication de bout en bout, les mesures de
+s\'{e}curit\'{e} ainsi que les proc\'{e}dures d'installation, de d\'{e}ploiement et de maintenance.
+
+\vspace{0.8cm}
+\noindent\textbf{Mots-cl\'{e}s\,:} Flutter, Dart, Node.js, Express, WebRTC, Socket.IO,
+MySQL, Firebase FCM, JWT, API REST, messagerie instantan\'{e}e, appels vid\'{e}o,
+r\'{e}unions en ligne.
+
+% ====================================================================
+%  ABSTRACT (english)
+% ====================================================================
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\markboth{Abstract}{}
+\thispagestyle{plain}
+
+Alanya is a unified mobile communication platform composed of a \textbf{Flutter}
+client (Android) and a \textbf{Node.js\,/\,Express} backend providing a REST API,
+WebRTC signaling and MySQL persistence.
+The system integrates instant 1-to-1 and group messaging (text, images, video,
+audio, files), peer-to-peer audio/video calls (WebRTC), scheduled meetings with
+a waiting room, 24-hour ephemeral stories, preferred contact management, and an
+administration dashboard.
+
+Data persistence relies on \textbf{MySQL\,8} (13 tables) on the server side and
+\textbf{Drift\,/\,SQLite} on the client for offline-first operation.
+Real-time communication is implemented over \textbf{Socket.IO}; audio/video
+media flows use peer-to-peer \textbf{WebRTC}; push notifications are delivered
+via \textbf{Firebase Cloud Messaging} (FCM).
+
+This document covers the technical architecture, complete REST API reference,
+data model, end-to-end communication flows, security measures, and installation,
+deployment and maintenance procedures for the complete system.
+
+\vspace{0.8cm}
+\noindent\textbf{Keywords:} Flutter, Dart, Node.js, Express, WebRTC, Socket.IO,
+MySQL, Firebase FCM, JWT, REST API, instant messaging, video calls, online meetings.
+
+% ====================================================================
+%  TABLE DES MATIERES / LISTES
+% ====================================================================
+\renewcommand{\contentsname}{Table des mati\`{e}res}
+\tableofcontents
+\listoffigures
+\listoftables
+
+% ====================================================================
+\chapter{Introduction}
+\label{chap:intro}
+
+\section{Objet du document}
+Ce manuel technique d\'{e}crit l'architecture, l'impl\'{e}mentation, le d\'{e}ploiement et
+l'exploitation de \textbf{Alanya}, une plateforme de communication unifi\'{e}e.
+Il couvre l'ensemble du syst\`{e}me, c'est-\`{a}-dire les deux principaux composants qui
+le constituent~:
+\begin{itemize}[leftmargin=1.3em]
+  \item le \textbf{frontend}\,: une application mobile \emph{Flutter}
+        (\texttt{Alanya\_flutter}), cible Android~;
+  \item le \textbf{backend}\,: un serveur \emph{Node.js\,/\,Express} coupl\'{e} \`{a}
+        \emph{Socket.IO} (\'{e}d.\ \emph{Alanya-Backend}), assurant l'API REST,
+        la signalisation WebRTC, la persistance MySQL et les notifications.
+\end{itemize}
+
+\section{Public vis\'{e}}
+Le document s'adresse aux \textbf{d\'{e}veloppeurs} et aux personnes amen\'{e}es \`{a}
+maintenir, faire \'{e}voluer ou reprendre le projet. Il suppose une connaissance
+g\'{e}n\'{e}rale de Dart\,/\,Flutter, de Node.js, des bases de donn\'{e}es relationnelles
+et des concepts WebRTC.
+
+\section{Pr\'{e}sentation fonctionnelle d'Alanya}
+Alanya regroupe dans une seule application l'ensemble des services de
+communication suivants~:
+\begin{itemize}[leftmargin=1.3em]
+  \item \textbf{Messagerie} instantan\'{e}e 1-\`{a}-1 et de groupe (texte, images,
+        vid\'{e}os, audio, fichiers), avec accus\'{e}s (\emph{envoy\'{e} / distribu\'{e} / lu}),
+        r\'{e}ponses, \'{e}ditions et suppressions~;
+  \item \textbf{Appels} audio et vid\'{e}o 1-\`{a}-1 et de groupe en WebRTC, avec
+        sonnerie native, int\'{e}gration de l'\'{e}cran d'appel syst\`{e}me (CallKit)
+        et historique~;
+  \item \textbf{R\'{e}unions} (visioconf\'{e}rences planifi\'{e}es) avec salle d'attente,
+        invitations, acceptation\,/\,refus et planificateur c\^{o}t\'{e} serveur~;
+  \item \textbf{Statuts} \'{e}ph\'{e}m\`{e}res (\emph{stories}) expirant au bout de 24~h,
+        avec suivi des vues et des \og{}j'aime\fg{}~;
+  \item \textbf{Contacts pr\'{e}f\'{e}r\'{e}s}, recherche d'utilisateurs, blocage~;
+  \item \textbf{Profil} et r\'{e}glages (th\`{e}me clair\,/\,sombre, notifications)~;
+  \item \textbf{Tableau de bord d'administration} (statistiques, gestion et
+        mod\'{e}ration des utilisateurs).
+\end{itemize}
+
+\section{Glossaire}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Terme} & \thd{D\'{e}finition}\\
+\midrule
+WebRTC   & Standard de communication temps r\'{e}el pair-\`{a}-pair (audio\,/\,vid\'{e}o\,/\,data) directement entre terminaux.\\
+Signaling & \'{E}change (via le serveur) des m\'{e}tadonn\'{e}es WebRTC (SDP, candidats ICE) pour \'{e}tablir une connexion pair-\`{a}-pair.\\
+SDP      & \emph{Session Description Protocol}\,: description des capacit\'{e}s m\'{e}dia \'{e}chang\'{e}e entre pairs (offer\,/\,answer).\\
+NAT      & \emph{Network Address Translation}.\\
+APK      & \emph{Android Package Kit}.\\
+ICE      & \emph{Interactive Connectivity Establishment}\,: s\'{e}lection du meilleur chemin r\'{e}seau (STUN\,/\,TURN).\\
+STUN\,/\,TURN & Session Traversal Utilities for NAT\,/\,Traversal Using Relays around NAT --- serveurs aidant \`{a} traverser les NAT~; TURN relaie le flux quand la connexion directe est impossible.\\
+Socket.IO & Biblioth\`{e}que de communication bidirectionnelle temps r\'{e}el (WebSocket + repli).\\
+JWT      & \emph{JSON Web Token}\,: jeton sign\'{e} portant l'identit\'{e}~; ici un couple \emph{access}\,/\,\emph{refresh}.\\
+FCM      & \emph{Firebase Cloud Messaging}\,: service de notifications push de Google.\\
+Drift    & ORM SQLite typ\'{e} pour Dart\,/\,Flutter (cache local hors-ligne du client).\\
+Provider & Solution de gestion d'\'{e}tat de Flutter fond\'{e}e sur \texttt{ChangeNotifier}.\\
+Outbox   & File locale des messages en attente d'envoi, rejou\'{e}s \`{a} la reconnexion.\\
+Cert pinning & \'{E}pinglage de certificat\,: l'app ne fait confiance qu'\`{a} un certificat pr\'{e}cis embarqu\'{e}.\\
+\bottomrule
+\end{tabularx}
+
+% ====================================================================
+\chapter{Architecture globale}
+\label{chap:archi}
+
+\section{Vue d'ensemble}
+Alanya suit une architecture \textbf{client\,/\,serveur} classique enrichie d'un
+canal temps r\'{e}el. Le client Flutter communique avec le backend par deux voies
+compl\'{e}mentaires~:
+\begin{enumerate}[leftmargin=1.4em]
+  \item une \textbf{API REST} (HTTP\,/\,HTTPS) pour les op\'{e}rations
+        requ\^{e}te\,/\,r\'{e}ponse (authentification, r\'{e}cup\'{e}ration de l'historique,
+        envoi de m\'{e}dias, administration)~;
+  \item une connexion \textbf{Socket.IO} (WebSocket) permanente pour le temps
+        r\'{e}el (messages instantan\'{e}s, pr\'{e}sence, signalisation des appels et
+        r\'{e}unions, \'{e}v\'{e}nements de statuts).
+\end{enumerate}
+Les flux m\'{e}dias des appels et r\'{e}unions transitent en \textbf{pair-\`{a}-pair WebRTC},
+le backend ne jouant que le r\^{o}le de \emph{serveur de signalisation}
+(et, via TURN, de relais r\'{e}seau si n\'{e}cessaire).
+
+% Figure d'architecture TikZ (volontairement commentee -- a decommmenter si souhaite)
+% \begin{figure}[H]
+% \centering
+% \begin{tikzpicture}[...]
+% ...
+% \end{tikzpicture}
+% \caption{Architecture globale.}
+% \label{fig:archi}
+% \end{figure}
+
+\section{Pile technologique}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Couche} & \thd{Technologie} & \thd{R\^{o}le}\\
+\midrule
+Client       & Flutter\,/\,Dart (SDK \texttt{\^{}3.9.2}) & Application multiplateforme.\\
+\'{E}tat client & \texttt{provider \^{}6.1.0} & Gestion d'\'{e}tat (\texttt{ChangeNotifier}).\\
+Cache client & \texttt{drift \^{}2.20.0} (SQLite) & Persistance locale hors-ligne.\\
+Temps r\'{e}el  & \texttt{socket\_io\_client\,/\,socket.io} 4.7.5 & \'{E}v\'{e}nements bidirectionnels.\\
+M\'{e}dia P2P  & \texttt{flutter\_webrtc \^{}0.14.2} & Appels et r\'{e}unions audio\,/\,vid\'{e}o.\\
+Backend      & Node.js \texttt{>=18} + Express \texttt{\^{}4.22.1} & API REST + serveur de signalisation.\\
+Base de donn\'{e}es & MySQL\,8 (\texttt{mysql2 \^{}3.22.1}) & Persistance serveur (13\,tables).\\
+Auth         & \texttt{jsonwebtoken} + \texttt{bcryptjs} & JWT access\,/\,refresh, hachage des mots de passe.\\
+Push         & \texttt{firebase-admin}\,/\,\texttt{firebase\_messaging} & Notifications (messages, appels).\\
+Email        & \texttt{nodemailer} (SMTP Gmail) & OTP de r\'{e}initialisation de mot de passe.\\
+Doc.\ API    & \texttt{swagger-jsdoc} + \texttt{swagger-ui-express} & OpenAPI 3.0 expos\'{e} sur \texttt{/api/docs}.\\
+\bottomrule
+\end{tabularx}
+\caption{Pile technologique du syst\`{e}me Alanya.}
+\label{tab:stack}
+\end{table}
+
+\section{Diagramme de contexte}
+\begin{figure}[H]
+\centering
+\imageOuCadre{diagrammes/CONTEXTE_ALANYA_BD.drawio.png}{0.7\linewidth}{Diagramme de contexte}
+\caption{Diagramme de contexte du syst\`{e}me Alanya.}
+\label{fig:contexte}
+\end{figure}
+
+\section{Diagramme de packages}
+\begin{figure}[H]
+\centering
+\imageOuCadre{diagrammes/PACKAGE_ALANYA_BD.drawio.png}{0.85\linewidth}{Diagramme de packages}
+\caption{Diagramme de packages\,/\,modules.}
+\label{fig:package}
+\end{figure}
+
+\section{Diagramme entit\'{e}s\,-\,relations}
+\begin{figure}[H]
+\centering
+\imageOuCadre{diagrammes/MCD_ALANYA_BD.png}{\linewidth}{Diagramme MCD (entit\'{e}s-relations)}
+\caption{Diagramme entit\'{e}s\,-\,relations (MCD).}
+\label{fig:er-mcd}
+\end{figure}
+
+% ====================================================================
+\chapter{Backend}
+\label{chap:backend}
+
+\section{Structure du projet}
+Le serveur (\texttt{Alanya-Backend}, point d'entr\'{e}e \texttt{server.js})
+suit une organisation en couches inspir\'{e}e du mod\`{e}le MVC, compl\'{e}t\'{e}e d'une couche
+temps r\'{e}el.
+
+\begin{lstlisting}[language=bash,caption={Arborescence du backend},captionpos=b]
+Alanya-Backend/
+|-- server.js               # Point d'entree : Express + Socket.IO
+|-- package.json            # Dependances, scripts (start / dev)
+|-- migrations/             # Scripts SQL (001 -> 005)
+|-- serviceAccountKey.json  # Cle de service Firebase
+\-- src/
+    |-- config/             # db.js, firebase.js, swagger.js
+    |-- middleware/         # auth.js, authCustom.js, adminAuth.js,
+    |                       # rateLimiter.js, upload.js, errorHandler.js
+    |-- routes/             # 15 fichiers de routes
+    |-- controllers/        # logique metier (11 controleurs)
+    |-- socket/
+    |   |-- handlers/       # auth.js, chat.js, calls.js, meetings.js
+    |   \-- state/          # pendingCalls.js (buffer appels hors-ligne)
+    |-- services/           # notificationService, mailService,
+    |                       # meetingScheduler, ...
+    |-- utils/              # turnCredentials.js (ICE/TURN)
+    \-- templates/          # email-template.html
+\end{lstlisting}
+
+Le montage des routes dans \texttt{server.js} associe chaque pr\'{e}fixe d'URL \`{a} son
+module~:
+
+\begin{lstlisting}[language=JavaScript,caption={Montage des routes (extrait de server.js)},captionpos=b]
+app.use('/api/auth',          authCustomRoutes);
+app.use('/api/pays',          paysRoutes);
+app.use('/api/users',         userRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/conversations', messageRoutes);   // GET/POST .../:id/messages
+app.use('/api/messages',      messageOpsRoutes); // PUT/DELETE /:id
+app.use('/api/status',        statusRoutes);
+app.use('/api/calls',         callRoutes);
+app.use('/api/meetings',      meetingRoutes);
+app.use('/api/upload',        uploadRoutes);
+app.use('/api/contacts',      contactRoutes);
+app.use('/api/turn',          turnRoutes);
+app.use('/api/admin',         adminRoutes);
+app.use('/notify',            notifyRoutes);
+app.get('/health', (_, res) => res.json({ status: 'Serveur ok' }));
+\end{lstlisting}
+
+\section{API REST --- r\'{e}f\'{e}rence compl\`{e}te}
+Toutes les routes (hors \texttt{/api/auth/register}, \texttt{/login},
+\texttt{/refresh}, les routes de r\'{e}initialisation de mot de passe, \texttt{/api/pays}
+et \texttt{/health}) exigent un en-t\^{e}te \texttt{Authorization: Bearer <access\_token>}.
+Les routes d'administration exigent en plus un compte administrateur
+(intergiciel \texttt{adminAuth}).
+
+\subsection{Authentification --- \texttt{/api/auth}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l p{6.5cm} X@{}}
+\toprule
+\thd{M\'{e}thode} & \thd{Chemin} & \thd{Description}\\
+\midrule
+\mPOST & \texttt{/api/auth/register} & Cr\'{e}ation de compte.\\
+\mPOST & \texttt{/api/auth/login} & Connexion (t\'{e}l\'{e}phone + mot de passe)~; renvoie access + refresh.\\
+\mPOST & \texttt{/api/auth/refresh} & Renouvellement de l'access token via le refresh token.\\
+\mPOST & \texttt{/api/auth/forgot-password} & Envoi d'un OTP \`{a} 6\,chiffres par email.\\
+\mPOST & \texttt{/api/auth/validate-otp} & Validation de l'OTP~; renvoie un \texttt{resetToken}.\\
+\mPOST & \texttt{/api/auth/reset-password-confirm} & Changement de mot de passe via \texttt{resetToken}.\\
+\mPOST & \texttt{/api/auth/reset-password} & R\'{e}initialisation directe (h\'{e}rit\'{e}e).\\
+\mGET  & \texttt{/api/auth/me} & Profil de l'utilisateur courant.\\
+\mPUT  & \texttt{/api/auth/me} & Mise \`{a} jour du profil.\\
+\mPUT  & \texttt{/api/auth/fcm-token} & Mise \`{a} jour du jeton FCM (push).\\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints d'authentification.}
+\end{table}
+
+\subsection{Utilisateurs --- \texttt{/api/users}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l p{5.2cm} X@{}}
+\toprule
+\thd{M\'{e}thode} & \thd{Chemin} & \thd{Description}\\
+\midrule
+\mGET  & \texttt{/api/users/search?q=} & Recherche d'utilisateurs (max 20\,r\'{e}sultats).\\
+\mGET  & \texttt{/api/users/phone/:phone} & Recherche par num\'{e}ro de t\'{e}l\'{e}phone.\\
+\mGET  & \texttt{/api/users/:id} & Profil d'un utilisateur.\\
+\mGET  & \texttt{/api/users/:id/block} & \'{E}tat de blocage.\\
+\mPOST & \texttt{/api/users/:id/block} & Bloquer un utilisateur.\\
+\mDEL  & \texttt{/api/users/:id/block} & D\'{e}bloquer un utilisateur.\\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints utilisateurs.}
+\end{table}
+
+\subsection{Conversations \& messages --- \texttt{/api/conversations}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l p{7cm} X@{}}
+\toprule
+\thd{M\'{e}thode} & \thd{Chemin} & \thd{Description}\\
+\midrule
+\mGET  & \texttt{/api/conversations} & Liste des conversations.\\
+\mPOST & \texttt{/api/conversations} & Cr\'{e}er une conversation priv\'{e}e 1-\`{a}-1.\\
+\mPOST & \texttt{/api/conversations/group} & Cr\'{e}er une conversation de groupe.\\
+\mGET  & \texttt{/api/conversations/:id} & D\'{e}tail d'une conversation.\\
+\mPUT  & \texttt{/api/conversations/:id} & Modifier (nom, photo, \'{e}pingl\'{e}, archiv\'{e}).\\
+\mDEL  & \texttt{/api/conversations/:id} & Supprimer\,/\,quitter.\\
+\mPOST & \texttt{/api/conversations/:id/read} & Marquer tous les messages comme lus.\\
+\mPOST & \texttt{/api/conversations/:id/leave} & Quitter un groupe.\\
+\mPOST & \texttt{/api/conversations/:id/participants} & Ajouter des membres.\\
+\mGET  & \texttt{/api/conversations/:id/messages} & Messages (pagination par curseur).\\
+\mPOST & \texttt{/api/conversations/:id/messages} & Envoyer un message.\\
+\mPUT  & \texttt{/api/messages/:id} & \'{E}diter un message.\\
+\mDEL  & \texttt{/api/messages/:id?all=} & Supprimer (pour soi ou pour tous).\\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints conversations et messages.}
+\end{table}
+
+\subsection{Appels --- \texttt{/api/calls}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l p{4.6cm} X@{}}
+\toprule
+\thd{M\'{e}thode} & \thd{Chemin} & \thd{Description}\\
+\midrule
+\mGET  & \texttt{/api/calls} & Historique d'appels (50 plus r\'{e}cents).\\
+\mPOST & \texttt{/api/calls} & Cr\'{e}er un enregistrement d'appel.\\
+\mPUT  & \texttt{/api/calls/:id/end} & Terminer\,/\,marquer manqu\'{e}.\\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints appels.}
+\end{table}
+
+\subsection{R\'{e}unions --- \texttt{/api/meetings}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l p{6.6cm} X@{}}
+\toprule
+\thd{M\'{e}thode} & \thd{Chemin} & \thd{Description}\\
+\midrule
+\mGET  & \texttt{/api/meetings} & Liste des r\'{e}unions de l'utilisateur.\\
+\mPOST & \texttt{/api/meetings} & Cr\'{e}er une r\'{e}union planifi\'{e}e.\\
+\mGET  & \texttt{/api/meetings/by-room/:room} & Recherche par identifiant de salle.\\
+\mGET  & \texttt{/api/meetings/:id} & D\'{e}tail d'une r\'{e}union.\\
+\mPUT  & \texttt{/api/meetings/:id} & Modifier une r\'{e}union.\\
+\mDEL  & \texttt{/api/meetings/:id} & Supprimer une r\'{e}union.\\
+\mPOST & \texttt{/api/meetings/:id/join} & Rejoindre une r\'{e}union.\\
+\mPOST & \texttt{/api/meetings/:id/leave} & Quitter une r\'{e}union.\\
+\mPOST & \texttt{/api/meetings/:id/invite} & Inviter des participants.\\
+\mPOST & \texttt{/api/meetings/:id/accept/:userId} & Accepter une demande.\\
+\mPOST & \texttt{/api/meetings/:id/decline/:userId} & Refuser une demande.\\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints r\'{e}unions.}
+\end{table}
+
+\subsection{Statuts --- \texttt{/api/status}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l p{5.6cm} X@{}}
+\toprule
+\thd{M\'{e}thode} & \thd{Chemin} & \thd{Description}\\
+\midrule
+\mGET  & \texttt{/api/status} & Statuts actifs des contacts.\\
+\mPOST & \texttt{/api/status} & Cr\'{e}er un statut (texte\,/\,image\,/\,vid\'{e}o).\\
+\mGET  & \texttt{/api/status/me} & Mes statuts actifs.\\
+\mDEL  & \texttt{/api/status/:id} & Supprimer un statut.\\
+\mPOST & \texttt{/api/status/:id/view} & Marquer comme vu.\\
+\mGET  & \texttt{/api/status/:id/views} & Liste des vues.\\
+\mPOST & \texttt{/api/status/:id/like} & Aimer.\\
+\mDEL  & \texttt{/api/status/:id/like} & Retirer le \og{}j'aime\fg{}.\\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints statuts.}
+\end{table}
+
+\subsection{Contacts, upload, TURN, pays}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l p{4.6cm} X@{}}
+\toprule
+\thd{M\'{e}thode} & \thd{Chemin} & \thd{Description}\\
+\midrule
+\mGET  & \texttt{/api/contacts} & Liste des contacts favoris.\\
+\mGET  & \texttt{/api/contacts/check/:id} & V\'{e}rifier si un utilisateur est contact.\\
+\mPOST & \texttt{/api/contacts/:id} & Ajouter un favori.\\
+\mDEL  & \texttt{/api/contacts/:id} & Retirer un favori.\\
+\mPOST & \texttt{/api/upload/avatar} & T\'{e}l\'{e}verser une photo de profil (max 5\,Mo).\\
+\mPOST & \texttt{/api/upload/media} & T\'{e}l\'{e}verser un m\'{e}dia de message (max 50\,Mo).\\
+\mGET  & \texttt{/api/turn/credentials} & Serveurs ICE (STUN + TURN, identifiants \'{e}ph\'{e}m\`{e}res).\\
+\mGET  & \texttt{/api/pays} & R\'{e}f\'{e}rentiel des pays.\\
+\mPOST & \texttt{/notify} & D\'{e}clenchement manuel d'une notification push.\\
+\mGET  & \texttt{/health} & Sonde de sant\'{e}.\\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints contacts, upload, TURN, r\'{e}f\'{e}rentiels.}
+\end{table}
+
+\subsection{Administration --- \texttt{/api/admin}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l p{6.5cm} X@{}}
+\toprule
+\thd{M\'{e}thode} & \thd{Chemin} & \thd{Description}\\
+\midrule
+\mPOST & \texttt{/api/admin/auth/login} & Connexion administrateur.\\
+\mGET  & \texttt{/api/admin/stats?from=\&to=} & Statistiques du tableau de bord.\\
+\mGET  & \texttt{/api/admin/users?search=\&status=} & Liste pagin\'{e}e des utilisateurs.\\
+\mGET  & \texttt{/api/admin/users/:id} & D\'{e}tail d'un utilisateur.\\
+\mGET  & \texttt{/api/admin/users/:id/activity} & Journal d'activit\'{e}.\\
+\mGET  & \texttt{/api/admin/users/:id/logins} & Historique de connexions.\\
+\mPOST & \texttt{/api/admin/users/:id/ban} & Bannir un utilisateur.\\
+\mDEL  & \texttt{/api/admin/users/:id/ban} & Lever le bannissement.\\
+\mPUT  & \texttt{/api/admin/users/:id/role} & D\'{e}finir le type de compte (super-admin requis).\\
+\mDEL  & \texttt{/api/admin/users/:id} & Supprimer un utilisateur (super-admin requis).\\
+\bottomrule
+\end{tabularx}
+\caption{Endpoints d'administration.}
+\end{table}
+
+\section{Mod\`{e}le de donn\'{e}es (MySQL)}
+La base (\texttt{utf8mb4}, fuseau UTC) comporte 13\,tables. Les codes num\'{e}riques
+(types et statuts) sont document\'{e}s dans les commentaires SQL des migrations.
+Le sch\'{e}ma relationnel complet est pr\'{e}sent\'{e} en
+annexe~\ref{ann:er} (figure~\ref{fig:er}).
+
+\subsection{Table \texttt{users}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Champ} & \thd{Type} & \thd{R\^{o}le}\\
+\midrule
+\texttt{alanyaID}           & INT PK       & Identifiant utilisateur (auto).\\
+\texttt{nom}                & VARCHAR(60)  & Nom affich\'{e}.\\
+\texttt{pseudo}             & VARCHAR(80)  & Pseudonyme.\\
+\texttt{alanyaPhone}        & VARCHAR(20) U & T\'{e}l\'{e}phone (identifiant de connexion, unique).\\
+\texttt{idPays}             & SMALLINT FK  & R\'{e}f\'{e}rence \texttt{pays.idPays}.\\
+\texttt{password}           & VARCHAR(255) & Hash bcrypt.\\
+\texttt{email}              & VARCHAR(255) U & Email (auth + reset, unique).\\
+\texttt{avatar\_url}        & VARCHAR(255) & URL de l'avatar.\\
+\texttt{type\_compte}       & SMALLINT     & Type de compte (0 = standard\ldots).\\
+\texttt{is\_online}         & TINYINT      & Pr\'{e}sence en ligne.\\
+\texttt{last\_seen}         & DATETIME     & Derni\`{e}re activit\'{e}.\\
+\texttt{exclus}             & TINYINT      & Banni (1) --- bloque la connexion.\\
+\texttt{exclude\_at}        & DATETIME     & Date du bannissement.\\
+\texttt{exclude\_reason}    & VARCHAR(255) & Motif du bannissement.\\
+\texttt{in\_call}           & TINYINT      & En appel.\\
+\texttt{biometric}          & TINYINT      & Auth biom\'{e}trique activ\'{e}e.\\
+\texttt{fcm\_token}         & VARCHAR(255) & Jeton de push FCM.\\
+\texttt{device\_ID}         & VARCHAR(255) & Identifiant appareil.\\
+\texttt{reset\_otp}         & VARCHAR(6)   & OTP de r\'{e}initialisation.\\
+\texttt{reset\_otp\_expires\_at} & DATETIME & Expiration de l'OTP (10\,min).\\
+\texttt{created\_at}        & DATETIME     & Date d'inscription.\\
+\bottomrule
+\end{tabularx}
+\caption{Table \texttt{users} (comptes utilisateurs).}
+\end{table}
+
+\subsection{Tables \texttt{conversation} et \texttt{conv\_participants}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Champ} & \thd{Type} & \thd{R\^{o}le}\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{conversation}}\\
+\texttt{conversID}            & BIGINT PK  & Identifiant de conversation.\\
+\texttt{isGroup}              & TINYINT    & 1 = groupe, 0 = 1-\`{a}-1.\\
+\texttt{GroupName}            & VARCHAR(255) & Nom du groupe.\\
+\texttt{groupPhoto}           & VARCHAR(255) & Photo du groupe.\\
+\texttt{lastMessage}          & TEXT         & Aper\c{c}u du dernier message.\\
+\texttt{lastMessageAt}        & DATETIME     & Horodatage du dernier message.\\
+\texttt{lastMessageSenderID}  & INT FK       & Auteur du dernier message.\\
+\texttt{lastMessageType}      & SMALLINT     & 0=texte 1=image 2=vid\'{e}o 3=audio 4=fichier.\\
+\texttt{lastMessageStatus}    & TINYINT      & 0=envoy\'{e} 1=distribu\'{e} 2=lu.\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{conv\_participants}}\\
+\texttt{id}          & BIGINT PK  & Cl\'{e} technique.\\
+\texttt{conversID}   & BIGINT FK  & Conversation.\\
+\texttt{alanyaID}    & INT FK     & Membre.\\
+\texttt{unreadCount} & SMALLINT   & Compteur de non-lus.\\
+\texttt{isPinned}    & TINYINT    & \'{E}pingl\'{e}e.\\
+\texttt{isArchived}  & TINYINT    & Archiv\'{e}e.\\
+\texttt{joinedAt}    & DATETIME   & Date d'adh\'{e}sion.\\
+\bottomrule
+\end{tabularx}
+\caption{Tables \texttt{conversation} et \texttt{conv\_participants}.}
+\end{table}
+
+\subsection{Table \texttt{message}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Champ} & \thd{Type} & \thd{R\^{o}le}\\
+\midrule
+\texttt{msgID}          & BIGINT PK  & Identifiant du message.\\
+\texttt{senderID}       & INT FK     & Exp\'{e}diteur.\\
+\texttt{conversationID} & BIGINT FK  & Conversation.\\
+\texttt{content}        & TEXT       & Contenu texte.\\
+\texttt{type}           & SMALLINT   & 0=texte 1=image 2=vid\'{e}o 3=audio 4=fichier 5=localisation.\\
+\texttt{status}         & TINYINT    & 0=envoi 1=envoy\'{e} 2=distribu\'{e} 3=lu.\\
+\texttt{sendAt}         & DATETIME   & Date d'envoi.\\
+\texttt{readAt}         & DATETIME   & Date de lecture.\\
+\texttt{mediaUrl}       & VARCHAR(255) & URL du m\'{e}dia.\\
+\texttt{mediaName}      & VARCHAR(255) & Nom de fichier.\\
+\texttt{mediaDuration}  & INT        & Dur\'{e}e (s) pour audio\,/\,vid\'{e}o.\\
+\texttt{isDeleted}      & TINYINT    & Supprim\'{e}.\\
+\texttt{deletedForID}   & INT        & NULL = pour tous~; sinon pour cet utilisateur.\\
+\texttt{isEdited}       & TINYINT    & \'{E}dit\'{e}.\\
+\texttt{editedAt}       & DATETIME   & Date d'\'{e}dition.\\
+\texttt{replyToID}      & BIGINT FK  & Message cit\'{e} (r\'{e}ponse).\\
+\texttt{replyToContent} & TEXT       & Aper\c{c}u du message cit\'{e}.\\
+\texttt{isStatusReply}  & TINYINT    & R\'{e}ponse \`{a} un statut.\\
+\bottomrule
+\end{tabularx}
+\caption{Table \texttt{message}.}
+\end{table}
+
+\subsection{Tables \texttt{statut} et \texttt{statut\_views}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Champ} & \thd{Type} & \thd{R\^{o}le}\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{statut}}\\
+\texttt{ID}              & INT PK      & Identifiant du statut.\\
+\texttt{alanyaID}        & INT FK      & Auteur.\\
+\texttt{type}            & SMALLINT    & 0=texte 1=image 2=vid\'{e}o.\\
+\texttt{text}            & TINYTEXT    & Texte\,/\,l\'{e}gende.\\
+\texttt{mediaUrl}        & VARCHAR(255) & M\'{e}dia.\\
+\texttt{mediaDurationMs} & INT         & Dur\'{e}e m\'{e}dia (ms).\\
+\texttt{backgroundColor} & VARCHAR(20) & Couleur de fond.\\
+\texttt{createdAt}       & DATETIME    & Cr\'{e}ation.\\
+\texttt{expiredAt}       & DATETIME    & Expiration (cr\'{e}ation + 24\,h).\\
+\texttt{viewedBy}        & INT         & Compteur de vues (d\'{e}normalis\'{e}).\\
+\texttt{likedBy}         & INT         & Compteur de \og{}j'aime\fg{} (d\'{e}normalis\'{e}).\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{statut\_views}}\\
+\texttt{id}       & BIGINT PK  & Cl\'{e} technique.\\
+\texttt{statutID} & INT FK     & Statut concern\'{e}.\\
+\texttt{alanyaID} & INT FK     & Spectateur.\\
+\texttt{seenAt}   & DATETIME   & Date de vue.\\
+\texttt{liked}    & TINYINT    & A aim\'{e}.\\
+\texttt{likedAt}  & DATETIME   & Date du \og{}j'aime\fg{}.\\
+\bottomrule
+\end{tabularx}
+\caption{Tables \texttt{statut} et \texttt{statut\_views}.}
+\end{table}
+
+\subsection{Tables \texttt{meeting}, \texttt{participant} et \texttt{callHistory}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Champ} & \thd{Type} & \thd{R\^{o}le}\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{meeting}}\\
+\texttt{idMeeting}    & INT PK      & Identifiant de r\'{e}union.\\
+\texttt{idOrganiser}  & INT FK      & Organisateur.\\
+\texttt{start\_time}  & DATETIME    & D\'{e}but planifi\'{e}.\\
+\texttt{duree}        & INT         & Dur\'{e}e (min).\\
+\texttt{objet}        & VARCHAR(255) & Sujet.\\
+\texttt{room}         & VARCHAR(100) & Identifiant de salle (UUID).\\
+\texttt{isEnd}        & TINYINT     & Termin\'{e}e.\\
+\texttt{type\_media}  & TINYINT     & 0=audio 1=vid\'{e}o.\\
+\texttt{reminder\_sent} & TINYINT   & Rappel d\'{e}j\`{a} envoy\'{e}.\\
+\texttt{created\_at}  & DATETIME    & Cr\'{e}ation.\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{participant}}\\
+\texttt{ID}             & INT PK   & Cl\'{e} technique.\\
+\texttt{idMeeting}      & INT FK   & R\'{e}union.\\
+\texttt{IDparticipant}  & INT FK   & Participant.\\
+\texttt{status}         & TINYINT  & 0=invit\'{e} 1=accept\'{e} 2=refus\'{e}.\\
+\texttt{connecte}       & TINYINT  & Connect\'{e}.\\
+\texttt{duree}          & INT      & Dur\'{e}e de pr\'{e}sence.\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{callHistory}}\\
+\texttt{IDcall}      & BIGINT PK & Identifiant d'appel.\\
+\texttt{idCaller}    & INT FK    & Appelant.\\
+\texttt{idReceiver}  & INT FK    & Appel\'{e}.\\
+\texttt{type}        & SMALLINT  & 0=audio 1=vid\'{e}o.\\
+\texttt{status}      & SMALLINT  & 0=manqu\'{e} 1=r\'{e}pondu 2=rejet\'{e}.\\
+\texttt{start\_time} & DATETIME  & D\'{e}but effectif.\\
+\texttt{duree}       & INT       & Dur\'{e}e (s).\\
+\texttt{created\_at} & DATETIME  & Date.\\
+\bottomrule
+\end{tabularx}
+\caption{Tables \texttt{meeting}, \texttt{participant} et \texttt{callHistory}.}
+\end{table}
+
+\subsection{Tables annexes}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Table} & \thd{R\^{o}le et champs principaux}\\
+\midrule
+\texttt{pays}             & R\'{e}f\'{e}rentiel\,: \texttt{idPays}, \texttt{libelle}, \texttt{prefix}, \texttt{timeZone}, \texttt{decalageHoraire}.\\
+\texttt{preferredContact} & Contacts favoris\,: \texttt{idPrefContact}, \texttt{alanyaID}, \texttt{idFriend} (unicit\'{e} sur le couple).\\
+\texttt{blocked}          & Blocages\,: \texttt{idBlock}, \texttt{alanyaID}, \texttt{idCallerBlock}, \texttt{dateBlock}.\\
+\texttt{userAccess}       & Journal de connexions\,: \texttt{idLogin}, \texttt{alanyaID}, \texttt{device}, \texttt{dateLogin}, \texttt{ipAdress}, \texttt{os\_system}.\\
+\bottomrule
+\end{tabularx}
+\caption{Tables annexes.}
+\end{table}
+
+\section{Authentification \& s\'{e}curit\'{e}}
+\subsection{Jetons JWT}
+L'authentification repose sur un couple de jetons sign\'{e}s
+(\texttt{jsonwebtoken}). L'intergiciel \texttt{authCustom} v\'{e}rifie le jeton,
+contr\^{o}le qu'il s'agit bien d'un \emph{access token} et que le compte n'est
+pas banni (\texttt{exclus = 0}).
+
+\begin{lstlisting}[language=JavaScript,caption={G\'{e}n\'{e}ration des jetons (src/middleware/authCustom.js)},captionpos=b]
+// Access token : 15 minutes
+const generateAccessToken = (payload) =>
+  jwt.sign({ ...payload, type: 'access' }, JWT_SECRET, { expiresIn: '15m' });
+
+// Refresh token : 30 jours
+const generateRefreshToken = (payload) =>
+  jwt.sign({ ...payload, type: 'refresh' }, JWT_REFRESH_SECRET, { expiresIn: '30d' });
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l l l X@{}}
+\toprule
+\thd{Jeton} & \thd{Dur\'{e}e} & \thd{Secret} & \thd{Usage}\\
+\midrule
+Access  & 15\,min   & \texttt{JWT\_SECRET}         & En-t\^{e}te \texttt{Authorization: Bearer}.\\
+Refresh & 30\,jours & \texttt{JWT\_REFRESH\_SECRET} & Corps de \texttt{POST /api/auth/refresh}.\\
+\bottomrule
+\end{tabularx}
+\caption{Jetons JWT.}
+\end{table}
+
+\subsection{Mots de passe et r\'{e}initialisation (OTP)}
+Les mots de passe sont hach\'{e}s avec \texttt{bcryptjs}. La r\'{e}initialisation
+se fait en trois \'{e}tapes~:
+(1)~\texttt{forgot-password} envoie un OTP de 6\,chiffres par email (validit\'{e}
+10\,minutes),
+(2)~\texttt{validate-otp} v\'{e}rifie l'OTP et renvoie un \texttt{resetToken} de courte
+dur\'{e}e,
+(3)~\texttt{reset-password-confirm} applique le nouveau mot de passe.
+
+\subsection{Limitation de d\'{e}bit (rate limiting)}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Limiteur} & \thd{Quota} & \thd{Port\'{e}e}\\
+\midrule
+\texttt{authLimiter}    & 10\,/\,15\,min & \texttt{/login}, \texttt{/register} (succ\`{e}s non compt\'{e}s).\\
+\texttt{messageLimiter} & 60\,/\,min     & Envoi de messages.\\
+\texttt{uploadLimiter}  & 20\,/\,min     & T\'{e}l\'{e}versements.\\
+\texttt{generalLimiter} & 300\,/\,min    & Toute l'API (par IP).\\
+\bottomrule
+\end{tabularx}
+\caption{Limitation de d\'{e}bit (\texttt{src/middleware/rateLimiter.js}).}
+\end{table}
+
+\section{Temps r\'{e}el\,: Socket.IO}
+Apr\`{e}s connexion HTTP, le client ouvre une session Socket.IO et s'authentifie
+via l'\'{e}v\'{e}nement \texttt{auth:login} (jeton JWT). Le serveur r\'{e}pond
+\texttt{auth:verified} puis route les \'{e}v\'{e}nements.
+Le tableau~\ref{tab:socket} recense les principaux \'{e}v\'{e}nements par domaine.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X X@{}}
+\toprule
+\thd{Domaine} & \thd{Client vers Serveur} & \thd{Serveur vers Client}\\
+\midrule
+Auth        & \texttt{auth:login} & \texttt{auth:verified}, \texttt{auth:error}, \texttt{auth:conflict}\\
+Chat        & \texttt{join\_conversation}, \texttt{message:send}, \texttt{message:delivered}, \texttt{message:read}, \texttt{typing:start/stop}, \texttt{presence:online/offline} & \texttt{joined\_conversation}, \texttt{message:sent}, \texttt{message:received}, \texttt{message:status}, \texttt{typing:started/stopped}, \texttt{presence:updated}\\
+Appels 1-1  & \texttt{call\_user}, \texttt{answer\_call}, \texttt{reject\_call}, \texttt{end\_call}, \texttt{ice\_candidate} & \texttt{incoming\_call}, \texttt{call\_answered}, \texttt{call\_rejected}, \texttt{call\_ended}, \texttt{call\_failed}, \texttt{ice\_candidate}\\
+Appels groupe & \texttt{create\_group\_call}, \texttt{join\_group\_call}, \texttt{leave\_group\_call}, \texttt{end\_group\_call}, \texttt{group\_offer/answer/ice} & \texttt{group\_call\_invite}, \texttt{group\_participants}, \texttt{group\_user\_joined/left}, \texttt{group\_offer/answer/ice}, \texttt{group\_call\_ended}\\
+R\'{e}unions  & \texttt{meeting:create/start/end}, \texttt{meeting:join\_request/accept/decline}, \texttt{meeting:join\_room/leave}, \texttt{meeting:offer/answer/ice\_candidate}, \texttt{meeting:chat} & \texttt{meeting:created/started/ended}, \texttt{meeting:room\_joined}, \texttt{meeting:user\_joined/left}, \texttt{meeting:join\_requested}, \texttt{meeting:accepted/declined}, \texttt{meeting:offer/answer/ice\_candidate}, \texttt{meeting:message}\\
+\bottomrule
+\end{tabularx}
+\caption{\'{E}v\'{e}nements Socket.IO par domaine.}
+\label{tab:socket}
+\end{table}
+
+\begin{note}
+Lorsqu'un \texttt{call\_user} cible un destinataire hors-ligne, l'appel est mis
+en tampon c\^{o}t\'{e} serveur (\texttt{src/socket/state/pendingCalls.js}) et rejou\'{e} \`{a}
+sa reconnexion~; en parall\`{e}le une notification FCM est \'{e}mise pour le r\'{e}veiller.
+\end{note}
+
+\section{WebRTC --- STUN\,/\,TURN\,/\,ICE}
+L'endpoint \texttt{GET /api/turn/credentials} fournit la liste des serveurs ICE.
+Deux serveurs STUN Google sont toujours inclus~; les serveurs TURN proviennent
+de la variable \texttt{TURN\_SERVERS}. Si \texttt{TURN\_SECRET} est d\'{e}fini, des
+identifiants \textbf{\'{e}ph\'{e}m\`{e}res} (HMAC-SHA1, TTL \texttt{TURN\_TTL\_SEC}, 3600~s par
+d\'{e}faut) sont g\'{e}n\'{e}r\'{e}s par utilisateur~; sinon les identifiants statiques de la
+configuration sont renvoy\'{e}s.
+
+\begin{lstlisting}[language=JavaScript,caption={G\'{e}n\'{e}ration des identifiants TURN \'{e}ph\'{e}m\`{e}res (src/utils/turnCredentials.js)},captionpos=b]
+const generateEphemeralCredentials = (userId, ttlSec) => {
+  const expiry = Math.floor(Date.now() / 1000) + ttlSec;
+  const username = `${expiry}:${userId}`;
+  const hmac = crypto.createHmac('sha1', process.env.TURN_SECRET);
+  hmac.update(username);
+  return { username, credential: hmac.digest('base64'), ttlSec };
+};
+\end{lstlisting}
+
+\section{Notifications et emails}
+Le service \texttt{notificationService} (Firebase Admin SDK) envoie les push FCM
+(messages, appels)~; \texttt{mailService} (\texttt{nodemailer}, SMTP Gmail) envoie
+les emails d'OTP \`{a} partir du gabarit \texttt{src/templates/email-template.html}.
+
+Les variables d'environnement li\'{e}es \`{a} l'envoi d'emails sont~:
+
+\begin{lstlisting}[language=EnvFile,caption={Variables d'environnement pour l'envoi automatique des mails},captionpos=b]
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=etchomechris2000@gmail.com
+SMTP_PASS=rrgh fmxn ugjt ymkl
+SMTP_FROM=etchomechris2000@gmail.com
+MAIL_FROM_NAME=Alanya
+SUPPORT_EMAIL=etchomechris2000@gmail.com
+\end{lstlisting}
+
+\subsection{Configuration de Nodemailer}
+L'installation du paquet \texttt{nodemailer} s'effectue via npm. Une fois install\'{e},
+le service de messagerie est initialis\'{e} dans un fichier d\'{e}di\'{e}
+\texttt{mailService.js}. Ce service configure automatiquement le transporteur SMTP
+\`{a} partir des variables d'environnement d\'{e}finies pr\'{e}c\'{e}demment.
+
+La configuration du transporteur repose sur les param\`{e}tres standards de Gmail~:
+l'h\^{o}te \texttt{smtp.gmail.com}, le port \texttt{587} avec TLS (d'o\`{u}
+\texttt{SMTP\_SECURE=false}). L'authentification utilise l'adresse email et le mot
+de passe d'application g\'{e}n\'{e}r\'{e} depuis le compte Google concern\'{e}.
+
+\subsubsection{G\'{e}n\'{e}ration du mot de passe d'application}
+Pour utiliser Nodemailer avec un compte Gmail prot\'{e}g\'{e} par la double authentification
+(2FA), un mot de passe d'application est requis. Voici les \'{e}tapes \`{a} suivre~:
+\begin{enumerate}
+  \item Se connecter au compte Google associ\'{e} \`{a} l'adresse \texttt{SMTP\_USER}~;
+  \item Acc\'{e}der \`{a} \textbf{G\'{e}rer votre compte Google} puis \`{a} l'onglet
+        \textbf{S\'{e}curit\'{e}}~;
+  \item Activer la \textbf{V\'{e}rification en deux \'{e}tapes} si ce n'est pas d\'{e}j\`{a} fait~;
+  \item Rechercher l'option \textbf{Mots de passe d'application} dans la m\^{e}me section~;
+  \item S\'{e}lectionner \textbf{Autre (nom personnalis\'{e})} et saisir un nom explicite
+        comme \texttt{Nodemailer-Alanya}~;
+  \item Cliquer sur \textbf{G\'{e}n\'{e}rer}~: un mot de passe de 16\,caract\`{e}res s'affiche~;
+  \item Copier ce mot de passe et le renseigner dans \texttt{SMTP\_PASS}.
+\end{enumerate}
+
+\begin{note}[Important]
+Ce mot de passe d'application n'est affich\'{e} qu'une seule fois. Il peut \^{e}tre
+r\'{e}voqu\'{e} \`{a} tout moment sans d\'{e}sactiver la double authentification, ce qui
+permet de s\'{e}curiser l'application en cas de rotation des identifiants.
+\end{note}
+
+La m\'{e}thode principale \texttt{sendOTPEmail} prend en param\`{e}tres l'adresse
+destinataire, le code OTP \`{a} six\,chiffres et \'{e}ventuellement le nom de
+l'utilisateur. En cas d'erreur lors de l'envoi (probl\`{e}me r\'{e}seau, authentification
+incorrecte, destinataire invalide), l'exception est captur\'{e}e, logu\'{e}e et
+propag\'{e}e au contr\^{o}leur appelant.
+
+\section{Configuration et d\'{e}marrage}
+Le serveur charge sa configuration depuis \texttt{.env} (voir
+annexe~\ref{ann:env}), initialise Firebase, cr\'{e}e le serveur HTTP + Socket.IO,
+monte les routes, enregistre les gestionnaires de socket puis \'{e}coute le port
+\texttt{PORT} (3000). Le planificateur de r\'{e}unions est d\'{e}marr\'{e} au lancement.
+
+\begin{lstlisting}[language=bash,caption={D\'{e}marrage du backend},captionpos=b]
+npm install          # installation des dependances
+npm run dev          # developpement (nodemon, rechargement auto)
+npm start            # production (node server.js)
+# Sonde de sante   : GET http://localhost:3000/health
+# Documentation    : GET http://localhost:3000/api/docs  (Swagger UI)
+\end{lstlisting}
+
+% ====================================================================
+\chapter{Client --- Application Flutter Alanya}
+\label{chap:client}
+
+\section{Structure du projet}
+Le client (\texttt{Alanya\_flutter}, version \texttt{1.0.0+1}) adopte une architecture
+proche du \emph{Clean Architecture} avec gestion d'\'{e}tat \emph{Provider}.
+
+\begin{lstlisting}[language=bash,caption={Arborescence du dossier lib/},captionpos=b]
+lib/
+|-- main.dart                  # Point d'entree, MultiProvider, AuthWrapper
+|-- Alanya_api_client.dart     # Client HTTP + Socket.IO
+|-- Alanya_models.dart         # Modeles de domaine (User, Message, ...)
+|-- core/
+|   |-- db/                    # Drift SQLite (app_database.dart, chat_dao.dart)
+|   |-- network/               # cert_pinning.dart
+|   |-- services/              # call, meeting, chat, push, storage, webrtc...
+|   \-- theme/                 # app_colors, app_dimens, app_theme, controller
+|-- providers/                 # auth, chat, status, connectivity, admin
+|-- screens/                   # admin, authentification, calls, chats,
+|   |                          # contacts, home, meetings, profile, status
+|   \-- shared/
+\-- widgets/common/            # composants reutilisables (avatar, badge...)
+\end{lstlisting}
+
+\section{Point d'entr\'{e}e et initialisation}
+\texttt{main()} initialise le \emph{binding} Flutter, active le \textbf{certificate
+pinning} (\texttt{HttpOverrides.global}), initialise Firebase + CallKit, puis lance
+\texttt{AlanyaApp}. L'arbre de providers est mont\'{e} par un \texttt{MultiProvider}.
+
+\begin{lstlisting}[language=Dart,caption={S\'{e}quence d'initialisation (lib/main.dart)},captionpos=b]
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Certificate pinning (backend auto-signe) avant tout appel reseau
+  HttpOverrides.global = await PinnedCertHttpOverrides.load();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  await CallKitService.instance.init();
+  runApp(const AlanyaApp());
+}
+\end{lstlisting}
+
+\subsection{Providers et cycle de vie}
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Provider\,/\,Service} & \thd{R\^{o}le}\\
+\midrule
+\texttt{ThemeController}        & Th\`{e}me clair\,/\,sombre, persistance.\\
+\texttt{AlanyaApiClient}        & Client HTTP + Socket.IO partag\'{e}.\\
+\texttt{AppDatabase}            & Base Drift locale.\\
+\texttt{LocalCacheRepository}   & Synchronisation et hydratation du cache.\\
+\texttt{AuthProvider}           & Connexion\,/\,d\'{e}connexion, session, rafra\^{i}chissement.\\
+\texttt{ChatProvider}           & Conversations, messages, pr\'{e}sence, offline-first.\\
+\texttt{CallService}            & Orchestration des appels WebRTC 1-\`{a}-1.\\
+\texttt{MeetingService}         & Orchestration des r\'{e}unions WebRTC.\\
+\texttt{StatusProvider}         & Statuts, vues, expiration.\\
+\texttt{AdminProvider}          & Statistiques et gestion (administration).\\
+\texttt{ConnectivityProvider}   & \'{E}tat r\'{e}seau (OS + socket).\\
+\texttt{LocalHiddenStore}       & Stockage local sensible.\\
+\bottomrule
+\end{tabularx}
+\caption{Arbre de providers du client.}
+\end{table}
+
+\begin{note}
+\texttt{ChatProvider} et \texttt{StatusProvider} appliquent un motif
+\textbf{bind\,/\,unbind}\,: \`{a} la connexion, \texttt{bind(userId)} abonne le provider
+aux \'{e}v\'{e}nements socket et charge le cache~; \`{a} la d\'{e}connexion, \texttt{unbind()} se
+d\'{e}sabonne et purge l'\'{e}tat, \'{e}vitant toute fuite entre sessions.
+\end{note}
+
+\section{Couche r\'{e}seau}
+\texttt{AlanyaApiClient} encapsule un \texttt{http.Client} et une connexion
+Socket.IO. Les URL de base et le comportement (timeout 15~s, rafra\^{i}chissement
+automatique sur \texttt{401} puis rejeu) sont d\'{e}finis comme suit~:
+
+\begin{lstlisting}[language=Dart,caption={Constantes r\'{e}seau (lib/Alanya\_api\_client.dart)},captionpos=b]
+static const String baseUrl   = 'https://158.220.107.211/api';
+static const String socketUrl = 'https://158.220.107.211/';
+// ...
+final response = await request().timeout(const Duration(seconds: 15));
+// Sur 401 : refresh du token puis nouvel essai automatique
+\end{lstlisting}
+
+\subsection{Certificate pinning}
+Le backend pr\'{e}sente un certificat \textbf{auto-sign\'{e}} (CN = 158.220.107.211).
+Plut\^{o}t que de d\'{e}sactiver la validation TLS, l'application embarque ce
+certificat (\texttt{assets/server\_cert.pem}), le convertit en DER et n'accepte
+\emph{que lui} (comparaison octet par octet). \texttt{HttpOverrides.global} couvre
+d'un coup les requ\^{e}tes HTTP, les uploads multipart, le WebSocket Socket.IO et
+le chargement d'images \texttt{cached\_network\_image}.
+
+\begin{lstlisting}[language=Dart,caption={V\'{e}rification du certificat \'{e}pingl\'{e} (lib/core/network/cert\_pinning.dart)},captionpos=b]
+bool _verify(X509Certificate cert, String host, int port) {
+  final ok = _bytesEqual(cert.der, _pinnedDer);
+  if (!ok)
+    debugPrint('[CertPinning] Certificat NON epingle refuse pour $host:$port');
+  return ok;
+}
+\end{lstlisting}
+
+\section{Cache local hors-ligne (Drift)}
+Le client maintient un miroir local SQLite via \texttt{drift}. La table
+\texttt{LocalMessages} impl\'{e}mente un motif \textbf{outbox}\,: chaque message porte
+un \texttt{clientId}, un drapeau \texttt{syncPending}, un \texttt{pendingUploadPath}
+et un \texttt{retryCount}, permettant l'envoi diff\'{e}r\'{e} et le rejeu \`{a} la reconnexion.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Table Drift} & \thd{R\^{o}le}\\
+\midrule
+\texttt{LocalConversations} & Cache des conversations (aper\c{c}u, non-lus, \'{e}pingl\'{e}, archiv\'{e}).\\
+\texttt{LocalMessages}      & Cache des messages + outbox (\texttt{clientId}, \texttt{syncPending}, \texttt{retryCount}).\\
+\texttt{LocalUsers}         & Cache des profils (pr\'{e}sence, contact favori, pays).\\
+\texttt{LocalCalls}         & Historique d'appels local.\\
+\bottomrule
+\end{tabularx}
+\caption{Tables du cache local Drift.}
+\end{table}
+
+\section{Fonctionnalit\'{e}s (modules d'\'{e}crans)}
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Module (\texttt{lib/screens/})} & \thd{Contenu}\\
+\midrule
+\texttt{authentification} & Connexion, inscription, mot de passe oubli\'{e} (OTP).\\
+\texttt{home}     & Navigation principale (barre inf\'{e}rieure).\\
+\texttt{chats}    & Liste des conversations, fil de discussion, m\'{e}dias, emojis.\\
+\texttt{calls}    & Historique, clavier, appel entrant\,/\,sortant, appel actif, groupes.\\
+\texttt{meetings} & Liste, salle d'attente, r\'{e}union en cours, contr\^{o}les.\\
+\texttt{status}   & Fil des statuts, visionneuse, cr\'{e}ation.\\
+\texttt{contacts} & Liste de contacts, favoris, blocage.\\
+\texttt{profile}  & Profil, r\'{e}glages, th\`{e}me, d\'{e}connexion.\\
+\texttt{admin}    & Statistiques et gestion des utilisateurs.\\
+\bottomrule
+\end{tabularx}
+\caption{Modules d'\'{e}crans du client.}
+\end{table}
+
+\section{Design system : charte graphique}
+Les couleurs sont centralis\'{e}es dans \texttt{lib/core/theme/app\_colors.dart},
+compl\'{e}t\'{e}es par \texttt{app\_dimens.dart} (espacements, rayons, ombres, dur\'{e}es)
+et \texttt{app\_theme.dart} (\texttt{ThemeData} clair\,/\,sombre, extensions
+\texttt{context.colors}, \texttt{context.text}, \texttt{context.semantic}).
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Jeton} & \thd{Valeur} & \thd{Usage}\\
+\midrule
+\texttt{brandPrimary}      & \texttt{\#3F51B5} & Boutons, accents, \'{e}tats actifs, liens.\\
+\texttt{brandPrimaryDark}  & \texttt{\#1A237E} & Fonds immersifs (appels, vid\'{e}o).\\
+\texttt{brandPrimaryStrong}& \texttt{\#303F9F} & \'{E}tats survol\,/\,press\'{e}.\\
+\texttt{brandContainer}    & \texttt{\#E8EAF6} & Fonds teint\'{e}s, s\'{e}lection.\\
+\texttt{success\,/\,online} & \texttt{\#1FA363} & Succ\`{e}s, pr\'{e}sence en ligne.\\
+\texttt{error}             & \texttt{\#EF4444} & Erreurs.\\
+\texttt{warning}           & \texttt{\#F59E0B} & Avertissements.\\
+\texttt{info}              & \texttt{\#2E90FA} & Informations.\\
+\bottomrule
+\end{tabularx}
+\caption{Principaux jetons de couleur du design system.}
+\end{table}
+
+\section{Plateformes et permissions}
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}X X@{}}
+\toprule
+\multicolumn{2}{@{}l}{\thd{Permissions Android (\texttt{AndroidManifest.xml})}}\\
+\midrule
+\texttt{INTERNET}, \texttt{ACCESS\_NETWORK\_STATE}   & \texttt{CAMERA}, \texttt{RECORD\_AUDIO}\\
+\texttt{MODIFY\_AUDIO\_SETTINGS}, \texttt{BLUETOOTH\_CONNECT} & \texttt{READ\_CONTACTS}, \texttt{READ\_PHONE\_STATE}\\
+\texttt{POST\_NOTIFICATIONS}, \texttt{VIBRATE}       & \texttt{WAKE\_LOCK}, \texttt{USE\_FULL\_SCREEN\_INTENT}\\
+\texttt{FOREGROUND\_SERVICE}                         & \texttt{FOREGROUND\_SERVICE\_PHONE\_CALL}, \texttt{MANAGE\_OWN\_CALLS}\\
+\bottomrule
+\end{tabularx}
+\caption{Permissions Android (appels, m\'{e}dia, notifications).}
+\end{table}
+
+\section{D\'{e}pendances cl\'{e}s}
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\thd{Paquet} & \thd{Version} & \thd{R\^{o}le}\\
+\midrule
+\texttt{provider}                & \texttt{\^{}6.1.0}   & Gestion d'\'{e}tat.\\
+\texttt{socket\_io\_client}      & \texttt{\^{}2.0.3+1} & Temps r\'{e}el.\\
+\texttt{http}                    & \texttt{\^{}1.6.0}   & REST.\\
+\texttt{flutter\_webrtc}         & \texttt{\^{}0.14.2}  & Appels\,/\,r\'{e}unions.\\
+\texttt{drift}                   & \texttt{\^{}2.20.0}  & Cache SQLite.\\
+\texttt{flutter\_secure\_storage}& \texttt{\^{}9.0.0}   & Stockage s\'{e}curis\'{e} des jetons.\\
+\texttt{firebase\_messaging}     & \texttt{\^{}15.1.3}  & Push FCM.\\
+\texttt{flutter\_callkit\_incoming} & \texttt{\^{}2.5.0} & \'{E}cran d'appel syst\`{e}me.\\
+\texttt{just\_audio\,/\,flutter\_ringtone\_player} & --- & Sonneries.\\
+\texttt{cached\_network\_image}  & \texttt{\^{}3.4.1}   & Cache d'images.\\
+\texttt{image\_picker\,/\,file\_picker\,/\,record} & --- & S\'{e}lection et capture de m\'{e}dias.\\
+\bottomrule
+\end{tabularx}
+\caption{Principales d\'{e}pendances du client (\texttt{pubspec.yaml}).}
+\end{table}
+
+% ====================================================================
+\chapter{Flux de bout en bout}
+\label{chap:flux}
+
+Ce chapitre illustre par des diagrammes de s\'{e}quence les trois flux les plus
+structurants. Les fl\`{e}ches pleines repr\'{e}sentent des appels requ\^{e}te\,/\,r\'{e}ponse,
+les fl\`{e}ches en tiret\'{e}s des \'{e}v\'{e}nements asynchrones (Socket.IO).
+
+\section{Authentification et ouverture de session}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\sffamily\footnotesize,
+  actor/.style={draw=AlanyaIndigo, very thick, rectangle, minimum width=26mm,
+                minimum height=8mm, align=center, fill=AlanyaContainer},
+  arr/.style={-{Stealth[length=2.2mm]}, thick, AlanyaIndigoStrong},
+  retarr/.style={-{Stealth[length=2.2mm]}, thick, dashed, AlanyaGray}
+]
+  \node[actor] (u)  {Utilisateur};
+  \node[actor, right=28mm of u]  (c)  {Client Flutter};
+  \node[actor, right=32mm of c]  (s)  {Backend};
+  \node[actor, right=28mm of s]  (db) {MySQL};
+  \foreach \x in {u,c,s,db} \draw[dashed,AlanyaLine] (\x.south)--++(0,-6.8cm);
+  \draw[arr]    ($(u.south)+(0,-0.5)$)   -- node[above,font=\tiny]{Saisie t\'{e}l\'{e}phone + mot de passe}   ($(c.south)+(0,-0.5)$);
+  \draw[arr]    ($(c.south)+(0,-1.3)$)   -- node[above,font=\tiny]{POST /api/auth/login}   ($(s.south)+(0,-1.3)$);
+  \draw[arr]    ($(s.south)+(0,-2.0)$)   -- node[above,font=\tiny]{SELECT + bcrypt.compare} ($(db.south)+(0,-2.0)$);
+  \draw[retarr] ($(db.south)+(0,-2.7)$)  -- node[above,font=\tiny]{ligne}                  ($(s.south)+(0,-2.7)$);
+  \draw[retarr] ($(s.south)+(0,-3.4)$)   -- node[above,font=\tiny]{200 + access/refresh}   ($(c.south)+(0,-3.4)$);
+  \draw[arr]    ($(c.south)+(0,-4.4)$)   -- node[above,font=\tiny]{auth:login (jeton)}      ($(s.south)+(0,-4.4)$);
+  \draw[retarr] ($(s.south)+(0,-5.2)$)   -- node[above,font=\tiny]{auth:verified}           ($(c.south)+(0,-5.2)$);
+\end{tikzpicture}
+\caption{Flux d'authentification\,: login REST puis handshake Socket.IO.}
+\label{fig:seq-auth}
+\end{figure}
+
+\section{Envoi et r\'{e}ception d'un message}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\sffamily\footnotesize,
+  actor/.style={draw=AlanyaIndigo, very thick, rectangle, minimum width=26mm,
+                minimum height=8mm, align=center, fill=AlanyaContainer},
+  arr/.style={-{Stealth[length=2.2mm]}, thick, AlanyaIndigoStrong},
+  retarr/.style={-{Stealth[length=2.2mm]}, thick, dashed, AlanyaGray}
+]
+  \node[actor] (a)  {Exp\'{e}diteur};
+  \node[actor, right=28mm of a]  (s)  {Backend};
+  \node[actor, right=28mm of s]  (db) {MySQL};
+  \node[actor, right=28mm of db] (b)  {Destinataire};
+  \foreach \x in {a,s,db,b} \draw[dashed,AlanyaLine] (\x.south)--++(0,-6.2cm);
+  \draw[arr]    ($(a.south)+(0,-0.6)$)   -- node[above,font=\tiny]{message:send}               ($(s.south)+(0,-0.6)$);
+  \draw[arr]    ($(s.south)+(0,-1.4)$)   -- node[above,font=\tiny]{INSERT + UPDATE conversation}($(db.south)+(0,-1.4)$);
+  \draw[retarr] ($(db.south)+(0,-2.2)$)  -- node[above,font=\tiny]{ok}                         ($(s.south)+(0,-2.2)$);
+  \draw[arr]    ($(s.south)+(0,-3.0)$)   -- node[above,font=\tiny]{message:received}            ($(b.south)+(0,-3.0)$);
+  \draw[retarr] ($(s.south)+(0,-3.8)$)   -- node[above,font=\tiny]{message:sent}               ($(a.south)+(0,-3.8)$);
+  \draw[arr]    ($(s.south)+(0,-4.8)$)   -- node[above,font=\tiny]{push FCM (si hors-ligne)}    ($(b.south)+(0,-4.8)$);
+\end{tikzpicture}
+\caption{Flux d'envoi de message\,: persistance, diffusion et accus\'{e}.}
+\label{fig:seq-msg}
+\end{figure}
+
+\section{Signalisation d'un appel WebRTC}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\sffamily\footnotesize,
+  actor/.style={draw=AlanyaIndigo, very thick, rectangle, minimum width=30mm,
+                minimum height=8mm, align=center, fill=AlanyaContainer},
+  arr/.style={-{Stealth[length=2.2mm]}, thick, AlanyaIndigoStrong},
+  p2p/.style={-{Stealth[length=2.2mm]}, very thick, dashed, danger}
+]
+  \node[actor] (a) {Appelant};
+  \node[actor, right=38mm of a] (s) {Backend (signaling)};
+  \node[actor, right=38mm of s] (b) {Appel\'{e}};
+  \foreach \x in {a,s,b} \draw[dashed,AlanyaLine] (\x.south)--++(0,-10.4cm);
+  \draw[arr] ($(a.south)+(0,-0.5)$) -- node[above,font=\tiny]{call\_user (SDP offer)}   ($(s.south)+(0,-0.5)$);
+  \draw[arr] ($(s.south)+(0,-1.2)$) -- node[above,font=\tiny]{incoming\_call}            ($(b.south)+(0,-1.2)$);
+  \draw[arr] ($(b.south)+(0,-1.9)$) -- node[above,font=\tiny]{answer\_call (SDP answer)} ($(s.south)+(0,-1.9)$);
+  \draw[arr] ($(s.south)+(0,-2.6)$) -- node[above,font=\tiny]{call\_answered}            ($(a.south)+(0,-2.6)$);
+  \draw[arr] ($(a.south)+(0,-3.5)$) -- node[above,font=\tiny]{ice\_candidate}            ($(s.south)+(0,-3.5)$);
+  \draw[arr] ($(s.south)+(0,-4.2)$) -- node[above,font=\tiny]{ice\_candidate}            ($(b.south)+(0,-4.2)$);
+  \draw[arr] ($(b.south)+(0,-5.1)$) -- node[above,font=\tiny]{ice\_candidate}            ($(s.south)+(0,-5.1)$);
+  \draw[arr] ($(s.south)+(0,-5.8)$) -- node[above,font=\tiny]{ice\_candidate}            ($(a.south)+(0,-5.8)$);
+  \draw[p2p] ($(a.south)+(0,-7.2)$) -- node[above,font=\tiny]{Flux m\'{e}dia WebRTC (P2P)} ($(b.south)+(0,-7.2)$);
+\end{tikzpicture}
+\caption{Signalisation d'appel\,: \'{e}change SDP\,/\,ICE via le serveur, puis m\'{e}dia pair-\`{a}-pair.}
+\label{fig:seq-call}
+\end{figure}
+
+% ====================================================================
+\chapter{S\'{e}curit\'{e}}
+\label{chap:securite}
+
+\section{Transport (TLS) et certificat auto-sign\'{e}}
+Le backend est expos\'{e} en \textbf{HTTPS} \`{a} l'adresse
+\texttt{https://158.220.107.211} avec un certificat \textbf{auto-sign\'{e}}. Le client
+applique un \textbf{\'{e}pinglage de certificat} (cf.\ chapitre~\ref{chap:client}) qui
+n'accepte que ce certificat pr\'{e}cis, neutralisant le risque d'interception
+(MITM) sans d\'{e}sactiver la validation des autres h\^{o}tes (Firebase, images
+externes).
+
+\section{Authentification et autorisation}
+\begin{itemize}[leftmargin=1.3em]
+  \item Jetons JWT access (15~min)\,/\,refresh (30~jours), v\'{e}rification du type
+        de jeton et du statut \texttt{exclus} \`{a} chaque requ\^{e}te prot\'{e}g\'{e}e.
+  \item Mots de passe hach\'{e}s avec \texttt{bcryptjs} (10\,tours de sel).
+  \item R\'{e}initialisation par OTP email \`{a} usage unique et \`{a} dur\'{e}e limit\'{e}e.
+  \item Routes d'administration prot\'{e}g\'{e}es par \texttt{adminAuth}~; actions
+        sensibles (changement de r\^{o}le, suppression) r\'{e}serv\'{e}es au super-admin.
+\end{itemize}
+
+\section{Stockage des secrets c\^{o}t\'{e} client}
+Les jetons et donn\'{e}es sensibles sont conserv\'{e}s via
+\texttt{flutter\_secure\_storage} (Keystore Android\,/\,Keychain iOS). Le pinning
+embarque le certificat serveur dans les assets de l'application.
+
+\section{Durcissement r\'{e}seau et anti-abus}
+La limitation de d\'{e}bit prot\`{e}ge contre le bourrage d'identifiants et le
+\emph{flood}. Les requ\^{e}tes SQL sont param\'{e}tr\'{e}es (pr\'{e}vention des injections).
+Le CORS est ouvert (\texttt{*}), adapt\'{e} \`{a} un client mobile.
+
+\section{Limites connues}
+\begin{itemize}[leftmargin=1.3em]
+  \item Pas de chiffrement de bout en bout\,: les messages sont stock\'{e}s en clair
+        en base.
+  \item Le CORS ouvert et le certificat auto-sign\'{e} conviennent \`{a} un contexte
+        ma\^{i}tris\'{e} mais devraient \'{e}voluer pour une mise en production large.
+  \item L'authentification Socket.IO est \'{e}tablie \`{a} la connexion (pas de
+        re-v\'{e}rification par \'{e}v\'{e}nement).
+  \item La purge des statuts expir\'{e}s repose sur le filtrage \texttt{expiredAt}
+        (pas de t\^{a}che de nettoyage d\'{e}di\'{e}e).
+\end{itemize}
+
+% ====================================================================
+\chapter{Installation et d\'{e}ploiement}
+\label{chap:deploiement}
+
+\section{Pr\'{e}requis}
+\begin{itemize}[leftmargin=1.3em]
+  \item \textbf{Backend}\,: Node.js \texttt{>=18}, un serveur MySQL\,8, un compte
+        Firebase (FCM) et un compte SMTP (OTP).
+  \item \textbf{Client}\,: Flutter (SDK Dart \texttt{\^{}3.9.2}), VS Code ou Android Studio.
+\end{itemize}
+
+\section{Diagramme de d\'{e}ploiement}
+\begin{figure}[H]
+\centering
+\imageOuCadre{diagrammes/DEPLOIEMENT_ALANYA_BD.drawio.png}{\linewidth}{Diagramme de d\'{e}ploiement}
+\caption{Diagramme de d\'{e}ploiement du syst\`{e}me Alanya.}
+\label{fig:deploiement}
+\end{figure}
+
+\section{D\'{e}ploiement du backend}
+\begin{enumerate}[leftmargin=1.4em]
+  \item Cloner le d\'{e}p\^{o}t et installer les d\'{e}pendances (\texttt{npm install}).
+  \item Renseigner le fichier \texttt{.env} (voir annexe~\ref{ann:env}).
+  \item Appliquer les migrations SQL \texttt{migrations/001..005} sur la base.
+  \item Lancer le serveur avec la commande \texttt{npm start}.
+  \item V\'{e}rifier la sonde \texttt{GET /health} et la documentation \texttt{GET /api/docs}.
+\end{enumerate}
+
+\subsection{D\'{e}ploiement complet du backend sur Ubuntu 24.04}
+Cette partie d\'{e}crit l'ensemble des \'{e}tapes n\'{e}cessaires au d\'{e}ploiement du backend
+Node.js sur un serveur Ubuntu 24.04 fra\^{i}chement install\'{e}, avec s\'{e}curisation
+HTTPS via certificat auto-sign\'{e}.
+
+\subsubsection{Connexion initiale et mise \`{a} jour}
+\begin{lstlisting}[language=bash,caption={Connexion SSH et mise \`{a} jour du syst\`{e}me},captionpos=b]
+ssh root@158.220.107.211
+apt update && apt upgrade -y
+\end{lstlisting}
+
+\subsubsection{Installation de Node.js 22 LTS}
+\begin{lstlisting}[language=bash,caption={Installation de Node.js 22},captionpos=b]
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install nodejs -y
+node --version   # v22.x ou superieure
+npm --version    # 10.x ou superieure
+\end{lstlisting}
+
+\subsubsection{Installation de PM2}
+\begin{lstlisting}[language=bash,caption={Installation du gestionnaire de processus PM2},captionpos=b]
+npm install -g pm2
+pm2 startup systemd
+\end{lstlisting}
+
+\subsubsection{D\'{e}ploiement initial du code}
+Depuis la machine locale\,:
+\begin{lstlisting}[language=bash,caption={Copie des fichiers vers le serveur (rsync)},captionpos=b]
+cd ~/Alanya-backend
+rsync -avz --exclude 'node_modules' --exclude '.git' \
+  -e ssh ./ root@158.220.107.211:/var/www/backend2026/
+\end{lstlisting}
+Sur le serveur\,:
+\begin{lstlisting}[language=bash,caption={Installation des d\'{e}pendances et d\'{e}marrage},captionpos=b]
+ssh root@158.220.107.211
+cd /var/www/backend2026
+npm install --omit=dev
+pm2 start server.js --name backend
+pm2 save
+\end{lstlisting}
+
+\subsubsection{Cr\'{e}ation de l'alias \texttt{deploy}}
+Dans \texttt{\textasciitilde/.bashrc} sur la machine locale\,:
+\begin{lstlisting}[language=bash,caption={Alias de d\'{e}ploiement rapide},captionpos=b]
+alias deploy='rsync -avz --exclude node_modules --exclude .git \
+  -e ssh ./ root@158.220.107.211:/var/www/backend2026/ && \
+  ssh root@158.220.107.211 \
+    "cd /var/www/backend2026 && \
+     npm install --omit=dev && \
+     pm2 restart backend --update-env"'
+\end{lstlisting}
+\begin{lstlisting}[language=bash,caption={Rechargement de la configuration},captionpos=b]
+source ~/.bashrc
+\end{lstlisting}
+
+\subsubsection{Installation de Nginx}
+\begin{lstlisting}[language=bash,caption={Installation du serveur Nginx},captionpos=b]
+apt install nginx -y
+systemctl enable nginx && systemctl start nginx
+\end{lstlisting}
+
+Le client Flutter se connecte en HTTPS (port 443) au reverse proxy Nginx, qui
+transmet localement en HTTP (port 3000) \`{a} Node.js. Le backend communique avec
+un serveur MySQL\,8 distant.
+
+\subsubsection{G\'{e}n\'{e}ration du certificat SSL auto-sign\'{e}}
+\begin{lstlisting}[language=bash,caption={Cr\'{e}ation du certificat SSL pour l'IP},captionpos=b]
+mkdir -p /etc/nginx/ssl
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/ssl/private/nginx-selfsigned.key \
+  -out /etc/ssl/certs/nginx-selfsigned.crt
+\end{lstlisting}
+
+Lors de la g\'{e}n\'{e}ration, renseigner le champ \textbf{Common Name} avec l'IP du serveur~:
+\begin{lstlisting}[caption={Exemple de r\'{e}ponses aux questions OpenSSL},captionpos=b]
+Country Name (2 letter code) [AU]: CM
+State or Province Name [Some-State]: Centre
+Locality Name (eg, city) []: Yaounde
+Organization Name [Internet Widgits Pty Ltd]: Alanya
+Organizational Unit Name []: Dev
+Common Name (e.g. server FQDN) []: 158.220.107.211
+Email Address []: etchomechris2000@gmail.com
+\end{lstlisting}
+
+\subsubsection{(Optionnel) Groupe Diffie-Hellman}
+\begin{lstlisting}[language=bash,caption={G\'{e}n\'{e}ration des cl\'{e}s Diffie-Hellman (renforce la s\'{e}curit\'{e})},captionpos=b]
+openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+\end{lstlisting}
+
+\subsubsection{Configuration du reverse proxy Nginx}
+\begin{lstlisting}[language=bash,caption={Ouverture du fichier de configuration Nginx},captionpos=b]
+nano /etc/nginx/sites-available/default
+\end{lstlisting}
+\begin{lstlisting}[language=bash,caption={Configuration Nginx (proxy TLS vers backend)},captionpos=b]
+server {
+    listen 80;
+    listen [::]:80;
+    server_name 158.220.107.211;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name 158.220.107.211;
+
+    ssl_certificate     /etc/ssl/certs/nginx-selfsigned.crt;
+    ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+    ssl_dhparam         /etc/ssl/certs/dhparam.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        proxy_pass         http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection 'upgrade';
+        proxy_set_header   Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+}
+\end{lstlisting}
+\begin{lstlisting}[language=bash,caption={Activation de la configuration},captionpos=b]
+ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+\end{lstlisting}
+
+\subsubsection{Configuration du pare-feu (UFW)}
+\begin{lstlisting}[language=bash,caption={Ouverture des ports avec UFW},captionpos=b]
+ufw allow 'Nginx Full'   # ports 80 et 443
+ufw allow 22/tcp         # SSH
+ufw enable
+\end{lstlisting}
+
+\subsubsection{V\'{e}rification du d\'{e}ploiement}
+\begin{lstlisting}[language=bash,caption={Test de l'API en HTTPS},captionpos=b]
+curl -k https://158.220.107.211/health
+# Resultat attendu : {"status":"ok","timestamp":"..."}
+\end{lstlisting}
+
+\subsubsection{Commandes utiles au quotidien}
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Action} & \thd{Commande}\\
+\midrule
+Voir les logs backend   & \texttt{pm2 logs backend --lines 50}\\
+Red\'{e}marrer backend  & \texttt{pm2 restart backend}\\
+Red\'{e}marrer Nginx    & \texttt{systemctl reload nginx}\\
+D\'{e}ployer une nouvelle version & \texttt{deploy} (machine locale)\\
+\'{E}tat des processus  & \texttt{pm2 list}\\
+Tester la config Nginx  & \texttt{nginx -t}\\
+\bottomrule
+\end{tabularx}
+\caption{Aide-m\'{e}moire des commandes courantes.}
+\end{table}
+
+\subsubsection{Proc\'{e}dure pour un changement de serveur}
+En cas de migration vers un nouveau serveur (nouvelle IP publique)\,:
+\begin{enumerate}[leftmargin=1.4em]
+  \item Remplacer toutes les occurrences de l'ancienne IP par la nouvelle dans~:
+        \begin{itemize}
+          \item la commande \texttt{rsync}\,/\,l'alias \texttt{deploy}~;
+          \item la configuration Nginx (directive \texttt{server\_name})~;
+          \item le certificat SSL (param\`{e}tre \texttt{CN}).
+        \end{itemize}
+  \item R\'{e}g\'{e}n\'{e}rer le certificat auto-sign\'{e} avec la nouvelle IP.
+  \item Recr\'{e}er l'alias \texttt{deploy} sur la machine locale.
+  \item Adapter les variables d'environnement (\texttt{.env}) si n\'{e}cessaire.
+\end{enumerate}
+
+\section{Build et distribution de l'application}
+\begin{lstlisting}[language=bash,caption={Construction du client Flutter},captionpos=b]
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs   # generation Drift
+flutter build apk --release                # Android (APK universel)
+flutter build apk --release --split-per-abi  # APK par architecture
+flutter build appbundle --release          # Android (AAB, Play Store)
+flutter build ios --release                # iOS (necessite Xcode)
+flutter build web --release                # Web
+\end{lstlisting}
+
+\begin{note}
+Le certificat serveur \'{e}pingl\'{e} (\texttt{assets/server\_cert.pem}) doit correspondre
+au certificat r\'{e}ellement pr\'{e}sent\'{e} par le backend. \textbf{Tout renouvellement
+du certificat c\^{o}t\'{e} serveur impose de mettre \`{a} jour cet asset et de
+republier l'application}, faute de quoi toutes les connexions \'{e}choueront.
+\end{note}
+
+% ====================================================================
+\chapter{Exploitation et maintenance}
+\label{chap:exploitation}
+
+\section{Migrations de base de donn\'{e}es}
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\thd{Migration} & \thd{Contenu}\\
+\midrule
+\texttt{001\_initial\_schema.sql} & Sch\'{e}ma initial (13\,tables + index).\\
+\texttt{002\_add\_reminder\_sent\_and\_callhistory.sql} & Colonne \texttt{reminder\_sent} (rappels de r\'{e}union).\\
+\texttt{003\_add\_otp\_reset\_password.sql} & \texttt{email}, \texttt{reset\_otp}, \texttt{reset\_otp\_expires\_at}.\\
+\texttt{004\_status\_likes\_audio.sql} & Audio des statuts + \og{}j'aime\fg{} (\texttt{statut\_views}).\\
+\texttt{005\_admin\_dashboard.sql} & \texttt{exclude\_at}, \texttt{exclude\_reason} + index du dashboard.\\
+\bottomrule
+\end{tabularx}
+\caption{Migrations SQL du backend.}
+\end{table}
+
+\section{Journalisation et supervision}
+Le backend journalise sur la sortie standard avec des pr\'{e}fixes
+(\texttt{[Socket]}, \texttt{[FCM]}, \texttt{[DB]}, \texttt{[TURN]}, \texttt{[Auth]}). La
+sonde \texttt{GET /health} permet une supervision externe simple. C\^{o}t\'{e} client,
+les traces \texttt{debugPrint} sont pr\'{e}fix\'{e}es (\texttt{[Main]}, \texttt{[CertPinning]}\ldots).
+
+\section{D\'{e}pannage (troubleshooting)}
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}p{5.2cm} X@{}}
+\toprule
+\thd{Sympt\^{o}me} & \thd{Piste}\\
+\midrule
+\texttt{HandshakeException}\,/\,TLS au d\'{e}marrage du client & Certificat \'{e}pingl\'{e} d\'{e}synchronis\'{e}\,: reg\'{e}n\'{e}rer \texttt{assets/server\_cert.pem} depuis le serveur et republier.\\
+\texttt{401 TOKEN\_EXPIRED} en boucle & Refresh token expir\'{e}\,/\,invalide\,: forcer une reconnexion (re-login).\\
+Appels non re\c{c}us hors-ligne & V\'{e}rifier le jeton FCM (\texttt{PUT /api/auth/fcm-token}) et le tampon \texttt{pendingCalls}.\\
+M\'{e}dia WebRTC bloqu\'{e} (pas d'audio\,/\,vid\'{e}o) & NAT sym\'{e}trique\,: v\'{e}rifier \texttt{TURN\_SERVERS}\,/\,\texttt{TURN\_SECRET} et l'endpoint \texttt{/api/turn/credentials}.\\
+Emails d'OTP non re\c{c}us & V\'{e}rifier la configuration SMTP (\texttt{SMTP\_USER}\,/\,\texttt{SMTP\_PASS}, mot de passe d'application Gmail).\\
+\og{}Trop de tentatives\ldots\fg{} au login & Limiteur \texttt{authLimiter} (10\,/\,15\,min)\,: attendre ou ajuster.\\
+\bottomrule
+\end{tabularx}
+\caption{Guide de d\'{e}pannage.}
+\end{table}
+
+\section{Pistes d'\'{e}volution}
+Chiffrement de bout en bout, certificat TLS reconnu (ACME\,/\,Let's Encrypt),
+externalisation des m\'{e}dias vers un CDN, recherche plein-texte des messages,
+t\^{a}che de purge des statuts expir\'{e}s, suite de tests automatis\'{e}s.
+
+% ====================================================================
+\appendix
+\chapter{Annexes}
+
+% \section{Sch\'{e}ma relationnel (ER)}
+% \label{ann:er}
+% \begin{figure}[H]
+% \centering
+% \begin{tikzpicture}[
+%   font=\sffamily\scriptsize, node distance=7mm and 12mm,
+%   ent/.style={draw=AlanyaIndigo, very thick, rounded corners=2pt, fill=AlanyaContainer,
+%               inner sep=4pt, align=center, minimum width=24mm},
+%   rel/.style={-{Stealth[length=2mm]}, thick, AlanyaIndigoStrong}
+% ]
+%   \node[ent] (users) {\textbf{users}\\\scriptsize alanyaID (PK)};
+%   \node[ent, right=of users] (pays) {\textbf{pays}\\\scriptsize idPays (PK)};
+%   \node[ent, below=of users] (conv) {\textbf{conversation}\\\scriptsize conversID (PK)};
+%   \node[ent, right=of conv]  (cp)   {\textbf{conv\_participants}};
+%   \node[ent, below=of conv]  (msg)  {\textbf{message}\\\scriptsize msgID (PK)};
+%   \node[ent, right=22mm of cp] (call) {\textbf{callHistory}};
+%   \node[ent, below=of msg]   (stat) {\textbf{statut}\\\scriptsize ID (PK)};
+%   \node[ent, right=of stat]  (sv)   {\textbf{statut\_views}};
+%   \node[ent, right=of call]  (meet) {\textbf{meeting}\\\scriptsize idMeeting (PK)};
+%   \node[ent, below=of meet]  (part) {\textbf{participant}};
+%   \node[ent, below=of call]  (pref) {\textbf{preferredContact}};
+
+%   \draw[rel] (users) -- node[above,font=\tiny]{idPays}            (pays);
+%   \draw[rel] (cp)    -- (conv);
+%   \draw[rel] (cp.north)  to[out=90,in=0]  (users.east);
+%   \draw[rel] (msg)   -- node[left,font=\tiny]{conversationID}     (conv);
+%   \draw[rel] (msg.west)  to[out=180,in=180] node[left,font=\tiny]{senderID} (users.west);
+%   \draw[rel] (sv)    -- node[above,font=\tiny]{statutID}          (stat);
+%   \draw[rel] (stat.west) to[out=180,in=270] node[below,font=\tiny]{alanyaID} (users.south);
+%   \draw[rel] (part)  -- node[right,font=\tiny]{idMeeting}         (meet);
+%   \draw[rel] (call.north) to[out=90,in=0]  node[right,font=\tiny]{idCaller/idReceiver} (users.east);
+%   \draw[rel] (pref.west) to[out=180,in=300] (users.south east);
+% \end{tikzpicture}
+% \caption{Sch\'{e}ma relationnel simplifi\'{e} (cl\'{e}s primaires et principales relations).}
+% \label{fig:er}
+% \end{figure}
+
+% \section{Diagramme de cas d'utilisation}
+% \label{ann:usecase}
+% \begin{figure}[H]
+% \centering
+% \imageOuCadre{images/diagramme-cas-utilisation.png}{0.85\linewidth}{Diagramme de cas d'utilisation}
+% \caption{Diagramme de cas d'utilisation d'Alanya.}
+% \label{fig:usecase}
+% \end{figure}
+
+\section{Variables d'environnement du backend (\texttt{.env})}
+\label{ann:env}
+\begin{note}[Confidentiel]
+Les valeurs ci-dessous sont les secrets r\'{e}els de l'environnement de production,
+reproduits \`{a} la demande du commanditaire. Traitez ce document comme confidentiel.
+\end{note}
+
+\begin{lstlisting}[language=EnvFile,caption={Fichier .env du backend (valeurs r\'{e}elles)},captionpos=b]
+# App
+APP_NAME=Alanya
+APP_VERSION=1.0.0
+APP_DESCRIPTION=Backend for Alanya chat application
+APP_AUTHOR=Alanya
+APP_LICENSE=MIT
+LOGO_URL=https://picsum.photos/800/400
+
+# MySQL
+DB_HOST=163.123.183.89
+DB_PORT=17705
+DB_NAME=alanyBD2027
+DB_USER=Chris
+DB_PASSWORD=KENDRA2026
+# mysql://Chris:KENDRA2026@163.123.183.89:17705/alanyBD2027
+
+# Server
+PORT=3000
+NODE_ENV=production
+
+# JWT
+JWT_SECRET=f7da4f70d01a055a7bd988c87fef94b75763a17d367d42f556ed11b81a05750c
+JWT_REFRESH_SECRET=a3e9c2b1d8f4e7a0b5c6d2e1f3a4b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4
+
+# Firebase (projet Alanya-2026) -- cle de service : voir serviceAccountKey.json
+FIREBASE_PROJECT_ID=Alanya-2026
+
+# TURN / ICE
+TURN_SERVERS=[{"urls":["turn:global.relay.metered.ca:80",
+  "turn:global.relay.metered.ca:80?transport=tcp",
+  "turn:global.relay.metered.ca:443",
+  "turns:global.relay.metered.ca:443?transport=tcp"],
+  "username":"eebff34aa8046efc8b4e72aa","credential":"1DBkqNdITDjuFXyQ"},
+  {"urls":["turn:76.13.44.253:3478?transport=tcp"],
+  "username":"alanya","credential":"alanya2026"}]
+# TURN_SECRET=...     (active des identifiants ephemeres si defini)
+# TURN_TTL_SEC=3600
+
+# Base URL
+BASE_URL=https://158.220.107.211
+
+# SMTP (Gmail)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=etchomechris2000@gmail.com
+SMTP_PASS=rrgh fmxn ugjt ymkl
+SMTP_FROM=etchomechris2000@gmail.com
+MAIL_FROM_NAME=Alanya
+SUPPORT_EMAIL=etchomechris2000@gmail.com
+
+# OTP
+OTP_EXPIRY_MIN=10
+\end{lstlisting}
+
+% ====================================================================
+\begin{thebibliography}{99}
+\addcontentsline{toc}{chapter}{Bibliographie}
+\bibitem{flutter}     Google, \emph{Flutter Documentation}. \url{https://docs.flutter.dev}
+\bibitem{dart}        Google, \emph{Dart Language}. \url{https://dart.dev}
+\bibitem{provider}    R.\ Rousselet, \emph{provider --- state management for Flutter}. \url{https://pub.dev/packages/provider}
+\bibitem{drift}       S.\ Binder, \emph{Drift --- reactive persistence for Flutter}. \url{https://drift.simonbinder.eu}
+\bibitem{webrtc}      W3C, \emph{WebRTC 1.0: Real-Time Communication Between Browsers}. \url{https://www.w3.org/TR/webrtc/}
+\bibitem{flutterwebrtc} \emph{flutter\_webrtc package}. \url{https://pub.dev/packages/flutter_webrtc}
+\bibitem{express}     OpenJS Foundation, \emph{Express --- Node.js web framework}. \url{https://expressjs.com}
+\bibitem{socketio}    \emph{Socket.IO Documentation (v4)}. \url{https://socket.io/docs/v4/}
+\bibitem{jwt}         M.\ Jones, J.\ Bradley, N.\ Sakimura, \emph{RFC 7519 --- JSON Web Token (JWT)}. \url{https://www.rfc-editor.org/rfc/rfc7519}
+\bibitem{turn}        R.\ Mahy, P.\ Matthews, J.\ Rosenberg, \emph{RFC 5766 --- TURN}. \url{https://www.rfc-editor.org/rfc/rfc5766}
+\bibitem{mysql}       Oracle, \emph{MySQL 8.0 Reference Manual}. \url{https://dev.mysql.com/doc/}
+\bibitem{fcm}         Google, \emph{Firebase Cloud Messaging}. \url{https://firebase.google.com/docs/cloud-messaging}
+\end{thebibliography}
+
+\end{document}

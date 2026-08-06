@@ -26,6 +26,15 @@ object CallNativeBridge {
                         dismissIncomingSilently(callId)
                         result.success(null)
                     }
+                    // Flutter s'apprête à retirer ces appels de CallKit
+                    // (endCall/endAllCalls) : les marquer AVANT le retrait pour
+                    // que TalkyApplication ne les prenne pas pour des refus
+                    // utilisateur (sinon POST /calls/reject fratricide).
+                    "markProgrammaticDismiss" -> {
+                        val ids = call.argument<List<String>>("callIds") ?: emptyList()
+                        ids.forEach { CallDismissRegistry.markProgrammaticDismiss(it) }
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             }

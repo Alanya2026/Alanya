@@ -243,13 +243,14 @@ extension CallOneToOne on CallService {
           isVideo: _isVideo,
           displayName: _remoteUserName ?? LocaleController.instance.l10n.callNoun,
           handle: _remoteUserId.toString(),
-          // startCallKit: true (et non false) même pour un appel entrant déjà
-          // accepté : enregistre explicitement l'appel via le plugin CallKit
-          // (ConnectionService sur Android), en plus du foreground service
-          // déclenché nativement au tap "Accepter". Filet de sécurité si ce
-          // dernier échoue silencieusement (OEM agressifs type MIUI/EMUI) —
-          // sans ce filet, l'appel accepté depuis une notification en
-          // arrière-plan pouvait être tué par l'OS sans envoyer end_call.
+          // startCallKit: true, y compris pour un entrant déjà accepté : c'est
+          // ICI que le foreground service Android est démarré, et nulle part
+          // ailleurs. Le tap « Accepter » ne démarre plus de FGS
+          // (EXTRA_CALLKIT_CALLING_SHOW=false, voir CallIncomingHelper) car le
+          // service ne peut pas honorer startForeground() sans engine Flutter
+          // (crash ForegroundServiceDidNotStartInTime, app tuée). Une fois ici,
+          // l'engine est prêt → le service se construit avec un manager valide.
+          startCallKit: true,
         );
         await _markCallSessionConnected();
       }
@@ -343,6 +344,9 @@ extension CallOneToOne on CallService {
         '${StackTrace.current}',
       );
     }
+    // Capturé avant le teardown : le son ne doit sonner que si une conversation
+    // était établie, pas sur un rejet, un timeout ou un échec de connexion.
+    final wasConnected = _status == CallStatus.connected;
     speakingDetector.stop();
     _markTerminalCallId(_currentCallId);
     _cancelOutgoingRestoreTimeout();
@@ -353,6 +357,9 @@ extension CallOneToOne on CallService {
     await _callKit.endAll(callId: _currentCallId);
     await _webrtc.dispose();
     _durationTimer?.cancel();
+    // Après la libération de la session audio : le son part sur le canal
+    // notification (haut-parleur) et non plus dans l'écouteur de l'appel.
+    if (wasConnected) MessageSoundService.instance.playCallEnd();
     _resetCallState();
     _status = CallStatus.ended;
     notify();

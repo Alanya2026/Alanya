@@ -75,6 +75,7 @@ import '../../core/utils/mention_parser.dart';
 import '../../core/utils/avatar_utils.dart';
 import '../profile/profile_screen.dart';
 import '../../core/utils/system_event_payload.dart';
+import '../../widgets/group_join_banner.dart';
 import '../../widgets/chat/contact_message_preview.dart';
 import '../../widgets/chat/location_message_preview.dart';
 import '../../widgets/chat/reply_quote_bar.dart';
@@ -187,6 +188,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// ou lever le verrou pendant que cet écran est ouvert.
   bool _groupOnlyAdminsCanSend = false;
   int _myGroupRole = GroupRole.member;
+
+  /// Consentement « Rester / Quitter » pour un membre tout juste ajouté.
+  int? _myPendingJoinMsgID;
+  String _groupDisplayName = '';
+  String _joinBannerActor = '';
+  bool _joinBannerBusy = false;
 
   /// Membres du groupe, pour résoudre les mentions à l'envoi et les surligner.
   /// Alimenté par le même stream que le verrou du composeur.
@@ -770,13 +777,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       final membres = decodeParticipants(conv.participantsJson)
           .map(Participant.fromJson)
           .toList();
+      final groupName = (conv.groupName ?? '').trim().isNotEmpty
+          ? conv.groupName!.trim()
+          : widget.userName;
+      final pendingChanged = conv.myPendingJoinMsgID != _myPendingJoinMsgID;
       if (conv.onlyAdminsCanSend != _groupOnlyAdminsCanSend ||
           conv.myRole != _myGroupRole ||
-          membres.length != _groupParticipants.length) {
+          membres.length != _groupParticipants.length ||
+          pendingChanged ||
+          groupName != _groupDisplayName) {
         setState(() {
           _groupOnlyAdminsCanSend = conv.onlyAdminsCanSend;
           _myGroupRole = conv.myRole;
           _groupParticipants = membres;
+          _myPendingJoinMsgID = conv.myPendingJoinMsgID;
+          _groupDisplayName = groupName;
+          if (pendingChanged && conv.myPendingJoinMsgID == null) {
+            _joinBannerActor = '';
+            _joinBannerBusy = false;
+          }
         });
       } else {
         // Les noms ou les rôles ont pu changer sans que le nombre bouge :
@@ -784,6 +803,58 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         _groupParticipants = membres;
       }
     });
+  }
+
+  void _maybeRefreshJoinBannerActor(List<LocalMessage> messages) {
+    final pending = _myPendingJoinMsgID;
+    if (pending == null) return;
+    String actor = '';
+    for (final m in messages) {
+      if (m.msgID != pending) continue;
+      final p = SystemEventPayload.tryParse(m.content);
+      if (p != null) actor = p.actorName.trim();
+      break;
+    }
+    if (actor == _joinBannerActor) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || actor == _joinBannerActor) return;
+      setState(() => _joinBannerActor = actor);
+    });
+  }
+
+  Future<void> _onJoinStay() async {
+    final convId = _convId;
+    if (convId == null || _joinBannerBusy) return;
+    setState(() => _joinBannerBusy = true);
+    try {
+      await _chat.repository.ackGroupJoin(
+        convId,
+        msgID: _myPendingJoinMsgID,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.groupUpdateFailed)),
+      );
+    } finally {
+      if (mounted) setState(() => _joinBannerBusy = false);
+    }
+  }
+
+  Future<void> _onJoinLeave() async {
+    final convId = _convId;
+    if (convId == null || _joinBannerBusy) return;
+    setState(() => _joinBannerBusy = true);
+    try {
+      await _chat.repository.leaveGroup(convId);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _joinBannerBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.groupUpdateFailed)),
+      );
+    }
   }
 
   @override
@@ -838,6 +909,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
             children: [
               const OfflineBanner(wrapSafeArea: false),
               _buildPinnedBanner(),
+              if (widget.isGroup && _myPendingJoinMsgID != null)
+                GroupJoinBanner(
+                  actorName: _joinBannerActor.isNotEmpty
+                      ? _joinBannerActor
+                      : context.l10n.unknownSender,
+                  groupName: _groupDisplayName.isNotEmpty
+                      ? _groupDisplayName
+                      : widget.userName,
+                  onStay: () => unawaited(_onJoinStay()),
+                  onLeave: () => unawaited(_onJoinLeave()),
+                  busy: _joinBannerBusy,
+                ),
               Expanded(
                 child: Stack(
                   children: [
@@ -859,6 +942,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                               builder: (context, snapshot) {
                                 final messages = snapshot.data ?? const [];
                                 _currentMessages = messages;
+                                _maybeRefreshJoinBannerActor(messages);
                                 // Une seule fois, dès que le fil a du contenu :
                                 // l'instantané est déjà pris à ce stade.
                                 if (!_initialScrollDone && messages.isNotEmpty) {

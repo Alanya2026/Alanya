@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
+import '../../core/services/local_cache_repository.dart';
 import '../../core/services/local_hidden_store.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -13,7 +17,9 @@ import '../../providers/connectivity_provider.dart';
 import '../../talky_models.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/contact_lists_sheet.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/qr_pin.dart';
 import '../../widgets/status_ringed_avatar.dart';
 import '../../providers/status_provider.dart';
 import '../status/status_viewer_screen.dart';
@@ -22,6 +28,10 @@ import '../../widgets/chat/message_status_icon.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
+import 'select_members_screen.dart';
+
+/// Entrées du menu ⋮ de l'écran des discussions.
+enum _ChatsMenuAction { contactLists, newGroup, markAllRead }
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
@@ -32,7 +42,7 @@ class ChatsScreen extends StatefulWidget {
 
 class _ChatsScreenState extends State<ChatsScreen> {
   String _search = '';
-  String _filter = 'all'; // 'all', 'discussions', 'groups', 'unread', 'archived'
+  String _filter = 'all'; // 'all', 'discussions', 'groups', 'qr', 'unread', 'archived'
   bool _searchOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
   bool _selectionMode = false;
@@ -44,6 +54,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
   bool _awaitingInitialConversations = true;
   ChatProvider? _chatProvider;
 
+  /// Contacts préférés ajoutés par QR — pour la pastille sur l'avatar des
+  /// conversations. Observé depuis le cache : la liste vit déjà en Drift, un
+  /// Set évite toute lecture par ligne.
+  Set<int> _qrAddedIds = const {};
+  StreamSubscription<List<LocalUser>>? _qrIdsSub;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +69,18 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } else {
       _chatProvider!.addListener(_onChatProviderChanged);
     }
+    _qrIdsSub = context
+        .read<LocalCacheRepository>()
+        .watchPreferredContacts()
+        .listen((contacts) {
+      final ids = {
+        for (final c in contacts)
+          if (c.addedViaQr) c.alanyaID,
+      };
+      if (mounted && !setEquals(ids, _qrAddedIds)) {
+        setState(() => _qrAddedIds = ids);
+      }
+    });
     // Rafraîchit les statuts pour que les anneaux autour des avatars (1v1)
     // reflètent l'état courant dès l'ouverture de la liste des chats.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -76,6 +104,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   void dispose() {
     _chatProvider?.removeListener(_onChatProviderChanged);
     _chatProvider = null;
+    _qrIdsSub?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -122,6 +151,47 @@ class _ChatsScreenState extends State<ChatsScreen> {
     return _latestConversations
         .where((c) => _selectedConversationIDs.contains(c.conversID))
         .toList();
+  }
+
+  // ── Menu ⋮ ──────────────────────────────────────────────────────────
+
+  Future<void> _onMenuAction(_ChatsMenuAction action) async {
+    switch (action) {
+      case _ChatsMenuAction.contactLists:
+        await showContactListsSheet(context);
+      case _ChatsMenuAction.newGroup:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SelectMembersScreen()),
+        );
+      case _ChatsMenuAction.markAllRead:
+        await _markAllAsRead();
+    }
+  }
+
+  /// Marque lues toutes les discussions non lues visibles. Rien à faire pour
+  /// les archivées : elles ne pèsent pas sur la pastille de la barre.
+  Future<void> _markAllAsRead() async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final chat = context.read<ChatProvider>();
+
+    final nonLues = _latestConversations
+        .where((c) => c.unreadCount > 0 && !c.isArchived)
+        .toList();
+    if (nonLues.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.markAllAsReadDone(0))),
+      );
+      return;
+    }
+
+    for (final conv in nonLues) {
+      await chat.repository.markAsRead(conv.conversID);
+    }
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.markAllAsReadDone(nonLues.length))),
+    );
   }
 
   @override
@@ -211,7 +281,50 @@ class _ChatsScreenState extends State<ChatsScreen> {
               tooltip: _searchOpen ? context.l10n.closeSearch : context.l10n.commonSearch,
               onPressed: _toggleSearch,
             ),
-            IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
+            PopupMenuButton<_ChatsMenuAction>(
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: context.l10n.optionsAction,
+              onSelected: _onMenuAction,
+              itemBuilder: (context) => [
+                // Les listes en tête : c'est le raccourci que le menu existe
+                // pour offrir, le reste vient après le séparateur.
+                PopupMenuItem(
+                  value: _ChatsMenuAction.contactLists,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.folder_rounded,
+                        color: context.colors.primary),
+                    title: Text(
+                      context.l10n.contactLists,
+                      style: TextStyle(
+                        color: context.colors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: _ChatsMenuAction.newGroup,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.group_add_outlined),
+                    title: Text(context.l10n.newGroup),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _ChatsMenuAction.markAllRead,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.done_all_rounded),
+                    title: Text(context.l10n.markAllAsRead),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -238,6 +351,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 AppSpacing.hGapSm,
                 _buildFilterChip(context.l10n.groupsFilter, 'groups', Icons.groups_rounded),
                 AppSpacing.hGapSm,
+                _buildFilterChip(context.l10n.qrContactsFilterQr, 'qr', Icons.qr_code_2),
+                AppSpacing.hGapSm,
                 _buildFilterChip(context.l10n.unread, 'unread', Icons.mark_email_unread_outlined),
                 AppSpacing.hGapSm,
                 _buildFilterChip(context.l10n.archived, 'archived', Icons.archive_outlined),
@@ -263,7 +378,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 }
                 // Appliquer le filtre (chips). Le chip « Archivés » est seul à
                 // afficher les conv archivées ; les autres chips les excluent.
-                convs = _applyFilter(convs);
+                convs = _applyFilter(convs, myId);
 
                 // Skeleton seulement si le cache local est vide ET que le
                 // premier sync n'a pas encore répondu. Si Drift a déjà des
@@ -436,6 +551,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 bottom: 4,
                 child: PresenceDot(online: true, size: 14),
               ),
+            // Contact rencontré par QR : même pastille que dans les listes de
+            // contacts, coin opposé au point de présence.
+            if (!conv.isGroup &&
+                !isSelf &&
+                otherId != null &&
+                _qrAddedIds.contains(otherId))
+              const Positioned(
+                left: 4,
+                bottom: 4,
+                child: QrPin(size: 17),
+              ),
           ],
         ),
       ),
@@ -506,8 +632,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         ? Text.rich(
                             TextSpan(
                               children: parseRichSpans(
-                                displayConversationPreview(
-                                  conv.lastMessage!,
+                                conversationListPreview(
+                                  conv,
+                                  myId,
                                   context.l10n,
                                 ),
                                 context.text.bodyMedium!.copyWith(
@@ -656,7 +783,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  List<LocalConversation> _applyFilter(List<LocalConversation> convs) {
+  List<LocalConversation> _applyFilter(List<LocalConversation> convs, int myId) {
     if (_filter == 'archived') {
       return convs.where((c) => c.isArchived).toList();
     }
@@ -667,6 +794,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
         return visible.where((c) => !c.isGroup).toList();
       case 'groups':
         return visible.where((c) => c.isGroup).toList();
+      case 'qr':
+        // Conversations avec un contact rencontré par QR — le pendant du
+        // filtre du même nom sur l'écran des contacts préférés.
+        return visible
+            .where((c) =>
+                !c.isGroup &&
+                _qrAddedIds.contains(conversationOtherUserId(c, myId)))
+            .toList();
       case 'unread':
         return visible.where((c) => c.unreadCount > 0).toList();
       case 'all':

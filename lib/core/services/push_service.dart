@@ -11,6 +11,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../firebase_options.dart';
+import '../../models/qr_models.dart';
 import '../../talky_api_client.dart';
 import '../theme/locale_controller.dart';
 import 'callkit_service.dart';
@@ -479,6 +480,12 @@ class PushService {
 
     NotificationDiagnostics.pushForeground(Map<String, dynamic>.from(data));
     debugPrint('[Push] foreground: type=$type');
+    // Filet de course : le serveur ne pousse que sans socket au premier plan,
+    // mais la socket a pu tomber juste avant. Même dialogue que l'événement.
+    if (type == 'qr_contact_scanned') {
+      _apiClient.injectQrContactScan(_qrScanFromPush(data));
+      return;
+    }
     if (type == 'call_ended') {
       await dispatchCallEndedPush(
         callId: (data['callId'] ?? '').toString().trim(),
@@ -563,7 +570,25 @@ class PushService {
     );
     debugPrint('[Push] opened from notif: type=${data['type']}');
     if (data.isEmpty) return;
+    // L'app était fermée ou derrière : l'événement socket du scan est perdu,
+    // la data de la push permet de rejouer l'invitation d'ajout en retour.
+    if (data['type']?.toString() == 'qr_contact_scanned') {
+      _apiClient.injectQrContactScan(_qrScanFromPush(data));
+      return;
+    }
     _dispatchNotificationAction(NotificationAction.fromMap(data));
+  }
+
+  /// Reconstruit l'événement de scan depuis la data FCM (valeurs en chaînes).
+  static QrContactScan _qrScanFromPush(Map<String, dynamic> data) {
+    final avatar = (data['byAvatar'] ?? '').toString().trim();
+    return QrContactScan(
+      alanyaID: int.tryParse(data['byAlanyaID']?.toString() ?? '') ?? 0,
+      nom: (data['byNom'] ?? '').toString(),
+      pseudo: (data['byPseudo'] ?? '').toString(),
+      avatarUrl: avatar.isEmpty ? null : avatar,
+      alreadyMutual: data['alreadyMutual']?.toString() == '1',
+    );
   }
 
   static void _onLocalNotifTap(NotificationResponse response) {

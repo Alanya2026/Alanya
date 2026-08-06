@@ -170,6 +170,7 @@ extension CallGroup on CallService {
   }
 
   Future<void> _terminateGroupCall() async {
+    final wasConnected = _status == CallStatus.connected;
     speakingDetector.stop();
     _markTerminalCallId(_groupRoomId);
     for (final pc in _groupPeerConnections.values) {
@@ -185,6 +186,7 @@ extension CallGroup on CallService {
     await _callKit.endAll(callId: _groupRoomId);
     await _webrtc.dispose();
     _durationTimer?.cancel();
+    if (wasConnected) MessageSoundService.instance.playCallEnd();
     _groupRoomId = null;
     // Converge sur le reset 1-à-1 canonique : nettoie aussi _currentCallId
     // (sinon 'group_<room>' serait réutilisé comme id du prochain appel 1-à-1),

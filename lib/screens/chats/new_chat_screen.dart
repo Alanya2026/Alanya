@@ -285,6 +285,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                                   ? user.nom
                                                   : user.pseudo,
                                               size: AppSizes.avatarMd,
+                                              qrBadge: user.addedViaQr == true,
                                             ),
                                             if (user.isOnline)
                                               Positioned(

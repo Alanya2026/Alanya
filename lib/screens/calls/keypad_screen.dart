@@ -457,6 +457,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
         imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
         name: user.nom.isNotEmpty ? user.nom : user.pseudo,
         size: AppSizes.avatarMd,
+        qrBadge: user.addedViaQr == true,
       ),
       title: Text(
         user.nom.isNotEmpty ? user.nom : user.pseudo,

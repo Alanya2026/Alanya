@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/session_end_reason.dart';
 import '../core/services/call/pending_call_reject_store.dart';
+import '../core/services/onboarding_service.dart';
 import '../core/utils/app_log.dart';
 import '../core/utils/alanya_phone_formatter.dart';
 import '../talky_api_client.dart';
@@ -19,6 +20,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   bool _isInitialized = false;
+  bool _pendingOnboardingAfterRegister = false;
 
   AuthProvider({TalkyApiClient? apiClient, StorageService? storage})
       : _apiClient = apiClient ?? TalkyApiClient(),
@@ -29,6 +31,12 @@ class AuthProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isLoggedIn => _currentUser != null;
   bool get isInitialized => _isInitialized;
+  bool get pendingOnboardingAfterRegister => _pendingOnboardingAfterRegister;
+
+  void clearPendingOnboardingAfterRegister() {
+    _pendingOnboardingAfterRegister = false;
+  }
+
   bool get sessionExpired =>
       currentSessionEndReason == SessionEndReason.tokenExpired;
 
@@ -176,6 +184,7 @@ class AuthProvider extends ChangeNotifier {
     currentSessionEndReason = reason;
     _apiClient.logout();
     _currentUser = null;
+    _pendingOnboardingAfterRegister = false;
   }
 
   /// Au retour au premier plan : réhydrate et valide sans déconnecter offline.
@@ -231,9 +240,11 @@ class AuthProvider extends ChangeNotifier {
       await _apiClient.login(
         alanyaPhone: AlanyaPhoneFormatter.normalize(alanyaPhone),
         password: password,
-        // Sans identifiant d'appareil le backend refuse la connexion : aucune
-        // ligne `appareils` ne serait créée, la session serait irrévocable.
+        // `device_ID` reste l'UUID applicatif : c'est lui que le socket et le
+        // registre push annoncent, et la déduplication push legacy les compare.
+        // L'identifiant matériel part à part, pour la seule table `appareils`.
         deviceId: await _apiClient.ensureStableDeviceId(),
+        hardwareId: await TalkyApiClient.currentHardwareId(),
       );
 
       await _storage.saveTokens(
@@ -257,36 +268,91 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> register({
-    String? email,
-    required String password,
-    required String nom,
-    required String pseudo,
-    required int idPays,
+  /// Finalise une session à partir de tokens déjà émis par le backend : la
+  /// connexion par QR est autorisée depuis un autre appareil, il n'y a donc
+  /// aucune requête de login à jouer ici, seulement la fin de [login].
+  Future<void> loginWithQrTokens({
+    required String accessToken,
+    required String refreshToken,
   }) async {
     _setLoading(true);
     _clearError();
 
     try {
-      final cleanEmail = email?.trim();
-      await _apiClient.register(
-        email: (cleanEmail == null || cleanEmail.isEmpty) ? null : cleanEmail,
-        password: password,
-        nom: nom,
-        pseudo: pseudo,
-        idPays: idPays,
-        deviceId: await _apiClient.ensureStableDeviceId(),
-      );
+      _apiClient.setToken(accessToken);
+      _apiClient.setRefreshToken(refreshToken);
 
       await _storage.saveTokens(
-        accessToken: _apiClient.accessToken!,
-        refreshToken: _apiClient.currentRefreshToken!,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
       );
 
       final userData = await _apiClient.getMe();
       _currentUser = User.fromJson(userData);
       await _storage.saveUser(_currentUser!);
       currentSessionEndReason = SessionEndReason.none;
+      // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
+    } on TalkyException catch (e) {
+      _error = e.message;
+      debugPrint('[AuthProvider] LoginQr TalkyException: ${e.message} (Status: ${e.statusCode})');
+    } catch (e) {
+      _error = LocaleController.instance.l10n.anErrorOccurred('$e');
+      debugPrint('[AuthProvider] LoginQr Exception: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> register({
+    required String password,
+    required String nom,
+    required String pseudo,
+    String? email,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final regData = await _apiClient.register(
+        password: password,
+        nom: nom,
+        pseudo: pseudo,
+        email: email,
+        deviceId: await _apiClient.ensureStableDeviceId(),
+        hardwareId: await TalkyApiClient.currentHardwareId(),
+      );
+
+      // Le code de récupération n'existe que dans CETTE réponse : ni getMe ni
+      // aucun autre endpoint ne le renvoie sans le mot de passe. On le capte
+      // avant tout appel susceptible d'échouer, sinon l'écran identifiants
+      // n'aurait plus rien à afficher.
+      final code = regData['recoveryCode']?.toString();
+      OnboardingService.pendingRecoveryCode =
+          (code != null && code.isNotEmpty) ? code : null;
+
+      await _storage.saveTokens(
+        accessToken: _apiClient.accessToken!,
+        refreshToken: _apiClient.currentRefreshToken!,
+      );
+
+      Map<String, dynamic> userData;
+      try {
+        userData = await _apiClient.getMe();
+      } catch (e) {
+        debugPrint('[AuthProvider] getMe post-register échoué, fallback réponse register: $e');
+        final raw = regData['user'];
+        if (raw is! Map) rethrow;
+        userData = Map<String, dynamic>.from(raw);
+      }
+
+      _currentUser = User.fromJson(userData);
+      await _storage.saveUser(_currentUser!);
+      _pendingOnboardingAfterRegister = true;
+      // Drapeau persistant : survit à une fermeture de l'app en plein onboarding,
+      // contrairement à `_pendingOnboardingAfterRegister` qui vit en mémoire.
+      await OnboardingService().markStarted(_currentUser!.alanyaID);
+      currentSessionEndReason = SessionEndReason.none;
+      notifyListeners();
       // Socket après ChatProvider.bind (AuthWrapper._syncSessionBindings).
     } on TalkyException catch (e) {
       _error = e.message;
@@ -345,9 +411,49 @@ class AuthProvider extends ChangeNotifier {
     await refreshProfile();
   }
 
-  /// Met à jour le nom et/ou le pseudo de l'utilisateur connecté.
-  Future<void> updateProfile({String? nom, String? pseudo}) async {
-    await _apiClient.updateMe(nom: nom, pseudo: pseudo);
+  /// Met à jour le profil de l'utilisateur connecté.
+  ///
+  /// [genre] et [age] sont à écriture unique côté serveur : les renvoyer sur un
+  /// compte qui les a déjà renseignés lève une [TalkyException] `409`.
+  Future<void> updateProfile({
+    String? nom,
+    String? pseudo,
+    String? bio,
+    String? genre,
+    int? age,
+    int? idPays,
+  }) async {
+    await _apiClient.updateMe(
+      nom: nom,
+      pseudo: pseudo,
+      bio: bio,
+      genre: genre,
+      age: age,
+      idPays: idPays,
+    );
+    await refreshProfile();
+  }
+
+  /// Réaffiche le code de récupération (mot de passe requis).
+  Future<String> revealRecoveryCode(String password) =>
+      _apiClient.revealRecoveryCode(password);
+
+  /// Valide un code de récupération et retourne le `resetToken` associé.
+  /// Statique dans l'esprit : appelée hors session, avant toute connexion.
+  Future<String> validateRecoveryCode({
+    required String alanyaPhone,
+    required String recoveryCode,
+  }) async {
+    final data = await _apiClient.validateRecoveryCode(
+      alanyaPhone: alanyaPhone,
+      recoveryCode: recoveryCode,
+    );
+    return data['resetToken']?.toString() ?? '';
+  }
+
+  /// Met à jour la bio de l'utilisateur connecté.
+  Future<void> updateBio(String bio) async {
+    await _apiClient.updateMe(bio: bio.trim());
     await refreshProfile();
   }
 
@@ -379,6 +485,24 @@ class AuthProvider extends ChangeNotifier {
     _apiClient.logout();
     await _storage.clearAll();
     _currentUser = null;
+    _pendingOnboardingAfterRegister = false;
+    notifyListeners();
+  }
+
+  /// Cet appareil vient d'être déconnecté depuis un autre appareil du compte.
+  ///
+  /// `TalkyApiClient.logout()` n'efface que les tokens EN MÉMOIRE : sans ce
+  /// passage par le stockage, le refresh token persisté relancerait la session
+  /// au prochain démarrage, et l'UI resterait sur l'écran d'accueil avec un
+  /// compte qui répond « non authentifié » à chaque action.
+  Future<void> handleRemoteRevocation() async {
+    if (_currentUser == null && _apiClient.accessToken == null) return;
+    debugPrint('[AuthProvider] appareil révoqué à distance → session locale effacée');
+    currentSessionEndReason = SessionEndReason.revokedRemotely;
+    _apiClient.logout();
+    await _storage.clearAll();
+    _currentUser = null;
+    _pendingOnboardingAfterRegister = false;
     notifyListeners();
   }
 

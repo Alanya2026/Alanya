@@ -3,7 +3,7 @@
 %  Document de validation client — assemble les cinq volets.
 %
 %  Ce fichier ne contient AUCUN texte de fond : il assemble les fragments
-%  de contenu/, partagés avec les cinq dossiers autonomes. Une correction
+%  de contenu/, partagés avec les six dossiers autonomes. Une correction
 %  faite dans un fragment vaut pour les deux formats.
 %
 %  Compilation :  latexmk -pdf dossier-conception-alanya.tex
@@ -19,7 +19,7 @@
   urlcolor=AlanyaIndigoStrong,
   pdftitle={Alanya - Dossier de conception},
   pdfauthor={Equipe Alanya},
-  pdfsubject={Conception - comptes business, certification, compte officiel, listes de contacts}
+  pdfsubject={Conception - comptes business, certification, compte officiel, listes de contacts, identite et connexion QR}
 }
 
 \begin{document}
@@ -61,7 +61,7 @@
   {\Large\color{AlanyaGray} Comptes business, certification,}\\[3pt]
   {\Large\color{AlanyaGray} compte officiel et listes de contacts}\\[16pt]
   {\normalsize\itshape\color{AlanyaGray}
-   Cinq volets --- approche fonctionnelle et approche technique}\\[24pt]
+   Six volets --- approche fonctionnelle et approche technique}\\[24pt]
   {\color{AlanyaLine}\rule{0.62\linewidth}{0.6pt}}
 \end{center}
 
@@ -90,9 +90,10 @@
 \markboth{Résumé}{}
 \thispagestyle{plain}
 
-Quatre fonctionnalités ont été demandées pour Alanya~: les \textbf{comptes business} avec
+Cinq fonctionnalités ont été demandées pour Alanya~: les \textbf{comptes business} avec
 leur fiche étendue, la \textbf{certification des comptes}, un \textbf{compte officiel} au nom
-de l'application, et les \textbf{listes de contacts préférés}.
+de l'application, les \textbf{listes de contacts préférés}, et l'\textbf{identité par QR
+code} --- ajout de contact instantané et connexion multi-appareils.
 
 La première décision de ce dossier est de constater que trois d'entre elles ne sont pas trois
 systèmes différents. Comptes business, certification et compte officiel répondent à la même
@@ -128,7 +129,7 @@ signalé et argumenté.
 \markboth{Comment lire ce dossier}{}
 \thispagestyle{plain}
 
-\section*{Les cinq volets}
+\section*{Les six volets}
 
 Chaque fonctionnalité est traitée dans les \emph{deux} parties. L'ordre suit les dépendances
 techniques, pas l'ordre dans lequel les fonctionnalités ont été demandées.
@@ -144,6 +145,8 @@ dépendent. \\
 3 & Compte officiel et diffusion & Messages et statuts adressés à une partie de la base. \\
 4 & Comptes business & Ce que contient une fiche~: lieu, médias, horaires, catalogue. \\
 5 & Certification & Le dossier, son instruction, le sort des pièces. \\
+6 & Identité et connexion QR & Ajout de contact instantané par scan, et connexion d'un
+second appareil. Indépendante des cinq autres. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -195,6 +198,10 @@ l'architecture, mais elles doivent être arbitrées avant l'implémentation du v
   {Attester une identité, sans vendre de badge}
 \input{contenu/certification-naive}
 
+\volet{6}{Identité et connexion par QR code}%
+  {Ajout de contact instantané par scan, et connexion d'un second appareil}
+\input{contenu/qr-code-naive}
+
 % =====================================================================
 \part{Approche technique}
 % =====================================================================
@@ -219,6 +226,10 @@ l'architecture, mais elles doivent être arbitrées avant l'implémentation du v
   {Dossiers, coffre à documents, abonnement laissé dormant}
 \input{contenu/certification-technique}
 
+\volet{6}{Identité et connexion par QR code}%
+  {Jeton opaque régénérable, session de connexion éphémère, révocation réelle du refresh token}
+\input{contenu/qr-code-technique}
+
 % =====================================================================
 %  SYNTHÈSE FINALE
 % =====================================================================
@@ -228,7 +239,7 @@ l'architecture, mais elles doivent être arbitrées avant l'implémentation du v
 \addcontentsline{toc}{chapter}{Ce qui reste à construire}
 \markboth{Ce qui reste à construire}{}
 
-Les cinq volets s'appuient sur des briques d'infrastructure qui \textbf{n'existent pas
+Les six volets s'appuient sur des briques d'infrastructure qui \textbf{n'existent pas
 aujourd'hui} dans les trois dépôts. Les rassembler ici évite qu'elles apparaissent comme des
 surprises au moment du développement.
 
@@ -250,6 +261,9 @@ Journal de vues & 4 & Tableau de bord du commerçant. Anti-rebond, agrégation e
 concevoir \emph{avec} la table, pas après. \\
 Stockage objet & 4 & Les médias de fiche sont publics et servis en boucle. Le disque local
 tiendra la mise en service, pas au-delà. \\
+Révocation de session & 6 & Transforme le refresh token JWT actuel --- jamais révocable ---
+en jeton réellement révocable. Condition pour qu'un bouton « Déconnecter » ait un effet
+immédiat. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -273,6 +287,15 @@ Trancher lequel décrit la production. \\
 afficherait faux. À corriger dans le même lot que le volet~1. \\
 \code{uploads/} est servi en statique par \code{server.js} & Une pièce d'identité déposée
 par le chemin habituel serait publiquement téléchargeable. Stockage distinct obligatoire. \\
+\code{auth:conflict} défini et écouté côté mobile (\code{lib/talky\_models.dart},
+\code{lib/api/socket\_api.dart}) mais jamais émis par le backend & Résolu par le
+volet~6~: l'événement est désormais émis à chaque connexion du compte
+(\code{authCustomController.js}, \code{qrAuthController.js}) et remonté à l'UI. \\
+Les migrations 023 à 025 réellement présentes (\code{023\_message\_delivered\_at.sql},
+\code{024\_groups\_roles\_mentions.sql}, \code{025\_email\_change\_otp.sql}) ne
+correspondent plus aux numéros réservés par les volets 1 à 3, jamais appliqués & Le premier
+numéro réellement libre aujourd'hui est \textbf{026} --- le volet~6 le prend. Les volets 1
+à 3 devront être renumérotés au moment de leur implémentation réelle. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -281,6 +304,7 @@ par le chemin habituel serait publiquement téléchargeable. Stockage distinct o
 
 \begin{center}
 \begin{tikzpicture}[
+  scale=0.82, every node/.style={scale=0.82},
   x=1cm, y=1cm,
   v/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
             font=\sffamily\scriptsize, inner sep=5pt, minimum height=0.9cm,
@@ -294,6 +318,7 @@ par le chemin habituel serait publiquement téléchargeable. Stockage distinct o
   \node[v] (d)  at (4.1,0)    {3. Diffusion\\[-2pt]{\scriptsize + file de jobs}};
   \node[v] (b)  at (8.2,0)    {4. Business\\[-2pt]{\scriptsize + géo, médias}};
   \node[v] (c)  at (12.3,0)   {5. Certification\\[-2pt]{\scriptsize + coffre}};
+  \node[v] (q)  at (16.4,0)   {6. QR\\[-2pt]{\scriptsize indépendant}};
 
   \draw[a] (s) -- (d);
   \draw[a] (d) -- (b);
@@ -305,12 +330,15 @@ par le chemin habituel serait publiquement téléchargeable. Stockage distinct o
 
 Le socle conditionne les volets 3, 4 et 5. Les listes de contacts n'en dépendent que pour la
 numérotation des migrations et du schéma local~: elles peuvent être livrées en parallèle, et
-constituent le cycle le plus court.
+constituent le cycle le plus court. L'identité par QR code (volet~6) n'a aucune arête entrante~:
+elle porte un axe \emph{session/authentification}, orthogonal à l'axe \emph{qui est ce
+compte} que porte le socle --- elle peut se construire dès maintenant, en parallèle des cinq
+autres.
 
 \vfill
 \begin{center}\small\color{AlanyaGray}\sffamily
 Fin du dossier de conception. \\
-Les cinq volets existent aussi en documents autonomes, dans le même dossier.
+Les six volets existent aussi en documents autonomes, dans le même dossier.
 \end{center}
 
 \end{document}

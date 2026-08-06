@@ -93,6 +93,10 @@ dependencies:
   # ── UI : swipe actions sur listes / bulles ───────────────────────
   flutter_slidable: ^3.0.0
 
+  # ── QR : mon code d'identité et connexion d'un nouvel appareil ───
+  qr_flutter: ^4.1.0                  # Rendu du QR à l'écran (Dart pur)
+  mobile_scanner: ^7.4.0              # Scan du QR (CameraX + ML Kit / AVFoundation)
+
   # ── Identification appareil (marque + modèle pour userAccess) ────
   device_info_plus: ^10.1.2
   video_thumbnail: ^0.5.6
@@ -106,6 +110,9 @@ dependencies:
   # (AGP 8.9.1 / Kotlin 2.1.0 / Gradle 8.12) — « Could not find method kotlin() ».
   receive_sharing_intent: 1.8.1
   audio_metadata_reader: ^1.6.0
+  app_links: ^7.2.1
+  local_auth: ^2.3.0
+  package_info_plus: ^8.1.2
 
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la
@@ -132,25 +139,25 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/images/alanyalogo.png
+  image_path: assets/images/new_alanya_logo.png
   web:
     generate: true
-    image_path: assets/images/alanyalogo.png
+    image_path: assets/images/new_alanya_logo.png
     background_color: "#FFFFFF"
     theme_color: "#3F51B5"
   windows:
     generate: true
-    image_path: assets/images/alanyalogo.png
+    image_path: assets/images/new_alanya_logo.png
   macos:
     generate: true
-    image_path: assets/images/alanyalogo.png
+    image_path: assets/images/new_alanya_logo.png
 
 flutter_native_splash:
   color: "#FFFFFF"
-  image: assets/images/alanyalogo_splash.png
+  image: assets/images/new_alanya_logo_splash.png
   android_12:
     color: "#FFFFFF"
-    image: assets/images/alanyalogo_splash.png
+    image: assets/images/new_alanya_logo_splash.png
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -169,7 +176,7 @@ flutter:
   assets:
     - assets/sounds/
     - assets/sounds/ringtones/   # Sonneries fournies avec l'app (aperçu/foreground)
-    - assets/sounds/ui/          # Sons d'interface (envoi/réception de message)
+    - assets/sounds/ui/          # Sons d'interface (message, scan QR, fin d'appel)
     - assets/server_cert.pem   # Certificat backend épinglé (cert pinning)
     - assets/images/
 

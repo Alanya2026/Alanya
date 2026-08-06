@@ -47,12 +47,13 @@ bool canEditInfo(int myRole, bool onlyAdminsCanEditInfo) {
 
 /// Ajouter des participants.
 ///
-/// Volontairement adossée au **même verrou** que l'édition des infos
-/// (`POST /:id/participants`, §2.5 du plan) : inviter, c'est modifier le
-/// groupe. Un second réglage n'apporterait qu'une case à cocher de plus pour
-/// la même intention.
-bool canAddParticipants(int myRole, bool onlyAdminsCanEditInfo) =>
-    canEditInfo(myRole, onlyAdminsCanEditInfo);
+/// Verrou indépendant de [canEditInfo] : un admin peut laisser tout le monde
+/// inviter tout en réservant le renommage, et inversement. Le serveur répond
+/// 403 `GROUP_ADD_MEMBERS_LOCKED` si le verrou est actif.
+bool canAddParticipants(int myRole, bool onlyAdminsCanAddMembers) {
+  if (!_isMember(myRole)) return false;
+  return !onlyAdminsCanAddMembers || myRole >= GroupRole.admin;
+}
 
 /// Basculer les verrous du groupe (mode annonce, édition réservée).
 ///

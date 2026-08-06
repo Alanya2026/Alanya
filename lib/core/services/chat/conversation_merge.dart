@@ -6,6 +6,7 @@ import '../../utils/audio_message_kind.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
+import '../../utils/system_event_payload.dart';
 import '../../theme/locale_controller.dart';
 
 /// Merge monotonic conversation list HTTP → cache local.
@@ -140,6 +141,14 @@ class ConversationMerge {
   }) {
     // type=5 : JSON lat/lng — ne jamais exposer le content brut.
     if (type == 5) return locationPreviewLabel(content);
+    // type=6 : JSON événement de groupe — ne jamais exposer le content brut.
+    if (type == kSystemMessageType) {
+      final payload = SystemEventPayload.tryParse(content);
+      if (payload != null) {
+        return payload.previewLabel(resolveL10n());
+      }
+      return resolveL10n().sysGroupEventFallback;
+    }
     // type=7 : JSON contact — ne jamais exposer le content brut.
     if (type == 7) return contactPreviewLabel(content);
 

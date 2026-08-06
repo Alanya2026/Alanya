@@ -464,6 +464,7 @@ class _UserTile extends StatelessWidget {
                         : null,
                     name: user.nom.isNotEmpty ? user.nom : user.pseudo,
                     size: AppSizes.avatarMd,
+                    qrBadge: user.addedViaQr == true,
                   ),
                   if (user.isOnline)
                     Positioned(

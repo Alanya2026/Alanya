@@ -2002,6 +2002,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playbackSpeed => 'Playback speed';
 
   @override
+  String get playbackSpeedVoiceLabel => 'Voice messages';
+
+  @override
+  String get playbackSpeedVideoLabel => 'Videos';
+
+  @override
+  String get playbackSpeedMusicLabel => 'Music';
+
+  @override
   String get music => 'Music';
 
   @override
@@ -3034,6 +3043,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sysGroupEventFallback => 'The group was updated';
 
   @override
+  String sysPreviewGroupCreated(String actor, String value) {
+    return '$actor created \"$value\"';
+  }
+
+  @override
+  String sysPreviewGroupCreatedShort(String actor) {
+    return '$actor created the group';
+  }
+
+  @override
+  String sysPreviewMemberAdded(String actor) {
+    return '$actor added members';
+  }
+
+  @override
+  String sysPreviewMemberRemoved(String actor) {
+    return '$actor removed a member';
+  }
+
+  @override
+  String sysPreviewMemberLeft(String actor) {
+    return '$actor left the group';
+  }
+
+  @override
+  String sysPreviewGroupRenamed(String actor) {
+    return '$actor renamed the group';
+  }
+
+  @override
+  String sysPreviewGroupPhotoChanged(String actor) {
+    return '$actor changed the group photo';
+  }
+
+  @override
+  String sysPreviewGroupDescriptionChanged(String actor) {
+    return '$actor changed the description';
+  }
+
+  @override
+  String sysPreviewRolePromoted(String actor) {
+    return '$actor made someone an admin';
+  }
+
+  @override
+  String sysPreviewRoleDemoted(String actor) {
+    return '$actor removed admin rights';
+  }
+
+  @override
+  String sysPreviewSettingsChanged(String actor) {
+    return '$actor changed group settings';
+  }
+
+  @override
   String get groupOwner => 'Owner';
 
   @override
@@ -3087,8 +3151,63 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onlyAdminsCanEditInfoLabel => 'Only admins can edit info';
 
   @override
-  String get onlyAdminsCanEditInfoSubtitle =>
-      'Name, photo, description and adding members';
+  String get onlyAdminsCanEditInfoSubtitle => 'Name, photo and description';
+
+  @override
+  String get hideHistoryForNewMembersLabel => 'Hide history for new members';
+
+  @override
+  String get hideHistoryForNewMembersSubtitle =>
+      'New members won\'t see messages sent before they joined';
+
+  @override
+  String get onlyAdminsCanAddMembersLabel => 'Only admins can add members';
+
+  @override
+  String get onlyAdminsCanAddMembersSubtitle =>
+      'Invite new participants to the group';
+
+  @override
+  String groupJoinBannerBody(String actor, String group) {
+    return '$actor added you to the group \"$group\"';
+  }
+
+  @override
+  String get stay => 'Stay';
+
+  @override
+  String sysHideHistoryOn(String actor) {
+    return '$actor hid chat history for new members';
+  }
+
+  @override
+  String get sysHideHistoryOnByMe => 'You hid chat history for new members';
+
+  @override
+  String sysHideHistoryOff(String actor) {
+    return '$actor made chat history visible for new members';
+  }
+
+  @override
+  String get sysHideHistoryOffByMe =>
+      'You made chat history visible for new members';
+
+  @override
+  String sysOnlyAdminsAddOn(String actor) {
+    return '$actor restricted adding members to admins';
+  }
+
+  @override
+  String get sysOnlyAdminsAddOnByMe =>
+      'You restricted adding members to admins';
+
+  @override
+  String sysOnlyAdminsAddOff(String actor) {
+    return '$actor allowed everyone to add members';
+  }
+
+  @override
+  String get sysOnlyAdminsAddOffByMe => 'You allowed everyone to add members';
 
   @override
   String get mentionsOnlyLabel => 'Mentions only';
@@ -3345,4 +3464,1259 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get confCancelInvite => 'Cancel';
+
+  @override
+  String get qrMyCodeTitle => 'My QR code';
+
+  @override
+  String get qrMyCodeTabCode => 'My code';
+
+  @override
+  String get qrMyCodeTabScan => 'Scan';
+
+  @override
+  String get qrMyCodeSubtitle =>
+      'Have this code scanned to be added as a preferred contact.';
+
+  @override
+  String get qrMyCodeShare => 'Share';
+
+  @override
+  String qrMyCodeExpiresIn(String time) {
+    return 'Expires in $time';
+  }
+
+  @override
+  String get qrMyCodeValidityNote =>
+      'Valid for 10 minutes and a single person. A new code is generated automatically.';
+
+  @override
+  String get qrMyCodeNewCode => 'New code';
+
+  @override
+  String get qrMyCodeShareValidity =>
+      'This code is valid for 10 minutes and a single person.';
+
+  @override
+  String get qrScanReturnTitle => 'New contact';
+
+  @override
+  String qrScanReturnBody(String name) {
+    return '$name added you to their preferred contacts with your QR code. Add them back?';
+  }
+
+  @override
+  String get qrScanReturnAccept => 'Add';
+
+  @override
+  String get qrScanReturnDecline => 'No thanks';
+
+  @override
+  String get qrScanReturnFailed => 'Could not add this contact';
+
+  @override
+  String qrScannedMutualInfo(String name) {
+    return '$name added you with your QR code';
+  }
+
+  @override
+  String get qrNoteFieldHint => 'Add a note (place, context…)';
+
+  @override
+  String get qrNoteSaved => 'Note saved';
+
+  @override
+  String get qrNoteFailed => 'Could not save the note';
+
+  @override
+  String get qrContactsFilterAll => 'All';
+
+  @override
+  String get qrContactsFilterQr => 'Via QR';
+
+  @override
+  String get qrContactAddedViaQr => 'Added via QR code';
+
+  @override
+  String qrContactAddedViaQrOn(String date) {
+    return 'Added via QR code · $date';
+  }
+
+  @override
+  String get qrMyCodeShareSheetTitle => 'Share my code';
+
+  @override
+  String get qrMyCodeShareLink => 'Share the link';
+
+  @override
+  String get qrMyCodeShareLinkHint => 'Tappable link and Alanya ID';
+
+  @override
+  String get qrMyCodeShareImage => 'Share the image';
+
+  @override
+  String get qrMyCodeShareImageHint => 'The card to scan';
+
+  @override
+  String qrMyCodeShareId(String id) {
+    return 'My Alanya ID: $id';
+  }
+
+  @override
+  String get qrMyCodeRegenerate => 'Regenerate';
+
+  @override
+  String get qrMyCodeRegenerateConfirmTitle => 'Regenerate your code?';
+
+  @override
+  String get qrMyCodeRegenerateConfirmBody =>
+      'The old code will stop working right away. Anyone who saved it will no longer be able to add you with it.';
+
+  @override
+  String get qrMyCodeRegenerateDone => 'New code generated';
+
+  @override
+  String qrMyCodeShareText(String name) {
+    return 'Add me on Alanya: I am $name.';
+  }
+
+  @override
+  String get qrScanTitle => 'Scan a code';
+
+  @override
+  String get qrScanEntryButton => 'Scan a code';
+
+  @override
+  String get qrScanInstruction => 'Point at a contact\'s QR code';
+
+  @override
+  String get qrScanErrorUnreadable =>
+      'Code unreadable. Move closer and try again.';
+
+  @override
+  String get qrScanErrorUnknown => 'This code has expired or is unknown.';
+
+  @override
+  String get qrScanOwnCode => 'This is your own code.';
+
+  @override
+  String qrScanAddSuccess(String name) {
+    return '$name was added to your preferred contacts';
+  }
+
+  @override
+  String qrScanAlreadyContact(String name) {
+    return '$name is already in your preferred contacts';
+  }
+
+  @override
+  String get qrScanResultAdded => 'Added to your contacts';
+
+  @override
+  String get qrScanResultAlready => 'Already in your contacts';
+
+  @override
+  String get qrScanActionMessage => 'Message';
+
+  @override
+  String get qrScanActionDetails => 'View details';
+
+  @override
+  String get qrScanUndo => 'Undo';
+
+  @override
+  String qrScanUndone(String name) {
+    return '$name was removed from your preferred contacts';
+  }
+
+  @override
+  String get qrScanUndoFailed => 'Could not undo the addition';
+
+  @override
+  String get qrScanCameraDenied => 'Alanya needs camera access to scan a code.';
+
+  @override
+  String get qrScanOpenSettings => 'Open settings';
+
+  @override
+  String get qrScanTorchOn => 'Flashlight on';
+
+  @override
+  String get qrScanTorchOff => 'Flashlight off';
+
+  @override
+  String get qrScanImportImage => 'Import an image';
+
+  @override
+  String get qrScanImportNoCode => 'No QR code in this image.';
+
+  @override
+  String get qrScanImportNotAlanya => 'This QR code is not an Alanya code.';
+
+  @override
+  String get qrScanImportFailed => 'Could not read this image.';
+
+  @override
+  String get qrLoginTitle => 'Sign in with QR code';
+
+  @override
+  String get qrLoginEntryButton => 'Sign in with a QR code';
+
+  @override
+  String get qrLoginUsePassword => 'Sign in with my password';
+
+  @override
+  String get qrLoginExplanation =>
+      'Open Alanya on the phone you are already signed in on, go to Account & security, then scan this code.';
+
+  @override
+  String qrLoginExpiresIn(String time) {
+    return 'Expires in $time';
+  }
+
+  @override
+  String get qrLoginStatusWaiting => 'Waiting to be scanned…';
+
+  @override
+  String get qrLoginStatusScanned =>
+      'Code scanned. Confirm on your other device.';
+
+  @override
+  String get qrLoginStatusRejected =>
+      'Sign-in declined from your other device.';
+
+  @override
+  String get qrLoginStatusExpired => 'This code has expired.';
+
+  @override
+  String get qrLoginRegenerate => 'Generate a new code';
+
+  @override
+  String get qrLoginNetworkError =>
+      'Could not connect. Check your network and try again.';
+
+  @override
+  String get qrApproveTitle => 'New sign-in';
+
+  @override
+  String get qrApproveIntro => 'This code was just scanned from this device:';
+
+  @override
+  String get qrApproveDeviceLabel => 'Device (declared name)';
+
+  @override
+  String get qrApprovePlatformLabel => 'Platform';
+
+  @override
+  String get qrApproveRequestedLabel => 'Requested';
+
+  @override
+  String get qrApproveIpLabel => 'IP address';
+
+  @override
+  String get qrApproveLocationLabel => 'Approximate location';
+
+  @override
+  String get qrApproveDeclaredNotice =>
+      'The name and platform are announced by the device requesting access and can be forged. Only the IP address is observed by Alanya.';
+
+  @override
+  String get qrApproveSecurityWarning =>
+      'If you did not start this request, decline it and change your password.';
+
+  @override
+  String get qrApproveReject => 'Decline';
+
+  @override
+  String get qrApproveConfirm => 'Confirm';
+
+  @override
+  String get qrApproveDone => 'Device connected';
+
+  @override
+  String get qrApproveRejectDone => 'Sign-in declined';
+
+  @override
+  String get qrApproveSessionExpired =>
+      'This request has expired. Show a new code on the other device.';
+
+  @override
+  String get qrDevicesTitle => 'Connected devices';
+
+  @override
+  String get qrDevicesEntryTitle => 'Connected devices';
+
+  @override
+  String get qrDevicesEntrySubtitle => 'See where your account is open';
+
+  @override
+  String get qrLinkDeviceTitle => 'Link a new device';
+
+  @override
+  String get qrLinkDeviceSubtitle => 'Scan the code shown on the other device';
+
+  @override
+  String get qrDevicesThisDevice => 'This device';
+
+  @override
+  String get qrDevicesUnknownDevice => 'Unknown device';
+
+  @override
+  String get qrDevicesMethodPassword => 'Signed in with password';
+
+  @override
+  String get qrDevicesMethodSignup => 'Sign-up device';
+
+  @override
+  String get qrDevicesMethodQr => 'Signed in with QR code';
+
+  @override
+  String qrDevicesLastActive(String date) {
+    return 'Active $date';
+  }
+
+  @override
+  String get qrDevicesRevoke => 'Sign out';
+
+  @override
+  String get qrDevicesRevokeConfirmTitle => 'Sign this device out?';
+
+  @override
+  String qrDevicesRevokeConfirmBody(String name) {
+    return '$name will be signed out right away. Your password will be required to sign back in on it.';
+  }
+
+  @override
+  String get qrDevicesRevokeDone => 'Device signed out';
+
+  @override
+  String get qrDevicesEmpty => 'No other connected device';
+
+  @override
+  String get qrDevicesLoadError => 'Could not load your devices';
+
+  @override
+  String get qrDevicesIosNote =>
+      'On iPhone, a device may show up again as a new device in this list after Alanya is reinstalled.';
+
+  @override
+  String qrBannerNewDevice(String name) {
+    return 'New device connected: $name';
+  }
+
+  @override
+  String get qrBannerSignedOutRemotely =>
+      'This device was signed out from another device.';
+
+  @override
+  String get myAccountLabel => 'My account';
+
+  @override
+  String get accountHubTitle => 'My account';
+
+  @override
+  String get accountHubSecurityScore => 'Security score';
+
+  @override
+  String accountHubSecurityScoreValue(int score, int max) {
+    return '$score / $max';
+  }
+
+  @override
+  String get securityScoreAddEmail => 'Add an email to improve your score.';
+
+  @override
+  String get securityScoreAddBiometric =>
+      'Enable biometrics to improve your score.';
+
+  @override
+  String get accountHubSectionIdentity => 'Identity';
+
+  @override
+  String get accountHubSectionProtection => 'Protection';
+
+  @override
+  String get accountHubSectionData => 'Data';
+
+  @override
+  String get accountHubEditProfile => 'Edit profile';
+
+  @override
+  String get accountHubEditProfileSubtitle => 'Name, username, bio, photo';
+
+  @override
+  String get accountHubMyMedia => 'My media';
+
+  @override
+  String get accountHubPrivacy => 'Privacy';
+
+  @override
+  String get accountHubPrivacySubtitle => 'Visibility, blocking, read receipts';
+
+  @override
+  String get accountHubSecurity => 'Account security';
+
+  @override
+  String get accountHubSecuritySubtitle => 'Password, devices, biometrics';
+
+  @override
+  String get accountHubDataAccount => 'Data & account';
+
+  @override
+  String get accountHubDataAccountSubtitle => 'GDPR export, deletion';
+
+  @override
+  String get accountHubProfilePreview => 'Profile preview';
+
+  @override
+  String get accountHubProfilePreviewSubtitle => 'See how contacts view you';
+
+  @override
+  String get profileBioLabel => 'Bio';
+
+  @override
+  String get profileBioHint =>
+      'Tell others about yourself (500 characters max)';
+
+  @override
+  String get profilePreviewLink => 'Profile preview';
+
+  @override
+  String get myMediaTitle => 'My media';
+
+  @override
+  String get myMediaPlaceholder =>
+      'Your shared photos and videos will appear here.';
+
+  @override
+  String get storageTitle => 'Storage & cache';
+
+  @override
+  String get storageUsed => 'Storage used';
+
+  @override
+  String get storageBreakdownTitle => 'Breakdown';
+
+  @override
+  String get storageMediaCache => 'Media cache';
+
+  @override
+  String get storageDatabase => 'Database';
+
+  @override
+  String get storageTempFiles => 'Temporary files';
+
+  @override
+  String get storageOther => 'Other data';
+
+  @override
+  String get storageClearMediaCache => 'Clear media cache';
+
+  @override
+  String get storageClearTemp => 'Clear temporary files';
+
+  @override
+  String get storageClearCacheConfirm =>
+      'Cached files will be removed. Media can be downloaded again.';
+
+  @override
+  String get storageClearCacheDone => 'Media cache cleared';
+
+  @override
+  String get storageClearTempDone => 'Temporary files cleared';
+
+  @override
+  String get networkDataTitle => 'Network & data';
+
+  @override
+  String get networkDataSectionNetwork => 'Network';
+
+  @override
+  String get networkWifiOnly => 'Wi-Fi only';
+
+  @override
+  String get networkWifiOnlySubtitle => 'Only download media on Wi-Fi';
+
+  @override
+  String get networkDataSaver => 'Data saver';
+
+  @override
+  String get networkDataSaverSubtitle =>
+      'Reduces quality and automatic downloads';
+
+  @override
+  String get settingsSectionCommunication => 'Communication';
+
+  @override
+  String get settingsSectionApplication => 'Application';
+
+  @override
+  String get settingsSectionInformation => 'Information';
+
+  @override
+  String get settingsStorage => 'Storage & cache';
+
+  @override
+  String get settingsStorageSubtitle => 'Usage and cleanup';
+
+  @override
+  String get settingsNetwork => 'Network & data';
+
+  @override
+  String get settingsNetworkSubtitle => 'Wi-Fi, data saver, media';
+
+  @override
+  String get settingsAccessibility => 'Accessibility';
+
+  @override
+  String get settingsAccessibilitySubtitle => 'Text and motion';
+
+  @override
+  String get settingsAbout => 'About & legal';
+
+  @override
+  String get settingsMutedConversations => 'Muted conversations';
+
+  @override
+  String get accessibilityTitle => 'Accessibility';
+
+  @override
+  String get accessibilitySectionDisplay => 'Display';
+
+  @override
+  String get accessibilityFontScale => 'Text size';
+
+  @override
+  String get accessibilityFontScaleSmall => 'Small';
+
+  @override
+  String get accessibilityFontScaleDefault => 'Normal';
+
+  @override
+  String get accessibilityFontScaleMedium => 'Large';
+
+  @override
+  String get accessibilityFontScaleLarge => 'Extra large';
+
+  @override
+  String get accessibilityReduceMotion => 'Reduce motion';
+
+  @override
+  String get accessibilityReduceMotionSubtitle =>
+      'Limits transitions and visual effects';
+
+  @override
+  String get accessibilitySaveFailed => 'Could not save preferences';
+
+  @override
+  String get mutedConversationsTitle => 'Muted conversations';
+
+  @override
+  String get mutedConversationsEmpty => 'No muted conversations';
+
+  @override
+  String mutedConversationsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count conversations',
+      one: '1 conversation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mutedForeverLabel => 'Muted indefinitely';
+
+  @override
+  String mutedUntilLabel(String date) {
+    return 'Until $date';
+  }
+
+  @override
+  String get dndScheduleTitle => 'Do not disturb';
+
+  @override
+  String get dndEnabled => 'Schedule';
+
+  @override
+  String get dndEnabledSubtitle => 'Mute notifications on a time schedule';
+
+  @override
+  String get dndScheduleHours => 'Hours';
+
+  @override
+  String get dndStartTime => 'Start';
+
+  @override
+  String get dndEndTime => 'End';
+
+  @override
+  String get dndDays => 'Active days';
+
+  @override
+  String get dndDayMon => 'Mon';
+
+  @override
+  String get dndDayTue => 'Tue';
+
+  @override
+  String get dndDayWed => 'Wed';
+
+  @override
+  String get dndDayThu => 'Thu';
+
+  @override
+  String get dndDayFri => 'Fri';
+
+  @override
+  String get dndDaySat => 'Sat';
+
+  @override
+  String get dndDaySun => 'Sun';
+
+  @override
+  String get dndSaveFailed => 'Could not save schedule';
+
+  @override
+  String get aboutTitle => 'About';
+
+  @override
+  String get aboutSectionLegal => 'Legal';
+
+  @override
+  String aboutVersion(String version, String build) {
+    return 'Version $version (build $build)';
+  }
+
+  @override
+  String get aboutTerms => 'Terms of service';
+
+  @override
+  String get aboutPrivacy => 'Privacy policy';
+
+  @override
+  String get aboutLicenses => 'Open source licenses';
+
+  @override
+  String get aboutSupport => 'Contact support';
+
+  @override
+  String get aboutCopyright => '© 2026 Alanya · Made with care in Douala';
+
+  @override
+  String get exportDataTitle => 'Data & account';
+
+  @override
+  String get exportSectionYourData => 'Your data';
+
+  @override
+  String get exportSectionDanger => 'Sensitive zone';
+
+  @override
+  String get exportPhase1Title => 'Quick export (GDPR)';
+
+  @override
+  String get exportPhase1Subtitle =>
+      'Profile, contacts, metadata — available immediately';
+
+  @override
+  String get exportPhase2Title => 'Full export';
+
+  @override
+  String get exportPhase2Subtitle =>
+      'Includes messages and media — ready in ~24 h';
+
+  @override
+  String get exportRequestPhase1 => 'Export now';
+
+  @override
+  String get exportRequestPhase2 => 'Request full export';
+
+  @override
+  String get exportPhase1ReadyTitle => 'Export ready';
+
+  @override
+  String get exportPhase2Started =>
+      'Full export requested — you will be notified';
+
+  @override
+  String get exportInProgress => 'Export in progress';
+
+  @override
+  String get exportInProgressHint =>
+      'Ready in ~24 h · notification when complete';
+
+  @override
+  String get exportReady => 'Your export is ready';
+
+  @override
+  String get exportDownload => 'Download';
+
+  @override
+  String exportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get deleteAccountTitle => 'Delete account';
+
+  @override
+  String get deleteAccountEntrySubtitle => 'Irreversible action';
+
+  @override
+  String get deleteAccountStep1Title => 'Irreversible action';
+
+  @override
+  String get deleteAccountStep1Bullet1 => 'Messages and media will be deleted';
+
+  @override
+  String get deleteAccountStep1Bullet2 => 'Removed from all groups';
+
+  @override
+  String get deleteAccountStep1Bullet3 =>
+      'Phone number released after the grace period';
+
+  @override
+  String get deleteAccountContinue => 'Continue';
+
+  @override
+  String get deleteAccountPassword => 'Password';
+
+  @override
+  String get deleteAccountConfirmLabel => 'Type DELETE';
+
+  @override
+  String get deleteAccountConfirmWord => 'DELETE';
+
+  @override
+  String get deleteAccountConfirmMismatch => 'Type DELETE to confirm';
+
+  @override
+  String get deleteAccountSubmit => 'Delete my account';
+
+  @override
+  String get deleteAccountGraceTitle => 'Deletion scheduled';
+
+  @override
+  String deleteAccountGraceBody(String date) {
+    return 'Your account will be permanently deleted on $date. You can cancel until then.';
+  }
+
+  @override
+  String deleteAccountFailed(String error) {
+    return 'Deletion failed: $error';
+  }
+
+  @override
+  String get biometricLock => 'Biometric lock';
+
+  @override
+  String get biometricLockTitle => 'Alanya is locked';
+
+  @override
+  String get biometricLockUnlock => 'Unlock';
+
+  @override
+  String get biometricLockSubtitle => 'Fingerprint or face unlock on open';
+
+  @override
+  String get biometricLockEnableConfirm =>
+      'Confirm your fingerprint to enable the lock';
+
+  @override
+  String get biometricLockUnavailable =>
+      'Biometrics unavailable on this device';
+
+  @override
+  String biometricLockFailed(String error) {
+    return 'Biometrics: $error';
+  }
+
+  @override
+  String get accountSecuritySectionProtection => 'Protection';
+
+  @override
+  String get logoutAllDevices => 'Sign out all devices';
+
+  @override
+  String get logoutAllDevicesSubtitle => 'Ends all sessions except this one';
+
+  @override
+  String get logoutAllDevicesConfirm =>
+      'All other devices will be signed out immediately.';
+
+  @override
+  String get logoutAllDevicesAction => 'Sign out';
+
+  @override
+  String get logoutAllDevicesDone => 'Other devices signed out';
+
+  @override
+  String get logoutAllDevicesFailed => 'Could not sign out all devices';
+
+  @override
+  String get privacySectionWhoCanSee => 'Who can see me';
+
+  @override
+  String get privacySectionMessages => 'Messages';
+
+  @override
+  String get privacySectionLists => 'Lists & groups';
+
+  @override
+  String get privacyLastSeen => 'Last seen';
+
+  @override
+  String get privacyOnlineStatus => 'Online status';
+
+  @override
+  String get privacyProfilePhoto => 'Profile photo';
+
+  @override
+  String get privacyReadReceipts => 'Read receipts';
+
+  @override
+  String get privacyReadReceiptsSubtitle =>
+      'Send and receive read confirmations';
+
+  @override
+  String get privacyNotificationPreview => 'Notification preview';
+
+  @override
+  String get privacyBlockedContacts => 'Blocked contacts';
+
+  @override
+  String get privacyBlockedContactsEmpty => 'No blocked contacts';
+
+  @override
+  String privacyBlockedContactsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count contacts',
+      one: '1 contact',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get privacyAddToGroups => 'Add to groups';
+
+  @override
+  String get privacyVisibilityEveryone => 'Everyone';
+
+  @override
+  String get privacyVisibilityContacts => 'My contacts';
+
+  @override
+  String get privacyVisibilityNobody => 'Nobody';
+
+  @override
+  String get privacySaveFailed => 'Could not save privacy settings';
+
+  @override
+  String get onboardingCredentialsTitle => 'Your credentials';
+
+  @override
+  String get onboardingCredentialsSubtitle =>
+      'Keep this information in a safe place.';
+
+  @override
+  String get onboardingCredentialsBanner =>
+      'Save your Alanya number and password — they won\'t be shown again.';
+
+  @override
+  String get onboardingProfileTitle => 'Your profile';
+
+  @override
+  String get onboardingProfileSubtitle =>
+      'Photo, gender, age, country, bio: fill in now or anytime in My account.';
+
+  @override
+  String get profileBioDefault => 'Hi, I\'m on Alanya';
+
+  @override
+  String get onboardingPersonalizeTitle => 'Personalize Alanya';
+
+  @override
+  String get onboardingPersonalizeSubtitle =>
+      'Theme, language, and lock. Change anytime in Settings.';
+
+  @override
+  String onboardingStepOf(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get onboardingCountryTitle => 'Your country';
+
+  @override
+  String get onboardingCountrySubtitle => 'Helps contacts recognize you.';
+
+  @override
+  String get onboardingPhotoTitle => 'Profile photo';
+
+  @override
+  String get onboardingPhotoSubtitle => 'Add a photo or skip this step.';
+
+  @override
+  String get onboardingPhotoChooseGallery => 'Choose from gallery';
+
+  @override
+  String get onboardingPhotoCamera => 'Take a photo';
+
+  @override
+  String get onboardingPhotoFailed => 'Could not add photo';
+
+  @override
+  String get onboardingBioTitle => 'A few words about you';
+
+  @override
+  String get onboardingBioSubtitle =>
+      'Introduce yourself in one line (optional).';
+
+  @override
+  String get onboardingBioHint => 'Hi, I\'m on Alanya';
+
+  @override
+  String get onboardingPreferencesTitle => 'Preferences';
+
+  @override
+  String get onboardingPreferencesSubtitle => 'App theme and language.';
+
+  @override
+  String get onboardingThemeLabel => 'Theme';
+
+  @override
+  String get onboardingLanguageLabel => 'Language';
+
+  @override
+  String get onboardingBiometricTitle => 'Protect access';
+
+  @override
+  String get onboardingBiometricSubtitle =>
+      'A quick gesture each time you return to the app.';
+
+  @override
+  String get onboardingBiometricFriendlyTitle => 'Fingerprint or face unlock';
+
+  @override
+  String get onboardingBiometricFriendlyBody =>
+      'Turn on quick unlock. You can change this anytime in Settings.';
+
+  @override
+  String get onboardingBiometricUnavailable =>
+      'Biometrics unavailable — you can enable this later in settings.';
+
+  @override
+  String get onboardingCompleteTitle => 'You\'re all set!';
+
+  @override
+  String get onboardingCompleteSubtitle => 'Your account is ready.';
+
+  @override
+  String get onboardingCompleteMessage =>
+      'Explore Alanya and stay connected with people you care about.';
+
+  @override
+  String get onboardingCompleteCta => 'Discover Alanya';
+
+  @override
+  String get onboardingContinue => 'Continue';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingSkipAll => 'Set up later';
+
+  @override
+  String get onboardingSkipAllTitle => 'Skip setup?';
+
+  @override
+  String get onboardingSkipAllBody =>
+      'You can complete your profile anytime in My account.';
+
+  @override
+  String get onboardingSkipAllCredentialsBody =>
+      'You won\'t see your password here again. Complete your profile anytime in My account.';
+
+  @override
+  String get onboardingSkipAllRecoveryBody =>
+      'You won\'t see your password here again, and your recovery code will only reappear in My account → Security. Write them down before continuing.';
+
+  @override
+  String get onboardingSaveFailed =>
+      'Could not save — try again or skip this step.';
+
+  @override
+  String get onboardingCredentialsBannerNoEmail =>
+      'Write down your Alanya number, your password and your recovery code — they won\'t be shown here again.';
+
+  @override
+  String get onboardingPhotoAdd => 'Tap to add a photo';
+
+  @override
+  String get onboardingIdentityTitle => 'About you';
+
+  @override
+  String get onboardingIdentitySubtitle =>
+      'Gender and age can\'t be changed once saved.';
+
+  @override
+  String get profileGenderLabel => 'Gender';
+
+  @override
+  String get profileGenderMale => 'Male';
+
+  @override
+  String get profileGenderFemale => 'Female';
+
+  @override
+  String get profileGenderOther => 'Other';
+
+  @override
+  String get profileGenderUnspecified => 'Prefer not to say';
+
+  @override
+  String get profileAgeLabel => 'Age';
+
+  @override
+  String get profileAgeSuffix => 'yrs';
+
+  @override
+  String profileAgeBirthYear(int year) {
+    return 'Birth year ≈ $year';
+  }
+
+  @override
+  String profileAgeInvalid(int min, int max) {
+    return 'Invalid age (between $min and $max)';
+  }
+
+  @override
+  String get recoveryCodeTitle => 'Recovery code';
+
+  @override
+  String get recoveryCodeKeepSafe => 'Keep it safe';
+
+  @override
+  String get recoveryCodeOnboardingHint =>
+      'Without an email address, this code is your only way back into your account. Write it down somewhere other than this phone.';
+
+  @override
+  String get recoveryCodeCopied => 'Recovery code copied';
+
+  @override
+  String get recoveryCodeEntrySubtitle =>
+      'Reset your password without an email';
+
+  @override
+  String get recoveryCodeIntro =>
+      'This code resets your password without going through email. It never changes, not even after a password change.';
+
+  @override
+  String get recoveryCodeSecurityWarning =>
+      'Anyone who knows this code and your Alanya ID can change your password. Never share it.';
+
+  @override
+  String get recoveryCodeReveal => 'Show code';
+
+  @override
+  String get recoveryCodeHide => 'Hide';
+
+  @override
+  String get recoveryCodePasswordPrompt =>
+      'Enter your password to display the code.';
+
+  @override
+  String get recoveryCodeRevealFailed => 'Could not display the code';
+
+  @override
+  String get forgotMethodTitle => 'Recover your account';
+
+  @override
+  String get forgotMethodSubtitle => 'How would you like to proceed?';
+
+  @override
+  String get forgotMethodEmail => 'I have an email address';
+
+  @override
+  String get forgotMethodEmailSubtitle => 'Get a 6-digit code by email.';
+
+  @override
+  String get forgotMethodCode => 'I have a recovery code';
+
+  @override
+  String get forgotMethodCodeSubtitle =>
+      'The code shown when you created your account.';
+
+  @override
+  String get forgotCodeTitle => 'Your recovery code';
+
+  @override
+  String get forgotCodeSubtitle =>
+      'Enter your Alanya ID and the code you saved at sign-up.';
+
+  @override
+  String get forgotCodeHint => 'XXXX-XXXX-XXXX';
+
+  @override
+  String get forgotCodeSubmit => 'Validate code';
+
+  @override
+  String get validatorRecoveryCode => '12-character recovery code';
+
+  @override
+  String deleteAccountGraceDays(int days) {
+    return 'Grace period · $days days';
+  }
+
+  @override
+  String get deleteAccountCancelDeletion => 'Cancel deletion';
+
+  @override
+  String get deleteAccountCancelSuccess => 'Deletion cancelled';
+
+  @override
+  String get deleteAccountCancelFailed => 'Could not cancel deletion';
+
+  @override
+  String get deleteAccountLogoutNow => 'Sign out';
+
+  @override
+  String get myMediaEmpty => 'No shared media yet';
+
+  @override
+  String get myMediaLoadFailed => 'Could not load your media';
+
+  @override
+  String dndSummaryActive(String start, String end, String days) {
+    return '$start – $end · $days';
+  }
+
+  @override
+  String get dndSummaryInactive => 'Off';
+
+  @override
+  String get exportPhase1ShareSubject => 'Alanya export (profile and metadata)';
+
+  @override
+  String get contactLists => 'Contact lists';
+
+  @override
+  String get contactListsManage => 'Manage';
+
+  @override
+  String get createList => 'Create a list';
+
+  @override
+  String get listName => 'List name';
+
+  @override
+  String get listNameHint => 'Family, Friends, Work…';
+
+  @override
+  String get renameList => 'Rename list';
+
+  @override
+  String get deleteList => 'Delete list';
+
+  @override
+  String deleteListConfirm(String name) {
+    return 'Delete “$name”? Your contacts stay in your favourites.';
+  }
+
+  @override
+  String get listColor => 'Chip colour';
+
+  @override
+  String get listNameAlreadyExists => 'A list with this name already exists';
+
+  @override
+  String get listSaveFailed => 'Could not save the list. Try again.';
+
+  @override
+  String get listMembersUpdateFailed => 'Could not update members. Try again.';
+
+  @override
+  String listMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+      zero: 'No members',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addToList => 'Add members';
+
+  @override
+  String get removeFromList => 'Remove from list';
+
+  @override
+  String get createGroupFromList => 'Create a group';
+
+  @override
+  String get noLists => 'No contact lists';
+
+  @override
+  String get noListsHint =>
+      'Sort your preferred contacts into Family, Friends, Work…';
+
+  @override
+  String get noListMembers => 'No members in this list';
+
+  @override
+  String get noContactToAddToList =>
+      'All your preferred contacts are already in this list';
+
+  @override
+  String addMembersSelected(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get newList => 'New list';
+
+  @override
+  String get contactListsHint =>
+      'A list can only contain contacts already in your favourites. The same contact can belong to several lists.';
+
+  @override
+  String get notInThisList => 'Favourite — not in this list';
+
+  @override
+  String createGroupNamed(String name) {
+    return 'Create a group “$name”';
+  }
+
+  @override
+  String get manageLists => 'Manage lists';
+
+  @override
+  String get contactListsSheetSubtitle =>
+      'Open a list, or turn it into a group.';
+
+  @override
+  String get markAllAsRead => 'Mark all as read';
+
+  @override
+  String markAllAsReadDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count chats marked as read',
+      one: '1 chat marked as read',
+      zero: 'No unread chats',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get optionsAction => 'Options';
 }

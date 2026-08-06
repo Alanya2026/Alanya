@@ -14,8 +14,8 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/country_selector_tile.dart';
-import '../../widgets/account/warning_banner.dart';
-import 'change_email_screen.dart';
+import '../chats/media_viewer_screen.dart';
+import 'profile_preview_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -32,6 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _pseudoController = TextEditingController();
+  final _bioController = TextEditingController();
   final _picker = ImagePicker();
   bool _saving = false;
   List<Pays> _countries = const [];
@@ -102,12 +103,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _user = cached;
       _nameController.text = cached.nom;
       _pseudoController.text = cached.pseudo;
+      _bioController.text = cached.bio;
       _isLoading = false;
       _syncSelectedCountry();
     });
   }
 
-  // ── Photo de profil ─────────────────────────────────────────────────
+  Future<void> _openAvatar() async {
+    if (_uploadingAvatar) return;
+    final hasPhoto = _user?.avatarUrl.isNotEmpty == true;
+    if (hasPhoto) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MediaViewerScreen(
+            networkUrl: _user!.avatarUrl.trim(),
+            title: _user!.nom,
+          ),
+        ),
+      );
+      return;
+    }
+    await _openAvatarSheet();
+  }
 
   Future<void> _openAvatarSheet() async {
     if (_uploadingAvatar) return;
@@ -251,17 +269,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  // ── Sauvegarde ──────────────────────────────────────────────────────
-
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final nom = _nameController.text.trim();
     final pseudo = _pseudoController.text.trim();
+    final bio = _bioController.text.trim();
 
     final nomChanged = nom != (_user?.nom ?? '');
     final pseudoChanged = pseudo != (_user?.pseudo ?? '');
-    if (!nomChanged && !pseudoChanged) {
+    final bioChanged = bio != (_user?.bio ?? '');
+    if (!nomChanged && !pseudoChanged && !bioChanged) {
       Navigator.pop(context);
       return;
     }
@@ -272,6 +290,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       await auth.updateProfile(
         nom: nomChanged ? nom : null,
         pseudo: pseudoChanged ? pseudo : null,
+        bio: bioChanged ? bio : null,
       );
       if (!mounted) return;
       Navigator.pop(context);
@@ -283,8 +302,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
     }
   }
-
-  // ── UI ──────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -324,126 +341,78 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 key: _formKey,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
-                children: [
-                  Center(child: _buildAvatar()),
-                  const SizedBox(height: AppSpacing.xxxl + 8),
-                  TextFormField(
-                    decoration: InputDecoration(
-                      labelText: context.l10n.name2,
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                    controller: _nameController,
-                    validator: Validators.required,
-                  ),
-                  AppSpacing.vGapXxl,
-                  TextFormField(
-                    decoration: InputDecoration(
-                      labelText: context.l10n.signupPseudoHint,
-                      prefixIcon: Icon(Icons.alternate_email),
-                    ),
-                    controller: _pseudoController,
-                    validator: Validators.required,
-                  ),
-                  AppSpacing.vGapXxl,
-                  if ((_user?.email.trim().isEmpty ?? true)) ...[
-                    WarningBanner(
-                      message: context.l10n.emailMissingRecoveryBanner,
-                    ),
-                    AppSpacing.vGapLg,
-                  ],
-                  InkWell(
-                    onTap: () async {
-                      final auth = context.read<AuthProvider>();
-                      final ok = await Navigator.push<bool>(
+                  children: [
+                    Center(child: _buildAvatar()),
+                    AppSpacing.vGapMd,
+                    TextButton.icon(
+                      onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const ChangeEmailScreen(),
+                          builder: (_) => const ProfilePreviewScreen(),
                         ),
-                      );
-                      if (ok == true && mounted) {
-                        await auth.refreshProfile();
-                        if (!mounted) return;
-                        _hydrateFromAuth();
-                      }
-                    },
-                    borderRadius: AppRadius.brSm,
-                    child: InputDecorator(
+                      ),
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: Text(context.l10n.profilePreviewLink),
+                    ),
+                    const SizedBox(height: AppSpacing.xxxl + 8),
+                    TextFormField(
                       decoration: InputDecoration(
-                        labelText: context.l10n.emailLabel,
-                        prefixIcon: Icon(
-                          (_user?.email.trim().isNotEmpty ?? false)
-                              ? Icons.email_outlined
-                              : Icons.warning_amber_rounded,
-                          color: (_user?.email.trim().isNotEmpty ?? false)
-                              ? null
-                              : context.colors.error,
-                        ),
-                        suffixIcon: Padding(
-                          padding: const EdgeInsets.only(right: AppSpacing.sm),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                (_user?.email.trim().isNotEmpty ?? false)
-                                    ? context.l10n.changeEmailEditAddress
-                                    : context.l10n.signupAddEmail,
-                                style: context.text.labelMedium?.copyWith(
-                                  color: context.colors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Icon(
-                                Icons.chevron_right,
-                                color: context.colors.primary,
-                              ),
-                            ],
-                          ),
-                        ),
-                        helperText: (_user?.email.trim().isEmpty ?? true)
-                            ? context.l10n.emailNeededForRecovery
-                            : null,
+                        labelText: context.l10n.name2,
+                        prefixIcon: Icon(Icons.person_outline),
                       ),
-                      child: Text(
-                        (_user?.email.trim().isNotEmpty ?? false)
-                            ? _user!.email.trim()
-                            : context.l10n.emailNotSet,
-                        style: context.text.bodyLarge?.copyWith(
-                          color: (_user?.email.trim().isNotEmpty ?? false)
-                              ? context.colors.onSurface
-                              : context.colors.onSurfaceVariant,
+                      controller: _nameController,
+                      validator: Validators.required,
+                    ),
+                    AppSpacing.vGapXxl,
+                    TextFormField(
+                      decoration: InputDecoration(
+                        labelText: context.l10n.signupPseudoHint,
+                        prefixIcon: Icon(Icons.alternate_email),
+                      ),
+                      controller: _pseudoController,
+                      validator: Validators.required,
+                    ),
+                    AppSpacing.vGapXxl,
+                    TextFormField(
+                      decoration: InputDecoration(
+                        labelText: context.l10n.profileBioLabel,
+                        hintText: context.l10n.profileBioHint,
+                        prefixIcon: Icon(Icons.notes_outlined),
+                        alignLabelWithHint: true,
+                      ),
+                      controller: _bioController,
+                      maxLines: 4,
+                      maxLength: 500,
+                    ),
+                    AppSpacing.vGapXxl,
+                    TextField(
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.phoneAlanyaPhone,
+                        prefixIcon: Icon(Icons.badge_outlined),
+                      ),
+                      controller: TextEditingController(
+                          text: AlanyaPhoneFormatter.formatDisplay(
+                              _user?.alanyaPhone ?? '')),
+                    ),
+                    AppSpacing.vGapXxl,
+                    if (_loadingCountries)
+                      const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
+                      )
+                    else if (_countries.isNotEmpty)
+                      CountrySelectorTile(
+                        countries: _countries,
+                        selected: _selectedCountry,
+                        enabled: !_savingCountry,
+                        onChanged: _changeCountry,
                       ),
-                    ),
-                  ),
-                  AppSpacing.vGapXxl,
-                  TextField(
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.phoneAlanyaPhone,
-                      prefixIcon: Icon(Icons.badge_outlined),
-                    ),
-                    controller: TextEditingController(
-                        text: AlanyaPhoneFormatter.formatDisplay(
-                            _user?.alanyaPhone ?? '')),
-                  ),
-                  AppSpacing.vGapXxl,
-                  if (_loadingCountries)
-                    const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  else if (_countries.isNotEmpty)
-                    CountrySelectorTile(
-                      countries: _countries,
-                      selected: _selectedCountry,
-                      enabled: !_savingCountry,
-                      onChanged: _changeCountry,
-                    ),
-                ],
-              ),
+                  ],
+                ),
               ),
             ),
     );
@@ -451,7 +420,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _buildAvatar() {
     return GestureDetector(
-      onTap: _openAvatarSheet,
+      onTap: _openAvatar,
+      onLongPress: _openAvatarSheet,
       child: Stack(
         children: [
           AppAvatar(
@@ -497,6 +467,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _pseudoController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 }

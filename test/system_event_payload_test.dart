@@ -233,6 +233,36 @@ void main() {
             .label(me, fr),
         'Chris a réservé la modification des infos aux administrateurs',
       );
+      expect(
+        parse({'e': 'settings_changed', 'by': 12, 'byName': 'Chris', 'lock': 'history', 'on': 1})
+            .label(me, fr),
+        "Chris a masqué l'historique pour les nouveaux membres",
+      );
+      expect(
+        parse({'e': 'settings_changed', 'by': 12, 'byName': 'Chris', 'lock': 'history', 'on': 0})
+            .label(me, fr),
+        "Chris a rendu l'historique visible pour les nouveaux membres",
+      );
+      expect(
+        parse({'e': 'settings_changed', 'by': me, 'byName': 'Moi', 'lock': 'history', 'on': 1})
+            .label(me, fr),
+        "Vous avez masqué l'historique pour les nouveaux membres",
+      );
+      expect(
+        parse({'e': 'settings_changed', 'by': 12, 'byName': 'Chris', 'lock': 'add', 'on': 1})
+            .label(me, fr),
+        'Chris a réservé l\'ajout de membres aux administrateurs',
+      );
+      expect(
+        parse({'e': 'settings_changed', 'by': 12, 'byName': 'Chris', 'lock': 'add', 'on': 0})
+            .label(me, fr),
+        'Chris a autorisé tout le monde à ajouter des membres',
+      );
+      expect(
+        parse({'e': 'settings_changed', 'by': me, 'byName': 'Moi', 'lock': 'add', 'on': 1})
+            .label(me, fr),
+        'Vous avez réservé l\'ajout de membres aux administrateurs',
+      );
     });
 
     test('member_left sans cible → phrase complète quand même', () {
@@ -251,6 +281,46 @@ void main() {
     test('nom d\'acteur vide → repli sur « expéditeur inconnu »', () {
       final p = parse({'e': 'member_left', 'by': 12, 'byName': '   '});
       expect(p.label(me, fr), contains(fr.unknownSender));
+    });
+  });
+
+  group('SystemEventPayload.previewLabel', () {
+    late AppLocalizations fr;
+
+    setUp(() {
+      fr = lookupAppLocalizations(const Locale('fr'));
+    });
+
+    SystemEventPayload parse(Map<String, dynamic> p) =>
+        SystemEventPayload.tryParse(encode(p))!;
+
+    test('member_added → aperçu court sans noms de cibles', () {
+      final p = parse({
+        'e': 'member_added',
+        'by': 12,
+        'byName': 'Chris',
+        'ids': [45],
+        'names': ['Marc'],
+      });
+      expect(p.previewLabel(fr), 'Chris a ajouté des membres');
+    });
+
+    test('group_created → aperçu avec nom du groupe', () {
+      final p = parse({
+        'e': 'group_created',
+        'by': 12,
+        'byName': 'Chris',
+        'value': 'Projet Vitrine',
+      });
+      expect(p.previewLabel(fr), 'Chris a créé « Projet Vitrine »');
+    });
+
+    test('événement inconnu → repli générique', () {
+      // previewLabel n'est appelé que sur des payloads déjà parsés (isKnown).
+      expect(
+        parse({'e': 'member_left', 'by': 12, 'byName': 'Chris'}).previewLabel(fr),
+        'Chris a quitté le groupe',
+      );
     });
   });
 }

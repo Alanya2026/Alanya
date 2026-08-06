@@ -5,6 +5,7 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 import '../navigation/app_navigator.dart';
 import '../utils/incoming_share_payload.dart';
+import 'qr_deep_link_service.dart';
 import '../../screens/chats/share_to_conversation_screen.dart';
 
 /// Reçoit les partages entrants (Galerie, Fichiers, navigateur…) et ouvre
@@ -58,13 +59,41 @@ class IncomingShareService {
 
   void _enqueue(List<SharedMediaFile> files) {
     if (files.isEmpty) return;
-    final payload = incomingSharePayloadFromSharedMedia(files);
+
+    // `receive_sharing_intent` capte TOUT ACTION_VIEW, y compris l'ouverture
+    // d'un lien d'identité `alanya://q/u/<jeton>` par le bouton « Ouvrir dans
+    // Alanya ». Sans ce filtre, l'écran de transfert s'ouvrait par-dessus
+    // l'ajout du contact, pré-rempli avec l'URL brute — alors que `app_links`
+    // traitait déjà correctement le même lien.
+    //
+    // Le tri se fait sur le type et non sur le seul contenu : un lien Alanya
+    // arrivé par ACTION_SEND (texte partagé depuis un navigateur pour être
+    // transmis à quelqu'un) est un `text`, pas un `url`, et reste un partage
+    // légitime qu'il ne faut pas avaler.
+    final restants = files
+        .where((f) => !(f.type == SharedMediaType.url && _estLienAlanya(f.path)))
+        .toList();
+    if (restants.isEmpty) {
+      unawaited(ReceiveSharingIntent.instance.reset());
+      return;
+    }
+
+    final payload = incomingSharePayloadFromSharedMedia(restants);
     if (payload.isEmpty) {
       unawaited(ReceiveSharingIntent.instance.reset());
       return;
     }
     _pending = payload;
     _tryPresentPending();
+  }
+
+  /// Vrai si le chemin reçu est un lien d'identité Alanya. La reconnaissance
+  /// est déléguée à [QrDeepLinkService], seul juge de cette forme : dupliquer
+  /// la règle ici ferait diverger les deux chemins au premier changement.
+  static bool _estLienAlanya(String path) {
+    final uri = Uri.tryParse(path.trim());
+    if (uri == null) return false;
+    return QrDeepLinkService.extractIdentityToken(uri) != null;
   }
 
   void _tryPresentPending() {

@@ -141,7 +141,8 @@ class CallKitService {
       avatar: callerPhoto,
       handle: callerId,
       type: isVideo ? 1 : 0,
-      duration: 30000,
+      // Sous le timeout serveur (45 s) : la notif expire avant le « sans réponse ».
+      duration: 40000,
       textAccept: l10n.commonAccept,
       textDecline: l10n.commonDecline,
       missedCallNotification: NotificationParams(
@@ -150,6 +151,13 @@ class CallKitService {
         subtitle: l10n.callMissed,
         callbackText: l10n.commonCallBack,
       ),
+      // Android : ne PAS démarrer le foreground service au tap « Accepter » —
+      // le service ne peut pas honorer startForeground() si l'engine Flutter
+      // n'est pas encore attaché (crash ForegroundServiceDidNotStartInTime).
+      // Le FGS légitime est démarré par [startOutgoingCall] une fois l'appel
+      // répondu, engine prêt. Même contrat que le chemin natif
+      // (CallIncomingHelper.buildIncomingBundle).
+      callingNotification: const NotificationParams(showNotification: false),
       extra: {
         'callId': callId,
         'callerId': callerId,
@@ -157,6 +165,9 @@ class CallKitService {
         'callerPhoto': callerPhoto ?? '',
         'isVideo': isVideo,
         'roomId': roomId ?? '',
+        // Fraîcheur pour le cold start (voir getActiveCall) : une entrée
+        // résiduelle ne doit jamais rejouer un accept/écran entrant fantôme.
+        'shownAt': DateTime.now().millisecondsSinceEpoch,
       },
       android: AndroidParams(
         isCustomNotification: true,
@@ -230,6 +241,7 @@ class CallKitService {
         'callerName': displayName,
         'isVideo': isVideo,
         'isOutgoing': true,
+        'shownAt': DateTime.now().millisecondsSinceEpoch,
       },
       android: AndroidParams(
         isCustomNotification: true,
@@ -271,10 +283,30 @@ class CallKitService {
         _lastShownCallId = null;
       }
     }
+    await _markProgrammaticDismissNative([id]);
     try {
       await FlutterCallkitIncoming.endCall(callId);
     } catch (e) {
       debugPrint('[CallKit] endCall error: $e');
+    }
+  }
+
+  /// Préviens le natif que ces retraits CallKit viennent de Flutter (fin
+  /// d'appel, nettoyage cold start, anti-doublon) et non d'un refus utilisateur.
+  /// Sans ce marquage, le listener ACTIVE_CALLS de TalkyApplication interprète
+  /// tout retrait non accepté comme un refus → POST /calls/reject qui peut tuer
+  /// un appel réellement en train de sonner (reject fratricide).
+  Future<void> _markProgrammaticDismissNative(List<String> callIds) async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    final ids = callIds.where((id) => id.trim().isNotEmpty).toList();
+    if (ids.isEmpty) return;
+    try {
+      await _nativeCallChannel.invokeMethod<void>(
+        'markProgrammaticDismiss',
+        {'callIds': ids},
+      );
+    } catch (e) {
+      debugPrint('[CallKit] markProgrammaticDismiss native: $e');
     }
   }
 
@@ -285,6 +317,21 @@ class CallKitService {
       await EndedCallRegistry.markEnded(id);
     }
     _lastShownCallId = null;
+    // endAllCalls retire TOUTES les entrées ACTIVE_CALLS : marquer chacune
+    // comme retrait programmatique, pas seulement [callId].
+    final toMark = <String>{if (id.isNotEmpty) id};
+    try {
+      final calls = await FlutterCallkitIncoming.activeCalls();
+      if (calls is List) {
+        for (final c in calls) {
+          final cid = ((c as Map?)?['id'] ?? '').toString().trim();
+          if (cid.isNotEmpty) toMark.add(cid);
+        }
+      }
+    } catch (e) {
+      debugPrint('[CallKit] activeCalls (endAll) error: $e');
+    }
+    await _markProgrammaticDismissNative(toMark.toList());
     try {
       await FlutterCallkitIncoming.endAllCalls();
     } catch (e) {
@@ -331,8 +378,16 @@ class CallKitService {
     debugPrint('[CallKit] event=$actionType callId=${event.body['id']}');
 
     final action = _parseCallAction(event, actionType);
-    _pendingAction = action;
-    _actions.add(action);
+    // Exclusif, pas cumulatif : avec un listener actif, l'action part par le
+    // stream UNIQUEMENT. La stocker aussi en pending la ferait traiter deux
+    // fois (stream immédiat + consumePendingAction au bootstrap) → double
+    // accept/reject. Sans listener (événement avant _bootstrap), pending est
+    // le seul canal et sera consommé au démarrage.
+    if (_actions.hasListener) {
+      _actions.add(action);
+    } else {
+      _pendingAction = action;
+    }
   }
 
   IncomingCallAction? consumePendingAction() {
@@ -341,34 +396,87 @@ class CallKitService {
     return p;
   }
 
-  /// Métadonnées du 1er appel CallKit encore actif (entrant non décliné/terminé).
+  /// Âge maximal d'une entrée non acceptée pour être rejouée au cold start :
+  /// au-delà de la sonnerie (40 s) + marge, c'est un débris.
+  static const _maxUnacceptedAge = Duration(seconds: 90);
+
+  /// Âge maximal d'une entrée acceptée : passé ce délai, le process est mort en
+  /// plein appel (crash/kill) et rejouer l'auto-réponse produirait un appel
+  /// fantôme (l'appelant a raccroché depuis longtemps).
+  static const _maxAcceptedAge = Duration(minutes: 3);
+
+  /// Métadonnées de l'appel CallKit actif le plus récent et encore plausible.
   /// Sert au démarrage à froid quand l'événement accept/decline est perdu :
   /// - [isAccepted] true → bouton « Accepter » tapé avant le boot Flutter
   /// - [isAccepted] false → corps de notif tapé, afficher l'écran d'appel entrant
-  /// Retourne null si aucun appel actif.
+  /// Les entrées trop vieilles (débris d'un appel précédent, process tué en
+  /// plein appel) sont ignorées — le nettoyage de main.dart les retirera.
+  /// Retourne null si aucun appel actif plausible.
   Future<Map<String, dynamic>?> getActiveCall() async {
     if (kIsWeb) return null;
     try {
       final calls = await FlutterCallkitIncoming.activeCalls();
-      if (calls is List && calls.isNotEmpty) {
-        final c = calls.first as Map?;
-        if (c == null) return null;
+      if (calls is! List || calls.isEmpty) return null;
+
+      Map? best;
+      var bestShownAt = -1;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      for (final raw in calls) {
+        final c = raw as Map?;
+        if (c == null) continue;
         final extra = (c['extra'] as Map?) ?? const {};
-        return {
-          'callId':      (extra['callId'] ?? c['id'] ?? '').toString(),
-          'callerId':    (extra['callerId'] ?? c['handle'] ?? '').toString(),
-          'callerName':  (extra['callerName'] ?? c['nameCaller'] ?? '').toString(),
-          'callerPhoto': extra['callerPhoto']?.toString(),
-          'isVideo':     extra['isVideo'] == true || extra['isVideo'] == 'true',
-          'roomId':      extra['roomId']?.toString(),
-          'isOutgoing':  extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
-          'isAccepted':  c['isAccepted'] == true || c['isAccepted'] == 'true',
-        };
+        final accepted = c['isAccepted'] == true || c['isAccepted'] == 'true';
+        final shownAt = int.tryParse('${extra['shownAt'] ?? ''}') ?? 0;
+        if (shownAt > 0) {
+          final age = now - shownAt;
+          final maxAge =
+              accepted ? _maxAcceptedAge.inMilliseconds : _maxUnacceptedAge.inMilliseconds;
+          if (age > maxAge) {
+            debugPrint(
+              '[CallKit] entrée périmée ignorée (age=${age ~/ 1000}s accepted=$accepted): ${c['id']}',
+            );
+            continue;
+          }
+        }
+        // Entrées sans shownAt (anciennes versions, iOS) : conservées, mais un
+        // candidat horodaté plus récent gagne toujours.
+        if (best == null || shownAt > bestShownAt) {
+          best = c;
+          bestShownAt = shownAt;
+        }
       }
+      if (best == null) return null;
+      final extra = (best['extra'] as Map?) ?? const {};
+      return {
+        'callId':      (extra['callId'] ?? best['id'] ?? '').toString(),
+        'callerId':    (extra['callerId'] ?? best['handle'] ?? '').toString(),
+        'callerName':  (extra['callerName'] ?? best['nameCaller'] ?? '').toString(),
+        'callerPhoto': extra['callerPhoto']?.toString(),
+        'isVideo':     extra['isVideo'] == true || extra['isVideo'] == 'true',
+        'roomId':      extra['roomId']?.toString(),
+        'isOutgoing':  extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
+        'isAccepted':  best['isAccepted'] == true || best['isAccepted'] == 'true',
+      };
     } catch (e) {
       debugPrint('[CallKit] activeCalls error: $e');
     }
     return null;
+  }
+
+  /// Purge silencieuse des entrées CallKit résiduelles au démarrage, quand
+  /// [getActiveCall] n'a rien retourné de plausible. Passe par [endAll], donc
+  /// marquée programmatique côté natif : aucun POST /calls/reject déclenché.
+  Future<void> purgeStaleActiveCalls() async {
+    if (kIsWeb) return;
+    try {
+      final calls = await FlutterCallkitIncoming.activeCalls();
+      if (calls is List && calls.isNotEmpty) {
+        debugPrint('[CallKit] purge de ${calls.length} entrée(s) périmée(s)');
+        await endAll();
+      }
+    } catch (e) {
+      debugPrint('[CallKit] purgeStaleActiveCalls error: $e');
+    }
   }
 
   void dispose() {

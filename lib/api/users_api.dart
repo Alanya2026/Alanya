@@ -64,11 +64,30 @@ extension UsersApi on TalkyApiClient {
     return data is List ? data : [];
   }
 
-  Future<Map<String, dynamic>> addContact(int userId) async {
+  /// [viaQr] marque l'ajout comme issu d'un code QR — utilisé par l'ajout EN
+  /// RETOUR après un scan, pour que les deux directions du lien portent la
+  /// même origine (pastille, filtre « Par QR »).
+  Future<Map<String, dynamic>> addContact(int userId, {bool viaQr = false}) async {
     final data = await _handleRequest(
-      () => _client.post(Uri.parse('${TalkyApiClient.baseUrl}/contacts/$userId'), headers: _headers),
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/contacts/$userId'),
+        headers: _headers,
+        body: viaQr ? jsonEncode({'addedVia': 'qr'}) : null,
+      ),
     );
     return data as Map<String, dynamic>;
+  }
+
+  /// Pose ou remplace la note contextuelle d'un contact préféré. Vide pour
+  /// effacer.
+  Future<void> setContactNote(int userId, String note) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/contacts/$userId/note'),
+        headers: _headers,
+        body: jsonEncode({'note': note}),
+      ),
+    );
   }
 
   Future<void> removeContact(int userId) async {
