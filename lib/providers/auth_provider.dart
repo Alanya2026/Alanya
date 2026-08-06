@@ -6,6 +6,7 @@ import '../core/services/storage_service.dart';
 import '../core/services/session_end_reason.dart';
 import '../core/services/call/pending_call_reject_store.dart';
 import '../core/services/onboarding_service.dart';
+import '../core/services/push_service.dart';
 import '../core/utils/app_log.dart';
 import '../core/utils/alanya_phone_formatter.dart';
 import '../talky_api_client.dart';
@@ -482,6 +483,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     currentSessionEndReason = SessionEndReason.explicitLogout;
+    await _detachPushDevice();
     _apiClient.logout();
     await _storage.clearAll();
     _currentUser = null;
@@ -499,11 +501,25 @@ class AuthProvider extends ChangeNotifier {
     if (_currentUser == null && _apiClient.accessToken == null) return;
     debugPrint('[AuthProvider] appareil révoqué à distance → session locale effacée');
     currentSessionEndReason = SessionEndReason.revokedRemotely;
+    await _detachPushDevice();
     _apiClient.logout();
     await _storage.clearAll();
     _currentUser = null;
     _pendingOnboardingAfterRegister = false;
     notifyListeners();
+  }
+
+  /// Détache l'appareil push côté serveur AVANT `_apiClient.logout()` :
+  /// après, la requête partirait sans header Authorization et échouerait en
+  /// 401 — la ligne `user_push_devices` de l'ancien compte continuerait alors
+  /// de recevoir ses notifications sur cet appareil.
+  Future<void> _detachPushDevice() async {
+    try {
+      await PushService.onSessionEnded()
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('[AuthProvider] détachement push au logout échoué: $e');
+    }
   }
 
   void _setLoading(bool value) {
