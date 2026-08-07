@@ -19,6 +19,7 @@ extension CallConference on CallService {
     debugPrint('[CallService] ➕ demande d\'ajout de $inviteeId mode=$mode');
     _confMode = mode;
     _isTransferInitiator = transfer;
+    _transferTargetId = transfer ? inviteeId.toString() : null;
     _transferStatus =
         transfer ? CallTransferStatus.inviting : CallTransferStatus.inviting;
     _apiClient.sendSocketEvent(SocketEvents.callAddParticipant, {
@@ -229,13 +230,17 @@ extension CallConference on CallService {
 
     final invitee = data['invitee'];
     if (invitee is Map) {
+      final inviteeId = invitee['id'].toString();
       _confPendingInvitee = GroupParticipantInfo(
-        id: invitee['id'].toString(),
+        id: inviteeId,
         name: (invitee['name'] as String?)?.isNotEmpty == true
             ? invitee['name'] as String
             : LocaleController.instance.l10n.participantFallback,
         photo: normalizeBackendUrl(invitee['photo']?.toString()),
       );
+      if (_confMode == 'transfer') {
+        _transferTargetId = inviteeId;
+      }
     }
 
     _promoteOneToOneToMesh();
@@ -301,10 +306,12 @@ extension CallConference on CallService {
     _confPendingInvitee = null;
     _confInviteIsMine = false;
     _isTransferInitiator = false;
+    _transferTargetId = null;
     _transferStatus = CallTransferStatus.cancelled;
     _confMode = 'join';
     _lastConfFailure = reason == 'media_not_ready' ? 'media_not_ready' : reason;
     _confReadySent.clear();
+    _pendingConfReady.clear();
     _pendingConfJoinSessionId = null;
 
     _demoteMeshToOneToOne();
@@ -358,6 +365,7 @@ extension CallConference on CallService {
     debugPrint('[CallService] ✔ transfer done reason=$reason');
     _transferStatus = CallTransferStatus.completed;
     _isTransferInitiator = false;
+    _transferTargetId = null;
     notify();
 
     // L'initiateur doit fermer son UI / session locale.
@@ -378,9 +386,14 @@ extension CallConference on CallService {
       isConfInvitee: _confInvitedBy != null,
       peerId: peerId,
       localUserId: _localUserId,
+      transferTargetId: _transferTargetId,
     )) {
       return;
     }
+    // Négociation SDP terminée côté local — pas de ready sur une PC « Connected »
+    // fantôme avant answer/remote description (sinon leaveTimer serveur trop tôt).
+    if (!_groupRemoteDescSet.contains(peerId)) return;
+
     final sessionId = _confSessionId;
     if (sessionId == null) return;
 
@@ -480,6 +493,7 @@ extension CallConference on CallService {
     _confInvitedBy = null;
     _confInviteIsMine = false;
     _isTransferInitiator = false;
+    _transferTargetId = null;
     _transferStatus = CallTransferStatus.none;
     _confMode = 'join';
     _confReadySent.clear();

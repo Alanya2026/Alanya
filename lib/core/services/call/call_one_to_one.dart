@@ -404,6 +404,7 @@ extension CallOneToOne on CallService {
     _confInvitedBy = null;
     _confInviteIsMine = false;
     _isTransferInitiator = false;
+    _transferTargetId = null;
     _transferStatus = CallTransferStatus.none;
     _confMode = 'join';
     _confReadySent.clear();

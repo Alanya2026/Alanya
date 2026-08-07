@@ -605,6 +605,7 @@ extension CallSignaling on CallService {
       _lastConfFailure = _addRejectionReason(code);
       _transferStatus = CallTransferStatus.cancelled;
       _isTransferInitiator = false;
+      _transferTargetId = null;
       notify();
     });
 

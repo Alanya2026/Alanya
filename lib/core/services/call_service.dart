@@ -152,6 +152,9 @@ class CallService extends ChangeNotifier {
   /// true si je suis l'initiateur à retirer après call_transfer_armed.
   bool _isTransferInitiator = false;
 
+  /// Cible C du transfert en cours (id string). Ready média uniquement vers ce peer.
+  String? _transferTargetId;
+
   /// peerIds pour lesquels call_conf_ready a déjà été **émis** (sessionId|peerId).
   final Set<String> _confReadySent = {};
 

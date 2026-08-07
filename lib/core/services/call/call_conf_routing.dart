@@ -28,17 +28,23 @@ bool shouldMergeConfInvite({
 String confReadyKey(String sessionId, String peerId) => '$sessionId|$peerId';
 
 /// Décide si un ready peut être mis en file / émis côté client restant.
+///
+/// [transferTargetId] = C (cible du transfert). Sans match exact, aucun ready :
+/// évite d'armer le leaveTimer serveur sur une PC A↔B déjà connected.
 bool canLocalEmitConfReady({
   required String confMode,
   required bool isTransferInitiator,
   required bool isConfInvitee,
   required String peerId,
   int? localUserId,
+  String? transferTargetId,
 }) {
   if (confMode != 'transfer') return false;
   if (isTransferInitiator) return false;
   if (isConfInvitee) return false;
   if (localUserId != null && peerId == localUserId.toString()) return false;
+  if (transferTargetId == null || transferTargetId.isEmpty) return false;
+  if (peerId != transferTargetId) return false;
   return true;
 }
 

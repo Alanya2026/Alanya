@@ -105,6 +105,7 @@ void main() {
           isConfInvitee: false,
           peerId: '3',
           localUserId: 2,
+          transferTargetId: '3',
         ),
         isTrue,
       );
@@ -117,6 +118,7 @@ void main() {
           isConfInvitee: false,
           peerId: '3',
           localUserId: 1,
+          transferTargetId: '3',
         ),
         isFalse,
       );
@@ -129,6 +131,7 @@ void main() {
           isConfInvitee: true,
           peerId: '1',
           localUserId: 3,
+          transferTargetId: '3',
         ),
         isFalse,
       );
@@ -137,6 +140,32 @@ void main() {
       expect(
         canLocalEmitConfReady(
           confMode: 'join',
+          isTransferInitiator: false,
+          isConfInvitee: false,
+          peerId: '3',
+          localUserId: 2,
+          transferTargetId: '3',
+        ),
+        isFalse,
+      );
+    });
+    test('peer ≠ cible transfert → pas de ready', () {
+      expect(
+        canLocalEmitConfReady(
+          confMode: 'transfer',
+          isTransferInitiator: false,
+          isConfInvitee: false,
+          peerId: '1',
+          localUserId: 2,
+          transferTargetId: '3',
+        ),
+        isFalse,
+      );
+    });
+    test('sans transferTargetId → pas de ready', () {
+      expect(
+        canLocalEmitConfReady(
+          confMode: 'transfer',
           isTransferInitiator: false,
           isConfInvitee: false,
           peerId: '3',
