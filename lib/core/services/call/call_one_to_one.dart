@@ -402,6 +402,11 @@ extension CallOneToOne on CallService {
     _confPendingInvitee = null;
     _confInvitedBy = null;
     _confInviteIsMine = false;
+    _isTransferInitiator = false;
+    _transferStatus = CallTransferStatus.none;
+    _confMode = 'join';
+    _confReadySent.clear();
+    _pendingConfJoinSessionId = null;
     _myRosterId = null;
   }
 }

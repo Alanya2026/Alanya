@@ -96,13 +96,54 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   }
 
   /// Ouvre la feuille de sélection et lance l'invitation sur le contact choisi.
-  Future<void> _openAddSheet() async {
-    debugPrint('[AddToCall] 👆 bouton pressé');
+  Future<void> _openAddSheet({required bool transfer}) async {
+    debugPrint('[AddToCall] 👆 bouton pressé transfer=$transfer');
     try {
       final cs = Provider.of<CallService>(context, listen: false);
       if (!cs.canAddParticipant) {
         debugPrint('[AddToCall] ⛔ canAddParticipant=false, ouverture annulée');
         return;
+      }
+
+      final l10n = context.l10n;
+      if (transfer) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.transferCallConfirmationTitle),
+            content: Text(l10n.transferCallConfirmationBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.commonCancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.transferCall),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return;
+      } else {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.confAddSheetTitle),
+            content: Text(l10n.addToCallConfirmBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.commonCancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.invite),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return;
       }
 
       final me = context.read<AuthProvider>().currentUser;
@@ -112,7 +153,11 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
       };
       debugPrint('[AddToCall] ▶ ouverture de la feuille (exclus=$excluded)');
 
-      final chosen = await AddToCallSheet.show(context, excludedIds: excluded);
+      final chosen = await AddToCallSheet.show(
+        context,
+        excludedIds: excluded,
+        transfer: transfer,
+      );
       debugPrint('[AddToCall] ◀ feuille fermée, choix=${chosen?.alanyaID}');
       if (chosen == null || !mounted) return;
 
@@ -122,10 +167,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
             ? null
             : (me.nom.isNotEmpty ? me.nom : me.pseudo),
         myPhoto: me?.avatarUrl,
+        transfer: transfer,
       );
     } catch (e, st) {
-      // Sans ce filet, une erreur ici ne se voit nulle part : le bouton semble
-      // simplement inerte.
       debugPrint('[AddToCall] ** échec ouverture: $e\n$st');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,7 +199,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
       'busy' => l10n.confBusy(who),
       'no_answer' => l10n.confNoAnswer(who),
       'offline' => l10n.confNotJoined(who),
+      'media_not_ready' => l10n.mediaConnectionFailed,
       'cancelled' => null,
+      'caller_left' => null,
       'already_used' => l10n.confAddAlreadyUsed,
       'blocked' => l10n.confCannotAdd(who),
       _ => l10n.confAddFailed,
@@ -407,6 +453,20 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   }
 
   String _statusLabel(CallService cs) {
+    if (cs.isTransferInitiator) {
+      switch (cs.transferStatus) {
+        case CallTransferStatus.awaitingJoin:
+          return context.l10n.transferWaitingForParticipant;
+        case CallTransferStatus.awaitingMediaReady:
+          return context.l10n.transferWaitingForConnection;
+        case CallTransferStatus.countdown:
+          return context.l10n.transferCountdown;
+        case CallTransferStatus.completed:
+          return context.l10n.transferCompleted;
+        default:
+          break;
+      }
+    }
     switch (cs.status) {
       case CallStatus.outgoing:
         return context.l10n.callInProgress;
@@ -575,7 +635,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                               onSwitchCam: () => cs.switchCamera(),
                               onHangUp: _hangUp,
                               canAddParticipant: cs.canAddParticipant,
-                              onAddParticipant: _openAddSheet,
+                              onAddParticipant: () => _openAddSheet(transfer: false),
+                              onTransferParticipant: cs.canAddParticipant
+                                  ? () => _openAddSheet(transfer: true)
+                                  : null,
                             ),
                           ),
                         ),

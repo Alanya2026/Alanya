@@ -16,6 +16,8 @@ class IncomingCallAction {
   final String? callerPhoto;
   final bool isVideo;
   final String? roomId;
+  final String? sessionKind;
+  final String? mode;
   final bool isOutgoing;
   final IncomingCallActionType action;
 
@@ -26,9 +28,16 @@ class IncomingCallAction {
     required this.callerPhoto,
     required this.isVideo,
     required this.roomId,
+    this.sessionKind,
+    this.mode,
     this.isOutgoing = false,
     required this.action,
   });
+
+  bool get isConference =>
+      sessionKind == 'conference' ||
+      callId.startsWith('conf_') ||
+      (roomId != null && roomId!.startsWith('conf_'));
 }
 
 enum IncomingCallActionType { incomingPreview, accept, decline, timeout, ended }
@@ -83,6 +92,8 @@ class CallKitService {
           extra['isVideo'] == 'true' ||
           event.body['type'] == 1,
       roomId: extra['roomId']?.toString(),
+      sessionKind: extra['sessionKind']?.toString(),
+      mode: extra['mode']?.toString(),
       isOutgoing:
           extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
       action: actionType,
@@ -104,6 +115,8 @@ class CallKitService {
     String? callerPhoto,
     required bool isVideo,
     String? roomId,
+    String? sessionKind,
+    String? mode,
     bool silent = false,
   }) async {
     if (kIsWeb) return;
@@ -165,6 +178,9 @@ class CallKitService {
         'callerPhoto': callerPhoto ?? '',
         'isVideo': isVideo,
         'roomId': roomId ?? '',
+        if (sessionKind != null && sessionKind.isNotEmpty)
+          'sessionKind': sessionKind,
+        if (mode != null && mode.isNotEmpty) 'mode': mode,
         // Fraîcheur pour le cold start (voir getActiveCall) : une entrée
         // résiduelle ne doit jamais rejouer un accept/écran entrant fantôme.
         'shownAt': DateTime.now().millisecondsSinceEpoch,
@@ -454,6 +470,8 @@ class CallKitService {
         'callerPhoto': extra['callerPhoto']?.toString(),
         'isVideo':     extra['isVideo'] == true || extra['isVideo'] == 'true',
         'roomId':      extra['roomId']?.toString(),
+        'sessionKind': extra['sessionKind']?.toString(),
+        'mode':        extra['mode']?.toString(),
         'isOutgoing':  extra['isOutgoing'] == true || extra['isOutgoing'] == 'true',
         'isAccepted':  best['isAccepted'] == true || best['isAccepted'] == 'true',
       };

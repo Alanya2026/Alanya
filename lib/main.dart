@@ -557,6 +557,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                 callerPhoto: active['callerPhoto'] as String?,
                 isVideo:     active['isVideo'] as bool,
                 roomId:      active['roomId'] as String?,
+                sessionKind: active['sessionKind'] as String?,
+                mode:        active['mode'] as String?,
               ));
             } else {
               debugPrint('[AuthWrapper]  Appel CallKit actif → écran d\'appel entrant');
@@ -567,6 +569,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                 callerPhoto: active['callerPhoto'] as String?,
                 isVideo:     active['isVideo'] as bool,
                 roomId:      active['roomId'] as String?,
+                sessionKind: active['sessionKind'] as String?,
+                mode:        active['mode'] as String?,
               );
             }
           }

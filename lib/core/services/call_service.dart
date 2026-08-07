@@ -43,6 +43,17 @@ const bool _kAndroidNativeCallNotifications = bool.fromEnvironment(
 
 enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
 
+/// État UI informatif du transfert (le backend reste autoritaire).
+enum CallTransferStatus {
+  none,
+  inviting,
+  awaitingJoin,
+  awaitingMediaReady,
+  countdown,
+  completed,
+  cancelled,
+}
+
 /// Infos minimales d'un participant d'appel de groupe (pour l'UI grille).
 class GroupParticipantInfo {
   final String id;
@@ -114,7 +125,7 @@ class CallService extends ChangeNotifier {
   // Roster de l'appel de groupe (userId → infos d'affichage).
   final Map<String, GroupParticipantInfo> _groupRoster = {};
 
-  //  « Ajouter à l'appel » — session à trois (transfert assisté)
+  //  « Ajouter à l'appel » — session à trois (join / transfer)
   //
   // Un appel 1-à-1 ordinaire n'a pas de session. Elle naît au premier ajout et
   // porte à elle seule le droit d'ajout : tant que _confSessionId est posé, le
@@ -130,6 +141,21 @@ class CallService extends ChangeNotifier {
 
   // Vrai chez celui qui a lancé l'invitation : lui seul peut l'annuler.
   bool _confInviteIsMine = false;
+
+  /// Mode d'invitation serveur : `join` (défaut) ou `transfer`.
+  String _confMode = 'join';
+
+  /// État UI informatif du transfert (backend = source de vérité).
+  CallTransferStatus _transferStatus = CallTransferStatus.none;
+
+  /// true si je suis l'initiateur à retirer après call_transfer_armed.
+  bool _isTransferInitiator = false;
+
+  /// peerIds pour lesquels call_conf_ready a déjà été émis (sessionId|peerId).
+  final Set<String> _confReadySent = {};
+
+  /// call_conf_join en attente si le socket n'était pas prêt (cold-start).
+  String? _pendingConfJoinSessionId;
 
   // Mon propre identifiant dans le roster, mémorisé à la bascule en maillage.
   String? _myRosterId;
@@ -223,6 +249,10 @@ class CallService extends ChangeNotifier {
   GroupParticipantInfo? get confPendingInvitee => _confPendingInvitee;
   GroupParticipantInfo? get confInvitedBy => _confInvitedBy;
   bool get confInviteIsMine => _confInviteIsMine;
+  String get confMode => _confMode;
+  bool get isTransferMode => _confMode == 'transfer';
+  CallTransferStatus get transferStatus => _transferStatus;
+  bool get isTransferInitiator => _isTransferInitiator;
 
   /// Flux distant à afficher quand l'écran est en mode « à deux ».
   ///

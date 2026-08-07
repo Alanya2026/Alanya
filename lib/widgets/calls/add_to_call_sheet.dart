@@ -16,18 +16,30 @@ import '../common/app_avatar.dart';
 /// plein en ferait perdre le contexte. Sélection unique : un appui lance
 /// l'invitation et referme, sans bouton de validation.
 class AddToCallSheet extends StatefulWidget {
-  const AddToCallSheet({super.key, required this.excludedIds});
+  const AddToCallSheet({
+    super.key,
+    required this.excludedIds,
+    this.transfer = false,
+  });
 
   /// Soi-même et l'autre participant : eux ne peuvent pas être ajoutés.
   final Set<int> excludedIds;
+  final bool transfer;
 
   /// Ouvre la feuille et renvoie l'utilisateur choisi, ou null.
-  static Future<User?> show(BuildContext context, {required Set<int> excludedIds}) {
+  static Future<User?> show(
+    BuildContext context, {
+    required Set<int> excludedIds,
+    bool transfer = false,
+  }) {
     return showModalBottomSheet<User>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddToCallSheet(excludedIds: excludedIds),
+      builder: (_) => AddToCallSheet(
+        excludedIds: excludedIds,
+        transfer: transfer,
+      ),
     );
   }
 
@@ -129,7 +141,9 @@ class _AddToCallSheetState extends State<AddToCallSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        l10n.confAddSheetTitle,
+                        widget.transfer
+                            ? l10n.transferCallSheetTitle
+                            : l10n.confAddSheetTitle,
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w600),
                       ),

@@ -257,6 +257,7 @@ extension CallSignaling on CallService {
     _apiClient.onSocketEvent(SocketEvents.authVerified, (_) {
       _flushPendingEndCalls();
       _flushPendingRejects();
+      _flushPendingConfJoin();
     });
 
     _apiClient.onSocketEvent(SocketEvents.callResume, (data) async {
@@ -414,10 +415,6 @@ extension CallSignaling on CallService {
     // Côté invité : on me propose de rejoindre un appel en cours.
     _apiClient.onSocketEvent(SocketEvents.callConfInvite, (data) {
       if (data is! Map) return;
-      if (_status != CallStatus.idle) {
-        debugPrint('[CallService] 🛡 call_conf_invite ignoré: status=$_status');
-        return;
-      }
       if (_isMeetingActive()) {
         debugPrint('[CallService] 🛡 call_conf_invite ignoré: réunion active');
         return;
@@ -430,9 +427,19 @@ extension CallSignaling on CallService {
         return;
       }
 
+      // Fusion Push/Socket : même session déjà en incoming → compléter sans re-sonner.
+      final sameSession = _status == CallStatus.incoming &&
+          (_confSessionId == sessionId || _currentCallId == sessionId);
+      if (_status != CallStatus.idle && !sameSession) {
+        debugPrint('[CallService] 🛡 call_conf_invite ignoré: status=$_status');
+        return;
+      }
+
       _confSessionId = sessionId;
       _isVideo = data['isVideo'] == true;
       _currentCallId = sessionId;
+      final mode = data['mode']?.toString();
+      if (mode == 'transfer' || mode == 'join') _confMode = mode!;
 
       final from = data['from'];
       if (from is Map) {
@@ -443,39 +450,43 @@ extension CallSignaling on CallService {
               : resolveL10n().participantFallback,
           photo: normalizeBackendUrl(from['photo']?.toString()),
         );
-        // L'écran d'appel entrant s'appuie sur ces champs.
         _remoteUserId = int.tryParse(from['id'].toString());
         _remoteUserName = _confInvitedBy!.name;
         _remoteUserPhoto = _confInvitedBy!.photo;
       }
 
-      // Les présents servent à annoncer le motif : « vous ajoute à un appel
-      // avec X ». Ils alimenteront ensuite la grille.
       _onConfPeers(data);
 
-      _status = CallStatus.incoming;
-      notify();
+      if (!sameSession) {
+        _status = CallStatus.incoming;
+        notify();
 
-      if (!_isAppForeground) {
-        if (_nativeAndroidHandlesIncomingCallUi) {
-          debugPrint('[CallService] 📲 CallKit natif Android (session à trois)');
-        } else {
-          unawaited(
-            _callKit
-                .showIncoming(
-                  callId: sessionId,
-                  callerId: _confInvitedBy?.id ?? '',
-                  callerName: _confInvitedBy?.name ?? resolveL10n().groupCall,
-                  callerPhoto: _confInvitedBy?.photo,
-                  isVideo: _isVideo,
-                  roomId: sessionId,
-                  silent: false,
-                )
-                .catchError((e) {
-              debugPrint('[CallService] ** CallKit conf showIncoming error: $e');
-            }),
-          );
+        if (!_isAppForeground) {
+          if (_nativeAndroidHandlesIncomingCallUi) {
+            debugPrint('[CallService] 📲 CallKit natif Android (session à trois)');
+          } else {
+            unawaited(
+              _callKit
+                  .showIncoming(
+                    callId: sessionId,
+                    callerId: _confInvitedBy?.id ?? '',
+                    callerName: _confInvitedBy?.name ?? resolveL10n().groupCall,
+                    callerPhoto: _confInvitedBy?.photo,
+                    isVideo: _isVideo,
+                    roomId: sessionId,
+                    sessionKind: 'conference',
+                    mode: _confMode,
+                    silent: false,
+                  )
+                  .catchError((e) {
+                debugPrint('[CallService] ** CallKit conf showIncoming error: $e');
+              }),
+            );
+          }
         }
+      } else {
+        debugPrint('[CallService] 🔀 call_conf_invite fusionné session=$sessionId');
+        notify();
       }
     });
 
@@ -504,12 +515,24 @@ extension CallSignaling on CallService {
       _onConfLeft(data);
     });
 
+    _apiClient.onSocketEvent(SocketEvents.callTransferArmed, (data) {
+      if (data is! Map) return;
+      _onTransferArmed(data);
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callTransferDone, (data) async {
+      if (data is! Map) return;
+      await _onTransferDone(data);
+    });
+
     // Demande d'ajout refusée par le serveur.
     _apiClient.onSocketEvent(SocketEvents.callAddRejected, (data) {
       if (data is! Map) return;
       final code = data['code']?.toString() ?? 'INTERNAL';
       debugPrint('[CallService] ✖ ajout refusé: $code');
       _lastConfFailure = _addRejectionReason(code);
+      _transferStatus = CallTransferStatus.cancelled;
+      _isTransferInitiator = false;
       notify();
     });
 

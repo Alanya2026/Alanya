@@ -22,6 +22,7 @@ class CallControlBar extends StatelessWidget {
     required this.onHangUp,
     this.canAddParticipant = false,
     this.onAddParticipant,
+    this.onTransferParticipant,
   });
 
   final bool isVideo;
@@ -39,6 +40,7 @@ class CallControlBar extends StatelessWidget {
   /// l'ajout n'est pas possible : il n'y a aucune action de rattrapage à offrir.
   final bool canAddParticipant;
   final VoidCallback? onAddParticipant;
+  final VoidCallback? onTransferParticipant;
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +150,19 @@ class CallControlBar extends StatelessWidget {
                       onAddParticipant?.call();
                     },
                   ),
+                  if (onTransferParticipant != null) ...[
+                    AppSpacing.hGapMd,
+                    _ControlButton(
+                      icon: Icons.phone_forwarded,
+                      active: false,
+                      useVideoChrome: useVideoChrome,
+                      semanticsLabel: context.l10n.transferCall,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        onTransferParticipant?.call();
+                      },
+                    ),
+                  ],
                 ],
               ],
             ),

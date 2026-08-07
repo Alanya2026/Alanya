@@ -6038,6 +6038,72 @@ abstract class AppLocalizations {
   /// **'Ajouter à l\'appel'**
   String get addToCall;
 
+  /// No description provided for @transferCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transférer l\'appel'**
+  String get transferCall;
+
+  /// No description provided for @transferCallSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transférer l\'appel'**
+  String get transferCallSheetTitle;
+
+  /// No description provided for @transferCallConfirmationTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transférer l\'appel ?'**
+  String get transferCallConfirmationTitle;
+
+  /// No description provided for @transferCallConfirmationBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le contact rejoindra d\'abord l\'appel. Vous quitterez automatiquement environ 10 secondes après que sa connexion sera établie.'**
+  String get transferCallConfirmationBody;
+
+  /// No description provided for @addToCallConfirmBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inviter ce contact à rejoindre l\'appel en cours ?'**
+  String get addToCallConfirmBody;
+
+  /// No description provided for @transferWaitingForParticipant.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente de réponse…'**
+  String get transferWaitingForParticipant;
+
+  /// No description provided for @transferWaitingForConnection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion en cours…'**
+  String get transferWaitingForConnection;
+
+  /// No description provided for @transferCountdown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transfert en cours… Vous quitterez bientôt l\'appel.'**
+  String get transferCountdown;
+
+  /// No description provided for @transferCompleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel transféré'**
+  String get transferCompleted;
+
+  /// No description provided for @mediaConnectionFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La connexion média n\'a pas pu être établie'**
+  String get mediaConnectionFailed;
+
+  /// No description provided for @conferenceTransferInviteBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'souhaite vous transférer cet appel'**
+  String get conferenceTransferInviteBody;
+
   /// No description provided for @confCallOfThree.
   ///
   /// In fr, this message translates to:

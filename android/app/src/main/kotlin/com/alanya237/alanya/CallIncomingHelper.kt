@@ -199,7 +199,10 @@ object CallIncomingHelper {
         val callerId = data["callerId"] ?: ""
         val callerName = data["callerName"] ?: data["title"] ?: "Alanya"
         val isVideo = data["isVideo"] == "true"
-        val roomId = data["roomId"] ?: ""
+        val sessionId = (data["sessionId"] ?: "").trim()
+        val roomId = (data["roomId"] ?: sessionId).ifBlank {
+            if (callId.startsWith("conf_")) callId else ""
+        }
         val photo = data["photo"] ?: ""
 
         val extra = hashMapOf<String, Any?>(
@@ -209,6 +212,9 @@ object CallIncomingHelper {
             "callerPhoto" to photo,
             "isVideo" to isVideo,
             "roomId" to roomId,
+            "sessionId" to (sessionId.ifBlank { if (callId.startsWith("conf_")) callId else "" }),
+            "sessionKind" to (data["sessionKind"] ?: if (callId.startsWith("conf_")) "conference" else ""),
+            "mode" to (data["mode"] ?: ""),
             // Fraîcheur pour le cold start Flutter (main.dart) : une entrée
             // ACTIVE_CALLS résiduelle d'un essai précédent ne doit jamais
             // déclencher une auto-réponse ou un écran entrant fantôme.

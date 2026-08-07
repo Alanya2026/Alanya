@@ -3431,6 +3431,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addToCall => 'Add to call';
 
   @override
+  String get transferCall => 'Transfer call';
+
+  @override
+  String get transferCallSheetTitle => 'Transfer call';
+
+  @override
+  String get transferCallConfirmationTitle => 'Transfer this call?';
+
+  @override
+  String get transferCallConfirmationBody =>
+      'The contact will join the call first. You will leave automatically about 10 seconds after their connection is established.';
+
+  @override
+  String get addToCallConfirmBody =>
+      'Invite this contact to join the ongoing call?';
+
+  @override
+  String get transferWaitingForParticipant => 'Waiting for an answer…';
+
+  @override
+  String get transferWaitingForConnection => 'Connecting…';
+
+  @override
+  String get transferCountdown =>
+      'Transfer in progress… You will leave the call soon.';
+
+  @override
+  String get transferCompleted => 'Call transferred';
+
+  @override
+  String get mediaConnectionFailed =>
+      'Media connection could not be established';
+
+  @override
+  String get conferenceTransferInviteBody =>
+      'wants to transfer this call to you';
+
+  @override
   String get confCallOfThree => '3-way call';
 
   @override

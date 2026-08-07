@@ -1452,6 +1452,7 @@ class SocketEvents {
   static const callAddCancel      = 'call_add_cancel';
   static const callConfJoin       = 'call_conf_join';
   static const callConfReject     = 'call_conf_reject';
+  static const callConfReady      = 'call_conf_ready';
 
   // « Ajouter à l'appel » (Backend → Flutter)
   static const callAddPending     = 'call_add_pending';   // aux 2 présents : l'invité sonne
@@ -1461,6 +1462,8 @@ class SocketEvents {
   static const callConfFailed     = 'call_conf_failed';   // invitation soldée
   static const callConfLeft       = 'call_conf_left';     // un participant s'est retiré
   static const callAddRejected    = 'call_add_rejected';  // demande d'ajout refusée
+  static const callTransferArmed  = 'call_transfer_armed'; // countdown initiateur
+  static const callTransferDone   = 'call_transfer_done';  // UI initiateur
 
   // Appels groupe (Flutter → Backend)
   static const createGroupCall    = 'create_group_call';

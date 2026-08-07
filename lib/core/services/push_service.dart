@@ -113,7 +113,11 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           callerName: (data['callerName'] ?? data['title'] ?? resolveL10n().callNoun).toString(),
           callerPhoto: data['photo']?.toString(),
           isVideo: data['isVideo'] == 'true',
-          roomId: data['roomId']?.toString(),
+          roomId: data['roomId']?.toString() ??
+              (callId.startsWith('conf_') ? callId : null),
+          sessionKind: data['sessionKind']?.toString() ??
+              (callId.startsWith('conf_') ? 'conference' : null),
+          mode: data['mode']?.toString(),
           silent: playCustomRingtoneOurselves,
         );
 

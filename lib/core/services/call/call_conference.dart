@@ -1,26 +1,33 @@
-// « Ajouter à l'appel » : escalade d'un appel 1-à-1 vers une session à trois,
-// puis retrait d'un participant sans interrompre les autres (part of call_service.dart).
+// « Ajouter à l'appel » / transfert : escalade d'un appel 1-à-1 vers une session
+// à trois, puis retrait éventuel de l'initiateur (part of call_service.dart).
 //
-// Le maillage média est celui des appels de groupe — les relais group_offer /
-// group_answer / group_ice_candidate sont réutilisés tels quels. La seule
-// particularité tient en une phrase : la connexion 1-à-1 déjà établie n'est ni
-// fermée ni renégociée, elle devient le premier lien du maillage.
+// Le maillage média est celui des appels de groupe — group_offer /
+// group_answer / group_ice_candidate. La connexion 1-à-1 n'est ni fermée ni
+// renégociée : elle devient le premier lien du maillage.
 part of '../call_service.dart';
 
 extension CallConference on CallService {
-  /// Invite [inviteeId] à rejoindre l'appel en cours.
-  ///
-  /// Le serveur arbitre : droit d'ajout déjà utilisé, invité occupé ou bloqué
-  /// reviennent en `call_add_rejected`. On n'anticipe rien localement, sinon les
-  /// deux participants pourraient se croire chacun légitime.
-  void addParticipant(int inviteeId, {String? myName, String? myPhoto}) {
+  /// Invite [inviteeId] à rejoindre (join) ou recevoir le transfert (transfer).
+  void addParticipant(
+    int inviteeId, {
+    String? myName,
+    String? myPhoto,
+    bool transfer = false,
+  }) {
     if (!canAddParticipant) return;
-    debugPrint('[CallService] ➕ demande d\'ajout de $inviteeId');
+    final mode = transfer ? 'transfer' : 'join';
+    debugPrint('[CallService] ➕ demande d\'ajout de $inviteeId mode=$mode');
+    _confMode = mode;
+    _isTransferInitiator = transfer;
+    _transferStatus =
+        transfer ? CallTransferStatus.inviting : CallTransferStatus.inviting;
     _apiClient.sendSocketEvent(SocketEvents.callAddParticipant, {
       'targetUserId': inviteeId.toString(),
+      'mode': mode,
       if (myName != null) 'callerName': myName,
       if (myPhoto != null) 'callerPhoto': myPhoto,
     });
+    notify();
   }
 
   /// Annule l'invitation en cours. Réservé à celui qui l'a lancée.
@@ -28,17 +35,19 @@ extension CallConference on CallService {
     if (_confSessionId == null || !_confInviteIsMine) return;
     debugPrint('[CallService] ✖ annulation de l\'invitation');
     _apiClient.sendSocketEvent(SocketEvents.callAddCancel, {});
+    _transferStatus = CallTransferStatus.cancelled;
+    notify();
   }
 
   /// Côté invité : accepte de rejoindre l'appel à trois.
-  ///
-  /// Le flux local est ouvert AVANT d'annoncer l'acceptation : les deux présents
-  /// enverront leurs offres dès qu'ils l'apprennent, et `_handleGroupOffer` a
-  /// besoin des pistes locales pour y répondre.
   Future<void> acceptConferenceInvite() async {
     final sessionId = _confSessionId;
     final myId = _localUserId;
-    if (sessionId == null || myId == null || _status != CallStatus.incoming) return;
+    if (sessionId == null || myId == null) return;
+    if (_status != CallStatus.incoming && _status != CallStatus.joining) {
+      // Cold-start peut déjà être en joining.
+      if (_status != CallStatus.connected) return;
+    }
     final myName = _localUserName;
     final myPhoto = _localUserPhoto;
 
@@ -49,7 +58,6 @@ extension CallConference on CallService {
       await _ringtone.stop();
       await _initLocalStream(_isVideo);
 
-      // Le maillage s'adresse via _groupRoomId : la session en tient lieu.
       _groupRoomId = sessionId;
       _myRosterId = myId.toString();
       _groupRoster[myId.toString()] = GroupParticipantInfo(
@@ -58,7 +66,7 @@ extension CallConference on CallService {
         photo: myPhoto,
       );
 
-      _apiClient.sendSocketEvent(SocketEvents.callConfJoin, {});
+      _emitOrQueueConfJoin(sessionId);
 
       _status = CallStatus.connected;
       _startDurationTimer();
@@ -80,9 +88,51 @@ extension CallConference on CallService {
     }
   }
 
+  void _emitOrQueueConfJoin(String sessionId) {
+    if (_apiClient.isSocketReady) {
+      _apiClient.sendSocketEvent(SocketEvents.callConfJoin, {});
+      _pendingConfJoinSessionId = null;
+      return;
+    }
+    debugPrint('[CallService] ⏳ call_conf_join en file (socket pas prêt)');
+    _pendingConfJoinSessionId = sessionId;
+    if (!_apiClient.isSocketConnected) {
+      _apiClient.connectSocket();
+    }
+  }
+
+  /// Flush de la file call_conf_join avec gardes anti-session périmée.
+  void _flushPendingConfJoin() {
+    final sessionId = _pendingConfJoinSessionId;
+    if (sessionId == null) return;
+    _pendingConfJoinSessionId = null;
+
+    if (_confSessionId != sessionId) {
+      debugPrint('[CallService] 🛡 conf join flush drop: session mismatch');
+      return;
+    }
+    if (_isTerminalCallId(sessionId)) {
+      debugPrint('[CallService] 🛡 conf join flush drop: session terminale');
+      return;
+    }
+    if (_status != CallStatus.joining &&
+        _status != CallStatus.incoming &&
+        _status != CallStatus.connected) {
+      debugPrint('[CallService] 🛡 conf join flush drop: status=$_status');
+      return;
+    }
+    if (!_apiClient.isSocketReady) {
+      _pendingConfJoinSessionId = sessionId;
+      return;
+    }
+    debugPrint('[CallService] 🔁 flush call_conf_join session=$sessionId');
+    _apiClient.sendSocketEvent(SocketEvents.callConfJoin, {});
+  }
+
   /// Côté invité : refuse l'invitation.
   Future<void> rejectConferenceInvite() async {
     if (_confSessionId == null) return;
+    _pendingConfJoinSessionId = null;
     _apiClient.sendSocketEvent(SocketEvents.callConfReject, {});
     _markTerminalCallId(_confSessionId);
     await _ringtone.stop();
@@ -90,7 +140,6 @@ extension CallConference on CallService {
     _terminateConference();
   }
 
-  /// Traduit un code de refus serveur en raison affichable par l'interface.
   String _addRejectionReason(String code) {
     switch (code) {
       case 'ADD_ALREADY_USED':
@@ -110,17 +159,8 @@ extension CallConference on CallService {
     }
   }
 
-  // ── Bascule 1-à-1 → maillage ────────────────────────────────────────────────
-
-  /// Verse la connexion 1-à-1 en cours dans le maillage, sans y toucher.
-  ///
-  /// Ni `close()` ni renégociation : la RTCPeerConnection déjà établie et son
-  /// flux distant sont simplement réindexés par identifiant d'utilisateur, là où
-  /// la grille et le reste du code maillé savent les lire. C'est ce qui fait que
-  /// les deux participants d'origine n'entendent aucune coupure — et qu'au
-  /// départ du troisième, ils n'ont rien à reconstruire.
   void _promoteOneToOneToMesh() {
-    if (_groupRoomId != null) return; // déjà maillé
+    if (_groupRoomId != null) return;
     final peerId = _remoteUserId?.toString();
     final myId = _localUserId;
     if (peerId == null || myId == null) return;
@@ -131,8 +171,6 @@ extension CallConference on CallService {
     if (pc != null) _groupPeerConnections[peerId] = pc;
     final remote = _webrtc.remoteStream;
     if (remote != null) _groupRemoteStreams[peerId] = remote;
-    // La description distante est posée de longue date sur ce lien : le marquer
-    // évite que les prochains candidats ICE soient mis en attente pour rien.
     _groupRemoteDescSet.add(peerId);
 
     _groupRoster[peerId] = GroupParticipantInfo(
@@ -157,16 +195,8 @@ extension CallConference on CallService {
     debugPrint('[CallService] 🔗 connexion 1-à-1 versée dans le maillage (pair=$peerId)');
   }
 
-  /// Empêche la chute du lien d'origine d'emporter tout l'appel.
-  ///
-  /// En 1-à-1, `onConnectionFailure` termine l'appel : c'est correct, il n'y a
-  /// qu'un correspondant. Une fois ce lien versé dans le maillage, ce n'est plus
-  /// qu'une connexion parmi d'autres — la faire valoir fin d'appel coupait la
-  /// communication de celui qui restait alors qu'il devait continuer avec
-  /// l'arrivant. On la traite donc comme le départ de ce seul pair.
   void _guardOriginLinkFailure(String peerId) {
     _webrtc.onConnectionFailure = () {
-      // Hors session, le comportement 1-à-1 d'origine reprend ses droits.
       if (_confSessionId == null) {
         debugPrint('[CallService] ** lien tombé hors session : fin d\'appel');
         _terminateCall();
@@ -176,7 +206,6 @@ extension CallConference on CallService {
       debugPrint('[CallService] 🔌 lien d\'origine ($peerId) tombé en session');
       _removeGroupPeer(peerId);
 
-      // Plus aucun correspondant connecté : l'appel n'a plus d'objet.
       if (_groupPeerConnections.isEmpty) {
         debugPrint('[CallService] ** plus aucun pair : fin d\'appel');
         _terminateCall();
@@ -188,15 +217,16 @@ extension CallConference on CallService {
     };
   }
 
-  // ── Réactions aux événements serveur ────────────────────────────────────────
-
-  /// Une invitation vient d'être lancée : l'invité sonne, le droit est verrouillé.
   void _onConfAddPending(Map data) {
     final sessionId = data['sessionId']?.toString();
     if (sessionId == null) return;
 
     _confSessionId = sessionId;
     _confInviteIsMine = data['byUserId']?.toString() == _localUserId?.toString();
+    final mode = data['mode']?.toString();
+    if (mode == 'transfer' || mode == 'join') _confMode = mode!;
+    _isTransferInitiator = _confInviteIsMine && _confMode == 'transfer';
+    _transferStatus = CallTransferStatus.awaitingJoin;
 
     final invitee = data['invitee'];
     if (invitee is Map) {
@@ -209,20 +239,16 @@ extension CallConference on CallService {
       );
     }
 
-    // La grille apparaît dès la sonnerie : la tuile de l'invité préexiste à sa
-    // réponse, c'est le seul moyen de rendre l'attente lisible.
     _promoteOneToOneToMesh();
     notify();
   }
 
-  /// L'invité a accepté : chaque présent lui ouvre une connexion.
-  ///
-  /// Ce sont les présents qui offrent et l'arrivant qui répond — règle unique et
-  /// suffisante pour qu'aucune offre n'en croise une autre.
   Future<void> _onConfJoined(Map data) async {
     final user = data['user'];
     if (user is! Map) return;
     final userId = user['id'].toString();
+    final mode = data['mode']?.toString();
+    if (mode == 'transfer' || mode == 'join') _confMode = mode!;
 
     _groupRoster[userId] = GroupParticipantInfo(
       id: userId,
@@ -232,16 +258,20 @@ extension CallConference on CallService {
       photo: normalizeBackendUrl(user['photo']?.toString()),
     );
     _confPendingInvitee = null;
+    if (_confMode == 'transfer' && _isTransferInitiator) {
+      _transferStatus = CallTransferStatus.awaitingMediaReady;
+    }
     notify();
 
     if (_groupPeerConnections.containsKey(userId)) return;
     await _createGroupPeerAndOffer(userId);
   }
 
-  /// Côté invité : la liste de ceux qui vont lui offrir. Rien à initier.
   void _onConfPeers(Map data) {
     final peers = data['peers'];
     if (peers is! List) return;
+    final mode = data['mode']?.toString();
+    if (mode == 'transfer' || mode == 'join') _confMode = mode!;
     for (final p in peers) {
       if (p is! Map) continue;
       final id = p['id'].toString();
@@ -260,10 +290,6 @@ extension CallConference on CallService {
     notify();
   }
 
-  /// L'invitation est soldée sans que l'invité soit entré.
-  ///
-  /// Effacer la session rend le droit d'ajout aux deux participants — sans quoi
-  /// un simple refus condamnerait l'appel à ne plus jamais accueillir personne.
   void _onConfFailed(Map data) {
     final invitee = _confPendingInvitee;
     final reason = data['reason']?.toString() ?? 'declined';
@@ -275,20 +301,28 @@ extension CallConference on CallService {
     _confSessionId = null;
     _confPendingInvitee = null;
     _confInviteIsMine = false;
-    _lastConfFailure = reason;
+    _isTransferInitiator = false;
+    _transferStatus = CallTransferStatus.cancelled;
+    _confMode = 'join';
+    _lastConfFailure = reason == 'media_not_ready' ? 'media_not_ready' : reason;
+    _confReadySent.clear();
+    _pendingConfJoinSessionId = null;
 
-    // Retour à un appel à deux : la grille n'a plus lieu d'être.
     _demoteMeshToOneToOne();
     notify();
   }
 
-  /// Un participant s'est retiré. Les autres continuent.
   void _onConfLeft(Map data) {
     final userId = data['userId']?.toString();
     if (userId == null) return;
-    debugPrint('[CallService] 👋 $userId a quitté la session');
+    final reason = data['reason']?.toString();
+    debugPrint('[CallService] 👋 $userId a quitté la session reason=$reason');
 
-    _lastConfDeparture = _groupRoster[userId]?.name;
+    if (reason == 'media_not_ready') {
+      _lastConfFailure = 'media_not_ready';
+    } else {
+      _lastConfDeparture = _groupRoster[userId]?.name;
+    }
     _removeGroupPeer(userId);
 
     final remaining = (data['remaining'] as List?)
@@ -297,20 +331,65 @@ extension CallConference on CallService {
         const <String>[];
     if (remaining.isNotEmpty) _groupParticipants = remaining;
 
-    // Le droit d'ajout reste consommé : _confSessionId n'est pas effacé.
+    if (_isTransferInitiator &&
+        _transferStatus == CallTransferStatus.countdown) {
+      // Un autre est parti pendant le countdown : le serveur annule le leave auto.
+      _transferStatus = CallTransferStatus.cancelled;
+    }
+
     _demoteMeshToOneToOne();
     notify();
   }
 
-  /// Ramène l'affichage à deux quand il ne reste qu'un correspondant.
-  ///
-  /// Le maillage n'est pas défait pour autant : la connexion survivante reste
-  /// indexée par identifiant, et `activeRemoteStream` la donne à voir à l'écran
-  /// d'appel ordinaire.
+  void _onTransferArmed(Map data) {
+    final sessionId = data['sessionId']?.toString();
+    if (sessionId == null || sessionId != _confSessionId) return;
+    if (!_isTransferInitiator) return;
+    _transferStatus = CallTransferStatus.countdown;
+    debugPrint('[CallService] ⏱ transfer armed leaveInMs=${data['leaveInMs']}');
+    notify();
+  }
+
+  Future<void> _onTransferDone(Map data) async {
+    final sessionId = data['sessionId']?.toString();
+    if (sessionId == null) return;
+    if (_confSessionId != null && _confSessionId != sessionId) return;
+
+    final reason = data['reason']?.toString() ?? 'automatic';
+    debugPrint('[CallService] ✔ transfer done reason=$reason');
+    _transferStatus = CallTransferStatus.completed;
+    _isTransferInitiator = false;
+    notify();
+
+    // L'initiateur doit fermer son UI / session locale.
+    if (_status == CallStatus.connected ||
+        _status == CallStatus.joining ||
+        _status == CallStatus.connecting) {
+      await _terminateCall();
+    }
+  }
+
+  /// Émis une seule fois par (session, peer) quand PC↔C est connected.
+  /// Uniquement pour un participant restant en mode transfer (pas l'initiateur).
+  void _maybeEmitConfReady(String peerId) {
+    if (_confMode != 'transfer') return;
+    if (_isTransferInitiator) return;
+    final sessionId = _confSessionId;
+    if (sessionId == null) return;
+    final key = '$sessionId|$peerId';
+    if (_confReadySent.contains(key)) return;
+    _confReadySent.add(key);
+    debugPrint('[CallService] 📡 call_conf_ready peer=$peerId');
+    _apiClient.sendSocketEvent(SocketEvents.callConfReady, {
+      'sessionId': sessionId,
+      'peerId': peerId,
+    });
+  }
+
   void _demoteMeshToOneToOne() {
     if (_groupRoomId == null) return;
-    if (_confPendingInvitee != null) return;      // un invité sonne encore
-    if (_groupRemoteStreams.length > 1) return;   // toujours à trois
+    if (_confPendingInvitee != null) return;
+    if (_groupRemoteStreams.length > 1) return;
 
     final remainingId = _groupRemoteStreams.keys.isNotEmpty
         ? _groupRemoteStreams.keys.first
@@ -333,13 +412,17 @@ extension CallConference on CallService {
     debugPrint('[CallService] ↩ retour à l\'affichage à deux (pair=$remainingId)');
   }
 
-  /// Ferme la session sans toucher à l'appel : utilisé au refus et sur erreur.
   void _terminateConference() {
     speakingDetector.stop();
     _confSessionId = null;
     _confPendingInvitee = null;
     _confInvitedBy = null;
     _confInviteIsMine = false;
+    _isTransferInitiator = false;
+    _transferStatus = CallTransferStatus.none;
+    _confMode = 'join';
+    _confReadySent.clear();
+    _pendingConfJoinSessionId = null;
     _groupRoster.clear();
     _groupRoomId = null;
     _resetCallState();

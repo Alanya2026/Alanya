@@ -9,8 +9,11 @@ extension CallIncoming on CallService {
     String? callerPhoto,
     required bool isVideo,
     String? roomId,
+    String? sessionKind,
+    String? mode,
   }) async {
-    debugPrint('[CallService] 📲 acceptIncomingCallFromPush callId=$callId caller=$callerId');
+    debugPrint('[CallService] 📲 acceptIncomingCallFromPush callId=$callId caller=$callerId '
+        'sessionKind=$sessionKind mode=$mode roomId=$roomId');
 
     // Idempotence : double événement CallKit (stream + pending), double clic
     // sur « Accepter », ou repli activeCalls() après un accept déjà dispatché —
@@ -19,6 +22,7 @@ extension CallIncoming on CallService {
     if (callId.isNotEmpty && _currentCallId == callId) {
       final alreadyHandling = _status == CallStatus.connecting ||
           _status == CallStatus.connected ||
+          _status == CallStatus.joining ||
           (_status == CallStatus.incoming && _autoAnswerOnNextIncoming);
       if (alreadyHandling) {
         debugPrint('[CallService] 🛡 acceptIncoming ignoré (déjà en cours): $callId');
@@ -37,6 +41,10 @@ extension CallIncoming on CallService {
       _apiClient.connectSocket();
     }
 
+    final isConf = sessionKind == 'conference' ||
+        callId.startsWith('conf_') ||
+        (roomId != null && roomId.startsWith('conf_'));
+
     _remoteUserId = int.tryParse(callerId);
     _remoteUserName = callerName;
     _remoteUserPhoto = normalizeBackendUrl(callerPhoto);
@@ -44,9 +52,29 @@ extension CallIncoming on CallService {
     _currentCallId = callId.isNotEmpty ? callId : null;
     _autoAnswerOnNextIncoming = true;
     _autoAnswerCallerId = callerId;
-    // Accepté depuis la notification/CallKit : on saute IncomingCallScreen et on
-    // ouvre directement l'écran d'appel actif (voir HomeScreen + call_ui).
     _isAutoAnsweringFromPush = true;
+
+    if (isConf) {
+      final sessionId = (roomId != null && roomId.isNotEmpty)
+          ? roomId
+          : callId;
+      _confSessionId = sessionId;
+      _confMode = (mode == 'transfer') ? 'transfer' : 'join';
+      _confInvitedBy = GroupParticipantInfo(
+        id: callerId,
+        name: callerName.isNotEmpty
+            ? callerName
+            : LocaleController.instance.l10n.participantFallback,
+        photo: normalizeBackendUrl(callerPhoto),
+      );
+      _status = CallStatus.incoming;
+      _ensureRemoteIdentityResolved();
+      notify();
+      debugPrint('[CallService] ⚡ cold-start conférence → acceptConferenceInvite');
+      await acceptConferenceInvite();
+      return;
+    }
+
     _status = CallStatus.incoming;
     _ensureRemoteIdentityResolved();
     notify();
@@ -95,6 +123,8 @@ extension CallIncoming on CallService {
     String? callerPhoto,
     required bool isVideo,
     String? roomId,
+    String? sessionKind,
+    String? mode,
   }) {
     unawaited(_prepareIncomingFromCallKitAsync(
       callId: callId,
@@ -103,6 +133,8 @@ extension CallIncoming on CallService {
       callerPhoto: callerPhoto,
       isVideo: isVideo,
       roomId: roomId,
+      sessionKind: sessionKind,
+      mode: mode,
     ));
   }
 
@@ -113,6 +145,8 @@ extension CallIncoming on CallService {
     String? callerPhoto,
     required bool isVideo,
     String? roomId,
+    String? sessionKind,
+    String? mode,
   }) async {
     if (!await canPrepareIncomingFromCallKit(
       callId: callId,
@@ -134,21 +168,42 @@ extension CallIncoming on CallService {
 
     final parsedCallerId = int.tryParse(callerId);
 
-    debugPrint('[CallService] 📲 prepareIncomingFromCallKit callId=$callId caller=$callerId');
+    debugPrint('[CallService] 📲 prepareIncomingFromCallKit callId=$callId caller=$callerId '
+        'sessionKind=$sessionKind');
 
     _remoteUserId = parsedCallerId;
     _remoteUserName = callerName;
     _remoteUserPhoto = normalizeBackendUrl(callerPhoto);
     _isVideo = isVideo;
     _currentCallId = callId.isNotEmpty ? callId : null;
-    _groupRoomId = (roomId != null && roomId.isNotEmpty) ? roomId : null;
+
+    final isConf = sessionKind == 'conference' ||
+        callId.startsWith('conf_') ||
+        (roomId != null && roomId.startsWith('conf_'));
+    if (isConf) {
+      final sessionId =
+          (roomId != null && roomId.isNotEmpty) ? roomId : callId;
+      _confSessionId = sessionId;
+      _confMode = (mode == 'transfer') ? 'transfer' : 'join';
+      _groupRoomId = sessionId;
+      _confInvitedBy = GroupParticipantInfo(
+        id: callerId,
+        name: callerName.isNotEmpty
+            ? callerName
+            : LocaleController.instance.l10n.participantFallback,
+        photo: normalizeBackendUrl(callerPhoto),
+      );
+    } else {
+      _groupRoomId = (roomId != null && roomId.isNotEmpty) ? roomId : null;
+    }
+
     _status = CallStatus.incoming;
     _ensureRemoteIdentityResolved();
     notify();
     // Filet anti-fantôme (1-à-1) : si l'offre WebRTC de confirmation n'arrive
     // jamais via le socket, on démonte au lieu de laisser un écran d'appel entrant
     // pour un appel déjà terminé (ex. appelant a raccroché, app tuée → « Inconnu »).
-    if (_groupRoomId == null) {
+    if (_groupRoomId == null && !isConf) {
       _armAwaitingOfferTimeout();
     }
   }
@@ -162,6 +217,8 @@ extension CallIncoming on CallService {
     String? callerPhoto,
     required bool isVideo,
     String? roomId,
+    String? sessionKind,
+    String? mode,
   }) async {
     if (callId.isNotEmpty &&
         (_isTerminalCallId(callId) || await EndedCallRegistry.isEnded(callId))) {
@@ -203,6 +260,8 @@ extension CallIncoming on CallService {
         callerPhoto: callerPhoto,
         isVideo: isVideo,
         roomId: roomId,
+        sessionKind: sessionKind,
+        mode: mode,
       );
       return;
     }
@@ -231,6 +290,8 @@ extension CallIncoming on CallService {
       callerPhoto: callerPhoto,
       isVideo: isVideo,
       roomId: roomId,
+      sessionKind: sessionKind,
+      mode: mode,
     );
   }
 
@@ -243,17 +304,33 @@ extension CallIncoming on CallService {
   Future<void> rejectIncomingCallFromPush({
     required String callerId,
     String? callId,
+    bool isConference = false,
   }) async {
-    debugPrint('[CallService] 📲 rejectIncomingCallFromPush caller=$callerId callId=$callId');
+    debugPrint('[CallService] 📲 rejectIncomingCallFromPush caller=$callerId '
+        'callId=$callId conf=$isConference');
 
     final resolvedCallId = callId ?? _currentCallId;
+    final conf = isConference ||
+        _confSessionId != null ||
+        (resolvedCallId != null && resolvedCallId.startsWith('conf_'));
+
     _markTerminalCallId(resolvedCallId);
     _autoAnswerOnNextIncoming = false;
     _autoAnswerCallerId = null;
     _isAutoAnsweringFromPush = false;
+    _pendingConfJoinSessionId = null;
 
     await _ringtone.stop();
     await _callKit.endAll(callId: resolvedCallId);
+
+    if (conf) {
+      if (_confSessionId == null && resolvedCallId != null) {
+        _confSessionId = resolvedCallId;
+      }
+      _apiClient.sendSocketEvent(SocketEvents.callConfReject, {});
+      _terminateConference();
+      return;
+    }
 
     final cid = int.tryParse(callerId);
     if (cid != null) {
@@ -289,6 +366,8 @@ extension CallIncoming on CallService {
           callerPhoto: action.callerPhoto,
           isVideo: action.isVideo,
           roomId: action.roomId,
+          sessionKind: action.sessionKind,
+          mode: action.mode,
         );
         break;
       case IncomingCallActionType.accept:
@@ -299,6 +378,8 @@ extension CallIncoming on CallService {
           callerPhoto: action.callerPhoto,
           isVideo: action.isVideo,
           roomId: action.roomId,
+          sessionKind: action.sessionKind,
+          mode: action.mode,
         );
         break;
       case IncomingCallActionType.decline:
@@ -306,6 +387,7 @@ extension CallIncoming on CallService {
         await rejectIncomingCallFromPush(
           callerId: action.callerId,
           callId: action.callId,
+          isConference: action.isConference,
         );
         break;
       case IncomingCallActionType.ended:
