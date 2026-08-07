@@ -7303,6 +7303,15 @@ class $LocalContactListsTable extends LocalContactLists
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _colorMeta = const VerificationMeta('color');
   @override
   late final GeneratedColumn<String> color = GeneratedColumn<String>(
@@ -7350,6 +7359,7 @@ class $LocalContactListsTable extends LocalContactLists
   List<GeneratedColumn> get $columns => [
     idList,
     name,
+    kind,
     color,
     memberLimit,
     memberCount,
@@ -7377,6 +7387,12 @@ class $LocalContactListsTable extends LocalContactLists
       context.handle(
         _nameMeta,
         name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
       );
     }
     if (data.containsKey('color')) {
@@ -7428,6 +7444,10 @@ class $LocalContactListsTable extends LocalContactLists
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      ),
       color: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}color'],
@@ -7458,6 +7478,10 @@ class LocalContactList extends DataClass
   final int idList;
   final String name;
 
+  /// Identifiant stable des listes système (`family`, `friends`, …).
+  /// Null pour une liste personnalisée — le libellé affiché est [name].
+  final String? kind;
+
   /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
   final String? color;
 
@@ -7470,6 +7494,7 @@ class LocalContactList extends DataClass
   const LocalContactList({
     required this.idList,
     required this.name,
+    this.kind,
     this.color,
     this.memberLimit,
     required this.memberCount,
@@ -7480,6 +7505,9 @@ class LocalContactList extends DataClass
     final map = <String, Expression>{};
     map['id_list'] = Variable<int>(idList);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || kind != null) {
+      map['kind'] = Variable<String>(kind);
+    }
     if (!nullToAbsent || color != null) {
       map['color'] = Variable<String>(color);
     }
@@ -7495,6 +7523,7 @@ class LocalContactList extends DataClass
     return LocalContactListsCompanion(
       idList: Value(idList),
       name: Value(name),
+      kind: kind == null && nullToAbsent ? const Value.absent() : Value(kind),
       color: color == null && nullToAbsent
           ? const Value.absent()
           : Value(color),
@@ -7514,6 +7543,7 @@ class LocalContactList extends DataClass
     return LocalContactList(
       idList: serializer.fromJson<int>(json['idList']),
       name: serializer.fromJson<String>(json['name']),
+      kind: serializer.fromJson<String?>(json['kind']),
       color: serializer.fromJson<String?>(json['color']),
       memberLimit: serializer.fromJson<int?>(json['memberLimit']),
       memberCount: serializer.fromJson<int>(json['memberCount']),
@@ -7526,6 +7556,7 @@ class LocalContactList extends DataClass
     return <String, dynamic>{
       'idList': serializer.toJson<int>(idList),
       'name': serializer.toJson<String>(name),
+      'kind': serializer.toJson<String?>(kind),
       'color': serializer.toJson<String?>(color),
       'memberLimit': serializer.toJson<int?>(memberLimit),
       'memberCount': serializer.toJson<int>(memberCount),
@@ -7536,6 +7567,7 @@ class LocalContactList extends DataClass
   LocalContactList copyWith({
     int? idList,
     String? name,
+    Value<String?> kind = const Value.absent(),
     Value<String?> color = const Value.absent(),
     Value<int?> memberLimit = const Value.absent(),
     int? memberCount,
@@ -7543,6 +7575,7 @@ class LocalContactList extends DataClass
   }) => LocalContactList(
     idList: idList ?? this.idList,
     name: name ?? this.name,
+    kind: kind.present ? kind.value : this.kind,
     color: color.present ? color.value : this.color,
     memberLimit: memberLimit.present ? memberLimit.value : this.memberLimit,
     memberCount: memberCount ?? this.memberCount,
@@ -7552,6 +7585,7 @@ class LocalContactList extends DataClass
     return LocalContactList(
       idList: data.idList.present ? data.idList.value : this.idList,
       name: data.name.present ? data.name.value : this.name,
+      kind: data.kind.present ? data.kind.value : this.kind,
       color: data.color.present ? data.color.value : this.color,
       memberLimit: data.memberLimit.present
           ? data.memberLimit.value
@@ -7568,6 +7602,7 @@ class LocalContactList extends DataClass
     return (StringBuffer('LocalContactList(')
           ..write('idList: $idList, ')
           ..write('name: $name, ')
+          ..write('kind: $kind, ')
           ..write('color: $color, ')
           ..write('memberLimit: $memberLimit, ')
           ..write('memberCount: $memberCount, ')
@@ -7577,14 +7612,22 @@ class LocalContactList extends DataClass
   }
 
   @override
-  int get hashCode =>
-      Object.hash(idList, name, color, memberLimit, memberCount, cachedAt);
+  int get hashCode => Object.hash(
+    idList,
+    name,
+    kind,
+    color,
+    memberLimit,
+    memberCount,
+    cachedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LocalContactList &&
           other.idList == this.idList &&
           other.name == this.name &&
+          other.kind == this.kind &&
           other.color == this.color &&
           other.memberLimit == this.memberLimit &&
           other.memberCount == this.memberCount &&
@@ -7594,6 +7637,7 @@ class LocalContactList extends DataClass
 class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
   final Value<int> idList;
   final Value<String> name;
+  final Value<String?> kind;
   final Value<String?> color;
   final Value<int?> memberLimit;
   final Value<int> memberCount;
@@ -7601,6 +7645,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
   const LocalContactListsCompanion({
     this.idList = const Value.absent(),
     this.name = const Value.absent(),
+    this.kind = const Value.absent(),
     this.color = const Value.absent(),
     this.memberLimit = const Value.absent(),
     this.memberCount = const Value.absent(),
@@ -7609,6 +7654,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
   LocalContactListsCompanion.insert({
     this.idList = const Value.absent(),
     this.name = const Value.absent(),
+    this.kind = const Value.absent(),
     this.color = const Value.absent(),
     this.memberLimit = const Value.absent(),
     this.memberCount = const Value.absent(),
@@ -7617,6 +7663,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
   static Insertable<LocalContactList> custom({
     Expression<int>? idList,
     Expression<String>? name,
+    Expression<String>? kind,
     Expression<String>? color,
     Expression<int>? memberLimit,
     Expression<int>? memberCount,
@@ -7625,6 +7672,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
     return RawValuesInsertable({
       if (idList != null) 'id_list': idList,
       if (name != null) 'name': name,
+      if (kind != null) 'kind': kind,
       if (color != null) 'color': color,
       if (memberLimit != null) 'member_limit': memberLimit,
       if (memberCount != null) 'member_count': memberCount,
@@ -7635,6 +7683,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
   LocalContactListsCompanion copyWith({
     Value<int>? idList,
     Value<String>? name,
+    Value<String?>? kind,
     Value<String?>? color,
     Value<int?>? memberLimit,
     Value<int>? memberCount,
@@ -7643,6 +7692,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
     return LocalContactListsCompanion(
       idList: idList ?? this.idList,
       name: name ?? this.name,
+      kind: kind ?? this.kind,
       color: color ?? this.color,
       memberLimit: memberLimit ?? this.memberLimit,
       memberCount: memberCount ?? this.memberCount,
@@ -7658,6 +7708,9 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
     }
     if (color.present) {
       map['color'] = Variable<String>(color.value);
@@ -7679,6 +7732,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
     return (StringBuffer('LocalContactListsCompanion(')
           ..write('idList: $idList, ')
           ..write('name: $name, ')
+          ..write('kind: $kind, ')
           ..write('color: $color, ')
           ..write('memberLimit: $memberLimit, ')
           ..write('memberCount: $memberCount, ')
@@ -11158,6 +11212,7 @@ typedef $$LocalContactListsTableCreateCompanionBuilder =
     LocalContactListsCompanion Function({
       Value<int> idList,
       Value<String> name,
+      Value<String?> kind,
       Value<String?> color,
       Value<int?> memberLimit,
       Value<int> memberCount,
@@ -11167,6 +11222,7 @@ typedef $$LocalContactListsTableUpdateCompanionBuilder =
     LocalContactListsCompanion Function({
       Value<int> idList,
       Value<String> name,
+      Value<String?> kind,
       Value<String?> color,
       Value<int?> memberLimit,
       Value<int> memberCount,
@@ -11189,6 +11245,11 @@ class $$LocalContactListsTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11232,6 +11293,11 @@ class $$LocalContactListsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get color => $composableBuilder(
     column: $table.color,
     builder: (column) => ColumnOrderings(column),
@@ -11267,6 +11333,9 @@ class $$LocalContactListsTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
 
   GeneratedColumn<String> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
@@ -11327,6 +11396,7 @@ class $$LocalContactListsTableTableManager
               ({
                 Value<int> idList = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> kind = const Value.absent(),
                 Value<String?> color = const Value.absent(),
                 Value<int?> memberLimit = const Value.absent(),
                 Value<int> memberCount = const Value.absent(),
@@ -11334,6 +11404,7 @@ class $$LocalContactListsTableTableManager
               }) => LocalContactListsCompanion(
                 idList: idList,
                 name: name,
+                kind: kind,
                 color: color,
                 memberLimit: memberLimit,
                 memberCount: memberCount,
@@ -11343,6 +11414,7 @@ class $$LocalContactListsTableTableManager
               ({
                 Value<int> idList = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> kind = const Value.absent(),
                 Value<String?> color = const Value.absent(),
                 Value<int?> memberLimit = const Value.absent(),
                 Value<int> memberCount = const Value.absent(),
@@ -11350,6 +11422,7 @@ class $$LocalContactListsTableTableManager
               }) => LocalContactListsCompanion.insert(
                 idList: idList,
                 name: name,
+                kind: kind,
                 color: color,
                 memberLimit: memberLimit,
                 memberCount: memberCount,

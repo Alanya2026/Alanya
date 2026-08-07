@@ -1317,6 +1317,9 @@ class ContactList {
   final int idList;
   final String name;
 
+  /// `family` | `friends` | `work` | `trust` pour les listes système.
+  final String? kind;
+
   /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
   final String? color;
   final int? memberLimit;
@@ -1325,6 +1328,7 @@ class ContactList {
   ContactList({
     required this.idList,
     required this.name,
+    this.kind,
     this.color,
     this.memberLimit,
     this.memberCount = 0,
@@ -1333,6 +1337,7 @@ class ContactList {
   factory ContactList.fromJson(Map<String, dynamic> json) => ContactList(
         idList: (json['idList'] as num?)?.toInt() ?? 0,
         name: json['name']?.toString() ?? '',
+        kind: _nullableContactListKind(json['kind']),
         color: (json['color']?.toString().isEmpty ?? true)
             ? null
             : json['color'].toString(),
@@ -1343,10 +1348,17 @@ class ContactList {
   Map<String, dynamic> toJson() => {
         'idList': idList,
         'name': name,
+        'kind': kind,
         'color': color,
         'memberLimit': memberLimit,
         'memberCount': memberCount,
       };
+}
+
+String? _nullableContactListKind(dynamic raw) {
+  if (raw == null) return null;
+  final s = raw.toString().trim();
+  return s.isEmpty ? null : s;
 }
 
 // ── SOCKET EVENTS ────────────────────────────────────────────────────

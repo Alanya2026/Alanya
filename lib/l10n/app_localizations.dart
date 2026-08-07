@@ -8228,6 +8228,30 @@ abstract class AppLocalizations {
   /// **'Impossible d\'ouvrir la page d\'aide'**
   String get officialHelpUnavailable;
 
+  /// No description provided for @listKindFamily.
+  ///
+  /// In fr, this message translates to:
+  /// **'Famille'**
+  String get listKindFamily;
+
+  /// No description provided for @listKindFriends.
+  ///
+  /// In fr, this message translates to:
+  /// **'Amis'**
+  String get listKindFriends;
+
+  /// No description provided for @listKindWork.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bureau'**
+  String get listKindWork;
+
+  /// No description provided for @listKindTrust.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confiance'**
+  String get listKindTrust;
+
   /// No description provided for @contactLists.
   ///
   /// In fr, this message translates to:

@@ -238,19 +238,12 @@ class LocalCacheRepository {
   List<LocalContactList> _sortContactLists(List<LocalContactList> lists) {
     final sorted = [...lists];
     sorted.sort((a, b) {
-      final ka = _defaultListSortKey(a.name);
-      final kb = _defaultListSortKey(b.name);
+      final ka = defaultContactListSortKey(a.kind);
+      final kb = defaultContactListSortKey(b.kind);
       if (ka != kb) return ka.compareTo(kb);
       return a.name.compareTo(b.name);
     });
     return sorted;
-  }
-
-  int _defaultListSortKey(String name) {
-    for (var i = 0; i < kDefaultContactLists.length; i++) {
-      if (kDefaultContactLists[i].name == name) return i;
-    }
-    return 100;
   }
 
   /// Rafraîchit les listes depuis l'API. Best-effort : en cas d'erreur réseau,
@@ -270,6 +263,7 @@ class LocalCacheRepository {
           final companion = LocalContactListsCompanion(
             idList: Value(l.idList),
             name: Value(l.name),
+            kind: Value(l.kind),
             color: Value(l.color),
             memberLimit: Value(l.memberLimit),
             memberCount: Value(l.memberCount),

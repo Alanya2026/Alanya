@@ -4664,6 +4664,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get officialHelpUnavailable => 'Could not open the help page';
 
   @override
+  String get listKindFamily => 'Family';
+
+  @override
+  String get listKindFriends => 'Friends';
+
+  @override
+  String get listKindWork => 'Work';
+
+  @override
+  String get listKindTrust => 'Trust';
+
+  @override
   String get contactLists => 'Contact lists';
 
   @override

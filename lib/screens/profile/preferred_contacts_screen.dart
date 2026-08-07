@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
+import '../../core/utils/contact_list_display.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/contact_list_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -184,7 +185,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
               final tint = parseListColor(couleurs[list.idList]) ??
                   context.colors.primary;
               return ChoiceChip(
-                label: Text('${list.name} · ${list.memberCount}'),
+                label: Text('${list.displayName(context.l10n)} · ${list.memberCount}'),
                 selected: selected,
                 showCheckmark: false,
                 selectedColor: tint,
@@ -546,7 +547,7 @@ class _ListBadge extends StatelessWidget {
         borderRadius: AppRadius.brPill,
       ),
       child: Text(
-        list.name,
+        list.displayName(context.l10n),
         style: context.text.labelSmall?.copyWith(
           color: tint,
           fontWeight: FontWeight.w600,

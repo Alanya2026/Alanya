@@ -7,6 +7,7 @@ import '../core/db/app_database.dart';
 import '../core/services/local_cache_repository.dart';
 import '../core/theme/app_dimens.dart';
 import '../core/theme/app_theme.dart';
+import '../core/utils/contact_list_display.dart';
 import '../core/theme/contact_list_colors.dart';
 import '../screens/profile/contact_list_detail_screen.dart';
 import '../screens/profile/contact_lists_screen.dart';
@@ -38,7 +39,7 @@ class _ContactListsSheet extends StatelessWidget {
       MaterialPageRoute(
         builder: (_) => ContactListDetailScreen(
           idList: list.idList,
-          initialName: list.name,
+          initialName: list.displayName(context.l10n),
         ),
       ),
     );
@@ -113,7 +114,7 @@ class _ContactListsSheet extends StatelessWidget {
                               context.colors.primary,
                           size: AppSizes.avatarSm,
                         ),
-                        title: Text(list.name),
+                        title: Text(list.displayName(context.l10n)),
                         subtitle:
                             Text(context.l10n.listMembersCount(list.memberCount)),
                         trailing: Icon(

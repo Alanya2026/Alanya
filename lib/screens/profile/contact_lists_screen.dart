@@ -10,6 +10,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/contact_list_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
+import '../../core/utils/contact_list_display.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/common/common.dart';
 import 'add_list_members_sheet.dart';
@@ -73,15 +74,16 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
     if (!mounted) return;
     final result = await showListEditorSheet(
       context,
-      initialName: list.name,
+      initialName: list.displayName(l10n),
       initialColor: couleurs[list.idList] ?? kContactListColors.first,
+      nameReadOnly: isSystemContactListKind(list.kind),
     );
     if (result == null || !mounted) return;
     final cache = context.read<LocalCacheRepository>();
     try {
       await cache.updateContactList(
         list.idList,
-        name: result.name,
+        name: isSystemContactListKind(list.kind) ? null : result.name,
         color: result.color,
       );
     } on TalkyException catch (e) {
@@ -100,7 +102,7 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(dialogContext.l10n.deleteList),
-        content: Text(dialogContext.l10n.deleteListConfirm(list.name)),
+        content: Text(dialogContext.l10n.deleteListConfirm(list.displayName(l10n))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -139,7 +141,7 @@ class _ContactListsScreenState extends State<ContactListsScreen> {
       MaterialPageRoute(
         builder: (_) => ContactListDetailScreen(
           idList: list.idList,
-          initialName: list.name,
+          initialName: list.displayName(context.l10n),
         ),
       ),
     );
@@ -295,7 +297,8 @@ class _ContactListTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(list.name, style: context.text.titleSmall),
+                      Text(list.displayName(context.l10n),
+                          style: context.text.titleSmall),
                       Text(
                         context.l10n.listMembersCount(list.memberCount),
                         style: context.text.bodySmall?.copyWith(
@@ -339,21 +342,28 @@ Future<ContactListDraft?> showListEditorSheet(
   BuildContext context, {
   String? initialName,
   required String initialColor,
+  bool nameReadOnly = false,
 }) {
   return showAppBottomSheet<ContactListDraft>(
     context: context,
     builder: (_) => _ListEditorSheet(
       initialName: initialName,
       initialColor: initialColor,
+      nameReadOnly: nameReadOnly,
     ),
   );
 }
 
 class _ListEditorSheet extends StatefulWidget {
-  const _ListEditorSheet({this.initialName, required this.initialColor});
+  const _ListEditorSheet({
+    this.initialName,
+    required this.initialColor,
+    this.nameReadOnly = false,
+  });
 
   final String? initialName;
   final String initialColor;
+  final bool nameReadOnly;
 
   @override
   State<_ListEditorSheet> createState() => _ListEditorSheetState();
@@ -382,19 +392,10 @@ class _ListEditorSheetState extends State<_ListEditorSheet> {
   Future<void> _pickMembers() async {
     // Le clavier masquerait la feuille de sélection empilée par-dessus.
     FocusScope.of(context).unfocus();
-    final name = _controller.text.trim();
-    int? maxSelection;
-    for (final def in kDefaultContactLists) {
-      if (def.name == name) {
-        maxSelection = def.memberLimit;
-        break;
-      }
-    }
     final picked = await showAddListMembersSheet(
       context,
       initialSelection: _memberIds,
       confirmLabel: context.l10n.commonSave,
-      maxSelection: maxSelection,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -406,16 +407,21 @@ class _ListEditorSheetState extends State<_ListEditorSheet> {
 
   void _submit() {
     final name = _controller.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty && !widget.nameReadOnly) return;
     Navigator.pop(
       context,
-      ContactListDraft(name, _color, memberIds: {..._memberIds}),
+      ContactListDraft(
+        widget.nameReadOnly ? (widget.initialName ?? name) : name,
+        _color,
+        memberIds: {..._memberIds},
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.initialName != null;
+    final isColorOnlyEdit = isEdit && widget.nameReadOnly;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -427,26 +433,34 @@ class _ListEditorSheetState extends State<_ListEditorSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isEdit ? context.l10n.renameList : context.l10n.createList,
+              isColorOnlyEdit
+                  ? context.l10n.listColor
+                  : (isEdit ? context.l10n.renameList : context.l10n.createList),
               style: context.text.titleMedium,
             ),
             AppSpacing.vGapLg,
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              maxLength: 60,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _submit(),
-              decoration: InputDecoration(
-                labelText: context.l10n.listName,
-                hintText: context.l10n.listNameHint,
-                counterText: '',
-                border: const OutlineInputBorder(
-                  borderRadius: AppRadius.brSm,
+            if (!widget.nameReadOnly)
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                maxLength: 60,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.listName,
+                  hintText: context.l10n.listNameHint,
+                  counterText: '',
+                  border: const OutlineInputBorder(
+                    borderRadius: AppRadius.brSm,
+                  ),
                 ),
+              )
+            else
+              Text(
+                widget.initialName ?? '',
+                style: context.text.titleSmall,
               ),
-            ),
-            AppSpacing.vGapLg,
+            if (!widget.nameReadOnly) AppSpacing.vGapLg else AppSpacing.vGapMd,
             Text(
               context.l10n.listColor,
               style: context.text.labelLarge?.copyWith(

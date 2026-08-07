@@ -321,6 +321,10 @@ class LocalContactLists extends Table {
   IntColumn get idList => integer()();
   TextColumn get name => text().withDefault(const Constant(''))();
 
+  /// Identifiant stable des listes système (`family`, `friends`, …).
+  /// Null pour une liste personnalisée — le libellé affiché est [name].
+  TextColumn get kind => text().nullable()();
+
   /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
   TextColumn get color => text().nullable()();
 
@@ -364,7 +368,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -544,6 +548,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 22) {
             await m.addColumn(localContactLists, localContactLists.memberLimit);
+          }
+          if (from < 23) {
+            await m.addColumn(localContactLists, localContactLists.kind);
           }
         },
       );

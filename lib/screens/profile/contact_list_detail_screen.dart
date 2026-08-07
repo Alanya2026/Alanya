@@ -10,6 +10,7 @@ import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
+import '../../core/utils/contact_list_display.dart';
 import '../../core/utils/user_search.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
@@ -82,7 +83,7 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
     } on TalkyException catch (e) {
       if (e.statusCode == 409 &&
           e.message.toLowerCase().contains('limit')) {
-        _showError(l10n.listMemberLimitReached(memberLimit ?? kConfianceMemberLimit));
+        _showError(l10n.listMemberLimitReached(memberLimit ?? kTrustMemberLimit));
       } else {
         AppLog.e('ContactListDetail', 'Bascule d\'appartenance échouée', e);
         _showError(l10n.listMembersUpdateFailed);
@@ -138,8 +139,11 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
         final list = (listsSnapshot.data ?? const <LocalContactList>[])
             .where((l) => l.idList == widget.idList)
             .firstOrNull;
-        final name = list?.name ?? widget.initialName;
-        final memberLimit = list?.memberLimit;
+        final name = list != null
+            ? list.displayName(context.l10n)
+            : widget.initialName;
+        final memberLimit = list?.memberLimit ??
+            memberLimitForContactListKind(list?.kind);
 
         return StreamBuilder<List<User>>(
           stream: cache.watchListMembers(widget.idList),
