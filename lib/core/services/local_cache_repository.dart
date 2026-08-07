@@ -233,9 +233,11 @@ class LocalCacheRepository {
     }
   }
 
-  Future<void> syncCalls({required int myId}) async {
+  /// Écrit en cache une réponse GET /calls déjà téléchargée — permet à un
+  /// écran qui vient de faire l'appel réseau d'alimenter le cache sans le
+  /// refaire (syncCalls refaisait un GET identique juste derrière).
+  Future<void> ingestCallsRaw(List<dynamic> raw, {required int myId}) async {
     try {
-      final raw = await _api.getCallHistory();
       final now = DateTime.now();
       await _db.batch((b) {
         for (final r in raw.whereType<Map<String, dynamic>>()) {
@@ -243,6 +245,15 @@ class LocalCacheRepository {
           _insertCallIntoBatch(b, c, myId: myId, now: now);
         }
       });
+    } catch (e) {
+      debugPrint('[LocalCacheRepo] ingestCallsRaw échouée: $e');
+    }
+  }
+
+  Future<void> syncCalls({required int myId}) async {
+    try {
+      final raw = await _api.getCallHistory();
+      await ingestCallsRaw(raw, myId: myId);
     } catch (e) {
       debugPrint('[LocalCacheRepo] syncCalls échouée: $e');
     }
@@ -256,9 +267,10 @@ class LocalCacheRepository {
         .watch();
   }
 
-  Future<void> syncMeetings() async {
+  /// Écrit en cache une réponse GET /meetings déjà téléchargée (même logique
+  /// que [ingestCallsRaw]).
+  Future<void> ingestMeetingsRaw(List<dynamic> raw) async {
     try {
-      final raw = await _api.getMeetings();
       await _db.batch((b) {
         for (final r in raw.whereType<Map<String, dynamic>>()) {
           final m = Meeting.fromJson(r);
@@ -270,6 +282,15 @@ class LocalCacheRepository {
           );
         }
       });
+    } catch (e) {
+      debugPrint('[LocalCacheRepo] ingestMeetingsRaw échouée: $e');
+    }
+  }
+
+  Future<void> syncMeetings() async {
+    try {
+      final raw = await _api.getMeetings();
+      await ingestMeetingsRaw(raw);
     } catch (e) {
       debugPrint('[LocalCacheRepo] syncMeetings échouée: $e');
     }

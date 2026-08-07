@@ -11,6 +11,7 @@ import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/meeting_service.dart';
+import '../../talky_api_client.dart';
 import '../../core/services/push_service.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
@@ -95,9 +96,14 @@ class _MeetsScreenState extends State<MeetsScreen>
     }
 
     try {
-      final meetingService =
-          Provider.of<MeetingService>(context, listen: false);
-      final data = await meetingService.getMeetings();
+      // Un seul GET /meetings : la réponse brute sert à la fois à l'affichage
+      // et au cache local (l'ancien `syncMeetings` refaisait le même appel).
+      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+      final raw = await apiClient.getMeetings();
+      final data = raw
+          .whereType<Map<String, dynamic>>()
+          .map(Meeting.fromJson)
+          .toList();
       if (!mounted) return;
       setState(() {
         _meetings = data;
@@ -106,7 +112,7 @@ class _MeetsScreenState extends State<MeetsScreen>
       if (mounted) {
         final cache =
             Provider.of<LocalCacheRepository>(context, listen: false);
-        cache.syncMeetings();
+        cache.ingestMeetingsRaw(raw);
       }
     } catch (_) {
       if (!mounted) return;

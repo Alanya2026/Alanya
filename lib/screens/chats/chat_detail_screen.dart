@@ -165,8 +165,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   LocalMessage? _replyTo;
   final FocusNode _inputFocus = FocusNode();
   Timer? _typingTimer;
+  // Dernier typing:start émis — throttle côté client (un event / 2,5 s max).
+  DateTime? _lastTypingSentAt;
 
   bool _loadingOlder = false;
+  // Historique épuisé : plus aucune requête de pagination pour cette
+  // conversation. Réarmé quand _convId change.
+  bool _reachedStart = false;
   bool _historySyncInFlight = false;
   /// True si la conv a un aperçu serveur (lastMessageAt) → le fil ne devrait pas rester vide.
   bool _expectMessages = false;
@@ -404,11 +409,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     }
 
     // Près du haut visuel → charger une page d'anciens messages.
-    if (pos.pixels >= pos.maxScrollExtent - 80 && !_loadingOlder) {
+    // `_reachedStart` : une fois l'historique épuisé, chaque micro-événement de
+    // scroll en haut du fil relançait une requête qui revenait vide — polling
+    // permanent déguisé sur les conversations courtes (fil dans un écran).
+    if (pos.pixels >= pos.maxScrollExtent - 80 &&
+        !_loadingOlder &&
+        !_reachedStart &&
+        pos.maxScrollExtent > pos.viewportDimension) {
       final convId = _convId;
       if (convId == null) return;
       _loadingOlder = true;
-      _chat.repository.loadOlderMessages(convId).whenComplete(() {
+      _chat.repository.loadOlderMessages(convId).then((loaded) {
+        if (loaded == 0) _reachedStart = true;
+      }).whenComplete(() {
         if (mounted) _loadingOlder = false;
       });
     }
@@ -458,6 +471,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     // par userId seul, création à la volée, déduplication d'un doublon 1-1),
     // auquel cas le premier appel avait un convId nul.
     _watchGroupState();
+
+    // Nouvelle conversation attachée → la pagination repart de zéro.
+    _reachedStart = false;
 
     // 1) Marque ce chat visible → conversation active + lecture immédiate.
     //    (didPush a pu se déclencher avant la résolution async du convId ;
@@ -520,7 +536,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     try {
       var activeConvId = convId;
       for (var attempt = 0; attempt < 2; attempt++) {
-        await _chat.repository.syncMessages(activeConvId);
+        // delta: ne redemande que les messages postérieurs au dernier msgID
+        // local — l'ouverture de chat retéléchargeait systématiquement les 50
+        // derniers messages complets déjà en base. Si la base locale est vide,
+        // syncMessages retombe de lui-même sur un chargement complet.
+        await _chat.repository.syncMessages(activeConvId, delta: true);
         await _chat.repository.syncReactions(activeConvId);
         if (!mounted || _convId != activeConvId) return;
         var stillEmpty = (await _chat.repository.dao

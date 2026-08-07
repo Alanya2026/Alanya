@@ -667,7 +667,7 @@ class Message {
       final contact = ContactPayload.tryParse(content);
       return contact?.previewLabel ?? LocaleController.instance.l10n.contact;
     }
-    if (type == 8) {
+    if (type == kWelcomeCtaMessageType) {
       final cta = WelcomeCtaPayload.tryParse(content);
       if (cta != null && cta.buttons.isNotEmpty) {
         return cta.buttons.map((b) => b.label).join(' · ');

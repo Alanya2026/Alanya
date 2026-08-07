@@ -152,7 +152,7 @@ class ConversationMerge {
     }
     // type=7 : JSON contact — ne jamais exposer le content brut.
     if (type == 7) return contactPreviewLabel(content);
-    if (type == 8) {
+    if (type == kWelcomeCtaMessageType) {
       final cta = WelcomeCtaPayload.tryParse(content);
       if (cta != null && cta.buttons.isNotEmpty) {
         return cta.buttons.map((b) => b.label).join(' · ');

@@ -1,6 +1,14 @@
 import 'dart:convert';
 
-/// Payload JSON des boutons CTA (message type 8 — bienvenue officiel).
+/// Type de message porteur de boutons de bienvenue.
+///
+/// Son `content` est du JSON, jamais du texte : tout affichage qui l'ignore
+/// expose `{"buttons":[…]}` à l'écran. Nommer la valeur évite d'oublier ce type
+/// dans l'un des rendus, ce qui s'est déjà produit.
+/// Aligné sur `WELCOME_CTA_MSG_TYPE` (welcomeService.js).
+const int kWelcomeCtaMessageType = 8;
+
+/// Payload JSON des boutons CTA (bienvenue officiel).
 class WelcomeCtaButton {
   const WelcomeCtaButton({
     required this.label,

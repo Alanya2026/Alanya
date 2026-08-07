@@ -99,10 +99,11 @@ class _CallsScreenState extends State<CallsScreen> {
         _recentCalls = calls;
         _isLoading = false;
       });
-      // Sync background → met aussi à jour le cache local pour la prochaine fois.
+      // Réutilise la réponse déjà téléchargée pour alimenter le cache local :
+      // l'ancien `syncCalls` refaisait un GET /calls identique juste derrière.
       if (mounted && _myId != 0) {
         final cache = Provider.of<LocalCacheRepository>(context, listen: false);
-        cache.syncCalls(myId: _myId);
+        cache.ingestCallsRaw(raw, myId: _myId);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);

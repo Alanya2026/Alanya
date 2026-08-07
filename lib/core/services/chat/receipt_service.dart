@@ -55,12 +55,17 @@ class ReceiptService {
   }
 
   Future<void> _propagateRead(int conversationID) async {
+    // Socket OU HTTP, jamais les deux : le POST partait systématiquement même
+    // quand le socket avait réussi — chaque marquage de lecture écrivait donc
+    // deux fois les mêmes lignes côté serveur. Le fallback socket reste assuré
+    // par _pendingReadsRetry / flushPendingReads.
     if (_api.isSocketReady) {
       try {
         _api.sendSocketEvent(SocketEvents.messageRead, {
           'conversationID': conversationID,
         });
         _pendingReadsRetry.remove(conversationID);
+        return;
       } catch (e) {
         debugPrint('[ReceiptService] sendSocketEvent failed: $e');
         _pendingReadsRetry[conversationID] =
@@ -72,6 +77,7 @@ class ReceiptService {
     }
     try {
       await _api.markConversationAsRead(conversationID);
+      _pendingReadsRetry.remove(conversationID);
     } catch (e) {
       debugPrint('[ReceiptService] markConversationAsRead HTTP failed: $e');
     }

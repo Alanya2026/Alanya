@@ -921,10 +921,15 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       connectivity.addBackOnlineListener(_onBackOnline!);
     }
 
-    try {
-      await adminProvider.loadStats();
-    } catch (e) {
-      debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e');
+    // Réservé aux comptes admin : /admin/stats déclenche ~10 agrégations
+    // lourdes côté serveur (dont des COUNT(*) sur `message`). Appelé sans
+    // garde, chaque login utilisateur payait ce coût pour un 403 avalé.
+    if (AdminProvider.isAdmin(authProvider.currentUser)) {
+      try {
+        await adminProvider.loadStats();
+      } catch (e) {
+        debugPrint('[AuthWrapper] AdminProvider.loadStats échoué: $e');
+      }
     }
 
     IncomingShareService.instance.onSessionReady();

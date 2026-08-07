@@ -302,6 +302,15 @@ extension _ChatActions on _ChatDetailScreenState {
     if (m.type == 5) return locationPreviewLabel(m.content);
     // Contact : JSON — ne jamais exposer le content brut.
     if (m.type == 7) return contactPreviewLabel(m.content);
+    // Boutons de bienvenue : JSON également. Sans ce cas, une citation affichait
+    // `{"buttons":[…]}` tel quel.
+    if (m.type == kWelcomeCtaMessageType) {
+      final cta = WelcomeCtaPayload.tryParse(m.content);
+      if (cta != null && cta.buttons.isNotEmpty) {
+        return cta.buttons.map((b) => b.label).join(' · ');
+      }
+      return context.l10n.discussionFallback;
+    }
     // Message système : JSON aussi. Le swipe-répondre est déjà neutralisé par
     // le court-circuit de rendu, mais la citation reste protégée ici.
     if (m.type == kSystemMessageType) {
@@ -1337,7 +1346,16 @@ extension _ChatActions on _ChatDetailScreenState {
       _stopTyping();
       return;
     }
-    _apiClient.sendSocketEvent(SocketEvents.typingStart, {'conversationID': _convId});
+    // Throttle : le typing:start partait à CHAQUE caractère (200 events socket
+    // pour un message de 200 caractères, rediffusés à tous les participants).
+    // Un rafraîchissement toutes les 2,5 s suffit à entretenir l'indicateur.
+    final now = DateTime.now();
+    if (_lastTypingSentAt == null ||
+        now.difference(_lastTypingSentAt!) > const Duration(milliseconds: 2500)) {
+      _apiClient.sendSocketEvent(
+          SocketEvents.typingStart, {'conversationID': _convId});
+      _lastTypingSentAt = now;
+    }
     _typingTimer?.cancel();
     _typingTimer = Timer(const Duration(seconds: 3), _stopTyping);
   }
@@ -1442,6 +1460,9 @@ extension _ChatActions on _ChatDetailScreenState {
 
   void _stopTyping() {
     _typingTimer?.cancel();
+    // Réarme le throttle : après un stop explicite, une nouvelle frappe doit
+    // pouvoir réémettre typing:start immédiatement.
+    _lastTypingSentAt = null;
     if (_convId == null) return;
     _apiClient.sendSocketEvent(SocketEvents.typingStop, {'conversationID': _convId});
   }
