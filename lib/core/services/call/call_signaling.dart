@@ -399,6 +399,120 @@ extension CallSignaling on CallService {
       _terminateGroupCall();
     });
 
+    // « Ajouter à l'appel » — session à trois
+    //
+    // Le maillage média n'apparaît pas ici : les offres, réponses et candidats
+    // passent par les mêmes relais group_* que les appels de groupe, déjà
+    // écoutés plus bas.
+
+    // Une invitation vient d'être lancée (reçu par les DEUX présents).
+    _apiClient.onSocketEvent(SocketEvents.callAddPending, (data) {
+      if (data is! Map) return;
+      _onConfAddPending(data);
+    });
+
+    // Côté invité : on me propose de rejoindre un appel en cours.
+    _apiClient.onSocketEvent(SocketEvents.callConfInvite, (data) {
+      if (data is! Map) return;
+      if (_status != CallStatus.idle) {
+        debugPrint('[CallService] 🛡 call_conf_invite ignoré: status=$_status');
+        return;
+      }
+      if (_isMeetingActive()) {
+        debugPrint('[CallService] 🛡 call_conf_invite ignoré: réunion active');
+        return;
+      }
+
+      final sessionId = data['sessionId']?.toString();
+      if (sessionId == null) return;
+      if (_isTerminalCallId(sessionId)) {
+        debugPrint('[CallService] 🛡 call_conf_invite ignoré: session déjà soldée');
+        return;
+      }
+
+      _confSessionId = sessionId;
+      _isVideo = data['isVideo'] == true;
+      _currentCallId = sessionId;
+
+      final from = data['from'];
+      if (from is Map) {
+        _confInvitedBy = GroupParticipantInfo(
+          id: from['id'].toString(),
+          name: (from['name'] as String?)?.isNotEmpty == true
+              ? from['name'] as String
+              : resolveL10n().participantFallback,
+          photo: normalizeBackendUrl(from['photo']?.toString()),
+        );
+        // L'écran d'appel entrant s'appuie sur ces champs.
+        _remoteUserId = int.tryParse(from['id'].toString());
+        _remoteUserName = _confInvitedBy!.name;
+        _remoteUserPhoto = _confInvitedBy!.photo;
+      }
+
+      // Les présents servent à annoncer le motif : « vous ajoute à un appel
+      // avec X ». Ils alimenteront ensuite la grille.
+      _onConfPeers(data);
+
+      _status = CallStatus.incoming;
+      notify();
+
+      if (!_isAppForeground) {
+        if (_nativeAndroidHandlesIncomingCallUi) {
+          debugPrint('[CallService] 📲 CallKit natif Android (session à trois)');
+        } else {
+          unawaited(
+            _callKit
+                .showIncoming(
+                  callId: sessionId,
+                  callerId: _confInvitedBy?.id ?? '',
+                  callerName: _confInvitedBy?.name ?? resolveL10n().groupCall,
+                  callerPhoto: _confInvitedBy?.photo,
+                  isVideo: _isVideo,
+                  roomId: sessionId,
+                  silent: false,
+                )
+                .catchError((e) {
+              debugPrint('[CallService] ** CallKit conf showIncoming error: $e');
+            }),
+          );
+        }
+      }
+    });
+
+    // L'invité est entré : chaque présent lui ouvre une connexion.
+    _apiClient.onSocketEvent(SocketEvents.callConfJoined, (data) async {
+      if (data is! Map) return;
+      await _onConfJoined(data);
+    });
+
+    // Côté invité : qui va m'offrir. Rien à initier de mon côté.
+    _apiClient.onSocketEvent(SocketEvents.callConfPeers, (data) {
+      if (data is! Map) return;
+      _onConfPeers(data);
+      notify();
+    });
+
+    // Invitation soldée sans que l'invité entre : le droit d'ajout est rendu.
+    _apiClient.onSocketEvent(SocketEvents.callConfFailed, (data) {
+      if (data is! Map) return;
+      _onConfFailed(data);
+    });
+
+    // Un participant s'est retiré : les autres continuent.
+    _apiClient.onSocketEvent(SocketEvents.callConfLeft, (data) {
+      if (data is! Map) return;
+      _onConfLeft(data);
+    });
+
+    // Demande d'ajout refusée par le serveur.
+    _apiClient.onSocketEvent(SocketEvents.callAddRejected, (data) {
+      if (data is! Map) return;
+      final code = data['code']?.toString() ?? 'INTERNAL';
+      debugPrint('[CallService] ✖ ajout refusé: $code');
+      _lastConfFailure = _addRejectionReason(code);
+      notify();
+    });
+
     // WebRTC groupe : offer reçue
     _apiClient.onSocketEvent(SocketEvents.groupOffer, (data) async {
       if (data is! Map) return;

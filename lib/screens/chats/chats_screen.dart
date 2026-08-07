@@ -17,6 +17,7 @@ import '../../providers/connectivity_provider.dart';
 import '../../talky_models.dart';
 import '../../widgets/animated_search_bar.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/contact_lists_sheet.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/qr_pin.dart';
 import '../../widgets/status_ringed_avatar.dart';
@@ -27,6 +28,10 @@ import '../../widgets/chat/message_status_icon.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
+import 'select_members_screen.dart';
+
+/// Entrées du menu ⋮ de l'écran des discussions.
+enum _ChatsMenuAction { contactLists, newGroup, markAllRead }
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
@@ -148,6 +153,47 @@ class _ChatsScreenState extends State<ChatsScreen> {
         .toList();
   }
 
+  // ── Menu ⋮ ──────────────────────────────────────────────────────────
+
+  Future<void> _onMenuAction(_ChatsMenuAction action) async {
+    switch (action) {
+      case _ChatsMenuAction.contactLists:
+        await showContactListsSheet(context);
+      case _ChatsMenuAction.newGroup:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SelectMembersScreen()),
+        );
+      case _ChatsMenuAction.markAllRead:
+        await _markAllAsRead();
+    }
+  }
+
+  /// Marque lues toutes les discussions non lues visibles. Rien à faire pour
+  /// les archivées : elles ne pèsent pas sur la pastille de la barre.
+  Future<void> _markAllAsRead() async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final chat = context.read<ChatProvider>();
+
+    final nonLues = _latestConversations
+        .where((c) => c.unreadCount > 0 && !c.isArchived)
+        .toList();
+    if (nonLues.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.markAllAsReadDone(0))),
+      );
+      return;
+    }
+
+    for (final conv in nonLues) {
+      await chat.repository.markAsRead(conv.conversID);
+    }
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.markAllAsReadDone(nonLues.length))),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = Provider.of<ChatProvider>(context);
@@ -235,7 +281,50 @@ class _ChatsScreenState extends State<ChatsScreen> {
               tooltip: _searchOpen ? context.l10n.closeSearch : context.l10n.commonSearch,
               onPressed: _toggleSearch,
             ),
-            IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
+            PopupMenuButton<_ChatsMenuAction>(
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: context.l10n.optionsAction,
+              onSelected: _onMenuAction,
+              itemBuilder: (context) => [
+                // Les listes en tête : c'est le raccourci que le menu existe
+                // pour offrir, le reste vient après le séparateur.
+                PopupMenuItem(
+                  value: _ChatsMenuAction.contactLists,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.folder_rounded,
+                        color: context.colors.primary),
+                    title: Text(
+                      context.l10n.contactLists,
+                      style: TextStyle(
+                        color: context.colors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: _ChatsMenuAction.newGroup,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.group_add_outlined),
+                    title: Text(context.l10n.newGroup),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _ChatsMenuAction.markAllRead,
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.done_all_rounded),
+                    title: Text(context.l10n.markAllAsRead),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -423,45 +512,58 @@ class _ChatsScreenState extends State<ChatsScreen> {
         }
         _enterSelectionMode(conv);
       },
-      leading: Stack(
-        children: [
-          if (hasStatus)
-            StatusRingedAvatar(
-              avatarUrl: displayAvatar,
-              name: displayName,
-              totalCount: statusProv.totalCount(otherId),
-              unseenCount: statusProv.unseenCount(otherId),
-              size: AppSizes.avatarLg,
-              onTap: () => _openContactStatus(context, statusProv, otherId),
-            )
-          else
-            ProfileAvatar(
-              imageUrl: displayAvatar,
-              name: displayName,
-              userId: otherId ?? (isSelf ? myId : 0),
-              isGroup: conv.isGroup,
-              conversationId: conv.conversID,
-              size: AppSizes.avatarLg,
-              borderRadius: AppSizes.avatarLg / 2,
-            ),
-          if (isOnline && !conv.isGroup)
-            const Positioned(
-              right: 0,
-              bottom: 0,
-              child: PresenceDot(online: true, size: 14),
-            ),
-          // Contact rencontré par QR : même pastille que dans les listes de
-          // contacts, coin opposé au point de présence.
-          if (!conv.isGroup &&
-              !isSelf &&
-              otherId != null &&
-              _qrAddedIds.contains(otherId))
-            const Positioned(
-              left: -2,
-              bottom: -2,
-              child: QrPin(size: 17),
-            ),
-        ],
+      // Emplacement fixe (avatarLg) pour TOUS les avatars → largeur du leading
+      // constante (titres alignés). La photo est légèrement réduite et centrée
+      // (avec ou sans statut) pour réserver la marge de l'anneau, dessiné autour
+      // façon onglet Statut.
+      leading: SizedBox(
+        width: AppSizes.avatarLg,
+        height: AppSizes.avatarLg,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (hasStatus)
+              StatusRingedAvatar(
+                avatarUrl: displayAvatar,
+                name: displayName,
+                totalCount: statusProv.totalCount(otherId),
+                unseenCount: statusProv.unseenCount(otherId),
+                size: AppSizes.avatarLg,
+                onTap: () => _openContactStatus(context, statusProv, otherId),
+              )
+            else
+              ProfileAvatar(
+                imageUrl: displayAvatar,
+                name: displayName,
+                userId: otherId ?? (isSelf ? myId : 0),
+                isGroup: conv.isGroup,
+                conversationId: conv.conversID,
+                // Même taille réduite que la photo sous l'anneau (marge réservée
+                // pour tous → homogène).
+                size: StatusRingedAvatar.innerPhotoSize(AppSizes.avatarLg, 3),
+                borderRadius:
+                    StatusRingedAvatar.innerPhotoSize(AppSizes.avatarLg, 3) / 2,
+              ),
+            if (isOnline && !conv.isGroup)
+              // Recalée sur le bord de la photo réduite (marge ≈ 5 px).
+              const Positioned(
+                right: 4,
+                bottom: 4,
+                child: PresenceDot(online: true, size: 14),
+              ),
+            // Contact rencontré par QR : même pastille que dans les listes de
+            // contacts, coin opposé au point de présence.
+            if (!conv.isGroup &&
+                !isSelf &&
+                otherId != null &&
+                _qrAddedIds.contains(otherId))
+              const Positioned(
+                left: 4,
+                bottom: 4,
+                child: QrPin(size: 17),
+              ),
+          ],
+        ),
       ),
       title: conv.isGroup
           ? Text(

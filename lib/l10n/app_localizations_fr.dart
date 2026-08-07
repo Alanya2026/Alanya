@@ -186,14 +186,38 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadSubtitle =>
-      'Télécharge automatiquement les photos, vidéos et fichiers reçus dans l’app';
+      'Télécharge les médias reçus dans l’app';
 
   @override
-  String get settingsMediaVisibility => 'Visibilité des médias';
+  String get settingsMediaVisibility => 'Enregistrer dans la galerie';
 
   @override
   String get settingsMediaVisibilitySubtitle =>
-      'Enregistre les médias reçus dans le stockage interne (Galerie et Téléchargements)';
+      'Les photos et vidéos reçues apparaissent dans la galerie de l’appareil';
+
+  @override
+  String get mediaSaveToGallery => 'Enregistrer dans la galerie';
+
+  @override
+  String get mediaSaveToDownloads => 'Enregistrer dans Téléchargements';
+
+  @override
+  String get mediaSavedToGallery => 'Enregistré dans la galerie';
+
+  @override
+  String get mediaSavedToDownloads => 'Enregistré dans Téléchargements';
+
+  @override
+  String get mediaAlreadyInGallery => 'Déjà dans la galerie';
+
+  @override
+  String get mediaAlreadyInDownloads => 'Déjà dans Téléchargements';
+
+  @override
+  String get mediaSaveAgain => 'Enregistrer à nouveau';
+
+  @override
+  String get mediaSaveFailed => 'Impossible d’enregistrer ce média';
 
   @override
   String get settingsCalls => 'Appels';
@@ -3438,6 +3462,87 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoutez un e-mail pour sécuriser votre compte';
 
   @override
+  String get addToCall => 'Ajouter à l\'appel';
+
+  @override
+  String get confCallOfThree => 'Appel à 3';
+
+  @override
+  String get confRinging => 'Sonnerie…';
+
+  @override
+  String confAddingInvitee(String name) {
+    return '$name est en train d\'être ajouté';
+  }
+
+  @override
+  String confSomeoneAdds(String who, String name) {
+    return '$who ajoute $name';
+  }
+
+  @override
+  String confJoinedCall(String name) {
+    return '$name a rejoint l\'appel';
+  }
+
+  @override
+  String confLeftCall(String name) {
+    return '$name a quitté l\'appel';
+  }
+
+  @override
+  String confDeclined(String name) {
+    return '$name a refusé de rejoindre';
+  }
+
+  @override
+  String confBusy(String name) {
+    return '$name est déjà en appel';
+  }
+
+  @override
+  String confNoAnswer(String name) {
+    return '$name n\'a pas répondu';
+  }
+
+  @override
+  String confNotJoined(String name) {
+    return '$name n\'a pas rejoint l\'appel';
+  }
+
+  @override
+  String get confAddAlreadyUsed =>
+      'Un participant a déjà été ajouté à cet appel';
+
+  @override
+  String confCannotAdd(String name) {
+    return '$name ne peut pas être ajoutée';
+  }
+
+  @override
+  String get confAddFailed => 'L\'ajout n\'a pas pu aboutir';
+
+  @override
+  String confInviteSubtitle(String name) {
+    return 'vous ajoute à un appel avec $name';
+  }
+
+  @override
+  String get confAddSheetTitle => 'Ajouter à l\'appel';
+
+  @override
+  String get noContactsToAdd => 'Aucun contact à ajouter';
+
+  @override
+  String get confAlreadyInCall => 'déjà là';
+
+  @override
+  String get confContactBusy => 'en appel';
+
+  @override
+  String get confCancelInvite => 'Annuler';
+
+  @override
   String get qrMyCodeTitle => 'Mon code QR';
 
   @override
@@ -3940,7 +4045,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsNetwork => 'Réseau et données';
 
   @override
-  String get settingsNetworkSubtitle => 'Wi-Fi, économiseur, médias';
+  String get settingsNetworkSubtitle => 'Wi-Fi et économiseur de données';
 
   @override
   String get settingsAccessibility => 'Accessibilité';
@@ -4608,4 +4713,123 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get officialHelpUnavailable => 'Impossible d\'ouvrir la page d\'aide';
+
+  @override
+  String get contactLists => 'Listes de contacts';
+
+  @override
+  String get contactListsManage => 'Gérer';
+
+  @override
+  String get createList => 'Créer une liste';
+
+  @override
+  String get listName => 'Nom de la liste';
+
+  @override
+  String get listNameHint => 'Famille, Amis, Bureau…';
+
+  @override
+  String get renameList => 'Renommer la liste';
+
+  @override
+  String get deleteList => 'Supprimer la liste';
+
+  @override
+  String deleteListConfirm(String name) {
+    return 'Supprimer « $name » ? Vos contacts restent dans vos favoris.';
+  }
+
+  @override
+  String get listColor => 'Couleur de la puce';
+
+  @override
+  String get listNameAlreadyExists => 'Une liste porte déjà ce nom';
+
+  @override
+  String get listSaveFailed => 'Impossible d\'enregistrer la liste. Réessayez.';
+
+  @override
+  String get listMembersUpdateFailed =>
+      'Impossible de modifier les membres. Réessayez.';
+
+  @override
+  String listMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '1 membre',
+      zero: 'Aucun membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addToList => 'Ajouter des membres';
+
+  @override
+  String get removeFromList => 'Retirer de la liste';
+
+  @override
+  String get createGroupFromList => 'Créer un groupe';
+
+  @override
+  String get noLists => 'Aucune liste de contacts';
+
+  @override
+  String get noListsHint =>
+      'Rangez vos contacts préférés par Famille, Amis, Bureau…';
+
+  @override
+  String get noListMembers => 'Aucun membre dans cette liste';
+
+  @override
+  String get noContactToAddToList =>
+      'Tous vos contacts préférés sont déjà dans cette liste';
+
+  @override
+  String addMembersSelected(int count) {
+    return '$count sélectionné(s)';
+  }
+
+  @override
+  String get newList => 'Nouvelle liste';
+
+  @override
+  String get contactListsHint =>
+      'Une liste ne peut contenir que des contacts déjà en favoris. Un même contact peut appartenir à plusieurs listes.';
+
+  @override
+  String get notInThisList => 'Favori — pas dans cette liste';
+
+  @override
+  String createGroupNamed(String name) {
+    return 'Créer un groupe « $name »';
+  }
+
+  @override
+  String get manageLists => 'Gérer les listes';
+
+  @override
+  String get contactListsSheetSubtitle =>
+      'Ouvrir une liste, ou en faire un groupe.';
+
+  @override
+  String get markAllAsRead => 'Tout marquer comme lu';
+
+  @override
+  String markAllAsReadDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count discussions marquées comme lues',
+      one: '1 discussion marquée comme lue',
+      zero: 'Aucune discussion non lue',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get optionsAction => 'Options';
 }

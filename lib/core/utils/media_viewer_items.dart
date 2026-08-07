@@ -68,6 +68,9 @@ Future<List<MediaViewerItem>> buildMediaViewerItems(
       localPath: localPath,
       networkUrl: msg.mediaUrl,
       title: msg.mediaName,
+      msgID: msg.msgID,
+      // Une vue unique ne laisse aucune trace : pas d'enregistrement possible.
+      canSave: !msg.isViewOnce,
     ));
   }
   return prepared;

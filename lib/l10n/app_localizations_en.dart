@@ -186,14 +186,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadSubtitle =>
-      'Automatically download received photos, videos and files in the app';
+      'Download received media inside the app';
 
   @override
-  String get settingsMediaVisibility => 'Media visibility';
+  String get settingsMediaVisibility => 'Save to gallery';
 
   @override
   String get settingsMediaVisibilitySubtitle =>
-      'Save received media to internal storage (Gallery and Downloads)';
+      'Received photos and videos show up in the device gallery';
+
+  @override
+  String get mediaSaveToGallery => 'Save to gallery';
+
+  @override
+  String get mediaSaveToDownloads => 'Save to Downloads';
+
+  @override
+  String get mediaSavedToGallery => 'Saved to gallery';
+
+  @override
+  String get mediaSavedToDownloads => 'Saved to Downloads';
+
+  @override
+  String get mediaAlreadyInGallery => 'Already in gallery';
+
+  @override
+  String get mediaAlreadyInDownloads => 'Already in Downloads';
+
+  @override
+  String get mediaSaveAgain => 'Save again';
+
+  @override
+  String get mediaSaveFailed => 'Could not save this media';
 
   @override
   String get settingsCalls => 'Calls';
@@ -3404,6 +3428,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNoEmailChip => 'Add an email to secure your account';
 
   @override
+  String get addToCall => 'Add to call';
+
+  @override
+  String get confCallOfThree => '3-way call';
+
+  @override
+  String get confRinging => 'Ringing…';
+
+  @override
+  String confAddingInvitee(String name) {
+    return 'Adding $name';
+  }
+
+  @override
+  String confSomeoneAdds(String who, String name) {
+    return '$who is adding $name';
+  }
+
+  @override
+  String confJoinedCall(String name) {
+    return '$name joined the call';
+  }
+
+  @override
+  String confLeftCall(String name) {
+    return '$name left the call';
+  }
+
+  @override
+  String confDeclined(String name) {
+    return '$name declined to join';
+  }
+
+  @override
+  String confBusy(String name) {
+    return '$name is already on a call';
+  }
+
+  @override
+  String confNoAnswer(String name) {
+    return '$name did not answer';
+  }
+
+  @override
+  String confNotJoined(String name) {
+    return '$name did not join the call';
+  }
+
+  @override
+  String get confAddAlreadyUsed =>
+      'Someone has already been added to this call';
+
+  @override
+  String confCannotAdd(String name) {
+    return '$name cannot be added';
+  }
+
+  @override
+  String get confAddFailed => 'The person could not be added';
+
+  @override
+  String confInviteSubtitle(String name) {
+    return 'is adding you to a call with $name';
+  }
+
+  @override
+  String get confAddSheetTitle => 'Add to call';
+
+  @override
+  String get noContactsToAdd => 'No contacts to add';
+
+  @override
+  String get confAlreadyInCall => 'already here';
+
+  @override
+  String get confContactBusy => 'on a call';
+
+  @override
+  String get confCancelInvite => 'Cancel';
+
+  @override
   String get qrMyCodeTitle => 'My QR code';
 
   @override
@@ -3901,7 +4006,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNetwork => 'Network & data';
 
   @override
-  String get settingsNetworkSubtitle => 'Wi-Fi, data saver, media';
+  String get settingsNetworkSubtitle => 'Wi-Fi and data saver';
 
   @override
   String get settingsAccessibility => 'Accessibility';
@@ -4557,4 +4662,122 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get officialHelpUnavailable => 'Could not open the help page';
+
+  @override
+  String get contactLists => 'Contact lists';
+
+  @override
+  String get contactListsManage => 'Manage';
+
+  @override
+  String get createList => 'Create a list';
+
+  @override
+  String get listName => 'List name';
+
+  @override
+  String get listNameHint => 'Family, Friends, Work…';
+
+  @override
+  String get renameList => 'Rename list';
+
+  @override
+  String get deleteList => 'Delete list';
+
+  @override
+  String deleteListConfirm(String name) {
+    return 'Delete “$name”? Your contacts stay in your favourites.';
+  }
+
+  @override
+  String get listColor => 'Chip colour';
+
+  @override
+  String get listNameAlreadyExists => 'A list with this name already exists';
+
+  @override
+  String get listSaveFailed => 'Could not save the list. Try again.';
+
+  @override
+  String get listMembersUpdateFailed => 'Could not update members. Try again.';
+
+  @override
+  String listMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+      zero: 'No members',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addToList => 'Add members';
+
+  @override
+  String get removeFromList => 'Remove from list';
+
+  @override
+  String get createGroupFromList => 'Create a group';
+
+  @override
+  String get noLists => 'No contact lists';
+
+  @override
+  String get noListsHint =>
+      'Sort your preferred contacts into Family, Friends, Work…';
+
+  @override
+  String get noListMembers => 'No members in this list';
+
+  @override
+  String get noContactToAddToList =>
+      'All your preferred contacts are already in this list';
+
+  @override
+  String addMembersSelected(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get newList => 'New list';
+
+  @override
+  String get contactListsHint =>
+      'A list can only contain contacts already in your favourites. The same contact can belong to several lists.';
+
+  @override
+  String get notInThisList => 'Favourite — not in this list';
+
+  @override
+  String createGroupNamed(String name) {
+    return 'Create a group “$name”';
+  }
+
+  @override
+  String get manageLists => 'Manage lists';
+
+  @override
+  String get contactListsSheetSubtitle =>
+      'Open a list, or turn it into a group.';
+
+  @override
+  String get markAllAsRead => 'Mark all as read';
+
+  @override
+  String markAllAsReadDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count chats marked as read',
+      one: '1 chat marked as read',
+      zero: 'No unread chats',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get optionsAction => 'Options';
 }

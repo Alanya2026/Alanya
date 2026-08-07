@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/call_ui_theme.dart';
+import '../common/app_avatar.dart';
 import 'speaking_indicator_border.dart';
 
 /// Tuile participant pour les appels de groupe.
@@ -176,18 +177,27 @@ class CallGroupGrid extends StatelessWidget {
     required this.streams,
     required this.roster,
     required this.activeSpeakers,
+    this.pendingInvitee,
+    this.onCancelPending,
   });
 
   final Map<String, MediaStream> streams;
   final Map<String, GroupParticipantInfo> roster;
   final Set<String> activeSpeakers;
 
+  /// Invité dont la tuile existe avant qu'il ait répondu : c'est le seul moyen
+  /// de rendre l'attente lisible pendant qu'il sonne.
+  final GroupParticipantInfo? pendingInvitee;
+
+  /// Annulation de l'invitation — fournie au seul auteur de celle-ci.
+  final VoidCallback? onCancelPending;
+
   @override
   Widget build(BuildContext context) {
     final callUi = context.callUi;
     final entries = streams.entries.toList();
 
-    if (entries.isEmpty) {
+    if (entries.isEmpty && pendingInvitee == null) {
       return Container(
         color: callUi.groupBackground,
         alignment: Alignment.center,
@@ -232,8 +242,15 @@ class CallGroupGrid extends StatelessWidget {
           crossAxisSpacing: AppSpacing.sm,
           childAspectRatio: 0.75,
         ),
-        itemCount: entries.length,
+        itemCount: entries.length + (pendingInvitee != null ? 1 : 0),
         itemBuilder: (context, i) {
+          if (i == entries.length && pendingInvitee != null) {
+            return _PendingParticipantTile(
+              key: ValueKey('pending_${pendingInvitee!.id}'),
+              invitee: pendingInvitee!,
+              onCancel: onCancelPending,
+            );
+          }
           final e = entries[i];
           final info = roster[e.key];
           return CallParticipantTile(
@@ -247,6 +264,91 @@ class CallGroupGrid extends StatelessWidget {
             isVideoOn: info?.isVideoOn ?? true,
           );
         },
+      ),
+    );
+  }
+}
+
+/// Tuile d'un invité qui sonne encore : avatar désaturé, cadre pointillé et
+/// mention explicite. Elle disparaît dès qu'il entre — ou que l'invitation est
+/// soldée.
+class _PendingParticipantTile extends StatelessWidget {
+  const _PendingParticipantTile({super.key, required this.invitee, this.onCancel});
+
+  final GroupParticipantInfo invitee;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final callUi = context.callUi;
+    final l10n = context.l10n;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: callUi.groupTileBackground,
+        borderRadius: AppRadius.brMd,
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.6)),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ColorFiltered(
+                colorFilter: const ColorFilter.matrix(<double>[
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0, 0, 0, 0.55, 0,
+                ]),
+                child: AppAvatar(
+                  imageUrl: invitee.photo,
+                  name: invitee.name,
+                  size: 56,
+                ),
+              ),
+              AppSpacing.vGapSm,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: Text(
+                  invitee.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: callUi.onBackground,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                l10n.confRinging,
+                style: const TextStyle(
+                  color: AppColors.warning,
+                  fontSize: 11,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ],
+          ),
+          if (onCancel != null)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Semantics(
+                button: true,
+                label: l10n.confCancelInvite,
+                child: IconButton(
+                  iconSize: 18,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close),
+                  color: callUi.onBackgroundMuted,
+                  onPressed: onCancel,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

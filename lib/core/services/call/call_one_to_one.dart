@@ -335,6 +335,15 @@ extension CallOneToOne on CallService {
   }
 
   Future<void> _terminateCall() async {
+    // Pendant une session à trois, terminer l'appel est presque toujours une
+    // erreur : on trace l'origine de l'appel pour la localiser.
+    if (_confSessionId != null) {
+      debugPrint(
+        '[CallService] ⚠ _terminateCall PENDANT une session '
+        '(session=$_confSessionId, invitéEnAttente=${_confPendingInvitee?.id})\n'
+        '${StackTrace.current}',
+      );
+    }
     // Capturé avant le teardown : le son ne doit sonner que si une conversation
     // était établie, pas sur un rejet, un timeout ou un échec de connexion.
     final wasConnected = _status == CallStatus.connected;
@@ -387,5 +396,12 @@ extension CallOneToOne on CallService {
     _isAutoAnsweringFromPush = false;
     _isRestoringOutgoing = false;
     _cancelOutgoingRestoreTimeout();
+    // Session à trois : tout est soldé avec l'appel. Le droit d'ajout étant
+    // porté par _confSessionId, l'effacer ici rend son bouton au prochain appel.
+    _confSessionId = null;
+    _confPendingInvitee = null;
+    _confInvitedBy = null;
+    _confInviteIsMine = false;
+    _myRosterId = null;
   }
 }

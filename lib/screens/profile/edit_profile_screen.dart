@@ -138,6 +138,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           builder: (_) => MediaViewerScreen(
             networkUrl: _user!.avatarUrl.trim(),
             title: _user!.nom,
+            // Photo de profil : l'enregistrer dans la galerie n'a pas de sens.
+            canSave: false,
           ),
         ),
       );

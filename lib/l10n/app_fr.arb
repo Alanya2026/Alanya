@@ -71,9 +71,17 @@
   "settingsLangSystem": "Système",
   "settingsMedia": "Médias",
   "settingsAutoDownload": "Téléchargement automatique",
-  "settingsAutoDownloadSubtitle": "Télécharge automatiquement les photos, vidéos et fichiers reçus dans l’app",
-  "settingsMediaVisibility": "Visibilité des médias",
-  "settingsMediaVisibilitySubtitle": "Enregistre les médias reçus dans le stockage interne (Galerie et Téléchargements)",
+  "settingsAutoDownloadSubtitle": "Télécharge les médias reçus dans l’app",
+  "settingsMediaVisibility": "Enregistrer dans la galerie",
+  "settingsMediaVisibilitySubtitle": "Les photos et vidéos reçues apparaissent dans la galerie de l’appareil",
+  "mediaSaveToGallery": "Enregistrer dans la galerie",
+  "mediaSaveToDownloads": "Enregistrer dans Téléchargements",
+  "mediaSavedToGallery": "Enregistré dans la galerie",
+  "mediaSavedToDownloads": "Enregistré dans Téléchargements",
+  "mediaAlreadyInGallery": "Déjà dans la galerie",
+  "mediaAlreadyInDownloads": "Déjà dans Téléchargements",
+  "mediaSaveAgain": "Enregistrer à nouveau",
+  "mediaSaveFailed": "Impossible d’enregistrer ce média",
   "settingsCalls": "Appels",
   "settingsRingtone": "Sonnerie d'appel",
   "ringtoneScreenTitle": "Sonnerie d'appel",
@@ -2194,7 +2202,6 @@
   "mentionYou": "Vous",
   "jumpToMention": "Aller à la mention suivante",
   "unreadMessagesSeparator": "Messages non lus",
-
   "signupEmailOptionalHint": "Adresse e-mail (optionnel)",
   "signupEmailOptionalSubtitle": "Uniquement pour récupérer votre mot de passe",
   "signupNoEmailWarningTitle": "Sans adresse e-mail",
@@ -2203,7 +2210,6 @@
   "signupContinueWithoutEmail": "Continuer",
   "signupCredentialsNoEmailReminder": "Sans e-mail, la récupération de compte est impossible. Vous pourrez en ajouter un à tout moment dans Profil → Compte → Modifier le profil (vérification par code OTP).",
   "signupCredentialsEmailOk": "Votre e-mail pourra servir à récupérer votre mot de passe en cas d'oubli.",
-
   "emailLabel": "E-mail",
   "emailNotSet": "Non renseigné",
   "emailNeededForRecovery": "Nécessaire pour récupérer votre mot de passe",
@@ -2226,7 +2232,9 @@
   "changeEmailOtpSubtitle": "Saisissez le code envoyé à {email}",
   "@changeEmailOtpSubtitle": {
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "changeEmailResendCode": "Renvoyer le code",
@@ -2241,6 +2249,99 @@
   "changePasswordSuccess": "Mot de passe modifié",
   "changePasswordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'actuel",
   "profileNoEmailChip": "Ajoutez un e-mail pour sécuriser votre compte",
+  "addToCall": "Ajouter à l'appel",
+  "confCallOfThree": "Appel à 3",
+  "confRinging": "Sonnerie…",
+  "confAddingInvitee": "{name} est en train d'être ajouté",
+  "@confAddingInvitee": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confSomeoneAdds": "{who} ajoute {name}",
+  "@confSomeoneAdds": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confJoinedCall": "{name} a rejoint l'appel",
+  "@confJoinedCall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confLeftCall": "{name} a quitté l'appel",
+  "@confLeftCall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confDeclined": "{name} a refusé de rejoindre",
+  "@confDeclined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confBusy": "{name} est déjà en appel",
+  "@confBusy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confNoAnswer": "{name} n'a pas répondu",
+  "@confNoAnswer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confNotJoined": "{name} n'a pas rejoint l'appel",
+  "@confNotJoined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddAlreadyUsed": "Un participant a déjà été ajouté à cet appel",
+  "confCannotAdd": "{name} ne peut pas être ajoutée",
+  "@confCannotAdd": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddFailed": "L'ajout n'a pas pu aboutir",
+  "confInviteSubtitle": "vous ajoute à un appel avec {name}",
+  "@confInviteSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confAddSheetTitle": "Ajouter à l'appel",
+  "noContactsToAdd": "Aucun contact à ajouter",
+  "confAlreadyInCall": "déjà là",
+  "confContactBusy": "en appel",
+  "confCancelInvite": "Annuler",
 
   "qrMyCodeTitle": "Mon code QR",
   "qrMyCodeTabCode": "Mon code",
@@ -2469,7 +2570,7 @@
   "settingsStorage": "Stockage et cache",
   "settingsStorageSubtitle": "Espace utilisé et nettoyage",
   "settingsNetwork": "Réseau et données",
-  "settingsNetworkSubtitle": "Wi-Fi, économiseur, médias",
+  "settingsNetworkSubtitle": "Wi-Fi et économiseur de données",
   "settingsAccessibility": "Accessibilité",
   "settingsAccessibilitySubtitle": "Texte et animations",
   "settingsAbout": "À propos et mentions légales",
@@ -2734,5 +2835,60 @@
   "officialContactSupport": "Contacter le support",
   "officialComingSoon": "Bientôt disponible",
   "officialHelpAndFaq": "Aide et questions fréquentes",
-  "officialHelpUnavailable": "Impossible d'ouvrir la page d'aide"
+  "officialHelpUnavailable": "Impossible d'ouvrir la page d'aide",
+  "contactLists": "Listes de contacts",
+  "contactListsManage": "Gérer",
+  "createList": "Créer une liste",
+  "listName": "Nom de la liste",
+  "listNameHint": "Famille, Amis, Bureau…",
+  "renameList": "Renommer la liste",
+  "deleteList": "Supprimer la liste",
+  "deleteListConfirm": "Supprimer « {name} » ? Vos contacts restent dans vos favoris.",
+  "@deleteListConfirm": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "listColor": "Couleur de la puce",
+  "listNameAlreadyExists": "Une liste porte déjà ce nom",
+  "listSaveFailed": "Impossible d'enregistrer la liste. Réessayez.",
+  "listMembersUpdateFailed": "Impossible de modifier les membres. Réessayez.",
+  "listMembersCount": "{count, plural, =0{Aucun membre} =1{1 membre} other{{count} membres}}",
+  "@listMembersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "addToList": "Ajouter des membres",
+  "removeFromList": "Retirer de la liste",
+  "createGroupFromList": "Créer un groupe",
+  "noLists": "Aucune liste de contacts",
+  "noListsHint": "Rangez vos contacts préférés par Famille, Amis, Bureau…",
+  "noListMembers": "Aucun membre dans cette liste",
+  "noContactToAddToList": "Tous vos contacts préférés sont déjà dans cette liste",
+  "addMembersSelected": "{count} sélectionné(s)",
+  "@addMembersSelected": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "newList": "Nouvelle liste",
+  "contactListsHint": "Une liste ne peut contenir que des contacts déjà en favoris. Un même contact peut appartenir à plusieurs listes.",
+  "notInThisList": "Favori — pas dans cette liste",
+  "createGroupNamed": "Créer un groupe « {name} »",
+  "@createGroupNamed": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "manageLists": "Gérer les listes",
+  "contactListsSheetSubtitle": "Ouvrir une liste, ou en faire un groupe.",
+  "markAllAsRead": "Tout marquer comme lu",
+  "markAllAsReadDone": "{count, plural, =0{Aucune discussion non lue} =1{1 discussion marquée comme lue} other{{count} discussions marquées comme lues}}",
+  "@markAllAsReadDone": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "optionsAction": "Options"
 }

@@ -443,20 +443,68 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAutoDownloadSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Télécharge automatiquement les photos, vidéos et fichiers reçus dans l’app'**
+  /// **'Télécharge les médias reçus dans l’app'**
   String get settingsAutoDownloadSubtitle;
 
   /// No description provided for @settingsMediaVisibility.
   ///
   /// In fr, this message translates to:
-  /// **'Visibilité des médias'**
+  /// **'Enregistrer dans la galerie'**
   String get settingsMediaVisibility;
 
   /// No description provided for @settingsMediaVisibilitySubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Enregistre les médias reçus dans le stockage interne (Galerie et Téléchargements)'**
+  /// **'Les photos et vidéos reçues apparaissent dans la galerie de l’appareil'**
   String get settingsMediaVisibilitySubtitle;
+
+  /// No description provided for @mediaSaveToGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer dans la galerie'**
+  String get mediaSaveToGallery;
+
+  /// No description provided for @mediaSaveToDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer dans Téléchargements'**
+  String get mediaSaveToDownloads;
+
+  /// No description provided for @mediaSavedToGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistré dans la galerie'**
+  String get mediaSavedToGallery;
+
+  /// No description provided for @mediaSavedToDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistré dans Téléchargements'**
+  String get mediaSavedToDownloads;
+
+  /// No description provided for @mediaAlreadyInGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà dans la galerie'**
+  String get mediaAlreadyInGallery;
+
+  /// No description provided for @mediaAlreadyInDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà dans Téléchargements'**
+  String get mediaAlreadyInDownloads;
+
+  /// No description provided for @mediaSaveAgain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer à nouveau'**
+  String get mediaSaveAgain;
+
+  /// No description provided for @mediaSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d’enregistrer ce média'**
+  String get mediaSaveFailed;
 
   /// No description provided for @settingsCalls.
   ///
@@ -5984,6 +6032,126 @@ abstract class AppLocalizations {
   /// **'Ajoutez un e-mail pour sécuriser votre compte'**
   String get profileNoEmailChip;
 
+  /// No description provided for @addToCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à l\'appel'**
+  String get addToCall;
+
+  /// No description provided for @confCallOfThree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel à 3'**
+  String get confCallOfThree;
+
+  /// No description provided for @confRinging.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sonnerie…'**
+  String get confRinging;
+
+  /// No description provided for @confAddingInvitee.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est en train d\'être ajouté'**
+  String confAddingInvitee(String name);
+
+  /// No description provided for @confSomeoneAdds.
+  ///
+  /// In fr, this message translates to:
+  /// **'{who} ajoute {name}'**
+  String confSomeoneAdds(String who, String name);
+
+  /// No description provided for @confJoinedCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a rejoint l\'appel'**
+  String confJoinedCall(String name);
+
+  /// No description provided for @confLeftCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a quitté l\'appel'**
+  String confLeftCall(String name);
+
+  /// No description provided for @confDeclined.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a refusé de rejoindre'**
+  String confDeclined(String name);
+
+  /// No description provided for @confBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est déjà en appel'**
+  String confBusy(String name);
+
+  /// No description provided for @confNoAnswer.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas répondu'**
+  String confNoAnswer(String name);
+
+  /// No description provided for @confNotJoined.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas rejoint l\'appel'**
+  String confNotJoined(String name);
+
+  /// No description provided for @confAddAlreadyUsed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un participant a déjà été ajouté à cet appel'**
+  String get confAddAlreadyUsed;
+
+  /// No description provided for @confCannotAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} ne peut pas être ajoutée'**
+  String confCannotAdd(String name);
+
+  /// No description provided for @confAddFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ajout n\'a pas pu aboutir'**
+  String get confAddFailed;
+
+  /// No description provided for @confInviteSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'vous ajoute à un appel avec {name}'**
+  String confInviteSubtitle(String name);
+
+  /// No description provided for @confAddSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à l\'appel'**
+  String get confAddSheetTitle;
+
+  /// No description provided for @noContactsToAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun contact à ajouter'**
+  String get noContactsToAdd;
+
+  /// No description provided for @confAlreadyInCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'déjà là'**
+  String get confAlreadyInCall;
+
+  /// No description provided for @confContactBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'en appel'**
+  String get confContactBusy;
+
+  /// No description provided for @confCancelInvite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get confCancelInvite;
+
   /// No description provided for @qrMyCodeTitle.
   ///
   /// In fr, this message translates to:
@@ -6887,7 +7055,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNetworkSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Wi-Fi, économiseur, médias'**
+  /// **'Wi-Fi et économiseur de données'**
   String get settingsNetworkSubtitle;
 
   /// No description provided for @settingsAccessibility.
@@ -8059,6 +8227,186 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible d\'ouvrir la page d\'aide'**
   String get officialHelpUnavailable;
+
+  /// No description provided for @contactLists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Listes de contacts'**
+  String get contactLists;
+
+  /// No description provided for @contactListsManage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gérer'**
+  String get contactListsManage;
+
+  /// No description provided for @createList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer une liste'**
+  String get createList;
+
+  /// No description provided for @listName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom de la liste'**
+  String get listName;
+
+  /// No description provided for @listNameHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Famille, Amis, Bureau…'**
+  String get listNameHint;
+
+  /// No description provided for @renameList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renommer la liste'**
+  String get renameList;
+
+  /// No description provided for @deleteList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer la liste'**
+  String get deleteList;
+
+  /// No description provided for @deleteListConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer « {name} » ? Vos contacts restent dans vos favoris.'**
+  String deleteListConfirm(String name);
+
+  /// No description provided for @listColor.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couleur de la puce'**
+  String get listColor;
+
+  /// No description provided for @listNameAlreadyExists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une liste porte déjà ce nom'**
+  String get listNameAlreadyExists;
+
+  /// No description provided for @listSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la liste. Réessayez.'**
+  String get listSaveFailed;
+
+  /// No description provided for @listMembersUpdateFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de modifier les membres. Réessayez.'**
+  String get listMembersUpdateFailed;
+
+  /// No description provided for @listMembersCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun membre} =1{1 membre} other{{count} membres}}'**
+  String listMembersCount(int count);
+
+  /// No description provided for @addToList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des membres'**
+  String get addToList;
+
+  /// No description provided for @removeFromList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer de la liste'**
+  String get removeFromList;
+
+  /// No description provided for @createGroupFromList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer un groupe'**
+  String get createGroupFromList;
+
+  /// No description provided for @noLists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune liste de contacts'**
+  String get noLists;
+
+  /// No description provided for @noListsHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rangez vos contacts préférés par Famille, Amis, Bureau…'**
+  String get noListsHint;
+
+  /// No description provided for @noListMembers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun membre dans cette liste'**
+  String get noListMembers;
+
+  /// No description provided for @noContactToAddToList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous vos contacts préférés sont déjà dans cette liste'**
+  String get noContactToAddToList;
+
+  /// No description provided for @addMembersSelected.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} sélectionné(s)'**
+  String addMembersSelected(int count);
+
+  /// No description provided for @newList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle liste'**
+  String get newList;
+
+  /// No description provided for @contactListsHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une liste ne peut contenir que des contacts déjà en favoris. Un même contact peut appartenir à plusieurs listes.'**
+  String get contactListsHint;
+
+  /// No description provided for @notInThisList.
+  ///
+  /// In fr, this message translates to:
+  /// **'Favori — pas dans cette liste'**
+  String get notInThisList;
+
+  /// No description provided for @createGroupNamed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer un groupe « {name} »'**
+  String createGroupNamed(String name);
+
+  /// No description provided for @manageLists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gérer les listes'**
+  String get manageLists;
+
+  /// No description provided for @contactListsSheetSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir une liste, ou en faire un groupe.'**
+  String get contactListsSheetSubtitle;
+
+  /// No description provided for @markAllAsRead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout marquer comme lu'**
+  String get markAllAsRead;
+
+  /// No description provided for @markAllAsReadDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucune discussion non lue} =1{1 discussion marquée comme lue} other{{count} discussions marquées comme lues}}'**
+  String markAllAsReadDone(int count);
+
+  /// No description provided for @optionsAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Options'**
+  String get optionsAction;
 }
 
 class _AppLocalizationsDelegate

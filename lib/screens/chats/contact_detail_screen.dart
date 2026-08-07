@@ -294,7 +294,11 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       if (next) {
         await _api.addContact(widget.userId);
       } else {
-        await _api.removeContact(widget.userId);
+        // Passe par le cache : retirer des favoris doit aussi sortir le
+        // contact de toutes les listes où il figure.
+        await context
+            .read<LocalCacheRepository>()
+            .removePreferredContact(widget.userId);
       }
       if (mounted) setState(() => _isFavorite = next);
     } catch (e) {
@@ -984,6 +988,7 @@ class _MediaCardState extends State<_MediaCard> {
                                     localPath: msg.localMediaPath,
                                     networkUrl: msg.mediaUrl,
                                     title: msg.mediaName,
+                                    msgID: msg.msgID,
                                   ),
                                 ),
                               ),

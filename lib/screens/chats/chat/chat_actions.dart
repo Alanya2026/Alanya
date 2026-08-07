@@ -425,6 +425,15 @@ extension _ChatActions on _ChatDetailScreenState {
                   _openForwardPicker(msg);
                 },
               ),
+            if (_canSaveMediaToDevice(msg))
+              ListTile(
+                leading: Icon(Icons.download_rounded, color: primary),
+                title: Text(MediaSaveFeedback.actionLabel(context, msg.type)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _saveMediaToDevice(msg);
+                },
+              ),
             if (canForwardMessage(msg))
               ListTile(
                 leading: Icon(Icons.share_outlined, color: primary),
@@ -731,6 +740,52 @@ extension _ChatActions on _ChatDetailScreenState {
         ),
       ),
     );
+  }
+
+  /// Une vue unique ne laisse aucune trace, un message supprimé n'a plus de
+  /// contenu, et seuls les types photo/vidéo/document ont une destination sur
+  /// l'appareil.
+  bool _canSaveMediaToDevice(LocalMessage msg) {
+    if (msg.isViewOnce || msg.isDeleted) return false;
+    if (msg.type != 1 && msg.type != 2 && msg.type != 4) return false;
+    final hasLocal = msg.localMediaPath != null &&
+        File(msg.localMediaPath!).existsSync();
+    final hasUrl = msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty;
+    return hasLocal || hasUrl;
+  }
+
+  Future<void> _saveMediaToDevice(
+    LocalMessage msg, {
+    bool force = false,
+  }) async {
+    if (!_canSaveMediaToDevice(msg)) return;
+
+    // Déjà sur l'appareil : on l'annonce plutôt que de créer un doublon en
+    // silence — la copie supplémentaire reste offerte, mais assumée.
+    if (!force &&
+        await AlanyaMediaExportService.instance.isExported(msg.msgID)) {
+      if (!mounted) return;
+      MediaSaveFeedback.showAlreadySaved(
+        context,
+        msg.type,
+        onSaveAgain: () => _saveMediaToDevice(msg, force: true),
+      );
+      return;
+    }
+
+    final ok = await AlanyaMediaExportService.instance.saveNow(
+      type: msg.type,
+      localPath: msg.localMediaPath,
+      networkUrl: msg.mediaUrl,
+      mediaName: msg.mediaName,
+      msgID: msg.msgID,
+    );
+    if (!mounted) return;
+    if (ok) {
+      MediaSaveFeedback.showSaved(context, msg.type);
+    } else {
+      MediaSaveFeedback.showFailed(context);
+    }
   }
 
   Future<void> _shareMessage(LocalMessage msg) async {

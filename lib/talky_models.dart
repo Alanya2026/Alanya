@@ -1306,6 +1306,45 @@ class PreferredContact {
       );
 }
 
+// ── CONTACT LIST ─────────────────────────────────────────────────────
+
+/// Liste nommée de contacts préférés (Famille, Amis, Bureau…).
+///
+/// Ne porte que l'entête : les membres se lisent séparément
+/// (`GET /contact-lists/:id/members`) et sont hydratés en [User], comme les
+/// contacts préférés.
+class ContactList {
+  final int idList;
+  final String name;
+
+  /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
+  final String? color;
+  final int memberCount;
+
+  ContactList({
+    required this.idList,
+    required this.name,
+    this.color,
+    this.memberCount = 0,
+  });
+
+  factory ContactList.fromJson(Map<String, dynamic> json) => ContactList(
+        idList: (json['idList'] as num?)?.toInt() ?? 0,
+        name: json['name']?.toString() ?? '',
+        color: (json['color']?.toString().isEmpty ?? true)
+            ? null
+            : json['color'].toString(),
+        memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'idList': idList,
+        'name': name,
+        'color': color,
+        'memberCount': memberCount,
+      };
+}
+
 // ── SOCKET EVENTS ────────────────────────────────────────────────────
 // Noms exacts utilisés par le backend Node.js
 
@@ -1391,6 +1430,21 @@ class SocketEvents {
   static const callResume    = 'call_resume';
   static const callRejoinOffer = 'call_rejoin_offer';
   static const callLogUpdated = 'call_log_updated';
+
+  // « Ajouter à l'appel » — transfert assisté, 3 participants max (Flutter → Backend)
+  static const callAddParticipant = 'call_add_participant';
+  static const callAddCancel      = 'call_add_cancel';
+  static const callConfJoin       = 'call_conf_join';
+  static const callConfReject     = 'call_conf_reject';
+
+  // « Ajouter à l'appel » (Backend → Flutter)
+  static const callAddPending     = 'call_add_pending';   // aux 2 présents : l'invité sonne
+  static const callConfInvite     = 'call_conf_invite';   // à l'invité
+  static const callConfJoined     = 'call_conf_joined';   // aux présents : offrir à l'arrivant
+  static const callConfPeers      = 'call_conf_peers';    // à l'invité : qui va lui offrir
+  static const callConfFailed     = 'call_conf_failed';   // invitation soldée
+  static const callConfLeft       = 'call_conf_left';     // un participant s'est retiré
+  static const callAddRejected    = 'call_add_rejected';  // demande d'ajout refusée
 
   // Appels groupe (Flutter → Backend)
   static const createGroupCall    = 'create_group_call';

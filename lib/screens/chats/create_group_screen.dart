@@ -19,7 +19,15 @@ import 'chat_detail_screen.dart';
 class CreateGroupScreen extends StatefulWidget {
   final List<User> members;
 
-  const CreateGroupScreen({super.key, required this.members});
+  /// Nom pré-rempli et éditable — utilisé quand le groupe naît d'une liste de
+  /// contacts (« Famille » devient le nom proposé du groupe).
+  final String? initialName;
+
+  const CreateGroupScreen({
+    super.key,
+    required this.members,
+    this.initialName,
+  });
 
   @override
   State<CreateGroupScreen> createState() => _CreateGroupScreenState();
@@ -41,6 +49,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   void initState() {
     super.initState();
     _members = List.of(widget.members);
+    _nameController.text = widget.initialName ?? '';
     _nameController.addListener(() => setState(() {}));
   }
 

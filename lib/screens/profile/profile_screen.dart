@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../talky_api_client.dart';
 import '../../core/utils/app_log.dart';
 import '../../talky_models.dart';
 import '../../core/theme/app_dimens.dart';
@@ -24,6 +23,7 @@ import 'settings_screen.dart';
 import 'account_hub_screen.dart';
 import 'edit_profile_screen.dart';
 import 'my_media_screen.dart';
+import 'contact_lists_screen.dart';
 import 'preferred_contacts_screen.dart';
 import 'qr_code_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
@@ -63,11 +63,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _removeContact(User user) async {
     try {
-      final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
-      await apiClient.removeContact(user.alanyaID);
-      if (!mounted) return;
       final cache = Provider.of<LocalCacheRepository>(context, listen: false);
-      await cache.upsertKnownUser(user, preferred: false);
+      await cache.removePreferredContact(user.alanyaID, user: user);
     } catch (e, st) {
       AppLog.e('ProfileScreen', 'Suppression contact préféré échouée', e, st);
       if (!mounted) return;
@@ -81,6 +78,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const PreferredContactsScreen()),
+    );
+  }
+
+  void _openContactLists() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ContactListsScreen()),
     );
   }
 
@@ -279,6 +283,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           builder: (_) => const AccountHubScreen()),
                     );
                   }),
+                  const Divider(height: 1),
+                  // Juste sous la grille des contacts préférés : les listes
+                  // organisent ces contacts-là, la proximité fait le lien.
+                  _buildMenuItem(
+                    Icons.folder_outlined,
+                    context.l10n.contactLists,
+                    _openContactLists,
+                  ),
                   const Divider(height: 1),
                   _buildMenuItem(Icons.photo_library_outlined, context.l10n.myMediaTitle, () {
                     Navigator.push(

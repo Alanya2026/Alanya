@@ -371,6 +371,7 @@ class _ConversationMediaScreenState extends State<ConversationMediaScreen>
             localPath: msg.localMediaPath,
             networkUrl: msg.mediaUrl,
             title: msg.mediaName,
+            msgID: msg.msgID,
           ),
         ),
       ),

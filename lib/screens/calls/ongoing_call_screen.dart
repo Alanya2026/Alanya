@@ -13,6 +13,7 @@ import '../../widgets/calls/call_connecting_overlay.dart';
 import '../../widgets/calls/call_control_bar.dart';
 import '../../widgets/calls/call_participant_tile.dart';
 import '../../widgets/calls/call_top_bar.dart';
+import '../../widgets/calls/add_to_call_sheet.dart';
 import '../../widgets/calls/draggable_video_pip.dart';
 import '../../widgets/common/app_avatar.dart';
 
@@ -86,28 +87,107 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     final cs = Provider.of<CallService>(context, listen: false);
 
     _localRenderer.srcObject = cs.localStream;
-    _remoteRenderer.srcObject = cs.remoteStream;
+    _remoteRenderer.srcObject = cs.activeRemoteStream;
     _watchVideoTracks(cs.localStream);
-    _watchVideoTracks(cs.remoteStream);
+    _watchVideoTracks(cs.activeRemoteStream);
     cs.addListener(_onCallChanged);
 
     setState(() => _renderersReady = true);
   }
 
+  /// Ouvre la feuille de sélection et lance l'invitation sur le contact choisi.
+  Future<void> _openAddSheet() async {
+    debugPrint('[AddToCall] 👆 bouton pressé');
+    try {
+      final cs = Provider.of<CallService>(context, listen: false);
+      if (!cs.canAddParticipant) {
+        debugPrint('[AddToCall] ⛔ canAddParticipant=false, ouverture annulée');
+        return;
+      }
+
+      final me = context.read<AuthProvider>().currentUser;
+      final excluded = <int>{
+        if (me != null) me.alanyaID,
+        if (cs.remoteUserId != null) cs.remoteUserId!,
+      };
+      debugPrint('[AddToCall] ▶ ouverture de la feuille (exclus=$excluded)');
+
+      final chosen = await AddToCallSheet.show(context, excludedIds: excluded);
+      debugPrint('[AddToCall] ◀ feuille fermée, choix=${chosen?.alanyaID}');
+      if (chosen == null || !mounted) return;
+
+      cs.addParticipant(
+        chosen.alanyaID,
+        myName: me == null
+            ? null
+            : (me.nom.isNotEmpty ? me.nom : me.pseudo),
+        myPhoto: me?.avatarUrl,
+      );
+    } catch (e, st) {
+      // Sans ce filet, une erreur ici ne se voit nulle part : le bouton semble
+      // simplement inerte.
+      debugPrint('[AddToCall] ** échec ouverture: $e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
+
+  /// Bandeaux d'information : arrivée, départ, échec d'invitation.
+  ///
+  /// Chaque fait n'est lu qu'une fois, sinon le message se rejouerait à chaque
+  /// notification du service.
+  void _drainConferenceNotices(CallService cs) {
+    final l10n = context.l10n;
+
+    final departed = cs.takeConfDeparture();
+    if (departed != null) {
+      _showNotice(l10n.confLeftCall(departed));
+    }
+
+    final failure = cs.takeConfFailure();
+    if (failure == null) return;
+
+    final who = cs.confPendingInvitee?.name ?? l10n.participantFallback;
+    final message = switch (failure) {
+      'declined' => l10n.confDeclined(who),
+      'busy' => l10n.confBusy(who),
+      'no_answer' => l10n.confNoAnswer(who),
+      'offline' => l10n.confNotJoined(who),
+      'cancelled' => null,
+      'already_used' => l10n.confAddAlreadyUsed,
+      'blocked' => l10n.confCannotAdd(who),
+      _ => l10n.confAddFailed,
+    };
+    if (message != null) _showNotice(message);
+  }
+
+  void _showNotice(String message) {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 4)),
+      );
+    });
+  }
+
   void _onCallChanged() {
     if (_closing || !mounted) return;
     final cs = Provider.of<CallService>(context, listen: false);
+    _drainConferenceNotices(cs);
 
     setState(() {
       if (_renderersReady) {
         if (_localRenderer.srcObject != cs.localStream) {
           _localRenderer.srcObject = cs.localStream;
         }
-        if (_remoteRenderer.srcObject != cs.remoteStream) {
-          _remoteRenderer.srcObject = cs.remoteStream;
+        if (_remoteRenderer.srcObject != cs.activeRemoteStream) {
+          _remoteRenderer.srcObject = cs.activeRemoteStream;
         }
         _watchVideoTracks(cs.localStream);
-        _watchVideoTracks(cs.remoteStream);
+        _watchVideoTracks(cs.activeRemoteStream);
       }
     });
 
@@ -138,7 +218,12 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
       _localRenderer.srcObject = null;
       _remoteRenderer.srcObject = null;
     }
-    if (cs.groupRoomId != null) {
+    // Session à trois : raccrocher ne fait que me retirer, l'appel continue
+    // sans moi. Le serveur interprète end_call en ce sens — surtout pas
+    // leaveGroupCall, qui viserait une room d'appel de groupe inexistante.
+    if (cs.isConference) {
+      await cs.endCall();
+    } else if (cs.groupRoomId != null) {
       await cs.leaveGroupCall();
     } else {
       await cs.endCall();
@@ -264,6 +349,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
         streams: cs.groupRemoteStreams,
         roster: cs.groupRoster,
         activeSpeakers: cs.activeSpeakers,
+        pendingInvitee: cs.confPendingInvitee,
+        // Annulable par le seul auteur de l'invitation.
+        onCancelPending:
+            cs.confInviteIsMine ? () => cs.cancelAddParticipant() : null,
       );
     }
 
@@ -358,8 +447,11 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
           final localUser = context.watch<AuthProvider>().currentUser;
           final localName = localUser?.nom ?? context.l10n.meLabel;
           final localPhoto = localUser?.avatarUrl;
-          final displayName =
-              isGroup ? context.l10n.groupCall : (cs.remoteUserName ?? context.l10n.callNoun);
+          final displayName = isGroup
+              ? (cs.isConference
+                  ? context.l10n.confCallOfThree
+                  : context.l10n.groupCall)
+              : (cs.remoteUserName ?? context.l10n.callNoun);
           final pipChild = _buildPipChild(
             cs,
             isGroup,
@@ -482,6 +574,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                               onCamera: () => cs.toggleCamera(),
                               onSwitchCam: () => cs.switchCamera(),
                               onHangUp: _hangUp,
+                              canAddParticipant: cs.canAddParticipant,
+                              onAddParticipant: _openAddSheet,
                             ),
                           ),
                         ),

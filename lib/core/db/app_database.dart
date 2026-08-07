@@ -313,6 +313,36 @@ class LocalMessageReactions extends Table {
   Set<Column> get primaryKey => {msgID, userID};
 }
 
+/// Listes de contacts (Famille, Amis, Bureau…) — entêtes seules.
+///
+/// Miroir local de `contact_list` (migration serveur 038) : la liste reste
+/// consultable hors ligne, comme les contacts préférés.
+class LocalContactLists extends Table {
+  IntColumn get idList => integer()();
+  TextColumn get name => text().withDefault(const Constant(''))();
+
+  /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
+  TextColumn get color => text().nullable()();
+
+  /// Compte renvoyé par le serveur — évite un COUNT par liste à l'affichage.
+  IntColumn get memberCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {idList};
+}
+
+/// Appartenance liste ↔ contact, many-to-many : un contact peut être dans
+/// plusieurs listes. PK composite comme [LocalMessageReactions] — la ligne ne
+/// porte QUE le lien, le profil vit dans [LocalUsers].
+class LocalContactListMembers extends Table {
+  IntColumn get idList => integer()();
+  IntColumn get idFriend => integer()();
+
+  @override
+  Set<Column> get primaryKey => {idList, idFriend};
+}
+
 @DriftDatabase(
   tables: [
     LocalConversations,
@@ -322,6 +352,8 @@ class LocalMessageReactions extends Table {
     LocalMeetings,
     LocalStatuses,
     LocalMessageReactions,
+    LocalContactLists,
+    LocalContactListMembers,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -329,7 +361,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -492,6 +524,17 @@ class AppDatabase extends _$AppDatabase {
                 localConversations, localConversations.onlyAdminsCanAddMembers);
           }
           if (from < 20) {
+            await m.addColumn(localUsers, localUsers.accountType);
+            await m.addColumn(localUsers, localUsers.verificationStatus);
+            await m.addColumn(localUsers, localUsers.verifiedUntil);
+          }
+          if (from < 21) {
+            // Listes de contacts (migration serveur 038). Deux créations de
+            // tables : rien du cache existant n'est vidé.
+            await m.createTable(localContactLists);
+            await m.createTable(localContactListMembers);
+            // Rattrapage installs v20 Alfred (tables ok, colonnes compte officiel
+            // manquantes) — no-op si déjà migrées via v20 broadcast.
             await m.addColumn(localUsers, localUsers.accountType);
             await m.addColumn(localUsers, localUsers.verificationStatus);
             await m.addColumn(localUsers, localUsers.verifiedUntil);

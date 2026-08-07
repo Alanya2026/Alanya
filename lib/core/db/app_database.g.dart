@@ -7278,6 +7278,580 @@ class LocalMessageReactionsCompanion
   }
 }
 
+class $LocalContactListsTable extends LocalContactLists
+    with TableInfo<$LocalContactListsTable, LocalContactList> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalContactListsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idListMeta = const VerificationMeta('idList');
+  @override
+  late final GeneratedColumn<int> idList = GeneratedColumn<int>(
+    'id_list',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _memberCountMeta = const VerificationMeta(
+    'memberCount',
+  );
+  @override
+  late final GeneratedColumn<int> memberCount = GeneratedColumn<int>(
+    'member_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    idList,
+    name,
+    color,
+    memberCount,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_contact_lists';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalContactList> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id_list')) {
+      context.handle(
+        _idListMeta,
+        idList.isAcceptableOrUnknown(data['id_list']!, _idListMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('member_count')) {
+      context.handle(
+        _memberCountMeta,
+        memberCount.isAcceptableOrUnknown(
+          data['member_count']!,
+          _memberCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {idList};
+  @override
+  LocalContactList map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalContactList(
+      idList: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_list'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      ),
+      memberCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}member_count'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalContactListsTable createAlias(String alias) {
+    return $LocalContactListsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalContactList extends DataClass
+    implements Insertable<LocalContactList> {
+  final int idList;
+  final String name;
+
+  /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
+  final String? color;
+
+  /// Compte renvoyé par le serveur — évite un COUNT par liste à l'affichage.
+  final int memberCount;
+  final DateTime cachedAt;
+  const LocalContactList({
+    required this.idList,
+    required this.name,
+    this.color,
+    required this.memberCount,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id_list'] = Variable<int>(idList);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<String>(color);
+    }
+    map['member_count'] = Variable<int>(memberCount);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  LocalContactListsCompanion toCompanion(bool nullToAbsent) {
+    return LocalContactListsCompanion(
+      idList: Value(idList),
+      name: Value(name),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
+      memberCount: Value(memberCount),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory LocalContactList.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalContactList(
+      idList: serializer.fromJson<int>(json['idList']),
+      name: serializer.fromJson<String>(json['name']),
+      color: serializer.fromJson<String?>(json['color']),
+      memberCount: serializer.fromJson<int>(json['memberCount']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'idList': serializer.toJson<int>(idList),
+      'name': serializer.toJson<String>(name),
+      'color': serializer.toJson<String?>(color),
+      'memberCount': serializer.toJson<int>(memberCount),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  LocalContactList copyWith({
+    int? idList,
+    String? name,
+    Value<String?> color = const Value.absent(),
+    int? memberCount,
+    DateTime? cachedAt,
+  }) => LocalContactList(
+    idList: idList ?? this.idList,
+    name: name ?? this.name,
+    color: color.present ? color.value : this.color,
+    memberCount: memberCount ?? this.memberCount,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  LocalContactList copyWithCompanion(LocalContactListsCompanion data) {
+    return LocalContactList(
+      idList: data.idList.present ? data.idList.value : this.idList,
+      name: data.name.present ? data.name.value : this.name,
+      color: data.color.present ? data.color.value : this.color,
+      memberCount: data.memberCount.present
+          ? data.memberCount.value
+          : this.memberCount,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalContactList(')
+          ..write('idList: $idList, ')
+          ..write('name: $name, ')
+          ..write('color: $color, ')
+          ..write('memberCount: $memberCount, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(idList, name, color, memberCount, cachedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalContactList &&
+          other.idList == this.idList &&
+          other.name == this.name &&
+          other.color == this.color &&
+          other.memberCount == this.memberCount &&
+          other.cachedAt == this.cachedAt);
+}
+
+class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
+  final Value<int> idList;
+  final Value<String> name;
+  final Value<String?> color;
+  final Value<int> memberCount;
+  final Value<DateTime> cachedAt;
+  const LocalContactListsCompanion({
+    this.idList = const Value.absent(),
+    this.name = const Value.absent(),
+    this.color = const Value.absent(),
+    this.memberCount = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+  });
+  LocalContactListsCompanion.insert({
+    this.idList = const Value.absent(),
+    this.name = const Value.absent(),
+    this.color = const Value.absent(),
+    this.memberCount = const Value.absent(),
+    required DateTime cachedAt,
+  }) : cachedAt = Value(cachedAt);
+  static Insertable<LocalContactList> custom({
+    Expression<int>? idList,
+    Expression<String>? name,
+    Expression<String>? color,
+    Expression<int>? memberCount,
+    Expression<DateTime>? cachedAt,
+  }) {
+    return RawValuesInsertable({
+      if (idList != null) 'id_list': idList,
+      if (name != null) 'name': name,
+      if (color != null) 'color': color,
+      if (memberCount != null) 'member_count': memberCount,
+      if (cachedAt != null) 'cached_at': cachedAt,
+    });
+  }
+
+  LocalContactListsCompanion copyWith({
+    Value<int>? idList,
+    Value<String>? name,
+    Value<String?>? color,
+    Value<int>? memberCount,
+    Value<DateTime>? cachedAt,
+  }) {
+    return LocalContactListsCompanion(
+      idList: idList ?? this.idList,
+      name: name ?? this.name,
+      color: color ?? this.color,
+      memberCount: memberCount ?? this.memberCount,
+      cachedAt: cachedAt ?? this.cachedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (idList.present) {
+      map['id_list'] = Variable<int>(idList.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
+    if (memberCount.present) {
+      map['member_count'] = Variable<int>(memberCount.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalContactListsCompanion(')
+          ..write('idList: $idList, ')
+          ..write('name: $name, ')
+          ..write('color: $color, ')
+          ..write('memberCount: $memberCount, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalContactListMembersTable extends LocalContactListMembers
+    with TableInfo<$LocalContactListMembersTable, LocalContactListMember> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalContactListMembersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idListMeta = const VerificationMeta('idList');
+  @override
+  late final GeneratedColumn<int> idList = GeneratedColumn<int>(
+    'id_list',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idFriendMeta = const VerificationMeta(
+    'idFriend',
+  );
+  @override
+  late final GeneratedColumn<int> idFriend = GeneratedColumn<int>(
+    'id_friend',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [idList, idFriend];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_contact_list_members';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalContactListMember> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id_list')) {
+      context.handle(
+        _idListMeta,
+        idList.isAcceptableOrUnknown(data['id_list']!, _idListMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_idListMeta);
+    }
+    if (data.containsKey('id_friend')) {
+      context.handle(
+        _idFriendMeta,
+        idFriend.isAcceptableOrUnknown(data['id_friend']!, _idFriendMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_idFriendMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {idList, idFriend};
+  @override
+  LocalContactListMember map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalContactListMember(
+      idList: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_list'],
+      )!,
+      idFriend: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id_friend'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalContactListMembersTable createAlias(String alias) {
+    return $LocalContactListMembersTable(attachedDatabase, alias);
+  }
+}
+
+class LocalContactListMember extends DataClass
+    implements Insertable<LocalContactListMember> {
+  final int idList;
+  final int idFriend;
+  const LocalContactListMember({required this.idList, required this.idFriend});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id_list'] = Variable<int>(idList);
+    map['id_friend'] = Variable<int>(idFriend);
+    return map;
+  }
+
+  LocalContactListMembersCompanion toCompanion(bool nullToAbsent) {
+    return LocalContactListMembersCompanion(
+      idList: Value(idList),
+      idFriend: Value(idFriend),
+    );
+  }
+
+  factory LocalContactListMember.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalContactListMember(
+      idList: serializer.fromJson<int>(json['idList']),
+      idFriend: serializer.fromJson<int>(json['idFriend']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'idList': serializer.toJson<int>(idList),
+      'idFriend': serializer.toJson<int>(idFriend),
+    };
+  }
+
+  LocalContactListMember copyWith({int? idList, int? idFriend}) =>
+      LocalContactListMember(
+        idList: idList ?? this.idList,
+        idFriend: idFriend ?? this.idFriend,
+      );
+  LocalContactListMember copyWithCompanion(
+    LocalContactListMembersCompanion data,
+  ) {
+    return LocalContactListMember(
+      idList: data.idList.present ? data.idList.value : this.idList,
+      idFriend: data.idFriend.present ? data.idFriend.value : this.idFriend,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalContactListMember(')
+          ..write('idList: $idList, ')
+          ..write('idFriend: $idFriend')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(idList, idFriend);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalContactListMember &&
+          other.idList == this.idList &&
+          other.idFriend == this.idFriend);
+}
+
+class LocalContactListMembersCompanion
+    extends UpdateCompanion<LocalContactListMember> {
+  final Value<int> idList;
+  final Value<int> idFriend;
+  final Value<int> rowid;
+  const LocalContactListMembersCompanion({
+    this.idList = const Value.absent(),
+    this.idFriend = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalContactListMembersCompanion.insert({
+    required int idList,
+    required int idFriend,
+    this.rowid = const Value.absent(),
+  }) : idList = Value(idList),
+       idFriend = Value(idFriend);
+  static Insertable<LocalContactListMember> custom({
+    Expression<int>? idList,
+    Expression<int>? idFriend,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (idList != null) 'id_list': idList,
+      if (idFriend != null) 'id_friend': idFriend,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalContactListMembersCompanion copyWith({
+    Value<int>? idList,
+    Value<int>? idFriend,
+    Value<int>? rowid,
+  }) {
+    return LocalContactListMembersCompanion(
+      idList: idList ?? this.idList,
+      idFriend: idFriend ?? this.idFriend,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (idList.present) {
+      map['id_list'] = Variable<int>(idList.value);
+    }
+    if (idFriend.present) {
+      map['id_friend'] = Variable<int>(idFriend.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalContactListMembersCompanion(')
+          ..write('idList: $idList, ')
+          ..write('idFriend: $idFriend, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7290,6 +7864,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalStatusesTable localStatuses = $LocalStatusesTable(this);
   late final $LocalMessageReactionsTable localMessageReactions =
       $LocalMessageReactionsTable(this);
+  late final $LocalContactListsTable localContactLists =
+      $LocalContactListsTable(this);
+  late final $LocalContactListMembersTable localContactListMembers =
+      $LocalContactListMembersTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7302,6 +7880,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localMeetings,
     localStatuses,
     localMessageReactions,
+    localContactLists,
+    localContactListMembers,
   ];
 }
 
@@ -10518,6 +11098,377 @@ typedef $$LocalMessageReactionsTableProcessedTableManager =
       LocalMessageReaction,
       PrefetchHooks Function()
     >;
+typedef $$LocalContactListsTableCreateCompanionBuilder =
+    LocalContactListsCompanion Function({
+      Value<int> idList,
+      Value<String> name,
+      Value<String?> color,
+      Value<int> memberCount,
+      required DateTime cachedAt,
+    });
+typedef $$LocalContactListsTableUpdateCompanionBuilder =
+    LocalContactListsCompanion Function({
+      Value<int> idList,
+      Value<String> name,
+      Value<String?> color,
+      Value<int> memberCount,
+      Value<DateTime> cachedAt,
+    });
+
+class $$LocalContactListsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalContactListsTable> {
+  $$LocalContactListsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get idList => $composableBuilder(
+    column: $table.idList,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get memberCount => $composableBuilder(
+    column: $table.memberCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalContactListsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalContactListsTable> {
+  $$LocalContactListsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get idList => $composableBuilder(
+    column: $table.idList,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get memberCount => $composableBuilder(
+    column: $table.memberCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalContactListsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalContactListsTable> {
+  $$LocalContactListsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get idList =>
+      $composableBuilder(column: $table.idList, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<int> get memberCount => $composableBuilder(
+    column: $table.memberCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$LocalContactListsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalContactListsTable,
+          LocalContactList,
+          $$LocalContactListsTableFilterComposer,
+          $$LocalContactListsTableOrderingComposer,
+          $$LocalContactListsTableAnnotationComposer,
+          $$LocalContactListsTableCreateCompanionBuilder,
+          $$LocalContactListsTableUpdateCompanionBuilder,
+          (
+            LocalContactList,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalContactListsTable,
+              LocalContactList
+            >,
+          ),
+          LocalContactList,
+          PrefetchHooks Function()
+        > {
+  $$LocalContactListsTableTableManager(
+    _$AppDatabase db,
+    $LocalContactListsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalContactListsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalContactListsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalContactListsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> idList = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> color = const Value.absent(),
+                Value<int> memberCount = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+              }) => LocalContactListsCompanion(
+                idList: idList,
+                name: name,
+                color: color,
+                memberCount: memberCount,
+                cachedAt: cachedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> idList = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> color = const Value.absent(),
+                Value<int> memberCount = const Value.absent(),
+                required DateTime cachedAt,
+              }) => LocalContactListsCompanion.insert(
+                idList: idList,
+                name: name,
+                color: color,
+                memberCount: memberCount,
+                cachedAt: cachedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalContactListsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalContactListsTable,
+      LocalContactList,
+      $$LocalContactListsTableFilterComposer,
+      $$LocalContactListsTableOrderingComposer,
+      $$LocalContactListsTableAnnotationComposer,
+      $$LocalContactListsTableCreateCompanionBuilder,
+      $$LocalContactListsTableUpdateCompanionBuilder,
+      (
+        LocalContactList,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalContactListsTable,
+          LocalContactList
+        >,
+      ),
+      LocalContactList,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalContactListMembersTableCreateCompanionBuilder =
+    LocalContactListMembersCompanion Function({
+      required int idList,
+      required int idFriend,
+      Value<int> rowid,
+    });
+typedef $$LocalContactListMembersTableUpdateCompanionBuilder =
+    LocalContactListMembersCompanion Function({
+      Value<int> idList,
+      Value<int> idFriend,
+      Value<int> rowid,
+    });
+
+class $$LocalContactListMembersTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalContactListMembersTable> {
+  $$LocalContactListMembersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get idList => $composableBuilder(
+    column: $table.idList,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idFriend => $composableBuilder(
+    column: $table.idFriend,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalContactListMembersTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalContactListMembersTable> {
+  $$LocalContactListMembersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get idList => $composableBuilder(
+    column: $table.idList,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get idFriend => $composableBuilder(
+    column: $table.idFriend,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalContactListMembersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalContactListMembersTable> {
+  $$LocalContactListMembersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get idList =>
+      $composableBuilder(column: $table.idList, builder: (column) => column);
+
+  GeneratedColumn<int> get idFriend =>
+      $composableBuilder(column: $table.idFriend, builder: (column) => column);
+}
+
+class $$LocalContactListMembersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalContactListMembersTable,
+          LocalContactListMember,
+          $$LocalContactListMembersTableFilterComposer,
+          $$LocalContactListMembersTableOrderingComposer,
+          $$LocalContactListMembersTableAnnotationComposer,
+          $$LocalContactListMembersTableCreateCompanionBuilder,
+          $$LocalContactListMembersTableUpdateCompanionBuilder,
+          (
+            LocalContactListMember,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalContactListMembersTable,
+              LocalContactListMember
+            >,
+          ),
+          LocalContactListMember,
+          PrefetchHooks Function()
+        > {
+  $$LocalContactListMembersTableTableManager(
+    _$AppDatabase db,
+    $LocalContactListMembersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalContactListMembersTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalContactListMembersTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalContactListMembersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> idList = const Value.absent(),
+                Value<int> idFriend = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalContactListMembersCompanion(
+                idList: idList,
+                idFriend: idFriend,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int idList,
+                required int idFriend,
+                Value<int> rowid = const Value.absent(),
+              }) => LocalContactListMembersCompanion.insert(
+                idList: idList,
+                idFriend: idFriend,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalContactListMembersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalContactListMembersTable,
+      LocalContactListMember,
+      $$LocalContactListMembersTableFilterComposer,
+      $$LocalContactListMembersTableOrderingComposer,
+      $$LocalContactListMembersTableAnnotationComposer,
+      $$LocalContactListMembersTableCreateCompanionBuilder,
+      $$LocalContactListMembersTableUpdateCompanionBuilder,
+      (
+        LocalContactListMember,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalContactListMembersTable,
+          LocalContactListMember
+        >,
+      ),
+      LocalContactListMember,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10536,4 +11487,11 @@ class $AppDatabaseManager {
       $$LocalStatusesTableTableManager(_db, _db.localStatuses);
   $$LocalMessageReactionsTableTableManager get localMessageReactions =>
       $$LocalMessageReactionsTableTableManager(_db, _db.localMessageReactions);
+  $$LocalContactListsTableTableManager get localContactLists =>
+      $$LocalContactListsTableTableManager(_db, _db.localContactLists);
+  $$LocalContactListMembersTableTableManager get localContactListMembers =>
+      $$LocalContactListMembersTableTableManager(
+        _db,
+        _db.localContactListMembers,
+      );
 }
