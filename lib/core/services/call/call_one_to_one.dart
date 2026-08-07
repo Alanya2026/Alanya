@@ -225,6 +225,7 @@ extension CallOneToOne on CallService {
 
       _apiClient.sendSocketEvent(SocketEvents.answerCall, {
         'callerId': _remoteUserId.toString(),
+        'callId': _currentCallId,
         'answer': {
           'sdp': answer.sdp,
           'type': answer.type,

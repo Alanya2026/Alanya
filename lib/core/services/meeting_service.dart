@@ -218,6 +218,18 @@ class MeetingService extends ChangeNotifier {
       }
     });
 
+    _apiClient.onSocketEvent(SocketEvents.meetingJoinDenied, (data) async {
+      final code = (data is Map ? data['code'] : null)?.toString();
+      debugPrint('[MeetingService] join_denied code=$code');
+      if (_roomJoinCompleter != null && !_roomJoinCompleter!.isCompleted) {
+        _roomJoinCompleter!.completeError(
+          StateError(code ?? 'ACCOUNT_ALREADY_IN_MEETING'),
+        );
+      }
+      // Ne pas emit leave (jamais entré) — cleanup local seulement.
+      await _terminateMeeting(emitLeave: false);
+    });
+
     // Un nouveau participant vient de rejoindre → enrichir le roster + WebRTC
     _apiClient.onSocketEvent(SocketEvents.meetingUserJoined, (data) async {
       if (data is! Map) return;
@@ -645,6 +657,9 @@ class MeetingService extends ChangeNotifier {
 
     try {
       await _roomJoinCompleter!.future.timeout(const Duration(seconds: 10));
+    } on StateError catch (e) {
+      debugPrint('[MeetingService] join denied: $e');
+      rethrow;
     } catch (_) {
       debugPrint('[MeetingService] Timeout attente room_joined');
     } finally {

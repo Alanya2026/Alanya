@@ -1440,6 +1440,7 @@ class SocketEvents {
   static const callAnswered  = 'call_answered';
   static const callRejected  = 'call_rejected';
   static const callEnded     = 'call_ended';
+  static const callError     = 'call_error';
   static const callFailed    = 'call_failed';
   static const callBusy      = 'call_busy';       // cible occupée (ringing/in_call)
   static const callNoAnswer  = 'call_no_answer';  // timeout serveur sans réponse
@@ -1507,6 +1508,7 @@ class SocketEvents {
   // Meetings (Backend → Flutter)
   static const meetingCreated     = 'meeting:created';
   static const meetingRoomJoined  = 'meeting:room_joined';
+  static const meetingJoinDenied  = 'meeting:join_denied';
   static const meetingUserJoined  = 'meeting:user_joined';
   static const meetingUserLeft    = 'meeting:user_left';
   static const meetingAccepted    = 'meeting:accepted';

@@ -387,7 +387,14 @@ extension CallIncoming on CallService {
         );
         break;
       case IncomingCallActionType.decline:
+        await rejectIncomingCallFromPush(
+          callerId: action.callerId,
+          callId: action.callId,
+          isConference: action.isConference,
+        );
+        break;
       case IncomingCallActionType.timeout:
+        // Timeout CallKit : refus compte (sonnerie expirée).
         await rejectIncomingCallFromPush(
           callerId: action.callerId,
           callId: action.callId,
@@ -395,9 +402,12 @@ extension CallIncoming on CallService {
         );
         break;
       case IncomingCallActionType.ended:
+        // Dismiss OS / nettoyage local — ne pas reject_call (autre device peut
+        // encore sonner ou avoir déjà décroché).
         await notifyCallEndedFromExternal(
           callId: action.callId,
           callerId: action.callerId,
+          localOnlyIfIncoming: true,
         );
         break;
     }
@@ -408,10 +418,12 @@ extension CallIncoming on CallService {
   Future<void> notifyCallEndedFromExternal({
     String? callId,
     String? callerId,
+    bool localOnlyIfIncoming = false,
   }) async {
     final id = (callId ?? '').trim();
     debugPrint(
-      '[CallService] notifyCallEndedFromExternal callId=$id status=$_status',
+      '[CallService] notifyCallEndedFromExternal callId=$id status=$_status '
+      'localOnlyIfIncoming=$localOnlyIfIncoming',
     );
 
     if (id.isNotEmpty) {
@@ -431,6 +443,13 @@ extension CallIncoming on CallService {
     }
 
     if (_status == CallStatus.incoming) {
+      if (localOnlyIfIncoming) {
+        _markTerminalCallId(id.isNotEmpty ? id : _currentCallId);
+        await _ringtone.stop();
+        await _callKit.endAll(callId: id.isNotEmpty ? id : _currentCallId);
+        await _terminateCall();
+        return;
+      }
       await rejectIncomingCallFromPush(
         callerId: callerId ?? _remoteUserId?.toString() ?? '',
         callId: id.isNotEmpty ? id : _currentCallId,

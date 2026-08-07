@@ -197,12 +197,79 @@ extension CallSignaling on CallService {
       await _terminateCall();
     });
 
-    // Appel terminé par l'autre côté
+    // Appel terminé par l'autre côté, ou stop multi-device (answered/rejected elsewhere).
     _apiClient.onSocketEvent(SocketEvents.callEnded, (data) async {
-      debugPrint('[CallService] 📞 Appel terminé par l\'autre côté');
-      final callId = (data is Map ? data['callId'] : null)?.toString();
+      final map = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+      final callId = map['callId']?.toString();
+      final reason = map['reason']?.toString();
+      final claimedElsewhere = reason == 'answered_elsewhere' ||
+          reason == 'rejected_elsewhere' ||
+          map['claimedByAnotherDevice'] == true ||
+          map['claimedByAnotherDevice']?.toString() == 'true';
+
+      debugPrint(
+        '[CallService] 📞 call_ended callId=$callId reason=$reason '
+        'claimedElsewhere=$claimedElsewhere status=$_status',
+      );
+
+      // Déjà en média actif sur CE device : ignorer (ne doit normalement pas
+      // arriver — serveur exclut le gagnant — mais filet anti-course).
+      if (claimedElsewhere &&
+          (_status == CallStatus.connected ||
+              _status == CallStatus.connecting ||
+              _status == CallStatus.joining) &&
+          (callId == null ||
+              callId.isEmpty ||
+              callId == _currentCallId ||
+              callId == _confSessionId ||
+              callId == _groupRoomId)) {
+        debugPrint('[CallService] 🛡 call_ended elsewhere ignoré (média local actif)');
+        return;
+      }
+
       _markTerminalCallId(callId ?? _currentCallId);
+
+      if (claimedElsewhere) {
+        // Stop local uniquement : pas de reject_call.
+        await _callKit.endAll(callId: callId ?? _currentCallId);
+        if (_status == CallStatus.incoming ||
+            _status == CallStatus.idle ||
+            _status == CallStatus.joining) {
+          await _terminateCall();
+        } else if (callId != null &&
+            callId.isNotEmpty &&
+            callId != _currentCallId &&
+            callId != _confSessionId) {
+          // Autre callId : juste CallKit déjà coupé.
+          return;
+        } else {
+          await _terminateCall();
+        }
+        return;
+      }
+
       await _terminateCall();
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callError, (data) async {
+      final code = (data is Map ? data['code'] : null)?.toString();
+      final callId = (data is Map ? data['callId'] : null)?.toString();
+      debugPrint('[CallService] call_error code=$code callId=$callId');
+      if (code == 'CALL_ANSWERED_ELSEWHERE' ||
+          code == 'CALL_ALREADY_JOINED_ON_OTHER_DEVICE') {
+        _markTerminalCallId(callId ?? _currentCallId);
+        await _callKit.endAll(callId: callId ?? _currentCallId);
+        if (_status == CallStatus.incoming || _status == CallStatus.joining) {
+          await _terminateCall();
+        }
+        return;
+      }
+      if (code == 'DEVICE_ID_REQUIRED' || code == 'CALL_ID_UNAVAILABLE') {
+        _showTransientMessage(
+          LocaleController.instance.l10n.callFailed,
+        );
+        await _terminateCall();
+      }
     });
 
     // Appel échoué (destinataire hors-ligne, données invalides, appel bloqué…)
