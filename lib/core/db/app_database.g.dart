@@ -7312,6 +7312,17 @@ class $LocalContactListsTable extends LocalContactLists
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _memberLimitMeta = const VerificationMeta(
+    'memberLimit',
+  );
+  @override
+  late final GeneratedColumn<int> memberLimit = GeneratedColumn<int>(
+    'member_limit',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _memberCountMeta = const VerificationMeta(
     'memberCount',
   );
@@ -7340,6 +7351,7 @@ class $LocalContactListsTable extends LocalContactLists
     idList,
     name,
     color,
+    memberLimit,
     memberCount,
     cachedAt,
   ];
@@ -7371,6 +7383,15 @@ class $LocalContactListsTable extends LocalContactLists
       context.handle(
         _colorMeta,
         color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('member_limit')) {
+      context.handle(
+        _memberLimitMeta,
+        memberLimit.isAcceptableOrUnknown(
+          data['member_limit']!,
+          _memberLimitMeta,
+        ),
       );
     }
     if (data.containsKey('member_count')) {
@@ -7411,6 +7432,10 @@ class $LocalContactListsTable extends LocalContactLists
         DriftSqlType.string,
         data['${effectivePrefix}color'],
       ),
+      memberLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}member_limit'],
+      ),
       memberCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}member_count'],
@@ -7436,6 +7461,9 @@ class LocalContactList extends DataClass
   /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
   final String? color;
 
+  /// Plafond de membres (ex. Confiance = 5). Null = illimité.
+  final int? memberLimit;
+
   /// Compte renvoyé par le serveur — évite un COUNT par liste à l'affichage.
   final int memberCount;
   final DateTime cachedAt;
@@ -7443,6 +7471,7 @@ class LocalContactList extends DataClass
     required this.idList,
     required this.name,
     this.color,
+    this.memberLimit,
     required this.memberCount,
     required this.cachedAt,
   });
@@ -7453,6 +7482,9 @@ class LocalContactList extends DataClass
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || color != null) {
       map['color'] = Variable<String>(color);
+    }
+    if (!nullToAbsent || memberLimit != null) {
+      map['member_limit'] = Variable<int>(memberLimit);
     }
     map['member_count'] = Variable<int>(memberCount);
     map['cached_at'] = Variable<DateTime>(cachedAt);
@@ -7466,6 +7498,9 @@ class LocalContactList extends DataClass
       color: color == null && nullToAbsent
           ? const Value.absent()
           : Value(color),
+      memberLimit: memberLimit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(memberLimit),
       memberCount: Value(memberCount),
       cachedAt: Value(cachedAt),
     );
@@ -7480,6 +7515,7 @@ class LocalContactList extends DataClass
       idList: serializer.fromJson<int>(json['idList']),
       name: serializer.fromJson<String>(json['name']),
       color: serializer.fromJson<String?>(json['color']),
+      memberLimit: serializer.fromJson<int?>(json['memberLimit']),
       memberCount: serializer.fromJson<int>(json['memberCount']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
@@ -7491,6 +7527,7 @@ class LocalContactList extends DataClass
       'idList': serializer.toJson<int>(idList),
       'name': serializer.toJson<String>(name),
       'color': serializer.toJson<String?>(color),
+      'memberLimit': serializer.toJson<int?>(memberLimit),
       'memberCount': serializer.toJson<int>(memberCount),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
@@ -7500,12 +7537,14 @@ class LocalContactList extends DataClass
     int? idList,
     String? name,
     Value<String?> color = const Value.absent(),
+    Value<int?> memberLimit = const Value.absent(),
     int? memberCount,
     DateTime? cachedAt,
   }) => LocalContactList(
     idList: idList ?? this.idList,
     name: name ?? this.name,
     color: color.present ? color.value : this.color,
+    memberLimit: memberLimit.present ? memberLimit.value : this.memberLimit,
     memberCount: memberCount ?? this.memberCount,
     cachedAt: cachedAt ?? this.cachedAt,
   );
@@ -7514,6 +7553,9 @@ class LocalContactList extends DataClass
       idList: data.idList.present ? data.idList.value : this.idList,
       name: data.name.present ? data.name.value : this.name,
       color: data.color.present ? data.color.value : this.color,
+      memberLimit: data.memberLimit.present
+          ? data.memberLimit.value
+          : this.memberLimit,
       memberCount: data.memberCount.present
           ? data.memberCount.value
           : this.memberCount,
@@ -7527,6 +7569,7 @@ class LocalContactList extends DataClass
           ..write('idList: $idList, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
+          ..write('memberLimit: $memberLimit, ')
           ..write('memberCount: $memberCount, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
@@ -7534,7 +7577,8 @@ class LocalContactList extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(idList, name, color, memberCount, cachedAt);
+  int get hashCode =>
+      Object.hash(idList, name, color, memberLimit, memberCount, cachedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7542,6 +7586,7 @@ class LocalContactList extends DataClass
           other.idList == this.idList &&
           other.name == this.name &&
           other.color == this.color &&
+          other.memberLimit == this.memberLimit &&
           other.memberCount == this.memberCount &&
           other.cachedAt == this.cachedAt);
 }
@@ -7550,12 +7595,14 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
   final Value<int> idList;
   final Value<String> name;
   final Value<String?> color;
+  final Value<int?> memberLimit;
   final Value<int> memberCount;
   final Value<DateTime> cachedAt;
   const LocalContactListsCompanion({
     this.idList = const Value.absent(),
     this.name = const Value.absent(),
     this.color = const Value.absent(),
+    this.memberLimit = const Value.absent(),
     this.memberCount = const Value.absent(),
     this.cachedAt = const Value.absent(),
   });
@@ -7563,6 +7610,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
     this.idList = const Value.absent(),
     this.name = const Value.absent(),
     this.color = const Value.absent(),
+    this.memberLimit = const Value.absent(),
     this.memberCount = const Value.absent(),
     required DateTime cachedAt,
   }) : cachedAt = Value(cachedAt);
@@ -7570,6 +7618,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
     Expression<int>? idList,
     Expression<String>? name,
     Expression<String>? color,
+    Expression<int>? memberLimit,
     Expression<int>? memberCount,
     Expression<DateTime>? cachedAt,
   }) {
@@ -7577,6 +7626,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
       if (idList != null) 'id_list': idList,
       if (name != null) 'name': name,
       if (color != null) 'color': color,
+      if (memberLimit != null) 'member_limit': memberLimit,
       if (memberCount != null) 'member_count': memberCount,
       if (cachedAt != null) 'cached_at': cachedAt,
     });
@@ -7586,6 +7636,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
     Value<int>? idList,
     Value<String>? name,
     Value<String?>? color,
+    Value<int?>? memberLimit,
     Value<int>? memberCount,
     Value<DateTime>? cachedAt,
   }) {
@@ -7593,6 +7644,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
       idList: idList ?? this.idList,
       name: name ?? this.name,
       color: color ?? this.color,
+      memberLimit: memberLimit ?? this.memberLimit,
       memberCount: memberCount ?? this.memberCount,
       cachedAt: cachedAt ?? this.cachedAt,
     );
@@ -7610,6 +7662,9 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
     if (color.present) {
       map['color'] = Variable<String>(color.value);
     }
+    if (memberLimit.present) {
+      map['member_limit'] = Variable<int>(memberLimit.value);
+    }
     if (memberCount.present) {
       map['member_count'] = Variable<int>(memberCount.value);
     }
@@ -7625,6 +7680,7 @@ class LocalContactListsCompanion extends UpdateCompanion<LocalContactList> {
           ..write('idList: $idList, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
+          ..write('memberLimit: $memberLimit, ')
           ..write('memberCount: $memberCount, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
@@ -11103,6 +11159,7 @@ typedef $$LocalContactListsTableCreateCompanionBuilder =
       Value<int> idList,
       Value<String> name,
       Value<String?> color,
+      Value<int?> memberLimit,
       Value<int> memberCount,
       required DateTime cachedAt,
     });
@@ -11111,6 +11168,7 @@ typedef $$LocalContactListsTableUpdateCompanionBuilder =
       Value<int> idList,
       Value<String> name,
       Value<String?> color,
+      Value<int?> memberLimit,
       Value<int> memberCount,
       Value<DateTime> cachedAt,
     });
@@ -11136,6 +11194,11 @@ class $$LocalContactListsTableFilterComposer
 
   ColumnFilters<String> get color => $composableBuilder(
     column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get memberLimit => $composableBuilder(
+    column: $table.memberLimit,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11174,6 +11237,11 @@ class $$LocalContactListsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get memberLimit => $composableBuilder(
+    column: $table.memberLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get memberCount => $composableBuilder(
     column: $table.memberCount,
     builder: (column) => ColumnOrderings(column),
@@ -11202,6 +11270,11 @@ class $$LocalContactListsTableAnnotationComposer
 
   GeneratedColumn<String> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<int> get memberLimit => $composableBuilder(
+    column: $table.memberLimit,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get memberCount => $composableBuilder(
     column: $table.memberCount,
@@ -11255,12 +11328,14 @@ class $$LocalContactListsTableTableManager
                 Value<int> idList = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> color = const Value.absent(),
+                Value<int?> memberLimit = const Value.absent(),
                 Value<int> memberCount = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
               }) => LocalContactListsCompanion(
                 idList: idList,
                 name: name,
                 color: color,
+                memberLimit: memberLimit,
                 memberCount: memberCount,
                 cachedAt: cachedAt,
               ),
@@ -11269,12 +11344,14 @@ class $$LocalContactListsTableTableManager
                 Value<int> idList = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> color = const Value.absent(),
+                Value<int?> memberLimit = const Value.absent(),
                 Value<int> memberCount = const Value.absent(),
                 required DateTime cachedAt,
               }) => LocalContactListsCompanion.insert(
                 idList: idList,
                 name: name,
                 color: color,
+                memberLimit: memberLimit,
                 memberCount: memberCount,
                 cachedAt: cachedAt,
               ),

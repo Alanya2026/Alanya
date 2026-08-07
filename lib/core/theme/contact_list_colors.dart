@@ -6,14 +6,13 @@ import '../db/app_database.dart';
 ///
 /// Palette de la maquette `docs/architecture/maquettes/listes-contacts-acces.html` :
 /// huit teintes profondes de valeur voisine, qui tiennent sur fond clair comme
-/// sur fond sombre. **L'ordre est l'ordre d'attribution** — les trois premières
-/// sont celles des listes historiques (Famille, Amis, Bureau), qui ne changent
-/// donc pas de couleur.
+/// sur fond sombre. Les quatre premières sont celles des listes par défaut
+/// (Famille, Amis, Bureau, Confiance — doc liste-contacts.pdf).
 const List<String> kContactListColors = [
-  '#C2185B', // framboise
-  '#00796B', // sarcelle
-  '#3949AB', // indigo
-  '#B7791F', // ocre
+  '#C2185B', // Famille — framboise / rouge
+  '#00796B', // Amis — sarcelle / vert
+  '#3949AB', // Bureau — indigo / bleu
+  '#B7791F', // Confiance — ocre / or
   '#5E35B1', // violet
   '#2E7D32', // vert forêt
   '#C62828', // brique

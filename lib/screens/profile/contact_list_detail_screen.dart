@@ -4,12 +4,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/default_contact_lists.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/utils/user_search.dart';
+import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../chats/contact_detail_screen.dart';
@@ -53,10 +55,22 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
     unawaited(cache.syncPreferredContacts());
   }
 
-  Future<void> _toggleMember(User user, {required bool isMember}) async {
+  Future<void> _toggleMember(
+    User user, {
+    required bool isMember,
+    int? memberLimit,
+    required int memberCount,
+  }) async {
     if (_pending.contains(user.alanyaID)) return;
     final l10n = context.l10n;
     final cache = context.read<LocalCacheRepository>();
+
+    if (!isMember &&
+        memberLimit != null &&
+        memberCount >= memberLimit) {
+      _showError(l10n.listMemberLimitReached(memberLimit));
+      return;
+    }
 
     setState(() => _pending.add(user.alanyaID));
     try {
@@ -64,6 +78,14 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
         await cache.removeListMember(widget.idList, user.alanyaID);
       } else {
         await cache.addListMember(widget.idList, user.alanyaID);
+      }
+    } on TalkyException catch (e) {
+      if (e.statusCode == 409 &&
+          e.message.toLowerCase().contains('limit')) {
+        _showError(l10n.listMemberLimitReached(memberLimit ?? kConfianceMemberLimit));
+      } else {
+        AppLog.e('ContactListDetail', 'Bascule d\'appartenance échouée', e);
+        _showError(l10n.listMembersUpdateFailed);
       }
     } catch (e, st) {
       AppLog.e('ContactListDetail', 'Bascule d\'appartenance échouée', e, st);
@@ -117,6 +139,7 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
             .where((l) => l.idList == widget.idList)
             .firstOrNull;
         final name = list?.name ?? widget.initialName;
+        final memberLimit = list?.memberLimit;
 
         return StreamBuilder<List<User>>(
           stream: cache.watchListMembers(widget.idList),
@@ -147,7 +170,12 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
                         padding: const EdgeInsets.only(right: AppSpacing.lg),
                         child: Center(
                           child: Text(
-                            '${members.length}',
+                            list?.memberLimit != null
+                                ? context.l10n.listMembersCountLimited(
+                                    members.length,
+                                    list!.memberLimit!,
+                                  )
+                                : '${members.length}',
                             style: context.text.titleMedium?.copyWith(
                               color: context.colors.onSurfaceVariant,
                             ),
@@ -176,13 +204,20 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
                                   final user = isMember
                                       ? members[index]
                                       : others[index - members.length];
+                                  final atLimit = !isMember &&
+                                      memberLimit != null &&
+                                      members.length >= memberLimit;
                                   return _MemberTile(
                                     user: user,
                                     isMember: isMember,
                                     busy: _pending.contains(user.alanyaID),
+                                    atLimit: atLimit,
+                                    memberLimit: memberLimit,
                                     onToggle: () => _toggleMember(
                                       user,
                                       isMember: isMember,
+                                      memberLimit: memberLimit,
+                                      memberCount: members.length,
                                     ),
                                     onOpen: () => _openContact(user),
                                   );
@@ -230,6 +265,8 @@ class _MemberTile extends StatelessWidget {
     required this.user,
     required this.isMember,
     required this.busy,
+    required this.atLimit,
+    this.memberLimit,
     required this.onToggle,
     required this.onOpen,
   });
@@ -237,6 +274,8 @@ class _MemberTile extends StatelessWidget {
   final User user;
   final bool isMember;
   final bool busy;
+  final bool atLimit;
+  final int? memberLimit;
   final VoidCallback onToggle;
   final VoidCallback onOpen;
 
@@ -306,8 +345,10 @@ class _MemberTile extends StatelessWidget {
                   IconButton(
                     tooltip: isMember
                         ? context.l10n.removeFromList
-                        : context.l10n.addToList,
-                    onPressed: busy ? null : onToggle,
+                        : (atLimit && memberLimit != null
+                            ? context.l10n.listMemberLimitReached(memberLimit!)
+                            : context.l10n.addToList),
+                    onPressed: busy || atLimit ? null : onToggle,
                     icon: busy
                         ? const SizedBox(
                             width: AppIconSize.sm,
@@ -320,7 +361,10 @@ class _MemberTile extends StatelessWidget {
                                 : Icons.radio_button_unchecked,
                             color: isMember
                                 ? context.colors.primary
-                                : context.colors.outline,
+                                : (atLimit
+                                    ? context.colors.outline.withValues(
+                                        alpha: 0.35)
+                                    : context.colors.outline),
                           ),
                   ),
                 ],

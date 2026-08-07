@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
 import '../db/app_database.dart';
+import '../constants/default_contact_lists.dart';
 import '../theme/contact_list_colors.dart';
 import '../utils/media_album.dart';
 import '../utils/user_search.dart';
@@ -227,15 +228,29 @@ class LocalCacheRepository {
 
   /// Listes de contacts en cache (offline-first, comme les contacts préférés).
   Stream<List<LocalContactList>> watchContactLists() {
-    return (_db.select(_db.localContactLists)
-          ..orderBy([(l) => OrderingTerm(expression: l.name)]))
-        .watch();
+    return (_db.select(_db.localContactLists)).watch().map(_sortContactLists);
   }
 
   Future<List<LocalContactList>> getContactListsOnce() {
-    return (_db.select(_db.localContactLists)
-          ..orderBy([(l) => OrderingTerm(expression: l.name)]))
-        .get();
+    return (_db.select(_db.localContactLists)).get().then(_sortContactLists);
+  }
+
+  List<LocalContactList> _sortContactLists(List<LocalContactList> lists) {
+    final sorted = [...lists];
+    sorted.sort((a, b) {
+      final ka = _defaultListSortKey(a.name);
+      final kb = _defaultListSortKey(b.name);
+      if (ka != kb) return ka.compareTo(kb);
+      return a.name.compareTo(b.name);
+    });
+    return sorted;
+  }
+
+  int _defaultListSortKey(String name) {
+    for (var i = 0; i < kDefaultContactLists.length; i++) {
+      if (kDefaultContactLists[i].name == name) return i;
+    }
+    return 100;
   }
 
   /// Rafraîchit les listes depuis l'API. Best-effort : en cas d'erreur réseau,
@@ -256,6 +271,7 @@ class LocalCacheRepository {
             idList: Value(l.idList),
             name: Value(l.name),
             color: Value(l.color),
+            memberLimit: Value(l.memberLimit),
             memberCount: Value(l.memberCount),
             cachedAt: Value(now),
           );

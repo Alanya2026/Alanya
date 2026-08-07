@@ -2859,6 +2859,19 @@
       "count": { "type": "int" }
     }
   },
+  "listMembersCountLimited": "{current}/{limit} membres",
+  "@listMembersCountLimited": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "limit": { "type": "int" }
+    }
+  },
+  "listMemberLimitReached": "Cette liste est limitée à {limit} membres",
+  "@listMemberLimitReached": {
+    "placeholders": {
+      "limit": { "type": "int" }
+    }
+  },
   "addToList": "Ajouter des membres",
   "removeFromList": "Retirer de la liste",
   "createGroupFromList": "Créer un groupe",

@@ -26,6 +26,7 @@ Future<Set<int>?> showAddListMembersSheet(
   Set<int> alreadyIn = const {},
   Set<int> initialSelection = const {},
   String? confirmLabel,
+  int? maxSelection,
 }) {
   return showAppBottomSheet<Set<int>>(
     context: context,
@@ -33,6 +34,7 @@ Future<Set<int>?> showAddListMembersSheet(
       alreadyIn: alreadyIn,
       initialSelection: initialSelection,
       confirmLabel: confirmLabel,
+      maxSelection: maxSelection,
     ),
   );
 }
@@ -42,11 +44,13 @@ class _AddListMembersSheet extends StatefulWidget {
     required this.alreadyIn,
     required this.initialSelection,
     required this.confirmLabel,
+    this.maxSelection,
   });
 
   final Set<int> alreadyIn;
   final Set<int> initialSelection;
   final String? confirmLabel;
+  final int? maxSelection;
 
   @override
   State<_AddListMembersSheet> createState() => _AddListMembersSheetState();
@@ -147,13 +151,29 @@ class _AddListMembersSheetState extends State<_AddListMembersSheet> {
                       final selected = _selectedIds.contains(user.alanyaID);
                       return CheckboxListTile(
                         value: selected,
-                        onChanged: (_) => setState(() {
-                          if (selected) {
-                            _selectedIds.remove(user.alanyaID);
-                          } else {
-                            _selectedIds.add(user.alanyaID);
+                        onChanged: (_) {
+                          if (!selected &&
+                              widget.maxSelection != null &&
+                              _selectedIds.length >= widget.maxSelection!) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  context.l10n.listMemberLimitReached(
+                                    widget.maxSelection!,
+                                  ),
+                                ),
+                              ),
+                            );
+                            return;
                           }
-                        }),
+                          setState(() {
+                            if (selected) {
+                              _selectedIds.remove(user.alanyaID);
+                            } else {
+                              _selectedIds.add(user.alanyaID);
+                            }
+                          });
+                        },
                         controlAffinity: ListTileControlAffinity.trailing,
                         secondary: AppAvatar(
                           imageUrl:

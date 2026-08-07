@@ -8306,6 +8306,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{Aucun membre} =1{1 membre} other{{count} membres}}'**
   String listMembersCount(int count);
 
+  /// No description provided for @listMembersCountLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'{current}/{limit} membres'**
+  String listMembersCountLimited(int current, int limit);
+
+  /// No description provided for @listMemberLimitReached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette liste est limitée à {limit} membres'**
+  String listMemberLimitReached(int limit);
+
   /// No description provided for @addToList.
   ///
   /// In fr, this message translates to:

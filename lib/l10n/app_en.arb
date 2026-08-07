@@ -1977,6 +1977,19 @@
       "count": { "type": "int" }
     }
   },
+  "listMembersCountLimited": "{current}/{limit} members",
+  "@listMembersCountLimited": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "limit": { "type": "int" }
+    }
+  },
+  "listMemberLimitReached": "This list is limited to {limit} members",
+  "@listMemberLimitReached": {
+    "placeholders": {
+      "limit": { "type": "int" }
+    }
+  },
   "addToList": "Add members",
   "removeFromList": "Remove from list",
   "createGroupFromList": "Create a group",

@@ -1319,12 +1319,14 @@ class ContactList {
 
   /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
   final String? color;
+  final int? memberLimit;
   final int memberCount;
 
   ContactList({
     required this.idList,
     required this.name,
     this.color,
+    this.memberLimit,
     this.memberCount = 0,
   });
 
@@ -1334,6 +1336,7 @@ class ContactList {
         color: (json['color']?.toString().isEmpty ?? true)
             ? null
             : json['color'].toString(),
+        memberLimit: (json['memberLimit'] as num?)?.toInt(),
         memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
       );
 
@@ -1341,6 +1344,7 @@ class ContactList {
         'idList': idList,
         'name': name,
         'color': color,
+        'memberLimit': memberLimit,
         'memberCount': memberCount,
       };
 }

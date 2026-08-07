@@ -324,6 +324,9 @@ class LocalContactLists extends Table {
   /// Teinte de la puce (`#RRGGBB`), null = teinte du thème.
   TextColumn get color => text().nullable()();
 
+  /// Plafond de membres (ex. Confiance = 5). Null = illimité.
+  IntColumn get memberLimit => integer().nullable()();
+
   /// Compte renvoyé par le serveur — évite un COUNT par liste à l'affichage.
   IntColumn get memberCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get cachedAt => dateTime()();
@@ -361,7 +364,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -538,6 +541,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(localUsers, localUsers.accountType);
             await m.addColumn(localUsers, localUsers.verificationStatus);
             await m.addColumn(localUsers, localUsers.verifiedUntil);
+          }
+          if (from < 22) {
+            await m.addColumn(localContactLists, localContactLists.memberLimit);
           }
         },
       );

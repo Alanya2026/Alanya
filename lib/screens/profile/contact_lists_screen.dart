@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/default_contact_lists.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_dimens.dart';
@@ -381,10 +382,19 @@ class _ListEditorSheetState extends State<_ListEditorSheet> {
   Future<void> _pickMembers() async {
     // Le clavier masquerait la feuille de sélection empilée par-dessus.
     FocusScope.of(context).unfocus();
+    final name = _controller.text.trim();
+    int? maxSelection;
+    for (final def in kDefaultContactLists) {
+      if (def.name == name) {
+        maxSelection = def.memberLimit;
+        break;
+      }
+    }
     final picked = await showAddListMembersSheet(
       context,
       initialSelection: _memberIds,
       confirmLabel: context.l10n.commonSave,
+      maxSelection: maxSelection,
     );
     if (picked == null || !mounted) return;
     setState(() {

@@ -4766,6 +4766,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String listMembersCountLimited(int current, int limit) {
+    return '$current/$limit membres';
+  }
+
+  @override
+  String listMemberLimitReached(int limit) {
+    return 'Cette liste est limitée à $limit membres';
+  }
+
+  @override
   String get addToList => 'Ajouter des membres';
 
   @override
