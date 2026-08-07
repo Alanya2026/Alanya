@@ -495,12 +495,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final membre = _groupParticipants
         .where((p) => p.alanyaID == userId)
         .firstOrNull;
+    // Ne jamais passer _convId (conversation de groupe) : « Message » sur la
+    // fiche doit ouvrir/créer la 1-1 avec ce membre, pas réutiliser le groupe.
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ContactDetailScreen(
           userId: userId,
-          conversationId: _convId,
           // Évitent l'écran vide le temps du chargement.
           initialName: membre?.nom ?? '',
           initialAvatar: membre?.user.avatarUrl ?? '',

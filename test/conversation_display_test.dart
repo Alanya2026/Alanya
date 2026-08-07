@@ -239,4 +239,108 @@ void main() {
       );
     });
   });
+
+  // Fiche contact « Message » : ne jamais ouvrir un groupe à la place d'une 1-1.
+  group('resolveTrustedDirectConversationId', () {
+    const peerB = 2;
+    final groupG = conv(
+      conversID: 100,
+      isGroup: true,
+      groupName: 'Groupe G',
+      participants: [part(me, 'Chris'), part(peerB, 'Bob'), part(3, 'Alice')],
+    );
+    final directAB = conv(
+      conversID: 200,
+      participants: [part(me, 'Chris'), part(peerB, 'Bob')],
+    );
+
+    test('depuis un groupe, avec 1-1 locale → ID 200, jamais 100', () {
+      // Scénario 1 : groupe G=100, membre B, 1-1 A↔B=200 déjà locale.
+      final chosen = resolveTrustedDirectConversationId(
+        [groupG, directAB],
+        me,
+        peerB,
+        candidateId: groupG.conversID,
+      );
+      expect(chosen, 200);
+      expect(chosen, isNot(100));
+    });
+
+    test('depuis un groupe, sans 1-1 locale → null (jamais l\'ID groupe)', () {
+      // Scénario 2 : aucune 1-1 locale → le flux UI crée/résout via API.
+      final chosen = resolveTrustedDirectConversationId(
+        [groupG],
+        me,
+        peerB,
+        candidateId: groupG.conversID,
+      );
+      expect(chosen, isNull);
+      expect(chosen, isNot(100));
+    });
+
+    test('depuis une vraie 1-1 → le candidateId est réutilisé', () {
+      // Scénario 3 : ouverture normale depuis une discussion directe.
+      final chosen = resolveTrustedDirectConversationId(
+        [groupG, directAB],
+        me,
+        peerB,
+        candidateId: directAB.conversID,
+      );
+      expect(chosen, 200);
+    });
+
+    test('conversationId groupe fourni par erreur → rejeté, 1-1 recherchée', () {
+      // Scénario 4 : protection défensive ContactDetailScreen.
+      final chosen = resolveTrustedDirectConversationId(
+        [groupG, directAB],
+        me,
+        peerB,
+        candidateId: 100,
+      );
+      expect(chosen, isNot(100));
+      expect(chosen, 200);
+
+      // Sans 1-1 de secours : null, jamais le groupe.
+      expect(
+        resolveTrustedDirectConversationId(
+          [groupG],
+          me,
+          peerB,
+          candidateId: 100,
+        ),
+        isNull,
+      );
+    });
+
+    test('candidateId absent → findLocalDirectConversationId', () {
+      expect(
+        resolveTrustedDirectConversationId(
+          [groupG, directAB],
+          me,
+          peerB,
+        ),
+        200,
+      );
+      expect(
+        resolveTrustedDirectConversationId([groupG], me, peerB),
+        isNull,
+      );
+    });
+
+    test('1-1 avec un autre interlocuteur → candidateId rejeté', () {
+      final directAC = conv(
+        conversID: 300,
+        participants: [part(me, 'Chris'), part(3, 'Alice')],
+      );
+      expect(
+        resolveTrustedDirectConversationId(
+          [directAC, directAB],
+          me,
+          peerB,
+          candidateId: 300,
+        ),
+        200,
+      );
+    });
+  });
 }

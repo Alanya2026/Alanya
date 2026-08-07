@@ -69,10 +69,10 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   /// ne doit plus écraser l'en-tête s'il arrive après (course possible depuis
   /// que les requêtes partent en parallèle).
   bool _profileFromNetwork = false;
-  /// 1-1 locale avec [widget.userId] si [widget.conversationId] est absent.
+  /// 1-1 locale validée avec [widget.userId] (jamais un ID de groupe).
   int? _resolvedConvId;
 
-  int? get _effectiveConvId => widget.conversationId ?? _resolvedConvId;
+  int? get _effectiveConvId => _resolvedConvId;
 
   /// Mon propre profil, ouvert depuis une conversation avec moi-même.
   ///
@@ -92,7 +92,6 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   }
 
   Future<void> _resolveDirectConversation() async {
-    if (widget.conversationId != null) return;
     final myId = context.read<AuthProvider>().currentUser?.alanyaID;
     if (myId == null) return;
     try {
@@ -102,7 +101,14 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           .dao
           .getAllConversations();
       if (!mounted) return;
-      final id = findLocalDirectConversationId(convs, myId, widget.userId);
+      // Ne jamais faire confiance aveuglément à widget.conversationId : un
+      // caller issu d'un groupe peut y passer l'ID du groupe.
+      final id = resolveTrustedDirectConversationId(
+        convs,
+        myId,
+        widget.userId,
+        candidateId: widget.conversationId,
+      );
       if (mounted) setState(() => _resolvedConvId = id);
     } catch (e, st) {
       AppLog.e('ContactDetail', 'Résolution conversation 1-1 échouée', e, st);
@@ -257,22 +263,29 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     if (_contact == null) return;
     if (!mounted) return;
 
-    // Utiliser la conv fournie ou celle résolue au chargement ; sinon re-chercher.
-    int? convId = _effectiveConvId;
-    if (convId == null) {
-      final myId =
-          context.read<AuthProvider>().currentUser?.alanyaID;
-      if (myId != null) {
-        final convs = await context
-            .read<ChatProvider>()
-            .repository
-            .dao
-            .getAllConversations();
-        convId = findLocalDirectConversationId(convs, myId, widget.userId);
-      }
+    // Toujours revalider : un ID groupe ne doit jamais ouvrir ChatDetailScreen.
+    int? convId;
+    final myId = context.read<AuthProvider>().currentUser?.alanyaID;
+    if (myId != null) {
+      final convs = await context
+          .read<ChatProvider>()
+          .repository
+          .dao
+          .getAllConversations();
+      if (!mounted) return;
+      convId = resolveTrustedDirectConversationId(
+        convs,
+        myId,
+        widget.userId,
+        candidateId: widget.conversationId,
+      );
+    } else {
+      convId = _effectiveConvId;
     }
 
     if (!mounted) return;
+    // isGroup: false (défaut) + userId du membre + convId 1-1 (ou null →
+    // création/résolution API dans ChatDetailScreen). Jamais l'ID d'un groupe.
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

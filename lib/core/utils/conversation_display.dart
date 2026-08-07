@@ -119,6 +119,31 @@ int? findLocalDirectConversationId(
   return best?.conversID;
 }
 
+/// [candidateId] n'est accepté que s'il désigne une 1-1 locale dont
+/// l'interlocuteur est exactement [peerUserId]. Un ID de groupe — ou une 1-1
+/// avec quelqu'un d'autre — est rejeté, puis on retombe sur
+/// [findLocalDirectConversationId].
+///
+/// Sert la fiche contact (« Message ») : un caller issu d'un groupe ne doit
+/// jamais ouvrir ni écrire dans la conversation de groupe.
+int? resolveTrustedDirectConversationId(
+  Iterable<LocalConversation> convs,
+  int myId,
+  int peerUserId, {
+  int? candidateId,
+}) {
+  if (candidateId != null) {
+    for (final c in convs) {
+      if (c.conversID != candidateId) continue;
+      if (!c.isGroup && conversationCounterpartId(c, myId) == peerUserId) {
+        return candidateId;
+      }
+      break;
+    }
+  }
+  return findLocalDirectConversationId(convs, myId, peerUserId);
+}
+
 /// Toutes les conversations 1-1 locales avec [peerUserId] (doublons legacy).
 List<int> findAllDirectConversationIds(
   Iterable<LocalConversation> convs,
