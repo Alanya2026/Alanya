@@ -23,6 +23,7 @@ import 'chat/message_sound_service.dart';
 import 'call/ended_call_registry.dart';
 import 'call/pending_call_reject_store.dart';
 import 'call/pending_outgoing_call_store.dart';
+import 'call/call_conf_routing.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -151,8 +152,11 @@ class CallService extends ChangeNotifier {
   /// true si je suis l'initiateur à retirer après call_transfer_armed.
   bool _isTransferInitiator = false;
 
-  /// peerIds pour lesquels call_conf_ready a déjà été émis (sessionId|peerId).
+  /// peerIds pour lesquels call_conf_ready a déjà été **émis** (sessionId|peerId).
   final Set<String> _confReadySent = {};
+
+  /// Ready en attente de socket prêt (sessionId|peerId) — flush à authVerified.
+  final Set<String> _pendingConfReady = {};
 
   /// call_conf_join en attente si le socket n'était pas prêt (cold-start).
   String? _pendingConfJoinSessionId;

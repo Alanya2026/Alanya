@@ -406,6 +406,7 @@ extension CallOneToOne on CallService {
     _transferStatus = CallTransferStatus.none;
     _confMode = 'join';
     _confReadySent.clear();
+    _pendingConfReady.clear();
     _pendingConfJoinSessionId = null;
     _myRosterId = null;
   }

@@ -41,9 +41,11 @@ extension CallIncoming on CallService {
       _apiClient.connectSocket();
     }
 
-    final isConf = sessionKind == 'conference' ||
-        callId.startsWith('conf_') ||
-        (roomId != null && roomId.startsWith('conf_'));
+    final isConf = isConferenceCallIncoming(
+      sessionKind: sessionKind,
+      callId: callId,
+      roomId: roomId,
+    );
 
     _remoteUserId = int.tryParse(callerId);
     _remoteUserName = callerName;
@@ -177,9 +179,11 @@ extension CallIncoming on CallService {
     _isVideo = isVideo;
     _currentCallId = callId.isNotEmpty ? callId : null;
 
-    final isConf = sessionKind == 'conference' ||
-        callId.startsWith('conf_') ||
-        (roomId != null && roomId.startsWith('conf_'));
+    final isConf = isConferenceCallIncoming(
+      sessionKind: sessionKind,
+      callId: callId,
+      roomId: roomId,
+    );
     if (isConf) {
       final sessionId =
           (roomId != null && roomId.isNotEmpty) ? roomId : callId;

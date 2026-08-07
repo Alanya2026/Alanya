@@ -105,26 +105,25 @@ extension CallConference on CallService {
   void _flushPendingConfJoin() {
     final sessionId = _pendingConfJoinSessionId;
     if (sessionId == null) return;
-    _pendingConfJoinSessionId = null;
 
-    if (_confSessionId != sessionId) {
-      debugPrint('[CallService] 🛡 conf join flush drop: session mismatch');
-      return;
+    final decision = confJoinFlushDecision(
+      pendingSessionId: sessionId,
+      confSessionId: _confSessionId,
+      isTerminal: _isTerminalCallId(sessionId),
+      callStatusName: _status.name,
+      socketReady: _apiClient.isSocketReady,
+    );
+    switch (decision) {
+      case ConfQueueFlushResult.drop:
+        debugPrint('[CallService] 🛡 conf join flush drop session=$sessionId');
+        _pendingConfJoinSessionId = null;
+        return;
+      case ConfQueueFlushResult.keep:
+        return;
+      case ConfQueueFlushResult.emit:
+        break;
     }
-    if (_isTerminalCallId(sessionId)) {
-      debugPrint('[CallService] 🛡 conf join flush drop: session terminale');
-      return;
-    }
-    if (_status != CallStatus.joining &&
-        _status != CallStatus.incoming &&
-        _status != CallStatus.connected) {
-      debugPrint('[CallService] 🛡 conf join flush drop: status=$_status');
-      return;
-    }
-    if (!_apiClient.isSocketReady) {
-      _pendingConfJoinSessionId = sessionId;
-      return;
-    }
+    _pendingConfJoinSessionId = null;
     debugPrint('[CallService] 🔁 flush call_conf_join session=$sessionId');
     _apiClient.sendSocketEvent(SocketEvents.callConfJoin, {});
   }
@@ -370,20 +369,82 @@ extension CallConference on CallService {
   }
 
   /// Émis une seule fois par (session, peer) quand PC↔C est connected.
-  /// Uniquement pour un participant restant en mode transfer (pas l'initiateur).
+  /// Uniquement pour un participant **restant** en mode transfer
+  /// (ni l'initiateur, ni C la cible).
   void _maybeEmitConfReady(String peerId) {
-    if (_confMode != 'transfer') return;
-    if (_isTransferInitiator) return;
+    if (!canLocalEmitConfReady(
+      confMode: _confMode,
+      isTransferInitiator: _isTransferInitiator,
+      isConfInvitee: _confInvitedBy != null,
+      peerId: peerId,
+      localUserId: _localUserId,
+    )) {
+      return;
+    }
     final sessionId = _confSessionId;
     if (sessionId == null) return;
-    final key = '$sessionId|$peerId';
+
+    final key = confReadyKey(sessionId, peerId);
+    if (_confReadySent.contains(key) || _pendingConfReady.contains(key)) return;
+
+    if (!_apiClient.isSocketReady) {
+      debugPrint('[CallService] ⏳ call_conf_ready en file peer=$peerId');
+      _pendingConfReady.add(key);
+      if (!_apiClient.isSocketConnected) {
+        _apiClient.connectSocket();
+      }
+      return;
+    }
+
+    _emitConfReady(sessionId, peerId, key);
+  }
+
+  void _emitConfReady(String sessionId, String peerId, String key) {
     if (_confReadySent.contains(key)) return;
     _confReadySent.add(key);
+    _pendingConfReady.remove(key);
     debugPrint('[CallService] 📡 call_conf_ready peer=$peerId');
     _apiClient.sendSocketEvent(SocketEvents.callConfReady, {
       'sessionId': sessionId,
       'peerId': peerId,
     });
+  }
+
+  /// Flush des ready mis en file, avec gardes anti-session périmée.
+  void _flushPendingConfReady() {
+    if (_pendingConfReady.isEmpty) return;
+    if (!_apiClient.isSocketReady) return;
+
+    final pending = Set<String>.from(_pendingConfReady);
+    for (final key in pending) {
+      final parts = key.split('|');
+      if (parts.length != 2) {
+        _pendingConfReady.remove(key);
+        continue;
+      }
+      final sessionId = parts[0];
+      final peerId = parts[1];
+
+      final decision = confReadyFlushDecision(
+        keySessionId: sessionId,
+        confSessionId: _confSessionId,
+        isTerminal: _isTerminalCallId(sessionId),
+        confMode: _confMode,
+        isTransferInitiator: _isTransferInitiator,
+        callStatusName: _status.name,
+        socketReady: _apiClient.isSocketReady,
+      );
+      switch (decision) {
+        case ConfQueueFlushResult.drop:
+          debugPrint('[CallService] 🛡 conf ready flush drop key=$key');
+          _pendingConfReady.remove(key);
+          continue;
+        case ConfQueueFlushResult.keep:
+          return;
+        case ConfQueueFlushResult.emit:
+          _emitConfReady(sessionId, peerId, key);
+      }
+    }
   }
 
   void _demoteMeshToOneToOne() {
@@ -422,6 +483,7 @@ extension CallConference on CallService {
     _transferStatus = CallTransferStatus.none;
     _confMode = 'join';
     _confReadySent.clear();
+    _pendingConfReady.clear();
     _pendingConfJoinSessionId = null;
     _groupRoster.clear();
     _groupRoomId = null;

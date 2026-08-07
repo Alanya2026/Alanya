@@ -258,6 +258,7 @@ extension CallSignaling on CallService {
       _flushPendingEndCalls();
       _flushPendingRejects();
       _flushPendingConfJoin();
+      _flushPendingConfReady();
     });
 
     _apiClient.onSocketEvent(SocketEvents.callResume, (data) async {
@@ -428,8 +429,12 @@ extension CallSignaling on CallService {
       }
 
       // Fusion Push/Socket : même session déjà en incoming → compléter sans re-sonner.
-      final sameSession = _status == CallStatus.incoming &&
-          (_confSessionId == sessionId || _currentCallId == sessionId);
+      final sameSession = shouldMergeConfInvite(
+        callStatusName: _status.name,
+        confSessionId: _confSessionId,
+        currentCallId: _currentCallId,
+        incomingSessionId: sessionId,
+      );
       if (_status != CallStatus.idle && !sameSession) {
         debugPrint('[CallService] 🛡 call_conf_invite ignoré: status=$_status');
         return;
