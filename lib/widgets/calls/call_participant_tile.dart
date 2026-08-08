@@ -8,28 +8,33 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/call_ui_theme.dart';
 import '../common/app_avatar.dart';
+import 'dashed_border.dart';
 import 'speaking_indicator_border.dart';
 
-/// Tuile participant pour les appels de groupe.
+/// Tuile participant pour les appels de groupe / conf.
 class CallParticipantTile extends StatefulWidget {
   const CallParticipantTile({
     super.key,
     required this.userId,
-    required this.stream,
     required this.name,
     required this.isSpeaking,
+    this.stream,
     this.photoUrl,
     this.isMuted = false,
     this.isVideoOn = true,
+    this.mirror = false,
+    this.onTap,
   });
 
   final String userId;
-  final MediaStream stream;
+  final MediaStream? stream;
   final String name;
   final String? photoUrl;
   final bool isSpeaking;
   final bool isMuted;
   final bool isVideoOn;
+  final bool mirror;
+  final VoidCallback? onTap;
 
   @override
   State<CallParticipantTile> createState() => _CallParticipantTileState();
@@ -78,9 +83,11 @@ class _CallParticipantTileState extends State<CallParticipantTile> {
         url.isNotEmpty &&
         url.toUpperCase() != 'NON DEFINI' &&
         (url.startsWith('http://') || url.startsWith('https://'));
-    final showAvatar = !widget.isVideoOn || (_ready && _renderer.videoWidth == 0);
+    final showAvatar = !widget.isVideoOn ||
+        widget.stream == null ||
+        (_ready && _renderer.videoWidth == 0);
 
-    return SpeakingIndicatorBorder(
+    final tile = SpeakingIndicatorBorder(
       isSpeaking: widget.isSpeaking && !widget.isMuted,
       borderRadius: AppRadius.brMd,
       speakingColor: callUi.speakingRing,
@@ -100,9 +107,10 @@ class _CallParticipantTileState extends State<CallParticipantTile> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (_ready && widget.isVideoOn)
+            if (_ready && widget.isVideoOn && widget.stream != null)
               RTCVideoView(
                 _renderer,
+                mirror: widget.mirror,
                 objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
               ),
             if (showAvatar)
@@ -167,10 +175,21 @@ class _CallParticipantTileState extends State<CallParticipantTile> {
         ),
       ),
     );
+
+    if (widget.onTap == null) return tile;
+    return Semantics(
+      button: true,
+      label: widget.name,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: tile,
+      ),
+    );
   }
 }
 
-/// Grille de participants pour appel groupé.
+/// Grille de participants pour appel groupé / conf (inclut la tuile locale).
 class CallGroupGrid extends StatelessWidget {
   const CallGroupGrid({
     super.key,
@@ -179,25 +198,47 @@ class CallGroupGrid extends StatelessWidget {
     required this.activeSpeakers,
     this.pendingInvitee,
     this.onCancelPending,
+    this.localUserId,
+    this.localStream,
+    this.localName,
+    this.localPhoto,
+    this.localMuted = false,
+    this.localVideoOn = true,
+    this.localSpeaking = false,
+    this.onParticipantTap,
   });
 
   final Map<String, MediaStream> streams;
   final Map<String, GroupParticipantInfo> roster;
   final Set<String> activeSpeakers;
 
-  /// Invité dont la tuile existe avant qu'il ait répondu : c'est le seul moyen
-  /// de rendre l'attente lisible pendant qu'il sonne.
+  /// Invité dont la tuile existe avant qu'il ait répondu.
   final GroupParticipantInfo? pendingInvitee;
 
   /// Annulation de l'invitation — fournie au seul auteur de celle-ci.
   final VoidCallback? onCancelPending;
 
+  final String? localUserId;
+  final MediaStream? localStream;
+  final String? localName;
+  final String? localPhoto;
+  final bool localMuted;
+  final bool localVideoOn;
+  final bool localSpeaking;
+
+  /// Tap sur une tuile active (pas pending) → focus modal.
+  final ValueChanged<String>? onParticipantTap;
+
   @override
   Widget build(BuildContext context) {
     final callUi = context.callUi;
-    final entries = streams.entries.toList();
+    final remoteEntries = streams.entries.toList();
+    final hasLocal = localUserId != null && localUserId!.isNotEmpty;
+    final itemCount = remoteEntries.length +
+        (hasLocal ? 1 : 0) +
+        (pendingInvitee != null ? 1 : 0);
 
-    if (entries.isEmpty && pendingInvitee == null) {
+    if (itemCount == 0) {
       return Container(
         color: callUi.groupBackground,
         alignment: Alignment.center,
@@ -231,9 +272,9 @@ class CallGroupGrid extends StatelessWidget {
       color: callUi.groupBackground,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.sm,
-        80,
+        88,
         AppSpacing.sm,
-        160,
+        168,
       ),
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -242,26 +283,56 @@ class CallGroupGrid extends StatelessWidget {
           crossAxisSpacing: AppSpacing.sm,
           childAspectRatio: 0.75,
         ),
-        itemCount: entries.length + (pendingInvitee != null ? 1 : 0),
+        itemCount: itemCount,
         itemBuilder: (context, i) {
-          if (i == entries.length && pendingInvitee != null) {
-            return _PendingParticipantTile(
-              key: ValueKey('pending_${pendingInvitee!.id}'),
-              invitee: pendingInvitee!,
-              onCancel: onCancelPending,
+          var index = i;
+
+          if (hasLocal) {
+            if (index == 0) {
+              final id = localUserId!;
+              final name = localName?.isNotEmpty == true
+                  ? localName!
+                  : context.l10n.meLabel;
+              return CallParticipantTile(
+                key: ValueKey('local_$id'),
+                userId: id,
+                stream: localStream,
+                name: name,
+                photoUrl: localPhoto,
+                isSpeaking: localSpeaking,
+                isMuted: localMuted,
+                isVideoOn: localVideoOn,
+                mirror: true,
+                onTap: onParticipantTap == null
+                    ? null
+                    : () => onParticipantTap!(id),
+              );
+            }
+            index -= 1;
+          }
+
+          if (index < remoteEntries.length) {
+            final e = remoteEntries[index];
+            final info = roster[e.key];
+            return CallParticipantTile(
+              key: ValueKey('remote_${e.key}'),
+              userId: e.key,
+              stream: e.value,
+              name: info?.name ?? context.l10n.participantFallback,
+              photoUrl: info?.photo,
+              isSpeaking: activeSpeakers.contains(e.key),
+              isMuted: info?.isMuted ?? false,
+              isVideoOn: info?.isVideoOn ?? true,
+              onTap: onParticipantTap == null
+                  ? null
+                  : () => onParticipantTap!(e.key),
             );
           }
-          final e = entries[i];
-          final info = roster[e.key];
-          return CallParticipantTile(
-            key: ValueKey('remote_${e.key}'),
-            userId: e.key,
-            stream: e.value,
-            name: info?.name ?? context.l10n.participantFallback,
-            photoUrl: info?.photo,
-            isSpeaking: activeSpeakers.contains(e.key),
-            isMuted: info?.isMuted ?? false,
-            isVideoOn: info?.isVideoOn ?? true,
+
+          return _PendingParticipantTile(
+            key: ValueKey('pending_${pendingInvitee!.id}'),
+            invitee: pendingInvitee!,
+            onCancel: onCancelPending,
           );
         },
       ),
@@ -269,9 +340,7 @@ class CallGroupGrid extends StatelessWidget {
   }
 }
 
-/// Tuile d'un invité qui sonne encore : avatar désaturé, cadre pointillé et
-/// mention explicite. Elle disparaît dès qu'il entre — ou que l'invitation est
-/// soldée.
+/// Tuile d'un invité qui sonne encore : avatar désaturé, cadre pointillé.
 class _PendingParticipantTile extends StatelessWidget {
   const _PendingParticipantTile({super.key, required this.invitee, this.onCancel});
 
@@ -283,72 +352,75 @@ class _PendingParticipantTile extends StatelessWidget {
     final callUi = context.callUi;
     final l10n = context.l10n;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: callUi.groupTileBackground,
-        borderRadius: AppRadius.brMd,
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.6)),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ColorFiltered(
-                colorFilter: const ColorFilter.matrix(<double>[
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0, 0, 0, 0.55, 0,
-                ]),
-                child: AppAvatar(
-                  imageUrl: invitee.photo,
-                  name: invitee.name,
-                  size: 56,
+    return DashedBorder(
+      color: AppColors.warning.withValues(alpha: 0.75),
+      borderRadius: AppRadius.brMd,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: callUi.groupTileBackground,
+          borderRadius: AppRadius.brMd,
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ColorFiltered(
+                  colorFilter: const ColorFilter.matrix(<double>[
+                    0.2126, 0.7152, 0.0722, 0, 0,
+                    0.2126, 0.7152, 0.0722, 0, 0,
+                    0.2126, 0.7152, 0.0722, 0, 0,
+                    0, 0, 0, 0.55, 0,
+                  ]),
+                  child: AppAvatar(
+                    imageUrl: invitee.photo,
+                    name: invitee.name,
+                    size: 56,
+                  ),
                 ),
-              ),
-              AppSpacing.vGapSm,
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                child: Text(
-                  invitee.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: callUi.onBackground,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                AppSpacing.vGapSm,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                  child: Text(
+                    invitee.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: callUi.onBackground,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  l10n.confRinging,
+                  style: const TextStyle(
+                    color: AppColors.warning,
+                    fontSize: 11,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ],
+            ),
+            if (onCancel != null)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Semantics(
+                  button: true,
+                  label: l10n.confCancelInvite,
+                  child: IconButton(
+                    iconSize: 18,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.close),
+                    color: callUi.onBackgroundMuted,
+                    onPressed: onCancel,
                   ),
                 ),
               ),
-              Text(
-                l10n.confRinging,
-                style: const TextStyle(
-                  color: AppColors.warning,
-                  fontSize: 11,
-                  letterSpacing: 0.4,
-                ),
-              ),
-            ],
-          ),
-          if (onCancel != null)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Semantics(
-                button: true,
-                label: l10n.confCancelInvite,
-                child: IconButton(
-                  iconSize: 18,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.close),
-                  color: callUi.onBackgroundMuted,
-                  onPressed: onCancel,
-                ),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

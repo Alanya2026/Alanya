@@ -286,13 +286,23 @@ extension CallGroup on CallService {
 
     pc.onConnectionState = (state) {
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+        _cancelGroupPeerDisconnectGrace(userId);
         _maybeEmitConfReady(userId);
+        return;
       }
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+        _cancelGroupPeerDisconnectGrace(userId);
         debugPrint('[CallService] ** Group peer $userId connection failed: $state');
         _removeGroupPeer(userId);
+        return;
+      }
+      // Disconnected est souvent transitoire (ICE restart) — grâce 8 s.
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+        debugPrint(
+          '[CallService] ⏳ Group peer $userId Disconnected — grâce 8s',
+        );
+        _armGroupPeerDisconnectGrace(userId);
       }
     };
 
@@ -300,14 +310,69 @@ extension CallGroup on CallService {
     return pc;
   }
 
-  void _removeGroupPeer(String userId) {
-    _groupPeerConnections[userId]?.close();
+  static const _groupPeerDisconnectGraceDuration = Duration(seconds: 8);
+
+  void _armGroupPeerDisconnectGrace(String userId) {
+    _cancelGroupPeerDisconnectGrace(userId);
+    _groupPeerDisconnectGrace[userId] = Timer(
+      _groupPeerDisconnectGraceDuration,
+      () {
+        _groupPeerDisconnectGrace.remove(userId);
+        if (!_groupPeerConnections.containsKey(userId)) return;
+        debugPrint(
+          '[CallService] ** Group peer $userId toujours Disconnected après grâce',
+        );
+        _removeGroupPeer(userId);
+      },
+    );
+  }
+
+  void _cancelGroupPeerDisconnectGrace(String userId) {
+    _groupPeerDisconnectGrace.remove(userId)?.cancel();
+  }
+
+  void _cancelAllGroupPeerDisconnectGrace() {
+    for (final t in _groupPeerDisconnectGrace.values) {
+      t.cancel();
+    }
+    _groupPeerDisconnectGrace.clear();
+  }
+
+  void _removeGroupPeer(
+    String userId, {
+    bool disarmOriginFailure = false,
+  }) {
+    _cancelGroupPeerDisconnectGrace(userId);
+    final pc = _groupPeerConnections[userId];
+    // PC 1-à-1 partagé dans le mesh : close() déclenche onConnectionFailure.
+    // Sans désarmement, le départ d'A (transfert) raccroche B à tort.
+    if (disarmOriginFailure ||
+        (pc != null && identical(pc, _webrtc.peerConnection))) {
+      _webrtc.onConnectionFailure = null;
+    }
+    pc?.close();
     _groupPeerConnections.remove(userId);
     _groupRemoteStreams.remove(userId);
     _groupParticipants.remove(userId);
     _groupPendingIce.remove(userId);
     _groupRemoteDescSet.remove(userId);
     notify();
+  }
+
+  void _clearAllGroupPeers({bool disarmOriginFailure = true}) {
+    _cancelAllGroupPeerDisconnectGrace();
+    if (disarmOriginFailure) {
+      _webrtc.onConnectionFailure = null;
+    }
+    for (final pc in _groupPeerConnections.values) {
+      pc.close();
+    }
+    _groupPeerConnections.clear();
+    _groupRemoteStreams.clear();
+    _groupParticipants.clear();
+    _groupPendingIce.clear();
+    _groupRemoteDescSet.clear();
+    _groupRoster.clear();
   }
 
   Future<void> _flushGroupPendingIce(String userId) async {

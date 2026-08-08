@@ -12,6 +12,7 @@ import '../../core/services/call_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/calls/call_action_button.dart';
 import '../../widgets/calls/call_connecting_overlay.dart';
+import '../../widgets/common/app_avatar.dart';
 import 'ongoing_call_screen.dart';
 
 /// Écran d'appel entrant (app au premier plan uniquement).
@@ -174,23 +175,32 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : context.l10n.unknownSender;
         // Invitation à rejoindre un appel : le motif prime sur le type d'appel.
         // L'invité doit savoir qui l'ajoute, et à quelle conversation.
-        final otherPeer = cs.isConference
+        final otherPeers = cs.isConference
             ? cs.groupRoster.values
                 .where((p) => p.id != cs.confInvitedBy?.id)
-                .map((p) => p.name)
-                .where((n) => n.isNotEmpty)
-                .join(', ')
-            : '';
+                .toList()
+            : const <GroupParticipantInfo>[];
+        final otherPeerNames = otherPeers
+            .map((p) => p.name)
+            .where((n) => n.isNotEmpty)
+            .join(', ');
+        final isTransferInvite = cs.isConference && cs.isTransferMode;
         final subtitle = cs.isConference
-            ? (otherPeer.isNotEmpty
-                ? context.l10n.confInviteSubtitle(otherPeer)
-                : context.l10n.confCallOfThree)
+            ? (isTransferInvite
+                ? (otherPeerNames.isNotEmpty
+                    ? '${context.l10n.conferenceTransferInviteBody} · $otherPeerNames'
+                    : context.l10n.conferenceTransferInviteBody)
+                : (otherPeerNames.isNotEmpty
+                    ? context.l10n.confInviteSubtitle(otherPeerNames)
+                    : context.l10n.confCallOfThree))
             : isGroup
                 ? (isVideo ? context.l10n.groupVideoCall : context.l10n.groupCall)
                 : (isVideo ? context.l10n.videoCall : context.l10n.voiceCall);
-        final subtitleIcon = isVideo
-            ? CupertinoIcons.video_camera_solid
-            : CupertinoIcons.phone_fill;
+        final subtitleIcon = isTransferInvite
+            ? Icons.phone_forwarded
+            : isVideo
+                ? CupertinoIcons.video_camera_solid
+                : CupertinoIcons.phone_fill;
 
         return PopScope(
           onPopInvokedWithResult: (didPop, _) {
@@ -251,16 +261,45 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                             size: 16,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            subtitle,
-                            style: TextStyle(
-                              color: callUi.onBackgroundMuted,
-                              fontSize: 15,
+                          Flexible(
+                            child: Text(
+                              subtitle,
+                              style: TextStyle(
+                                color: callUi.onBackgroundMuted,
+                                fontSize: 15,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    if (cs.isConference && otherPeers.isNotEmpty) ...[
+                      AppSpacing.vGapLg,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (cs.confInvitedBy != null) ...[
+                            AppAvatar(
+                              imageUrl: cs.confInvitedBy!.photo,
+                              name: cs.confInvitedBy!.name,
+                              size: 40,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          ...otherPeers.take(3).map(
+                            (p) => Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: AppAvatar(
+                                imageUrl: p.photo,
+                                name: p.name,
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const Spacer(flex: 2),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(40, 0, 40, 48),

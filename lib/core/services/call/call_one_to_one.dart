@@ -301,21 +301,36 @@ extension CallOneToOne on CallService {
 
   /// Termine l'appel en cours.
   Future<void> endCall() async {
+    if (_isEndingCall ||
+        _status == CallStatus.ended ||
+        _status == CallStatus.idle) {
+      debugPrint(
+        '[CallService] endCall() ignoré (déjà en fin status=$_status '
+        'ending=$_isEndingCall)',
+      );
+      return;
+    }
+    _isEndingCall = true;
     _callEndedByUs = true;
     debugPrint('[CallService] 📞 endCall() - Appel terminé par nous');
     _markTerminalCallId(_currentCallId);
 
-    if (_remoteUserId != null) {
-      final mode = _status == CallStatus.connected
-          ? await _webrtc.detectConnectionMode()
-          : null;
-      final payload = <String, dynamic>{
-        'targetUserId': _remoteUserId.toString(),
-        if (mode != null) 'mode': mode,
-      };
-      _emitEndCallOrEnqueue(payload);
+    try {
+      if (_remoteUserId != null) {
+        final mode = _status == CallStatus.connected
+            ? await _webrtc.detectConnectionMode()
+            : null;
+        final payload = <String, dynamic>{
+          'targetUserId': _remoteUserId.toString(),
+          if (mode != null) 'mode': mode,
+        };
+        _emitEndCallOrEnqueue(payload);
+      }
+      // Hangup volontaire : force même s'il reste des pairs mesh (on part seuls).
+      await _terminateCall(fromEndCall: true, force: true);
+    } finally {
+      _isEndingCall = false;
     }
-    await _terminateCall();
   }
 
   void _emitEndCallOrEnqueue(Map<String, dynamic> payload) {
@@ -335,42 +350,76 @@ extension CallOneToOne on CallService {
     }
   }
 
-  Future<void> _terminateCall() async {
-    // Pendant une session à trois, terminer l'appel est presque toujours une
-    // erreur : on trace l'origine de l'appel pour la localiser.
+  /// [fromEndCall] : true si déjà sous la garde `_isEndingCall` de [endCall].
+  /// [force] : autorise le teardown même si une session conf a encore des pairs
+  /// (départ volontaire initiateur transfert / hangup local).
+  Future<void> _terminateCall({
+    bool fromEndCall = false,
+    bool force = false,
+  }) async {
+    if (_isEndingCall && !fromEndCall) {
+      debugPrint('[CallService] _terminateCall ignoré (déjà en fin)');
+      return;
+    }
+
+    // Entonnoir anti raccrochage intempestif (piège transfert / conf) :
+    // tant qu'une session conf a encore un pair média, un Closed WebRTC
+    // ou un call_ended parasite ne doit pas tout couper.
+    if (!force && _confSessionId != null) {
+      final hasPeers = _groupPeerConnections.isNotEmpty ||
+          _groupRemoteStreams.isNotEmpty;
+      if (hasPeers) {
+        debugPrint(
+          '[CallService] 🛡 _terminateCall bloqué (session=$_confSessionId '
+          'pairs=${_groupPeerConnections.keys.toList()})',
+        );
+        return;
+      }
+    }
+
+    if (!fromEndCall) _isEndingCall = true;
+
     if (_confSessionId != null) {
       debugPrint(
         '[CallService] ⚠ _terminateCall PENDANT une session '
-        '(session=$_confSessionId, invitéEnAttente=${_confPendingInvitee?.id})\n'
+        '(session=$_confSessionId, invitéEnAttente=${_confPendingInvitee?.id}, '
+        'force=$force)\n'
         '${StackTrace.current}',
       );
     }
     // Capturé avant le teardown : le son ne doit sonner que si une conversation
     // était établie, pas sur un rejet, un timeout ou un échec de connexion.
     final wasConnected = _status == CallStatus.connected;
-    speakingDetector.stop();
-    _markTerminalCallId(_currentCallId);
-    _cancelOutgoingRestoreTimeout();
-    _isRestoringOutgoing = false;
-    await _clearOutgoingSnapshot();
-    await _ringtone.stop();
-    await _releaseCallSession();
-    await _callKit.endAll(callId: _currentCallId);
-    await _webrtc.dispose();
-    _durationTimer?.cancel();
-    // Après la libération de la session audio : le son part sur le canal
-    // notification (haut-parleur) et non plus dans l'écouteur de l'appel.
-    if (wasConnected) MessageSoundService.instance.playCallEnd();
-    _resetCallState();
-    _status = CallStatus.ended;
-    notify();
-    _status = CallStatus.idle;
-    await Future.microtask(() {});
-    notify();
     try {
-      await onCallTerminatedHook?.call();
-    } catch (e) {
-      debugPrint('[CallService] onCallTerminatedHook échoué: $e');
+      speakingDetector.stop();
+      _markTerminalCallId(_currentCallId);
+      _cancelOutgoingRestoreTimeout();
+      _isRestoringOutgoing = false;
+      await _clearOutgoingSnapshot();
+      await _ringtone.stop();
+      await _releaseCallSession();
+      // Mesh d'abord, sans retrigger onConnectionFailure → end_call parasite.
+      _webrtc.onConnectionFailure = null;
+      _clearAllGroupPeers(disarmOriginFailure: true);
+      await _callKit.endAll(callId: _currentCallId);
+      await _webrtc.dispose();
+      _durationTimer?.cancel();
+      // Après la libération de la session audio : le son part sur le canal
+      // notification (haut-parleur) et non plus dans l'écouteur de l'appel.
+      if (wasConnected) MessageSoundService.instance.playCallEnd();
+      _resetCallState();
+      _status = CallStatus.ended;
+      notify();
+      _status = CallStatus.idle;
+      await Future.microtask(() {});
+      notify();
+      try {
+        await onCallTerminatedHook?.call();
+      } catch (e) {
+        debugPrint('[CallService] onCallTerminatedHook échoué: $e');
+      }
+    } finally {
+      if (!fromEndCall) _isEndingCall = false;
     }
   }
 
@@ -405,6 +454,8 @@ extension CallOneToOne on CallService {
     _confInviteIsMine = false;
     _isTransferInitiator = false;
     _transferTargetId = null;
+    _transferLeaveInMs = null;
+    _transferArmedAt = null;
     _transferStatus = CallTransferStatus.none;
     _confMode = 'join';
     _confReadySent.clear();

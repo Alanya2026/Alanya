@@ -6,7 +6,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 
-/// Barre de contrôle flottante pour les appels (mute, speaker/caméra, raccrocher).
+/// Barre de contrôle flottante pour les appels.
+///
+/// Primaire : mute + (caméra | speaker) + overflow éventuel, puis raccrocher.
+/// Add / transfer / switch cam → menu overflow pour limiter le nombre de boutons.
 class CallControlBar extends StatelessWidget {
   const CallControlBar({
     super.key,
@@ -36,11 +39,100 @@ class CallControlBar extends StatelessWidget {
   final VoidCallback onSwitchCam;
   final VoidCallback onHangUp;
 
-  /// Affiche le bouton « Ajouter à l'appel ». Absent plutôt que grisé quand
-  /// l'ajout n'est pas possible : il n'y a aucune action de rattrapage à offrir.
   final bool canAddParticipant;
   final VoidCallback? onAddParticipant;
   final VoidCallback? onTransferParticipant;
+
+  bool get _hasOverflow =>
+      isVideo ||
+      (canAddParticipant &&
+          (onAddParticipant != null || onTransferParticipant != null));
+
+  Future<void> _openMore(BuildContext context) async {
+    final callUi = context.callUi;
+    final l10n = context.l10n;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: callUi.controlSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: callUi.controlBorder,
+                    borderRadius: AppRadius.brPill,
+                  ),
+                ),
+                if (isVideo)
+                  ListTile(
+                    leading: Icon(
+                      CupertinoIcons.switch_camera,
+                      color: callUi.onControlSurface,
+                    ),
+                    title: Text(
+                      l10n.switchCamera,
+                      style: TextStyle(color: callUi.onControlSurface),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      HapticFeedback.selectionClick();
+                      onSwitchCam();
+                    },
+                  ),
+                if (canAddParticipant && onAddParticipant != null)
+                  ListTile(
+                    leading: Icon(
+                      Icons.person_add_alt_1,
+                      color: callUi.onControlSurface,
+                    ),
+                    title: Text(
+                      l10n.addToCall,
+                      style: TextStyle(color: callUi.onControlSurface),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      HapticFeedback.selectionClick();
+                      onAddParticipant!();
+                    },
+                  ),
+                if (canAddParticipant && onTransferParticipant != null)
+                  ListTile(
+                    leading: Icon(
+                      Icons.phone_forwarded,
+                      color: callUi.onControlSurface,
+                    ),
+                    title: Text(
+                      l10n.transferCall,
+                      style: TextStyle(color: callUi.onControlSurface),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      HapticFeedback.selectionClick();
+                      onTransferParticipant!();
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +198,8 @@ class CallControlBar extends StatelessWidget {
                     icon: isVideoOn ? Icons.videocam : Icons.videocam_off,
                     active: !isVideoOn,
                     useVideoChrome: useVideoChrome,
-                    semanticsLabel: isVideoOn ? context.l10n.turnOffCamera : context.l10n.enableCamera,
+                    semanticsLabel:
+                        isVideoOn ? context.l10n.turnOffCamera : context.l10n.enableCamera,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onCamera();
@@ -119,50 +212,26 @@ class CallControlBar extends StatelessWidget {
                         : CupertinoIcons.speaker_2,
                     active: isSpeakerOn,
                     useVideoChrome: useVideoChrome,
-                    semanticsLabel: isSpeakerOn ? context.l10n.turnOffSpeaker : context.l10n.turnOnSpeaker,
+                    semanticsLabel: isSpeakerOn
+                        ? context.l10n.turnOffSpeaker
+                        : context.l10n.turnOnSpeaker,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onSpeaker();
                     },
                   ),
-                if (isVideo) ...[
+                if (_hasOverflow) ...[
                   AppSpacing.hGapMd,
                   _ControlButton(
-                    icon: CupertinoIcons.switch_camera,
+                    icon: Icons.more_horiz,
                     active: false,
                     useVideoChrome: useVideoChrome,
-                    semanticsLabel: context.l10n.switchCamera,
+                    semanticsLabel: context.l10n.more,
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      onSwitchCam();
+                      _openMore(context);
                     },
                   ),
-                ],
-                if (canAddParticipant) ...[
-                  AppSpacing.hGapMd,
-                  _ControlButton(
-                    icon: Icons.person_add_alt_1,
-                    active: false,
-                    useVideoChrome: useVideoChrome,
-                    semanticsLabel: context.l10n.addToCall,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onAddParticipant?.call();
-                    },
-                  ),
-                  if (onTransferParticipant != null) ...[
-                    AppSpacing.hGapMd,
-                    _ControlButton(
-                      icon: Icons.phone_forwarded,
-                      active: false,
-                      useVideoChrome: useVideoChrome,
-                      semanticsLabel: context.l10n.transferCall,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        onTransferParticipant?.call();
-                      },
-                    ),
-                  ],
                 ],
               ],
             ),
@@ -228,7 +297,7 @@ class _ControlButton extends StatelessWidget {
         : (active ? callUi.controlSurfaceActive : callUi.controlSurface);
     final fg = useVideoChrome
         ? (active ? AppColors.black : callUi.onVideoControlSurface)
-        : (active ? callUi.onControlSurface : callUi.onControlSurface);
+        : callUi.onControlSurface;
     final borderColor = useVideoChrome
         ? Colors.white.withValues(alpha: 0.2)
         : callUi.controlBorder.withValues(alpha: 0.6);

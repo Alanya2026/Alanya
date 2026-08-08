@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
@@ -11,8 +13,10 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/calls/call_audio_backdrop.dart';
 import '../../widgets/calls/call_connecting_overlay.dart';
 import '../../widgets/calls/call_control_bar.dart';
+import '../../widgets/calls/call_participant_focus_overlay.dart';
 import '../../widgets/calls/call_participant_tile.dart';
 import '../../widgets/calls/call_top_bar.dart';
+import '../../widgets/calls/call_transfer_countdown_overlay.dart';
 import '../../widgets/calls/add_to_call_sheet.dart';
 import '../../widgets/calls/draggable_video_pip.dart';
 import '../../widgets/common/app_avatar.dart';
@@ -42,6 +46,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   final Set<String> _watchedVideoTrackIds = {};
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulse;
+  String? _focusedParticipantId;
+  Timer? _countdownTicker;
 
   @override
   void initState() {
@@ -223,6 +229,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     if (_closing || !mounted) return;
     final cs = Provider.of<CallService>(context, listen: false);
     _drainConferenceNotices(cs);
+    _syncCountdownTicker(cs);
 
     setState(() {
       if (_renderersReady) {
@@ -235,11 +242,45 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
         _watchVideoTracks(cs.localStream);
         _watchVideoTracks(cs.activeRemoteStream);
       }
+      // Si le focus pointe un participant parti, le fermer.
+      final focused = _focusedParticipantId;
+      if (focused != null) {
+        final localId = (cs.localUserId ??
+                Provider.of<AuthProvider>(context, listen: false)
+                    .currentUser
+                    ?.alanyaID)
+            ?.toString();
+        final stillThere =
+            focused == localId || cs.groupRemoteStreams.containsKey(focused);
+        if (!stillThere) _focusedParticipantId = null;
+      }
     });
 
     if (cs.status == CallStatus.ended || cs.status == CallStatus.idle) {
       _closeAndPop();
     }
+  }
+
+  void _syncCountdownTicker(CallService cs) {
+    final need = cs.isTransferInitiator &&
+        cs.transferStatus == CallTransferStatus.countdown;
+    if (need && _countdownTicker == null) {
+      _countdownTicker = Timer.periodic(const Duration(milliseconds: 200), (_) {
+        if (!mounted) return;
+        setState(() {});
+      });
+    } else if (!need && _countdownTicker != null) {
+      _countdownTicker?.cancel();
+      _countdownTicker = null;
+    }
+  }
+
+  void _focusParticipant(String userId) {
+    setState(() => _focusedParticipantId = userId);
+  }
+
+  void _dismissFocus() {
+    setState(() => _focusedParticipantId = null);
   }
 
   void _closeAndPop() {
@@ -279,6 +320,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
   @override
   void dispose() {
+    _countdownTicker?.cancel();
     _pulseCtrl.dispose();
     _callService.removeListener(_onCallChanged);
     if (_renderersReady) {
@@ -388,6 +430,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     bool hasRemoteVideo, {
     required String localName,
     required String? localPhoto,
+    required String localUserId,
     bool isConnecting = false,
   }) {
     if (isGroup) {
@@ -396,9 +439,16 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
         roster: cs.groupRoster,
         activeSpeakers: cs.activeSpeakers,
         pendingInvitee: cs.confPendingInvitee,
-        // Annulable par le seul auteur de l'invitation.
         onCancelPending:
             cs.confInviteIsMine ? () => cs.cancelAddParticipant() : null,
+        localUserId: localUserId,
+        localStream: cs.localStream,
+        localName: localName,
+        localPhoto: localPhoto,
+        localMuted: cs.isMuted,
+        localVideoOn: cs.isVideo && cs.isVideoOn,
+        localSpeaking: cs.amISpeaking,
+        onParticipantTap: _focusParticipant,
       );
     }
 
@@ -460,6 +510,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
         case CallTransferStatus.awaitingMediaReady:
           return context.l10n.transferWaitingForConnection;
         case CallTransferStatus.countdown:
+          final secs = cs.transferCountdownRemainingSeconds;
+          if (secs != null) {
+            return context.l10n.transferCountdownSeconds(secs);
+          }
           return context.l10n.transferCountdown;
         case CallTransferStatus.completed:
           return context.l10n.transferCompleted;
@@ -494,10 +548,17 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, _) => _onFullscreenPop(didPop),
+      canPop: _focusedParticipantId == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _focusedParticipantId != null) {
+          _dismissFocus();
+          return;
+        }
+        _onFullscreenPop(didPop);
+      },
       child: Consumer<CallService>(
         builder: (_, cs, __) {
+          _syncCountdownTicker(cs);
           final callUi = context.callUi;
           final isVideo = cs.isVideo;
           final isGroup = cs.groupRoomId != null;
@@ -507,17 +568,26 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
           final localUser = context.watch<AuthProvider>().currentUser;
           final localName = localUser?.nom ?? context.l10n.meLabel;
           final localPhoto = localUser?.avatarUrl;
+          final localUserId = (cs.localUserId ?? localUser?.alanyaID)?.toString() ?? '';
+          final transferStatusLabel = _statusLabel(cs);
           final displayName = isGroup
               ? (cs.isConference
                   ? context.l10n.confCallOfThree
                   : context.l10n.groupCall)
               : (cs.remoteUserName ?? context.l10n.callNoun);
-          final pipChild = _buildPipChild(
-            cs,
-            isGroup,
-            localName: localName,
-            localPhoto: localPhoto,
-          );
+          // PiP 1-à-1 uniquement — en conf la tuile locale est dans la grille.
+          final pipChild = isGroup
+              ? null
+              : _buildPipChild(
+                  cs,
+                  isGroup,
+                  localName: localName,
+                  localPhoto: localPhoto,
+                );
+          final countdownSecs = cs.transferCountdownRemainingSeconds;
+          final showCountdown = cs.isTransferInitiator &&
+              cs.transferStatus == CallTransferStatus.countdown &&
+              countdownSecs != null;
 
           CallUiScope.applyOverlayStyle(context, isVideo: isVideo);
 
@@ -543,6 +613,34 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                   });
                 }
 
+                Widget? focusOverlay;
+                final focusedId = _focusedParticipantId;
+                if (isGroup && focusedId != null) {
+                  final isLocal = focusedId == localUserId;
+                  final rosterInfo = cs.groupRoster[focusedId];
+                  focusOverlay = CallParticipantFocusOverlay(
+                    userId: focusedId,
+                    name: isLocal
+                        ? localName
+                        : (rosterInfo?.name ?? context.l10n.participantFallback),
+                    stream: isLocal
+                        ? cs.localStream
+                        : cs.groupRemoteStreams[focusedId],
+                    photoUrl: isLocal ? localPhoto : rosterInfo?.photo,
+                    isMuted: isLocal
+                        ? cs.isMuted
+                        : (rosterInfo?.isMuted ?? false),
+                    isVideoOn: isLocal
+                        ? (cs.isVideo && cs.isVideoOn)
+                        : (rosterInfo?.isVideoOn ?? true),
+                    isSpeaking: isLocal
+                        ? cs.amISpeaking
+                        : cs.activeSpeakers.contains(focusedId),
+                    mirror: isLocal,
+                    onDismiss: _dismissFocus,
+                  );
+                }
+
                 return Stack(
                   fit: StackFit.expand,
                   children: [
@@ -552,6 +650,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                       hasRemoteVideo,
                       localName: localName,
                       localPhoto: localPhoto,
+                      localUserId: localUserId,
                       isConnecting: isConnecting,
                     ),
 
@@ -563,7 +662,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                         animation: _pulse,
                       ),
 
-                    if (isVideo)
+                    if (isVideo && !isGroup)
                       Positioned.fill(
                         child: GestureDetector(
                           behavior: HitTestBehavior.translucent,
@@ -577,8 +676,16 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                         bounds: pipBounds,
                         position: _pipOffset,
                         onPositionChanged: _onPipPositionChanged,
-                        onTap: isGroup ? null : _toggleSwap,
+                        onTap: _toggleSwap,
                         child: pipChild,
+                      ),
+
+                    if (focusOverlay != null) focusOverlay,
+
+                    if (showCountdown)
+                      CallTransferCountdownOverlay(
+                        remainingSeconds: countdownSecs,
+                        totalSeconds: cs.transferCountdownTotalSeconds,
                       ),
 
                     Positioned(
@@ -596,9 +703,13 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                             duration: AppDurations.normal,
                             child: CallTopBar(
                               name: displayName,
-                              status: isGroup
-                                  ? context.l10n.participantsCount(cs.groupRemoteStreams.length + 1)
-                                  : _statusLabel(cs),
+                              status: transferStatusLabel.isNotEmpty
+                                  ? transferStatusLabel
+                                  : (isGroup
+                                      ? context.l10n.participantsCount(
+                                          cs.groupRemoteStreams.length + 1,
+                                        )
+                                      : ''),
                               duration: cs.status == CallStatus.connected
                                   ? cs.formattedDuration
                                   : null,

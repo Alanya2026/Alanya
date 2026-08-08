@@ -37,6 +37,7 @@ extension CallConference on CallService {
     debugPrint('[CallService] ✖ annulation de l\'invitation');
     _apiClient.sendSocketEvent(SocketEvents.callAddCancel, {});
     _transferStatus = CallTransferStatus.cancelled;
+    _clearTransferCountdown();
     notify();
   }
 
@@ -197,22 +198,36 @@ extension CallConference on CallService {
 
   void _guardOriginLinkFailure(String peerId) {
     _webrtc.onConnectionFailure = () {
+      // Après demote / départ volontaire d'un pair : un flux mesh restant
+      // prouve que l'appel continue — ne pas raccrocher (piège transfert).
+      final hasMeshPeer = _groupRemoteStreams.isNotEmpty ||
+          _groupPeerConnections.keys.any((id) => id != peerId);
       if (_confSessionId == null) {
+        if (hasMeshPeer) {
+          debugPrint(
+            '[CallService] 🔌 lien d\'origine tombé hors session conf '
+            'mais pair mesh restant — on continue',
+          );
+          _webrtc.onConnectionFailure = null;
+          return;
+        }
         debugPrint('[CallService] ** lien tombé hors session : fin d\'appel');
         _terminateCall();
         return;
       }
 
       debugPrint('[CallService] 🔌 lien d\'origine ($peerId) tombé en session');
-      _removeGroupPeer(peerId);
+      _removeGroupPeer(peerId, disarmOriginFailure: true);
 
-      if (_groupPeerConnections.isEmpty) {
+      if (_groupPeerConnections.isEmpty && _groupRemoteStreams.isEmpty) {
         debugPrint('[CallService] ** plus aucun pair : fin d\'appel');
         _terminateCall();
         return;
       }
 
       _demoteMeshToOneToOne();
+      // PC d'origine mort : ne plus laisser un Closed tardif tuer B↔C.
+      _webrtc.onConnectionFailure = null;
       notify();
     };
   }
@@ -307,6 +322,7 @@ extension CallConference on CallService {
     _confInviteIsMine = false;
     _isTransferInitiator = false;
     _transferTargetId = null;
+    _clearTransferCountdown();
     _transferStatus = CallTransferStatus.cancelled;
     _confMode = 'join';
     _lastConfFailure = reason == 'media_not_ready' ? 'media_not_ready' : reason;
@@ -329,7 +345,12 @@ extension CallConference on CallService {
     } else {
       _lastConfDeparture = _groupRoster[userId]?.name;
     }
-    _removeGroupPeer(userId);
+
+    // Départ de l'ancien pair 1-à-1 (ex. initiateur transfert) : désarmer
+    // avant close pour éviter le raccrochage intempestif du lien d'origine.
+    final isOriginPeer = userId == _remoteUserId?.toString() ||
+        identical(_groupPeerConnections[userId], _webrtc.peerConnection);
+    _removeGroupPeer(userId, disarmOriginFailure: isOriginPeer);
 
     final remaining = (data['remaining'] as List?)
             ?.map((e) => e.toString())
@@ -341,9 +362,21 @@ extension CallConference on CallService {
         _transferStatus == CallTransferStatus.countdown) {
       // Un autre est parti pendant le countdown : le serveur annule le leave auto.
       _transferStatus = CallTransferStatus.cancelled;
+      _clearTransferCountdown();
     }
 
     _demoteMeshToOneToOne();
+    if (isOriginPeer) {
+      _webrtc.onConnectionFailure = null;
+    }
+
+    // Plus aucun pair média : solde local (évite un appel fantôme si
+    // call_ended serveur arrive avant/après et est filtré par l'entonnoir).
+    if (_groupPeerConnections.isEmpty && _groupRemoteStreams.isEmpty) {
+      debugPrint('[CallService] 👋 plus aucun pair après conf_left → fin locale');
+      unawaited(_terminateCall(force: true));
+      return;
+    }
     notify();
   }
 
@@ -351,9 +384,19 @@ extension CallConference on CallService {
     final sessionId = data['sessionId']?.toString();
     if (sessionId == null || sessionId != _confSessionId) return;
     if (!_isTransferInitiator) return;
+    final leaveInMs = int.tryParse(data['leaveInMs']?.toString() ?? '') ??
+        (data['leaveInMs'] is num ? (data['leaveInMs'] as num).toInt() : null) ??
+        10000;
+    _transferLeaveInMs = leaveInMs;
+    _transferArmedAt = DateTime.now();
     _transferStatus = CallTransferStatus.countdown;
-    debugPrint('[CallService] ⏱ transfer armed leaveInMs=${data['leaveInMs']}');
+    debugPrint('[CallService] ⏱ transfer armed leaveInMs=$leaveInMs');
     notify();
+  }
+
+  void _clearTransferCountdown() {
+    _transferLeaveInMs = null;
+    _transferArmedAt = null;
   }
 
   Future<void> _onTransferDone(Map data) async {
@@ -362,17 +405,39 @@ extension CallConference on CallService {
     if (_confSessionId != null && _confSessionId != sessionId) return;
 
     final reason = data['reason']?.toString() ?? 'automatic';
-    debugPrint('[CallService] ✔ transfer done reason=$reason');
+    final transferred =
+        data['transferredUserId']?.toString() ?? data['to']?.toString();
+    final localId = _localUserId?.toString();
+    // Uniquement l'initiateur qui part doit teardown — B/C continuent.
+    final amLeaving = transferred == null ||
+        transferred.isEmpty ||
+        (localId != null && transferred == localId);
+    if (!amLeaving) {
+      debugPrint(
+        '[CallService] transfer_done ignoré (je ne suis pas le partant '
+        'transferred=$transferred local=$localId)',
+      );
+      return;
+    }
+
+    debugPrint('[CallService] ✔ transfer done reason=$reason — départ local');
     _transferStatus = CallTransferStatus.completed;
     _isTransferInitiator = false;
     _transferTargetId = null;
+    _clearTransferCountdown();
     notify();
 
-    // L'initiateur doit fermer son UI / session locale.
     if (_status == CallStatus.connected ||
         _status == CallStatus.joining ||
         _status == CallStatus.connecting) {
-      await _terminateCall();
+      // Soldate conf + mesh AVANT terminate pour ne pas laisser un Closed
+      // WebRTC côté B/C être confondu avec une panne locale ici, et pour
+      // autoriser l'entonnoir _terminateCall (force).
+      _webrtc.onConnectionFailure = null;
+      _clearAllGroupPeers(disarmOriginFailure: true);
+      _confSessionId = null;
+      _groupRoomId = null;
+      await _terminateCall(force: true);
     }
   }
 
@@ -482,6 +547,10 @@ extension CallConference on CallService {
     }
 
     _groupRoomId = null;
+    // Le PC 1-à-1 d'origine peut être mort (pair parti) : l'UI lit
+    // activeRemoteStream via _groupRemoteStreams. Ne plus tuer l'appel sur
+    // Closed tardif du lien d'origine.
+    _webrtc.onConnectionFailure = null;
     _startSpeakingDetection(groupMode: false);
     debugPrint('[CallService] ↩ retour à l\'affichage à deux (pair=$remainingId)');
   }
@@ -494,6 +563,7 @@ extension CallConference on CallService {
     _confInviteIsMine = false;
     _isTransferInitiator = false;
     _transferTargetId = null;
+    _clearTransferCountdown();
     _transferStatus = CallTransferStatus.none;
     _confMode = 'join';
     _confReadySent.clear();

@@ -97,6 +97,10 @@ class CallService extends ChangeNotifier {
 
   bool _callEndedByUs = false;
 
+  /// Teardown en cours (endCall / terminate) — empêche un 2ᵉ `end_call`
+  /// (ex. CallKit `ended` pendant `_callKit.endAll`).
+  bool _isEndingCall = false;
+
   // Contrôles médias
   bool _isMuted = false;
   bool _isSpeakerOn = false;
@@ -122,6 +126,9 @@ class CallService extends ChangeNotifier {
   // ICE candidates bufferisés tant que la remote description n'est pas définie.
   final Map<String, List<RTCIceCandidate>> _groupPendingIce = {};
   final Set<String> _groupRemoteDescSet = <String>{};
+
+  /// Grâce sur `Disconnected` mesh (état WebRTC souvent transitoire).
+  final Map<String, Timer> _groupPeerDisconnectGrace = {};
 
   // Roster de l'appel de groupe (userId → infos d'affichage).
   final Map<String, GroupParticipantInfo> _groupRoster = {};
@@ -155,6 +162,12 @@ class CallService extends ChangeNotifier {
   /// Cible C du transfert en cours (id string). Ready média uniquement vers ce peer.
   String? _transferTargetId;
 
+  /// Délai annoncé par le serveur pour le leave auto (ms).
+  int? _transferLeaveInMs;
+
+  /// Instant local où call_transfer_armed a été reçu.
+  DateTime? _transferArmedAt;
+
   /// peerIds pour lesquels call_conf_ready a déjà été **émis** (sessionId|peerId).
   final Set<String> _confReadySent = {};
 
@@ -173,6 +186,9 @@ class CallService extends ChangeNotifier {
   int? _localUserId;
   String _localUserName = '';
   String? _localUserPhoto;
+
+  int? get localUserId => _localUserId;
+  String? get myRosterId => _myRosterId;
 
   // Derniers faits marquants, consommés une fois par l'écran d'appel pour
   // afficher un bandeau (« Untel a refusé », « Untel a quitté l'appel »).
@@ -260,6 +276,25 @@ class CallService extends ChangeNotifier {
   bool get isTransferMode => _confMode == 'transfer';
   CallTransferStatus get transferStatus => _transferStatus;
   bool get isTransferInitiator => _isTransferInitiator;
+
+  /// Secondes restantes du leave auto (null si pas en countdown).
+  int? get transferCountdownRemainingSeconds {
+    if (_transferStatus != CallTransferStatus.countdown) return null;
+    final armedAt = _transferArmedAt;
+    final leaveInMs = _transferLeaveInMs;
+    if (armedAt == null || leaveInMs == null) return null;
+    final elapsed = DateTime.now().difference(armedAt).inMilliseconds;
+    final left = leaveInMs - elapsed;
+    if (left <= 0) return 0;
+    return (left / 1000).ceil();
+  }
+
+  /// Durée totale du countdown annoncée par le serveur (secondes).
+  int get transferCountdownTotalSeconds {
+    final ms = _transferLeaveInMs;
+    if (ms == null || ms <= 0) return 10;
+    return (ms / 1000).ceil();
+  }
 
   /// Flux distant à afficher quand l'écran est en mode « à deux ».
   ///

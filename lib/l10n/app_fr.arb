@@ -2258,6 +2258,14 @@
   "transferWaitingForParticipant": "En attente de réponse…",
   "transferWaitingForConnection": "Connexion en cours…",
   "transferCountdown": "Transfert en cours… Vous quitterez bientôt l'appel.",
+  "transferCountdownSeconds": "Transfert · {seconds}s",
+  "@transferCountdownSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "transferCompleted": "Appel transféré",
   "mediaConnectionFailed": "La connexion média n'a pas pu être établie",
   "conferenceTransferInviteBody": "souhaite vous transférer cet appel",

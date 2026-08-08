@@ -1376,6 +1376,14 @@
   "transferWaitingForParticipant": "Waiting for an answer…",
   "transferWaitingForConnection": "Connecting…",
   "transferCountdown": "Transfer in progress… You will leave the call soon.",
+  "transferCountdownSeconds": "Transfer · {seconds}s",
+  "@transferCountdownSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "transferCompleted": "Call transferred",
   "mediaConnectionFailed": "Media connection could not be established",
   "conferenceTransferInviteBody": "wants to transfer this call to you",

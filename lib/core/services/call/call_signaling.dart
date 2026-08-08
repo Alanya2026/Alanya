@@ -248,7 +248,19 @@ extension CallSignaling on CallService {
         return;
       }
 
-      await _terminateCall();
+      // Pendant une conf encore peuplée, un call_ended parasite (ex. après
+      // leave auto transfert de A) ne doit pas raccrocher B/C.
+      final hasMeshPeers = _groupPeerConnections.isNotEmpty ||
+          _groupRemoteStreams.isNotEmpty;
+      if (_confSessionId != null && hasMeshPeers) {
+        debugPrint(
+          '[CallService] 🛡 call_ended ignoré (session conf encore peuplée '
+          '$_confSessionId)',
+        );
+        return;
+      }
+
+      await _terminateCall(force: true);
     });
 
     _apiClient.onSocketEvent(SocketEvents.callError, (data) async {
@@ -606,6 +618,8 @@ extension CallSignaling on CallService {
       _transferStatus = CallTransferStatus.cancelled;
       _isTransferInitiator = false;
       _transferTargetId = null;
+      _transferLeaveInMs = null;
+      _transferArmedAt = null;
       notify();
     });
 

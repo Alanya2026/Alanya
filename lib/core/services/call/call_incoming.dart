@@ -430,6 +430,16 @@ extension CallIncoming on CallService {
       await EndedCallRegistry.markEnded(id);
     }
 
+    // Hangup local déjà en cours (CallKit `ended` pendant endAll) : ne pas
+    // réémettre end_call — en conf ça coupait à tort l'inviteur via le
+    // fallback 1-à-1 serveur.
+    if (_isEndingCall || _callEndedByUs) {
+      debugPrint(
+        '[CallService] notifyCallEndedFromExternal: fin locale déjà en cours',
+      );
+      return;
+    }
+
     if (_status == CallStatus.outgoing ||
         _status == CallStatus.connecting ||
         _status == CallStatus.connected) {

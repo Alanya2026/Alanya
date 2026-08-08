@@ -291,7 +291,11 @@ class _ActiveSessionBannerHostState extends State<ActiveSessionBannerHost>
             accent: context.semantic.success,
             onExpand: () => callService.navigateToCallUi(),
             onHangUp: () async {
-              if (callService.groupRoomId != null) {
+              // Conf / transfert : end_call → leaveCallSession (je pars seul).
+              // leaveGroupCall vise les rooms groupe classiques, pas callSessions.
+              if (callService.isConference) {
+                await callService.endCall();
+              } else if (callService.groupRoomId != null) {
                 await callService.leaveGroupCall();
               } else {
                 await callService.endCall();

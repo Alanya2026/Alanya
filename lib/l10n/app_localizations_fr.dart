@@ -3492,6 +3492,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Transfert en cours… Vous quitterez bientôt l\'appel.';
 
   @override
+  String transferCountdownSeconds(int seconds) {
+    return 'Transfert · ${seconds}s';
+  }
+
+  @override
   String get transferCompleted => 'Appel transféré';
 
   @override

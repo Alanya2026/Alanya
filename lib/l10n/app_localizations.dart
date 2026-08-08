@@ -6086,6 +6086,12 @@ abstract class AppLocalizations {
   /// **'Transfert en cours… Vous quitterez bientôt l\'appel.'**
   String get transferCountdown;
 
+  /// No description provided for @transferCountdownSeconds.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transfert · {seconds}s'**
+  String transferCountdownSeconds(int seconds);
+
   /// No description provided for @transferCompleted.
   ///
   /// In fr, this message translates to:
