@@ -363,18 +363,14 @@ extension CallOneToOne on CallService {
     }
 
     // Entonnoir anti raccrochage intempestif (piège transfert / conf) :
-    // tant qu'une session conf a encore un pair média, un Closed WebRTC
-    // ou un call_ended parasite ne doit pas tout couper.
-    if (!force && _confSessionId != null) {
-      final hasPeers = _groupPeerConnections.isNotEmpty ||
-          _groupRemoteStreams.isNotEmpty;
-      if (hasPeers) {
-        debugPrint(
-          '[CallService] 🛡 _terminateCall bloqué (session=$_confSessionId '
-          'pairs=${_groupPeerConnections.keys.toList()})',
-        );
-        return;
-      }
+    // bloquer seulement tant qu'il reste 2+ pairs mesh (vrai appel à 3).
+    // À deux (1 pair), un hangup / Closed doit pouvoir terminer l'appel.
+    if (!force && _confSessionId != null && _groupPeerConnections.length >= 2) {
+      debugPrint(
+        '[CallService] 🛡 _terminateCall bloqué (session=$_confSessionId '
+        'pairs=${_groupPeerConnections.keys.toList()})',
+      );
+      return;
     }
 
     if (!fromEndCall) _isEndingCall = true;

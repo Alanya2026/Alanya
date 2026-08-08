@@ -248,14 +248,14 @@ extension CallSignaling on CallService {
         return;
       }
 
-      // Pendant une conf encore peuplée, un call_ended parasite (ex. après
-      // leave auto transfert de A) ne doit pas raccrocher B/C.
-      final hasMeshPeers = _groupPeerConnections.isNotEmpty ||
-          _groupRemoteStreams.isNotEmpty;
-      if (_confSessionId != null && hasMeshPeers) {
+      // Pendant une conf à 3+ encore peuplée, un call_ended parasite ne doit
+      // pas raccrocher les restants. Dès qu'il ne reste qu'un pair (retour à
+      // deux), call_ended = l'autre a raccroché → on coupe l'appel.
+      final meshPeerCount = _groupPeerConnections.length;
+      if (_confSessionId != null && meshPeerCount >= 2) {
         debugPrint(
-          '[CallService] 🛡 call_ended ignoré (session conf encore peuplée '
-          '$_confSessionId)',
+          '[CallService] 🛡 call_ended ignoré (conf encore à $meshPeerCount '
+          'pairs session=$_confSessionId)',
         );
         return;
       }
