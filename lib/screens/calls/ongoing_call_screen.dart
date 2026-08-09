@@ -531,6 +531,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
         return '';
       case CallStatus.connected:
         return context.l10n.inProgress;
+      case CallStatus.reconnecting:
+        return context.l10n.callReconnecting;
       case CallStatus.ended:
         return context.l10n.ended2;
       default:
@@ -710,7 +712,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                                           cs.groupRemoteStreams.length + 1,
                                         )
                                       : ''),
-                              duration: cs.status == CallStatus.connected
+                              duration: (cs.status == CallStatus.connected ||
+                                      cs.status == CallStatus.reconnecting)
                                   ? cs.formattedDuration
                                   : null,
                               onMinimize: _minimize,

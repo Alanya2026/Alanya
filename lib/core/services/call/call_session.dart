@@ -27,6 +27,12 @@ extension CallSession on CallService {
       getLocalStream: () => _webrtc.localStream,
       isVideoOn: () => _isVideoOn,
       isMuted: () => _isMuted,
+      onReplaceAudioNeeded: () async {
+        await _webrtc.replaceAudioTrack(
+          keepMuted: _isMuted,
+          type: _isVideo ? CallType.video : CallType.audio,
+        );
+      },
     );
   }
 

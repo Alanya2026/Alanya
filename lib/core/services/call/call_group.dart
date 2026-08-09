@@ -209,48 +209,84 @@ extension CallGroup on CallService {
     }
   }
 
-  Future<void> _createGroupPeerAndOffer(String userId) async {
+  Future<void> _createGroupPeerAndOffer(String userId, {bool iceRestart = false}) async {
     final pc = await _createGroupPeerConnection(userId);
 
-    _webrtc.localStream?.getTracks().forEach((track) {
-      pc.addTrack(track, _webrtc.localStream!);
-    });
+    if (!iceRestart) {
+      _webrtc.localStream?.getTracks().forEach((track) {
+        pc.addTrack(track, _webrtc.localStream!);
+      });
+    }
 
-    final offer = await pc.createOffer();
+    final generation = iceRestart
+        ? (_groupPeerIceGeneration[userId] = (_groupPeerIceGeneration[userId] ?? 0) + 1)
+        : (_groupPeerIceGeneration[userId] ??= 0);
+
+    final offer = iceRestart
+        ? await pc.createOffer({'iceRestart': true})
+        : await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    // Payload exact attendu par le backend
     _apiClient.sendSocketEvent(SocketEvents.groupOffer, {
       'roomId': _groupRoomId,
-      'fromUserId': '', // rempli par socket.alanyaID côté serveur
+      'fromUserId': '',
       'toUserId': userId,
       'offer': {'sdp': offer.sdp, 'type': offer.type},
+      'generation': generation,
     });
   }
 
-  Future<void> _handleGroupOffer(String fromUserId, Map offer) async {
+  Future<void> _handleGroupOffer(
+    String fromUserId,
+    Map offer, {
+    int? generation,
+  }) async {
     final pc = await _createGroupPeerConnection(fromUserId);
 
+    if (generation != null) {
+      final local = _groupPeerIceGeneration[fromUserId] ?? 0;
+      if (generation < local) {
+        debugPrint(
+          '[CallService] 🛡 group_offer gen périmée peer=$fromUserId gen=$generation local=$local',
+        );
+        return;
+      }
+      _groupPeerIceGeneration[fromUserId] = generation;
+    }
+
+    final alreadyHadPc = _groupRemoteDescSet.contains(fromUserId);
     await pc.setRemoteDescription(
       RTCSessionDescription(offer['sdp'] as String, 'offer'),
     );
     _groupRemoteDescSet.add(fromUserId);
     await _flushGroupPendingIce(fromUserId);
 
-    _webrtc.localStream?.getTracks().forEach((track) {
-      pc.addTrack(track, _webrtc.localStream!);
-    });
+    if (!alreadyHadPc) {
+      _webrtc.localStream?.getTracks().forEach((track) {
+        pc.addTrack(track, _webrtc.localStream!);
+      });
+    }
 
     final answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
-    // Payload exact attendu par le backend
     _apiClient.sendSocketEvent(SocketEvents.groupAnswer, {
       'roomId': _groupRoomId,
       'fromUserId': '',
       'toUserId': fromUserId,
       'answer': {'sdp': answer.sdp, 'type': answer.type},
+      if (generation != null) 'generation': generation,
     });
+
+    _groupPeerIsRestarting[fromUserId] = false;
+    _cancelGroupPeerDisconnectGrace(fromUserId);
+  }
+
+  /// Initiator restart déterministe : userId le plus bas du pair.
+  bool _isGroupRestartInitiator(String peerId) {
+    final me = _localUserId?.toString() ?? _myRosterId;
+    if (me == null || me.isEmpty) return false;
+    return isGroupRestartInitiator(me: me, peerId: peerId);
   }
 
   Future<RTCPeerConnection> _createGroupPeerConnection(String userId) async {
@@ -262,6 +298,7 @@ extension CallGroup on CallService {
     final iceConfig = {'iceServers': iceServers};
 
     final pc = await createPeerConnection(iceConfig);
+    _groupPeerIceGeneration.putIfAbsent(userId, () => 0);
 
     pc.onTrack = (event) {
       if (event.streams.isNotEmpty) {
@@ -271,7 +308,6 @@ extension CallGroup on CallService {
     };
 
     pc.onIceCandidate = (candidate) {
-      // Payload exact attendu par le backend
       _apiClient.sendSocketEvent(SocketEvents.groupIceCandidate, {
         'roomId': _groupRoomId,
         'fromUserId': '',
@@ -281,23 +317,30 @@ extension CallGroup on CallService {
           'sdpMid': candidate.sdpMid,
           'sdpMLineIndex': candidate.sdpMLineIndex,
         },
+        'generation': _groupPeerIceGeneration[userId] ?? 0,
       });
     };
 
     pc.onConnectionState = (state) {
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         _cancelGroupPeerDisconnectGrace(userId);
+        _groupPeerRetryCount[userId] = 0;
+        _groupPeerIsRestarting[userId] = false;
         _maybeEmitConfReady(userId);
         return;
       }
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
         _cancelGroupPeerDisconnectGrace(userId);
-        debugPrint('[CallService] ** Group peer $userId connection failed: $state');
+        debugPrint('[CallService] Group peer $userId Closed → drop lien local seulement');
         _removeGroupPeer(userId);
         return;
       }
-      // Disconnected est souvent transitoire (ICE restart) — grâce 8 s.
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
+        _cancelGroupPeerDisconnectGrace(userId);
+        debugPrint('[CallService] Group peer $userId Failed → ICE restart si initiator');
+        unawaited(_attemptGroupPeerIceRestart(userId));
+        return;
+      }
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
         debugPrint(
           '[CallService] ⏳ Group peer $userId Disconnected — grâce 8s',
@@ -319,12 +362,70 @@ extension CallGroup on CallService {
       () {
         _groupPeerDisconnectGrace.remove(userId);
         if (!_groupPeerConnections.containsKey(userId)) return;
+        final st = _groupPeerConnections[userId]?.connectionState;
+        if (st == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+          return;
+        }
         debugPrint(
-          '[CallService] ** Group peer $userId toujours Disconnected après grâce',
+          '[CallService] Group peer $userId toujours Disconnected après grâce',
         );
-        _removeGroupPeer(userId);
+        // Initiator : ICE restart. Autre côté : attend l'offer ; si rien,
+        // drop du lien local seulement (pas leaveCallSession serveur).
+        if (_isGroupRestartInitiator(userId)) {
+          unawaited(_attemptGroupPeerIceRestart(userId));
+        } else {
+          // Callee mesh : timeout local supplémentaire avant drop lien.
+          _groupPeerDisconnectGrace[userId] = Timer(
+            const Duration(seconds: 20),
+            () {
+              _groupPeerDisconnectGrace.remove(userId);
+              if (!_groupPeerConnections.containsKey(userId)) return;
+              final s = _groupPeerConnections[userId]?.connectionState;
+              if (s == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+                return;
+              }
+              debugPrint(
+                '[CallService] Group peer $userId sans offer restart → drop lien local',
+              );
+              _removeGroupPeer(userId);
+            },
+          );
+        }
       },
     );
+  }
+
+  Future<void> _attemptGroupPeerIceRestart(String userId) async {
+    if (!_isGroupRestartInitiator(userId)) return;
+    if (_groupPeerIsRestarting[userId] == true) return;
+    if (!_groupPeerConnections.containsKey(userId)) return;
+
+    final retries = _groupPeerRetryCount[userId] ?? 0;
+    if (retries >= CallService._maxGroupPeerIceRestarts) {
+      debugPrint(
+        '[CallService] Group peer $userId ICE max → drop lien local (pas leaveSession)',
+      );
+      _removeGroupPeer(userId);
+      return;
+    }
+
+    _groupPeerIsRestarting[userId] = true;
+    _groupPeerRetryCount[userId] = retries + 1;
+    // Purge ICE buffer de l'ancienne génération.
+    _groupPendingIce.remove(userId);
+
+    try {
+      debugPrint(
+        '[CallService] Group ICE restart peer=$userId #${retries + 1}',
+      );
+      await _createGroupPeerAndOffer(userId, iceRestart: true);
+    } catch (e) {
+      debugPrint('[CallService] ** Group ICE restart échoué $userId: $e');
+      _groupPeerIsRestarting[userId] = false;
+      if ((_groupPeerRetryCount[userId] ?? 0) >= CallService._maxGroupPeerIceRestarts) {
+        _removeGroupPeer(userId);
+      }
+    }
   }
 
   void _cancelGroupPeerDisconnectGrace(String userId) {
@@ -338,17 +439,31 @@ extension CallGroup on CallService {
     _groupPeerDisconnectGrace.clear();
   }
 
+  void _clearGroupPeerReconnectState([String? userId]) {
+    if (userId != null) {
+      _groupPeerIceGeneration.remove(userId);
+      _groupPeerRetryCount.remove(userId);
+      _groupPeerIsRestarting.remove(userId);
+      return;
+    }
+    _groupPeerIceGeneration.clear();
+    _groupPeerRetryCount.clear();
+    _groupPeerIsRestarting.clear();
+  }
+
   void _removeGroupPeer(
     String userId, {
     bool disarmOriginFailure = false,
   }) {
     _cancelGroupPeerDisconnectGrace(userId);
+    _clearGroupPeerReconnectState(userId);
     final pc = _groupPeerConnections[userId];
     // PC 1-à-1 partagé dans le mesh : close() déclenche onConnectionFailure.
     // Sans désarmement, le départ d'A (transfert) raccroche B à tort.
     if (disarmOriginFailure ||
         (pc != null && identical(pc, _webrtc.peerConnection))) {
       _webrtc.onConnectionFailure = null;
+      _webrtc.onConnectionStateChanged = null;
     }
     pc?.close();
     _groupPeerConnections.remove(userId);
@@ -356,13 +471,17 @@ extension CallGroup on CallService {
     _groupParticipants.remove(userId);
     _groupPendingIce.remove(userId);
     _groupRemoteDescSet.remove(userId);
+    // Intentionnel : ne pas appeler leaveCallSession / end_call ici.
+    // Une perte de lien local ≠ expulsion serveur du participant.
     notify();
   }
 
   void _clearAllGroupPeers({bool disarmOriginFailure = true}) {
     _cancelAllGroupPeerDisconnectGrace();
+    _clearGroupPeerReconnectState();
     if (disarmOriginFailure) {
       _webrtc.onConnectionFailure = null;
+      _webrtc.onConnectionStateChanged = null;
     }
     for (final pc in _groupPeerConnections.values) {
       pc.close();

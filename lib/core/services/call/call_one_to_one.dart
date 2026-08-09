@@ -28,6 +28,7 @@ extension CallOneToOne on CallService {
     if (!await _ensureFullyConnectedForOutgoingCall()) return;
     _errorMessage = null;
     _status = CallStatus.outgoing;
+    _isOutgoingCaller = true;
     _remoteUserId = targetUserId;
     _remoteUserName = targetUserName;
     _remoteUserPhoto = targetUserPhoto;
@@ -57,14 +58,12 @@ extension CallOneToOne on CallService {
             'sdpMid': candidate.sdpMid,
             'sdpMLineIndex': candidate.sdpMLineIndex,
           },
+          'generation': _webrtc.iceGeneration,
+          if (_currentCallId != null) 'callId': _currentCallId,
         });
       };
 
-      // Connection failure handler
-      _webrtc.onConnectionFailure = () {
-        debugPrint('[CallService] ** Peer connection failed, ending call');
-        _terminateCall();
-      };
+      _wireOneToOneConnectionStateHandlers();
 
       final offer = await _webrtc.createOffer();
 
@@ -167,6 +166,7 @@ extension CallOneToOne on CallService {
 
     // Verrouille immédiatement pour bloquer un éventuel double-appel.
     _status = CallStatus.connecting;
+    _isOutgoingCaller = false;
     // L'auto-réponse a fait son office : on repasse en navigation normale pour
     // que la minimisation de l'écran d'appel ne le ré-ouvre pas en boucle.
     _isAutoAnsweringFromPush = false;
@@ -208,14 +208,12 @@ extension CallOneToOne on CallService {
             'sdpMid': candidate.sdpMid,
             'sdpMLineIndex': candidate.sdpMLineIndex,
           },
+          'generation': _webrtc.iceGeneration,
+          if (_currentCallId != null) 'callId': _currentCallId,
         });
       };
 
-      // Connection failure handler
-      _webrtc.onConnectionFailure = () {
-        debugPrint('[CallService] ** Peer connection failed, ending call');
-        _terminateCall();
-      };
+      _wireOneToOneConnectionStateHandlers();
 
       await _webrtc.handleOffer(
         RTCSessionDescription(offer['sdp'] as String, 'offer'),
@@ -312,12 +310,14 @@ extension CallOneToOne on CallService {
     }
     _isEndingCall = true;
     _callEndedByUs = true;
+    _cancelAllReconnectTimers();
     debugPrint('[CallService] 📞 endCall() - Appel terminé par nous');
     _markTerminalCallId(_currentCallId);
 
     try {
       if (_remoteUserId != null) {
-        final mode = _status == CallStatus.connected
+        final mode = (_status == CallStatus.connected ||
+                _status == CallStatus.reconnecting)
             ? await _webrtc.detectConnectionMode()
             : null;
         final payload = <String, dynamic>{
@@ -385,9 +385,11 @@ extension CallOneToOne on CallService {
     }
     // Capturé avant le teardown : le son ne doit sonner que si une conversation
     // était établie, pas sur un rejet, un timeout ou un échec de connexion.
-    final wasConnected = _status == CallStatus.connected;
+    final wasConnected = _status == CallStatus.connected ||
+        _status == CallStatus.reconnecting;
     try {
       speakingDetector.stop();
+      _cancelAllReconnectTimers();
       _markTerminalCallId(_currentCallId);
       _cancelOutgoingRestoreTimeout();
       _isRestoringOutgoing = false;
@@ -396,6 +398,7 @@ extension CallOneToOne on CallService {
       await _releaseCallSession();
       // Mesh d'abord, sans retrigger onConnectionFailure → end_call parasite.
       _webrtc.onConnectionFailure = null;
+      _webrtc.onConnectionStateChanged = null;
       _clearAllGroupPeers(disarmOriginFailure: true);
       await _callKit.endAll(callId: _currentCallId);
       await _webrtc.dispose();
@@ -442,6 +445,10 @@ extension CallOneToOne on CallService {
     _isAutoAnsweringFromPush = false;
     _isRestoringOutgoing = false;
     _cancelOutgoingRestoreTimeout();
+    _isOutgoingCaller = false;
+    _iceRestartCount = 0;
+    _isIceRestarting = false;
+    _cancelAllReconnectTimers();
     // Session à trois : tout est soldé avec l'appel. Le droit d'ajout étant
     // porté par _confSessionId, l'effacer ici rend son bouton au prochain appel.
     _confSessionId = null;

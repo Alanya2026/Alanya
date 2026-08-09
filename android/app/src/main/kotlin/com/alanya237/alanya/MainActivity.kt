@@ -137,6 +137,7 @@ class MainActivity : FlutterFragmentActivity() {
             }
 
         CallNativeBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
+        CallMediaBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
 
         notificationOpenChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,

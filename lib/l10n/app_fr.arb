@@ -854,6 +854,7 @@
   "deleteForEveryone": "Supprimer pour tous",
   "meetingTitle": "Titre de la réunion",
   "connecting": "Connexion en cours…",
+  "callReconnecting": "Reconnexion…",
   "freeUnassigned": "Libre · non assigné",
   "numberUnavailable": "Numéro indisponible",
   "meetingNotFound": "Réunion introuvable",

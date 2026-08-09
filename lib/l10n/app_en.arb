@@ -384,6 +384,7 @@
   "deleteForEveryone": "Delete for everyone",
   "meetingTitle": "Meeting title",
   "connecting": "Connecting…",
+  "callReconnecting": "Reconnecting…",
   "freeUnassigned": "Free · unassigned",
   "numberUnavailable": "Number unavailable",
   "meetingNotFound": "Meeting not found",

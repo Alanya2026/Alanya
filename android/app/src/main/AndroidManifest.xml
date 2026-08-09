@@ -19,6 +19,8 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <!-- Fiabiliser la réception des pushs data-only quand l'app est fermée
@@ -149,6 +151,11 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        <!-- Capture micro (± caméra) en arrière-plan pendant un appel VoIP. -->
+        <service
+            android:name=".CallMediaForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|camera" />
         <receiver
             android:name=".NotificationActionReceiver"
             android:exported="false" />

@@ -1315,6 +1315,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connecting => 'Connecting…';
 
   @override
+  String get callReconnecting => 'Reconnecting…';
+
+  @override
   String get freeUnassigned => 'Free · unassigned';
 
   @override

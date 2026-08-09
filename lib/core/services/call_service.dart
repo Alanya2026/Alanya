@@ -24,6 +24,7 @@ import 'call/ended_call_registry.dart';
 import 'call/pending_call_reject_store.dart';
 import 'call/pending_outgoing_call_store.dart';
 import 'call/call_conf_routing.dart';
+import 'call/call_restart_roles.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -35,6 +36,7 @@ part 'call/call_controls.dart';   // contrôles médias + timer
 part 'call/call_session.dart';    // session audio / foreground en veille
 part 'call/call_ui.dart';         // bannière / minimiser l'écran d'appel
 part 'call/call_outgoing_restore.dart'; // restauration appel sortant après kill
+part 'call/call_reconnect.dart'; // reconnexion mid-call 1-à-1 / ICE restart
 
 /// Aligné sur TalkyFirebaseMessagingService (Android V2).
 const bool _kAndroidNativeCallNotifications = bool.fromEnvironment(
@@ -42,7 +44,7 @@ const bool _kAndroidNativeCallNotifications = bool.fromEnvironment(
   defaultValue: true,
 );
 
-enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, ended }
+enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, reconnecting, ended }
 
 /// État UI informatif du transfert (le backend reste autoritaire).
 enum CallTransferStatus {
@@ -129,6 +131,12 @@ class CallService extends ChangeNotifier {
 
   /// Grâce sur `Disconnected` mesh (état WebRTC souvent transitoire).
   final Map<String, Timer> _groupPeerDisconnectGrace = {};
+
+  /// État reconnect par peer (mesh) — jamais leaveCallSession sur un seul lien.
+  final Map<String, int> _groupPeerIceGeneration = {};
+  final Map<String, int> _groupPeerRetryCount = {};
+  final Map<String, bool> _groupPeerIsRestarting = {};
+  static const int _maxGroupPeerIceRestarts = 3;
 
   // Roster de l'appel de groupe (userId → infos d'affichage).
   final Map<String, GroupParticipantInfo> _groupRoster = {};
@@ -233,6 +241,17 @@ class CallService extends ChangeNotifier {
   // File d'attente des end_call perdus quand le socket n'est pas prêt.
   // Rejoués à l'authentification du socket (comme les rejects).
   final List<Map<String, dynamic>> _pendingEndCalls = [];
+
+  /// true si cet appareil a initié l'appel 1-à-1 (restart ICE = caller only).
+  bool _isOutgoingCaller = false;
+
+  Timer? _reconnectGraceTimer;
+  Timer? _globalReconnectTimer;
+  bool _isIceRestarting = false;
+  int _iceRestartCount = 0;
+  static const Duration _reconnectGraceDuration = Duration(seconds: 4);
+  static const Duration _globalReconnectTimeout = Duration(seconds: 45);
+  static const int _maxIceRestarts = 3;
 
   /// Hook optionnel après fin d'appel local (ex. resync historique).
   Future<void> Function()? onCallTerminatedHook;
@@ -467,7 +486,8 @@ class CallService extends ChangeNotifier {
     if (callId.isEmpty || _currentCallId != callId) return false;
     return _status == CallStatus.outgoing ||
         _status == CallStatus.connecting ||
-        _status == CallStatus.connected;
+        _status == CallStatus.connected ||
+        _status == CallStatus.reconnecting;
   }
 
   bool _alreadyHandledIncomingCallId(String? callId) {

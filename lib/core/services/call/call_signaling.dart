@@ -358,18 +358,30 @@ extension CallSignaling on CallService {
       // Pas de session locale : ignorer les ICE d'un appel fantôme / terminé.
       if (_status == CallStatus.idle ||
           _status == CallStatus.ended ||
-          (!_isRestoringOutgoing && _webrtc.peerConnection == null)) {
+          (!_isRestoringOutgoing &&
+              _status != CallStatus.reconnecting &&
+              _webrtc.peerConnection == null)) {
         debugPrint(
           '[CallService] 🛡 ice_candidate ignoré (status=$_status pc=${_webrtc.peerConnection != null})',
         );
         return;
       }
+      final gen = data['generation'] is int
+          ? data['generation'] as int
+          : int.tryParse(data['generation']?.toString() ?? '');
+      if (!_webrtc.acceptsIceGeneration(gen)) {
+        debugPrint('[CallService] 🛡 ice_candidate génération périmée gen=$gen');
+        return;
+      }
       final c = data['candidate'] as Map;
-      _webrtc.addIceCandidate(RTCIceCandidate(
-        c['candidate'] as String,
-        c['sdpMid'] as String?,
-        c['sdpMLineIndex'] as int?,
-      ));
+      _webrtc.addIceCandidate(
+        RTCIceCandidate(
+          c['candidate'] as String,
+          c['sdpMid'] as String?,
+          c['sdpMLineIndex'] as int?,
+        ),
+        generation: gen,
+      );
     });
 
     // Appels de groupe
@@ -638,7 +650,10 @@ extension CallSignaling on CallService {
       final fromUserId = data['fromUserId'].toString();
       final offer = data['offer'] as Map?;
       if (offer == null) return;
-      await _handleGroupOffer(fromUserId, offer);
+      final gen = data['generation'] is int
+          ? data['generation'] as int
+          : int.tryParse(data['generation']?.toString() ?? '');
+      await _handleGroupOffer(fromUserId, offer, generation: gen);
     });
 
     // WebRTC groupe : answer reçue
@@ -647,12 +662,21 @@ extension CallSignaling on CallService {
       final fromUserId = data['fromUserId'].toString();
       final answer = data['answer'] as Map?;
       if (answer == null) return;
+      final gen = data['generation'] is int
+          ? data['generation'] as int
+          : int.tryParse(data['generation']?.toString() ?? '');
+      final localGen = _groupPeerIceGeneration[fromUserId] ?? 0;
+      if (gen != null && gen < localGen) {
+        debugPrint('[CallService] 🛡 group_answer gen périmée peer=$fromUserId');
+        return;
+      }
       final pc = _groupPeerConnections[fromUserId];
       if (pc != null) {
         await pc.setRemoteDescription(
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );
         _groupRemoteDescSet.add(fromUserId);
+        _groupPeerIsRestarting[fromUserId] = false;
         await _flushGroupPendingIce(fromUserId);
       }
     });
@@ -663,6 +687,14 @@ extension CallSignaling on CallService {
       final fromUserId = data['fromUserId'].toString();
       final c = data['candidate'] as Map?;
       if (c == null) return;
+      final gen = data['generation'] is int
+          ? data['generation'] as int
+          : int.tryParse(data['generation']?.toString() ?? '');
+      final localGen = _groupPeerIceGeneration[fromUserId] ?? 0;
+      if (gen != null && gen < localGen) {
+        debugPrint('[CallService] 🛡 group_ice gen périmée peer=$fromUserId');
+        return;
+      }
       final candidate = RTCIceCandidate(
         c['candidate'] as String,
         c['sdpMid'] as String?,
@@ -670,7 +702,8 @@ extension CallSignaling on CallService {
       );
       final pc = _groupPeerConnections[fromUserId];
       if (pc == null || !_groupRemoteDescSet.contains(fromUserId)) {
-        _groupPendingIce.putIfAbsent(fromUserId, () => []).add(candidate);
+        final buf = _groupPendingIce.putIfAbsent(fromUserId, () => []);
+        if (buf.length < 64) buf.add(candidate);
         return;
       }
       try {

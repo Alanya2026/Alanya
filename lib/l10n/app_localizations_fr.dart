@@ -1333,6 +1333,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get connecting => 'Connexion en cours…';
 
   @override
+  String get callReconnecting => 'Reconnexion…';
+
+  @override
   String get freeUnassigned => 'Libre · non assigné';
 
   @override

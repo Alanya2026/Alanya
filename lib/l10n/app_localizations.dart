@@ -2318,6 +2318,12 @@ abstract class AppLocalizations {
   /// **'Connexion en cours…'**
   String get connecting;
 
+  /// No description provided for @callReconnecting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reconnexion…'**
+  String get callReconnecting;
+
   /// No description provided for @freeUnassigned.
   ///
   /// In fr, this message translates to:
