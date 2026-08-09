@@ -187,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    if (callService.status == CallStatus.incoming) {
+    if (callService.shouldShowFlutterIncomingUi) {
       _showIncomingCall();
       return;
     }

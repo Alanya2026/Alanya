@@ -86,6 +86,21 @@ extension CallSignaling on CallService {
       debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
       _ensureRemoteIdentityResolved();
+
+      // Owner UI avant notify : FG → Flutter, BG → CallKit (pas IncomingCallScreen).
+      if (_isAutoAnsweringFromPush) {
+        _clearIncomingPresentation(callId: incomingCallId);
+      } else if (_isAppForeground) {
+        _claimIncomingPresentation(
+          incomingCallId,
+          IncomingPresentationOwner.flutterScreen,
+        );
+      } else {
+        _claimIncomingPresentation(
+          incomingCallId,
+          IncomingPresentationOwner.nativeCallKit,
+        );
+      }
       notify();
 
       if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
@@ -413,6 +428,17 @@ extension CallSignaling on CallService {
         );
       }
       _status = CallStatus.incoming;
+      if (_isAppForeground) {
+        _claimIncomingPresentation(
+          _groupRoomId,
+          IncomingPresentationOwner.flutterScreen,
+        );
+      } else {
+        _claimIncomingPresentation(
+          _groupRoomId,
+          IncomingPresentationOwner.nativeCallKit,
+        );
+      }
       notify();
 
       if (!_isAppForeground) {
@@ -564,6 +590,17 @@ extension CallSignaling on CallService {
 
       if (!sameSession) {
         _status = CallStatus.incoming;
+        if (_isAppForeground) {
+          _claimIncomingPresentation(
+            sessionId,
+            IncomingPresentationOwner.flutterScreen,
+          );
+        } else {
+          _claimIncomingPresentation(
+            sessionId,
+            IncomingPresentationOwner.nativeCallKit,
+          );
+        }
         notify();
 
         if (!_isAppForeground) {

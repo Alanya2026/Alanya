@@ -55,6 +55,7 @@ extension CallIncoming on CallService {
     _autoAnswerOnNextIncoming = true;
     _autoAnswerCallerId = callerId;
     _isAutoAnsweringFromPush = true;
+    _clearIncomingPresentation(callId: callId.isNotEmpty ? callId : null);
 
     if (isConf) {
       final sessionId = (roomId != null && roomId.isNotEmpty)
@@ -203,6 +204,19 @@ extension CallIncoming on CallService {
 
     _status = CallStatus.incoming;
     _ensureRemoteIdentityResolved();
+    // CallKit possède déjà l'UI en BG ; en FG (tap notif / preview) → Flutter.
+    final presentationId = callId.isNotEmpty ? callId : (_groupRoomId ?? '');
+    if (_isAppForeground) {
+      _claimIncomingPresentation(
+        presentationId,
+        IncomingPresentationOwner.flutterScreen,
+      );
+    } else {
+      _claimIncomingPresentation(
+        presentationId,
+        IncomingPresentationOwner.nativeCallKit,
+      );
+    }
     notify();
     // Filet anti-fantôme (1-à-1) : si l'offre WebRTC de confirmation n'arrive
     // jamais via le socket, on démonte au lieu de laisser un écran d'appel entrant

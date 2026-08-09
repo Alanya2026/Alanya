@@ -154,6 +154,7 @@ extension CallOneToOne on CallService {
       _autoAnswerOnNextIncoming = true;
       _autoAnswerCallerId = _remoteUserId!.toString();
       _isAutoAnsweringFromPush = true;
+      _clearIncomingPresentation(callId: _activeIncomingPresentationCallId);
       await _ringtone.stop();
       notify();
       _armAwaitingOfferTimeout();
@@ -170,6 +171,7 @@ extension CallOneToOne on CallService {
     // L'auto-réponse a fait son office : on repasse en navigation normale pour
     // que la minimisation de l'écran d'appel ne le ré-ouvre pas en boucle.
     _isAutoAnsweringFromPush = false;
+    _clearIncomingPresentation(callId: _activeIncomingPresentationCallId);
     notify();
 
     await _ringtone.stop();
@@ -424,6 +426,7 @@ extension CallOneToOne on CallService {
 
   void _resetCallState() {
     _resetCallUiState();
+    _clearIncomingPresentation();
     _cancelOutgoingTimeout();
     _cancelAwaitingOfferTimeout();
     _cancelIncomingRingSafety();

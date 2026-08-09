@@ -212,10 +212,13 @@ class CallKitService {
 
   /// Retire la notif CallKit sans marquer l'appel terminé ni déclencher un refus
   /// côté natif (voir [CallDismissRegistry]).
+  /// Marque toujours le dismiss comme programmatique avant `endCall`, sinon le
+  /// listener natif interprète le retrait comme un refus utilisateur → reject.
   Future<void> dismissIncomingUiSilently({String? callId}) async {
     if (kIsWeb) return;
     final id = (callId ?? _lastShownCallId ?? '').trim();
     if (id.isEmpty) return;
+    await _markProgrammaticDismissNative([id]);
     if (Platform.isAndroid) {
       try {
         await _nativeCallChannel.invokeMethod<void>(

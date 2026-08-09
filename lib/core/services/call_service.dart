@@ -25,6 +25,7 @@ import 'call/pending_call_reject_store.dart';
 import 'call/pending_outgoing_call_store.dart';
 import 'call/call_conf_routing.dart';
 import 'call/call_restart_roles.dart';
+import 'call/incoming_presentation.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -213,6 +214,11 @@ class CallService extends ChangeNotifier {
   bool _isAutoAnsweringFromPush = false;
   bool _isRestoringOutgoing = false;
   Timer? _outgoingRestoreTimer;
+
+  // Propriétaire de présentation UI entrante (lié au callId) — distinct de
+  // CallStatus.incoming. Évite CallKit + IncomingCallScreen en même temps.
+  IncomingPresentationState _incomingPresentation =
+      IncomingPresentationState.empty;
 
   // Filet de sécurité local : si aucun état terminal serveur (call_answered,
   // call_busy, call_no_answer, call_rejected…) n'arrive, on abandonne l'appel.
@@ -481,6 +487,73 @@ class CallService extends ChangeNotifier {
 
   String? get currentCallId => _currentCallId;
 
+  IncomingPresentationOwner get incomingPresentationOwner =>
+      _incomingPresentation.owner;
+
+  /// callId utilisé pour l'ownership UI (1-1 = callId, groupe/conf = room/session).
+  String? get _activeIncomingPresentationCallId {
+    final id = _currentCallId?.trim();
+    if (id != null && id.isNotEmpty) return id;
+    final room = _groupRoomId?.trim();
+    if (room != null && room.isNotEmpty) return room;
+    return null;
+  }
+
+  /// HomeScreen : ouvrir IncomingCallScreen seulement si Flutter est owner.
+  bool get shouldShowFlutterIncomingUi => evaluateShouldShowFlutterIncomingUi(
+        statusIsIncoming: _status == CallStatus.incoming,
+        isAutoAnsweringFromPush: _isAutoAnsweringFromPush,
+        appForeground: _isAppForeground,
+        owner: _incomingPresentation.owner,
+        ownerCallId: _incomingPresentation.callId,
+        currentCallId: _activeIncomingPresentationCallId,
+      );
+
+  bool _claimIncomingPresentation(
+    String? callId,
+    IncomingPresentationOwner owner, {
+    bool explicitHandoff = false,
+  }) {
+    final id = callId?.trim() ?? '';
+    final result = claimIncomingPresentation(
+      current: _incomingPresentation,
+      callId: id,
+      owner: owner,
+      explicitHandoff: explicitHandoff,
+      isTerminal: _isTerminalCallId(id),
+    );
+    if (result.ignored && !result.changed) {
+      if (id.isNotEmpty) {
+        debugPrint(
+          '[CallService] 🛡 claim presentation ignoré: callId=$id '
+          'want=$owner have=${_incomingPresentation.owner}/'
+          '${_incomingPresentation.callId} handoff=$explicitHandoff',
+        );
+      }
+      return false;
+    }
+    if (result.changed) {
+      _incomingPresentation = result.state;
+      debugPrint(
+        '[CallService] 🎯 presentation owner=${result.state.owner} '
+        'callId=${result.state.callId}',
+      );
+    }
+    return result.changed || !result.ignored;
+  }
+
+  void _clearIncomingPresentation({String? callId}) {
+    final next = clearIncomingPresentationState(
+      current: _incomingPresentation,
+      callId: callId,
+    );
+    if (next.owner == _incomingPresentation.owner &&
+        next.callId == _incomingPresentation.callId) {
+      return;
+    }
+    _incomingPresentation = next;
+  }
+
   /// Vrai si une session d'appel sortant/en cours correspond au [callId] CallKit.
   bool matchesActiveOutgoingSession(String callId) {
     if (callId.isEmpty || _currentCallId != callId) return false;
@@ -506,6 +579,7 @@ class CallService extends ChangeNotifier {
     final now = DateTime.now();
     _handledTerminalCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 120);
     _handledTerminalCallIds[callId] = now;
+    _clearIncomingPresentation(callId: callId);
     // Persisté pour l'isolate FCM background (course call vs call_ended).
     unawaited(EndedCallRegistry.markEnded(callId));
   }
@@ -546,26 +620,38 @@ class CallService extends ChangeNotifier {
   }
 
   /// App envoyée en arrière-plan pendant un entrant qui sonne au premier plan :
-  /// on coupe la sonnerie Dart et on bascule sur CallKit pour que l'OS continue
-  /// de sonner et que l'appel reste décrochable depuis la notification/lockscreen
-  /// (comportement WhatsApp) — sinon la sonnerie tournerait sans UI.
+  /// claim CallKit, coupe RingtoneService, affiche CallKit pour le même callId
+  /// même si le FCM a déjà été consommé / est en retard — JAMAIS reject_call.
   Future<void> handleForegroundIncomingBackgrounded() async {
     if (kIsWeb) return;
     if (_status != CallStatus.incoming || _isAutoAnsweringFromPush) return;
+    final presentationId = _activeIncomingPresentationCallId;
+    if (presentationId == null || presentationId.isEmpty) return;
+
+    _claimIncomingPresentation(
+      presentationId,
+      IncomingPresentationOwner.nativeCallKit,
+      explicitHandoff: true,
+    );
+
     await _ringtone.stop();
     final callerId = _remoteUserId?.toString() ?? '';
     final isGroup = _groupRoomId != null && _groupRoomId!.isNotEmpty;
     if (!isGroup && callerId.isEmpty) return;
+
+    // Forcer CallKit pour ce callId (idempotent si déjà affiché via FCM).
     unawaited(
       _callKit
           .showIncoming(
-            callId: isGroup ? _groupRoomId! : (_currentCallId ?? ''),
+            callId: presentationId,
             callerId: callerId,
             callerName: _remoteUserName ??
                 (isGroup ? resolveL10n().groupCall : resolveL10n().callNoun),
             callerPhoto: _remoteUserPhoto,
             isVideo: _isVideo,
             roomId: isGroup ? _groupRoomId : null,
+            sessionKind: _confSessionId != null ? 'conference' : null,
+            mode: _confSessionId != null ? _confMode : null,
           )
           .catchError((Object e) {
         debugPrint('[CallService] handoff CallKit (background) échoué: $e');
@@ -573,11 +659,20 @@ class CallService extends ChangeNotifier {
     );
   }
 
-  /// Retour au premier plan pendant un entrant : retire l'UI CallKit et relance
-  /// la sonnerie Dart (l'écran d'appel entrant Flutter reprend la main).
+  /// Retour au premier plan pendant un entrant : dismiss CallKit programmatique
+  /// (pas un refus), claim Flutter, puis notify pour ouvrir IncomingCallScreen.
   Future<void> resumeForegroundIncoming() async {
     if (kIsWeb) return;
     if (_status != CallStatus.incoming || _isAutoAnsweringFromPush) return;
+    final presentationId = _activeIncomingPresentationCallId;
+    if (presentationId == null || presentationId.isEmpty) return;
+
+    _claimIncomingPresentation(
+      presentationId,
+      IncomingPresentationOwner.flutterScreen,
+      explicitHandoff: true,
+    );
+
     await dismissIncomingCallKitForForeground();
     if (_status == CallStatus.incoming && !_isAutoAnsweringFromPush) {
       unawaited(_ringtone.startIncomingRingtone().catchError((Object e) {
@@ -585,6 +680,7 @@ class CallService extends ChangeNotifier {
       }));
       _armIncomingRingSafety();
     }
+    notify();
   }
 
   /// Borne l'attente de l'offre WebRTC après acceptation d'un appel entrant : si
