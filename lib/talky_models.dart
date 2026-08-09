@@ -1434,6 +1434,8 @@ class SocketEvents {
   static const endCall     = 'end_call';
   static const callRejoin  = 'call_rejoin';
   static const callRejoinAnswer = 'call_rejoin_answer';
+  static const callResumeAck = 'call_resume_ack';
+  static const callResumeReject = 'call_resume_reject';
 
   // Appels 1-1 (Backend → Flutter)
   static const incomingCall  = 'incoming_call';

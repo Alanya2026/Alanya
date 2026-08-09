@@ -355,6 +355,15 @@ extension CallSignaling on CallService {
     // ICE candidate 1-à-1
     _apiClient.onSocketEvent(SocketEvents.iceCandidate, (data) {
       if (data is! Map || data['candidate'] == null) return;
+      // Pas de session locale : ignorer les ICE d'un appel fantôme / terminé.
+      if (_status == CallStatus.idle ||
+          _status == CallStatus.ended ||
+          (!_isRestoringOutgoing && _webrtc.peerConnection == null)) {
+        debugPrint(
+          '[CallService] 🛡 ice_candidate ignoré (status=$_status pc=${_webrtc.peerConnection != null})',
+        );
+        return;
+      }
       final c = data['candidate'] as Map;
       _webrtc.addIceCandidate(RTCIceCandidate(
         c['candidate'] as String,

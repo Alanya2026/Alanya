@@ -82,17 +82,64 @@ extension CallOutgoingRestore on CallService {
   }
 
   Future<void> _handleCallResume(Map<String, dynamic> data) async {
-    if (!_isRestoringOutgoing && _status != CallStatus.connecting) return;
-
     final peerId = int.tryParse(data['peerId']?.toString() ?? '');
-    if (peerId == null || peerId != _remoteUserId) return;
+    final serverCallId = data['callId']?.toString();
+    if (peerId == null || serverCallId == null || serverCallId.isEmpty) {
+      debugPrint('[CallService] 🛡 call_resume ignoré: payload invalide');
+      return;
+    }
+
+    final canResume = await _canConfirmCallResume(
+      serverCallId: serverCallId,
+      peerId: peerId,
+    );
+    if (!canResume) {
+      debugPrint(
+        '[CallService] call_resume_reject callId=$serverCallId peer=$peerId (no_local_call_state)',
+      );
+      _apiClient.sendSocketEvent(SocketEvents.callResumeReject, {
+        'callId': serverCallId,
+        'reason': 'no_local_call_state',
+      });
+      return;
+    }
+
+    _apiClient.sendSocketEvent(SocketEvents.callResumeAck, {
+      'callId': serverCallId,
+    });
+    debugPrint('[CallService] call_resume_ack callId=$serverCallId peer=$peerId');
+
+    // Déjà en communication : ack suffit, pas de renégociation forcée.
+    if (_status == CallStatus.connected && !_isRestoringOutgoing) {
+      if (_currentCallId == null || _currentCallId!.isEmpty) {
+        _currentCallId = serverCallId;
+      }
+      return;
+    }
+
+    // Snapshot / CallKit présents mais UI encore idle → amorcer la restore.
+    if (!_isRestoringOutgoing &&
+        _status != CallStatus.connecting &&
+        _status != CallStatus.outgoing) {
+      final bootstrapped = await _bootstrapOutgoingRestoreFromResume(
+        serverCallId: serverCallId,
+        peerId: peerId,
+        isVideo: data['isVideo'] == true,
+      );
+      if (!bootstrapped) {
+        debugPrint(
+          '[CallService] call_resume ack sans restore (status=$_status)',
+        );
+        return;
+      }
+    }
+
+    if (!_isRestoringOutgoing && _status != CallStatus.connecting) return;
+    if (_remoteUserId != null && peerId != _remoteUserId) return;
 
     _cancelOutgoingRestoreTimeout();
 
-    final serverCallId = data['callId']?.toString();
-    if (serverCallId != null && serverCallId.isNotEmpty) {
-      _currentCallId = serverCallId;
-    }
+    _currentCallId = serverCallId;
 
     final isVideo = data['isVideo'] == true || _isVideo;
     _isVideo = isVideo;
@@ -106,6 +153,88 @@ extension CallOutgoingRestore on CallService {
       debugPrint('[CallService] call_resume échoué: $e');
       await _terminateRestoredOutgoing(showMessage: true);
     }
+  }
+
+  /// Preuve locale qu'une reprise est légitime (évite de conserver un in_call fantôme).
+  Future<bool> _canConfirmCallResume({
+    required String serverCallId,
+    required int peerId,
+  }) async {
+    if (_isTerminalCallId(serverCallId) ||
+        await EndedCallRegistry.isEnded(serverCallId)) {
+      return false;
+    }
+
+    if (_isRestoringOutgoing &&
+        (_remoteUserId == peerId || _currentCallId == serverCallId)) {
+      return true;
+    }
+
+    if ((_status == CallStatus.connecting ||
+            _status == CallStatus.connected ||
+            _status == CallStatus.outgoing) &&
+        (_remoteUserId == peerId || _currentCallId == serverCallId)) {
+      return true;
+    }
+
+    final snap = await PendingOutgoingCallStore.read();
+    if (snap != null && snap.remoteUserId == peerId) {
+      if (snap.serverCallId == serverCallId ||
+          snap.clientCallId == serverCallId ||
+          snap.serverCallId == null ||
+          snap.serverCallId!.isEmpty) {
+        if (!await EndedCallRegistry.isEnded(snap.clientCallId)) {
+          return true;
+        }
+      }
+    }
+
+    if (!kIsWeb) {
+      final active = await _callKit.getActiveCall();
+      if (active != null) {
+        final activeId = (active['callId'] ?? '').toString();
+        final activeCaller = (active['callerId'] ?? '').toString();
+        if (activeId == serverCallId) return true;
+        if (activeCaller == peerId.toString() &&
+            (activeId.isEmpty ||
+                activeId == _currentCallId ||
+                (snap != null && activeId == snap.clientCallId))) {
+          return true;
+        }
+        if (snap != null &&
+            activeId == snap.clientCallId &&
+            snap.remoteUserId == peerId) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> _bootstrapOutgoingRestoreFromResume({
+    required String serverCallId,
+    required int peerId,
+    required bool isVideo,
+  }) async {
+    final snap = await PendingOutgoingCallStore.read();
+    if (snap == null || snap.remoteUserId != peerId) return false;
+    if (await EndedCallRegistry.isEnded(snap.clientCallId)) return false;
+
+    debugPrint(
+      '[CallService] 🔄 bootstrap restore depuis call_resume '
+      'client=${snap.clientCallId} server=$serverCallId',
+    );
+    _currentCallId = serverCallId;
+    _remoteUserId = snap.remoteUserId;
+    _remoteUserName = snap.remoteUserName;
+    _remoteUserPhoto = snap.remoteUserPhoto;
+    _isVideo = snap.isVideo || isVideo;
+    _status = CallStatus.connecting;
+    _isRestoringOutgoing = true;
+    notify();
+    _armOutgoingRestoreTimeout();
+    return true;
   }
 
   Future<void> _initWebRtcForOutgoingRestore({required bool isVideo}) async {
