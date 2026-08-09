@@ -126,6 +126,8 @@ extension CallReconnect on CallService {
 
     final pc = _webrtc.peerConnection;
     if (pc == null) {
+      // Pas de branche Recreating dans ce lot : ICE restart uniquement.
+      // PC null / max retries → fin propre (end_call), pas de recreate PC.
       debugPrint('[CallService] ICE restart impossible (PC null) → endCall');
       await endCall();
       return;

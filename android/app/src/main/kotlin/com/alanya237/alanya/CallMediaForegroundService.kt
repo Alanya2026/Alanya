@@ -52,7 +52,7 @@ class CallMediaForegroundService : Service() {
             Log.e(TAG, "startForeground failed", e)
             stopSelf()
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
