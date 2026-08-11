@@ -1,0 +1,1335 @@
+% Fragment partage : inclus par trajets-confiance.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{La propriété de sûreté}
+
+\section{Le désaccord à trancher en premier}
+
+Une fonctionnalité de suivi de trajet peut se construire autour de deux promesses
+différentes, et elles n'ont pas le même coût ni la même solidité~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{« vos proches voient où vous êtes »} --- la promesse est la \emph{trace}~;
+  \item \textbf{« si vous ne confirmez pas, vos proches sont prévenus »} --- la promesse est
+        l'\emph{échéance}.
+\end{enumerate}
+
+La première dépend du GPS, de la batterie, du réseau, du système d'exploitation et du bon
+vouloir d'iOS en arrière-plan. Elle tombe en panne régulièrement, et une fonctionnalité de
+sûreté qui tombe en panne régulièrement est pire qu'absente~: on lui fait confiance.
+
+La seconde ne dépend que d'une ligne dans \code{job\_queue} et d'une horloge serveur.
+
+\begin{note}[Le postulat du volet]
+\textbf{La garantie de sûreté, c'est l'échéance --- pas la trace.} La trace est un confort~:
+elle rassure pendant, et elle aide à retrouver quelqu'un après. L'échéance est le contrat.
+Tout le reste du dossier découle de là.
+\end{note}
+
+\section{Trois conséquences, à ne jamais perdre de vue}
+
+\textbf{Conséquence 1 --- perdre la position n'est pas un incident.} Un téléphone dans un
+tunnel, un GPS coupé, une application tuée par le système~: ce sont des \emph{informations},
+affichées honnêtement (« dernier point il y a 4 minutes »), et elles ne déclenchent jamais
+d'alerte à elles seules. Confondre « je ne vous vois plus » et « il vous est arrivé quelque
+chose » est le plus court chemin vers un cercle qui n'ouvre plus les notifications.
+
+\textbf{Conséquence 2 --- iOS n'a pas à égaler Android.} On ne peut pas garantir un flux de
+positions continu sur iOS en arrière-plan, et il est inutile de le promettre. Le filet tient
+quand même, parce qu'il est côté serveur. Le dossier dit ce qui est garanti et ce qui ne
+l'est pas, plutôt que d'annoncer une parité qui ne sera pas tenue.
+
+\textbf{Conséquence 3 --- on ne clôt jamais automatiquement sur une arrivée détectée.} Le
+GPS \emph{propose}, l'humain \emph{dispose}. Une détection d'arrivée pose la question~; seule
+la personne y répond. Le coût d'un faux positif devient une question à balayer, jamais un
+filet rompu.
+
+\begin{alerte}[Le filet dépend d'un drapeau d'environnement]
+\code{startJobWorker()} est conditionné par \code{BROADCAST\_\allowbreak WORKER\_\allowbreak ENABLED !== 'true'}
+(\code{src/services/jobQueue.js}). Aujourd'hui, si le drapeau est absent, la file ne tourne
+pas et seuls les diffusions et le rattrapage de bienvenue en pâtissent --- fâcheux, pas
+grave. Avec les trajets, \textbf{aucune échéance ne se déclenche plus~: on promet un filet
+qui n'existe pas}. Deux mesures dans le même lot~: renommer le drapeau en
+\code{JOB\_WORKER\_ENABLED}, et refuser de servir \mPOST{}~\code{/api/trips} si le worker
+n'a pas démarré. Un refus explicite vaut mieux qu'une promesse silencieuse.
+\end{alerte}
+
+\chapter{La machine à états}
+
+\section{Les huit états}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.9cm}p{1.7cm}X@{}}
+\toprule
+\thd{État} & \thd{Nature} & \thd{Sens} \\
+\midrule
+\code{active}            & ouvert   & Partage en cours, les positions circulent. \\
+\code{awaiting\_confirm} & ouvert   & La question est posée. Le partage continue. \\
+\code{alert}             & ouvert   & Grâce écoulée sans réponse. Le cercle est prévenu. \\
+\code{sos}               & ouvert   & Alerte explicite. Strictement plus fort que
+                                      \code{alert}. \\
+\code{closed\_confirmed} & terminal & La personne a confirmé son arrivée. \\
+\code{closed\_cancelled} & terminal & Arrêté par le propriétaire avant toute échéance. \\
+\code{closed\_expired}   & terminal & Plafond dur atteint après une alerte. \\
+\code{closed\_unwatched} & terminal & Plus aucun destinataire. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Pourquoi des libellés anglais dans le schéma]
+Le reste de la base fait de même --- \code{platform ENUM('android','ios','web','unknown')}
+(\code{migrations/\allowbreak 020\_\allowbreak user\_\allowbreak push\_\allowbreak devices.sql}), \code{kind = 'trust'}
+(\code{migrations/\allowbreak 050\_\allowbreak contact\_\allowbreak list\_\allowbreak kind.sql}). Les libellés français sont l'affaire de la
+couche de présentation et de \code{lib/l10n/}, jamais celle du schéma.
+\end{note}
+
+\begin{alerte}[\code{ENUM} plutôt qu'un entier --- et le contre-exemple est dans la base]
+À taille de stockage \textbf{identique} --- un octet dans les deux cas --- l'entier ne
+survit pas à la relecture. \code{message.type} est un \code{SMALLINT} documenté par un
+commentaire SQL~: \code{COMMENT '0=text 1=image 2=video 3=audio 4=file 5=location'}
+(\code{migrations/\allowbreak 001\_\allowbreak initial\_\allowbreak schema.sql}). Ce
+commentaire s'arrête à~5, alors que les types \textbf{6, 7 et 8 existent} --- message
+système, carte de contact, appel à l'action de bienvenue. Le commentaire a pourri~; la base
+ne sait plus ce qu'elle contient, et un dump de production ne se lit plus sans le code sous
+les yeux.
+
+Un \code{ENUM} ne peut pas pourrir~: la liste des valeurs \emph{est} le schéma, elle sort
+avec \code{SHOW CREATE TABLE}, et le serveur refuse ce qui n'y figure pas. C'est déjà le
+choix retenu partout où la base nomme un état~: \code{appState}, \code{block\_\allowbreak
+type}, \code{login\_\allowbreak method}, \code{previewMode}, et le \code{status} des
+diffusions.
+\end{alerte}
+
+\begin{note}[La règle appliquée ici, et ses trois pièges]
+\textbf{Ensemble fermé, qui ne change que par décision de conception} $\rightarrow$
+\code{ENUM}~: \code{trip.state} --- c'est une machine à états, y ajouter un état \emph{doit}
+coûter une migration, c'est une garantie et non une gêne --- ainsi que \code{trip.kind} et
+\code{trip\_\allowbreak watcher.state}.
+
+\textbf{Ensemble ouvert, écrit depuis de nombreux endroits} $\rightarrow$ \code{VARCHAR}~:
+\code{trip\_\allowbreak event.kind}, qui gagnera des valeurs au fil des versions, comme
+\code{job\_\allowbreak queue.kind} avant lui.
+
+\textbf{Entier} $\rightarrow$ seulement si la valeur est \emph{ordinale} et qu'on la compare
+avec \code{<} ou \code{>}. Aucune colonne de ce volet n'est dans ce cas.
+
+Les trois pièges de l'\code{ENUM}, à connaître avant d'écrire la migration~:
+\begin{enumerate}[leftmargin=1.6em]
+  \item \code{WHERE state = 1} ne compare pas au texte «~1~»~: il désigne la
+        \textbf{première valeur déclarée}. On compare toujours à une chaîne.
+  \item \code{ORDER BY state} trie par ordre de \emph{déclaration}, pas alphabétiquement.
+        On déclare donc les valeurs dans l'ordre du cycle de vie --- ici, c'est un avantage.
+  \item Ajouter une valeur \textbf{en fin de liste} se fait sans reconstruire la table, tant
+        qu'on reste sous 255 valeurs et donc sur un octet. L'insérer au milieu, la renommer
+        ou réordonner force au contraire une reconstruction complète. On ajoute toujours à
+        la fin.
+\end{enumerate}
+\end{note}
+
+\section{L'automate}
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  e/.style={draw=AlanyaLine, fill=AlanyaSurface, rounded corners=3pt,
+            font=\sffamily\small, inner sep=6pt, minimum height=0.85cm, text=AlanyaInk},
+  ok/.style={e, draw=AlanyaSuccess, line width=0.9pt, fill=AlanyaSuccess!8},
+  ko/.style={e, draw=danger, line width=0.9pt, fill=danger!6},
+  fin/.style={e, draw=AlanyaIndigo, fill=AlanyaContainer, text=AlanyaIndigoDark},
+  a/.style={-{Stealth[length=2.2mm]}, draw=AlanyaGray, semithick},
+  l/.style={font=\sffamily\scriptsize, text=AlanyaGray, fill=white, inner sep=2pt}
+]
+  \node[e]   (act) at (0,0)       {\code{active}};
+  \node[e]   (awa) at (4.9,0)     {\code{awaiting\_confirm}};
+  \node[ok]  (con) at (10.4,0)    {\code{closed\_confirmed}};
+  \node[ko]  (ale) at (4.9,-2.6)  {\code{alert}};
+  \node[ko]  (sos) at (0,-2.6)    {\code{sos}};
+  \node[fin] (exp) at (10.4,-2.6) {\code{closed\_expired}};
+
+  \draw[a] (act) -- node[l, above] {ETA, ou arrivée tenue 60~s} (awa);
+  \draw[a] (awa) -- node[l, above] {confirmation}               (con);
+  \draw[a] (ale) -- node[l, above right, pos=0.15, inner sep=1pt]
+           {confirmation tardive} (con.south west);
+  \draw[a] (awa) -- node[l, right] {grâce écoulée}              (ale);
+  \draw[a] (act) -- node[l, left]  {bouton SOS}                 (sos);
+  \draw[a] (awa.south west) -- node[l, pos=0.5, below left, inner sep=1pt]
+           {bouton SOS} (sos.north east);
+  \draw[a] (ale) -- node[l, above] {plafond dur}                (exp);
+
+  % Prolongation : boucle par le haut, elle ne doit croiser aucune transition.
+  \draw[a] (awa.north) -- ++(0,0.85) -- node[l, above] {prolongation}
+           ++(-4.9,0) -- (act.north);
+
+  % Arret volontaire : route par le bas, sous tous les etats.
+  \draw[a] (act.west) -- (-1.95,0) -- (-1.95,-4.3)
+           -- node[l, below, pos=0.60] {arrêt, ou plus aucun destinataire}
+           (10.4,-4.3) -- (exp.south);
+\end{tikzpicture}
+\end{center}
+
+Les deux états terminaux \code{closed\_cancelled} et \code{closed\_unwatched} partagent la
+même arête de sortie sur le schéma~; ils diffèrent par leur \code{close\_reason} et par ce
+qui est notifié au cercle.
+
+\section{Les transitions}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.0cm}p{3.0cm}p{2.2cm}X@{}}
+\toprule
+\thd{De} & \thd{Vers} & \thd{Qui} & \thd{Déclencheur} \\
+\midrule
+---                 & \code{active}   & client & \mPOST{}~\code{/api/trips} \\
+---                 & \code{sos}      & client & \mPOST{}~\code{/api/trips/sos},
+                                                 aucun trajet ouvert \\
+\code{active}       & \code{awaiting\_confirm} & job / serveur &
+  \code{trip\_eta\_due}, ou rayon tenu 60~s à l'ingestion d'un point \\
+\code{awaiting\_confirm} & \code{active} & client & prolongation \\
+\code{awaiting\_confirm} & \code{closed\_confirmed} & client & confirmation \\
+\code{awaiting\_confirm} & \code{alert} & job & \code{trip\_grace\_expired} \\
+\code{alert}        & \code{closed\_confirmed} & client & confirmation tardive \\
+ouvert              & \code{sos}      & client & bouton SOS après décompte \\
+\code{alert} / \code{sos} & \code{closed\_expired} & job &
+  \code{trip\_max\_duration} \\
+\code{active} / \code{awaiting\_confirm} & \code{closed\_cancelled} & client & arrêt \\
+tout ouvert         & \code{closed\_unwatched} & job & \code{trip\_no\_watcher} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Quatre invariants}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Seul le propriétaire clôt.} Un destinataire ne peut qu'acquitter
+        (\mPOST{}~\code{/api/trips/:id/seen}), ce qui s'inscrit dans \code{trip\_event} et
+        remonte au propriétaire (« Maman a vu »). Personne d'autre ne décide qu'une personne
+        est arrivée.
+  \item \textbf{Une alerte émise ne se rétracte jamais.} Confirmer après une alerte émet un
+        événement de résolution~; cela n'efface pas l'alerte, ni chez les destinataires, ni
+        dans le journal.
+  \item \textbf{Terminal est terminal.} Repartir, c'est un nouveau trajet.
+  \item \textbf{Un seul trajet ouvert par utilisateur} --- 409 \code{TRIP\_ALREADY\_ACTIVE}.
+\end{enumerate}
+
+\section{Les cas limites}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.2cm}X@{}}
+\toprule
+\thd{Situation} & \thd{Comportement} \\
+\midrule
+\thd{Application tuée} & Le service en avant-plan tient le flux. Si le système tue quand
+même, le serveur constate la péremption ($3\times$ battement $+$ 30~s), pose
+\code{stale = 1} et émet \code{trip:stale}. \textbf{Il n'alerte pas.} \\
+\thd{GPS coupé, permission retirée} & Le client émet \code{trip:signal} avec son motif~;
+le cercle lit « position indisponible » et le dernier point daté. \textbf{La chaîne
+d'échéance continue}~: perdre le signal n'exempte pas de confirmer. \\
+\thd{Réseau coupé} & Tampon local borné en Drift, vidé à la reconnexion avec les
+horodatages réels. Même chorégraphie de reprise que \code{RESUME\_ACK\_MS}
+(\code{src/\allowbreak socket/\allowbreak state/\allowbreak callState.js}). \\
+\thd{Deux appareils du propriétaire} & Exactement le problème des appels. Un lien
+\code{(tripId, ownerId) $\rightarrow$ deviceId} sur le modèle de
+\code{src/\allowbreak socket/\allowbreak state/\allowbreak callDeviceOwnership.js}. Sans lui, deux appareils entrelacent leurs
+positions et la trace zigzague. \\
+\thd{Trajet plus long que prévu} & Prolongations illimitées, plus un plafond dur de 12~h qui
+force \code{awaiting\_confirm}. Un trajet n'est pas un traceur permanent. \\
+\thd{Compte supprimé ou exclu} & Clôture en \code{closed\_cancelled}, destinataires
+notifiés. \\
+\thd{Horloge du client fausse} & Toute l'arithmétique d'échéance est serveur, en UTC, via
+\code{job\_queue.run\_after}. Le client n'envoie qu'une durée ou une heure~; c'est
+\code{eta\_at} calculé par le serveur qui fait foi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\chapter{Modèle de données}
+
+\section{Quatre tables}
+
+\begin{lstlisting}[language=SQL, caption={\code{migrations/051\_trips.sql} --- extrait}]
+-- 051_trips.sql -- trajets de confiance : suivi temps reel, echeance et SOS.
+-- L'audience est figee au demarrage (instantane de la liste Confiance),
+-- sur le modele de broadcast_delivery (040_broadcast.sql).
+
+CREATE TABLE IF NOT EXISTS trip (
+  id            BIGINT       NOT NULL AUTO_INCREMENT,
+  owner_id      INT          NOT NULL,
+  client_id     VARCHAR(64)  NOT NULL,          -- creation idempotente
+  kind          ENUM('taxi','meeting','sos')      NOT NULL DEFAULT 'meeting',
+  state         ENUM('active','awaiting_confirm','alert','sos',
+                     'closed_confirmed','closed_cancelled',
+                     'closed_expired','closed_unwatched')
+                                                 NOT NULL DEFAULT 'active',
+  dest_lat      DECIMAL(9,6) NULL,
+  dest_lng      DECIMAL(9,6) NULL,
+  dest_label    VARCHAR(160) NULL,               -- geocode UNE fois a la creation
+  dest_radius_m SMALLINT     NOT NULL DEFAULT 150,
+  eta_at        DATETIME     NULL,
+  grace_minutes SMALLINT     NOT NULL DEFAULT 10,
+  extensions    SMALLINT     NOT NULL DEFAULT 0,
+  note          VARCHAR(200) NULL,
+  owner_device  VARCHAR(128) NULL,               -- seul appareil emetteur
+  last_lat      DECIMAL(9,6) NULL,
+  last_lng      DECIMAL(9,6) NULL,
+  last_acc_m    SMALLINT     NULL,
+  last_battery  TINYINT      NULL,
+  last_at       DATETIME     NULL,
+  stale         TINYINT(1)   NOT NULL DEFAULT 0,
+  started_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  alerted_at    DATETIME     NULL,
+  closed_at     DATETIME     NULL,
+  close_reason  VARCHAR(30)  NULL,
+  points_purged_at DATETIME  NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_trip_client (owner_id, client_id),
+  KEY idx_trip_owner  (owner_id, started_at),
+  KEY idx_trip_open   (state, eta_at),
+  KEY idx_trip_purge  (closed_at, points_purged_at),
+  CONSTRAINT fk_trip_owner FOREIGN KEY (owner_id)
+    REFERENCES users(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS trip_watcher (
+  trip_id       BIGINT   NOT NULL,
+  alanyaID      INT      NOT NULL,
+  state         ENUM('active','revoked','left') NOT NULL DEFAULT 'active',
+  revoke_reason VARCHAR(20) NULL,                -- blocked | removed | left
+  msgID         INT      NULL,                   -- la carte type 9 chez ce membre
+  conversID     INT      NULL,
+  added_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  seen_at       DATETIME NULL,
+  revoked_at    DATETIME NULL,
+  PRIMARY KEY (trip_id, alanyaID),
+  KEY idx_tw_user (alanyaID, trip_id),
+  CONSTRAINT fk_tw_trip FOREIGN KEY (trip_id)
+    REFERENCES trip(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tw_user FOREIGN KEY (alanyaID)
+    REFERENCES users(alanyaID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS trip_point (
+  id          BIGINT       NOT NULL AUTO_INCREMENT,
+  trip_id     BIGINT       NOT NULL,
+  lat         DECIMAL(9,6) NOT NULL,
+  lng         DECIMAL(9,6) NOT NULL,
+  acc_m       SMALLINT     NULL,
+  speed_kmh   SMALLINT     NULL,
+  battery     TINYINT      NULL,
+  recorded_at DATETIME(3)  NOT NULL,             -- horloge client
+  received_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_point_trip (trip_id, recorded_at),
+  CONSTRAINT fk_point_trip FOREIGN KEY (trip_id)
+    REFERENCES trip(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS trip_event (
+  id         BIGINT      NOT NULL AUTO_INCREMENT,
+  trip_id    BIGINT      NOT NULL,
+  kind       VARCHAR(24) NOT NULL,
+  actor_id   INT         NULL,                   -- NULL = systeme
+  meta       JSON        NULL,
+  created_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_event_trip (trip_id, id),
+  CONSTRAINT fk_event_trip FOREIGN KEY (trip_id)
+    REFERENCES trip(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO scheduler_leases (name) VALUES ('trip_nightly_purge');
+\end{lstlisting}
+
+Les valeurs de \code{trip\_event.kind}~: \code{started}, \code{extended},
+\code{arrival\_detected}, \code{eta\_due}, \code{confirmed}, \code{alerted}, \code{sos},
+\code{resolved}, \code{watcher\_seen}, \code{watcher\_revoked}, \code{signal\_lost},
+\code{signal\_back}, \code{low\_battery}, \code{device\_takeover}, \code{closed}.
+
+\begin{alerte}[Les migrations sont appliquées à la main]
+Comme le rappelle déjà l'en-tête de \code{migrations/\allowbreak 038\_contact\_lists.sql}, il n'existe ni
+exécuteur ni table de suivi. \code{051\_trips.sql} doit être appliqué \textbf{avant} de
+déployer le code qui nomme ces tables. La base est distante~: prévoir la fenêtre.
+\end{alerte}
+
+\section{Pourquoi \code{DECIMAL(9,6)} et aucun index spatial}
+
+Six décimales valent environ 11~cm --- très au-delà de ce qu'un GPS de téléphone sait
+produire. Le type est exact, comparable, se sauvegarde en dump texte sans surprise, et il
+rend facile de dire honnêtement quelle précision on stocke.
+
+Un type \code{POINT} et un index \code{SPATIAL} n'apporteraient rien~: on ne cherche
+\textbf{jamais} de proximité entre trajets. L'arrivée s'évalue par trajet, contre une
+destination unique, en mémoire, à l'ingestion du point. Les cinquante migrations existantes
+n'ont aucun index spatial~; en introduire un pour un calcul qu'on ne fait pas serait un coût
+d'exploitation gratuit.
+
+\section{L'instantané de l'audience}
+
+\code{trip\_watcher} est peuplé \textbf{une fois}, au démarrage, à partir de \emph{tous} les
+membres de la liste \code{kind = 'trust'} du propriétaire. C'est le même geste que
+\code{broadcast\_delivery} (\code{migrations/\allowbreak 040\_broadcast.sql})~: matérialiser l'audience
+pour pouvoir dire, après coup, qui a été destinataire.
+
+Trois raisons~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item un trajet est une pièce d'archive --- si l'alerte part, il faut pouvoir répondre à
+        « qui a été prévenu~?~»~;
+  \item les modifications de \code{contact\_list\_member} ne doivent pas se propager à un
+        trajet en cours, sinon l'audience devient indécidable~;
+  \item cela neutralise la faille décrite plus bas~: supprimer sa liste Confiance pendant un
+        trajet n'ampute pas le trajet en cours.
+\end{enumerate}
+
+\begin{note}[Pas de sous-sélection --- le cercle \emph{est} l'audience]
+Le composeur ne propose aucune case à cocher~: démarrer un trajet notifie les cinq membres
+du cercle, en bloc. C'est ce qui permet de partir en un appui, et c'est ce qui rend la
+promesse énonçable en une phrase.
+
+Le corollaire est que l'audience se choisit \textbf{hors trajet}, en modifiant la liste
+Confiance --- un geste à froid, délibéré, et qui ne notifie personne, conformément à la
+règle de confidentialité posée au volet~2. Au moment de partir, il n'y a plus rien à
+décider~; c'est précisément l'objectif.
+\end{note}
+
+Une seule exception en cours de route, à l'échelle du trajet et sans effet sur la liste~: le
+propriétaire peut \textbf{révoquer} un destinataire. C'est aussi le mécanisme qu'emprunte la
+révocation automatique en cas de blocage.
+
+\begin{alerte}[Deux défauts connus des listes deviennent des défauts de sûreté]
+\code{deleteList} (\code{src/\allowbreak controllers/\allowbreak contactListController.js}) protège le \emph{nom} des
+listes système mais pas leur \emph{existence}~: supprimer « Confiance » réussit, et
+\code{ensureDefaultContactLists} la recrée \textbf{vide} au prochain
+\mGET{}~\code{/api/contact-lists}. Aujourd'hui on perd un rangement~; demain on vide un
+cercle de sécurité sans le dire.
+
+\code{getListMembers} appelle \code{maskPresenceIfBlocked} par ligne, mais
+\textbf{n'exclut pas} les membres qui ont bloqué le propriétaire. Le composeur de trajet
+proposerait donc de confier sa sécurité à quelqu'un qui l'a bloqué.
+
+Les deux figurent déjà aux points ouverts du volet~2. Ils deviennent des \textbf{prérequis
+du même lot}.
+\end{alerte}
+
+\section{Mémoire et base}
+
+\begin{note}[La règle de partage]
+Un tic de position peut se perdre. Une transition d'état, non.
+\end{note}
+
+En mémoire, dans un \code{src/\allowbreak socket/\allowbreak state/\allowbreak tripState.js} calqué sur \code{callState.js}~:
+dernière position, horodatage du dernier envoi, compteur de décimation, ensemble des
+destinataires, ensemble des blocages, minuterie de péremption, cache du lien d'appareil.
+
+En base, tout ce qui doit survivre à un redémarrage. C'est la différence majeure avec les
+appels~: \textbf{un trajet survit au redémarrage du serveur}. La base fait foi~; la mémoire
+n'est qu'un cache et un limiteur de débit, reconstruit paresseusement au premier contact.
+
+\chapter{Le fil des positions}
+
+\section{Trois régimes, pilotés par la distance}
+
+Le moteur est \code{Geolocator.getPositionStream()} et son \code{distanceFilter}, pas une
+minuterie. Le système d'exploitation pousse un point \emph{quand l'appareil a bougé}~; à
+l'arrêt, il n'émet rien.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{2.3cm}p{3.6cm}p{1.7cm}p{1.2cm}p{1.5cm}X@{}}
+\toprule
+\thd{Régime} & \thd{Déclencheur} & \thd{Précision} & \thd{Filtre} & \thd{Plancher} &
+\thd{Battement} \\
+\midrule
+Nominal  & à plus de 10 min de l'ETA         & \code{balanced} & 75 m & 15 s & 90 s \\
+Approche & à moins de 10 min, ou 1 km du but & \code{high}     & 30 m &  8 s & 30 s \\
+Alerte   & états \code{alert} et \code{sos}  & \code{best}     & 15 m &  5 s & 15 s \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Le battement forcé est indispensable~: sans lui, on ne distingue pas \emph{immobile} de
+\emph{traceur mort}. C'est exactement l'information dont un destinataire a besoin. Il ne
+rallume pas le GPS~--- il renvoie le dernier point connu
+(\code{Geolocator.\allowbreak getLastKnownPosition()}, déjà utilisé comme repli dans
+\code{lib/\allowbreak screens/\allowbreak chats/\allowbreak location\_\allowbreak
+picker\_\allowbreak screen.dart}) avec son horodatage de capture réel. L'écart entre
+\code{recorded\_at} et \code{received\_at} dit alors, à lui seul, si l'appareil mesure
+encore.
+
+\begin{alerte}[Le \code{distanceFilter} seul ne borne pas le débit]
+Un filtre de 50~m produit un point toutes les 36~s à pied, mais toutes les
+\textbf{6 secondes} dans un taxi à 30~km/h, et toutes les 2~secondes sur voie rapide. Le
+débit est donc proportionnel à la vitesse --- et le taxi, qui est le cas d'usage principal,
+est le plus coûteux.
+
+D'où le \textbf{plancher} de la quatrième colonne~: deux envois ne peuvent pas être séparés
+de moins de $n$ secondes. Les points intermédiaires ne sont pas jetés, ils sont
+\emph{groupés} dans l'envoi suivant --- la trace garde sa finesse, seul le nombre de paquets
+est borné.
+\end{alerte}
+
+\section{Aucune de ces valeurs n'est écrite en dur}
+
+Ce sont des \textbf{points de départ à régler en service}, pas des constantes. Deux
+conséquences de conception, et la seconde est la moins évidente.
+
+\textbf{Le serveur en est propriétaire.} Un module
+\code{src/\allowbreak constants/\allowbreak tripPolicy.js} lit l'environnement et expose la
+politique. Il n'existe pas de table de réglages globale dans Alanya
+(\code{appSettingsService.js} est \emph{par utilisateur})~; la convention maison est la
+variable d'environnement, comme \code{NOTIFICATION\_\allowbreak ANDROID\_\allowbreak
+NATIVE\_V2}.
+
+\begin{alerte}[La politique doit être \emph{servie}, jamais compilée dans l'application]
+La cadence s'applique sur le téléphone. Si ces valeurs vivent dans des constantes Dart,
+les changer impose une \textbf{publication de l'application} et des semaines d'adoption ---
+autant dire qu'elles ne se règlent jamais.
+
+\mPOST{}~\code{/api/trips} et \mGET{}~\code{/api/trips/active} renvoient donc un objet
+\code{policy}, que le client applique. Les constantes Dart ne servent que de repli, si la
+réponse est absente ou le serveur plus ancien. \code{trip:state} la reporte aussi, ce qui
+permet à un réglage de prendre effet \textbf{sur un trajet déjà en cours}.
+\end{alerte}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.4cm}p{1.5cm}X@{}}
+\toprule
+\thd{Variable} & \thd{Défaut} & \thd{Ce que coûte un réglage plus large} \\
+\midrule
+\code{TRIP\_FILTER\_M\_NOMINAL}    & 75 m  & Trace plus anguleuse en ville~; sans effet sur
+                                            la sûreté. \\
+\code{TRIP\_FLOOR\_S\_NOMINAL}     & 15 s  & Le pin saccade. C'est la molette la plus sûre à
+                                            tourner~: elle ne change que le nombre de
+                                            paquets. \\
+\code{TRIP\_BEAT\_S\_NOMINAL}      & 90 s  & Un arrêt met plus longtemps à se confirmer, et
+                                            le seuil de péremption recule d'autant. \\
+\code{TRIP\_FILTER\_M\_APPROACH}   & 30 m  & L'arrivée se détecte plus tard. \\
+\code{TRIP\_FLOOR\_S\_APPROACH}    & 8 s   & --- \\
+\code{TRIP\_BEAT\_S\_APPROACH}     & 30 s  & --- \\
+\code{TRIP\_FILTER\_M\_ALERT}      & 15 m  & \textbf{À ne pas relâcher} --- c'est le seul
+                                            régime où la précision sert vraiment. \\
+\code{TRIP\_FLOOR\_S\_ALERT}       & 5 s   & \textbf{À ne pas relâcher.} \\
+\code{TRIP\_BEAT\_S\_ALERT}        & 15 s  & \textbf{À ne pas relâcher.} \\
+\code{TRIP\_STALE\_FACTOR}         & 3     & Seuil de péremption $=$ facteur $\times$
+                                            battement $+$ 30 s. \\
+\code{TRIP\_BROADCAST\_MIN\_S}     & 5 s   & Cadence de rediffusion aux proches. \\
+\code{TRIP\_PERSIST\_MIN\_S}       & 30 s  & Finesse de la trace rejouable, et volume de
+                                            \code{trip\_point}. \\
+\code{TRIP\_LOW\_BATTERY\_PCT}     & 15 \% & Seuil de bascule en suivi ralenti. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Deux familles de réglages, qui ne se propagent pas pareil]
+Les valeurs de \textbf{cadence} ci-dessus sont pures dépenses~: elles s'appliquent à chaud,
+y compris sur un trajet en cours.
+
+Les valeurs de \textbf{contrat} --- \code{dest\_radius\_m}, \code{grace\_minutes}, les
+relances, la durée maximale --- sont d'une autre nature~: elles définissent ce qui a été
+promis à l'utilisateur au moment du départ. Elles sont donc \textbf{recopiées dans la ligne
+\code{trip}} à la création (les deux premières y sont déjà des colonnes), et un réglage
+ultérieur ne modifie \textbf{jamais} un trajet déjà parti. Sinon on changerait le contrat
+après signature.
+\end{note}
+
+\textbf{Garde batterie.} Sous 15~\%, retour au régime nominal avec un battement de 120~s, et
+le cercle est \emph{informé} (« batterie faible --- suivi ralenti »). Sous 5~\%, émission
+d'un événement portant la dernière position~: un téléphone qui meurt est un signal utile, et
+il ne doit pas être confondu avec une disparition.
+
+\section{Décimation à trois étages}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Client} --- le \code{distanceFilter} supprime déjà tout ce qui n'est pas un
+        déplacement.
+  \item \textbf{Socket} --- le serveur ne rediffuse pas plus d'une position toutes les 5~s
+        par trajet, quelle que soit la cadence entrante.
+  \item \textbf{Base} --- une insertion dans \code{trip\_point} toutes les 30~s au plus, par
+        lots de 10~s. La dernière position vit dans les colonnes \code{last\_*} de
+        \code{trip}, qui sont écrasées~; la table \code{trip\_point} n'est là que pour
+        rejouer la trace.
+\end{enumerate}
+
+\section{Détection d'arrivée}
+
+Trois conditions cumulatives, et une conséquence~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item être à moins de \code{dest\_radius\_m} (150~m par défaut)~;
+  \item y rester \textbf{60~s} --- l'hystérésis~;
+  \item se déplacer à moins de $\sim$15 km/h --- le portillon de vitesse.
+\end{enumerate}
+
+Les relevés dont \code{acc\_m > 100} sont \textbf{ignorés pour la détection}, mais affichés
+quand même, grisés, avec leur cercle de précision. Mieux vaut dire « à 60~m près » que
+planter un point mensonger.
+
+\begin{note}[Pourquoi 150 m, et pas 50]
+En ville, la précision courante est de 20 à 65~m, et le multi-trajet en canyon urbain
+dépasse régulièrement 100~m. Un rayon de 50~m ne déclencherait jamais en centre-ville~; 500~m
+déclencherait à un pâté de maisons. L'hystérésis et le portillon de vitesse font le reste du
+travail~: passer devant sa rue sans s'arrêter est le faux positif numéro un.
+\end{note}
+
+Et la conséquence, déjà énoncée mais qui mérite d'être répétée ici~: \textbf{une arrivée
+détectée ne clôt rien}. Elle fait passer en \code{awaiting\_confirm} et pose la question.
+
+\section{Coût réseau et charge serveur}
+
+Une position pèse environ 130 octets de JSON, et $\sim$220 octets sur le fil une fois
+l'enveloppe Socket.IO, WebSocket, TLS et TCP/IP comptée. Ce n'est \textbf{pas} un appel
+HTTP~: la trame part sur la socket déjà ouverte --- celle des messages, de la présence et
+des appels --- sans en-tête, sans jeton à revalider, et \textbf{sans réponse attendue}.
+
+C'est la capture qui suit la vitesse~; le plancher, lui, borne les envois~:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.4cm}p{2.6cm}p{2.4cm}X@{}}
+\toprule
+\thd{Allure} & \thd{Captures/h} & \thd{Envois/h} & \thd{Montant, trajet de 30 min} \\
+\midrule
+5 km/h, à pied      &   100 &   100 & $\sim$11 ko \\
+30 km/h, taxi ville &   600 &   240 & $\sim$26 ko \\
+90 km/h, voie rapide & 1\,800 &   240 & $\sim$26 ko \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Le plancher de 15~s plafonne les envois à 240 par heure quelle que soit l'allure --- sans
+lui, un taxi en ville en produirait 600, et le double sur voie rapide.
+
+En descendant, un proche \emph{dont l'écran est ouvert} reçoit au plus une trame toutes les
+5~s, soit $\sim$160 ko/h. En pratique il ne regarde presque jamais~: il reçoit la
+notification et ouvre la carte une ou deux fois.
+
+\begin{alerte}[Le vrai poste de dépense est la carte, pas les positions]
+Une session de suivi de cinq minutes avec une carte qui se déplace charge 60 à 150 tuiles,
+soit \textbf{1 à 3 Mo}. Les tuiles coûtent \textbf{20 à 50 fois} plus cher que le flux de
+positions qu'elles servent à afficher.
+
+C'est ce qui justifie deux choix du dossier~: la carte du proche est une \emph{vignette}
+figée dans la conversation, jamais une carte vivante~; et un fournisseur de tuiles sous
+contrat est un prérequis de mise en service.
+\end{alerte}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.6cm}X@{}}
+\toprule
+\thd{À 1 000 trajets simultanés} & \thd{Ordre de grandeur} \\
+\midrule
+Trames socket entrantes      & $\sim$70 / s --- aucune connexion nouvelle, elles empruntent
+                               les sockets existantes \\
+Émissions sortantes          & $\sim$100 à 200 / s \\
+Insertions \code{trip\_point} & 33 lignes/s, groupées en un \code{INSERT} multi-lignes
+                               toutes les 2~s \\
+Stockage                     & 1 000 trajets de 30 min $=$ 60 000 lignes $\approx$ 6 Mo,
+                               purgés à 24~h \\
+Lignes de \code{job\_queue}   & 4 000 armées \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Pour situer cet ordre de grandeur dans l'existant~: \code{typing:start} est aujourd'hui émis
+\textbf{à chaque caractère frappé}, et coûte « 1+2N requêtes SQL par frappe »
+(\code{docs/\allowbreak AUDIT\_\allowbreak SCALABILITE\_\allowbreak 2026-08-06.md}). Une
+seule conversation de groupe animée coûte plus de SQL que cent trajets.
+
+\begin{alerte}[Le plafond réel de la file est de 20 jobs par seconde]
+\code{startJobWorker()} tourne à \code{setInterval(tick, 1000)} avec
+\code{BATCH\_SIZE = 20} (\code{src/\allowbreak services/\allowbreak jobQueue.js}). Aux heures
+où les ETA s'agglutinent --- 18\,h--20\,h --- c'est juste. \code{idx\_job\_pret} et
+\code{FOR UPDATE SKIP LOCKED} tiennent la concurrence~; c'est \code{BATCH\_SIZE} qui est la
+molette. À mesurer avant la montée en charge, pas après.
+\end{alerte}
+
+\begin{note}[Batterie --- le poste qui compte vraiment]
+\code{balanced} coûte 3 à 6~\%/h, \code{high} 8 à 15~\%/h, \code{best} en continu 15 à
+25~\%/h. Un taxi de 30 minutes en régime nominal revient à 2 ou 3~\%. C'est le régime
+d'alerte qui est cher --- et c'est une des raisons du plafond de durée.
+\end{note}
+
+
+\chapter{L'échéance et l'escalade}
+
+\section{L'escalade en trois temps}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{2.0cm}p{4.4cm}X@{}}
+\toprule
+\thd{Moment} & \thd{Job} & \thd{Effet} \\
+\midrule
+$T-5$ min & \code{trip\_eta\_soon}     & Silencieux, \textbf{propriétaire seul}~:
+                                         « vous arrivez bientôt~? Prolonger / Je suis
+                                         arrivé ». \\
+$T$       & \code{trip\_eta\_due}      & État \code{awaiting\_confirm}, notification
+                                         prioritaire \textbf{au propriétaire seul}~;
+                                         relances à $+0$, $+3$ et $+7$ min. \\
+$T+10$ min & \code{trip\_grace\_expired} & État \code{alert}~: le cercle est prévenu, avec
+                                          la dernière position connue. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Pourquoi dix minutes, et non cinq]
+En deçà de cinq minutes, chaque embouteillage devient une alerte, et le cercle apprend à
+ignorer les alertes. C'est le véritable mode de défaillance de ce genre de produit~: pas
+l'alerte manquée, mais l'alerte qu'on n'ouvre plus. Au-delà d'un quart d'heure, le délai
+n'a plus d'utilité dans un incident réel.
+\end{note}
+
+La \textbf{prolongation} est à deux appuis, $+15$ ou $+30$ minutes, sans limite de nombre.
+Chaque prolongation ré-arme les jobs et écrit un \code{trip\_event} visible du cercle
+(« Awa a prolongé de 15 minutes »)~: cela rassure sans alerter.
+
+\section{Les huit \code{kind} de jobs}
+
+\code{trip\_eta\_soon}, \code{trip\_eta\_due}, \code{trip\_reminder},
+\code{trip\_grace\_expired}, \code{trip\_max\_duration}, \code{trip\_no\_watcher},
+\code{trip\_stale\_check}, \code{trip\_points\_purge}. Un service
+\code{src/\allowbreak services/\allowbreak tripWorkers.js} les enregistre, sur le modèle de
+\code{src/\allowbreak services/\allowbreak broadcastWorkers.js}.
+
+\code{dedupe\_key = "trip\_<id>"} pour chacun. La contrainte
+\code{UNIQUE uq\_\allowbreak job\_\allowbreak dedupe (kind, dedupe\_\allowbreak key)} de \code{migrations/\allowbreak 039\_job\_queue.sql}
+rend le ré-armement trivial~: une transaction qui supprime les lignes du trajet puis
+appelle \code{enqueue} avec le nouveau \code{run\_after}.
+
+\begin{alerte}[\code{enqueue} est silencieux sur collision]
+\code{enqueue} fait \code{ON DUPLICATE KEY UPDATE id = id} et \textbf{renvoie \code{null}}
+si la clé de déduplication existe déjà. Prolonger un trajet sans supprimer d'abord la ligne
+existante \emph{paraît} fonctionner et laisse l'ancienne échéance armée --- l'alerte
+partirait à l'heure initiale. Le \code{DELETE} préalable n'est pas une optimisation, c'est
+la correction.
+\end{alerte}
+
+\begin{note}[La file est \emph{at-least-once}]
+Un job peut se déclencher après la clôture du trajet --- reprise après incident, orphelin
+récupéré par \code{reclaimOrphans} au bout de dix minutes. \textbf{Chaque handler relit
+\code{trip.state} et sort en silence si le trajet est terminal.} C'est la seule protection
+qui tienne.
+\end{note}
+
+La purge nocturne tourne sous le bail \code{trip\_nightly\_purge} via
+\code{withLease()} (\code{src/\allowbreak services/\allowbreak schedulerLease.js}), à côté de
+\code{broadcast\_nightly\_purge} et \code{welcome\_status\_purge}.
+
+\chapter{API}
+
+\section{REST --- \code{src/routes/trips.js}}
+
+Style copié de \code{contactListController.js}~: cadrage sur \code{req.user.alanyaID}, jamais
+sur un identifiant fourni par le client~; \code{pool.execute}~; codes 400/403/404/409.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.6cm}X@{}}
+\toprule
+\mPOST{}~\code{/api/trips}                    & Démarrer. \code{\{clientId, kind, dest?,
+                                                etaAt? | durationMin?, note?\}} ---
+                                                l'audience n'est pas un paramètre \\
+\mPOST{}~\code{/api/trips/sos}                & SOS autonome --- crée le trajet \\
+\mGET{}~\code{/api/trips/active}              & Reprise à froid~: mon trajet, et ceux que je
+                                                suis \\
+\mGET{}~\code{/api/trips/:id}                 & Détail et frise d'événements \\
+\mGET{}~\code{/\allowbreak api/\allowbreak trips/\allowbreak :id/\allowbreak points?since=}   & La trace --- vide après purge \\
+\mPOST{}~\code{/api/trips/:id/extend}         & \code{\{minutes\}}, ré-arme les jobs \\
+\mPOST{}~\code{/api/trips/:id/confirm}        & Arrivée confirmée \\
+\mPOST{}~\code{/api/trips/:id/cancel}         & Arrêt avant échéance \\
+\mPOST{}~\code{/api/trips/:id/sos}            & Escalade d'un trajet existant \\
+\mDEL{}~\code{/\allowbreak api/\allowbreak trips/\allowbreak :id/\allowbreak watchers/\allowbreak :id}    & Révoquer un destinataire \\
+\mPOST{}~\code{/api/trips/:id/seen}           & Acquittement d'un destinataire \\
+\mGET{}~\code{/\allowbreak api/\allowbreak trips/\allowbreak history?cursor=}     & Historique du propriétaire \\
+\mDEL{}~\code{/api/trips/:id}                 & Suppression par le propriétaire \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Codes d'erreur~: \code{TRUST\_LIST\_EMPTY} 409, \code{TRIP\_ALREADY\_ACTIVE} 409,
+\code{TRIP\_TERMINAL} 409, \code{TRIP\_INCIDENT\_LOCKED} 423,
+\code{DEVICE\_NOT\_OWNER} 403.
+
+L'audience n'étant pas transmise par le client, elle n'a pas de code d'erreur propre~: le
+serveur lit la liste \code{trust} du porteur du jeton, et refuse en 409
+\code{TRUST\_LIST\_EMPTY} si elle est vide.
+
+\begin{note}[Toute réponse portant un trajet porte aussi la politique]
+\mPOST{}~\code{/api/trips}, \mGET{}~\code{/api/trips/active} et l'événement
+\code{trip:state} renvoient un objet \code{policy}~: les trois régimes, avec leurs filtres,
+planchers et battements, tels que \code{tripPolicy.js} les expose au moment de l'appel. Le
+client l'applique~; ses constantes Dart ne servent que si le champ manque.
+
+C'est la seule façon de régler la cadence sans publier l'application. Le champ doit donc
+exister \textbf{dès la première version}, même s'il ne renvoie d'abord que les valeurs par
+défaut --- l'ajouter plus tard imposerait exactement la publication qu'on cherche à éviter.
+\end{note}
+
+\begin{note}[Aucune position ne passe par REST en régime normal]
+Un aller-retour HTTP tous les 50 mètres serait absurde. Les positions montent par socket~;
+\mGET{}~\code{/api/trips/:id/points} ne sert qu'à rejouer une trace, et le lot de secours
+n'existe que pour vider le tampon hors ligne.
+\end{note}
+
+\section{Socket.IO --- \code{src/\allowbreak socket/\allowbreak handlers/\allowbreak trips.js}}
+
+Enregistré à côté de \code{calls.js} et \code{meetings.js} dans \code{server.js}. Room
+\code{trip\_<id>}, rejointe après vérification d'appartenance, exactement comme
+\code{join\_conversation} vérifie \code{conv\_participants}.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.0cm}X@{}}
+\toprule
+\thd{Client $\rightarrow$ serveur} & \thd{Objet} \\
+\midrule
+\code{trip:subscribe}      & Autorise, puis renvoie l'état complet \\
+\code{trip:unsubscribe}    & --- \\
+\code{trip:position}       & Un point. Rejeté si \code{deviceId} n'est pas
+                             \code{trip.owner\_device} \\
+\code{trip:position\_batch} & Vidange du tampon hors ligne, 200 points au plus \\
+\code{trip:claim\_device}  & Reprendre la main depuis un autre appareil \\
+\code{trip:signal}         & \code{gps\_off}, \code{permission\_denied},
+                             \code{background\_killed}, \code{battery\_saver} \\
+\code{trip:seen}           & Acquittement d'un destinataire \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{5.0cm}X@{}}
+\toprule
+\thd{Serveur $\rightarrow$ client} & \thd{Objet} \\
+\midrule
+\code{trip:state}          & État complet --- à la souscription et à chaque transition \\
+\code{trip:position}       & Fan-out room, plafonné à une émission / 5 s / trajet \\
+\code{trip:card\_update}   & Mutation de la carte de type 9 \\
+\code{trip:alert}          & Le trajet et sa dernière position \\
+\code{trip:stale}          & Plus de position reçue \\
+\code{trip:signal}         & Relais du motif déclaré par le propriétaire \\
+\code{trip:device\_revoked} & Un autre appareil a repris la main \\
+\code{trip:closed}         & Fin, avec son motif \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{alerte}[La room ne porte que le mouvement --- jamais l'alerte]
+\code{trip\_<id>} sert \textbf{uniquement} au flux haute fréquence. Tout ce qui doit
+\emph{atteindre} un destinataire --- état, alerte, clôture --- passe par
+\code{emitToUser} (\code{src/\allowbreak utils/\allowbreak userSocketRegistry.js}) \textbf{plus} la notification
+poussée. Un destinataire dont aucun appareil n'est abonné à la room doit quand même recevoir
+l'alerte. \textbf{Une alerte ne transite jamais par la seule room.}
+\end{alerte}
+
+\code{isUserOnline()} et \code{hasForegroundSocket()} décident si un destinataire reçoit le
+fan-out socket ou seulement la notification~: on ne diffuse pas dans une room que personne ne
+regarde.
+
+\section{Le verrou d'appareil}
+
+\code{trip.owner\_device} porte l'identifiant de l'unique appareil autorisé à émettre. Les
+autres appareils du compte affichent « trajet en cours sur votre autre appareil » et peuvent
+reprendre la main explicitement~: \code{trip:claim\_device} bascule la colonne, l'ancien
+porteur reçoit \code{trip:device\_revoked} et arrête son service.
+
+C'est le motif de \code{src/\allowbreak socket/\allowbreak state/\allowbreak callDeviceOwnership.js}, transposé --- avec la même
+justification qu'aux appels~: sans lui, deux appareils entrelacent leurs positions et la
+trace zigzague entre deux endroits.
+
+\chapter{Le message de type 9}
+
+\section{Pourquoi un type de message}
+
+Les types existants vont de 0 à 8~; le 9 est libre. Ils ne sont d'ailleurs documentés nulle
+part au complet~: le commentaire de \code{LocalMessages.type}
+(\code{lib/\allowbreak core/\allowbreak db/\allowbreak app\_database.dart}) s'arrête à \code{5=localisation}, le 6 et le 8 sont
+des constantes nommées (\code{kSystemMessageType} dans
+\code{lib/\allowbreak core/\allowbreak utils/\allowbreak system\_\allowbreak event\_\allowbreak payload.dart}, \code{kWelcomeCtaMessageType} dans
+\code{welcome\_cta\_payload.dart}), et le 7 --- la carte de contact --- n'existe qu'en
+littéral, dans \code{chat\_bubbles.dart} et \code{talky\_models.dart}. Le type 9 mérite une
+constante nommée et un commentaire tenu à jour.
+
+Le choisir plutôt que d'inventer une entité de
+conversation apporte trois choses gratuitement~: la notification poussée, le compteur de
+non-lus, et la persistance dans l'archive. Et \code{local\_messages} n'a pas à changer --- le
+JSON tient dans \code{content}, comme pour le type 5.
+
+\section{L'état dans le message, le mouvement dans le socket}
+
+C'est le point technique central du volet.
+
+\begin{note}[Cinq écritures, pas cinq mille]
+Le \code{content} du message porte l'\textbf{état}~: il est réécrit uniquement aux
+transitions --- cinq à six fois sur toute la vie d'un trajet. Les \emph{positions} ne
+touchent jamais la table \code{message}. Entre deux transitions, la carte s'anime à partir
+des \code{trip:position} reçus.
+\end{note}
+
+La réécriture passe par \code{trip:card\_update}, et \textbf{jamais} par
+\code{message:send}~: ce dernier remonterait \code{sentAt}, incrémenterait
+\code{unreadCount} et relancerait une notification à chaque changement d'état.
+
+\textbf{Exception --- les incidents.} Une alerte ou un SOS écrit \emph{en plus} un message
+système de type 6, pour que l'incident reste dans l'archive même si la carte est refermée ou
+le trajet purgé. Deux lignes au maximum par trajet, dans le pire cas.
+
+\section{Compatibilité descendante}
+
+\begin{alerte}[Un client ancien afficherait « Média »]
+Les replis existent des deux côtés --- \code{default:} dans \code{\_buildMedia}
+(\code{lib/\allowbreak screens/\allowbreak chats/\allowbreak chat/\allowbreak chat\_bubbles.dart}) et
+\code{default: return mediaName ?? 'Média'} dans \code{messagePreview}
+(\code{src/\allowbreak utils/\allowbreak messagePreview.js}) --- mais ils rendent un libellé générique et, dans le
+pire cas, le JSON brut. Le rendu dégradé (« Trajet de confiance --- mettez à jour
+l'application ») et l'aperçu de conversation doivent être écrits dans les deux fichiers
+\textbf{avant} la première émission d'un type 9 en production.
+\end{alerte}
+
+L'aperçu suit le patron de \code{locationPreviewFromContent}~: un court-circuit
+\code{if (t === 9)} dans \code{messagePreview}, et une entrée dans \code{mediaTypeLabel}. Le
+commentaire existant du fichier vaut aussi ici --- \emph{ne jamais exposer le
+\code{content} brut}.
+
+\chapter{Notifications}
+
+Nouveaux types dans \code{src/\allowbreak notifications/\allowbreak notificationContract.js}~:
+\code{trip\_started}, \code{trip\_alert}, \code{trip\_sos}, \code{trip\_closed},
+\code{trip\_watcher\_seen}, et un constructeur \code{buildTripPayload} en
+\code{schemaVersion: '2'} portant \code{tripId}, \code{state}, \code{ownerName},
+\code{lastLat} / \code{lastLng} / \code{lastAt} et un lien profond.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.4cm}p{2.2cm}p{1.6cm}X@{}}
+\toprule
+\thd{Type} & \thd{Priorité} & \thd{TTL} & \thd{Rendu} \\
+\midrule
+\code{trip\_started}      & normale & 1 h   & Notification ordinaire \\
+\code{trip\_alert}        & haute   & 120 s & \emph{data-only}, plein écran \\
+\code{trip\_sos}          & haute   & 120 s & \emph{data-only}, plein écran, son propre \\
+\code{trip\_closed}       & basse   & 1 h   & Silencieuse \\
+\code{trip\_watcher\_seen} & basse  & 1 h   & Silencieuse, propriétaire seul \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Le TTL court des alertes est délibéré~: une alerte de sûreté vieille de trois heures est du
+bruit, et son affichage tardif décrédibilise les suivantes. Le modèle est
+\code{sendCallToUser} / \code{buildIncomingCallPayload}, déjà en \code{ttl: 45\_000}.
+
+\begin{alerte}[Contournement de « Ne pas déranger » --- pour deux types seulement]
+\code{trip\_alert} et \code{trip\_sos} passent outre les préférences de notification et le
+mode « Ne pas déranger ». Une alerte de sûreté qu'un réglage de silence peut étouffer n'est
+pas une alerte de sûreté. Le contournement s'arrête là~: \code{trip\_started} est une
+notification ordinaire et \code{trip\_closed} est silencieuse. À valider explicitement --- il
+engage le produit.
+\end{alerte}
+
+Côté client, un canal Android dédié \code{alanya\_trip\_alert} en importance haute, avec son
+propre son et un \code{fullScreenIntent} pour le SOS~; le canal d'appel
+(\code{alanya\_call\_media}) donne le patron.
+
+\chapter{Client Flutter}
+
+\section{Cache local --- Drift 23 $\rightarrow$ 24}
+
+\code{schemaVersion} vaut aujourd'hui \textbf{23} (\code{lib/\allowbreak core/\allowbreak db/\allowbreak app\_database.dart}),
+les listes de contacts l'ayant porté là en trois étapes. Les trajets prennent le \textbf{24}~:
+
+\begin{lstlisting}[language=Dart, numbers=none]
+if (from < 24) {
+  await m.createTable(localTrips);
+  await m.createTable(localTripPoints);
+  await m.createTable(localTripEvents);
+}
+\end{lstlisting}
+
+Pure création de tables, aucune migration de données. \code{local\_messages} ne change pas.
+Puis \code{dart run build\_runner build -{}-delete-conflicting-outputs}. La montée doit
+passer par \code{onUpgrade}, jamais par une recréation.
+
+\code{LocalTripPoints} est un \textbf{anneau borné}~: tampon hors ligne côté propriétaire,
+cache de polyligne côté destinataire. Le plafonnement (suppression des plus anciens au-delà
+de $N$ par trajet) vit dans le DAO, pas dans le schéma.
+
+Deux nouveaux services~: \code{lib/\allowbreak core/\allowbreak services/\allowbreak trip\_repository.dart} (REST et Drift) et
+\code{lib/\allowbreak core/\allowbreak services/\allowbreak trip\_\allowbreak socket\_\allowbreak service.dart}. Les deux tables sont à ajouter à
+\code{clearSession()}.
+
+\section{Le service de localisation en avant-plan (Android)}
+
+\code{TripLocation\allowbreak ForegroundService.kt}, cloné de \code{CallMedia\allowbreak ForegroundService.kt}~:
+canal \code{alanya\_trip\_location}, identifiant de notification distinct, et le même
+conditionnement de \code{foregroundServiceType} au SDK 34 que l'existant. Pont
+\code{TripLocationBridge.kt} sur le canal \code{com.alanya237.alanya/\allowbreak trip\_location},
+calqué sur \code{CallMediaBridge.kt}.
+
+\begin{note}[\code{START\_STICKY}, et non \code{START\_NOT\_STICKY}]
+Le service d'appel est délibérément non collant~: un appel tué ne doit pas ressusciter. Un
+trajet, si. Le service relit le trajet ouvert dans Drift au redémarrage et reprend l'émission.
+\end{note}
+
+Orchestrateur Dart \code{lib/\allowbreak core/\allowbreak services/\allowbreak trip\_session\_guard.dart}, cloné de
+\code{lib/\allowbreak core/\allowbreak services/\allowbreak call\_session\_guard.dart}~: singleton, compteur de références,
+\code{WidgetsBindingObserver}, démarrage et arrêt du service, propriété de l'abonnement
+\code{getPositionStream()}, application des trois régimes, gestion du tampon hors ligne.
+
+\begin{alerte}[Le contenu de la notification persistante a une portée éthique]
+Elle doit \textbf{nommer les destinataires} (« Partagé avec Maman, Karim ») et offrir un
+« Arrêter » en un appui. Une notification de suivi qui ne dit pas à qui elle envoie la
+position, c'est le comportement d'un logiciel espion --- et c'est ce qui distingue cette
+fonctionnalité d'un traceur.
+\end{alerte}
+
+\section{Permissions à ajouter}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{2.0cm}p{5.6cm}X@{}}
+\toprule
+\thd{Cible} & \thd{Clé} & \thd{État actuel} \\
+\midrule
+Android & \code{ACCESS\_\allowbreak BACKGROUND\_\allowbreak LOCATION}   & absente \\
+Android & \code{FOREGROUND\_\allowbreak SERVICE\_\allowbreak LOCATION}  & absente \\
+Android & \code{<service … foregroundServiceType="location">} & absent \\
+iOS & \code{NSLocation\allowbreak Always\allowbreak AndWhenInUse\allowbreak UsageDescription} & absente \\
+iOS & \code{UIBackgroundModes: location}        & absente --- la liste vaut
+                                                  \code{audio}, \code{remote-notification},
+                                                  \code{voip} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Sont déjà là et réutilisables~: \code{ACCESS\_FINE\_LOCATION},
+\code{ACCESS\_COARSE\_LOCATION}, \code{FOREGROUND\_SERVICE}, \code{WAKE\_LOCK},
+\code{POST\_NOTIFICATIONS}, \code{REQUEST\_\allowbreak IGNORE\_\allowbreak BATTERY\_\allowbreak OPTIMIZATIONS}.
+
+\section{iOS --- ce qui est garanti, et ce qui ne l'est pas}
+
+\code{allowsBackgroundLocationUpdates = true},
+\code{showsBackgroundLocationIndicator = true} --- \textbf{on garde la pastille bleue}, on ne
+la masque jamais --- et \code{pausesLocationUpdatesAutomatically = false}. Repli sur
+l'enregistrement des changements significatifs de position.
+
+\begin{note}[Ne pas promettre la parité]
+La garantie iOS est « au mieux, avec péremption explicite ». Ce n'est pas un aveu de
+faiblesse~: c'est la conséquence directe du postulat du chapitre~1. Le filet est la chaîne
+d'échéance côté serveur, pas le flux de positions --- et cette chaîne est identique sur les
+deux plateformes.
+\end{note}
+
+\section{Interface}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.2cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Objet} \\
+\midrule
+\code{screens/\allowbreak trips/\allowbreak trips\_hub\_screen.dart} \emph{(nouveau)} &
+  Démarrer, trajet en cours, historique. \\
+\code{screens/\allowbreak trips/\allowbreak trip\_\allowbreak compose\_\allowbreak screen.dart} \emph{(nouveau)} &
+  Type, destination, heure, destinataires, consentement. \\
+\code{screens/\allowbreak trips/\allowbreak trip\_live\_screen.dart} \emph{(nouveau)} &
+  Suivi --- vue propriétaire et vue destinataire. \\
+\code{widgets/\allowbreak chat/\allowbreak trip\_message\_card.dart} \emph{(nouveau)} &
+  La carte de type 9, huit états. \\
+\code{widgets/\allowbreak trips/\allowbreak trip\_banner.dart} \emph{(nouveau)} &
+  Bandeau persistant au-dessus de la barre de navigation. \\
+\code{screens/\allowbreak profile/\allowbreak profile\_screen.dart} &
+  Entrée « Trajets de confiance », à côté des listes. \\
+\code{screens/\allowbreak chats/\allowbreak chat/\allowbreak chat\_actions.dart} &
+  Le menu position devient un choix à deux entrées. \\
+\code{lib/l10n/*} & Libellés des états, de l'escalade et du consentement. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{constat}[Aucun sixième onglet --- et pas besoin]
+\code{lib/\allowbreak screens/\allowbreak home/\allowbreak glass\_nav\_bar.dart} construit sa rangée par
+\code{List.generate(5, …)}~: Discussions, Appels, Statuts, Réunions, Profil. Le bandeau
+persistant se pose \emph{au-dessus} de la barre, dans l'espace déjà réservé par
+\code{kGlassNavBarSpace}. Il est visible sur les cinq onglets~: c'est le sixième onglet sans
+en être un.
+\end{constat}
+
+\begin{alerte}[Les tuiles cartographiques ne sont pas gratuites à cette échelle]
+\code{location\_\allowbreak picker\_\allowbreak screen.dart} charge \code{tile.openstreetmap.org} une fois, pour un
+écran. Un trajet de trente minutes suivi par cinq personnes en charge des \emph{centaines}.
+La politique d'usage d'OpenStreetMap l'interdit explicitement pour ce volume. Un fournisseur
+sous contrat est un \textbf{prérequis de mise en production}, pas une optimisation ultérieure.
+Le composant \code{flutter\_map} ne change pas --- seule l'URL des tuiles change.
+\end{alerte}
+
+\chapter{Vie privée, coercition et administration}
+
+\section{Base légale et minimisation}
+
+La base légale est le \textbf{consentement}, donné par trajet, révocable à tout instant en
+arrêtant le partage. Pas l'intérêt légitime~: une trace de déplacement continue liée à une
+identité révèle par inférence la pratique religieuse, l'état de santé et l'orientation
+sexuelle. Elle n'est pas une donnée personnelle ordinaire.
+
+Le géocodage inverse passe par \code{nominatim.openstreetmap.org}
+(\code{lib/\allowbreak core/\allowbreak utils/\allowbreak location\_payload.dart}) --- un tiers. On géocode donc
+\textbf{la destination une seule fois}, à la création, et \textbf{jamais la trace}.
+
+\section{Rétention --- le tableau fait foi}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.4cm}p{3.2cm}p{3.2cm}X@{}}
+\toprule
+\thd{Donnée} & \thd{Trajet normal} & \thd{Trajet à incident} & \thd{Raison} \\
+\midrule
+\code{trip\_point} & 24 h après clôture & 30 jours & Un historique permanent des
+déplacements de tous les utilisateurs n'est justifié par aucun besoin produit. En cas
+d'incident, la trace peut être une preuve. \\
+\code{trip}        & 12 mois & 12 mois & L'historique produit se contente du fait. \\
+\code{trip\_event} & 12 mois & 12 mois & Source de la frise. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+La suppression par l'utilisateur est immédiate pour un trajet normal, avec effacement de la
+carte chez les destinataires.
+
+\begin{note}[Le verrou de 30 jours sur les incidents est une mesure anti-coercition]
+Un trajet clos en \code{alert} ou \code{sos} ne peut pas être supprimé avant 30 jours
+(423 \code{TRIP\_INCIDENT\_LOCKED}). C'est délibéré~: un agresseur ne doit pas pouvoir
+contraindre quelqu'un à effacer la trace. À expliquer dans l'interface, pas à subir.
+\end{note}
+
+La suppression de compte doit être complétée dans
+\code{src/\allowbreak services/\allowbreak accountDeletionService.js}~: les \code{ON DELETE CASCADE} couvrent
+l'essentiel, la vérification explicite reste due.
+
+\section{Ce que l'administration voit --- et ce qu'on refuse de construire}
+
+L'administration reçoit une page de \textbf{compteurs agrégés} et rien d'autre~: trajets
+démarrés, clos, en alerte par jour~; durée médiane~; taux d'alerte~; taux de SOS. Sans
+\code{alanyaID}, sans coordonnées, sans libellé de destination, sans identité de
+destinataire. La coque \code{components/geolocation/} de l'administration Next.js
+(\code{WorldMap.tsx}, \code{GeoStats.tsx}) se réutilise telle quelle pour cette vue.
+
+\begin{note}[Deux options examinées, puis écartées]
+Un \textbf{registre d'incidents pseudonymisé} (qui, quand, quelle issue) aiderait le
+support~; un \textbf{bris de glace} sur la dernière position, à quatre yeux, avec
+justification écrite, expiration à 15 minutes, journal en ajout seul et notification à la
+personne concernée, aiderait en cas d'incident réel.
+
+Les deux sont écartés pour cette étape. Non parce qu'ils seraient mal conçus, mais parce que
+la posture la plus défendable est celle où \textbf{la donnée n'est pas accessible}. Et la
+rétention l'emporte de toute façon sur le contrôle d'accès~: à 24~h de conservation hors
+incident, la fenêtre de consultation n'existe quasiment pas.
+
+Si le besoin revient, la forme est connue --- une table \code{trip\_admin\_access} en ajout
+seul, portant \code{admin\_id}, \code{approver\_id}, \code{reason}, \code{expires\_at} et
+\code{subject\_notified\_at}. Elle n'est pas créée par \code{051\_trips.sql}.
+\end{note}
+
+\begin{alerte}[L'AIPD est un prérequis, pas un rattrapage]
+Un suivi de localisation systématique relève de l'article 35 du RGPD~: l'analyse d'impact
+est \textbf{obligatoire}. Elle doit être menée avant la mise en production, et elle doit
+inclure un modèle de menace « violences conjugales » --- pas seulement un modèle de menace
+technique.
+\end{alerte}
+
+\section{Détournement et coercition}
+
+C'est le risque qui peut tuer la fonctionnalité, et il ne se traite pas par une case à
+cocher. Sept garde-fous, traités comme des \emph{contraintes de conception}~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Le propriétaire est toujours l'émetteur.} Aucune demande de position, aucune
+        invitation à partager, aucun flux d'acceptation qu'un partenaire puisse transformer
+        en permanence.
+  \item \textbf{Tout trajet est fini et démarré à la main.} Pas de « partager 24 h », pas de
+        récurrence, pas d'interrupteur permanent.
+  \item \textbf{La notification persistante nomme l'audience} et ne peut pas être masquée
+        (service en avant-plan Android, pastille bleue iOS).
+  \item \textbf{Les destinataires n'ont pas d'historique.} On ne peut pas ouvrir « tous les
+        trajets passés d'Awa ». Cela tue l'interrogatoire « où étais-tu mardi~?~».
+  \item \textbf{L'audience se choisit à froid, et en silence.} On ne compose pas son cercle
+        au moment de partir~: on l'a fait avant, dans ses listes de contacts, et cette
+        modification ne notifie personne --- ni celui qui entre, ni celui qui sort. Sans
+        cela, « tu m'as retiré » deviendrait un levier de pression exerçable en direct.
+  \item \textbf{La sortie est sûre.} « Arrêter le partage » est toujours à un appui, et un
+        arrêt avant échéance n'envoie qu'un message neutre. Si arrêter était visiblement
+        suspect, arrêter deviendrait punissable.
+  \item \textbf{Le verrou de suppression de 30 jours} sur les trajets clos en incident.
+\end{enumerate}
+
+\begin{alerte}[Ce sont des atténuations, pas une solution]
+Aucune de ces mesures n'empêche quelqu'un de contraindre un proche à démarrer un trajet.
+Elles rendent la contrainte moins rentable et moins durable. Il faut l'écrire tel quel dans
+l'AIPD~: prétendre le contraire serait la plus dangereuse des erreurs de conception.
+\end{alerte}
+
+\section{Le blocage, et le cercle qui se vide}
+
+Le blocage est la primitive de sûreté de l'application~; le respecter n'est pas négociable.
+Un destinataire qui bloque le propriétaire passe en \code{state = 'revoked'} avec
+\code{revoke\_\allowbreak reason = 'blocked'}, quitte la room, voit sa carte effacée, et
+\textbf{ne reçoit plus rien --- alertes comprises}. Le propriétaire lit « un membre n'est
+plus destinataire », jamais « X vous a bloqué »~: l'application ne révèle pas un blocage.
+
+Le contrôle tourne \textbf{à la création} (filtre de l'instantané) \textbf{et à chaque
+diffusion persistée} (alerte, clôture) --- pas seulement à la création, car le blocage peut
+survenir en route et la room ne le sait pas. La requête symétrique existe déjà~:
+\code{isBlockedEitherWay} (\code{src/utils/blockUtils.js}), et sa forme groupée dans
+\code{src/\allowbreak utils/\allowbreak conversationParticipantsBatch.js}.
+
+\begin{alerte}[S'il ne reste aucun destinataire, le trajet ne continue pas]
+Un trajet sans destinataire n'est plus une fonctionnalité de sécurité~: c'est un traceur
+personnel, un autre produit, et une responsabilité RGPD qu'on ne veut pas assumer. Le
+propriétaire reçoit une invite immédiate et sonore~; sans réponse au bout de 5 minutes, le
+job \code{trip\_no\_watcher} clôt en \code{closed\_unwatched} et la purge normale s'applique.
+\end{alerte}
+
+\chapter{Impact fichier par fichier}
+
+\section{Backend}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{migrations/051\_trips.sql}            & nouveau & Les quatre tables et le bail \\
+\code{src/routes/trips.js}                  & nouveau & Les quatorze routes, Swagger inline \\
+\code{src/\allowbreak controllers/\allowbreak tripController.js}    & nouveau & Machine à états, autorisations \\
+\code{src/\allowbreak services/\allowbreak tripWorkers.js}          & nouveau & Les huit \code{kind} de jobs \\
+\code{src/\allowbreak constants/\allowbreak tripPolicy.js}          & nouveau & Rayon, grâce, plafonds, cadences \\
+\code{src/\allowbreak socket/\allowbreak handlers/\allowbreak trips.js}         & nouveau & Room, positions, verrou d'appareil \\
+\code{src/\allowbreak socket/\allowbreak state/\allowbreak tripState.js}        & nouveau & Cache et limiteur de débit \\
+\code{server.js}                            & modifié & Montage des routes et du handler \\
+\code{src/\allowbreak utils/\allowbreak messagePreview.js}          & modifié & Aperçu du type 9 \\
+\code{src/\allowbreak services/\allowbreak notificationService.js}  & modifié & \code{notifyTripAlert} \\
+\code{src/\allowbreak notifications/\allowbreak notificationContract.js} & modifié & \code{buildTripPayload} \\
+\code{src/services/jobQueue.js}             & modifié & \code{JOB\_WORKER\_ENABLED} \\
+\code{src/\allowbreak controllers/\allowbreak contactListController.js} & modifié & Protection de \code{deleteList},
+                                                            exclusion des bloqueurs \\
+\code{src/\allowbreak services/\allowbreak accountDeletionService.js} & modifié & Trajets à la suppression \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Mobile}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{lib/\allowbreak core/\allowbreak db/\allowbreak app\_database.dart}       & modifié & Trois tables, \code{schemaVersion} 24 \\
+\code{lib/\allowbreak core/\allowbreak services/\allowbreak trip\_repository.dart} & nouveau & REST et Drift \\
+\code{lib/\allowbreak core/\allowbreak services/\allowbreak trip\_\allowbreak socket\_\allowbreak service.dart} & nouveau & Événements temps réel \\
+\code{lib/\allowbreak core/\allowbreak services/\allowbreak trip\_session\_guard.dart} & nouveau & Cycle de vie, régimes GPS \\
+\code{…/\allowbreak kotlin/\allowbreak …/\allowbreak TripLocation\allowbreak ForegroundService.kt} & nouveau & Service en avant-plan \\
+\code{…/\allowbreak kotlin/\allowbreak …/\allowbreak TripLocationBridge.kt}     & nouveau & Canal de méthodes \\
+\code{lib/screens/trips/}                   & nouveau & Hub, composeur, suivi \\
+\code{lib/\allowbreak widgets/\allowbreak chat/\allowbreak trip\_message\_card.dart} & nouveau & La carte de type 9 \\
+\code{lib/\allowbreak widgets/\allowbreak trips/\allowbreak trip\_banner.dart}  & nouveau & Bandeau persistant \\
+\code{lib/\allowbreak screens/\allowbreak chats/\allowbreak chat/\allowbreak chat\_bubbles.dart} & modifié & \code{case 9} et repli \\
+\code{lib/\allowbreak screens/\allowbreak chats/\allowbreak chat/\allowbreak chat\_actions.dart} & modifié & Menu position à deux entrées \\
+\code{lib/\allowbreak screens/\allowbreak profile/\allowbreak profile\_screen.dart} & modifié & Entrée « Trajets de confiance » \\
+\code{lib/\allowbreak core/\allowbreak services/\allowbreak push\_service.dart} & modifié & Canal d'alerte, lien profond \\
+\code{android/\allowbreak app/\allowbreak src/\allowbreak main/\allowbreak AndroidManifest.xml} & modifié & Deux permissions, un service \\
+\code{ios/Runner/Info.plist}                & modifié & Deux clés \\
+\code{lib/l10n/app\_fr.arb}, \code{app\_en.arb} & modifié & Libellés \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Administration}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{6.4cm}p{1.6cm}X@{}}
+\toprule
+\thd{Fichier} & \thd{Nature} & \thd{Objet} \\
+\midrule
+\code{app/\allowbreak (dashboard)/\allowbreak trips/\allowbreak page.tsx}       & nouveau & Compteurs agrégés, sans identité \\
+\code{src/\allowbreak routes/\allowbreak admin/\allowbreak trips.js} \emph{(backend)} & nouveau & Une seule route de statistiques \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\chapter{Vérification}
+
+\section{Backend}
+
+Appliquer \code{051\_trips.sql}, vérifier que le worker de jobs tourne, redémarrer, puis~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item démarrer un trajet $\rightarrow$ 201~; en démarrer un second $\rightarrow$ 409
+        \code{TRIP\_ALREADY\_ACTIVE}~;
+  \item démarrer avec une liste Confiance vide $\rightarrow$ 409
+        \code{TRUST\_LIST\_EMPTY}~; démarrer avec cinq membres $\rightarrow$ cinq lignes
+        dans \code{trip\_watcher}, et cinq notifications~;
+  \item envoyer un tableau \code{watchers} dans le corps de la requête~: il doit être
+        \textbf{ignoré}, pas honoré --- l'audience se lit en base, jamais dans la
+        requête~;
+  \item poser un ETA à $+2$ min, ne rien faire~: vérifier le passage en
+        \code{awaiting\_confirm}, les trois relances, puis l'alerte à $+10$ min~;
+  \item prolonger de 15 min et vérifier que \textbf{l'ancienne échéance n'a pas survécu}
+        dans \code{job\_queue} --- c'est le piège de \code{dedupe\_key}~;
+  \item émettre une position depuis un second appareil $\rightarrow$ 403
+        \code{DEVICE\_NOT\_OWNER}~; \code{trip:claim\_device}, puis vérifier que le premier
+        s'est arrêté~;
+  \item faire bloquer le propriétaire par un destinataire pendant le trajet~: il ne doit
+        plus rien recevoir, et le propriétaire ne doit pas apprendre le blocage~;
+  \item révoquer le dernier destinataire, et vérifier la clôture en
+        \code{closed\_unwatched} après 5 min~;
+  \item redémarrer le serveur en plein trajet~: l'échéance doit toujours partir.
+\end{enumerate}
+
+\section{Client}
+
+\code{flutter pub get} $\rightarrow$
+\code{dart run build\_runner build -{}-delete-conflicting-outputs} $\rightarrow$
+\code{flutter run}.
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Migration 23 $\rightarrow$ 24} sur un appareil déjà installé~: la mise à jour
+        ne doit \textbf{pas} vider les données existantes.
+  \item La carte de type 9 change d'état sans remonter la conversation ni créer de non-lu.
+  \item \textbf{Hors ligne}~: réseau coupé pendant 10 minutes, puis rétabli --- les points
+        tamponnés remontent avec leurs horodatages réels, sans doublon.
+  \item Application balayée depuis les récents~: le service se relance et l'émission reprend.
+  \item Notification persistante~: elle nomme les destinataires, et « Arrêter » fonctionne
+        en un appui.
+  \item Client ancien~: la carte de type 9 affiche le repli, pas du JSON.
+\end{enumerate}
+
+\section{Recette terrain --- ce qui ne se teste que dehors}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Marcher jusqu'à la destination et vérifier que l'arrivée est détectée --- puis
+        \textbf{qu'elle ne clôt rien}.
+  \item Passer à 100 m de la destination sans s'arrêter~: aucune détection ne doit se
+        produire (hystérésis et portillon de vitesse).
+  \item Traverser un tunnel ou un parking souterrain~: le cercle doit lire « position
+        indisponible », \textbf{pas} une alerte.
+  \item Un trajet en voiture de 45 minutes, batterie mesurée avant et après.
+  \item Téléphone en veille, écran éteint, 20 minutes~: le flux ne doit pas s'arrêter sur
+        Android~; sur iOS, constater le comportement réel et l'écrire.
+\end{enumerate}
+
+\section{Points ouverts}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Rétention de 12 mois du fait \code{trip} --- alignée sur la politique générale de
+        conservation du produit~?
+  \item \textbf{Aucune sous-sélection de l'audience} --- décision prise, et c'est ce qui
+        rend le départ instantané. Le point à surveiller après la mise en service~: les
+        situations où l'on voudrait partager à trois sur cinq (rendez-vous médical,
+        entretien d'embauche). La réponse actuelle est de sortir la personne de son cercle
+        avant de partir, ce qui est un geste lourd. Si l'usage montre que le cas est
+        fréquent, l'ajout d'une sous-sélection ne coûterait rien au modèle de données~:
+        \code{trip\_watcher} est déjà une table d'appartenance par trajet.
+  \item Le contournement de « Ne pas déranger » doit-il être désactivable par le
+        destinataire~? (Recommandation~: non, mais l'arbitrage engage le produit.)
+  \item Les destinataires se voient-ils entre eux pendant un trajet --- le nombre seulement,
+        ou les identités~? (Recommandation~: le nombre. Les identités exposent le carnet
+        d'adresses, mais faciliteraient la coordination en cas de SOS.)
+  \item Qui porte l'AIPD, et bloque-t-elle la mise en production~? (Recommandation~: oui.)
+  \item Le verrou de suppression de 30 jours est-il tenable dans toutes les juridictions
+        visées~?
+  \item \code{BROADCAST\_WORKER\_ENABLED} $\rightarrow$ \code{JOB\_WORKER\_ENABLED}~:
+        renommage acceptable, ou faut-il un second drapeau~?
+  \item Quel fournisseur de tuiles cartographiques, et à quel coût par trajet~?
+  \item Extensions volontairement hors périmètre, possibles sans changer les tables~:
+        déclenchement matériel du SOS, appel automatique des secours, partage à un
+        non-contact par lien.
+\end{enumerate}

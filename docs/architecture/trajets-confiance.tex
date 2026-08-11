@@ -1,0 +1,138 @@
+% =====================================================================
+%  ALANYA — Dossier de conception
+%  Étape 7 : trajets de confiance (position en temps réel et SOS)
+%
+%  Premier volet sans spécification amont : il naît de la demande produit
+%  « partager sa route à son cercle de confiance, ou lancer un SOS ».
+%
+%  Compilation :  latexmk -pdf trajets-confiance.tex
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{alanya-conception}
+\setAlanyaDocTitre{Trajets de confiance}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AlanyaIndigoStrong,
+  urlcolor=AlanyaIndigoStrong,
+  pdftitle={Alanya - Trajets de confiance},
+  pdfauthor={Equipe Alanya},
+  pdfsubject={Conception - position en temps reel, echeance d'arrivee et SOS}
+}
+
+\begin{document}
+
+% =====================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[AlanyaIndigo]
+    (current page.north west) rectangle ([yshift=-6.4cm]current page.north east);
+  \fill[AlanyaIndigoDark]
+    ([yshift=-6.4cm]current page.north west) rectangle ([yshift=-6.0cm]current page.north east);
+\end{tikzpicture}
+
+\vspace*{1.1cm}
+{\color{white}\sffamily
+\begin{center}
+  {\small\bfseries DOSSIER DE CONCEPTION}\\[6pt]
+  {\footnotesize\color{AlanyaContainer} Document de travail --- à valider avant développement}
+\end{center}}
+
+\vspace{3.4cm}
+
+\begin{center}\sffamily
+  {\small\bfseries ÉTAPE 7}\\[10pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}\\[20pt]
+  {\fontsize{32}{36}\selectfont\bfseries\color{AlanyaIndigoDark} Trajets de confiance}\\[10pt]
+  {\large\color{AlanyaGray} Partager sa route à cinq personnes, et rentrer confirmé}\\[6pt]
+  {\normalsize\itshape\color{AlanyaGray}
+   Taxi et rendez-vous --- arriver, confirmer, ou alerter}\\[22pt]
+  {\color{AlanyaLine}\rule{0.6\linewidth}{0.6pt}}
+\end{center}
+
+\vspace{1.4cm}
+
+% Emblème : une route et ses jalons. Cinq points — la taille du cercle —
+% dont le dernier, l'arrivée, est le seul en vert.
+\begin{center}
+\begin{tikzpicture}[x=1cm, y=1cm]
+  \draw[AlanyaLine, line width=1.6pt, line cap=round]
+    (0,0) .. controls (1.6,0.55) and (3.2,-0.55) .. (4.8,0)
+          .. controls (6.4,0.55) and (7.4,0.2) .. (8.0,0);
+  \foreach \x in {0, 1.6, 3.2, 4.8, 6.4} {
+    \fill[AlanyaIndigo] (\x,{0.55*sin(\x*112.5)*0}) circle (0.16);
+  }
+  % Les quatre premiers jalons suivent la route ; le dernier la termine.
+  \fill[white]         (8.0,0) circle (0.30);
+  \fill[AlanyaSuccess] (8.0,0) circle (0.24);
+\end{tikzpicture}
+\end{center}
+
+\vfill
+
+\begin{center}\sffamily
+  \begin{tabular}{@{}r@{\quad}l@{}}
+    \thd{Périmètre}   & Talky (Flutter) \textbullet{} Alanya-Backend\\[3pt]
+    \thd{Statut}      & Conception --- aucune ligne de code écrite\\[3pt]
+    \thd{Dépend de}   & Listes de contacts (liste \code{trust}, migration 050)\\[3pt]
+    \thd{Remplace}    & ---\\[3pt]
+    \thd{Date}        & \today\\
+  \end{tabular}
+\end{center}
+
+\vspace{0.8cm}
+\begin{center}\color{AlanyaGray}\small\sffamily
+  Document confidentiel --- diffusion restreinte
+\end{center}
+\end{titlepage}
+
+% =====================================================================
+\chapter*{Avant-propos}
+\addcontentsline{toc}{chapter}{Avant-propos}
+\markboth{Avant-propos}{}
+\thispagestyle{plain}
+
+Alanya sait déjà partager \emph{une} position~: un message de type~5, une carte, un pin.
+C'est une photographie. Ce document décrit comment en faire un film utile --- et surtout,
+comment le doubler d'une promesse qui tient même quand le film s'interrompt.
+
+Une décision gouverne tout le reste, et il vaut mieux la lire avant le sommaire~:
+\textbf{la garantie de sûreté est l'échéance, pas la trace}. La carte rassure~; c'est
+l'échéance qui protège. Elle vit côté serveur et ne dépend ni du GPS, ni de la batterie, ni
+du système d'exploitation. Trois conséquences en découlent, qui reviennent à chaque
+chapitre~: perdre la position n'est pas un incident, iOS n'a pas à égaler Android, et une
+arrivée détectée ne clôt jamais un trajet toute seule.
+
+Ce volet est aussi le premier à porter un risque de \emph{détournement}~: une fonctionnalité
+qui diffuse la position de quelqu'un peut servir à le surveiller. Le sujet n'est pas relégué
+en annexe --- il a son chapitre dans chacune des deux parties.
+
+\begin{note}[Comment lire ce document]
+La \textbf{partie I} décrit la fonctionnalité telle que l'utilisateur et son cercle la
+voient. La \textbf{partie II} décrit comment on la construit. On peut valider la partie~I
+sans lire la partie~II.
+\end{note}
+
+\tableofcontents
+
+% =====================================================================
+\part{Approche naïve}
+% =====================================================================
+
+\input{contenu/trajets-naive}
+
+% =====================================================================
+\part{Approche technique}
+% =====================================================================
+
+\input{contenu/trajets-technique}
+
+\vfill
+\begin{center}\small\color{AlanyaGray}\sffamily
+Fin du dossier --- étape 7. \\
+Dernier volet du dossier de conception.
+\end{center}
+
+\end{document}

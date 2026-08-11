@@ -1,0 +1,468 @@
+% Fragment partage : inclus par trajets-confiance.tex (dossier autonome)
+% et par dossier-conception-alanya.tex (dossier client assemble).
+% Ne pas y mettre de preambule ni de \part : c'est l'appelant qui les pose.
+
+\chapter{Le besoin}
+
+\section{Ce qui existe déjà}
+
+Alanya sait partager \textbf{une} position. Depuis le menu des pièces jointes d'une
+conversation, on ouvre une carte, on déplace le pin, on envoie. Le destinataire reçoit une
+vignette~; un appui l'ouvre dans son application de cartographie.
+
+\begin{constat}[Un partage ponctuel, complet et fonctionnel]
+Le sélecteur est \code{lib/\allowbreak screens/\allowbreak chats/\allowbreak location\_\allowbreak picker\_\allowbreak screen.dart}~: carte
+OpenStreetMap, pin fixe au centre, et une chaîne de repli soignée --- service désactivé,
+permission refusée, \code{getCurrentPosition} trop lent, dernière position connue. Le
+message est un message ordinaire de \textbf{type~5}, dont le \code{content} est un JSON
+\code{\{lat, lng, name, address\}} produit par
+\code{lib/\allowbreak core/\allowbreak utils/\allowbreak location\_payload.dart}, avec un géocodage inverse Nominatim en
+meilleur effort.
+\end{constat}
+
+Ce qui n'existe pas~: le \emph{mouvement}. Une position envoyée est une photographie. Elle
+ne dit pas si la personne avance, si elle s'est arrêtée, ni si elle est arrivée.
+
+\section{Pourquoi le message ne convient pas au temps réel}
+
+L'idée la plus immédiate serait de renvoyer un message de type~5 toutes les trente secondes.
+Elle ne tient pas~:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item la conversation deviendrait illisible --- des dizaines de vignettes pour un seul
+        trajet~;
+  \item chaque envoi remonterait la conversation en tête de liste, rallumerait le compteur
+        de non-lus et déclencherait une notification~;
+  \item l'historique serait impossible à tenir~: on ne saurait pas dire où commence et où
+        finit un trajet, ni le supprimer sans supprimer des messages~;
+  \item et surtout, rien là-dedans ne \emph{surveille} l'arrivée. Or c'est cela, la demande.
+\end{itemize}
+
+\section{Ce qu'on ajoute}
+
+Un objet à part~: le \textbf{trajet}. On le démarre, on annonce où l'on va et quand on
+compte arriver, ses proches le suivent, et il se termine par une confirmation --- ou par une
+alerte.
+
+\begin{note}[La phrase à retenir]
+La promesse n'est pas «~vos proches voient où vous êtes~». Elle est~:
+\textbf{«~si vous ne confirmez pas votre arrivée, vos proches seront prévenus~»}.
+
+La carte est un confort. L'échéance est le contrat. C'est une distinction de conception, pas
+une nuance de vocabulaire~: elle décide de tout ce qui suit, à commencer par le fait qu'une
+perte de signal n'est jamais une alerte.
+\end{note}
+
+\section{La promesse, et ce qu'elle n'est pas}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Ce n'est pas un traceur} & Il n'existe aucun partage permanent, aucune récurrence,
+aucun interrupteur «~toujours actif~». Un trajet est fini, et démarré à la main. \\
+\thd{Ce n'est pas un service d'urgence} & Le SOS prévient le cercle de confiance. Il
+n'appelle ni la police, ni les secours, et l'écran le dit. \\
+\thd{Ce n'est pas une demande} & Personne ne peut réclamer la position de quelqu'un. Seul
+le propriétaire démarre, et seul lui arrête. \\
+\thd{Ce n'est pas un historique partagé} & Les membres du cercle voient le trajet
+\emph{pendant} qu'il a lieu. Ils n'ont accès à aucun trajet passé. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Les règles produit}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.6cm}X@{}}
+\toprule
+\thd{Qui reçoit} & \textbf{Tout le cercle de confiance}, c'est-à-dire la liste système
+\emph{Confiance}, plafonnée à cinq. Pas de sous-sélection au départ. \\
+\thd{Un seul à la fois} & Un utilisateur n'a qu'un trajet ouvert. Repartir, c'est un
+nouveau trajet. \\
+\thd{L'arrivée ne clôt rien} & Le GPS \emph{propose}, l'humain \emph{dispose}. Une
+destination atteinte pose la question~; elle n'y répond pas. \\
+\thd{Seul le propriétaire clôt} & Un membre peut dire «~j'ai vu~» et appeler. Il ne peut
+pas décider que quelqu'un est arrivé. \\
+\thd{Dix minutes de grâce} & Entre l'échéance et l'alerte. Avec trois relances, adressées
+au propriétaire seul. \\
+\thd{Une alerte ne se retire pas} & Elle se \emph{résout}. Le journal garde la trace de ce
+qui est parti, et à qui. \\
+\thd{Silence n'est pas danger} & Un GPS perdu s'affiche en gris, jamais en rouge. Le rouge
+est réservé à l'alerte et au SOS. \\
+\thd{Douze heures au maximum} & Passé ce plafond, le trajet demande à être clos. \\
+\thd{Navigation} & \textbf{Aucun sixième onglet.} La barre est codée en dur à cinq onglets
+(\code{lib/\allowbreak screens/\allowbreak home/\allowbreak glass\_nav\_bar.dart}). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\chapter{Le cercle de confiance}
+
+\section{Pourquoi réutiliser la liste Confiance}
+
+Le volet~2 a créé quatre listes système, dont une~: \emph{Confiance}, seule à porter un
+plafond --- cinq membres. Elle attendait un usage~; c'est celui-ci.
+
+\begin{constat}[Le plafond existe déjà en base]
+\code{src/\allowbreak utils/\allowbreak defaultContactLists.js} sème la liste \code{kind = 'trust'} avec
+\code{member\_limit = 5} et la couleur \code{\#B7791F}, à l'inscription et en rattrapage à
+chaque lecture des listes. Le contrôleur refuse le sixième membre en 409
+\code{LIST\_MEMBER\_LIMIT}. Rien n'est à créer côté audience.
+\end{constat}
+
+Ne pas inventer une seconde notion d'audience est aussi la position déjà tranchée au
+volet~2, qui a refusé de fusionner listes personnelles et audiences de diffusion. Ici, on va
+dans le même sens~: on \emph{réutilise} la liste, on n'en fabrique pas une autre.
+
+\section{Le cercle est l'audience --- en entier}
+
+Démarrer un trajet prévient les cinq. Il n'y a pas de case à cocher, pas d'écran de
+sélection, pas de «~partager à trois sur cinq~».
+
+\begin{note}[Ce que ce choix achète]
+Un appui de moins, et une promesse énonçable en une phrase --- «~mon cercle est prévenu~» —
+au lieu d'une liste variable dont on ne se souvient plus le lendemain. C'est aussi ce qui
+permet de tenir l'objectif de vingt secondes entre l'envie de partir et le départ effectif.
+
+Le corollaire~: on compose son cercle \textbf{à froid}, dans ses listes de contacts, pas au
+moment de partir. Cette composition ne notifie personne.
+\end{note}
+
+\section{Ce que le membre découvre}
+
+\begin{alerte}[Une règle du volet~2 est mise en défaut --- assumons-le]
+Les listes de contacts sont aujourd'hui \textbf{strictement privées}~: «~personne ne sait
+dans quelle liste il est rangé, ni même qu'il l'est~»
+(\code{contenu/listes-naive.tex}). Le premier trajet partagé \textbf{rompt cette règle}~:
+en recevant la carte, un proche apprend qu'il fait partie du cercle de confiance.
+
+On ne peut pas l'éviter --- prévenir quelqu'un sans qu'il sache qu'il a été choisi n'a pas
+de sens. On l'assume donc, et l'écran du membre le dit explicitement~:
+«~\emph{Awa vous a choisi comme personne de confiance}~». Ce qui reste privé~: les
+\emph{autres} listes, et le fait d'être \emph{sorti} du cercle.
+\end{alerte}
+
+Le membre voit combien de personnes suivent, jamais qui. Cela rassure --- «~je ne suis pas
+seul à veiller~» --- sans exposer le carnet d'adresses de quelqu'un d'autre.
+
+\section{Ce que le membre peut refuser}
+
+Recevoir un trajet n'est pas une obligation. Le membre peut quitter un trajet en cours, et
+un réglage général permet de ne plus être destinataire de trajets. Dans les deux cas, le
+propriétaire lit «~un membre n'est plus destinataire~», sans motif.
+
+\chapter{Les écrans}
+
+\section{Vue d'ensemble}
+
+Deux chemins partent de la même feuille de départ~: celui où l'on confirme, et celui où le
+silence déclenche l'alerte.
+
+\begin{center}
+  \imageOuCadre{maquettes/trajets-parcours.png}{\linewidth}%
+    {Le chemin nominal (partir, suivre, confirmer, clore) et le chemin d'alerte
+     (relances, alerte, prise en charge, résolution)\\
+     \texttt{maquettes/trajets-parcours.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/fd08532c-8cdb-454d-9af7-8c14a43b79b3}%
+{\texttt{claude.ai/code/artifact/fd08532c}}\\
+Source versionnée~: \code{docs/\allowbreak architecture/\allowbreak maquettes/\allowbreak trajets-parcours.html}
+\end{note}
+
+Les quatre temps --- \textbf{partir, suivre, confirmer, clore} --- sont rappelés en tête de
+chaque écran du propriétaire par une rampe de quatre segments. C'est la seule chose qui ne
+change jamais de place.
+
+\section{Partir}
+
+\begin{center}
+  \imageOuCadre{maquettes/trajets-depart.png}{\linewidth}%
+    {Cercle vide, cercle prêt, explication de la permission, composition, puis le contrat\\
+     \texttt{maquettes/trajets-depart.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/39bf86b6-9506-4aba-937a-6ae051260766}%
+{\texttt{claude.ai/code/artifact/39bf86b6}}\\
+Source versionnée~: \code{docs/\allowbreak architecture/\allowbreak maquettes/\allowbreak trajets-depart.html}
+\end{note}
+
+Trois lignes suffisent~: le type (taxi ou rendez-vous), le lieu, l'heure. On peut n'en
+donner qu'une des deux dernières --- avec les deux, la première atteinte pose la question.
+
+Le dernier écran affiche \textbf{le contrat en toutes lettres}~: «~\emph{Vos cinq proches
+verront votre position jusqu'à 21:45. Si vous n'avez pas confirmé à 21:55, ils seront
+prévenus avec votre dernière position.}~» C'est le seul élément de tout le parcours qui
+garantit que la personne a compris ce qu'elle déclenche. Les deux heures y sont écrites, pas
+déduites.
+
+Deux écrans ne se voient qu'une fois~: la composition du cercle, quand il est vide, et
+l'explication de la permission de localisation --- posée \emph{avant} que le système ne la
+demande, parce que c'est le seul moyen d'obtenir «~Toujours autoriser~».
+
+\section{Suivre}
+
+\begin{center}
+  \imageOuCadre{maquettes/trajets-en-cours.png}{\linewidth}%
+    {Trajet actif, échéance atteinte, signal perdu, bandeau persistant, second appareil\\
+     \texttt{maquettes/trajets-en-cours.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/32f2cae7-c8db-4f8c-b85a-f3eb43e5d644}%
+{\texttt{claude.ai/code/artifact/32f2cae7}}\\
+Source versionnée~: \code{docs/\allowbreak architecture/\allowbreak maquettes/\allowbreak trajets-en-cours.html}
+\end{note}
+
+Pendant tout le trajet, un \textbf{bandeau} se pose au-dessus de la barre de navigation. Il
+est visible sur les cinq onglets, affiche l'heure d'arrivée, et s'ouvre d'un appui.
+
+\begin{constat}[Le bandeau tient dans un espace déjà réservé]
+\code{lib/\allowbreak screens/\allowbreak home/\allowbreak glass\_nav\_bar.dart} construit sa rangée par
+\code{List.generate(5, …)} et réserve \code{kGlassNavBarSpace = 96} sous le contenu. Le
+bandeau s'insère là. Aucun sixième onglet, aucune refonte de navigation.
+\end{constat}
+
+«~Arrêter le partage~» est toujours à un appui, y compris depuis la notification système.
+Ce n'est pas une commodité~: si arrêter demandait d'ouvrir l'application et de naviguer,
+arrêter deviendrait coûteux --- donc reprochable par quelqu'un qui regarde par-dessus
+l'épaule.
+
+\section{Côté membre}
+
+\begin{center}
+  \imageOuCadre{maquettes/trajets-membre.png}{\linewidth}%
+    {La carte de trajet dans la conversation, et ses huit états\\
+     \texttt{maquettes/trajets-membre.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/065db5f1-a69a-4ce1-af06-efa4ef13b29a}%
+{\texttt{claude.ai/code/artifact/065db5f1}}\\
+Source versionnée~: \code{docs/\allowbreak architecture/\allowbreak maquettes/\allowbreak trajets-membre.html}
+\end{note}
+
+Le trajet arrive chez le proche \textbf{dans la conversation}, là où il parle déjà avec la
+personne. C'est la seule surface qu'on est certain qu'il verra~: elle reçoit déjà la
+notification, elle survit au redémarrage, elle reste dans l'archive.
+
+Un \textbf{seul message} par trajet, qui change d'état sur place --- il ne remonte pas la
+conversation à chaque position. Il reste compact~: avatar, ce qui se passe, l'heure
+d'arrivée, et un bouton «~Suivre~». La vraie carte est plein écran, à un appui.
+
+Le membre a exactement deux gestes~: dire qu'il a vu, et appeler.
+
+\section{Décider et alerter}
+
+\begin{center}
+  \imageOuCadre{maquettes/trajets-alerte.png}{\linewidth}%
+    {Armement du SOS, décompte annulable, mode discret --- puis la réception de l'alerte\\
+     \texttt{maquettes/trajets-alerte.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/91c2ad6f-cc73-4233-9d55-4b8b905bca8d}%
+{\texttt{claude.ai/code/artifact/91c2ad6f}}\\
+Source versionnée~: \code{docs/\allowbreak architecture/\allowbreak maquettes/\allowbreak trajets-alerte.html}
+\end{note}
+
+Le \textbf{SOS} est accessible sans trajet en cours --- il en crée un, sans destination ni
+heure, immédiatement en alerte. Il demande deux gestes pour partir~: un maintien de trois
+secondes, puis un décompte annulable de cinq. Après l'envoi, l'écran redevient neutre~:
+aucun son, aucune vibration. C'est le moment le plus dangereux, et il ne doit rien laisser
+paraître.
+
+Une fausse alerte se \emph{corrige} en un appui, en moins d'une minute. Elle ne s'efface pas.
+
+\section{Après le trajet}
+
+\begin{center}
+  \imageOuCadre{maquettes/trajets-fin-historique.png}{\linewidth}%
+    {Récapitulatif, historique, historique vide, et l'écran de confidentialité\\
+     \texttt{maquettes/trajets-fin-historique.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/048b398f-985e-45dd-b4e5-0d34a7ae5a69}%
+{\texttt{claude.ai/code/artifact/048b398f}}\\
+Source versionnée~: \code{docs/\allowbreak architecture/\allowbreak maquettes/\allowbreak trajets-fin-historique.html}
+\end{note}
+
+Le récapitulatif rejoue la frise du trajet --- y compris ce qui a raté, comme les quatre
+minutes sans signal. L'historique liste les trajets passés, avec leur issue lisible à la
+pastille avant même de lire la ligne.
+
+\section{Quand ça se dégrade}
+
+\begin{center}
+  \imageOuCadre{maquettes/trajets-erreurs-admin.png}{\linewidth}%
+    {Permission refusée, batterie faible, hors ligne, cercle vidé --- et la vue
+     d'administration, réduite à des compteurs\\
+     \texttt{maquettes/trajets-erreurs-admin.png}}
+\end{center}
+
+\begin{note}[Maquette interactive]
+\href{https://claude.ai/code/artifact/556526a1-c27a-4310-9435-158158a106ee}%
+{\texttt{claude.ai/code/artifact/556526a1}}\\
+Source versionnée~: \code{docs/\allowbreak architecture/\allowbreak maquettes/\allowbreak trajets-erreurs-admin.html}
+\end{note}
+
+Aucun de ces quatre écrans n'est rouge. Chacun rappelle que \textbf{l'échéance tient} --- ce
+qui est la seule chose que l'utilisateur ait besoin de savoir à ce moment-là, et ce qui
+distingue une dégradation d'une panne.
+
+\section{Points d'entrée}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Le profil, entrée «~Trajets de confiance~», à côté de «~Listes de contacts~»
+        (\code{lib/\allowbreak screens/\allowbreak profile/\allowbreak profile\_screen.dart}). C'est l'entrée canonique~:
+        démarrer, voir le trajet en cours, relire l'historique.
+  \item Le menu des pièces jointes d'une conversation, où «~Position~» devient un choix à
+        deux entrées~: \emph{position actuelle} --- le type~5 existant --- ou
+        \emph{trajet de confiance}. C'est là que vit déjà le réflexe «~je partage où je
+        suis~».
+  \item Le bandeau persistant, tant qu'un trajet est ouvert.
+\end{enumerate}
+
+\chapter{Les règles de vie d'un trajet}
+
+\section{L'échéance, la grâce, et les trois relances}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.0cm}p{4.4cm}X@{}}
+\toprule
+\thd{Moment} & \thd{Qui est sollicité} & \thd{Ce qui se passe} \\
+\midrule
+$T-5$ min          & Le propriétaire, en silence & «~Vous arrivez bientôt~?~» \\
+$T$                & Le propriétaire, notification prioritaire &
+                     Le trajet passe «~à confirmer~» \\
+$T+3$, $T+7$ min   & Le propriétaire, relances & Décompte visible \\
+$T+10$ min         & \textbf{Le cercle} & Alerte, avec la dernière position connue \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Pourquoi dix minutes, et non cinq]
+En deçà de cinq minutes, chaque embouteillage devient une alerte --- et le cercle apprend à
+ne plus les ouvrir. C'est le véritable mode de défaillance de ce genre de produit~: pas
+l'alerte manquée, mais l'alerte qu'on ignore. Au-delà d'un quart d'heure, le délai n'a plus
+d'utilité dans un incident réel.
+\end{note}
+
+Prolonger tient en deux appuis, sans limite de nombre, et le cercle en est informé~:
+«~\emph{Awa a prolongé de 15 minutes}~». Cela rassure sans alerter.
+
+\section{Le cercle est figé au départ}
+
+Les cinq destinataires sont photographiés au démarrage. Modifier sa liste Confiance pendant
+un trajet ne change pas le trajet en cours~: si l'alerte part, on doit pouvoir dire
+exactement qui a été prévenu.
+
+\section{Quand quelqu'un bloque, quand le cercle se vide}
+
+Le blocage l'emporte sur tout. Un membre qui bloque le propriétaire cesse d'être
+destinataire --- alertes comprises. Le propriétaire lit «~un membre n'est plus
+destinataire~», jamais «~X vous a bloqué~»~: l'application ne révèle pas un blocage.
+
+\begin{alerte}[Un trajet sans destinataire ne continue pas]
+S'il ne reste plus personne, le trajet ne doit pas se poursuivre en silence~: il ne serait
+plus une fonctionnalité de sécurité, mais un traceur personnel. Le propriétaire reçoit une
+invite immédiate~; sans réponse au bout de cinq minutes, le trajet se clôt tout seul.
+\end{alerte}
+
+\section{Ce qu'on garde, et combien de temps}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{4.0cm}p{3.2cm}p{3.2cm}X@{}}
+\toprule
+ & \thd{Trajet normal} & \thd{Après une alerte} & \thd{Pourquoi} \\
+\midrule
+La trace détaillée & 24 h après clôture & 30 jours &
+Un registre permanent des déplacements de tous les utilisateurs n'est justifié par aucun
+besoin. Après un incident, la trace peut servir de preuve. \\
+Le trajet lui-même & 12 mois & 12 mois &
+L'historique se contente du départ, de l'arrivée, de la durée et de l'issue. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}[Le verrou de trente jours protège la personne, pas le service]
+Un trajet clos par une alerte ne peut pas être supprimé avant trente jours. C'est
+délibéré~: personne ne doit pouvoir contraindre un proche à effacer la trace d'un incident
+dans la minute. L'écran de confidentialité l'explique, pour que la règle ne se découvre pas
+par un refus.
+\end{note}
+
+\section{Ce que l'administration voit --- et ne voit pas}
+
+Une seule page~: des \textbf{compteurs agrégés}. Trajets démarrés, taux de confirmation,
+nombre d'alertes, durée médiane. Aucune coordonnée, aucun nom, aucune destination, aucun
+trajet individuel.
+
+Deux options ont été examinées puis écartées --- un registre d'incidents pseudonymisé, et un
+accès exceptionnel à la dernière position sous double validation. Elles aideraient le
+support. Elles sont écartées parce que la posture la plus défendable est celle où la donnée
+n'est pas accessible~; et parce qu'à vingt-quatre heures de conservation, il n'y aurait de
+toute façon presque rien à consulter.
+
+\section{Ce qui n'est pas dans cette étape}
+
+Déclenchement matériel du SOS par le bouton d'alimentation~; appel automatique des
+secours~; partage à quelqu'un qui n'est pas dans le cercle, par lien~; trajets récurrents.
+Aucun de ces points ne demanderait de changer le modèle de données.
+
+\chapter{Ce qui pourrait mal tourner}
+
+Une fonctionnalité qui diffuse la position de quelqu'un mérite qu'on écrive ses risques
+avant son code. Les quatre suivants sont les plus sérieux, et chacun a sa contre-mesure dans
+la conception --- pas dans un réglage.
+
+\section{Le détournement par un proche}
+
+C'est le risque qui peut tuer la fonctionnalité~: un conjoint qui exige un trajet à chaque
+sortie. Sept garde-fous, tous structurels~:
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item aucune demande de position n'existe --- le propriétaire est toujours l'émetteur~;
+  \item tout trajet est fini, et démarré à la main~;
+  \item la notification persistante \textbf{nomme les destinataires} et ne peut être
+        masquée~;
+  \item les membres n'ont \textbf{aucun historique} --- «~montre-moi où tu étais mardi~»
+        n'est pas une fonctionnalité~;
+  \item l'audience se compose à froid, en silence, hors du moment de partir~;
+  \item «~Arrêter le partage~» est toujours à un appui, et un arrêt anticipé n'envoie qu'un
+        message neutre~;
+  \item un trajet clos par une alerte ne s'efface pas avant trente jours.
+\end{enumerate}
+
+\begin{alerte}[Ce sont des atténuations, pas une solution]
+Aucune de ces mesures n'empêche de contraindre quelqu'un à démarrer un trajet. Elles rendent
+la contrainte moins rentable et moins durable. Il faut l'écrire tel quel --- prétendre le
+contraire serait la plus dangereuse des erreurs de conception.
+\end{alerte}
+
+\section{La fatigue d'alerte}
+
+Une alerte qu'on n'ouvre plus ne protège personne. D'où les trois relances avant que le
+cercle n'entende quoi que ce soit, la prolongation en deux appuis, et une graduation stricte
+des notifications~: le démarrage est ordinaire, la clôture est silencieuse, seules l'alerte
+et le SOS sont bruyants.
+
+\section{La fausse alerte}
+
+Un SOS parti d'une poche détruirait la confiance du cercle plus sûrement qu'une alerte
+manquée. Maintien de trois secondes, décompte annulable de cinq, bouton absent de l'écran
+d'accueil, et correction poussée au cercle en moins d'une minute.
+
+\section{La batterie et la précision}
+
+Le suivi n'est pas continu~: il se déclenche à la distance parcourue, avec un battement
+régulier qui distingue \emph{immobile} de \emph{traceur éteint}. Sous quinze pour cent, il
+ralentit et le cercle en est informé.
+
+Quant à la précision, elle est dite plutôt que masquée~: en ville, on est souvent à
+soixante mètres près, et l'écran l'affiche. C'est aussi pourquoi l'arrivée se détecte dans
+un rayon de cent cinquante mètres, tenu pendant une minute, à faible vitesse --- passer
+devant sa rue sans s'arrêter est le faux positif le plus banal.

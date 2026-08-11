@@ -58,10 +58,10 @@
 \begin{center}\sffamily
   {\color{AlanyaLine}\rule{0.62\linewidth}{0.6pt}}\\[24pt]
   {\fontsize{38}{42}\selectfont\bfseries\color{AlanyaIndigoDark} Alanya}\\[10pt]
-  {\Large\color{AlanyaGray} Comptes business, certification,}\\[3pt]
-  {\Large\color{AlanyaGray} compte officiel et listes de contacts}\\[16pt]
+  {\Large\color{AlanyaGray} Comptes business, certification, compte officiel,}\\[3pt]
+  {\Large\color{AlanyaGray} listes de contacts et trajets de confiance}\\[16pt]
   {\normalsize\itshape\color{AlanyaGray}
-   Six volets --- approche fonctionnelle et approche technique}\\[24pt]
+   Sept volets --- approche fonctionnelle et approche technique}\\[24pt]
   {\color{AlanyaLine}\rule{0.62\linewidth}{0.6pt}}
 \end{center}
 
@@ -129,7 +129,7 @@ signalé et argumenté.
 \markboth{Comment lire ce dossier}{}
 \thispagestyle{plain}
 
-\section*{Les six volets}
+\section*{Les sept volets}
 
 Chaque fonctionnalité est traitée dans les \emph{deux} parties. L'ordre suit les dépendances
 techniques, pas l'ordre dans lequel les fonctionnalités ont été demandées.
@@ -147,6 +147,8 @@ dépendent. \\
 5 & Certification & Le dossier, son instruction, le sort des pièces. \\
 6 & Identité et connexion QR & Ajout de contact instantané par scan, et connexion d'un
 second appareil. Indépendante des cinq autres. \\
+7 & Trajets de confiance & Position en temps réel et SOS, adressés à la liste
+\emph{Confiance} du volet~2. Le seul volet dont la promesse est une \emph{échéance}. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -202,6 +204,10 @@ l'architecture, mais elles doivent être arbitrées avant l'implémentation du v
   {Ajout de contact instantané par scan, et connexion d'un second appareil}
 \input{contenu/qr-code-naive}
 
+\volet{7}{Trajets de confiance}%
+  {Partager sa route à son cercle, et être attendu à l'arrivée}
+\input{contenu/trajets-naive}
+
 % =====================================================================
 \part{Approche technique}
 % =====================================================================
@@ -230,6 +236,10 @@ l'architecture, mais elles doivent être arbitrées avant l'implémentation du v
   {Jeton opaque régénérable, session de connexion éphémère, révocation réelle du refresh token}
 \input{contenu/qr-code-technique}
 
+\volet{7}{Trajets de confiance}%
+  {Échéance gardée par la file de jobs, flux de positions décimé, audience figée}
+\input{contenu/trajets-technique}
+
 % =====================================================================
 %  SYNTHÈSE FINALE
 % =====================================================================
@@ -239,7 +249,7 @@ l'architecture, mais elles doivent être arbitrées avant l'implémentation du v
 \addcontentsline{toc}{chapter}{Ce qui reste à construire}
 \markboth{Ce qui reste à construire}{}
 
-Les six volets s'appuient sur des briques d'infrastructure qui \textbf{n'existent pas
+Les sept volets s'appuient sur des briques d'infrastructure qui \textbf{n'existent pas
 aujourd'hui} dans les trois dépôts. Les rassembler ici évite qu'elles apparaissent comme des
 surprises au moment du développement.
 
@@ -264,6 +274,12 @@ tiendra la mise en service, pas au-delà. \\
 Révocation de session & 6 & Transforme le refresh token JWT actuel --- jamais révocable ---
 en jeton réellement révocable. Condition pour qu'un bouton « Déconnecter » ait un effet
 immédiat. \\
+Localisation en avant-plan & 7 & Service Android \code{foregroundServiceType="location"} et
+son pont Dart, sur le modèle du service média des appels. Rien de tel n'existe~; sans lui,
+le suivi s'arrête dès que l'application passe en arrière-plan. \\
+Fournisseur de tuiles & 7 & Le partage ponctuel charge \code{tile.openstreetmap.org} une
+fois~; un trajet suivi par cinq personnes en charge des centaines. La politique d'usage
+d'OpenStreetMap l'interdit à ce volume. Un contrat est un prérequis de mise en service. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -319,12 +335,17 @@ numéro réellement libre aujourd'hui est \textbf{026} --- le volet~6 le prend. 
   \node[v] (b)  at (8.2,0)    {4. Business\\[-2pt]{\scriptsize + géo, médias}};
   \node[v] (c)  at (12.3,0)   {5. Certification\\[-2pt]{\scriptsize + coffre}};
   \node[v] (q)  at (16.4,0)   {6. QR\\[-2pt]{\scriptsize indépendant}};
+  % Les trajets pendent sous les listes : c'est leur seule arête entrante.
+  % On les place a plomb, sous l'arete socle -> certification qui longe y = -2.1.
+  \node[v] (t)  at (0,-4.2)   {7. Trajets\\[-2pt]{\scriptsize + localisation}};
 
   \draw[a] (s) -- (d);
   \draw[a] (d) -- (b);
   \draw[a] (b) -- (c);
   \draw[a, dashed, draw=AlanyaMute] (s) -- (l);
   \draw[a] (s.south east) to[out=-40, in=180] (4.1,-2.1) -- (12.3,-2.1) -- (c.south);
+  \draw[a] (l) -- node[font=\sffamily\tiny, text=AlanyaGray, fill=white, inner sep=1.5pt,
+                       pos=0.5] {liste \code{trust}} (t);
 \end{tikzpicture}
 \end{center}
 
@@ -335,10 +356,17 @@ elle porte un axe \emph{session/authentification}, orthogonal à l'axe \emph{qui
 compte} que porte le socle --- elle peut se construire dès maintenant, en parallèle des cinq
 autres.
 
+Les trajets de confiance (volet~7) n'ont qu'une arête entrante, et elle vient des listes~:
+ils consomment la liste \emph{Confiance} et son plafond de cinq, sans rien y ajouter. Ils
+arrivent donc en dernier dans l'ordre de réalisation, mais pour une raison de dépendance
+--- pas de priorité. C'est aussi le volet qui demande le plus de travail \emph{hors}
+serveur~: service de localisation en avant-plan, permissions Android et iOS, et un contrat
+de tuiles cartographiques.
+
 \vfill
 \begin{center}\small\color{AlanyaGray}\sffamily
 Fin du dossier de conception. \\
-Les six volets existent aussi en documents autonomes, dans le même dossier.
+Les sept volets existent aussi en documents autonomes, dans le même dossier.
 \end{center}
 
 \end{document}

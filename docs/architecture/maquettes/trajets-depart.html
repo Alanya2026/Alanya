@@ -1,0 +1,623 @@
+<title>Alanya — Trajets de confiance · Partir</title>
+
+<style>
+  :root {
+    --brand:            #3F51B5;
+    --brand-dark:       #1A237E;
+    --brand-strong:     #303F9F;
+    --brand-container:  #E8EAF6;
+    --online:           #1FA363;
+
+    --bg:               #F6F7FB;
+    --surface:          #FFFFFF;
+    --surface-muted:    #F4F5F8;
+    --outline:          #E2E5EC;
+    --outline-strong:   #CBD0E0;
+
+    --ink:              #1A1D23;
+    --ink-2:            #5B6273;
+    --ink-3:            #9AA0AE;
+
+    --page-bg:          #EEF0F7;
+    --page-panel:       #FFFFFF;
+    --page-line:        #DDE1EC;
+    --page-ink:         #23283A;
+    --page-ink-2:       #626A82;
+
+    /* Jetons de trajet — aucune couleur nouvelle.
+       success / warning / error de app_colors.dart, plus la teinte de la liste
+       Confiance stockée en base dans contact_list.color (#B7791F). */
+    --t-actif:      #1FA363;
+    --t-actif-bg:   #E4F5EC;
+    --t-attente:    #F59E0B;
+    --t-attente-bg: #FDF0D9;
+    --t-alerte:     #EF4444;
+    --t-alerte-bg:  #FDE7E7;
+    --t-confiance:  #B7791F;
+
+    --r-sm: 12px; --r-md: 16px; --r-lg: 20px; --r-pill: 28px;
+    --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-xxl: 24px;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+      --outline: #3A404C; --outline-strong: #3A404C;
+      --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+      --brand-container: #283593;
+      --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+      --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+      --t-actif-bg: #10301F; --t-attente-bg: #33260B; --t-alerte-bg: #3A1717;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B21; --surface-muted: #1F232B;
+    --outline: #3A404C; --outline-strong: #3A404C;
+    --ink: #F2F4F8; --ink-2: #AAB1C0; --ink-3: #6F7787;
+    --brand-container: #283593;
+    --page-bg: #0A0C11; --page-panel: #14171E; --page-line: #262C38;
+    --page-ink: #E8EBF2; --page-ink-2: #939BAF;
+    --t-actif-bg: #10301F; --t-attente-bg: #33260B; --t-alerte-bg: #3A1717;
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7FB; --surface: #FFFFFF; --surface-muted: #F4F5F8;
+    --outline: #E2E5EC; --outline-strong: #CBD0E0;
+    --ink: #1A1D23; --ink-2: #5B6273; --ink-3: #9AA0AE;
+    --brand-container: #E8EAF6;
+    --page-bg: #EEF0F7; --page-panel: #FFFFFF; --page-line: #DDE1EC;
+    --page-ink: #23283A; --page-ink-2: #626A82;
+    --t-actif-bg: #E4F5EC; --t-attente-bg: #FDF0D9; --t-alerte-bg: #FDE7E7;
+  }
+
+  * { box-sizing: border-box; }
+
+  .page {
+    background: var(--page-bg); color: var(--page-ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    min-height: 100vh; padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+  .masthead { display: flex; flex-direction: column; gap: var(--s-md); max-width: 64ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  .masthead h1 {
+    font-size: clamp(26px, 3.6vw, 38px); line-height: 1.12; letter-spacing: -0.02em;
+    font-weight: 700; margin: 0; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--page-ink-2); }
+
+  .panel {
+    background: var(--page-panel); border: 1px solid var(--page-line);
+    border-radius: var(--r-lg); padding: clamp(18px, 3vw, 30px);
+    display: flex; flex-direction: column; gap: var(--s-xl);
+  }
+  .panel > header { display: flex; flex-direction: column; gap: 6px; }
+  .panel h2 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .panel header p { margin: 0; color: var(--page-ink-2); font-size: 14px; max-width: 70ch; }
+
+  /* ---------- Scène ---------- */
+  .stage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: clamp(18px, 2.6vw, 32px); align-items: start;
+  }
+  .stage.serre { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .device-block { display: flex; flex-direction: column; gap: var(--s-md); align-items: center; }
+  .device-caption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--page-ink-2); text-align: center; max-width: 32ch;
+  }
+  .device-caption b { display: block; color: var(--page-ink); font-weight: 600; letter-spacing: 0.06em; }
+  .device {
+    width: 100%; max-width: 330px; background: var(--bg);
+    border: 1px solid var(--outline); border-radius: 30px; padding: 8px;
+    box-shadow: 0 18px 44px rgba(26, 35, 126, 0.13), 0 2px 6px rgba(0,0,0,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+  }
+  :root[data-theme="dark"] .device { box-shadow: 0 18px 44px rgba(0,0,0,0.5); }
+
+  .screen {
+    background: var(--bg); border-radius: 23px; overflow: hidden;
+    display: flex; flex-direction: column; min-height: 560px; color: var(--ink);
+    position: relative;
+  }
+  .screen.court { min-height: 420px; }
+
+  .appbar {
+    background: var(--surface); border-bottom: 1px solid var(--outline);
+    padding: 14px var(--s-lg) var(--s-md);
+    display: flex; align-items: center; gap: var(--s-md);
+  }
+  .appbar .back { width: 22px; height: 22px; color: var(--ink-2); flex: none; }
+  .appbar h3 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+  .appbar .spacer { flex: 1; }
+  .appbar .compte { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  .rows { background: var(--surface); display: flex; flex-direction: column; }
+  .rows.grandit { flex: 1; }
+  .row {
+    display: flex; align-items: center; gap: var(--s-md);
+    padding: 11px var(--s-lg); border-bottom: 1px solid var(--outline);
+  }
+  .row:last-child { border-bottom: none; }
+  .row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .row-nom {
+    font-size: 15px; font-weight: 600; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .row-sous { font-size: 12.5px; color: var(--ink-2); }
+  .row-sous.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+    flex: none; position: relative; font-size: 13px; font-weight: 650; color: #fff;
+    background: var(--brand-strong);
+  }
+  .avatar.sm { width: 28px; height: 28px; font-size: 11px; }
+  .avatar.xs { width: 22px; height: 22px; font-size: 9.5px; border: 2px solid var(--surface); }
+
+  .chevron { width: 18px; height: 18px; color: var(--ink-3); flex: none; }
+  .check {
+    width: 22px; height: 22px; border-radius: 50%; flex: none;
+    border: 1.8px solid var(--outline-strong); display: grid; place-items: center;
+  }
+  .check[data-on="1"] { background: var(--brand); border-color: var(--brand); }
+  .check svg { width: 13px; height: 13px; color: #fff; }
+
+  .bas {
+    padding: var(--s-md) var(--s-lg) var(--s-lg);
+    background: var(--surface); border-top: 1px solid var(--outline);
+    display: flex; flex-direction: column; gap: var(--s-sm);
+  }
+  .cta {
+    width: 100%; min-height: 48px; border-radius: var(--r-sm); border: none;
+    background: var(--brand); color: #fff; font-size: 15px; font-weight: 650;
+    font-family: inherit; display: inline-flex; align-items: center;
+    justify-content: center; gap: var(--s-sm); padding: 0 var(--s-md);
+  }
+  .cta svg { width: 19px; height: 19px; }
+  .cta.fantome { background: transparent; color: var(--ink-2); border: 1px solid var(--outline-strong); }
+  .cta.vert { background: var(--t-actif); }
+  .cta.rouge { background: var(--t-alerte); }
+  .cta.mini { min-height: 40px; font-size: 14px; }
+
+  .hint {
+    margin: 0; padding: var(--s-lg);
+    font-size: 12.5px; line-height: 1.5; color: var(--ink-3);
+    background: var(--surface);
+  }
+  .hint.grandit { flex: 1; }
+
+  /* =================================================================
+     Trajets — composants propres au volet 7
+     ================================================================= */
+
+  /* Bandeau d'état en tête d'écran. La couleur EST l'information :
+     on doit pouvoir lire l'état sans lire le texte. */
+  .etat {
+    display: flex; align-items: center; gap: var(--s-sm);
+    padding: 9px var(--s-lg); font-size: 12.5px; font-weight: 600;
+    background: var(--t-actif-bg); color: var(--t-actif);
+  }
+  .etat.attente { background: var(--t-attente-bg); color: #9A6100; }
+  .etat.alerte  { background: var(--t-alerte-bg);  color: #B32020; }
+  .etat.neutre  { background: var(--surface-muted); color: var(--ink-2); }
+  :root[data-theme="dark"] .etat.attente { color: #F3C05A; }
+  :root[data-theme="dark"] .etat.alerte  { color: #FF8D8D; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .etat.attente { color: #F3C05A; }
+    :root:not([data-theme="light"]) .etat.alerte  { color: #FF8D8D; }
+  }
+  .etat .spacer { flex: 1; }
+  .etat .chrono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* Pastille « en direct ». L'anneau ne clignote pas : il respire.
+     Un clignotement rapide sur un écran de sûreté fatigue. */
+  .pouls { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none;
+           position: relative; }
+  .pouls::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 1.5px solid currentColor; opacity: 0.45;
+    animation: respire 2.4s ease-in-out infinite;
+  }
+  @keyframes respire {
+    0%, 100% { transform: scale(0.75); opacity: 0.5; }
+    50%      { transform: scale(1.15); opacity: 0.1; }
+  }
+
+  /* Carte. Un fond quadrillé discret plus une polyligne : assez pour lire
+     « on suit un déplacement », sans faire semblant d'être une vraie carte. */
+  .carte-geo { position: relative; background: var(--surface-muted); flex: 1; min-height: 190px; }
+  .carte-geo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .carte-geo .rue { stroke: var(--outline); stroke-width: 1; }
+  .carte-geo .bloc { fill: var(--surface); }
+  .carte-geo .route { stroke: var(--brand); stroke-width: 3; fill: none; stroke-linecap: round; }
+  .carte-geo .route.pale { stroke: var(--outline-strong); stroke-dasharray: 5 5; }
+  .carte-geo .route.alerte { stroke: var(--t-alerte); }
+  .carte-geo .halo { fill: var(--brand); opacity: 0.14; }
+  .carte-geo .halo.alerte { fill: var(--t-alerte); opacity: 0.16; }
+
+  .pin {
+    position: absolute; width: 15px; height: 15px; border-radius: 50%;
+    background: var(--brand); border: 2.5px solid var(--surface);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.28); transform: translate(-50%, -50%);
+  }
+  .pin.but { background: var(--t-actif); }
+  .pin.sos { background: var(--t-alerte); width: 17px; height: 17px; }
+  .pin.perdu { background: var(--ink-3); }
+
+  .drapeau {
+    position: absolute; transform: translate(-50%, -50%);
+    display: flex; align-items: center; gap: 5px;
+    background: var(--surface); border: 1px solid var(--outline);
+    border-radius: var(--r-pill); padding: 3px 9px 3px 5px;
+    font-size: 10.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .drapeau i { width: 7px; height: 7px; border-radius: 50%; background: var(--t-actif); }
+
+  /* La « rampe » : les quatre temps du trajet, toujours dans le même ordre.
+     C'est la seule chose qui reste identique d'un écran à l'autre. */
+  .rampe { display: flex; gap: 0; padding: var(--s-md) var(--s-lg); background: var(--surface);
+           border-bottom: 1px solid var(--outline); }
+  .rampe .pas { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+  .rampe .barre { height: 3px; border-radius: 2px; background: var(--outline); }
+  .rampe .pas[data-on="1"] .barre { background: var(--t-actif); }
+  .rampe .pas[data-on="now"] .barre { background: var(--brand); }
+  .rampe .pas[data-on="alerte"] .barre { background: var(--t-alerte); }
+  .rampe .lib { font-size: 9.5px; letter-spacing: 0.05em; text-transform: uppercase;
+                color: var(--ink-3); font-family: var(--mono); }
+  .rampe .pas[data-on="now"] .lib { color: var(--brand); }
+  .rampe .pas[data-on="alerte"] .lib { color: var(--t-alerte); }
+
+  /* Le contrat, en toutes lettres. C'est le seul élément qui garantit que
+     l'utilisateur a compris ce qu'il déclenche. */
+  .contrat {
+    margin: var(--s-md) var(--s-lg); padding: var(--s-md);
+    border-radius: var(--r-sm); background: var(--brand-container);
+    color: var(--brand-dark); font-size: 13px; line-height: 1.5;
+  }
+  :root[data-theme="dark"] .contrat { color: #DDE1FF; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .contrat { color: #DDE1FF; }
+  }
+  .contrat b { font-weight: 700; }
+
+  /* Carte de trajet dans une conversation — le message de type 9. */
+  .fil { flex: 1; background: var(--bg); padding: var(--s-md) var(--s-lg);
+         display: flex; flex-direction: column; gap: var(--s-sm); }
+  .bulle {
+    max-width: 78%; padding: 8px 12px; border-radius: var(--r-md);
+    font-size: 13.5px; background: var(--surface); border: 1px solid var(--outline);
+    align-self: flex-start;
+  }
+  .bulle.moi { align-self: flex-end; background: var(--brand-container); border-color: transparent;
+               color: var(--brand-dark); }
+  :root[data-theme="dark"] .bulle.moi { color: #DDE1FF; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .bulle.moi { color: #DDE1FF; }
+  }
+  .bulle .h { font-size: 10px; color: var(--ink-3); font-family: var(--mono);
+              display: block; margin-top: 3px; }
+
+  .tcard {
+    align-self: flex-start; width: 88%; background: var(--surface);
+    border: 1px solid var(--outline); border-radius: var(--r-md); overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .tcard.systeme { align-self: center; width: 100%; background: transparent; border: none;
+                   text-align: center; }
+  .tcard .liseré { height: 3px; background: var(--t-actif); }
+  .tcard .liseré.attente { background: var(--t-attente); }
+  .tcard .liseré.alerte  { background: var(--t-alerte); }
+  .tcard .liseré.gris    { background: var(--outline-strong); }
+  .tcard .corps { padding: 10px var(--s-md); display: flex; flex-direction: column; gap: 7px; }
+  .tcard .tete { display: flex; align-items: center; gap: var(--s-sm); }
+  .tcard .titre { font-size: 13.5px; font-weight: 650; color: var(--ink); line-height: 1.3; }
+  .tcard .meta { font-size: 11.5px; color: var(--ink-2); font-family: var(--mono);
+                 font-variant-numeric: tabular-nums; }
+  .tcard .apercu { height: 62px; background: var(--surface-muted); border-radius: var(--r-sm);
+                   position: relative; overflow: hidden; }
+  .tcard .apercu svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .tcard .suivre {
+    border-top: 1px solid var(--outline); padding: 9px; text-align: center;
+    font-size: 13px; font-weight: 650; color: var(--brand);
+  }
+  .tcard .suivre.rouge { color: var(--t-alerte); }
+  .tcard .suivre.gris  { color: var(--ink-3); font-weight: 550; }
+  .sysline {
+    align-self: center; font-size: 11.5px; color: var(--ink-2); text-align: center;
+    background: var(--surface-muted); border-radius: var(--r-pill); padding: 4px 12px;
+  }
+  .sysline.alerte { background: var(--t-alerte-bg); color: #B32020; font-weight: 600; }
+  :root[data-theme="dark"] .sysline.alerte { color: #FF8D8D; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .sysline.alerte { color: #FF8D8D; }
+  }
+
+  /* Bandeau persistant, posé au-dessus de la barre de navigation.
+     Il occupe l'espace déjà réservé par kGlassNavBarSpace. */
+  .bandeau {
+    margin: 0 var(--s-md) var(--s-sm); border-radius: var(--r-sm);
+    background: var(--t-actif); color: #fff; padding: 9px var(--s-md);
+    display: flex; align-items: center; gap: var(--s-sm); font-size: 12.5px; font-weight: 600;
+  }
+  .bandeau.attente { background: var(--t-attente); color: #3A2A00; }
+  .bandeau.alerte  { background: var(--t-alerte); }
+  .bandeau .spacer { flex: 1; }
+  .bandeau .chrono { font-family: var(--mono); font-variant-numeric: tabular-nums;
+                     font-weight: 600; opacity: 0.92; }
+
+  .nav {
+    background: var(--surface); border-top: 1px solid var(--outline);
+    display: flex; padding: var(--s-sm) 0 var(--s-md);
+  }
+  .nav span {
+    flex: 1; text-align: center; font-size: 9.5px; color: var(--ink-3);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .nav span i { width: 20px; height: 20px; border-radius: 6px; background: var(--outline);
+                display: block; }
+  .nav span[data-on="1"] { color: var(--brand); }
+  .nav span[data-on="1"] i { background: var(--brand); }
+
+  /* Feuille modale : arrivée, prolongation, consentement. */
+  .voile { position: absolute; inset: 0; background: rgba(10, 12, 17, 0.45); }
+  .feuille {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0;
+    padding: var(--s-lg); display: flex; flex-direction: column; gap: var(--s-md);
+  }
+  .feuille .poignee { width: 36px; height: 4px; border-radius: 2px; background: var(--outline-strong);
+                      align-self: center; }
+  .feuille h4 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+                text-wrap: balance; }
+  .feuille p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+  .duo { display: flex; gap: var(--s-sm); width: 100%; }
+  .duo .cta { flex: 1; }
+
+  /* SOS : maintien puis décompte. Deux gestes, pas un. */
+  .sos-zone { flex: 1; display: flex; flex-direction: column; align-items: center;
+              justify-content: center; gap: var(--s-lg); padding: var(--s-xl);
+              background: var(--surface); text-align: center; }
+  .sos-bouton {
+    width: 148px; height: 148px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--t-alerte); color: #fff; font-size: 27px; font-weight: 800;
+    letter-spacing: 0.06em; position: relative;
+  }
+  .sos-bouton::before {
+    content: ""; position: absolute; inset: -11px; border-radius: 50%;
+    border: 3px solid var(--t-alerte); opacity: 0.28;
+  }
+  .sos-bouton::after {
+    content: ""; position: absolute; inset: -11px; border-radius: 50%;
+    border: 3px solid var(--t-alerte); border-right-color: transparent;
+    border-bottom-color: transparent; transform: rotate(-30deg);
+  }
+  .sos-bouton.discret { background: var(--surface-muted); color: var(--ink-3);
+                        font-size: 15px; font-weight: 650; letter-spacing: 0; }
+  .sos-bouton.discret::before, .sos-bouton.discret::after { display: none; }
+  .decompte { font-size: 52px; font-weight: 800; color: var(--t-alerte);
+              font-variant-numeric: tabular-nums; line-height: 1; }
+  .sos-zone h4 { margin: 0; font-size: 18px; font-weight: 700; text-wrap: balance; }
+  .sos-zone p { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 30ch; }
+
+  /* Écran d'alerte reçue — plein écran, une seule décision visible. */
+  .alerte-plein {
+    flex: 1; background: var(--t-alerte); color: #fff; padding: var(--s-xl);
+    display: flex; flex-direction: column; gap: var(--s-md); justify-content: center;
+    text-align: center; align-items: center;
+  }
+  .alerte-plein .quoi { font-size: 12px; font-family: var(--mono); letter-spacing: 0.16em;
+                        text-transform: uppercase; opacity: 0.85; }
+  .alerte-plein h4 { margin: 0; font-size: 23px; font-weight: 800; line-height: 1.2;
+                     text-wrap: balance; }
+  .alerte-plein .ou { font-size: 13px; opacity: 0.92; font-variant-numeric: tabular-nums; }
+  .alerte-plein .encart {
+    background: rgba(255,255,255,0.16); border-radius: var(--r-sm); padding: var(--s-md);
+    font-size: 12.5px; width: 100%; text-align: left; line-height: 1.5;
+  }
+
+  /* Notification système et écran verrouillé. */
+  .verrou { flex: 1; background: linear-gradient(160deg, #1A237E, #0D123E); color: #fff;
+            padding: var(--s-xl) var(--s-lg); display: flex; flex-direction: column; gap: var(--s-md); }
+  .verrou .heure { font-size: 46px; font-weight: 300; letter-spacing: -0.02em; line-height: 1;
+                   font-variant-numeric: tabular-nums; }
+  .verrou .date { font-size: 13px; opacity: 0.72; margin-bottom: var(--s-sm); }
+  .notif {
+    background: rgba(255,255,255,0.94); color: var(--ink); border-radius: var(--r-md);
+    padding: 10px var(--s-md); display: flex; flex-direction: column; gap: 4px;
+  }
+  .notif .app { font-size: 10.5px; font-family: var(--mono); color: var(--ink-3);
+                letter-spacing: 0.06em; text-transform: uppercase; }
+  .notif .t { font-size: 13.5px; font-weight: 650; }
+  .notif .c { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+  .notif .actions { display: flex; gap: var(--s-lg); margin-top: 3px;
+                    font-size: 12.5px; font-weight: 650; color: var(--brand); }
+  .notif.urgent { border-left: 4px solid var(--t-alerte); }
+  .notif.urgent .t { color: #B32020; }
+
+  /* Historique. */
+  .histo-row { display: flex; align-items: center; gap: var(--s-md);
+               padding: 12px var(--s-lg); border-bottom: 1px solid var(--outline); }
+  .jalon { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid;
+           place-items: center; background: var(--t-actif-bg); color: var(--t-actif); }
+  .jalon.alerte { background: var(--t-alerte-bg); color: var(--t-alerte); }
+  .jalon.gris { background: var(--surface-muted); color: var(--ink-3); }
+  .jalon svg { width: 15px; height: 15px; }
+
+  .frise { padding: var(--s-lg); background: var(--surface); display: flex;
+           flex-direction: column; gap: 0; }
+  .frise .ev { display: grid; grid-template-columns: 54px 13px 1fr; gap: var(--s-sm);
+               align-items: start; }
+  .frise .h { font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+              font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .frise .axe { display: flex; flex-direction: column; align-items: center; height: 100%; }
+  .frise .axe i { width: 9px; height: 9px; border-radius: 50%; background: var(--outline-strong);
+                  flex: none; margin-top: 4px; }
+  .frise .axe u { flex: 1; width: 1.5px; background: var(--outline); min-height: 16px; }
+  .frise .ev:last-child .axe u { display: none; }
+  .frise .ev[data-k="ok"] .axe i { background: var(--t-actif); }
+  .frise .ev[data-k="alerte"] .axe i { background: var(--t-alerte); }
+  .frise .txt { font-size: 12.5px; color: var(--ink-2); padding-bottom: var(--s-md); }
+  .frise .txt b { color: var(--ink); font-weight: 600; }
+
+  .vide { flex: 1; display: flex; flex-direction: column; align-items: center;
+          justify-content: center; gap: var(--s-md); padding: var(--s-xl); text-align: center;
+          background: var(--surface); }
+  .vide .rond { width: 68px; height: 68px; border-radius: 50%; background: var(--surface-muted);
+                display: grid; place-items: center; color: var(--ink-3); }
+  .vide .rond svg { width: 30px; height: 30px; }
+  .vide h4 { margin: 0; font-size: 17px; font-weight: 650; text-wrap: balance; }
+  .vide p { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 30ch; }
+
+  /* Administration : des compteurs, et rien d'autre. */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: var(--s-md); }
+  .kpi { border: 1px solid var(--page-line); border-radius: var(--r-md); padding: var(--s-md);
+         display: flex; flex-direction: column; gap: 3px; }
+  .kpi .lib { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+              text-transform: uppercase; color: var(--page-ink-2); }
+  .kpi .val { font-size: 27px; font-weight: 700; letter-spacing: -0.02em;
+              font-variant-numeric: tabular-nums; color: var(--page-ink); }
+  .kpi .var { font-size: 12px; color: var(--page-ink-2); font-variant-numeric: tabular-nums; }
+  .kpi .val.vert { color: var(--t-actif); }
+  .kpi .val.rouge { color: var(--t-alerte); }
+  .spark { height: 34px; margin-top: 3px; }
+  .spark path.aire { fill: var(--brand); opacity: 0.12; }
+  .spark path.trait { fill: none; stroke: var(--brand); stroke-width: 1.6; }
+  .spark circle { fill: var(--brand); }
+
+  .interdit {
+    border: 1px dashed var(--page-line); border-radius: var(--r-md); padding: var(--s-lg);
+    display: flex; flex-direction: column; gap: var(--s-sm); background: var(--page-panel);
+  }
+  .interdit h3 { margin: 0; font-size: 14px; font-weight: 650; color: var(--page-ink); }
+  .interdit ul { margin: 0; padding-left: 1.1em; font-size: 13.5px; color: var(--page-ink-2);
+                 display: flex; flex-direction: column; gap: 4px; }
+
+  /* ---------- Blocs de page ---------- */
+  .modele { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: var(--s-lg); }
+  .fiche {
+    border: 1px solid var(--page-line); border-radius: var(--r-md);
+    padding: var(--s-lg); display: flex; flex-direction: column; gap: var(--s-sm);
+  }
+  .fiche h3 {
+    margin: 0; font-family: var(--mono); font-size: 12.5px; color: var(--brand);
+    letter-spacing: 0.02em; font-weight: 600;
+  }
+  .fiche p { margin: 0; font-size: 13.5px; color: var(--page-ink-2); }
+  .fiche dl {
+    margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px var(--s-md);
+    font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  .fiche dt { color: var(--page-ink); }
+  .fiche dd { margin: 0; color: var(--page-ink-2); }
+
+  .notes { display: flex; flex-direction: column; gap: var(--s-md); }
+  .note {
+    border-left: 3px solid var(--brand); padding-left: var(--s-md);
+    font-size: 14px; color: var(--page-ink-2); max-width: 78ch;
+  }
+  .note.attention { border-left-color: var(--t-alerte); }
+  .note.bien { border-left-color: var(--t-actif); }
+  .note b { color: var(--page-ink); font-weight: 650; }
+
+  .tableau { width: 100%; overflow-x: auto; }
+  .tableau table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 13.5px; }
+  .tableau th, .tableau td { text-align: left; padding: 8px 10px;
+                             border-bottom: 1px solid var(--page-line); vertical-align: top; }
+  .tableau th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+                text-transform: uppercase; color: var(--page-ink-2); font-weight: 600; }
+  .tableau td code { font-family: var(--mono); font-size: 12px; color: var(--brand); }
+
+  footer.colophon {
+    display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-xl);
+    padding-top: var(--s-lg); border-top: 1px solid var(--page-line);
+    font-family: var(--mono); font-size: 11.5px; color: var(--page-ink-2);
+  }
+
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Alanya · Trajets de confiance · Étape 7</p>
+    <h1>Composer un trajet en moins de vingt secondes</h1>
+    <p>Le type, le lieu, l'heure, les destinataires — puis une phrase qui dit exactement ce qui se passera en cas de silence. C'est cette phrase, et non la carte, qui fait la promesse.</p>
+  </header>
+
+  <section class="panel">
+    <header>
+      <h2>De la liste vide au départ</h2>
+      <p>Cinq écrans, dont deux qu'on ne voit qu'une fois&nbsp;: la composition du cercle et
+         l'explication de la permission.</p>
+    </header>
+    <div class="stage"><div class="device-block"><div class="device"><div class="screen"><div class="appbar"><svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><h3>Trajets de confiance</h3></div><div class="vide"><span class="rond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0111 0"/><path d="M16 5.4a3.2 3.2 0 010 5.2M17.5 19a5.5 5.5 0 00-2-4.2"/></svg></span><h4>Votre cercle de confiance est vide</h4><p>Choisissez jusqu'à cinq proches. Eux seuls verront vos trajets, et seulement ceux que vous partagez.</p><button class="cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Composer mon cercle</button></div><div class="hint">Le cercle est votre liste <b>Confiance</b>. Vous la retrouvez dans Profil › Listes de contacts.</div></div></div><p class="device-caption"><b>Cercle vide</b>État bloquant, mais utile : il renvoie là où l'on remplit la liste Confiance.</p></div><div class="device-block"><div class="device"><div class="screen"><div class="appbar"><svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><h3>Trajets de confiance</h3></div><div class="rows"><div class="row"><span class="avatar" style="background:var(--t-confiance)">C</span><div class="row-body"><span class="row-nom">Mon cercle</span><span class="row-sous">Maman · Karim · Sofia · Awa · Yann</span></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div></div><div class="hint">Aucun trajet en cours.</div><div class="rows"><div class="row"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15h16M6 15V9.5L7.6 6h8.8L18 9.5V15M6.5 18.5v-2M17.5 18.5v-2"/></svg><div class="row-body"><span class="row-nom">Taxi</span><span class="row-sous">Un déplacement, une arrivée attendue</span></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div><div class="row"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.7 7-11a7 7 0 10-14 0c0 5.3 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg><div class="row-body"><span class="row-nom">Rendez-vous</span><span class="row-sous">Un lieu, une heure de retour</span></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div></div><div class="hint grandit">Vos trajets passés restent visibles ici. Personne d'autre n'y a accès.</div><div class="bas"><button class="cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/></svg> Nouveau trajet</button><button class="cta fantome mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.2"/></svg> Lancer un SOS</button></div></div></div><p class="device-caption"><b>Cercle prêt</b>Le SOS est atteignable sans démarrer de trajet — il en crée un.</p></div><div class="device-block"><div class="device"><div class="screen"><div class="appbar"><svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><h3>Localisation</h3></div><div class="sos-zone"><span class="rond" style="width:76px;height:76px;border-radius:50%;background:var(--brand-container);display:grid;place-items:center;color:var(--brand)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.7 7-11a7 7 0 10-14 0c0 5.3 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span><h4>Autoriser «&nbsp;Toujours&nbsp;»</h4><p>Sans cette autorisation, le partage s'arrête dès que vous quittez l'application — au moment précis où il sert.</p></div><div class="contrat">Alanya n'utilise votre position que pendant un trajet que <b>vous</b> avez démarré. Jamais avant, jamais après.</div><div class="bas"><button class="cta">Autoriser</button><button class="cta fantome mini">Plus tard</button></div></div></div><p class="device-caption"><b>Avant la demande système</b>On explique avant que l'OS ne demande : c'est le seul moyen d'obtenir « Toujours ».</p></div><div class="device-block"><div class="device"><div class="screen"><div class="appbar"><svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><h3>Nouveau trajet</h3></div><div class="rampe"><div class="pas" data-on="now"><div class="barre"></div><span class="lib">Partir</span></div><div class="pas" data-on="0"><div class="barre"></div><span class="lib">Suivre</span></div><div class="pas" data-on="0"><div class="barre"></div><span class="lib">Confirmer</span></div><div class="pas" data-on="0"><div class="barre"></div><span class="lib">Clore</span></div></div><div class="rows"><div class="row"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15h16M6 15V9.5L7.6 6h8.8L18 9.5V15M6.5 18.5v-2M17.5 18.5v-2"/></svg><div class="row-body"><span class="row-nom">Taxi</span></div><span class="check" data-on="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div><div class="row"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.7 7-11a7 7 0 10-14 0c0 5.3 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg><div class="row-body"><span class="row-nom">Domicile</span><span class="row-sous mono">3.8480, 11.5021 · rayon 150 m</span></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div><div class="row"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg><div class="row-body"><span class="row-nom">Arrivée vers 21:45</span><span class="row-sous">dans 32 minutes</span></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div></div><div class="hint">Une destination, une heure, ou les deux. Avec les deux, la première atteinte pose la question.</div><div class="rows grandit"><div class="row"><div class="row-body"><span class="row-nom">Note pour le cercle</span><span class="row-sous">Taxi jaune, plaque LT 4471</span></div></div></div><div class="bas"><button class="cta">Continuer</button></div></div></div><p class="device-caption"><b>Type, lieu, heure</b>Trois lignes. On doit pouvoir partir en moins de vingt secondes.</p></div><div class="device-block"><div class="device"><div class="screen"><div class="appbar"><svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><h3>Confirmer le départ</h3></div><div class="rampe"><div class="pas" data-on="now"><div class="barre"></div><span class="lib">Partir</span></div><div class="pas" data-on="0"><div class="barre"></div><span class="lib">Suivre</span></div><div class="pas" data-on="0"><div class="barre"></div><span class="lib">Confirmer</span></div><div class="pas" data-on="0"><div class="barre"></div><span class="lib">Clore</span></div></div><div class="rows"><div class="row"><span class="avatar" style="background:var(--t-confiance)">C</span><div class="row-body"><span class="row-nom">Votre cercle de confiance</span><span class="row-sous">Maman · Karim · Sofia · Awa · Yann</span></div><span class="compte">5</span></div><div class="row"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15h16M6 15V9.5L7.6 6h8.8L18 9.5V15M6.5 18.5v-2M17.5 18.5v-2"/></svg><div class="row-body"><span class="row-nom">Taxi vers Domicile</span><span class="row-sous mono">arrivée 21:45 · rayon 150 m</span></div></div></div><div class="contrat">Vos <b>cinq proches</b> verront votre position en direct jusqu'à <b>21:45</b>. Si vous n'avez pas confirmé à <b>21:55</b>, ils seront prévenus avec votre dernière position.</div><div class="hint grandit">Le cercle se modifie dans Profil › Listes de contacts, jamais au départ d'un trajet. Personne n'apprend qu'il y entre ou en sort.</div><div class="bas"><button class="cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/></svg> Démarrer le partage</button></div></div></div><p class="device-caption"><b>Le contrat, puis le départ</b>Aucune case à cocher : le cercle est l'audience, en entier.</p></div></div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>Ce que le composeur impose</h2>
+      <p>Trois règles qui ne sont pas négociables côté serveur, et qui doivent donc être
+         lisibles côté écran.</p>
+    </header>
+    <div class="modele">
+      <div class="fiche">
+        <h3>Le cercle entier, toujours</h3>
+        <p>Aucune case à cocher, aucune sous-sélection. Le cercle de confiance <em>est</em>
+           l'audience du trajet&nbsp;: c'est ce qui permet de partir en un appui, et ce qui
+           rend la promesse lisible.</p>
+        <dl><dt>Source</dt><dd>contact_list kind = trust</dd></dl>
+      </div>
+      <div class="fiche">
+        <h3>Cinq au maximum, au moins un</h3>
+        <p>Le plafond de cinq est déjà appliqué en base. Un cercle vide bloque le
+           départ&nbsp;: un trajet sans destinataire n'est pas de la sécurité, c'est un
+           traceur.</p>
+        <dl><dt>Plafond</dt><dd>contact_list.member_limit</dd>
+            <dt>Refus</dt><dd>409 TRUST_LIST_EMPTY</dd></dl>
+      </div>
+      <div class="fiche">
+        <h3>Un seul trajet ouvert</h3>
+        <p>Si un trajet tourne déjà, l'écran d'accueil le montre au lieu de proposer d'en
+           démarrer un second.</p>
+        <dl><dt>Refus</dt><dd>409 TRIP_ALREADY_ACTIVE</dd></dl>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="note"><b>Le contrat en toutes lettres.</b> «&nbsp;Si vous n'avez pas confirmé
+         à 21:55, ils seront prévenus&nbsp;» est le seul élément de l'écran qui garantit que
+         la personne a compris ce qu'elle déclenche. Les deux heures — échéance et grâce —
+         sont écrites, pas déduites.</p>
+      <p class="note bien"><b>Choisir l'audience se fait hors trajet.</b> On modifie son
+         cercle dans Profil › Listes de contacts, à froid, et cette modification ne notifie
+         personne — ni celui qui entre, ni celui qui sort. Au moment de partir, il n'y a plus
+         rien à décider.</p>
+      <p class="note attention"><b>Le cercle est figé au départ.</b> Retirer quelqu'un de sa
+         liste Confiance pendant un trajet ne le retire pas du trajet en cours. Un geste
+         explicite existe pour cela&nbsp;: révoquer un destinataire.</p>
+    </div>
+  </section>
+
+  <footer class="colophon"><span>Alanya · Trajets de confiance · Étape 7</span><span>Jetons : lib/core/theme/app_colors.dart</span><span>Document de travail</span></footer>
+
+</div>
+</div>
