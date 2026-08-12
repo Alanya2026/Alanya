@@ -452,8 +452,10 @@ extension CallOneToOne on CallService {
     _iceRestartCount = 0;
     _isIceRestarting = false;
     _cancelAllReconnectTimers();
-    // Session à trois : tout est soldé avec l'appel. Le droit d'ajout étant
-    // porté par _confSessionId, l'effacer ici rend son bouton au prochain appel.
+    // Session à trois : tout est soldé avec l'appel. Le droit d'ajout et le
+    // mode grille dépendent aussi de _groupRoomId : le conserver après la fin
+    // d'une conférence ferait traiter le prochain appel 1-à-1 comme un groupe.
+    _groupRoomId = null;
     _confSessionId = null;
     _confPendingInvitee = null;
     _confInvitedBy = null;
