@@ -31,6 +31,9 @@ import 'core/services/call_service.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/call/ended_call_registry.dart';
 import 'core/services/local_cache_repository.dart';
+import 'core/services/trip_repository.dart';
+import 'core/services/trip_socket_service.dart';
+import 'core/services/trip_bootstrap.dart';
 import 'core/services/local_hidden_store.dart';
 import 'core/services/meeting_service.dart';
 import 'core/services/presence_service.dart';
@@ -154,6 +157,31 @@ class _TalkyAppState extends State<TalkyApp> {
       ChatProvider(api: _apiClient, database: _database);
   late final LocalCacheRepository _localCache =
       LocalCacheRepository(db: _database, api: _apiClient);
+  late final TripRepository _trips =
+      TripRepository(db: _database, api: _apiClient);
+  // Démarré ici et non dans un écran : les changements d'état d'un trajet
+  // arrivent par le compte, donc sans souscription. Un trajet doit continuer
+  // d'être suivi même quand aucun écran de trajet n'est ouvert.
+  late final TripSocketService _tripSocket =
+      TripSocketService(api: _apiClient, trips: _trips)..start();
+
+  /// Reprise du suivi au démarrage. Vit hors des écrans : un trajet doit
+  /// survivre à la navigation et au redémarrage de l'application, pas dépendre
+  /// d'une page ouverte.
+  late final TripBootstrap _tripBootstrap = TripBootstrap(
+    api: _apiClient,
+    trips: _trips,
+    socket: _tripSocket,
+  )..start();
+
+  @override
+  void initState() {
+    super.initState();
+    // Un changement d'état de trajet doit réécrire la carte déjà posée dans la
+    // conversation. Seul le dépôt de chat sait retrouver la ligne et relancer le
+    // recalcul de l'aperçu ; le service socket lui délègue.
+    _tripSocket.bindCardWriter(_chatProvider.repository.updateTripCard);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +195,9 @@ class _TalkyAppState extends State<TalkyApp> {
         Provider<TalkyApiClient>.value(value: _apiClient),
         Provider<AppDatabase>.value(value: _database),
         Provider<LocalCacheRepository>.value(value: _localCache),
+        Provider<TripRepository>.value(value: _trips),
+        Provider<TripSocketService>.value(value: _tripSocket),
+        Provider<TripBootstrap>.value(value: _tripBootstrap),
         ChangeNotifierProvider(
             create: (_) => RingtonePreferences()..load()),
         ChangeNotifierProvider(

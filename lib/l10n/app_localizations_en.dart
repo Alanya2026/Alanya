@@ -4848,4 +4848,425 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get optionsAction => 'Options';
+
+  @override
+  String get trips => 'Trusted trips';
+
+  @override
+  String get tripsSubtitle => 'Let your circle know, and get home confirmed';
+
+  @override
+  String get tripsCircleEmptyTitle => 'Your trusted circle is empty';
+
+  @override
+  String get tripsCircleEmptyBody =>
+      'Pick up to five people. They alone will see your trips, and only the ones you share.';
+
+  @override
+  String get tripsComposeCircle => 'Set up my circle';
+
+  @override
+  String get tripsMyCircle => 'My trusted circle';
+
+  @override
+  String get tripsNone => 'No trip in progress.';
+
+  @override
+  String get tripsNew => 'New trip';
+
+  @override
+  String get tripsKindTaxi => 'Taxi';
+
+  @override
+  String get tripsKindTaxiHint => 'A ride, with an expected arrival';
+
+  @override
+  String get tripsKindMeeting => 'Appointment';
+
+  @override
+  String get tripsKindMeetingHint => 'A place, and a time to be back';
+
+  @override
+  String get tripsArrivalIn => 'Arriving in';
+
+  @override
+  String tripsMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get tripsNoteLabel => 'Note for your circle';
+
+  @override
+  String get tripsNoteHint => 'Yellow taxi, plate LT 4471';
+
+  @override
+  String get tripsStart => 'Start sharing';
+
+  @override
+  String get tripsContinue => 'Continue';
+
+  @override
+  String get tripsConfirmTitle => 'Confirm departure';
+
+  @override
+  String tripsContract(int count, String eta, String alert) {
+    return 'Your $count contacts will see your live location until $eta. If you haven\'t confirmed by $alert, they will be alerted with your last known position.';
+  }
+
+  @override
+  String get tripsCircleFrozen =>
+      'Your circle is edited in Profile › Contact lists, never when starting a trip. Nobody is told they were added or removed.';
+
+  @override
+  String get tripsInProgress => 'Trip in progress';
+
+  @override
+  String get tripsLive => 'Live';
+
+  @override
+  String get tripsStale => 'Location unavailable';
+
+  @override
+  String get tripsAwaitingConfirm => 'Arrival to confirm';
+
+  @override
+  String get tripsAlerted => 'Alert sent';
+
+  @override
+  String tripsWatcherCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people are following',
+      one: '1 person is following',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tripsEtaAt(String time) {
+    return 'Expected arrival $time';
+  }
+
+  @override
+  String get tripsAlreadyActive => 'A trip is already in progress.';
+
+  @override
+  String get tripsStartFailed => 'Could not start the trip.';
+
+  @override
+  String get tripsSosUnavailable => 'SOS is not available yet.';
+
+  @override
+  String get tripsStop => 'Stop sharing';
+
+  @override
+  String get tripsForegroundOnly =>
+      'Sharing pauses if you leave Alanya. Your circle will still be alerted at the expected time.';
+
+  @override
+  String tripsCardStarted(String name) {
+    return '$name started a trip';
+  }
+
+  @override
+  String tripsCardAwaiting(String name) {
+    return '$name should have arrived';
+  }
+
+  @override
+  String tripsCardAlert(String name) {
+    return '$name did not confirm arrival';
+  }
+
+  @override
+  String tripsCardSos(String name) {
+    return '$name triggered an SOS';
+  }
+
+  @override
+  String tripsCardArrived(String name) {
+    return '$name arrived safely';
+  }
+
+  @override
+  String tripsCardStopped(String name) {
+    return '$name stopped sharing';
+  }
+
+  @override
+  String get tripsCardFollow => 'Follow live';
+
+  @override
+  String get tripsCardSeePosition => 'See location';
+
+  @override
+  String get tripsCardSeeLast => 'See last known location';
+
+  @override
+  String get tripsCardFallback => 'Trusted trip — please update the app';
+
+  @override
+  String get tripsConfirmArrival => 'I\'ve arrived safely';
+
+  @override
+  String tripsExtendBy(int count) {
+    return '+$count min';
+  }
+
+  @override
+  String tripsExtended(int count) {
+    return 'Extended by $count minutes. Your circle has been informed.';
+  }
+
+  @override
+  String get tripsAlreadyClosed => 'This trip is already closed.';
+
+  @override
+  String get tripsActionFailed => 'Action failed for now.';
+
+  @override
+  String get tripsHistory => 'History';
+
+  @override
+  String get tripsHistoryEmpty => 'No trips yet';
+
+  @override
+  String get tripsHistoryEmptyBody =>
+      'When you share a trip, it will appear here — and only here.';
+
+  @override
+  String get tripsHistoryUnavailable => 'History unavailable';
+
+  @override
+  String get tripsHistoryOnline =>
+      'Your past trips are fetched online: they are not kept on this device.';
+
+  @override
+  String get tripsRetentionNote =>
+      'Trips are kept for twelve months. Detailed traces for twenty-four hours — thirty days after an alert.';
+
+  @override
+  String get tripsOutcomeConfirmed => 'Arrival confirmed';
+
+  @override
+  String get tripsOutcomeStopped => 'Trip stopped';
+
+  @override
+  String get tripsOutcomeAlert => 'Alert triggered';
+
+  @override
+  String get tripsDeleteLocked =>
+      'This trip is kept for thirty days after an alert. This rule protects the person involved.';
+
+  @override
+  String get loadMore => 'Load more';
+
+  @override
+  String get tripsFgsTitle => 'Trusted trip in progress';
+
+  @override
+  String get tripsFgsBodyPlain => 'Your location is shared with your circle';
+
+  @override
+  String tripsFgsBody(String names) {
+    return 'Shared with $names';
+  }
+
+  @override
+  String get tripsSosTitle => 'SOS';
+
+  @override
+  String get tripsSosHold => 'Hold for three seconds';
+
+  @override
+  String get tripsSosHoldBody =>
+      'Your circle will be alerted with your location, immediately.';
+
+  @override
+  String get tripsSosNotEmergency =>
+      'SOS does not call emergency services. It alerts your trusted circle.';
+
+  @override
+  String tripsSosSending(int count) {
+    return 'Sending in $count seconds';
+  }
+
+  @override
+  String get tripsSosSent => 'Your circle has been alerted';
+
+  @override
+  String get tripsSosDiscreet =>
+      'No sound, no vibration. Your location keeps being shared.';
+
+  @override
+  String get tripsSosTooMany => 'Too many SOS alerts in the last 24 hours.';
+
+  @override
+  String get tripsSosFalseAlarm => 'False alarm, I\'m fine';
+
+  @override
+  String get tripsSosButton => 'Trigger an SOS';
+
+  @override
+  String get tripsKeepsRunning =>
+      'Sharing continues even with the screen locked. A notification reminds you, and lets you stop it.';
+
+  @override
+  String get tripsDestination => 'Destination';
+
+  @override
+  String get tripsDestinationOptional => 'Pick a destination (optional)';
+
+  @override
+  String get tripsDestinationRadius => 'Arrival will be detected within 150 m';
+
+  @override
+  String get tripsShort => 'Trusted';
+
+  @override
+  String get tripsRailStart => 'Start';
+
+  @override
+  String get tripsRailFollow => 'Follow';
+
+  @override
+  String get tripsRailConfirm => 'Confirm';
+
+  @override
+  String get tripsRailClose => 'Close';
+
+  @override
+  String get tripsConfirmed => 'Arrival confirmed. Your circle has been told.';
+
+  @override
+  String get tripsDeleteTitle => 'Delete this trip?';
+
+  @override
+  String get tripsDeleteBody =>
+      'The trip and its trace will be erased. This cannot be undone.';
+
+  @override
+  String get tripsRecenter => 'Recentre on position';
+
+  @override
+  String get tripsArrivalReachedTitle => 'Have you arrived?';
+
+  @override
+  String get tripsArrivalReachedBody =>
+      'You\'ve been at your destination for a minute.';
+
+  @override
+  String get tripsArrivalDueTitle => 'Confirm your arrival';
+
+  @override
+  String tripsArrivalDueBody(String time) {
+    return 'Without a reply, your circle will be alerted at $time with your last known position.';
+  }
+
+  @override
+  String get tripsArrivalDueBodyPlain =>
+      'Without a reply, your circle will be alerted with your last known position.';
+
+  @override
+  String get tripsArrivalLater => 'Not yet — the deadline keeps running';
+
+  @override
+  String get tripsDegradedPermission => 'Location turned off';
+
+  @override
+  String get tripsDegradedPermissionBody =>
+      'Your circle can no longer see your position. The deadline still stands: they will be alerted if you don\'t confirm.';
+
+  @override
+  String get tripsDegradedStale => 'Location unavailable';
+
+  @override
+  String get tripsDegradedStaleBody =>
+      'Tunnel, car park or weak signal. This is not an alert — the deadline keeps running.';
+
+  @override
+  String get tripsDegradedBattery => 'Low battery';
+
+  @override
+  String get tripsDegradedBatteryBody =>
+      'Tracking is slowed down. If the phone dies, your last position will be sent.';
+
+  @override
+  String get tripsDegradedFix => 'Fix';
+
+  @override
+  String get locationSearchHint => 'Search a place or address…';
+
+  @override
+  String get locationSearchEmpty =>
+      'No results. You can still pick on the map.';
+
+  @override
+  String tripsCardFalseAlarm(String name) {
+    return '$name reported a false alarm';
+  }
+
+  @override
+  String get tripsSosFalseAlarmSent =>
+      'Your circle has been told you\'re fine.';
+
+  @override
+  String get tripsCall => 'Call';
+
+  @override
+  String get tripsPermissionTitle => 'Allow location access';
+
+  @override
+  String get tripsPermissionBody =>
+      'Without it, your circle won\'t see where you are. The arrival time is watched either way.';
+
+  @override
+  String get tripsPermissionNever =>
+      'Alanya only uses your location during a trip you started. Never before, never after.';
+
+  @override
+  String get tripsPermissionAllow => 'Allow';
+
+  @override
+  String get tripsPermissionLater => 'Later';
+
+  @override
+  String sysTripAlert(String actor) {
+    return '$actor didn\'t confirm arrival — the circle was alerted';
+  }
+
+  @override
+  String get sysTripAlertByMe =>
+      'You didn\'t confirm your arrival — your circle was alerted';
+
+  @override
+  String sysTripSos(String actor) {
+    return '$actor triggered an SOS';
+  }
+
+  @override
+  String get sysTripSosByMe => 'You triggered an SOS';
+
+  @override
+  String get tripsPreviewActive => '🧭 Trip in progress';
+
+  @override
+  String get tripsPreviewAwaiting => '🧭 Arrival to confirm';
+
+  @override
+  String get tripsPreviewAlert => '🆘 Trip alert';
+
+  @override
+  String get tripsPreviewSos => '🆘 SOS';
+
+  @override
+  String get tripsPreviewConfirmed => '✅ Arrived safely';
+
+  @override
+  String get tripsPreviewStopped => '🧭 Trip stopped';
+
+  @override
+  String get tripsPreviewFalseAlarm => '✅ False alarm';
 }

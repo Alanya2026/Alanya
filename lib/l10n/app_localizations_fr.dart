@@ -4900,4 +4900,428 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get optionsAction => 'Options';
+
+  @override
+  String get trips => 'Trajets de confiance';
+
+  @override
+  String get tripsSubtitle => 'Prévenir ses proches, et rentrer confirmé';
+
+  @override
+  String get tripsCircleEmptyTitle => 'Votre cercle de confiance est vide';
+
+  @override
+  String get tripsCircleEmptyBody =>
+      'Choisissez jusqu\'à cinq proches. Eux seuls verront vos trajets, et seulement ceux que vous partagez.';
+
+  @override
+  String get tripsComposeCircle => 'Composer mon cercle';
+
+  @override
+  String get tripsMyCircle => 'Mon cercle de confiance';
+
+  @override
+  String get tripsNone => 'Aucun trajet en cours.';
+
+  @override
+  String get tripsNew => 'Nouveau trajet';
+
+  @override
+  String get tripsKindTaxi => 'Taxi';
+
+  @override
+  String get tripsKindTaxiHint => 'Un déplacement, une arrivée attendue';
+
+  @override
+  String get tripsKindMeeting => 'Rendez-vous';
+
+  @override
+  String get tripsKindMeetingHint => 'Un lieu, une heure de retour';
+
+  @override
+  String get tripsArrivalIn => 'Arrivée dans';
+
+  @override
+  String tripsMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get tripsNoteLabel => 'Note pour le cercle';
+
+  @override
+  String get tripsNoteHint => 'Taxi jaune, plaque LT 4471';
+
+  @override
+  String get tripsStart => 'Démarrer le partage';
+
+  @override
+  String get tripsContinue => 'Continuer';
+
+  @override
+  String get tripsConfirmTitle => 'Confirmer le départ';
+
+  @override
+  String tripsContract(int count, String eta, String alert) {
+    return 'Vos $count proches verront votre position en direct jusqu\'à $eta. Si vous n\'avez pas confirmé à $alert, ils seront prévenus avec votre dernière position.';
+  }
+
+  @override
+  String get tripsCircleFrozen =>
+      'Le cercle se modifie dans Profil › Listes de contacts, jamais au départ d\'un trajet. Personne n\'apprend qu\'il y entre ou en sort.';
+
+  @override
+  String get tripsInProgress => 'Trajet en cours';
+
+  @override
+  String get tripsLive => 'En direct';
+
+  @override
+  String get tripsStale => 'Position indisponible';
+
+  @override
+  String get tripsAwaitingConfirm => 'Arrivée à confirmer';
+
+  @override
+  String get tripsAlerted => 'Alerte envoyée';
+
+  @override
+  String tripsWatcherCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes suivent',
+      one: '1 personne suit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tripsEtaAt(String time) {
+    return 'Arrivée prévue $time';
+  }
+
+  @override
+  String get tripsAlreadyActive => 'Un trajet est déjà en cours.';
+
+  @override
+  String get tripsStartFailed => 'Impossible de démarrer le trajet.';
+
+  @override
+  String get tripsSosUnavailable => 'Le SOS n\'est pas encore disponible.';
+
+  @override
+  String get tripsStop => 'Arrêter le partage';
+
+  @override
+  String get tripsForegroundOnly =>
+      'Le partage s\'interrompt si vous quittez Alanya. Vos proches seront prévenus à l\'heure prévue dans tous les cas.';
+
+  @override
+  String tripsCardStarted(String name) {
+    return '$name a démarré un trajet';
+  }
+
+  @override
+  String tripsCardAwaiting(String name) {
+    return '$name devrait être arrivé·e';
+  }
+
+  @override
+  String tripsCardAlert(String name) {
+    return '$name n\'a pas confirmé son arrivée';
+  }
+
+  @override
+  String tripsCardSos(String name) {
+    return '$name a déclenché un SOS';
+  }
+
+  @override
+  String tripsCardArrived(String name) {
+    return '$name est bien arrivé·e';
+  }
+
+  @override
+  String tripsCardStopped(String name) {
+    return '$name a arrêté le partage';
+  }
+
+  @override
+  String get tripsCardFollow => 'Suivre en direct';
+
+  @override
+  String get tripsCardSeePosition => 'Voir la position';
+
+  @override
+  String get tripsCardSeeLast => 'Voir la dernière position';
+
+  @override
+  String get tripsCardFallback =>
+      'Trajet de confiance — mettez à jour l\'application';
+
+  @override
+  String get tripsConfirmArrival => 'Je suis bien arrivé·e';
+
+  @override
+  String tripsExtendBy(int count) {
+    return '+$count min';
+  }
+
+  @override
+  String tripsExtended(int count) {
+    return 'Prolongé de $count minutes. Votre cercle a été informé.';
+  }
+
+  @override
+  String get tripsAlreadyClosed => 'Ce trajet est déjà clos.';
+
+  @override
+  String get tripsActionFailed => 'Action impossible pour le moment.';
+
+  @override
+  String get tripsHistory => 'Historique';
+
+  @override
+  String get tripsHistoryEmpty => 'Aucun trajet pour l\'instant';
+
+  @override
+  String get tripsHistoryEmptyBody =>
+      'Quand vous partagerez un trajet, il apparaîtra ici — et seulement ici.';
+
+  @override
+  String get tripsHistoryUnavailable => 'Historique indisponible';
+
+  @override
+  String get tripsHistoryOnline =>
+      'Vos trajets passés se consultent en ligne : ils ne sont pas conservés sur cet appareil.';
+
+  @override
+  String get tripsRetentionNote =>
+      'Vos trajets sont conservés douze mois. Les traces détaillées, vingt-quatre heures — trente jours après une alerte.';
+
+  @override
+  String get tripsOutcomeConfirmed => 'Arrivée confirmée';
+
+  @override
+  String get tripsOutcomeStopped => 'Trajet arrêté';
+
+  @override
+  String get tripsOutcomeAlert => 'Alerte déclenchée';
+
+  @override
+  String get tripsDeleteLocked =>
+      'Ce trajet est conservé trente jours après une alerte. Cette règle protège la personne concernée.';
+
+  @override
+  String get loadMore => 'Charger plus';
+
+  @override
+  String get tripsFgsTitle => 'Trajet de confiance en cours';
+
+  @override
+  String get tripsFgsBodyPlain =>
+      'Votre position est partagée avec votre cercle';
+
+  @override
+  String tripsFgsBody(String names) {
+    return 'Partagé avec $names';
+  }
+
+  @override
+  String get tripsSosTitle => 'SOS';
+
+  @override
+  String get tripsSosHold => 'Maintenez trois secondes';
+
+  @override
+  String get tripsSosHoldBody =>
+      'Vos proches recevront une alerte avec votre position, immédiatement.';
+
+  @override
+  String get tripsSosNotEmergency =>
+      'Le SOS ne prévient pas les secours. Il prévient votre cercle de confiance.';
+
+  @override
+  String tripsSosSending(int count) {
+    return 'Envoi dans $count secondes';
+  }
+
+  @override
+  String get tripsSosSent => 'Vos proches ont été prévenus';
+
+  @override
+  String get tripsSosDiscreet =>
+      'Aucun son, aucune vibration. Votre position continue d\'être partagée.';
+
+  @override
+  String get tripsSosTooMany => 'Trop de SOS sur les dernières 24 heures.';
+
+  @override
+  String get tripsSosFalseAlarm => 'Fausse alerte, je vais bien';
+
+  @override
+  String get tripsSosButton => 'Lancer un SOS';
+
+  @override
+  String get tripsKeepsRunning =>
+      'Le partage continue même écran verrouillé. Une notification vous le rappelle et permet de l\'arrêter.';
+
+  @override
+  String get tripsDestination => 'Destination';
+
+  @override
+  String get tripsDestinationOptional => 'Choisir une destination (facultatif)';
+
+  @override
+  String get tripsDestinationRadius =>
+      'L\'arrivée sera détectée dans un rayon de 150 m';
+
+  @override
+  String get tripsShort => 'Confiance';
+
+  @override
+  String get tripsRailStart => 'Partir';
+
+  @override
+  String get tripsRailFollow => 'Suivre';
+
+  @override
+  String get tripsRailConfirm => 'Confirmer';
+
+  @override
+  String get tripsRailClose => 'Clore';
+
+  @override
+  String get tripsConfirmed => 'Arrivée confirmée. Votre cercle est prévenu.';
+
+  @override
+  String get tripsDeleteTitle => 'Supprimer ce trajet ?';
+
+  @override
+  String get tripsDeleteBody =>
+      'Le trajet et sa trace seront effacés. Cette action est définitive.';
+
+  @override
+  String get tripsRecenter => 'Recentrer sur la position';
+
+  @override
+  String get tripsArrivalReachedTitle => 'Vous êtes arrivé·e ?';
+
+  @override
+  String get tripsArrivalReachedBody =>
+      'Vous êtes à votre destination depuis une minute.';
+
+  @override
+  String get tripsArrivalDueTitle => 'Confirmez votre arrivée';
+
+  @override
+  String tripsArrivalDueBody(String time) {
+    return 'Sans réponse, vos proches seront prévenus à $time avec votre dernière position.';
+  }
+
+  @override
+  String get tripsArrivalDueBodyPlain =>
+      'Sans réponse, vos proches seront prévenus avec votre dernière position.';
+
+  @override
+  String get tripsArrivalLater => 'Pas encore — l\'échéance continue de courir';
+
+  @override
+  String get tripsDegradedPermission => 'Localisation désactivée';
+
+  @override
+  String get tripsDegradedPermissionBody =>
+      'Vos proches ne voient plus votre position. L\'heure d\'arrivée reste surveillée : ils seront prévenus si vous ne confirmez pas.';
+
+  @override
+  String get tripsDegradedStale => 'Position indisponible';
+
+  @override
+  String get tripsDegradedStaleBody =>
+      'Tunnel, parking ou signal faible. Ce n\'est pas une alerte — l\'échéance continue de courir.';
+
+  @override
+  String get tripsDegradedBattery => 'Batterie faible';
+
+  @override
+  String get tripsDegradedBatteryBody =>
+      'Le suivi est ralenti. Si le téléphone s\'éteint, votre dernière position sera envoyée.';
+
+  @override
+  String get tripsDegradedFix => 'Réparer';
+
+  @override
+  String get locationSearchHint => 'Rechercher un lieu, une adresse…';
+
+  @override
+  String get locationSearchEmpty =>
+      'Aucun résultat. Vous pouvez toujours choisir sur la carte.';
+
+  @override
+  String tripsCardFalseAlarm(String name) {
+    return '$name a signalé une fausse alerte';
+  }
+
+  @override
+  String get tripsSosFalseAlarmSent =>
+      'Votre cercle a été prévenu que tout va bien.';
+
+  @override
+  String get tripsCall => 'Appeler';
+
+  @override
+  String get tripsPermissionTitle => 'Autoriser la localisation';
+
+  @override
+  String get tripsPermissionBody =>
+      'Sans cette autorisation, vos proches ne verront pas où vous êtes. L\'heure d\'arrivée reste surveillée dans tous les cas.';
+
+  @override
+  String get tripsPermissionNever =>
+      'Alanya n\'utilise votre position que pendant un trajet que vous avez démarré. Jamais avant, jamais après.';
+
+  @override
+  String get tripsPermissionAllow => 'Autoriser';
+
+  @override
+  String get tripsPermissionLater => 'Plus tard';
+
+  @override
+  String sysTripAlert(String actor) {
+    return '$actor n\'a pas confirmé son arrivée — le cercle a été prévenu';
+  }
+
+  @override
+  String get sysTripAlertByMe =>
+      'Vous n\'avez pas confirmé votre arrivée — votre cercle a été prévenu';
+
+  @override
+  String sysTripSos(String actor) {
+    return '$actor a déclenché un SOS';
+  }
+
+  @override
+  String get sysTripSosByMe => 'Vous avez déclenché un SOS';
+
+  @override
+  String get tripsPreviewActive => '🧭 Trajet en cours';
+
+  @override
+  String get tripsPreviewAwaiting => '🧭 Arrivée à confirmer';
+
+  @override
+  String get tripsPreviewAlert => '🆘 Alerte trajet';
+
+  @override
+  String get tripsPreviewSos => '🆘 SOS';
+
+  @override
+  String get tripsPreviewConfirmed => '✅ Bien arrivé·e';
+
+  @override
+  String get tripsPreviewStopped => '🧭 Trajet arrêté';
+
+  @override
+  String get tripsPreviewFalseAlarm => '✅ Fausse alerte';
 }

@@ -25,6 +25,7 @@ import '../status/statuses_screen.dart';
 import '../calls/incoming_call_screen.dart';
 import '../calls/ongoing_call_screen.dart';
 import '../../widgets/common/offline_banner.dart';
+import '../../widgets/trips/trip_banner.dart';
 import 'glass_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -474,6 +475,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 
   Widget _buildGlassNavBar() {
+    // Le bandeau de trajet se pose AU-DESSUS de la barre, dans l'espace déjà
+    // réservé par kGlassNavBarSpace. C'est ce qui rend un trajet en cours
+    // visible depuis les cinq onglets, sans en ajouter un sixième — la barre
+    // est codée en dur à cinq (List.generate(5, …) dans glass_nav_bar.dart).
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const TripBanner(),
+        _buildNavBarItself(),
+      ],
+    );
+  }
+
+  Widget _buildNavBarItself() {
     final chat = context.read<ChatProvider>();
     final cache = context.read<LocalCacheRepository>();
     final status = context.watch<StatusProvider>();

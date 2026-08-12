@@ -87,6 +87,10 @@ import '../../core/services/welcome_delivery_service.dart';
 import '../../widgets/chat/styled_preview_text.dart';
 import '../../widgets/chat/status_reply_quote.dart';
 import '../../widgets/chat/share_preferred_contact_sheet.dart';
+import '../trips/trips_hub_screen.dart';
+import '../trips/trip_live_screen.dart';
+import '../../core/utils/trip_payload.dart';
+import '../../widgets/chat/trip_message_card.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels

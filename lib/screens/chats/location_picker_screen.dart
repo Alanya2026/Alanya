@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import '../../core/utils/map_tiles.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -27,6 +30,14 @@ class LocationPickerScreen extends StatefulWidget {
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
   final _mapCtrl = MapController();
 
+  // ── Recherche de lieu ───────────────────────────────────────────────
+  final _recherche = TextEditingController();
+  final _focusRecherche = FocusNode();
+  Timer? _debounce;
+  List<PlaceHit> _resultats = const [];
+  bool _chercheEnCours = false;
+  bool _rechercheOuverte = false;
+
   LatLng _center = const LatLng(48.8566, 2.3522); // Paris fallback
   bool _hasFix = false;
   bool _loadingGps = true;
@@ -43,6 +54,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _recherche.dispose();
+    _focusRecherche.dispose();
     _mapCtrl.dispose();
     super.dispose();
   }
@@ -159,6 +173,157 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     });
   }
 
+
+  // ── Recherche de lieu ─────────────────────────────────────────────
+
+  /// Temporisation obligatoire : Nominatim n'accepte qu'une requête par
+  /// seconde. Sans elle, taper « boulangerie » enverrait onze requêtes et
+  /// ferait bannir l'adresse IP de l'application.
+  void _surSaisie(String texte) {
+    _debounce?.cancel();
+    if (texte.trim().length < 3) {
+      setState(() {
+        _resultats = const [];
+        _chercheEnCours = false;
+      });
+      return;
+    }
+    setState(() => _chercheEnCours = true);
+    _debounce = Timer(const Duration(milliseconds: 600), () => _lancerRecherche(texte));
+  }
+
+  Future<void> _lancerRecherche(String texte) async {
+    // On recherche AUTOUR du centre courant : sans cela, « pharmacie » renvoie
+    // des résultats à l'autre bout du monde.
+    final hits = await searchPlaces(
+      texte,
+      near: LocationPayload(lat: _center.latitude, lng: _center.longitude),
+    );
+    if (!mounted) return;
+    setState(() {
+      _resultats = hits;
+      _chercheEnCours = false;
+    });
+  }
+
+  void _choisirResultat(PlaceHit hit) {
+    _focusRecherche.unfocus();
+    setState(() {
+      _rechercheOuverte = false;
+      _resultats = const [];
+      _recherche.text = hit.name;
+      _center = LatLng(hit.lat, hit.lng);
+    });
+    _mapCtrl.move(_center, 16);
+  }
+
+  void _fermerRecherche() {
+    _focusRecherche.unfocus();
+    _debounce?.cancel();
+    setState(() {
+      _rechercheOuverte = false;
+      _resultats = const [];
+      _recherche.clear();
+    });
+  }
+
+  Widget _barreRecherche(BuildContext context) {
+    return Material(
+      color: AppColors.black.withValues(alpha: 0.55),
+      borderRadius: AppRadius.brPill,
+      child: TextField(
+        controller: _recherche,
+        focusNode: _focusRecherche,
+        onTap: () => setState(() => _rechercheOuverte = true),
+        onChanged: _surSaisie,
+        textInputAction: TextInputAction.search,
+        style: const TextStyle(color: AppColors.white),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: context.l10n.locationSearchHint,
+          hintStyle: TextStyle(color: AppColors.white.withValues(alpha: 0.7)),
+          prefixIcon: const Icon(Icons.search, color: AppColors.white, size: 20),
+          suffixIcon: _recherche.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.white, size: 18),
+                  tooltip: context.l10n.commonCancel,
+                  onPressed: _fermerRecherche,
+                ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: AppSpacing.md),
+        ),
+      ),
+    );
+  }
+
+  Widget _listeResultats(BuildContext context) {
+    if (!_rechercheOuverte) return const SizedBox.shrink();
+    if (_chercheEnCours) {
+      return _carteResultats(
+        child: const Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: Center(
+            child: SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+      );
+    }
+    if (_recherche.text.trim().length < 3) return const SizedBox.shrink();
+    if (_resultats.isEmpty) {
+      // Ni erreur ni blocage : la carte reste utilisable, et on le dit.
+      return _carteResultats(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Text(context.l10n.locationSearchEmpty,
+              style: context.text.bodySmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant)),
+        ),
+      );
+    }
+    return _carteResultats(
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        itemCount: _resultats.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (_, i) {
+          final h = _resultats[i];
+          return ListTile(
+            dense: true,
+            leading: Icon(Icons.place_outlined, color: context.colors.primary),
+            title: Text(h.name,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            // L'adresse complète lève l'ambiguïté entre deux lieux homonymes.
+            subtitle: Text(h.address,
+                maxLines: 2, overflow: TextOverflow.ellipsis),
+            onTap: () => _choisirResultat(h),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _carteResultats({required Widget child}) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, 0),
+        child: Material(
+          color: context.colors.surface,
+          borderRadius: AppRadius.brMd,
+          clipBehavior: Clip.antiAlias,
+          elevation: 6,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 300),
+            child: child,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -178,11 +343,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               ),
             ),
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.alanya.talky',
-                maxZoom: 19,
-              ),
+              MapTiles.layer(context),
+              MapTiles.attributionWidget(),
             ],
           ),
           // Pin fixe au centre (la carte bouge sous le pin).
@@ -236,6 +398,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     ],
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                  child: _barreRecherche(context),
+                ),
+                _listeResultats(context),
                 if (_statusHint != null ||
                     _permissionDenied ||
                     _serviceDisabled)

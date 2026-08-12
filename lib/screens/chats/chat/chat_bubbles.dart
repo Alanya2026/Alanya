@@ -551,24 +551,52 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final label = payload?.label(_myId ?? 0, context.l10n);
     if (label == null || label.isEmpty) return const SizedBox.shrink();
 
+    // Une ligne d'incident de trajet n'est pas un événement de groupe. Elle dit
+    // qu'un cercle a été réveillé, et elle est faite pour être retrouvée des
+    // mois plus tard dans un fil qu'on parcourt vite : elle porte donc la
+    // couleur d'alerte et une icône, là où « X a rejoint le groupe » reste gris.
+    final incident = payload!.event == SystemEvent.tripAlert ||
+        payload.event == SystemEvent.tripSos;
+
     return Align(
       alignment: Alignment.center,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+        padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: incident ? 6 : AppSpacing.xs),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.8,
         ),
         decoration: BoxDecoration(
-          color: context.semantic.surfaceMuted,
+          color: incident
+              ? context.colors.error.withValues(alpha: 0.10)
+              : context.semantic.surfaceMuted,
           borderRadius: AppRadius.brSm,
+          border: incident
+              ? Border.all(color: context.colors.error.withValues(alpha: 0.30))
+              : null,
         ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: context.text.labelSmall
-              ?.copyWith(color: context.colors.onSurfaceVariant),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (incident) ...[
+              Icon(Icons.warning_amber_rounded,
+                  size: 14, color: context.colors.error),
+              const SizedBox(width: 5),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: context.text.labelSmall?.copyWith(
+                  color: incident
+                      ? context.colors.error
+                      : context.colors.onSurfaceVariant,
+                  fontWeight: incident ? FontWeight.w600 : null,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -918,8 +946,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   /// Texte affiché sous un média : légende utilisateur, hors marqueur album.
   String? _captionText(LocalMessage msg) {
-    // Localisation / contact : le content est du JSON, affiché via la bulle carte.
-    if (msg.type == 5 || msg.type == 7 || msg.type == kWelcomeCtaMessageType) {
+    // Localisation / contact / trajet : le content est du JSON, rendu par une
+    // bulle carte. L'afficher en légende exposerait le JSON brut.
+    if (msg.type == 5 ||
+        msg.type == 7 ||
+        msg.type == kTripMessageType ||
+        msg.type == kWelcomeCtaMessageType) {
       return null;
     }
     final content = msg.content;
@@ -986,12 +1018,51 @@ extension _ChatBubbles on _ChatDetailScreenState {
         return _buildLocationMedia(msg, isMe);
       case 7:
         return _buildContactMedia(msg, isMe);
+      case kTripMessageType:
+        return _buildTripMedia(msg, isMe);
       case kWelcomeCtaMessageType:
         return _buildWelcomeCtaMedia(msg, isMe);
       default:
         return Text(_mediaLabel(msg.type, mediaName: msg.mediaName),
             style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));
     }
+  }
+
+  /// Carte de trajet de confiance (type 9).
+  ///
+  /// Le repli compte autant que le rendu : un client qui ne saurait pas lire ce
+  /// type afficherait « Média » et, au pire, le JSON brut. On rend donc un
+  /// libellé explicite quand le contenu n'est pas reconnu — ce qui arrive aussi
+  /// si le format évolue et que la version du payload change.
+  Widget _buildTripMedia(LocalMessage msg, bool isMe) {
+    final payload = TripCardPayload.tryParse(msg.content);
+    if (payload == null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.shield_outlined, size: 18, color: _bubbleMuted(isMe)),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Text(context.l10n.tripsCardFallback,
+                style: context.text.bodyMedium
+                    ?.copyWith(color: _bubbleMuted(isMe))),
+          ),
+        ],
+      );
+    }
+
+    return TripMessageCard(
+      payload: payload,
+      // Le nom vient de l'en-tête de conversation : dans un 1-1, c'est
+      // toujours celui de l'interlocuteur.
+      senderName: isMe ? context.l10n.meLabel : _chatTitle(context),
+      onOpen: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TripLiveScreen(tripId: payload.tripId, isOwner: isMe),
+        ),
+      ),
+    );
   }
 
   Widget _buildLocationMedia(LocalMessage msg, bool isMe) {

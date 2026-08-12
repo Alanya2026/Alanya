@@ -349,6 +349,21 @@ extension _ChatActions on _ChatDetailScreenState {
     _scrollToBottom();
   }
 
+  /// Ouvre le hub des trajets.
+  ///
+  /// Volontairement, on n'envoie **rien** dans cette conversation : un trajet
+  /// s'adresse au cercle de confiance en entier, pas à l'interlocuteur du
+  /// moment. Le menu n'est qu'un raccourci — la carte arrivera d'elle-même
+  /// chez les membres du cercle, celui-ci compris s'il en fait partie.
+  Future<void> _startTrip() async {
+    if (!mounted) return;
+    Navigator.pop(context); // referme la feuille de pièces jointes
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TripsHubScreen()),
+    );
+  }
+
   Future<void> _pickContact() async {
     final convId = await _ensureConversation();
     if (convId == null || !mounted) return;
@@ -1024,6 +1039,18 @@ extension _ChatActions on _ChatDetailScreenState {
                     sem.success,
                     _pickLocation,
                   ),
+                  // Voisin de « position », parce que c'est là que vit déjà le
+                  // réflexe « je partage où je suis ». Mais l'objet est
+                  // différent : une position est un instantané, un trajet est
+                  // un engagement à confirmer son arrivée.
+                  _attachOption(
+                    Icons.shield_outlined,
+                    // Libellé court : les entrées du menu sont côte à côte sous
+                    // une icône, « Trajets de confiance » y déborde.
+                    context.l10n.tripsShort,
+                    context.colors.primary,
+                    _startTrip,
+                  ),
                   _attachOption(
                     Icons.person,
                     context.l10n.contact2,
@@ -1036,7 +1063,6 @@ extension _ChatActions on _ChatDetailScreenState {
                     context.colors.tertiary,
                     _pickMusic,
                   ),
-                  const SizedBox(width: 72),
                 ],
               ),
             ],

@@ -24,6 +24,7 @@ import 'account_hub_screen.dart';
 import 'edit_profile_screen.dart';
 import 'my_media_screen.dart';
 import 'contact_lists_screen.dart';
+import '../trips/trips_hub_screen.dart';
 import 'preferred_contacts_screen.dart';
 import 'qr_code_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
@@ -85,6 +86,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ContactListsScreen()),
+    );
+  }
+
+  void _openTrips() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TripsHubScreen()),
     );
   }
 
@@ -290,6 +298,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Icons.folder_outlined,
                     context.l10n.contactLists,
                     _openContactLists,
+                  ),
+                  const Divider(height: 1),
+                  // Adossé aux listes : les trajets s'adressent à la liste
+                  // Confiance, et c'est là qu'on la compose.
+                  _buildMenuItem(
+                    Icons.shield_outlined,
+                    context.l10n.trips,
+                    _openTrips,
                   ),
                   const Divider(height: 1),
                   _buildMenuItem(Icons.photo_library_outlined, context.l10n.myMediaTitle, () {

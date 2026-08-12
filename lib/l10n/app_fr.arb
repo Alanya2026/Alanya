@@ -2043,68 +2043,92 @@
   "sysPreviewGroupCreated": "{actor} a créé « {value} »",
   "@sysPreviewGroupCreated": {
     "placeholders": {
-      "actor": { "type": "String" },
-      "value": { "type": "String" }
+      "actor": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewGroupCreatedShort": "{actor} a créé le groupe",
   "@sysPreviewGroupCreatedShort": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewMemberAdded": "{actor} a ajouté des membres",
   "@sysPreviewMemberAdded": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewMemberRemoved": "{actor} a retiré un membre",
   "@sysPreviewMemberRemoved": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewMemberLeft": "{actor} a quitté le groupe",
   "@sysPreviewMemberLeft": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewGroupRenamed": "{actor} a renommé le groupe",
   "@sysPreviewGroupRenamed": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewGroupPhotoChanged": "{actor} a changé la photo du groupe",
   "@sysPreviewGroupPhotoChanged": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewGroupDescriptionChanged": "{actor} a modifié la description",
   "@sysPreviewGroupDescriptionChanged": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewRolePromoted": "{actor} a nommé un administrateur",
   "@sysPreviewRolePromoted": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewRoleDemoted": "{actor} a retiré des droits d'administrateur",
   "@sysPreviewRoleDemoted": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysPreviewSettingsChanged": "{actor} a modifié les réglages du groupe",
   "@sysPreviewSettingsChanged": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "groupOwner": "Propriétaire",
@@ -2145,36 +2169,48 @@
   "groupJoinBannerBody": "{actor} vous a ajouté au groupe « {group} »",
   "@groupJoinBannerBody": {
     "placeholders": {
-      "actor": { "type": "String" },
-      "group": { "type": "String" }
+      "actor": {
+        "type": "String"
+      },
+      "group": {
+        "type": "String"
+      }
     }
   },
   "stay": "Rester",
   "sysHideHistoryOn": "{actor} a masqué l'historique pour les nouveaux membres",
   "@sysHideHistoryOn": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysHideHistoryOnByMe": "Vous avez masqué l'historique pour les nouveaux membres",
   "sysHideHistoryOff": "{actor} a rendu l'historique visible pour les nouveaux membres",
   "@sysHideHistoryOff": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysHideHistoryOffByMe": "Vous avez rendu l'historique visible pour les nouveaux membres",
   "sysOnlyAdminsAddOn": "{actor} a réservé l'ajout de membres aux administrateurs",
   "@sysOnlyAdminsAddOn": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysOnlyAdminsAddOnByMe": "Vous avez réservé l'ajout de membres aux administrateurs",
   "sysOnlyAdminsAddOff": "{actor} a autorisé tout le monde à ajouter des membres",
   "@sysOnlyAdminsAddOff": {
     "placeholders": {
-      "actor": { "type": "String" }
+      "actor": {
+        "type": "String"
+      }
     }
   },
   "sysOnlyAdminsAddOffByMe": "Vous avez autorisé tout le monde à ajouter des membres",
@@ -2362,7 +2398,6 @@
   "confAlreadyInCall": "déjà là",
   "confContactBusy": "en appel",
   "confCancelInvite": "Annuler",
-
   "qrMyCodeTitle": "Mon code QR",
   "qrMyCodeTabCode": "Mon code",
   "qrMyCodeTabScan": "Scanner",
@@ -2371,7 +2406,9 @@
   "qrMyCodeExpiresIn": "Expire dans {time}",
   "@qrMyCodeExpiresIn": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "qrMyCodeValidityNote": "Valable 10 minutes et pour une seule personne. Un nouveau code est généré automatiquement.",
@@ -2381,7 +2418,9 @@
   "qrScanReturnBody": "{name} vous a ajouté à ses contacts préférés avec votre code QR. L'ajouter en retour ?",
   "@qrScanReturnBody": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "qrScanReturnAccept": "Ajouter",
@@ -2390,7 +2429,9 @@
   "qrScannedMutualInfo": "{name} vous a ajouté avec votre code QR",
   "@qrScannedMutualInfo": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "qrNoteFieldHint": "Ajouter une note (lieu, contexte…)",
@@ -2402,7 +2443,9 @@
   "qrContactAddedViaQrOn": "Ajouté par QR code · {date}",
   "@qrContactAddedViaQrOn": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "qrMyCodeShareSheetTitle": "Partager mon code",
@@ -2413,7 +2456,9 @@
   "qrMyCodeShareId": "Mon Alanya ID : {id}",
   "@qrMyCodeShareId": {
     "placeholders": {
-      "id": { "type": "String" }
+      "id": {
+        "type": "String"
+      }
     }
   },
   "qrMyCodeRegenerate": "Régénérer",
@@ -2423,10 +2468,11 @@
   "qrMyCodeShareText": "Ajoutez-moi sur Alanya : je suis {name}.",
   "@qrMyCodeShareText": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "qrScanTitle": "Scanner un code",
   "qrScanEntryButton": "Scanner un code",
   "qrScanInstruction": "Cadrez le code QR d'un contact",
@@ -2436,13 +2482,17 @@
   "qrScanAddSuccess": "{name} a été ajouté à vos contacts préférés",
   "@qrScanAddSuccess": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "qrScanAlreadyContact": "{name} est déjà dans vos contacts préférés",
   "@qrScanAlreadyContact": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "qrScanResultAdded": "Ajouté à vos contacts",
@@ -2453,7 +2503,9 @@
   "qrScanUndone": "{name} a été retiré de vos contacts préférés",
   "@qrScanUndone": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "qrScanUndoFailed": "Impossible d'annuler l'ajout",
@@ -2465,7 +2517,6 @@
   "qrScanImportNoCode": "Aucun code QR dans cette image.",
   "qrScanImportNotAlanya": "Ce code QR n'est pas un code Alanya.",
   "qrScanImportFailed": "Impossible de lire cette image.",
-
   "qrLoginTitle": "Connexion par QR code",
   "qrLoginEntryButton": "Se connecter avec un code QR",
   "qrLoginUsePassword": "Se connecter avec mon mot de passe",
@@ -2473,7 +2524,9 @@
   "qrLoginExpiresIn": "Expire dans {time}",
   "@qrLoginExpiresIn": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "qrLoginStatusWaiting": "En attente de scan…",
@@ -2482,7 +2535,6 @@
   "qrLoginStatusExpired": "Ce code a expiré.",
   "qrLoginRegenerate": "Générer un nouveau code",
   "qrLoginNetworkError": "Connexion impossible. Vérifiez votre réseau et réessayez.",
-
   "qrApproveTitle": "Nouvelle connexion",
   "qrApproveIntro": "Ce code vient d'être scanné depuis cet appareil :",
   "qrApproveDeviceLabel": "Appareil (nom déclaré)",
@@ -2497,7 +2549,6 @@
   "qrApproveDone": "Appareil connecté",
   "qrApproveRejectDone": "Connexion refusée",
   "qrApproveSessionExpired": "Cette demande a expiré. Faites afficher un nouveau code sur l'autre appareil.",
-
   "qrDevicesTitle": "Appareils connectés",
   "qrDevicesEntryTitle": "Appareils connectés",
   "qrDevicesEntrySubtitle": "Voir où votre compte est ouvert",
@@ -2511,7 +2562,9 @@
   "qrDevicesLastActive": "Actif {date}",
   "@qrDevicesLastActive": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "qrDevicesRevoke": "Déconnecter",
@@ -2519,30 +2572,36 @@
   "qrDevicesRevokeConfirmBody": "{name} sera déconnecté immédiatement. Il faudra saisir votre mot de passe pour s'y reconnecter.",
   "@qrDevicesRevokeConfirmBody": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "qrDevicesRevokeDone": "Appareil déconnecté",
   "qrDevicesEmpty": "Aucun autre appareil connecté",
   "qrDevicesLoadError": "Impossible de charger vos appareils",
   "qrDevicesIosNote": "Sur iPhone, un appareil peut réapparaître comme un nouvel appareil dans cette liste après une réinstallation d'Alanya.",
-
   "qrBannerNewDevice": "Nouvel appareil connecté : {name}",
   "@qrBannerNewDevice": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "qrBannerSignedOutRemotely": "Cet appareil a été déconnecté depuis un autre appareil.",
-
   "myAccountLabel": "Mon compte",
   "accountHubTitle": "Mon compte",
   "accountHubSecurityScore": "Score de sécurité",
   "accountHubSecurityScoreValue": "{score} / {max}",
   "@accountHubSecurityScoreValue": {
     "placeholders": {
-      "score": { "type": "int" },
-      "max": { "type": "int" }
+      "score": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "securityScoreAddEmail": "Ajoutez un e-mail pour améliorer votre score.",
@@ -2610,14 +2669,18 @@
   "mutedConversationsCount": "{count, plural, =1{1 conversation} other{{count} conversations}}",
   "@mutedConversationsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "mutedForeverLabel": "Silencieux indéfiniment",
   "mutedUntilLabel": "Jusqu'au {date}",
   "@mutedUntilLabel": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "dndScheduleTitle": "Ne pas déranger",
@@ -2640,8 +2703,12 @@
   "aboutVersion": "Version {version} (build {build})",
   "@aboutVersion": {
     "placeholders": {
-      "version": { "type": "String" },
-      "build": { "type": "String" }
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
     }
   },
   "aboutTerms": "Conditions d'utilisation",
@@ -2667,7 +2734,9 @@
   "exportFailed": "Export impossible : {error}",
   "@exportFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "deleteAccountTitle": "Supprimer le compte",
@@ -2686,13 +2755,17 @@
   "deleteAccountGraceBody": "Votre compte sera définitivement supprimé le {date}. Vous pouvez annuler d'ici là.",
   "@deleteAccountGraceBody": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "deleteAccountFailed": "Suppression impossible : {error}",
   "@deleteAccountFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "biometricLock": "Verrouillage biométrique",
@@ -2704,7 +2777,9 @@
   "biometricLockFailed": "Biométrie : {error}",
   "@biometricLockFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "accountSecuritySectionProtection": "Protection",
@@ -2728,7 +2803,9 @@
   "privacyBlockedContactsCount": "{count, plural, =1{1 contact} other{{count} contacts}}",
   "@privacyBlockedContactsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "privacyAddToGroups": "Ajout aux groupes",
@@ -2747,8 +2824,12 @@
   "onboardingStepOf": "Étape {current} sur {total}",
   "@onboardingStepOf": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "onboardingCountryTitle": "Votre pays",
@@ -2798,14 +2879,20 @@
   "profileAgeBirthYear": "Année de naissance ≈ {year}",
   "@profileAgeBirthYear": {
     "placeholders": {
-      "year": { "type": "int" }
+      "year": {
+        "type": "int"
+      }
     }
   },
   "profileAgeInvalid": "Âge invalide (entre {min} et {max} ans)",
   "@profileAgeInvalid": {
     "placeholders": {
-      "min": { "type": "int" },
-      "max": { "type": "int" }
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "recoveryCodeTitle": "Code de récupération",
@@ -2833,7 +2920,9 @@
   "deleteAccountGraceDays": "Délai de grâce · {days} jours",
   "@deleteAccountGraceDays": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "deleteAccountCancelDeletion": "Annuler la suppression",
@@ -2845,9 +2934,15 @@
   "dndSummaryActive": "{start} – {end} · {days}",
   "@dndSummaryActive": {
     "placeholders": {
-      "start": { "type": "String" },
-      "end": { "type": "String" },
-      "days": { "type": "String" }
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
     }
   },
   "dndSummaryInactive": "Désactivé",
@@ -2870,7 +2965,9 @@
   "deleteListConfirm": "Supprimer « {name} » ? Vos contacts restent dans vos favoris.",
   "@deleteListConfirm": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "listColor": "Couleur de la puce",
@@ -2880,20 +2977,28 @@
   "listMembersCount": "{count, plural, =0{Aucun membre} =1{1 membre} other{{count} membres}}",
   "@listMembersCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "listMembersCountLimited": "{current}/{limit} membres",
   "@listMembersCountLimited": {
     "placeholders": {
-      "current": { "type": "int" },
-      "limit": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
     }
   },
   "listMemberLimitReached": "Cette liste est limitée à {limit} membres",
   "@listMemberLimitReached": {
     "placeholders": {
-      "limit": { "type": "int" }
+      "limit": {
+        "type": "int"
+      }
     }
   },
   "addToList": "Ajouter des membres",
@@ -2906,7 +3011,9 @@
   "addMembersSelected": "{count} sélectionné(s)",
   "@addMembersSelected": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "newList": "Nouvelle liste",
@@ -2915,7 +3022,9 @@
   "createGroupNamed": "Créer un groupe « {name} »",
   "@createGroupNamed": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "manageLists": "Gérer les listes",
@@ -2924,8 +3033,261 @@
   "markAllAsReadDone": "{count, plural, =0{Aucune discussion non lue} =1{1 discussion marquée comme lue} other{{count} discussions marquées comme lues}}",
   "@markAllAsReadDone": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "optionsAction": "Options"
+  "optionsAction": "Options",
+  "trips": "Trajets de confiance",
+  "tripsSubtitle": "Prévenir ses proches, et rentrer confirmé",
+  "tripsCircleEmptyTitle": "Votre cercle de confiance est vide",
+  "tripsCircleEmptyBody": "Choisissez jusqu'à cinq proches. Eux seuls verront vos trajets, et seulement ceux que vous partagez.",
+  "tripsComposeCircle": "Composer mon cercle",
+  "tripsMyCircle": "Mon cercle de confiance",
+  "tripsNone": "Aucun trajet en cours.",
+  "tripsNew": "Nouveau trajet",
+  "tripsKindTaxi": "Taxi",
+  "tripsKindTaxiHint": "Un déplacement, une arrivée attendue",
+  "tripsKindMeeting": "Rendez-vous",
+  "tripsKindMeetingHint": "Un lieu, une heure de retour",
+  "tripsArrivalIn": "Arrivée dans",
+  "tripsMinutes": "{count} min",
+  "@tripsMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsNoteLabel": "Note pour le cercle",
+  "tripsNoteHint": "Taxi jaune, plaque LT 4471",
+  "tripsStart": "Démarrer le partage",
+  "tripsContinue": "Continuer",
+  "tripsConfirmTitle": "Confirmer le départ",
+  "tripsContract": "Vos {count} proches verront votre position en direct jusqu'à {eta}. Si vous n'avez pas confirmé à {alert}, ils seront prévenus avec votre dernière position.",
+  "@tripsContract": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "eta": {
+        "type": "String"
+      },
+      "alert": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsCircleFrozen": "Le cercle se modifie dans Profil › Listes de contacts, jamais au départ d'un trajet. Personne n'apprend qu'il y entre ou en sort.",
+  "tripsInProgress": "Trajet en cours",
+  "tripsLive": "En direct",
+  "tripsStale": "Position indisponible",
+  "tripsAwaitingConfirm": "Arrivée à confirmer",
+  "tripsAlerted": "Alerte envoyée",
+  "tripsWatcherCount": "{count, plural, =1{1 personne suit} other{{count} personnes suivent}}",
+  "@tripsWatcherCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsEtaAt": "Arrivée prévue {time}",
+  "@tripsEtaAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsAlreadyActive": "Un trajet est déjà en cours.",
+  "tripsStartFailed": "Impossible de démarrer le trajet.",
+  "tripsSosUnavailable": "Le SOS n'est pas encore disponible.",
+  "tripsStop": "Arrêter le partage",
+  "tripsForegroundOnly": "Le partage s'interrompt si vous quittez Alanya. Vos proches seront prévenus à l'heure prévue dans tous les cas.",
+  "tripsCardStarted": "{name} a démarré un trajet",
+  "@tripsCardStarted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsCardAwaiting": "{name} devrait être arrivé·e",
+  "@tripsCardAwaiting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsCardAlert": "{name} n'a pas confirmé son arrivée",
+  "@tripsCardAlert": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsCardSos": "{name} a déclenché un SOS",
+  "@tripsCardSos": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsCardArrived": "{name} est bien arrivé·e",
+  "@tripsCardArrived": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsCardStopped": "{name} a arrêté le partage",
+  "@tripsCardStopped": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsCardFollow": "Suivre en direct",
+  "tripsCardSeePosition": "Voir la position",
+  "tripsCardSeeLast": "Voir la dernière position",
+  "tripsCardFallback": "Trajet de confiance — mettez à jour l'application",
+  "tripsConfirmArrival": "Je suis bien arrivé·e",
+  "tripsExtendBy": "+{count} min",
+  "@tripsExtendBy": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsExtended": "Prolongé de {count} minutes. Votre cercle a été informé.",
+  "@tripsExtended": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsAlreadyClosed": "Ce trajet est déjà clos.",
+  "tripsActionFailed": "Action impossible pour le moment.",
+  "tripsHistory": "Historique",
+  "tripsHistoryEmpty": "Aucun trajet pour l'instant",
+  "tripsHistoryEmptyBody": "Quand vous partagerez un trajet, il apparaîtra ici — et seulement ici.",
+  "tripsHistoryUnavailable": "Historique indisponible",
+  "tripsHistoryOnline": "Vos trajets passés se consultent en ligne : ils ne sont pas conservés sur cet appareil.",
+  "tripsRetentionNote": "Vos trajets sont conservés douze mois. Les traces détaillées, vingt-quatre heures — trente jours après une alerte.",
+  "tripsOutcomeConfirmed": "Arrivée confirmée",
+  "tripsOutcomeStopped": "Trajet arrêté",
+  "tripsOutcomeAlert": "Alerte déclenchée",
+  "tripsDeleteLocked": "Ce trajet est conservé trente jours après une alerte. Cette règle protège la personne concernée.",
+  "loadMore": "Charger plus",
+  "tripsFgsTitle": "Trajet de confiance en cours",
+  "tripsFgsBodyPlain": "Votre position est partagée avec votre cercle",
+  "tripsFgsBody": "Partagé avec {names}",
+  "@tripsFgsBody": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsSosTitle": "SOS",
+  "tripsSosHold": "Maintenez trois secondes",
+  "tripsSosHoldBody": "Vos proches recevront une alerte avec votre position, immédiatement.",
+  "tripsSosNotEmergency": "Le SOS ne prévient pas les secours. Il prévient votre cercle de confiance.",
+  "tripsSosSending": "Envoi dans {count} secondes",
+  "@tripsSosSending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsSosSent": "Vos proches ont été prévenus",
+  "tripsSosDiscreet": "Aucun son, aucune vibration. Votre position continue d'être partagée.",
+  "tripsSosTooMany": "Trop de SOS sur les dernières 24 heures.",
+  "tripsSosFalseAlarm": "Fausse alerte, je vais bien",
+  "tripsSosButton": "Lancer un SOS",
+  "tripsKeepsRunning": "Le partage continue même écran verrouillé. Une notification vous le rappelle et permet de l'arrêter.",
+  "tripsDestination": "Destination",
+  "tripsDestinationOptional": "Choisir une destination (facultatif)",
+  "tripsDestinationRadius": "L'arrivée sera détectée dans un rayon de 150 m",
+  "tripsShort": "Confiance",
+  "tripsRailStart": "Partir",
+  "tripsRailFollow": "Suivre",
+  "tripsRailConfirm": "Confirmer",
+  "tripsRailClose": "Clore",
+  "tripsConfirmed": "Arrivée confirmée. Votre cercle est prévenu.",
+  "tripsDeleteTitle": "Supprimer ce trajet ?",
+  "tripsDeleteBody": "Le trajet et sa trace seront effacés. Cette action est définitive.",
+  "tripsRecenter": "Recentrer sur la position",
+  "tripsArrivalReachedTitle": "Vous êtes arrivé·e ?",
+  "tripsArrivalReachedBody": "Vous êtes à votre destination depuis une minute.",
+  "tripsArrivalDueTitle": "Confirmez votre arrivée",
+  "tripsArrivalDueBody": "Sans réponse, vos proches seront prévenus à {time} avec votre dernière position.",
+  "@tripsArrivalDueBody": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsArrivalDueBodyPlain": "Sans réponse, vos proches seront prévenus avec votre dernière position.",
+  "tripsArrivalLater": "Pas encore — l'échéance continue de courir",
+  "tripsDegradedPermission": "Localisation désactivée",
+  "tripsDegradedPermissionBody": "Vos proches ne voient plus votre position. L'heure d'arrivée reste surveillée : ils seront prévenus si vous ne confirmez pas.",
+  "tripsDegradedStale": "Position indisponible",
+  "tripsDegradedStaleBody": "Tunnel, parking ou signal faible. Ce n'est pas une alerte — l'échéance continue de courir.",
+  "tripsDegradedBattery": "Batterie faible",
+  "tripsDegradedBatteryBody": "Le suivi est ralenti. Si le téléphone s'éteint, votre dernière position sera envoyée.",
+  "tripsDegradedFix": "Réparer",
+  "locationSearchHint": "Rechercher un lieu, une adresse…",
+  "locationSearchEmpty": "Aucun résultat. Vous pouvez toujours choisir sur la carte.",
+  "tripsCardFalseAlarm": "{name} a signalé une fausse alerte",
+  "@tripsCardFalseAlarm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsSosFalseAlarmSent": "Votre cercle a été prévenu que tout va bien.",
+  "tripsCall": "Appeler",
+  "tripsPermissionTitle": "Autoriser la localisation",
+  "tripsPermissionBody": "Sans cette autorisation, vos proches ne verront pas où vous êtes. L'heure d'arrivée reste surveillée dans tous les cas.",
+  "tripsPermissionNever": "Alanya n'utilise votre position que pendant un trajet que vous avez démarré. Jamais avant, jamais après.",
+  "tripsPermissionAllow": "Autoriser",
+  "tripsPermissionLater": "Plus tard",
+  "sysTripAlert": "{actor} n'a pas confirmé son arrivée — le cercle a été prévenu",
+  "@sysTripAlert": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysTripAlertByMe": "Vous n'avez pas confirmé votre arrivée — votre cercle a été prévenu",
+  "sysTripSos": "{actor} a déclenché un SOS",
+  "@sysTripSos": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysTripSosByMe": "Vous avez déclenché un SOS",
+  "tripsPreviewActive": "🧭 Trajet en cours",
+  "tripsPreviewAwaiting": "🧭 Arrivée à confirmer",
+  "tripsPreviewAlert": "🆘 Alerte trajet",
+  "tripsPreviewSos": "🆘 SOS",
+  "tripsPreviewConfirmed": "✅ Bien arrivé·e",
+  "tripsPreviewStopped": "🧭 Trajet arrêté",
+  "tripsPreviewFalseAlarm": "✅ Fausse alerte"
 }

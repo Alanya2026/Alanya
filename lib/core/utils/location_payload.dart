@@ -78,6 +78,93 @@ String locationPreviewLabel(String? content) {
   return loc?.previewLabel ?? LocaleController.instance.l10n.location;
 }
 
+
+/// Un résultat de recherche de lieu.
+class PlaceHit {
+  const PlaceHit({
+    required this.lat,
+    required this.lng,
+    required this.name,
+    required this.address,
+  });
+
+  final double lat;
+  final double lng;
+
+  /// Première partie de l'adresse — le nom reconnaissable du lieu.
+  final String name;
+
+  /// Adresse complète, affichée en second pour lever l'ambiguïté entre deux
+  /// lieux qui portent le même nom.
+  final String address;
+}
+
+/// Recherche de lieu (géocodage direct) via Nominatim.
+///
+/// Pendant du géocodage inverse déjà utilisé pour nommer une position. Même
+/// contrat : délai court et échec silencieux — une recherche qui ne répond pas
+/// ne doit jamais bloquer le choix sur la carte, qui reste toujours possible.
+///
+/// ⚠ Nominatim impose un maximum d'une requête par seconde et un `User-Agent`
+/// identifiant. L'appelant DOIT temporiser la saisie ; c'est fait dans
+/// `location_picker_screen.dart`.
+///
+/// [near] recentre la recherche autour d'un point : sans lui, « pharmacie »
+/// renvoie des résultats à l'autre bout du monde.
+Future<List<PlaceHit>> searchPlaces(
+  String query, {
+  LocationPayload? near,
+  int limit = 8,
+}) async {
+  final q = query.trim();
+  if (q.length < 3) return const [];
+  try {
+    final params = <String, String>{
+      'format': 'json',
+      'q': q,
+      'limit': '$limit',
+      'addressdetails': '0',
+      if (near != null)
+        // Boîte englobante d'environ 1°, soit ~110 km : assez large pour ne
+        // rien manquer localement, assez étroite pour écarter le reste.
+        'viewbox': '${near.lng - 0.5},${near.lat + 0.5},'
+            '${near.lng + 0.5},${near.lat - 0.5}',
+      if (near != null) 'bounded': '0',
+    };
+    final res = await http
+        .get(
+          Uri.https('nominatim.openstreetmap.org', '/search', params),
+          headers: {
+            'User-Agent': 'AlanyaTalky/1.0 (place search)',
+            'Accept': 'application/json',
+          },
+        )
+        .timeout(const Duration(seconds: 6));
+    if (res.statusCode != 200) return const [];
+
+    final data = jsonDecode(res.body);
+    if (data is! List) return const [];
+
+    return data.whereType<Map>().map((r) {
+      final lat = double.tryParse('${r['lat']}');
+      final lng = double.tryParse('${r['lon']}');
+      final display = '${r['display_name'] ?? ''}'.trim();
+      if (lat == null || lng == null || display.isEmpty) return null;
+      final parts = display.split(',');
+      return PlaceHit(
+        lat: lat,
+        lng: lng,
+        name: parts.first.trim(),
+        address: parts.length > 1 ? parts.sublist(1).join(',').trim() : display,
+      );
+    }).whereType<PlaceHit>().toList();
+  } catch (_) {
+    // Réseau coupé, délai dépassé, quota atteint : on rend une liste vide.
+    // L'écran affiche « aucun résultat » et la carte reste utilisable.
+    return const [];
+  }
+}
+
 /// Reverse geocode Nominatim (timeout court, fallback silencieux).
 Future<LocationPayload> enrichLocationWithAddress(LocationPayload base) async {
   try {

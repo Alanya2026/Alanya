@@ -8521,6 +8521,720 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Options'**
   String get optionsAction;
+
+  /// No description provided for @trips.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajets de confiance'**
+  String get trips;
+
+  /// No description provided for @tripsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prévenir ses proches, et rentrer confirmé'**
+  String get tripsSubtitle;
+
+  /// No description provided for @tripsCircleEmptyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre cercle de confiance est vide'**
+  String get tripsCircleEmptyTitle;
+
+  /// No description provided for @tripsCircleEmptyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez jusqu\'à cinq proches. Eux seuls verront vos trajets, et seulement ceux que vous partagez.'**
+  String get tripsCircleEmptyBody;
+
+  /// No description provided for @tripsComposeCircle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Composer mon cercle'**
+  String get tripsComposeCircle;
+
+  /// No description provided for @tripsMyCircle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon cercle de confiance'**
+  String get tripsMyCircle;
+
+  /// No description provided for @tripsNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun trajet en cours.'**
+  String get tripsNone;
+
+  /// No description provided for @tripsNew.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau trajet'**
+  String get tripsNew;
+
+  /// No description provided for @tripsKindTaxi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taxi'**
+  String get tripsKindTaxi;
+
+  /// No description provided for @tripsKindTaxiHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un déplacement, une arrivée attendue'**
+  String get tripsKindTaxiHint;
+
+  /// No description provided for @tripsKindMeeting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rendez-vous'**
+  String get tripsKindMeeting;
+
+  /// No description provided for @tripsKindMeetingHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un lieu, une heure de retour'**
+  String get tripsKindMeetingHint;
+
+  /// No description provided for @tripsArrivalIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée dans'**
+  String get tripsArrivalIn;
+
+  /// No description provided for @tripsMinutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} min'**
+  String tripsMinutes(int count);
+
+  /// No description provided for @tripsNoteLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note pour le cercle'**
+  String get tripsNoteLabel;
+
+  /// No description provided for @tripsNoteHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taxi jaune, plaque LT 4471'**
+  String get tripsNoteHint;
+
+  /// No description provided for @tripsStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Démarrer le partage'**
+  String get tripsStart;
+
+  /// No description provided for @tripsContinue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get tripsContinue;
+
+  /// No description provided for @tripsConfirmTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer le départ'**
+  String get tripsConfirmTitle;
+
+  /// No description provided for @tripsContract.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos {count} proches verront votre position en direct jusqu\'à {eta}. Si vous n\'avez pas confirmé à {alert}, ils seront prévenus avec votre dernière position.'**
+  String tripsContract(int count, String eta, String alert);
+
+  /// No description provided for @tripsCircleFrozen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le cercle se modifie dans Profil › Listes de contacts, jamais au départ d\'un trajet. Personne n\'apprend qu\'il y entre ou en sort.'**
+  String get tripsCircleFrozen;
+
+  /// No description provided for @tripsInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet en cours'**
+  String get tripsInProgress;
+
+  /// No description provided for @tripsLive.
+  ///
+  /// In fr, this message translates to:
+  /// **'En direct'**
+  String get tripsLive;
+
+  /// No description provided for @tripsStale.
+  ///
+  /// In fr, this message translates to:
+  /// **'Position indisponible'**
+  String get tripsStale;
+
+  /// No description provided for @tripsAwaitingConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée à confirmer'**
+  String get tripsAwaitingConfirm;
+
+  /// No description provided for @tripsAlerted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alerte envoyée'**
+  String get tripsAlerted;
+
+  /// No description provided for @tripsWatcherCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 personne suit} other{{count} personnes suivent}}'**
+  String tripsWatcherCount(int count);
+
+  /// No description provided for @tripsEtaAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée prévue {time}'**
+  String tripsEtaAt(String time);
+
+  /// No description provided for @tripsAlreadyActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un trajet est déjà en cours.'**
+  String get tripsAlreadyActive;
+
+  /// No description provided for @tripsStartFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de démarrer le trajet.'**
+  String get tripsStartFailed;
+
+  /// No description provided for @tripsSosUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le SOS n\'est pas encore disponible.'**
+  String get tripsSosUnavailable;
+
+  /// No description provided for @tripsStop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrêter le partage'**
+  String get tripsStop;
+
+  /// No description provided for @tripsForegroundOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le partage s\'interrompt si vous quittez Alanya. Vos proches seront prévenus à l\'heure prévue dans tous les cas.'**
+  String get tripsForegroundOnly;
+
+  /// No description provided for @tripsCardStarted.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a démarré un trajet'**
+  String tripsCardStarted(String name);
+
+  /// No description provided for @tripsCardAwaiting.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} devrait être arrivé·e'**
+  String tripsCardAwaiting(String name);
+
+  /// No description provided for @tripsCardAlert.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas confirmé son arrivée'**
+  String tripsCardAlert(String name);
+
+  /// No description provided for @tripsCardSos.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a déclenché un SOS'**
+  String tripsCardSos(String name);
+
+  /// No description provided for @tripsCardArrived.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est bien arrivé·e'**
+  String tripsCardArrived(String name);
+
+  /// No description provided for @tripsCardStopped.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a arrêté le partage'**
+  String tripsCardStopped(String name);
+
+  /// No description provided for @tripsCardFollow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivre en direct'**
+  String get tripsCardFollow;
+
+  /// No description provided for @tripsCardSeePosition.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir la position'**
+  String get tripsCardSeePosition;
+
+  /// No description provided for @tripsCardSeeLast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir la dernière position'**
+  String get tripsCardSeeLast;
+
+  /// No description provided for @tripsCardFallback.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet de confiance — mettez à jour l\'application'**
+  String get tripsCardFallback;
+
+  /// No description provided for @tripsConfirmArrival.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je suis bien arrivé·e'**
+  String get tripsConfirmArrival;
+
+  /// No description provided for @tripsExtendBy.
+  ///
+  /// In fr, this message translates to:
+  /// **'+{count} min'**
+  String tripsExtendBy(int count);
+
+  /// No description provided for @tripsExtended.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prolongé de {count} minutes. Votre cercle a été informé.'**
+  String tripsExtended(int count);
+
+  /// No description provided for @tripsAlreadyClosed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce trajet est déjà clos.'**
+  String get tripsAlreadyClosed;
+
+  /// No description provided for @tripsActionFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Action impossible pour le moment.'**
+  String get tripsActionFailed;
+
+  /// No description provided for @tripsHistory.
+  ///
+  /// In fr, this message translates to:
+  /// **'Historique'**
+  String get tripsHistory;
+
+  /// No description provided for @tripsHistoryEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun trajet pour l\'instant'**
+  String get tripsHistoryEmpty;
+
+  /// No description provided for @tripsHistoryEmptyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quand vous partagerez un trajet, il apparaîtra ici — et seulement ici.'**
+  String get tripsHistoryEmptyBody;
+
+  /// No description provided for @tripsHistoryUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Historique indisponible'**
+  String get tripsHistoryUnavailable;
+
+  /// No description provided for @tripsHistoryOnline.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos trajets passés se consultent en ligne : ils ne sont pas conservés sur cet appareil.'**
+  String get tripsHistoryOnline;
+
+  /// No description provided for @tripsRetentionNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos trajets sont conservés douze mois. Les traces détaillées, vingt-quatre heures — trente jours après une alerte.'**
+  String get tripsRetentionNote;
+
+  /// No description provided for @tripsOutcomeConfirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée confirmée'**
+  String get tripsOutcomeConfirmed;
+
+  /// No description provided for @tripsOutcomeStopped.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet arrêté'**
+  String get tripsOutcomeStopped;
+
+  /// No description provided for @tripsOutcomeAlert.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alerte déclenchée'**
+  String get tripsOutcomeAlert;
+
+  /// No description provided for @tripsDeleteLocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce trajet est conservé trente jours après une alerte. Cette règle protège la personne concernée.'**
+  String get tripsDeleteLocked;
+
+  /// No description provided for @loadMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Charger plus'**
+  String get loadMore;
+
+  /// No description provided for @tripsFgsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet de confiance en cours'**
+  String get tripsFgsTitle;
+
+  /// No description provided for @tripsFgsBodyPlain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre position est partagée avec votre cercle'**
+  String get tripsFgsBodyPlain;
+
+  /// No description provided for @tripsFgsBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partagé avec {names}'**
+  String tripsFgsBody(String names);
+
+  /// No description provided for @tripsSosTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'SOS'**
+  String get tripsSosTitle;
+
+  /// No description provided for @tripsSosHold.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintenez trois secondes'**
+  String get tripsSosHold;
+
+  /// No description provided for @tripsSosHoldBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos proches recevront une alerte avec votre position, immédiatement.'**
+  String get tripsSosHoldBody;
+
+  /// No description provided for @tripsSosNotEmergency.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le SOS ne prévient pas les secours. Il prévient votre cercle de confiance.'**
+  String get tripsSosNotEmergency;
+
+  /// No description provided for @tripsSosSending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi dans {count} secondes'**
+  String tripsSosSending(int count);
+
+  /// No description provided for @tripsSosSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos proches ont été prévenus'**
+  String get tripsSosSent;
+
+  /// No description provided for @tripsSosDiscreet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun son, aucune vibration. Votre position continue d\'être partagée.'**
+  String get tripsSosDiscreet;
+
+  /// No description provided for @tripsSosTooMany.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de SOS sur les dernières 24 heures.'**
+  String get tripsSosTooMany;
+
+  /// No description provided for @tripsSosFalseAlarm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fausse alerte, je vais bien'**
+  String get tripsSosFalseAlarm;
+
+  /// No description provided for @tripsSosButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer un SOS'**
+  String get tripsSosButton;
+
+  /// No description provided for @tripsKeepsRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le partage continue même écran verrouillé. Une notification vous le rappelle et permet de l\'arrêter.'**
+  String get tripsKeepsRunning;
+
+  /// No description provided for @tripsDestination.
+  ///
+  /// In fr, this message translates to:
+  /// **'Destination'**
+  String get tripsDestination;
+
+  /// No description provided for @tripsDestinationOptional.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir une destination (facultatif)'**
+  String get tripsDestinationOptional;
+
+  /// No description provided for @tripsDestinationRadius.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'arrivée sera détectée dans un rayon de 150 m'**
+  String get tripsDestinationRadius;
+
+  /// No description provided for @tripsShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confiance'**
+  String get tripsShort;
+
+  /// No description provided for @tripsRailStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partir'**
+  String get tripsRailStart;
+
+  /// No description provided for @tripsRailFollow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivre'**
+  String get tripsRailFollow;
+
+  /// No description provided for @tripsRailConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer'**
+  String get tripsRailConfirm;
+
+  /// No description provided for @tripsRailClose.
+  ///
+  /// In fr, this message translates to:
+  /// **'Clore'**
+  String get tripsRailClose;
+
+  /// No description provided for @tripsConfirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée confirmée. Votre cercle est prévenu.'**
+  String get tripsConfirmed;
+
+  /// No description provided for @tripsDeleteTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer ce trajet ?'**
+  String get tripsDeleteTitle;
+
+  /// No description provided for @tripsDeleteBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le trajet et sa trace seront effacés. Cette action est définitive.'**
+  String get tripsDeleteBody;
+
+  /// No description provided for @tripsRecenter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recentrer sur la position'**
+  String get tripsRecenter;
+
+  /// No description provided for @tripsArrivalReachedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous êtes arrivé·e ?'**
+  String get tripsArrivalReachedTitle;
+
+  /// No description provided for @tripsArrivalReachedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous êtes à votre destination depuis une minute.'**
+  String get tripsArrivalReachedBody;
+
+  /// No description provided for @tripsArrivalDueTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmez votre arrivée'**
+  String get tripsArrivalDueTitle;
+
+  /// No description provided for @tripsArrivalDueBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans réponse, vos proches seront prévenus à {time} avec votre dernière position.'**
+  String tripsArrivalDueBody(String time);
+
+  /// No description provided for @tripsArrivalDueBodyPlain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans réponse, vos proches seront prévenus avec votre dernière position.'**
+  String get tripsArrivalDueBodyPlain;
+
+  /// No description provided for @tripsArrivalLater.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore — l\'échéance continue de courir'**
+  String get tripsArrivalLater;
+
+  /// No description provided for @tripsDegradedPermission.
+  ///
+  /// In fr, this message translates to:
+  /// **'Localisation désactivée'**
+  String get tripsDegradedPermission;
+
+  /// No description provided for @tripsDegradedPermissionBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos proches ne voient plus votre position. L\'heure d\'arrivée reste surveillée : ils seront prévenus si vous ne confirmez pas.'**
+  String get tripsDegradedPermissionBody;
+
+  /// No description provided for @tripsDegradedStale.
+  ///
+  /// In fr, this message translates to:
+  /// **'Position indisponible'**
+  String get tripsDegradedStale;
+
+  /// No description provided for @tripsDegradedStaleBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tunnel, parking ou signal faible. Ce n\'est pas une alerte — l\'échéance continue de courir.'**
+  String get tripsDegradedStaleBody;
+
+  /// No description provided for @tripsDegradedBattery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Batterie faible'**
+  String get tripsDegradedBattery;
+
+  /// No description provided for @tripsDegradedBatteryBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le suivi est ralenti. Si le téléphone s\'éteint, votre dernière position sera envoyée.'**
+  String get tripsDegradedBatteryBody;
+
+  /// No description provided for @tripsDegradedFix.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réparer'**
+  String get tripsDegradedFix;
+
+  /// No description provided for @locationSearchHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un lieu, une adresse…'**
+  String get locationSearchHint;
+
+  /// No description provided for @locationSearchEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun résultat. Vous pouvez toujours choisir sur la carte.'**
+  String get locationSearchEmpty;
+
+  /// No description provided for @tripsCardFalseAlarm.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a signalé une fausse alerte'**
+  String tripsCardFalseAlarm(String name);
+
+  /// No description provided for @tripsSosFalseAlarmSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre cercle a été prévenu que tout va bien.'**
+  String get tripsSosFalseAlarmSent;
+
+  /// No description provided for @tripsCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appeler'**
+  String get tripsCall;
+
+  /// No description provided for @tripsPermissionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autoriser la localisation'**
+  String get tripsPermissionTitle;
+
+  /// No description provided for @tripsPermissionBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans cette autorisation, vos proches ne verront pas où vous êtes. L\'heure d\'arrivée reste surveillée dans tous les cas.'**
+  String get tripsPermissionBody;
+
+  /// No description provided for @tripsPermissionNever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya n\'utilise votre position que pendant un trajet que vous avez démarré. Jamais avant, jamais après.'**
+  String get tripsPermissionNever;
+
+  /// No description provided for @tripsPermissionAllow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autoriser'**
+  String get tripsPermissionAllow;
+
+  /// No description provided for @tripsPermissionLater.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus tard'**
+  String get tripsPermissionLater;
+
+  /// No description provided for @sysTripAlert.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} n\'a pas confirmé son arrivée — le cercle a été prévenu'**
+  String sysTripAlert(String actor);
+
+  /// No description provided for @sysTripAlertByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas confirmé votre arrivée — votre cercle a été prévenu'**
+  String get sysTripAlertByMe;
+
+  /// No description provided for @sysTripSos.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a déclenché un SOS'**
+  String sysTripSos(String actor);
+
+  /// No description provided for @sysTripSosByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez déclenché un SOS'**
+  String get sysTripSosByMe;
+
+  /// No description provided for @tripsPreviewActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'🧭 Trajet en cours'**
+  String get tripsPreviewActive;
+
+  /// No description provided for @tripsPreviewAwaiting.
+  ///
+  /// In fr, this message translates to:
+  /// **'🧭 Arrivée à confirmer'**
+  String get tripsPreviewAwaiting;
+
+  /// No description provided for @tripsPreviewAlert.
+  ///
+  /// In fr, this message translates to:
+  /// **'🆘 Alerte trajet'**
+  String get tripsPreviewAlert;
+
+  /// No description provided for @tripsPreviewSos.
+  ///
+  /// In fr, this message translates to:
+  /// **'🆘 SOS'**
+  String get tripsPreviewSos;
+
+  /// No description provided for @tripsPreviewConfirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'✅ Bien arrivé·e'**
+  String get tripsPreviewConfirmed;
+
+  /// No description provided for @tripsPreviewStopped.
+  ///
+  /// In fr, this message translates to:
+  /// **'🧭 Trajet arrêté'**
+  String get tripsPreviewStopped;
+
+  /// No description provided for @tripsPreviewFalseAlarm.
+  ///
+  /// In fr, this message translates to:
+  /// **'✅ Fausse alerte'**
+  String get tripsPreviewFalseAlarm;
 }
 
 class _AppLocalizationsDelegate
