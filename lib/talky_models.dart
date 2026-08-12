@@ -1361,6 +1361,304 @@ String? _nullableContactListKind(dynamic raw) {
   return s.isEmpty ? null : s;
 }
 
+// ── TRAJETS DE CONFIANCE ─────────────────────────────────────────────
+
+/// États d'un trajet, dans l'ordre du cycle de vie — mêmes libellés que
+/// l'`ENUM` de `trip.state` (migration serveur 051).
+abstract final class TripState {
+  static const active = 'active';
+  static const awaitingConfirm = 'awaiting_confirm';
+  static const alert = 'alert';
+  static const sos = 'sos';
+  static const closedConfirmed = 'closed_confirmed';
+  static const closedCancelled = 'closed_cancelled';
+  static const closedExpired = 'closed_expired';
+  static const closedUnwatched = 'closed_unwatched';
+
+  static const open = {active, awaitingConfirm, alert, sos};
+
+  /// Rouge à l'écran, et seuls états où le cercle a été prévenu.
+  static const alerting = {alert, sos};
+
+  static bool isOpen(String s) => open.contains(s);
+  static bool isAlerting(String s) => alerting.contains(s);
+}
+
+abstract final class TripKind {
+  static const taxi = 'taxi';
+  static const meeting = 'meeting';
+  static const sos = 'sos';
+}
+
+/// Une position d'un trajet.
+///
+/// [recordedAt] est l'heure de **capture**, pas de réception : c'est elle qu'on
+/// affiche (« maj il y a 8 s »). Un point renvoyé par le battement porte un
+/// horodatage ancien alors qu'il vient d'arriver — c'est précisément ce qui
+/// distingue « immobile » de « traceur mort ».
+class TripPoint {
+  final double lat;
+  final double lng;
+  final int? accuracyM;
+  final int? batteryPct;
+  final DateTime recordedAt;
+
+  const TripPoint({
+    required this.lat,
+    required this.lng,
+    required this.recordedAt,
+    this.accuracyM,
+    this.batteryPct,
+  });
+
+  /// Une position trop imprécise reste affichable — grisée, avec son cercle de
+  /// précision — mais ne doit jamais servir à décider d'une arrivée.
+  bool get isReliable => accuracyM == null || accuracyM! <= 100;
+
+  static TripPoint? tryParse(dynamic raw) {
+    if (raw is! Map) return null;
+    final lat = (raw['lat'] as num?)?.toDouble();
+    final lng = (raw['lng'] as num?)?.toDouble();
+    final at = DateTime.tryParse(raw['recordedAt']?.toString() ?? '');
+    if (lat == null || lng == null || at == null) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return TripPoint(
+      lat: lat,
+      lng: lng,
+      recordedAt: at.toLocal(),
+      accuracyM: (raw['accuracyM'] as num?)?.toInt(),
+      batteryPct: (raw['batteryPct'] as num?)?.toInt(),
+    );
+  }
+}
+
+/// Un trajet de confiance.
+///
+/// Le même objet sert des deux côtés : [isOwner] distingue « le trajet que je
+/// partage » de « celui que je suis ». Côté membre, [watchers] est toujours
+/// vide et seul [watcherCount] est renseigné — les identités des autres
+/// destinataires ne sortent jamais du serveur.
+class Trip {
+  final int id;
+  final int ownerId;
+  final String kind;
+  final String state;
+  final DateTime? etaAt;
+  final int graceMinutes;
+  final int extensions;
+  final String? note;
+  final String? destLabel;
+
+  /// Coordonnées de la destination et rayon d'arrivée, quand une destination a
+  /// été déclarée. Le serveur les renvoie dans `destination` ; l'écran de suivi
+  /// s'en sert pour dessiner le but et son cercle.
+  final double? destLat;
+  final double? destLng;
+  final int? destRadiusM;
+
+  final TripPoint? lastPoint;
+  final bool stale;
+  final DateTime startedAt;
+
+  /// Horodatage de l'alerte, s'il y en a eu une. Non nul ⇒ le cercle a été
+  /// prévenu, ce qui déclenche aussi le verrou de suppression de 30 jours.
+  final DateTime? alertedAt;
+  final DateTime? closedAt;
+  final String? closeReason;
+  final bool isOwner;
+  final int watcherCount;
+  final List<TripWatcher> watchers;
+
+  const Trip({
+    required this.id,
+    required this.ownerId,
+    required this.kind,
+    required this.state,
+    required this.startedAt,
+    this.alertedAt,
+    this.etaAt,
+    this.graceMinutes = 10,
+    this.extensions = 0,
+    this.note,
+    this.destLabel,
+    this.destLat,
+    this.destLng,
+    this.destRadiusM,
+    this.lastPoint,
+    this.stale = false,
+    this.closedAt,
+    this.closeReason,
+    this.isOwner = false,
+    this.watcherCount = 0,
+    this.watchers = const [],
+  });
+
+  bool get isOpen => TripState.isOpen(state);
+  bool get isAlerting => TripState.isAlerting(state);
+
+  /// Heure à laquelle le cercle sera prévenu si rien n'est confirmé. C'est la
+  /// phrase du contrat affichée au départ — jamais déduite, toujours calculée
+  /// à partir des valeurs que le serveur a figées dans le trajet.
+  DateTime? get alertAt =>
+      etaAt?.add(Duration(minutes: graceMinutes));
+
+  factory Trip.fromJson(Map<String, dynamic> json, {bool? isOwner}) {
+    final dest = json['destination'];
+    return Trip(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      ownerId: (json['ownerId'] as num?)?.toInt() ?? 0,
+      kind: json['kind']?.toString() ?? TripKind.meeting,
+      state: json['state']?.toString() ?? TripState.active,
+      etaAt: DateTime.tryParse(json['etaAt']?.toString() ?? '')?.toLocal(),
+      graceMinutes: (json['graceMinutes'] as num?)?.toInt() ?? 10,
+      extensions: (json['extensions'] as num?)?.toInt() ?? 0,
+      note: (json['note']?.toString().isEmpty ?? true)
+          ? null
+          : json['note'].toString(),
+      destLabel: dest is Map ? dest['label']?.toString() : null,
+      destLat: dest is Map ? (dest['lat'] as num?)?.toDouble() : null,
+      destLng: dest is Map ? (dest['lng'] as num?)?.toDouble() : null,
+      destRadiusM: dest is Map ? (dest['radiusM'] as num?)?.toInt() : null,
+      lastPoint: TripPoint.tryParse(json['lastPoint']),
+      stale: json['stale'] == true,
+      startedAt:
+          DateTime.tryParse(json['startedAt']?.toString() ?? '')?.toLocal() ??
+              DateTime.now(),
+      alertedAt:
+          DateTime.tryParse(json['alertedAt']?.toString() ?? '')?.toLocal(),
+      closedAt: DateTime.tryParse(json['closedAt']?.toString() ?? '')?.toLocal(),
+      closeReason: json['closeReason']?.toString(),
+      isOwner: isOwner ?? false,
+      watcherCount: (json['watcherCount'] as num?)?.toInt() ??
+          (json['watchers'] is List ? (json['watchers'] as List).length : 0),
+      watchers: json['watchers'] is List
+          ? (json['watchers'] as List)
+              .whereType<Map>()
+              .map((w) => TripWatcher.fromJson(w.cast<String, dynamic>()))
+              .toList()
+          : const [],
+    );
+  }
+}
+
+/// Un destinataire d'un trajet. Visible du propriétaire seul.
+class TripWatcher {
+  final int alanyaID;
+  final String nom;
+  final String? avatarUrl;
+
+  /// « Maman a vu » — le seul retour qu'un destinataire puisse donner.
+  final DateTime? seenAt;
+
+  const TripWatcher({
+    required this.alanyaID,
+    required this.nom,
+    this.avatarUrl,
+    this.seenAt,
+  });
+
+  factory TripWatcher.fromJson(Map<String, dynamic> json) => TripWatcher(
+        alanyaID: (json['alanyaID'] as num?)?.toInt() ?? 0,
+        nom: json['nom']?.toString() ?? '',
+        avatarUrl: json['avatarUrl']?.toString(),
+        seenAt: DateTime.tryParse(json['seenAt']?.toString() ?? '')?.toLocal(),
+      );
+}
+
+/// Cadence GPS servie par le serveur.
+///
+/// ⚠ Ces valeurs ne doivent **jamais** être codées en dur : la cadence
+/// s'exécute sur le téléphone, et la régler imposerait une publication de
+/// l'application. [TripPolicy.fallback] n'existe que pour le cas où le serveur
+/// ne renvoie pas le champ (version antérieure, réponse tronquée).
+class TripPolicy {
+  final Map<String, TripRegime> regimes;
+  final int staleFactor;
+  final int staleMarginS;
+  final int maxAccuracyM;
+  final int lowBatteryPct;
+
+  /// Délai de grâce après l'échéance, avant que le cercle ne soit prévenu.
+  /// Servi en lecture pour que l'écran de composition puisse écrire l'heure
+  /// d'alerte **exacte** avant même que le trajet n'existe. Le client ne
+  /// l'envoie jamais : le serveur la fige à la création.
+  final int graceMinutes;
+  final int maxDurationH;
+
+  const TripPolicy({
+    required this.regimes,
+    this.staleFactor = 3,
+    this.staleMarginS = 30,
+    this.maxAccuracyM = 100,
+    this.lowBatteryPct = 15,
+    this.graceMinutes = 10,
+    this.maxDurationH = 12,
+  });
+
+  static const fallback = TripPolicy(regimes: {
+    'nominal': TripRegime(
+        accuracy: 'balanced', filterM: 75, floorS: 15, beatS: 90),
+    'approach': TripRegime(
+        accuracy: 'high', filterM: 30, floorS: 8, beatS: 30),
+    'alert': TripRegime(accuracy: 'best', filterM: 15, floorS: 5, beatS: 15),
+  });
+
+  TripRegime regime(String name) => regimes[name] ?? regimes['nominal']!;
+
+  /// Délai de silence au-delà duquel on affiche « position indisponible ».
+  /// Dérivé du battement : sans rythme attendu, aucun moyen de décider à quel
+  /// moment un silence devient anormal.
+  Duration staleAfter(String regimeName) =>
+      Duration(seconds: regime(regimeName).beatS * staleFactor + staleMarginS);
+
+  factory TripPolicy.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return fallback;
+    final raw = json['regimes'];
+    if (raw is! Map || raw.isEmpty) return fallback;
+    return TripPolicy(
+      regimes: raw.map((k, v) => MapEntry(
+            k.toString(),
+            TripRegime.fromJson((v as Map).cast<String, dynamic>()),
+          )),
+      staleFactor: (json['staleFactor'] as num?)?.toInt() ?? 3,
+      staleMarginS: (json['staleMarginS'] as num?)?.toInt() ?? 30,
+      maxAccuracyM: (json['maxAccuracyM'] as num?)?.toInt() ?? 100,
+      lowBatteryPct: (json['lowBatteryPct'] as num?)?.toInt() ?? 15,
+      graceMinutes:
+          (json['contract']?['graceMinutes'] as num?)?.toInt() ?? 10,
+      maxDurationH:
+          (json['contract']?['maxDurationH'] as num?)?.toInt() ?? 12,
+    );
+  }
+}
+
+/// Un régime de cadence.
+///
+/// [filterM] déclenche à la **distance parcourue**, pas au temps : à l'arrêt,
+/// le système n'émet rien. [floorS] borne le débit — sans lui, un taxi en ville
+/// produirait une position toutes les six secondes. [beatS] force un envoi en
+/// l'absence de mouvement, ce qui rend l'immobilité lisible.
+class TripRegime {
+  final String accuracy;
+  final int filterM;
+  final int floorS;
+  final int beatS;
+
+  const TripRegime({
+    required this.accuracy,
+    required this.filterM,
+    required this.floorS,
+    required this.beatS,
+  });
+
+  factory TripRegime.fromJson(Map<String, dynamic> json) => TripRegime(
+        accuracy: json['accuracy']?.toString() ?? 'balanced',
+        filterM: (json['filterM'] as num?)?.toInt() ?? 75,
+        floorS: (json['floorS'] as num?)?.toInt() ?? 15,
+        beatS: (json['beatS'] as num?)?.toInt() ?? 90,
+      );
+}
+
 // ── SOCKET EVENTS ────────────────────────────────────────────────────
 // Noms exacts utilisés par le backend Node.js
 
@@ -1525,4 +1823,45 @@ class SocketEvents {
   static const statusLiked    = 'status:liked';
   static const statusUnliked  = 'status:unliked';
   static const statusDeleted  = 'status:deleted';
+
+  // ── Trajets de confiance ───────────────────────────────────────────
+  // La room `trip_<id>` ne porte QUE le flux de positions. Tout ce qui doit
+  // atteindre un destinataire — état, alerte, clôture — arrive par le compte
+  // (`user_<id>`) et par la notification poussée, jamais par la seule room.
+
+  /// Client → serveur. Rejoint le flux d'un trajet. Le serveur répond par
+  /// [tripStateEvent], qui porte aussi la politique de cadence à appliquer.
+  static const tripSubscribe   = 'trip:subscribe';
+  static const tripUnsubscribe = 'trip:unsubscribe';
+
+  /// Une position. Émise sans attendre d'accusé : si elle se perd, la suivante
+  /// la remplace. Refusée si l'appareil n'est pas le porteur du trajet.
+  static const tripPosition    = 'trip:position';
+
+  /// Vidange du tampon hors ligne, 200 points au plus. Chaque point garde son
+  /// horodatage de capture ; le serveur déduplique par `clientSeq`.
+  static const tripPositionBatch = 'trip:position_batch';
+  static const tripBatchAck      = 'trip:batch_ack';
+
+  /// Reprend l'émission depuis cet appareil. L'ancien porteur reçoit
+  /// [tripDeviceRevoked] et arrête son suivi — sans quoi la trace zigzaguerait.
+  static const tripClaimDevice   = 'trip:claim_device';
+  static const tripDeviceRevoked = 'trip:device_revoked';
+
+  /// GPS coupé, permission retirée, économiseur de batterie. Information, pas
+  /// alerte : l'échéance continue de courir côté serveur.
+  static const tripSignal = 'trip:signal';
+
+  /// « J'ai vu » — le seul retour qu'un destinataire puisse donner.
+  static const tripSeen        = 'trip:seen';
+  static const tripWatcherSeen = 'trip:watcher_seen';
+
+  // Serveur → client
+  static const tripStateEvent  = 'trip:state';
+  static const tripStarted     = 'trip:started';
+  static const tripCardUpdate  = 'trip:card_update';
+  static const tripStale       = 'trip:stale';
+  static const tripAlert       = 'trip:alert';
+  static const tripClosed      = 'trip:closed';
+  static const tripError       = 'trip:error';
 }

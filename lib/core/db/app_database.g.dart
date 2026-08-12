@@ -7962,6 +7962,2285 @@ class LocalContactListMembersCompanion
   }
 }
 
+class $LocalTripsTable extends LocalTrips
+    with TableInfo<$LocalTripsTable, LocalTrip> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalTripsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ownerIdMeta = const VerificationMeta(
+    'ownerId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerId = GeneratedColumn<int>(
+    'owner_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('meeting'),
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('active'),
+  );
+  static const VerificationMeta _etaAtMeta = const VerificationMeta('etaAt');
+  @override
+  late final GeneratedColumn<DateTime> etaAt = GeneratedColumn<DateTime>(
+    'eta_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _graceMinutesMeta = const VerificationMeta(
+    'graceMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> graceMinutes = GeneratedColumn<int>(
+    'grace_minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(10),
+  );
+  static const VerificationMeta _extensionsMeta = const VerificationMeta(
+    'extensions',
+  );
+  @override
+  late final GeneratedColumn<int> extensions = GeneratedColumn<int>(
+    'extensions',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _destLabelMeta = const VerificationMeta(
+    'destLabel',
+  );
+  @override
+  late final GeneratedColumn<String> destLabel = GeneratedColumn<String>(
+    'dest_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _destLatMeta = const VerificationMeta(
+    'destLat',
+  );
+  @override
+  late final GeneratedColumn<double> destLat = GeneratedColumn<double>(
+    'dest_lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _destLngMeta = const VerificationMeta(
+    'destLng',
+  );
+  @override
+  late final GeneratedColumn<double> destLng = GeneratedColumn<double>(
+    'dest_lng',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _destRadiusMMeta = const VerificationMeta(
+    'destRadiusM',
+  );
+  @override
+  late final GeneratedColumn<int> destRadiusM = GeneratedColumn<int>(
+    'dest_radius_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastLatMeta = const VerificationMeta(
+    'lastLat',
+  );
+  @override
+  late final GeneratedColumn<double> lastLat = GeneratedColumn<double>(
+    'last_lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastLngMeta = const VerificationMeta(
+    'lastLng',
+  );
+  @override
+  late final GeneratedColumn<double> lastLng = GeneratedColumn<double>(
+    'last_lng',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastAccuracyMMeta = const VerificationMeta(
+    'lastAccuracyM',
+  );
+  @override
+  late final GeneratedColumn<int> lastAccuracyM = GeneratedColumn<int>(
+    'last_accuracy_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastBatteryMeta = const VerificationMeta(
+    'lastBattery',
+  );
+  @override
+  late final GeneratedColumn<int> lastBattery = GeneratedColumn<int>(
+    'last_battery',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastAtMeta = const VerificationMeta('lastAt');
+  @override
+  late final GeneratedColumn<DateTime> lastAt = GeneratedColumn<DateTime>(
+    'last_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _staleMeta = const VerificationMeta('stale');
+  @override
+  late final GeneratedColumn<bool> stale = GeneratedColumn<bool>(
+    'stale',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("stale" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _closedAtMeta = const VerificationMeta(
+    'closedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> closedAt = GeneratedColumn<DateTime>(
+    'closed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _closeReasonMeta = const VerificationMeta(
+    'closeReason',
+  );
+  @override
+  late final GeneratedColumn<String> closeReason = GeneratedColumn<String>(
+    'close_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isOwnerMeta = const VerificationMeta(
+    'isOwner',
+  );
+  @override
+  late final GeneratedColumn<bool> isOwner = GeneratedColumn<bool>(
+    'is_owner',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_owner" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _watcherCountMeta = const VerificationMeta(
+    'watcherCount',
+  );
+  @override
+  late final GeneratedColumn<int> watcherCount = GeneratedColumn<int>(
+    'watcher_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    ownerId,
+    kind,
+    state,
+    etaAt,
+    graceMinutes,
+    extensions,
+    note,
+    destLabel,
+    destLat,
+    destLng,
+    destRadiusM,
+    lastLat,
+    lastLng,
+    lastAccuracyM,
+    lastBattery,
+    lastAt,
+    stale,
+    startedAt,
+    closedAt,
+    closeReason,
+    isOwner,
+    watcherCount,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_trips';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalTrip> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('owner_id')) {
+      context.handle(
+        _ownerIdMeta,
+        ownerId.isAcceptableOrUnknown(data['owner_id']!, _ownerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerIdMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    if (data.containsKey('eta_at')) {
+      context.handle(
+        _etaAtMeta,
+        etaAt.isAcceptableOrUnknown(data['eta_at']!, _etaAtMeta),
+      );
+    }
+    if (data.containsKey('grace_minutes')) {
+      context.handle(
+        _graceMinutesMeta,
+        graceMinutes.isAcceptableOrUnknown(
+          data['grace_minutes']!,
+          _graceMinutesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('extensions')) {
+      context.handle(
+        _extensionsMeta,
+        extensions.isAcceptableOrUnknown(data['extensions']!, _extensionsMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('dest_label')) {
+      context.handle(
+        _destLabelMeta,
+        destLabel.isAcceptableOrUnknown(data['dest_label']!, _destLabelMeta),
+      );
+    }
+    if (data.containsKey('dest_lat')) {
+      context.handle(
+        _destLatMeta,
+        destLat.isAcceptableOrUnknown(data['dest_lat']!, _destLatMeta),
+      );
+    }
+    if (data.containsKey('dest_lng')) {
+      context.handle(
+        _destLngMeta,
+        destLng.isAcceptableOrUnknown(data['dest_lng']!, _destLngMeta),
+      );
+    }
+    if (data.containsKey('dest_radius_m')) {
+      context.handle(
+        _destRadiusMMeta,
+        destRadiusM.isAcceptableOrUnknown(
+          data['dest_radius_m']!,
+          _destRadiusMMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_lat')) {
+      context.handle(
+        _lastLatMeta,
+        lastLat.isAcceptableOrUnknown(data['last_lat']!, _lastLatMeta),
+      );
+    }
+    if (data.containsKey('last_lng')) {
+      context.handle(
+        _lastLngMeta,
+        lastLng.isAcceptableOrUnknown(data['last_lng']!, _lastLngMeta),
+      );
+    }
+    if (data.containsKey('last_accuracy_m')) {
+      context.handle(
+        _lastAccuracyMMeta,
+        lastAccuracyM.isAcceptableOrUnknown(
+          data['last_accuracy_m']!,
+          _lastAccuracyMMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_battery')) {
+      context.handle(
+        _lastBatteryMeta,
+        lastBattery.isAcceptableOrUnknown(
+          data['last_battery']!,
+          _lastBatteryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_at')) {
+      context.handle(
+        _lastAtMeta,
+        lastAt.isAcceptableOrUnknown(data['last_at']!, _lastAtMeta),
+      );
+    }
+    if (data.containsKey('stale')) {
+      context.handle(
+        _staleMeta,
+        stale.isAcceptableOrUnknown(data['stale']!, _staleMeta),
+      );
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('closed_at')) {
+      context.handle(
+        _closedAtMeta,
+        closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta),
+      );
+    }
+    if (data.containsKey('close_reason')) {
+      context.handle(
+        _closeReasonMeta,
+        closeReason.isAcceptableOrUnknown(
+          data['close_reason']!,
+          _closeReasonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_owner')) {
+      context.handle(
+        _isOwnerMeta,
+        isOwner.isAcceptableOrUnknown(data['is_owner']!, _isOwnerMeta),
+      );
+    }
+    if (data.containsKey('watcher_count')) {
+      context.handle(
+        _watcherCountMeta,
+        watcherCount.isAcceptableOrUnknown(
+          data['watcher_count']!,
+          _watcherCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalTrip map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalTrip(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      ownerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_id'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      )!,
+      etaAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}eta_at'],
+      ),
+      graceMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grace_minutes'],
+      )!,
+      extensions: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}extensions'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      destLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}dest_label'],
+      ),
+      destLat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dest_lat'],
+      ),
+      destLng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dest_lng'],
+      ),
+      destRadiusM: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dest_radius_m'],
+      ),
+      lastLat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}last_lat'],
+      ),
+      lastLng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}last_lng'],
+      ),
+      lastAccuracyM: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_accuracy_m'],
+      ),
+      lastBattery: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_battery'],
+      ),
+      lastAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_at'],
+      ),
+      stale: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}stale'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}started_at'],
+      )!,
+      closedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}closed_at'],
+      ),
+      closeReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}close_reason'],
+      ),
+      isOwner: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_owner'],
+      )!,
+      watcherCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}watcher_count'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalTripsTable createAlias(String alias) {
+    return $LocalTripsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalTrip extends DataClass implements Insertable<LocalTrip> {
+  final int id;
+  final int ownerId;
+
+  /// `taxi` | `meeting` | `sos`.
+  final String kind;
+
+  /// `active` | `awaiting_confirm` | `alert` | `sos` | `closed_*`.
+  final String state;
+  final DateTime? etaAt;
+  final int graceMinutes;
+  final int extensions;
+  final String? note;
+  final String? destLabel;
+
+  /// Destination déclarée au départ, avec son rayon d'arrivée.
+  ///
+  /// Mise en cache pour une seule raison : l'écran de suivi doit pouvoir
+  /// dessiner le point d'arrivée et son cercle **avant** la première réponse du
+  /// serveur, et continuer à les dessiner hors ligne. Sans ces colonnes, la
+  /// carte n'affiche qu'un pin qui se déplace sans qu'on sache vers quoi.
+  ///
+  /// Le libellé, lui, est résolu une seule fois à la création : géocoder la
+  /// trace enverrait tout le déplacement à un tiers.
+  final double? destLat;
+  final double? destLng;
+  final int? destRadiusM;
+
+  /// Dernière position connue. `lastAt` est l'heure de **capture** : c'est elle
+  /// qu'on affiche (« maj il y a 8 s »), pas l'heure de réception.
+  final double? lastLat;
+  final double? lastLng;
+  final int? lastAccuracyM;
+  final int? lastBattery;
+  final DateTime? lastAt;
+
+  /// Plus de position reçue depuis le seuil de péremption. **Pas une alerte** :
+  /// une information, affichée en gris.
+  final bool stale;
+  final DateTime startedAt;
+  final DateTime? closedAt;
+  final String? closeReason;
+  final bool isOwner;
+
+  /// Nombre de destinataires. Côté membre, c'est tout ce qu'on connaît d'eux :
+  /// le nombre rassure, les identités exposeraient le carnet d'adresses d'un
+  /// autre.
+  final int watcherCount;
+  final DateTime cachedAt;
+  const LocalTrip({
+    required this.id,
+    required this.ownerId,
+    required this.kind,
+    required this.state,
+    this.etaAt,
+    required this.graceMinutes,
+    required this.extensions,
+    this.note,
+    this.destLabel,
+    this.destLat,
+    this.destLng,
+    this.destRadiusM,
+    this.lastLat,
+    this.lastLng,
+    this.lastAccuracyM,
+    this.lastBattery,
+    this.lastAt,
+    required this.stale,
+    required this.startedAt,
+    this.closedAt,
+    this.closeReason,
+    required this.isOwner,
+    required this.watcherCount,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['owner_id'] = Variable<int>(ownerId);
+    map['kind'] = Variable<String>(kind);
+    map['state'] = Variable<String>(state);
+    if (!nullToAbsent || etaAt != null) {
+      map['eta_at'] = Variable<DateTime>(etaAt);
+    }
+    map['grace_minutes'] = Variable<int>(graceMinutes);
+    map['extensions'] = Variable<int>(extensions);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || destLabel != null) {
+      map['dest_label'] = Variable<String>(destLabel);
+    }
+    if (!nullToAbsent || destLat != null) {
+      map['dest_lat'] = Variable<double>(destLat);
+    }
+    if (!nullToAbsent || destLng != null) {
+      map['dest_lng'] = Variable<double>(destLng);
+    }
+    if (!nullToAbsent || destRadiusM != null) {
+      map['dest_radius_m'] = Variable<int>(destRadiusM);
+    }
+    if (!nullToAbsent || lastLat != null) {
+      map['last_lat'] = Variable<double>(lastLat);
+    }
+    if (!nullToAbsent || lastLng != null) {
+      map['last_lng'] = Variable<double>(lastLng);
+    }
+    if (!nullToAbsent || lastAccuracyM != null) {
+      map['last_accuracy_m'] = Variable<int>(lastAccuracyM);
+    }
+    if (!nullToAbsent || lastBattery != null) {
+      map['last_battery'] = Variable<int>(lastBattery);
+    }
+    if (!nullToAbsent || lastAt != null) {
+      map['last_at'] = Variable<DateTime>(lastAt);
+    }
+    map['stale'] = Variable<bool>(stale);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    if (!nullToAbsent || closedAt != null) {
+      map['closed_at'] = Variable<DateTime>(closedAt);
+    }
+    if (!nullToAbsent || closeReason != null) {
+      map['close_reason'] = Variable<String>(closeReason);
+    }
+    map['is_owner'] = Variable<bool>(isOwner);
+    map['watcher_count'] = Variable<int>(watcherCount);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  LocalTripsCompanion toCompanion(bool nullToAbsent) {
+    return LocalTripsCompanion(
+      id: Value(id),
+      ownerId: Value(ownerId),
+      kind: Value(kind),
+      state: Value(state),
+      etaAt: etaAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(etaAt),
+      graceMinutes: Value(graceMinutes),
+      extensions: Value(extensions),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      destLabel: destLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destLabel),
+      destLat: destLat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destLat),
+      destLng: destLng == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destLng),
+      destRadiusM: destRadiusM == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destRadiusM),
+      lastLat: lastLat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastLat),
+      lastLng: lastLng == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastLng),
+      lastAccuracyM: lastAccuracyM == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAccuracyM),
+      lastBattery: lastBattery == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastBattery),
+      lastAt: lastAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAt),
+      stale: Value(stale),
+      startedAt: Value(startedAt),
+      closedAt: closedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedAt),
+      closeReason: closeReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closeReason),
+      isOwner: Value(isOwner),
+      watcherCount: Value(watcherCount),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory LocalTrip.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalTrip(
+      id: serializer.fromJson<int>(json['id']),
+      ownerId: serializer.fromJson<int>(json['ownerId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      state: serializer.fromJson<String>(json['state']),
+      etaAt: serializer.fromJson<DateTime?>(json['etaAt']),
+      graceMinutes: serializer.fromJson<int>(json['graceMinutes']),
+      extensions: serializer.fromJson<int>(json['extensions']),
+      note: serializer.fromJson<String?>(json['note']),
+      destLabel: serializer.fromJson<String?>(json['destLabel']),
+      destLat: serializer.fromJson<double?>(json['destLat']),
+      destLng: serializer.fromJson<double?>(json['destLng']),
+      destRadiusM: serializer.fromJson<int?>(json['destRadiusM']),
+      lastLat: serializer.fromJson<double?>(json['lastLat']),
+      lastLng: serializer.fromJson<double?>(json['lastLng']),
+      lastAccuracyM: serializer.fromJson<int?>(json['lastAccuracyM']),
+      lastBattery: serializer.fromJson<int?>(json['lastBattery']),
+      lastAt: serializer.fromJson<DateTime?>(json['lastAt']),
+      stale: serializer.fromJson<bool>(json['stale']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      closedAt: serializer.fromJson<DateTime?>(json['closedAt']),
+      closeReason: serializer.fromJson<String?>(json['closeReason']),
+      isOwner: serializer.fromJson<bool>(json['isOwner']),
+      watcherCount: serializer.fromJson<int>(json['watcherCount']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'ownerId': serializer.toJson<int>(ownerId),
+      'kind': serializer.toJson<String>(kind),
+      'state': serializer.toJson<String>(state),
+      'etaAt': serializer.toJson<DateTime?>(etaAt),
+      'graceMinutes': serializer.toJson<int>(graceMinutes),
+      'extensions': serializer.toJson<int>(extensions),
+      'note': serializer.toJson<String?>(note),
+      'destLabel': serializer.toJson<String?>(destLabel),
+      'destLat': serializer.toJson<double?>(destLat),
+      'destLng': serializer.toJson<double?>(destLng),
+      'destRadiusM': serializer.toJson<int?>(destRadiusM),
+      'lastLat': serializer.toJson<double?>(lastLat),
+      'lastLng': serializer.toJson<double?>(lastLng),
+      'lastAccuracyM': serializer.toJson<int?>(lastAccuracyM),
+      'lastBattery': serializer.toJson<int?>(lastBattery),
+      'lastAt': serializer.toJson<DateTime?>(lastAt),
+      'stale': serializer.toJson<bool>(stale),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'closedAt': serializer.toJson<DateTime?>(closedAt),
+      'closeReason': serializer.toJson<String?>(closeReason),
+      'isOwner': serializer.toJson<bool>(isOwner),
+      'watcherCount': serializer.toJson<int>(watcherCount),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  LocalTrip copyWith({
+    int? id,
+    int? ownerId,
+    String? kind,
+    String? state,
+    Value<DateTime?> etaAt = const Value.absent(),
+    int? graceMinutes,
+    int? extensions,
+    Value<String?> note = const Value.absent(),
+    Value<String?> destLabel = const Value.absent(),
+    Value<double?> destLat = const Value.absent(),
+    Value<double?> destLng = const Value.absent(),
+    Value<int?> destRadiusM = const Value.absent(),
+    Value<double?> lastLat = const Value.absent(),
+    Value<double?> lastLng = const Value.absent(),
+    Value<int?> lastAccuracyM = const Value.absent(),
+    Value<int?> lastBattery = const Value.absent(),
+    Value<DateTime?> lastAt = const Value.absent(),
+    bool? stale,
+    DateTime? startedAt,
+    Value<DateTime?> closedAt = const Value.absent(),
+    Value<String?> closeReason = const Value.absent(),
+    bool? isOwner,
+    int? watcherCount,
+    DateTime? cachedAt,
+  }) => LocalTrip(
+    id: id ?? this.id,
+    ownerId: ownerId ?? this.ownerId,
+    kind: kind ?? this.kind,
+    state: state ?? this.state,
+    etaAt: etaAt.present ? etaAt.value : this.etaAt,
+    graceMinutes: graceMinutes ?? this.graceMinutes,
+    extensions: extensions ?? this.extensions,
+    note: note.present ? note.value : this.note,
+    destLabel: destLabel.present ? destLabel.value : this.destLabel,
+    destLat: destLat.present ? destLat.value : this.destLat,
+    destLng: destLng.present ? destLng.value : this.destLng,
+    destRadiusM: destRadiusM.present ? destRadiusM.value : this.destRadiusM,
+    lastLat: lastLat.present ? lastLat.value : this.lastLat,
+    lastLng: lastLng.present ? lastLng.value : this.lastLng,
+    lastAccuracyM: lastAccuracyM.present
+        ? lastAccuracyM.value
+        : this.lastAccuracyM,
+    lastBattery: lastBattery.present ? lastBattery.value : this.lastBattery,
+    lastAt: lastAt.present ? lastAt.value : this.lastAt,
+    stale: stale ?? this.stale,
+    startedAt: startedAt ?? this.startedAt,
+    closedAt: closedAt.present ? closedAt.value : this.closedAt,
+    closeReason: closeReason.present ? closeReason.value : this.closeReason,
+    isOwner: isOwner ?? this.isOwner,
+    watcherCount: watcherCount ?? this.watcherCount,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  LocalTrip copyWithCompanion(LocalTripsCompanion data) {
+    return LocalTrip(
+      id: data.id.present ? data.id.value : this.id,
+      ownerId: data.ownerId.present ? data.ownerId.value : this.ownerId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      state: data.state.present ? data.state.value : this.state,
+      etaAt: data.etaAt.present ? data.etaAt.value : this.etaAt,
+      graceMinutes: data.graceMinutes.present
+          ? data.graceMinutes.value
+          : this.graceMinutes,
+      extensions: data.extensions.present
+          ? data.extensions.value
+          : this.extensions,
+      note: data.note.present ? data.note.value : this.note,
+      destLabel: data.destLabel.present ? data.destLabel.value : this.destLabel,
+      destLat: data.destLat.present ? data.destLat.value : this.destLat,
+      destLng: data.destLng.present ? data.destLng.value : this.destLng,
+      destRadiusM: data.destRadiusM.present
+          ? data.destRadiusM.value
+          : this.destRadiusM,
+      lastLat: data.lastLat.present ? data.lastLat.value : this.lastLat,
+      lastLng: data.lastLng.present ? data.lastLng.value : this.lastLng,
+      lastAccuracyM: data.lastAccuracyM.present
+          ? data.lastAccuracyM.value
+          : this.lastAccuracyM,
+      lastBattery: data.lastBattery.present
+          ? data.lastBattery.value
+          : this.lastBattery,
+      lastAt: data.lastAt.present ? data.lastAt.value : this.lastAt,
+      stale: data.stale.present ? data.stale.value : this.stale,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
+      closeReason: data.closeReason.present
+          ? data.closeReason.value
+          : this.closeReason,
+      isOwner: data.isOwner.present ? data.isOwner.value : this.isOwner,
+      watcherCount: data.watcherCount.present
+          ? data.watcherCount.value
+          : this.watcherCount,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTrip(')
+          ..write('id: $id, ')
+          ..write('ownerId: $ownerId, ')
+          ..write('kind: $kind, ')
+          ..write('state: $state, ')
+          ..write('etaAt: $etaAt, ')
+          ..write('graceMinutes: $graceMinutes, ')
+          ..write('extensions: $extensions, ')
+          ..write('note: $note, ')
+          ..write('destLabel: $destLabel, ')
+          ..write('destLat: $destLat, ')
+          ..write('destLng: $destLng, ')
+          ..write('destRadiusM: $destRadiusM, ')
+          ..write('lastLat: $lastLat, ')
+          ..write('lastLng: $lastLng, ')
+          ..write('lastAccuracyM: $lastAccuracyM, ')
+          ..write('lastBattery: $lastBattery, ')
+          ..write('lastAt: $lastAt, ')
+          ..write('stale: $stale, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('closeReason: $closeReason, ')
+          ..write('isOwner: $isOwner, ')
+          ..write('watcherCount: $watcherCount, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    ownerId,
+    kind,
+    state,
+    etaAt,
+    graceMinutes,
+    extensions,
+    note,
+    destLabel,
+    destLat,
+    destLng,
+    destRadiusM,
+    lastLat,
+    lastLng,
+    lastAccuracyM,
+    lastBattery,
+    lastAt,
+    stale,
+    startedAt,
+    closedAt,
+    closeReason,
+    isOwner,
+    watcherCount,
+    cachedAt,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalTrip &&
+          other.id == this.id &&
+          other.ownerId == this.ownerId &&
+          other.kind == this.kind &&
+          other.state == this.state &&
+          other.etaAt == this.etaAt &&
+          other.graceMinutes == this.graceMinutes &&
+          other.extensions == this.extensions &&
+          other.note == this.note &&
+          other.destLabel == this.destLabel &&
+          other.destLat == this.destLat &&
+          other.destLng == this.destLng &&
+          other.destRadiusM == this.destRadiusM &&
+          other.lastLat == this.lastLat &&
+          other.lastLng == this.lastLng &&
+          other.lastAccuracyM == this.lastAccuracyM &&
+          other.lastBattery == this.lastBattery &&
+          other.lastAt == this.lastAt &&
+          other.stale == this.stale &&
+          other.startedAt == this.startedAt &&
+          other.closedAt == this.closedAt &&
+          other.closeReason == this.closeReason &&
+          other.isOwner == this.isOwner &&
+          other.watcherCount == this.watcherCount &&
+          other.cachedAt == this.cachedAt);
+}
+
+class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
+  final Value<int> id;
+  final Value<int> ownerId;
+  final Value<String> kind;
+  final Value<String> state;
+  final Value<DateTime?> etaAt;
+  final Value<int> graceMinutes;
+  final Value<int> extensions;
+  final Value<String?> note;
+  final Value<String?> destLabel;
+  final Value<double?> destLat;
+  final Value<double?> destLng;
+  final Value<int?> destRadiusM;
+  final Value<double?> lastLat;
+  final Value<double?> lastLng;
+  final Value<int?> lastAccuracyM;
+  final Value<int?> lastBattery;
+  final Value<DateTime?> lastAt;
+  final Value<bool> stale;
+  final Value<DateTime> startedAt;
+  final Value<DateTime?> closedAt;
+  final Value<String?> closeReason;
+  final Value<bool> isOwner;
+  final Value<int> watcherCount;
+  final Value<DateTime> cachedAt;
+  const LocalTripsCompanion({
+    this.id = const Value.absent(),
+    this.ownerId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.state = const Value.absent(),
+    this.etaAt = const Value.absent(),
+    this.graceMinutes = const Value.absent(),
+    this.extensions = const Value.absent(),
+    this.note = const Value.absent(),
+    this.destLabel = const Value.absent(),
+    this.destLat = const Value.absent(),
+    this.destLng = const Value.absent(),
+    this.destRadiusM = const Value.absent(),
+    this.lastLat = const Value.absent(),
+    this.lastLng = const Value.absent(),
+    this.lastAccuracyM = const Value.absent(),
+    this.lastBattery = const Value.absent(),
+    this.lastAt = const Value.absent(),
+    this.stale = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.closeReason = const Value.absent(),
+    this.isOwner = const Value.absent(),
+    this.watcherCount = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+  });
+  LocalTripsCompanion.insert({
+    this.id = const Value.absent(),
+    required int ownerId,
+    this.kind = const Value.absent(),
+    this.state = const Value.absent(),
+    this.etaAt = const Value.absent(),
+    this.graceMinutes = const Value.absent(),
+    this.extensions = const Value.absent(),
+    this.note = const Value.absent(),
+    this.destLabel = const Value.absent(),
+    this.destLat = const Value.absent(),
+    this.destLng = const Value.absent(),
+    this.destRadiusM = const Value.absent(),
+    this.lastLat = const Value.absent(),
+    this.lastLng = const Value.absent(),
+    this.lastAccuracyM = const Value.absent(),
+    this.lastBattery = const Value.absent(),
+    this.lastAt = const Value.absent(),
+    this.stale = const Value.absent(),
+    required DateTime startedAt,
+    this.closedAt = const Value.absent(),
+    this.closeReason = const Value.absent(),
+    this.isOwner = const Value.absent(),
+    this.watcherCount = const Value.absent(),
+    required DateTime cachedAt,
+  }) : ownerId = Value(ownerId),
+       startedAt = Value(startedAt),
+       cachedAt = Value(cachedAt);
+  static Insertable<LocalTrip> custom({
+    Expression<int>? id,
+    Expression<int>? ownerId,
+    Expression<String>? kind,
+    Expression<String>? state,
+    Expression<DateTime>? etaAt,
+    Expression<int>? graceMinutes,
+    Expression<int>? extensions,
+    Expression<String>? note,
+    Expression<String>? destLabel,
+    Expression<double>? destLat,
+    Expression<double>? destLng,
+    Expression<int>? destRadiusM,
+    Expression<double>? lastLat,
+    Expression<double>? lastLng,
+    Expression<int>? lastAccuracyM,
+    Expression<int>? lastBattery,
+    Expression<DateTime>? lastAt,
+    Expression<bool>? stale,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? closedAt,
+    Expression<String>? closeReason,
+    Expression<bool>? isOwner,
+    Expression<int>? watcherCount,
+    Expression<DateTime>? cachedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ownerId != null) 'owner_id': ownerId,
+      if (kind != null) 'kind': kind,
+      if (state != null) 'state': state,
+      if (etaAt != null) 'eta_at': etaAt,
+      if (graceMinutes != null) 'grace_minutes': graceMinutes,
+      if (extensions != null) 'extensions': extensions,
+      if (note != null) 'note': note,
+      if (destLabel != null) 'dest_label': destLabel,
+      if (destLat != null) 'dest_lat': destLat,
+      if (destLng != null) 'dest_lng': destLng,
+      if (destRadiusM != null) 'dest_radius_m': destRadiusM,
+      if (lastLat != null) 'last_lat': lastLat,
+      if (lastLng != null) 'last_lng': lastLng,
+      if (lastAccuracyM != null) 'last_accuracy_m': lastAccuracyM,
+      if (lastBattery != null) 'last_battery': lastBattery,
+      if (lastAt != null) 'last_at': lastAt,
+      if (stale != null) 'stale': stale,
+      if (startedAt != null) 'started_at': startedAt,
+      if (closedAt != null) 'closed_at': closedAt,
+      if (closeReason != null) 'close_reason': closeReason,
+      if (isOwner != null) 'is_owner': isOwner,
+      if (watcherCount != null) 'watcher_count': watcherCount,
+      if (cachedAt != null) 'cached_at': cachedAt,
+    });
+  }
+
+  LocalTripsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? ownerId,
+    Value<String>? kind,
+    Value<String>? state,
+    Value<DateTime?>? etaAt,
+    Value<int>? graceMinutes,
+    Value<int>? extensions,
+    Value<String?>? note,
+    Value<String?>? destLabel,
+    Value<double?>? destLat,
+    Value<double?>? destLng,
+    Value<int?>? destRadiusM,
+    Value<double?>? lastLat,
+    Value<double?>? lastLng,
+    Value<int?>? lastAccuracyM,
+    Value<int?>? lastBattery,
+    Value<DateTime?>? lastAt,
+    Value<bool>? stale,
+    Value<DateTime>? startedAt,
+    Value<DateTime?>? closedAt,
+    Value<String?>? closeReason,
+    Value<bool>? isOwner,
+    Value<int>? watcherCount,
+    Value<DateTime>? cachedAt,
+  }) {
+    return LocalTripsCompanion(
+      id: id ?? this.id,
+      ownerId: ownerId ?? this.ownerId,
+      kind: kind ?? this.kind,
+      state: state ?? this.state,
+      etaAt: etaAt ?? this.etaAt,
+      graceMinutes: graceMinutes ?? this.graceMinutes,
+      extensions: extensions ?? this.extensions,
+      note: note ?? this.note,
+      destLabel: destLabel ?? this.destLabel,
+      destLat: destLat ?? this.destLat,
+      destLng: destLng ?? this.destLng,
+      destRadiusM: destRadiusM ?? this.destRadiusM,
+      lastLat: lastLat ?? this.lastLat,
+      lastLng: lastLng ?? this.lastLng,
+      lastAccuracyM: lastAccuracyM ?? this.lastAccuracyM,
+      lastBattery: lastBattery ?? this.lastBattery,
+      lastAt: lastAt ?? this.lastAt,
+      stale: stale ?? this.stale,
+      startedAt: startedAt ?? this.startedAt,
+      closedAt: closedAt ?? this.closedAt,
+      closeReason: closeReason ?? this.closeReason,
+      isOwner: isOwner ?? this.isOwner,
+      watcherCount: watcherCount ?? this.watcherCount,
+      cachedAt: cachedAt ?? this.cachedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (ownerId.present) {
+      map['owner_id'] = Variable<int>(ownerId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (etaAt.present) {
+      map['eta_at'] = Variable<DateTime>(etaAt.value);
+    }
+    if (graceMinutes.present) {
+      map['grace_minutes'] = Variable<int>(graceMinutes.value);
+    }
+    if (extensions.present) {
+      map['extensions'] = Variable<int>(extensions.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (destLabel.present) {
+      map['dest_label'] = Variable<String>(destLabel.value);
+    }
+    if (destLat.present) {
+      map['dest_lat'] = Variable<double>(destLat.value);
+    }
+    if (destLng.present) {
+      map['dest_lng'] = Variable<double>(destLng.value);
+    }
+    if (destRadiusM.present) {
+      map['dest_radius_m'] = Variable<int>(destRadiusM.value);
+    }
+    if (lastLat.present) {
+      map['last_lat'] = Variable<double>(lastLat.value);
+    }
+    if (lastLng.present) {
+      map['last_lng'] = Variable<double>(lastLng.value);
+    }
+    if (lastAccuracyM.present) {
+      map['last_accuracy_m'] = Variable<int>(lastAccuracyM.value);
+    }
+    if (lastBattery.present) {
+      map['last_battery'] = Variable<int>(lastBattery.value);
+    }
+    if (lastAt.present) {
+      map['last_at'] = Variable<DateTime>(lastAt.value);
+    }
+    if (stale.present) {
+      map['stale'] = Variable<bool>(stale.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (closedAt.present) {
+      map['closed_at'] = Variable<DateTime>(closedAt.value);
+    }
+    if (closeReason.present) {
+      map['close_reason'] = Variable<String>(closeReason.value);
+    }
+    if (isOwner.present) {
+      map['is_owner'] = Variable<bool>(isOwner.value);
+    }
+    if (watcherCount.present) {
+      map['watcher_count'] = Variable<int>(watcherCount.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTripsCompanion(')
+          ..write('id: $id, ')
+          ..write('ownerId: $ownerId, ')
+          ..write('kind: $kind, ')
+          ..write('state: $state, ')
+          ..write('etaAt: $etaAt, ')
+          ..write('graceMinutes: $graceMinutes, ')
+          ..write('extensions: $extensions, ')
+          ..write('note: $note, ')
+          ..write('destLabel: $destLabel, ')
+          ..write('destLat: $destLat, ')
+          ..write('destLng: $destLng, ')
+          ..write('destRadiusM: $destRadiusM, ')
+          ..write('lastLat: $lastLat, ')
+          ..write('lastLng: $lastLng, ')
+          ..write('lastAccuracyM: $lastAccuracyM, ')
+          ..write('lastBattery: $lastBattery, ')
+          ..write('lastAt: $lastAt, ')
+          ..write('stale: $stale, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('closeReason: $closeReason, ')
+          ..write('isOwner: $isOwner, ')
+          ..write('watcherCount: $watcherCount, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalTripPointsTable extends LocalTripPoints
+    with TableInfo<$LocalTripPointsTable, LocalTripPoint> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalTripPointsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tripIdMeta = const VerificationMeta('tripId');
+  @override
+  late final GeneratedColumn<int> tripId = GeneratedColumn<int>(
+    'trip_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _clientSeqMeta = const VerificationMeta(
+    'clientSeq',
+  );
+  @override
+  late final GeneratedColumn<int> clientSeq = GeneratedColumn<int>(
+    'client_seq',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _latMeta = const VerificationMeta('lat');
+  @override
+  late final GeneratedColumn<double> lat = GeneratedColumn<double>(
+    'lat',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lngMeta = const VerificationMeta('lng');
+  @override
+  late final GeneratedColumn<double> lng = GeneratedColumn<double>(
+    'lng',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accuracyMMeta = const VerificationMeta(
+    'accuracyM',
+  );
+  @override
+  late final GeneratedColumn<int> accuracyM = GeneratedColumn<int>(
+    'accuracy_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _speedKmhMeta = const VerificationMeta(
+    'speedKmh',
+  );
+  @override
+  late final GeneratedColumn<int> speedKmh = GeneratedColumn<int>(
+    'speed_kmh',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _batteryMeta = const VerificationMeta(
+    'battery',
+  );
+  @override
+  late final GeneratedColumn<int> battery = GeneratedColumn<int>(
+    'battery',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _recordedAtMeta = const VerificationMeta(
+    'recordedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> recordedAt = GeneratedColumn<DateTime>(
+    'recorded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pendingMeta = const VerificationMeta(
+    'pending',
+  );
+  @override
+  late final GeneratedColumn<bool> pending = GeneratedColumn<bool>(
+    'pending',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pending" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tripId,
+    clientSeq,
+    lat,
+    lng,
+    accuracyM,
+    speedKmh,
+    battery,
+    recordedAt,
+    pending,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_trip_points';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalTripPoint> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('trip_id')) {
+      context.handle(
+        _tripIdMeta,
+        tripId.isAcceptableOrUnknown(data['trip_id']!, _tripIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tripIdMeta);
+    }
+    if (data.containsKey('client_seq')) {
+      context.handle(
+        _clientSeqMeta,
+        clientSeq.isAcceptableOrUnknown(data['client_seq']!, _clientSeqMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clientSeqMeta);
+    }
+    if (data.containsKey('lat')) {
+      context.handle(
+        _latMeta,
+        lat.isAcceptableOrUnknown(data['lat']!, _latMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_latMeta);
+    }
+    if (data.containsKey('lng')) {
+      context.handle(
+        _lngMeta,
+        lng.isAcceptableOrUnknown(data['lng']!, _lngMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lngMeta);
+    }
+    if (data.containsKey('accuracy_m')) {
+      context.handle(
+        _accuracyMMeta,
+        accuracyM.isAcceptableOrUnknown(data['accuracy_m']!, _accuracyMMeta),
+      );
+    }
+    if (data.containsKey('speed_kmh')) {
+      context.handle(
+        _speedKmhMeta,
+        speedKmh.isAcceptableOrUnknown(data['speed_kmh']!, _speedKmhMeta),
+      );
+    }
+    if (data.containsKey('battery')) {
+      context.handle(
+        _batteryMeta,
+        battery.isAcceptableOrUnknown(data['battery']!, _batteryMeta),
+      );
+    }
+    if (data.containsKey('recorded_at')) {
+      context.handle(
+        _recordedAtMeta,
+        recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedAtMeta);
+    }
+    if (data.containsKey('pending')) {
+      context.handle(
+        _pendingMeta,
+        pending.isAcceptableOrUnknown(data['pending']!, _pendingMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tripId, clientSeq};
+  @override
+  LocalTripPoint map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalTripPoint(
+      tripId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}trip_id'],
+      )!,
+      clientSeq: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}client_seq'],
+      )!,
+      lat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lat'],
+      )!,
+      lng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lng'],
+      )!,
+      accuracyM: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}accuracy_m'],
+      ),
+      speedKmh: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}speed_kmh'],
+      ),
+      battery: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}battery'],
+      ),
+      recordedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recorded_at'],
+      )!,
+      pending: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pending'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalTripPointsTable createAlias(String alias) {
+    return $LocalTripPointsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalTripPoint extends DataClass implements Insertable<LocalTripPoint> {
+  final int tripId;
+  final int clientSeq;
+  final double lat;
+  final double lng;
+  final int? accuracyM;
+  final int? speedKmh;
+  final int? battery;
+
+  /// Heure de capture réelle. Un point tamponné hors ligne repart avec **son**
+  /// horodatage, jamais celui de l'envoi.
+  final DateTime recordedAt;
+  final bool pending;
+  const LocalTripPoint({
+    required this.tripId,
+    required this.clientSeq,
+    required this.lat,
+    required this.lng,
+    this.accuracyM,
+    this.speedKmh,
+    this.battery,
+    required this.recordedAt,
+    required this.pending,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['trip_id'] = Variable<int>(tripId);
+    map['client_seq'] = Variable<int>(clientSeq);
+    map['lat'] = Variable<double>(lat);
+    map['lng'] = Variable<double>(lng);
+    if (!nullToAbsent || accuracyM != null) {
+      map['accuracy_m'] = Variable<int>(accuracyM);
+    }
+    if (!nullToAbsent || speedKmh != null) {
+      map['speed_kmh'] = Variable<int>(speedKmh);
+    }
+    if (!nullToAbsent || battery != null) {
+      map['battery'] = Variable<int>(battery);
+    }
+    map['recorded_at'] = Variable<DateTime>(recordedAt);
+    map['pending'] = Variable<bool>(pending);
+    return map;
+  }
+
+  LocalTripPointsCompanion toCompanion(bool nullToAbsent) {
+    return LocalTripPointsCompanion(
+      tripId: Value(tripId),
+      clientSeq: Value(clientSeq),
+      lat: Value(lat),
+      lng: Value(lng),
+      accuracyM: accuracyM == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accuracyM),
+      speedKmh: speedKmh == null && nullToAbsent
+          ? const Value.absent()
+          : Value(speedKmh),
+      battery: battery == null && nullToAbsent
+          ? const Value.absent()
+          : Value(battery),
+      recordedAt: Value(recordedAt),
+      pending: Value(pending),
+    );
+  }
+
+  factory LocalTripPoint.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalTripPoint(
+      tripId: serializer.fromJson<int>(json['tripId']),
+      clientSeq: serializer.fromJson<int>(json['clientSeq']),
+      lat: serializer.fromJson<double>(json['lat']),
+      lng: serializer.fromJson<double>(json['lng']),
+      accuracyM: serializer.fromJson<int?>(json['accuracyM']),
+      speedKmh: serializer.fromJson<int?>(json['speedKmh']),
+      battery: serializer.fromJson<int?>(json['battery']),
+      recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+      pending: serializer.fromJson<bool>(json['pending']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tripId': serializer.toJson<int>(tripId),
+      'clientSeq': serializer.toJson<int>(clientSeq),
+      'lat': serializer.toJson<double>(lat),
+      'lng': serializer.toJson<double>(lng),
+      'accuracyM': serializer.toJson<int?>(accuracyM),
+      'speedKmh': serializer.toJson<int?>(speedKmh),
+      'battery': serializer.toJson<int?>(battery),
+      'recordedAt': serializer.toJson<DateTime>(recordedAt),
+      'pending': serializer.toJson<bool>(pending),
+    };
+  }
+
+  LocalTripPoint copyWith({
+    int? tripId,
+    int? clientSeq,
+    double? lat,
+    double? lng,
+    Value<int?> accuracyM = const Value.absent(),
+    Value<int?> speedKmh = const Value.absent(),
+    Value<int?> battery = const Value.absent(),
+    DateTime? recordedAt,
+    bool? pending,
+  }) => LocalTripPoint(
+    tripId: tripId ?? this.tripId,
+    clientSeq: clientSeq ?? this.clientSeq,
+    lat: lat ?? this.lat,
+    lng: lng ?? this.lng,
+    accuracyM: accuracyM.present ? accuracyM.value : this.accuracyM,
+    speedKmh: speedKmh.present ? speedKmh.value : this.speedKmh,
+    battery: battery.present ? battery.value : this.battery,
+    recordedAt: recordedAt ?? this.recordedAt,
+    pending: pending ?? this.pending,
+  );
+  LocalTripPoint copyWithCompanion(LocalTripPointsCompanion data) {
+    return LocalTripPoint(
+      tripId: data.tripId.present ? data.tripId.value : this.tripId,
+      clientSeq: data.clientSeq.present ? data.clientSeq.value : this.clientSeq,
+      lat: data.lat.present ? data.lat.value : this.lat,
+      lng: data.lng.present ? data.lng.value : this.lng,
+      accuracyM: data.accuracyM.present ? data.accuracyM.value : this.accuracyM,
+      speedKmh: data.speedKmh.present ? data.speedKmh.value : this.speedKmh,
+      battery: data.battery.present ? data.battery.value : this.battery,
+      recordedAt: data.recordedAt.present
+          ? data.recordedAt.value
+          : this.recordedAt,
+      pending: data.pending.present ? data.pending.value : this.pending,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTripPoint(')
+          ..write('tripId: $tripId, ')
+          ..write('clientSeq: $clientSeq, ')
+          ..write('lat: $lat, ')
+          ..write('lng: $lng, ')
+          ..write('accuracyM: $accuracyM, ')
+          ..write('speedKmh: $speedKmh, ')
+          ..write('battery: $battery, ')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('pending: $pending')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    tripId,
+    clientSeq,
+    lat,
+    lng,
+    accuracyM,
+    speedKmh,
+    battery,
+    recordedAt,
+    pending,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalTripPoint &&
+          other.tripId == this.tripId &&
+          other.clientSeq == this.clientSeq &&
+          other.lat == this.lat &&
+          other.lng == this.lng &&
+          other.accuracyM == this.accuracyM &&
+          other.speedKmh == this.speedKmh &&
+          other.battery == this.battery &&
+          other.recordedAt == this.recordedAt &&
+          other.pending == this.pending);
+}
+
+class LocalTripPointsCompanion extends UpdateCompanion<LocalTripPoint> {
+  final Value<int> tripId;
+  final Value<int> clientSeq;
+  final Value<double> lat;
+  final Value<double> lng;
+  final Value<int?> accuracyM;
+  final Value<int?> speedKmh;
+  final Value<int?> battery;
+  final Value<DateTime> recordedAt;
+  final Value<bool> pending;
+  final Value<int> rowid;
+  const LocalTripPointsCompanion({
+    this.tripId = const Value.absent(),
+    this.clientSeq = const Value.absent(),
+    this.lat = const Value.absent(),
+    this.lng = const Value.absent(),
+    this.accuracyM = const Value.absent(),
+    this.speedKmh = const Value.absent(),
+    this.battery = const Value.absent(),
+    this.recordedAt = const Value.absent(),
+    this.pending = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalTripPointsCompanion.insert({
+    required int tripId,
+    required int clientSeq,
+    required double lat,
+    required double lng,
+    this.accuracyM = const Value.absent(),
+    this.speedKmh = const Value.absent(),
+    this.battery = const Value.absent(),
+    required DateTime recordedAt,
+    this.pending = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tripId = Value(tripId),
+       clientSeq = Value(clientSeq),
+       lat = Value(lat),
+       lng = Value(lng),
+       recordedAt = Value(recordedAt);
+  static Insertable<LocalTripPoint> custom({
+    Expression<int>? tripId,
+    Expression<int>? clientSeq,
+    Expression<double>? lat,
+    Expression<double>? lng,
+    Expression<int>? accuracyM,
+    Expression<int>? speedKmh,
+    Expression<int>? battery,
+    Expression<DateTime>? recordedAt,
+    Expression<bool>? pending,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tripId != null) 'trip_id': tripId,
+      if (clientSeq != null) 'client_seq': clientSeq,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+      if (accuracyM != null) 'accuracy_m': accuracyM,
+      if (speedKmh != null) 'speed_kmh': speedKmh,
+      if (battery != null) 'battery': battery,
+      if (recordedAt != null) 'recorded_at': recordedAt,
+      if (pending != null) 'pending': pending,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalTripPointsCompanion copyWith({
+    Value<int>? tripId,
+    Value<int>? clientSeq,
+    Value<double>? lat,
+    Value<double>? lng,
+    Value<int?>? accuracyM,
+    Value<int?>? speedKmh,
+    Value<int?>? battery,
+    Value<DateTime>? recordedAt,
+    Value<bool>? pending,
+    Value<int>? rowid,
+  }) {
+    return LocalTripPointsCompanion(
+      tripId: tripId ?? this.tripId,
+      clientSeq: clientSeq ?? this.clientSeq,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      accuracyM: accuracyM ?? this.accuracyM,
+      speedKmh: speedKmh ?? this.speedKmh,
+      battery: battery ?? this.battery,
+      recordedAt: recordedAt ?? this.recordedAt,
+      pending: pending ?? this.pending,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tripId.present) {
+      map['trip_id'] = Variable<int>(tripId.value);
+    }
+    if (clientSeq.present) {
+      map['client_seq'] = Variable<int>(clientSeq.value);
+    }
+    if (lat.present) {
+      map['lat'] = Variable<double>(lat.value);
+    }
+    if (lng.present) {
+      map['lng'] = Variable<double>(lng.value);
+    }
+    if (accuracyM.present) {
+      map['accuracy_m'] = Variable<int>(accuracyM.value);
+    }
+    if (speedKmh.present) {
+      map['speed_kmh'] = Variable<int>(speedKmh.value);
+    }
+    if (battery.present) {
+      map['battery'] = Variable<int>(battery.value);
+    }
+    if (recordedAt.present) {
+      map['recorded_at'] = Variable<DateTime>(recordedAt.value);
+    }
+    if (pending.present) {
+      map['pending'] = Variable<bool>(pending.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTripPointsCompanion(')
+          ..write('tripId: $tripId, ')
+          ..write('clientSeq: $clientSeq, ')
+          ..write('lat: $lat, ')
+          ..write('lng: $lng, ')
+          ..write('accuracyM: $accuracyM, ')
+          ..write('speedKmh: $speedKmh, ')
+          ..write('battery: $battery, ')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('pending: $pending, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalTripEventsTable extends LocalTripEvents
+    with TableInfo<$LocalTripEventsTable, LocalTripEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalTripEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tripIdMeta = const VerificationMeta('tripId');
+  @override
+  late final GeneratedColumn<int> tripId = GeneratedColumn<int>(
+    'trip_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _seqMeta = const VerificationMeta('seq');
+  @override
+  late final GeneratedColumn<int> seq = GeneratedColumn<int>(
+    'seq',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _actorIdMeta = const VerificationMeta(
+    'actorId',
+  );
+  @override
+  late final GeneratedColumn<int> actorId = GeneratedColumn<int>(
+    'actor_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _metaMeta = const VerificationMeta('meta');
+  @override
+  late final GeneratedColumn<String> meta = GeneratedColumn<String>(
+    'meta',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _atMeta = const VerificationMeta('at');
+  @override
+  late final GeneratedColumn<DateTime> at = GeneratedColumn<DateTime>(
+    'at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [tripId, seq, kind, actorId, meta, at];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_trip_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalTripEvent> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('trip_id')) {
+      context.handle(
+        _tripIdMeta,
+        tripId.isAcceptableOrUnknown(data['trip_id']!, _tripIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tripIdMeta);
+    }
+    if (data.containsKey('seq')) {
+      context.handle(
+        _seqMeta,
+        seq.isAcceptableOrUnknown(data['seq']!, _seqMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_seqMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('actor_id')) {
+      context.handle(
+        _actorIdMeta,
+        actorId.isAcceptableOrUnknown(data['actor_id']!, _actorIdMeta),
+      );
+    }
+    if (data.containsKey('meta')) {
+      context.handle(
+        _metaMeta,
+        meta.isAcceptableOrUnknown(data['meta']!, _metaMeta),
+      );
+    }
+    if (data.containsKey('at')) {
+      context.handle(_atMeta, at.isAcceptableOrUnknown(data['at']!, _atMeta));
+    } else if (isInserting) {
+      context.missing(_atMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tripId, seq};
+  @override
+  LocalTripEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalTripEvent(
+      tripId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}trip_id'],
+      )!,
+      seq: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}seq'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      actorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}actor_id'],
+      ),
+      meta: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}meta'],
+      ),
+      at: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalTripEventsTable createAlias(String alias) {
+    return $LocalTripEventsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalTripEvent extends DataClass implements Insertable<LocalTripEvent> {
+  final int tripId;
+  final int seq;
+  final String kind;
+  final int? actorId;
+
+  /// JSON brut renvoyé par le serveur, décodé à l'affichage seulement.
+  final String? meta;
+  final DateTime at;
+  const LocalTripEvent({
+    required this.tripId,
+    required this.seq,
+    required this.kind,
+    this.actorId,
+    this.meta,
+    required this.at,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['trip_id'] = Variable<int>(tripId);
+    map['seq'] = Variable<int>(seq);
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || actorId != null) {
+      map['actor_id'] = Variable<int>(actorId);
+    }
+    if (!nullToAbsent || meta != null) {
+      map['meta'] = Variable<String>(meta);
+    }
+    map['at'] = Variable<DateTime>(at);
+    return map;
+  }
+
+  LocalTripEventsCompanion toCompanion(bool nullToAbsent) {
+    return LocalTripEventsCompanion(
+      tripId: Value(tripId),
+      seq: Value(seq),
+      kind: Value(kind),
+      actorId: actorId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(actorId),
+      meta: meta == null && nullToAbsent ? const Value.absent() : Value(meta),
+      at: Value(at),
+    );
+  }
+
+  factory LocalTripEvent.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalTripEvent(
+      tripId: serializer.fromJson<int>(json['tripId']),
+      seq: serializer.fromJson<int>(json['seq']),
+      kind: serializer.fromJson<String>(json['kind']),
+      actorId: serializer.fromJson<int?>(json['actorId']),
+      meta: serializer.fromJson<String?>(json['meta']),
+      at: serializer.fromJson<DateTime>(json['at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tripId': serializer.toJson<int>(tripId),
+      'seq': serializer.toJson<int>(seq),
+      'kind': serializer.toJson<String>(kind),
+      'actorId': serializer.toJson<int?>(actorId),
+      'meta': serializer.toJson<String?>(meta),
+      'at': serializer.toJson<DateTime>(at),
+    };
+  }
+
+  LocalTripEvent copyWith({
+    int? tripId,
+    int? seq,
+    String? kind,
+    Value<int?> actorId = const Value.absent(),
+    Value<String?> meta = const Value.absent(),
+    DateTime? at,
+  }) => LocalTripEvent(
+    tripId: tripId ?? this.tripId,
+    seq: seq ?? this.seq,
+    kind: kind ?? this.kind,
+    actorId: actorId.present ? actorId.value : this.actorId,
+    meta: meta.present ? meta.value : this.meta,
+    at: at ?? this.at,
+  );
+  LocalTripEvent copyWithCompanion(LocalTripEventsCompanion data) {
+    return LocalTripEvent(
+      tripId: data.tripId.present ? data.tripId.value : this.tripId,
+      seq: data.seq.present ? data.seq.value : this.seq,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      actorId: data.actorId.present ? data.actorId.value : this.actorId,
+      meta: data.meta.present ? data.meta.value : this.meta,
+      at: data.at.present ? data.at.value : this.at,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTripEvent(')
+          ..write('tripId: $tripId, ')
+          ..write('seq: $seq, ')
+          ..write('kind: $kind, ')
+          ..write('actorId: $actorId, ')
+          ..write('meta: $meta, ')
+          ..write('at: $at')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(tripId, seq, kind, actorId, meta, at);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalTripEvent &&
+          other.tripId == this.tripId &&
+          other.seq == this.seq &&
+          other.kind == this.kind &&
+          other.actorId == this.actorId &&
+          other.meta == this.meta &&
+          other.at == this.at);
+}
+
+class LocalTripEventsCompanion extends UpdateCompanion<LocalTripEvent> {
+  final Value<int> tripId;
+  final Value<int> seq;
+  final Value<String> kind;
+  final Value<int?> actorId;
+  final Value<String?> meta;
+  final Value<DateTime> at;
+  final Value<int> rowid;
+  const LocalTripEventsCompanion({
+    this.tripId = const Value.absent(),
+    this.seq = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.actorId = const Value.absent(),
+    this.meta = const Value.absent(),
+    this.at = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalTripEventsCompanion.insert({
+    required int tripId,
+    required int seq,
+    required String kind,
+    this.actorId = const Value.absent(),
+    this.meta = const Value.absent(),
+    required DateTime at,
+    this.rowid = const Value.absent(),
+  }) : tripId = Value(tripId),
+       seq = Value(seq),
+       kind = Value(kind),
+       at = Value(at);
+  static Insertable<LocalTripEvent> custom({
+    Expression<int>? tripId,
+    Expression<int>? seq,
+    Expression<String>? kind,
+    Expression<int>? actorId,
+    Expression<String>? meta,
+    Expression<DateTime>? at,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tripId != null) 'trip_id': tripId,
+      if (seq != null) 'seq': seq,
+      if (kind != null) 'kind': kind,
+      if (actorId != null) 'actor_id': actorId,
+      if (meta != null) 'meta': meta,
+      if (at != null) 'at': at,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalTripEventsCompanion copyWith({
+    Value<int>? tripId,
+    Value<int>? seq,
+    Value<String>? kind,
+    Value<int?>? actorId,
+    Value<String?>? meta,
+    Value<DateTime>? at,
+    Value<int>? rowid,
+  }) {
+    return LocalTripEventsCompanion(
+      tripId: tripId ?? this.tripId,
+      seq: seq ?? this.seq,
+      kind: kind ?? this.kind,
+      actorId: actorId ?? this.actorId,
+      meta: meta ?? this.meta,
+      at: at ?? this.at,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tripId.present) {
+      map['trip_id'] = Variable<int>(tripId.value);
+    }
+    if (seq.present) {
+      map['seq'] = Variable<int>(seq.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (actorId.present) {
+      map['actor_id'] = Variable<int>(actorId.value);
+    }
+    if (meta.present) {
+      map['meta'] = Variable<String>(meta.value);
+    }
+    if (at.present) {
+      map['at'] = Variable<DateTime>(at.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTripEventsCompanion(')
+          ..write('tripId: $tripId, ')
+          ..write('seq: $seq, ')
+          ..write('kind: $kind, ')
+          ..write('actorId: $actorId, ')
+          ..write('meta: $meta, ')
+          ..write('at: $at, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7978,6 +10257,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $LocalContactListsTable(this);
   late final $LocalContactListMembersTable localContactListMembers =
       $LocalContactListMembersTable(this);
+  late final $LocalTripsTable localTrips = $LocalTripsTable(this);
+  late final $LocalTripPointsTable localTripPoints = $LocalTripPointsTable(
+    this,
+  );
+  late final $LocalTripEventsTable localTripEvents = $LocalTripEventsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7992,6 +10278,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localMessageReactions,
     localContactLists,
     localContactListMembers,
+    localTrips,
+    localTripPoints,
+    localTripEvents,
   ];
 }
 
@@ -11619,6 +13908,1081 @@ typedef $$LocalContactListMembersTableProcessedTableManager =
       LocalContactListMember,
       PrefetchHooks Function()
     >;
+typedef $$LocalTripsTableCreateCompanionBuilder =
+    LocalTripsCompanion Function({
+      Value<int> id,
+      required int ownerId,
+      Value<String> kind,
+      Value<String> state,
+      Value<DateTime?> etaAt,
+      Value<int> graceMinutes,
+      Value<int> extensions,
+      Value<String?> note,
+      Value<String?> destLabel,
+      Value<double?> destLat,
+      Value<double?> destLng,
+      Value<int?> destRadiusM,
+      Value<double?> lastLat,
+      Value<double?> lastLng,
+      Value<int?> lastAccuracyM,
+      Value<int?> lastBattery,
+      Value<DateTime?> lastAt,
+      Value<bool> stale,
+      required DateTime startedAt,
+      Value<DateTime?> closedAt,
+      Value<String?> closeReason,
+      Value<bool> isOwner,
+      Value<int> watcherCount,
+      required DateTime cachedAt,
+    });
+typedef $$LocalTripsTableUpdateCompanionBuilder =
+    LocalTripsCompanion Function({
+      Value<int> id,
+      Value<int> ownerId,
+      Value<String> kind,
+      Value<String> state,
+      Value<DateTime?> etaAt,
+      Value<int> graceMinutes,
+      Value<int> extensions,
+      Value<String?> note,
+      Value<String?> destLabel,
+      Value<double?> destLat,
+      Value<double?> destLng,
+      Value<int?> destRadiusM,
+      Value<double?> lastLat,
+      Value<double?> lastLng,
+      Value<int?> lastAccuracyM,
+      Value<int?> lastBattery,
+      Value<DateTime?> lastAt,
+      Value<bool> stale,
+      Value<DateTime> startedAt,
+      Value<DateTime?> closedAt,
+      Value<String?> closeReason,
+      Value<bool> isOwner,
+      Value<int> watcherCount,
+      Value<DateTime> cachedAt,
+    });
+
+class $$LocalTripsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTripsTable> {
+  $$LocalTripsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ownerId => $composableBuilder(
+    column: $table.ownerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get etaAt => $composableBuilder(
+    column: $table.etaAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get graceMinutes => $composableBuilder(
+    column: $table.graceMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get extensions => $composableBuilder(
+    column: $table.extensions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get destLabel => $composableBuilder(
+    column: $table.destLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get destLat => $composableBuilder(
+    column: $table.destLat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get destLng => $composableBuilder(
+    column: $table.destLng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get destRadiusM => $composableBuilder(
+    column: $table.destRadiusM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lastLat => $composableBuilder(
+    column: $table.lastLat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lastLng => $composableBuilder(
+    column: $table.lastLng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastAccuracyM => $composableBuilder(
+    column: $table.lastAccuracyM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastBattery => $composableBuilder(
+    column: $table.lastBattery,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastAt => $composableBuilder(
+    column: $table.lastAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get stale => $composableBuilder(
+    column: $table.stale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get closeReason => $composableBuilder(
+    column: $table.closeReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isOwner => $composableBuilder(
+    column: $table.isOwner,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get watcherCount => $composableBuilder(
+    column: $table.watcherCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalTripsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTripsTable> {
+  $$LocalTripsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ownerId => $composableBuilder(
+    column: $table.ownerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get etaAt => $composableBuilder(
+    column: $table.etaAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get graceMinutes => $composableBuilder(
+    column: $table.graceMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get extensions => $composableBuilder(
+    column: $table.extensions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get destLabel => $composableBuilder(
+    column: $table.destLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get destLat => $composableBuilder(
+    column: $table.destLat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get destLng => $composableBuilder(
+    column: $table.destLng,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get destRadiusM => $composableBuilder(
+    column: $table.destRadiusM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lastLat => $composableBuilder(
+    column: $table.lastLat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lastLng => $composableBuilder(
+    column: $table.lastLng,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastAccuracyM => $composableBuilder(
+    column: $table.lastAccuracyM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastBattery => $composableBuilder(
+    column: $table.lastBattery,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastAt => $composableBuilder(
+    column: $table.lastAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get stale => $composableBuilder(
+    column: $table.stale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get closeReason => $composableBuilder(
+    column: $table.closeReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isOwner => $composableBuilder(
+    column: $table.isOwner,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get watcherCount => $composableBuilder(
+    column: $table.watcherCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalTripsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTripsTable> {
+  $$LocalTripsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get ownerId =>
+      $composableBuilder(column: $table.ownerId, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get etaAt =>
+      $composableBuilder(column: $table.etaAt, builder: (column) => column);
+
+  GeneratedColumn<int> get graceMinutes => $composableBuilder(
+    column: $table.graceMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get extensions => $composableBuilder(
+    column: $table.extensions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get destLabel =>
+      $composableBuilder(column: $table.destLabel, builder: (column) => column);
+
+  GeneratedColumn<double> get destLat =>
+      $composableBuilder(column: $table.destLat, builder: (column) => column);
+
+  GeneratedColumn<double> get destLng =>
+      $composableBuilder(column: $table.destLng, builder: (column) => column);
+
+  GeneratedColumn<int> get destRadiusM => $composableBuilder(
+    column: $table.destRadiusM,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get lastLat =>
+      $composableBuilder(column: $table.lastLat, builder: (column) => column);
+
+  GeneratedColumn<double> get lastLng =>
+      $composableBuilder(column: $table.lastLng, builder: (column) => column);
+
+  GeneratedColumn<int> get lastAccuracyM => $composableBuilder(
+    column: $table.lastAccuracyM,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastBattery => $composableBuilder(
+    column: $table.lastBattery,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastAt =>
+      $composableBuilder(column: $table.lastAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get stale =>
+      $composableBuilder(column: $table.stale, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get closedAt =>
+      $composableBuilder(column: $table.closedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get closeReason => $composableBuilder(
+    column: $table.closeReason,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isOwner =>
+      $composableBuilder(column: $table.isOwner, builder: (column) => column);
+
+  GeneratedColumn<int> get watcherCount => $composableBuilder(
+    column: $table.watcherCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$LocalTripsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalTripsTable,
+          LocalTrip,
+          $$LocalTripsTableFilterComposer,
+          $$LocalTripsTableOrderingComposer,
+          $$LocalTripsTableAnnotationComposer,
+          $$LocalTripsTableCreateCompanionBuilder,
+          $$LocalTripsTableUpdateCompanionBuilder,
+          (
+            LocalTrip,
+            BaseReferences<_$AppDatabase, $LocalTripsTable, LocalTrip>,
+          ),
+          LocalTrip,
+          PrefetchHooks Function()
+        > {
+  $$LocalTripsTableTableManager(_$AppDatabase db, $LocalTripsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalTripsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalTripsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalTripsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> ownerId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<DateTime?> etaAt = const Value.absent(),
+                Value<int> graceMinutes = const Value.absent(),
+                Value<int> extensions = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<String?> destLabel = const Value.absent(),
+                Value<double?> destLat = const Value.absent(),
+                Value<double?> destLng = const Value.absent(),
+                Value<int?> destRadiusM = const Value.absent(),
+                Value<double?> lastLat = const Value.absent(),
+                Value<double?> lastLng = const Value.absent(),
+                Value<int?> lastAccuracyM = const Value.absent(),
+                Value<int?> lastBattery = const Value.absent(),
+                Value<DateTime?> lastAt = const Value.absent(),
+                Value<bool> stale = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime?> closedAt = const Value.absent(),
+                Value<String?> closeReason = const Value.absent(),
+                Value<bool> isOwner = const Value.absent(),
+                Value<int> watcherCount = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+              }) => LocalTripsCompanion(
+                id: id,
+                ownerId: ownerId,
+                kind: kind,
+                state: state,
+                etaAt: etaAt,
+                graceMinutes: graceMinutes,
+                extensions: extensions,
+                note: note,
+                destLabel: destLabel,
+                destLat: destLat,
+                destLng: destLng,
+                destRadiusM: destRadiusM,
+                lastLat: lastLat,
+                lastLng: lastLng,
+                lastAccuracyM: lastAccuracyM,
+                lastBattery: lastBattery,
+                lastAt: lastAt,
+                stale: stale,
+                startedAt: startedAt,
+                closedAt: closedAt,
+                closeReason: closeReason,
+                isOwner: isOwner,
+                watcherCount: watcherCount,
+                cachedAt: cachedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int ownerId,
+                Value<String> kind = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<DateTime?> etaAt = const Value.absent(),
+                Value<int> graceMinutes = const Value.absent(),
+                Value<int> extensions = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<String?> destLabel = const Value.absent(),
+                Value<double?> destLat = const Value.absent(),
+                Value<double?> destLng = const Value.absent(),
+                Value<int?> destRadiusM = const Value.absent(),
+                Value<double?> lastLat = const Value.absent(),
+                Value<double?> lastLng = const Value.absent(),
+                Value<int?> lastAccuracyM = const Value.absent(),
+                Value<int?> lastBattery = const Value.absent(),
+                Value<DateTime?> lastAt = const Value.absent(),
+                Value<bool> stale = const Value.absent(),
+                required DateTime startedAt,
+                Value<DateTime?> closedAt = const Value.absent(),
+                Value<String?> closeReason = const Value.absent(),
+                Value<bool> isOwner = const Value.absent(),
+                Value<int> watcherCount = const Value.absent(),
+                required DateTime cachedAt,
+              }) => LocalTripsCompanion.insert(
+                id: id,
+                ownerId: ownerId,
+                kind: kind,
+                state: state,
+                etaAt: etaAt,
+                graceMinutes: graceMinutes,
+                extensions: extensions,
+                note: note,
+                destLabel: destLabel,
+                destLat: destLat,
+                destLng: destLng,
+                destRadiusM: destRadiusM,
+                lastLat: lastLat,
+                lastLng: lastLng,
+                lastAccuracyM: lastAccuracyM,
+                lastBattery: lastBattery,
+                lastAt: lastAt,
+                stale: stale,
+                startedAt: startedAt,
+                closedAt: closedAt,
+                closeReason: closeReason,
+                isOwner: isOwner,
+                watcherCount: watcherCount,
+                cachedAt: cachedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalTripsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalTripsTable,
+      LocalTrip,
+      $$LocalTripsTableFilterComposer,
+      $$LocalTripsTableOrderingComposer,
+      $$LocalTripsTableAnnotationComposer,
+      $$LocalTripsTableCreateCompanionBuilder,
+      $$LocalTripsTableUpdateCompanionBuilder,
+      (LocalTrip, BaseReferences<_$AppDatabase, $LocalTripsTable, LocalTrip>),
+      LocalTrip,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalTripPointsTableCreateCompanionBuilder =
+    LocalTripPointsCompanion Function({
+      required int tripId,
+      required int clientSeq,
+      required double lat,
+      required double lng,
+      Value<int?> accuracyM,
+      Value<int?> speedKmh,
+      Value<int?> battery,
+      required DateTime recordedAt,
+      Value<bool> pending,
+      Value<int> rowid,
+    });
+typedef $$LocalTripPointsTableUpdateCompanionBuilder =
+    LocalTripPointsCompanion Function({
+      Value<int> tripId,
+      Value<int> clientSeq,
+      Value<double> lat,
+      Value<double> lng,
+      Value<int?> accuracyM,
+      Value<int?> speedKmh,
+      Value<int?> battery,
+      Value<DateTime> recordedAt,
+      Value<bool> pending,
+      Value<int> rowid,
+    });
+
+class $$LocalTripPointsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTripPointsTable> {
+  $$LocalTripPointsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get tripId => $composableBuilder(
+    column: $table.tripId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get clientSeq => $composableBuilder(
+    column: $table.clientSeq,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lng => $composableBuilder(
+    column: $table.lng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get accuracyM => $composableBuilder(
+    column: $table.accuracyM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get speedKmh => $composableBuilder(
+    column: $table.speedKmh,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get battery => $composableBuilder(
+    column: $table.battery,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pending => $composableBuilder(
+    column: $table.pending,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalTripPointsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTripPointsTable> {
+  $$LocalTripPointsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get tripId => $composableBuilder(
+    column: $table.tripId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get clientSeq => $composableBuilder(
+    column: $table.clientSeq,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lng => $composableBuilder(
+    column: $table.lng,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get accuracyM => $composableBuilder(
+    column: $table.accuracyM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get speedKmh => $composableBuilder(
+    column: $table.speedKmh,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get battery => $composableBuilder(
+    column: $table.battery,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pending => $composableBuilder(
+    column: $table.pending,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalTripPointsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTripPointsTable> {
+  $$LocalTripPointsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get tripId =>
+      $composableBuilder(column: $table.tripId, builder: (column) => column);
+
+  GeneratedColumn<int> get clientSeq =>
+      $composableBuilder(column: $table.clientSeq, builder: (column) => column);
+
+  GeneratedColumn<double> get lat =>
+      $composableBuilder(column: $table.lat, builder: (column) => column);
+
+  GeneratedColumn<double> get lng =>
+      $composableBuilder(column: $table.lng, builder: (column) => column);
+
+  GeneratedColumn<int> get accuracyM =>
+      $composableBuilder(column: $table.accuracyM, builder: (column) => column);
+
+  GeneratedColumn<int> get speedKmh =>
+      $composableBuilder(column: $table.speedKmh, builder: (column) => column);
+
+  GeneratedColumn<int> get battery =>
+      $composableBuilder(column: $table.battery, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get pending =>
+      $composableBuilder(column: $table.pending, builder: (column) => column);
+}
+
+class $$LocalTripPointsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalTripPointsTable,
+          LocalTripPoint,
+          $$LocalTripPointsTableFilterComposer,
+          $$LocalTripPointsTableOrderingComposer,
+          $$LocalTripPointsTableAnnotationComposer,
+          $$LocalTripPointsTableCreateCompanionBuilder,
+          $$LocalTripPointsTableUpdateCompanionBuilder,
+          (
+            LocalTripPoint,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalTripPointsTable,
+              LocalTripPoint
+            >,
+          ),
+          LocalTripPoint,
+          PrefetchHooks Function()
+        > {
+  $$LocalTripPointsTableTableManager(
+    _$AppDatabase db,
+    $LocalTripPointsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalTripPointsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalTripPointsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalTripPointsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> tripId = const Value.absent(),
+                Value<int> clientSeq = const Value.absent(),
+                Value<double> lat = const Value.absent(),
+                Value<double> lng = const Value.absent(),
+                Value<int?> accuracyM = const Value.absent(),
+                Value<int?> speedKmh = const Value.absent(),
+                Value<int?> battery = const Value.absent(),
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<bool> pending = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTripPointsCompanion(
+                tripId: tripId,
+                clientSeq: clientSeq,
+                lat: lat,
+                lng: lng,
+                accuracyM: accuracyM,
+                speedKmh: speedKmh,
+                battery: battery,
+                recordedAt: recordedAt,
+                pending: pending,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int tripId,
+                required int clientSeq,
+                required double lat,
+                required double lng,
+                Value<int?> accuracyM = const Value.absent(),
+                Value<int?> speedKmh = const Value.absent(),
+                Value<int?> battery = const Value.absent(),
+                required DateTime recordedAt,
+                Value<bool> pending = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTripPointsCompanion.insert(
+                tripId: tripId,
+                clientSeq: clientSeq,
+                lat: lat,
+                lng: lng,
+                accuracyM: accuracyM,
+                speedKmh: speedKmh,
+                battery: battery,
+                recordedAt: recordedAt,
+                pending: pending,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalTripPointsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalTripPointsTable,
+      LocalTripPoint,
+      $$LocalTripPointsTableFilterComposer,
+      $$LocalTripPointsTableOrderingComposer,
+      $$LocalTripPointsTableAnnotationComposer,
+      $$LocalTripPointsTableCreateCompanionBuilder,
+      $$LocalTripPointsTableUpdateCompanionBuilder,
+      (
+        LocalTripPoint,
+        BaseReferences<_$AppDatabase, $LocalTripPointsTable, LocalTripPoint>,
+      ),
+      LocalTripPoint,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalTripEventsTableCreateCompanionBuilder =
+    LocalTripEventsCompanion Function({
+      required int tripId,
+      required int seq,
+      required String kind,
+      Value<int?> actorId,
+      Value<String?> meta,
+      required DateTime at,
+      Value<int> rowid,
+    });
+typedef $$LocalTripEventsTableUpdateCompanionBuilder =
+    LocalTripEventsCompanion Function({
+      Value<int> tripId,
+      Value<int> seq,
+      Value<String> kind,
+      Value<int?> actorId,
+      Value<String?> meta,
+      Value<DateTime> at,
+      Value<int> rowid,
+    });
+
+class $$LocalTripEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTripEventsTable> {
+  $$LocalTripEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get tripId => $composableBuilder(
+    column: $table.tripId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get seq => $composableBuilder(
+    column: $table.seq,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get actorId => $composableBuilder(
+    column: $table.actorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get meta => $composableBuilder(
+    column: $table.meta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get at => $composableBuilder(
+    column: $table.at,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalTripEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTripEventsTable> {
+  $$LocalTripEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get tripId => $composableBuilder(
+    column: $table.tripId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get seq => $composableBuilder(
+    column: $table.seq,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get actorId => $composableBuilder(
+    column: $table.actorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get meta => $composableBuilder(
+    column: $table.meta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get at => $composableBuilder(
+    column: $table.at,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalTripEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTripEventsTable> {
+  $$LocalTripEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get tripId =>
+      $composableBuilder(column: $table.tripId, builder: (column) => column);
+
+  GeneratedColumn<int> get seq =>
+      $composableBuilder(column: $table.seq, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get actorId =>
+      $composableBuilder(column: $table.actorId, builder: (column) => column);
+
+  GeneratedColumn<String> get meta =>
+      $composableBuilder(column: $table.meta, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get at =>
+      $composableBuilder(column: $table.at, builder: (column) => column);
+}
+
+class $$LocalTripEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalTripEventsTable,
+          LocalTripEvent,
+          $$LocalTripEventsTableFilterComposer,
+          $$LocalTripEventsTableOrderingComposer,
+          $$LocalTripEventsTableAnnotationComposer,
+          $$LocalTripEventsTableCreateCompanionBuilder,
+          $$LocalTripEventsTableUpdateCompanionBuilder,
+          (
+            LocalTripEvent,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalTripEventsTable,
+              LocalTripEvent
+            >,
+          ),
+          LocalTripEvent,
+          PrefetchHooks Function()
+        > {
+  $$LocalTripEventsTableTableManager(
+    _$AppDatabase db,
+    $LocalTripEventsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalTripEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalTripEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalTripEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> tripId = const Value.absent(),
+                Value<int> seq = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<int?> actorId = const Value.absent(),
+                Value<String?> meta = const Value.absent(),
+                Value<DateTime> at = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTripEventsCompanion(
+                tripId: tripId,
+                seq: seq,
+                kind: kind,
+                actorId: actorId,
+                meta: meta,
+                at: at,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int tripId,
+                required int seq,
+                required String kind,
+                Value<int?> actorId = const Value.absent(),
+                Value<String?> meta = const Value.absent(),
+                required DateTime at,
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTripEventsCompanion.insert(
+                tripId: tripId,
+                seq: seq,
+                kind: kind,
+                actorId: actorId,
+                meta: meta,
+                at: at,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalTripEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalTripEventsTable,
+      LocalTripEvent,
+      $$LocalTripEventsTableFilterComposer,
+      $$LocalTripEventsTableOrderingComposer,
+      $$LocalTripEventsTableAnnotationComposer,
+      $$LocalTripEventsTableCreateCompanionBuilder,
+      $$LocalTripEventsTableUpdateCompanionBuilder,
+      (
+        LocalTripEvent,
+        BaseReferences<_$AppDatabase, $LocalTripEventsTable, LocalTripEvent>,
+      ),
+      LocalTripEvent,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11644,4 +15008,10 @@ class $AppDatabaseManager {
         _db,
         _db.localContactListMembers,
       );
+  $$LocalTripsTableTableManager get localTrips =>
+      $$LocalTripsTableTableManager(_db, _db.localTrips);
+  $$LocalTripPointsTableTableManager get localTripPoints =>
+      $$LocalTripPointsTableTableManager(_db, _db.localTripPoints);
+  $$LocalTripEventsTableTableManager get localTripEvents =>
+      $$LocalTripEventsTableTableManager(_db, _db.localTripEvents);
 }

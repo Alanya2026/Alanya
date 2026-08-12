@@ -350,6 +350,113 @@ class LocalContactListMembers extends Table {
   Set<Column> get primaryKey => {idList, idFriend};
 }
 
+/// Trajets de confiance — miroir local de `trip` (migration serveur 051).
+///
+/// Deux rôles dans la même table, distingués par [isOwner] : le trajet que
+/// *je* partage, et ceux que je *suis* en tant que membre du cercle. Le second
+/// cas n'est jamais un historique — un trajet suivi disparaît du cache dès
+/// qu'il est clos (voir `TripRepository.pruneClosedWatched`). C'est ce qui
+/// empêche « montre-moi où tu étais mardi » d'exister.
+class LocalTrips extends Table {
+  IntColumn get id => integer()();
+  IntColumn get ownerId => integer()();
+
+  /// `taxi` | `meeting` | `sos`.
+  TextColumn get kind => text().withDefault(const Constant('meeting'))();
+
+  /// `active` | `awaiting_confirm` | `alert` | `sos` | `closed_*`.
+  TextColumn get state => text().withDefault(const Constant('active'))();
+
+  DateTimeColumn get etaAt => dateTime().nullable()();
+  IntColumn get graceMinutes => integer().withDefault(const Constant(10))();
+  IntColumn get extensions => integer().withDefault(const Constant(0))();
+  TextColumn get note => text().nullable()();
+  TextColumn get destLabel => text().nullable()();
+
+  /// Destination déclarée au départ, avec son rayon d'arrivée.
+  ///
+  /// Mise en cache pour une seule raison : l'écran de suivi doit pouvoir
+  /// dessiner le point d'arrivée et son cercle **avant** la première réponse du
+  /// serveur, et continuer à les dessiner hors ligne. Sans ces colonnes, la
+  /// carte n'affiche qu'un pin qui se déplace sans qu'on sache vers quoi.
+  ///
+  /// Le libellé, lui, est résolu une seule fois à la création : géocoder la
+  /// trace enverrait tout le déplacement à un tiers.
+  RealColumn get destLat => real().nullable()();
+  RealColumn get destLng => real().nullable()();
+  IntColumn get destRadiusM => integer().nullable()();
+
+  /// Dernière position connue. `lastAt` est l'heure de **capture** : c'est elle
+  /// qu'on affiche (« maj il y a 8 s »), pas l'heure de réception.
+  RealColumn get lastLat => real().nullable()();
+  RealColumn get lastLng => real().nullable()();
+  IntColumn get lastAccuracyM => integer().nullable()();
+  IntColumn get lastBattery => integer().nullable()();
+  DateTimeColumn get lastAt => dateTime().nullable()();
+
+  /// Plus de position reçue depuis le seuil de péremption. **Pas une alerte** :
+  /// une information, affichée en gris.
+  BoolColumn get stale => boolean().withDefault(const Constant(false))();
+
+  DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get closedAt => dateTime().nullable()();
+  TextColumn get closeReason => text().nullable()();
+
+  BoolColumn get isOwner => boolean().withDefault(const Constant(false))();
+
+  /// Nombre de destinataires. Côté membre, c'est tout ce qu'on connaît d'eux :
+  /// le nombre rassure, les identités exposeraient le carnet d'adresses d'un
+  /// autre.
+  IntColumn get watcherCount => integer().withDefault(const Constant(0))();
+
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Trace GPS, en **anneau borné**.
+///
+/// Deux usages dans la même table : tampon hors ligne côté propriétaire
+/// (les points en attente d'envoi, [pending] à vrai), et cache de polyligne
+/// côté membre. Le plafonnement se fait dans le DAO, pas dans le schéma.
+///
+/// [clientSeq] sert la déduplication : le serveur ignore un numéro déjà reçu,
+/// ce qui rend la vidange du tampon rejouable sans risque de doublon.
+class LocalTripPoints extends Table {
+  IntColumn get tripId => integer()();
+  IntColumn get clientSeq => integer()();
+  RealColumn get lat => real()();
+  RealColumn get lng => real()();
+  IntColumn get accuracyM => integer().nullable()();
+  IntColumn get speedKmh => integer().nullable()();
+  IntColumn get battery => integer().nullable()();
+
+  /// Heure de capture réelle. Un point tamponné hors ligne repart avec **son**
+  /// horodatage, jamais celui de l'envoi.
+  DateTimeColumn get recordedAt => dateTime()();
+
+  BoolColumn get pending => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {tripId, clientSeq};
+}
+
+/// Frise d'événements d'un trajet — source du récapitulatif de fin.
+class LocalTripEvents extends Table {
+  IntColumn get tripId => integer()();
+  IntColumn get seq => integer()();
+  TextColumn get kind => text()();
+  IntColumn get actorId => integer().nullable()();
+
+  /// JSON brut renvoyé par le serveur, décodé à l'affichage seulement.
+  TextColumn get meta => text().nullable()();
+  DateTimeColumn get at => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {tripId, seq};
+}
+
 @DriftDatabase(
   tables: [
     LocalConversations,
@@ -361,6 +468,9 @@ class LocalContactListMembers extends Table {
     LocalMessageReactions,
     LocalContactLists,
     LocalContactListMembers,
+    LocalTrips,
+    LocalTripPoints,
+    LocalTripEvents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -368,7 +478,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 25;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -551,6 +661,21 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 23) {
             await m.addColumn(localContactLists, localContactLists.kind);
+          }
+          if (from < 24) {
+            // Trajets de confiance (migration serveur 051). Trois créations de
+            // tables : rien du cache existant n'est vidé, et `local_messages`
+            // ne change pas — le message de type 9 réutilise `content`.
+            await m.createTable(localTrips);
+            await m.createTable(localTripPoints);
+            await m.createTable(localTripEvents);
+          }
+          if (from < 25) {
+            // Coordonnées de destination : le serveur les renvoyait déjà, le
+            // cache les jetait. Trois colonnes nullables, aucun trajet perdu.
+            await m.addColumn(localTrips, localTrips.destLat);
+            await m.addColumn(localTrips, localTrips.destLng);
+            await m.addColumn(localTrips, localTrips.destRadiusM);
           }
         },
       );

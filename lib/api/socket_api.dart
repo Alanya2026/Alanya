@@ -376,12 +376,22 @@ extension SocketApi on TalkyApiClient {
     _socketListeners.clear();
   }
 
-  void sendSocketEvent(String event, dynamic data) {
+  /// Émet un événement, et **dit si l'émission a eu lieu**.
+  ///
+  /// Le retour `bool` importe : un émetteur qui doit rejouer plus tard — le flux
+  /// de positions d'un trajet, par exemple — ne peut pas distinguer autrement
+  /// un envoi réel d'un envoi jeté. Sans lui, il marque comme transmis un point
+  /// qui n'a jamais quitté le téléphone.
+  ///
+  /// Rétrocompatible : les appelants qui ignorent la valeur compilent sans
+  /// changement.
+  bool sendSocketEvent(String event, dynamic data) {
     if (!isSocketReady) {
-      debugPrint('[Socket] ** emit "$event" différé (socket non prêt — connected=$isSocketConnected, auth=$_isSocketAuthVerified)');
-      return;
+      debugPrint('[Socket] ** emit "$event" abandonné (socket non prêt — connected=$isSocketConnected, auth=$_isSocketAuthVerified)');
+      return false;
     }
     _socket!.emit(event, data);
+    return true;
   }
 
   void onSocketEvent(String event, void Function(dynamic) callback) {

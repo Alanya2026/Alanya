@@ -21,6 +21,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
+    <!-- Trajets de confiance. ACCESS_BACKGROUND_LOCATION n'est PAS requis :
+         un service de type "location" démarré pendant que l'application est
+         visible suffit, et n'impose aucune déclaration au Play Store. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <!-- Fiabiliser la réception des pushs data-only quand l'app est fermée
@@ -156,6 +160,13 @@
             android:name=".CallMediaForegroundService"
             android:exported="false"
             android:foregroundServiceType="microphone|camera" />
+        <!-- Maintient la localisation active pendant un trajet de confiance.
+             Sans lui, Android 10+ coupe les mises à jour dès le passage en
+             arrière-plan — c'est-à-dire au moment où le suivi sert. -->
+        <service
+            android:name=".TripLocationForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
         <receiver
             android:name=".NotificationActionReceiver"
             android:exported="false" />
