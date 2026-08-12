@@ -4,6 +4,7 @@ import 'dart:math';
 import '../db/app_database.dart';
 import '../theme/locale_controller.dart';
 import 'system_event_payload.dart';
+import 'trip_payload.dart';
 
 /// Préfixe du marqueur album stocké dans [LocalMessage.content].
 const albumMarkerPrefix = '__talky_album__';
@@ -165,6 +166,13 @@ String normalizeConversationPreview(String? text) {
     final payload = SystemEventPayload.tryParse(text);
     if (payload != null) {
       return payload.previewLabel(resolveL10n());
+    }
+    // Idem pour les trajets : les lignes écrites avant le support du type 9
+    // portent le JSON de la carte. Sans ce rattrapage, elles resteraient
+    // illisibles jusqu'au prochain message de la conversation.
+    final trajet = TripCardPayload.tryParse(text);
+    if (trajet != null) {
+      return trajet.previewLabel(resolveL10n());
     }
   }
   return text;

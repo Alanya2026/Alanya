@@ -21,6 +21,17 @@ abstract final class SystemEvent {
   static const roleChanged = 'role_changed';
   static const settingsChanged = 'settings_changed';
 
+  /// Lignes d'incident d'un trajet de confiance.
+  ///
+  /// Elles ne sont pas des événements de groupe et ne s'affichent pas dans un
+  /// groupe : elles arrivent dans la conversation directe entre la personne
+  /// suivie et chaque membre de son cercle. Elles passent par le type 6 pour une
+  /// raison simple — c'est le seul message du fil que rien ne réécrit. La carte
+  /// de trajet, elle, finira par dire « arrêté » ou « bien arrivé·e », et la
+  /// trace GPS sera purgée. **L'incident, on ne l'efface pas.**
+  static const tripAlert = 'trip_alert';
+  static const tripSos = 'trip_sos';
+
   static const _known = {
     groupCreated,
     memberAdded,
@@ -31,6 +42,8 @@ abstract final class SystemEvent {
     groupDescriptionChanged,
     roleChanged,
     settingsChanged,
+    tripAlert,
+    tripSos,
   };
 
   static bool isKnown(String e) => _known.contains(e);
@@ -148,6 +161,16 @@ class SystemEventPayload {
     switch (event) {
       case SystemEvent.groupCreated:
         return byMe ? l10n.sysGroupCreatedByMe(v) : l10n.sysGroupCreated(actor, v);
+
+      // Deux lectures d'un même fait : le proche lit « Awa n'a pas confirmé »,
+      // la personne suivie relit « Vous n'avez pas confirmé ». Elle voit la
+      // ligne aussi — c'est ce qui lui permet de savoir exactement ce que son
+      // cercle a reçu, et quand.
+      case SystemEvent.tripAlert:
+        return byMe ? l10n.sysTripAlertByMe : l10n.sysTripAlert(actor);
+
+      case SystemEvent.tripSos:
+        return byMe ? l10n.sysTripSosByMe : l10n.sysTripSos(actor);
 
       case SystemEvent.memberAdded:
         if (!hasTargetNames) return l10n.sysGroupEventFallback;
@@ -267,6 +290,14 @@ class SystemEventPayload {
             : l10n.sysPreviewRoleDemoted(actor);
       case SystemEvent.settingsChanged:
         return l10n.sysPreviewSettingsChanged(actor);
+      // On réutilise les libellés de la carte de trajet : ils disent déjà
+      // exactement le fait. Sans ces deux cas, l'aperçu tomberait sur le repli
+      // générique — « Le groupe a été mis à jour » pour une alerte reçue d'un
+      // proche en pleine nuit.
+      case SystemEvent.tripAlert:
+        return l10n.tripsCardAlert(actor);
+      case SystemEvent.tripSos:
+        return l10n.tripsCardSos(actor);
       default:
         return l10n.sysGroupEventFallback;
     }

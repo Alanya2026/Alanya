@@ -7,6 +7,7 @@ import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
 import '../../utils/system_event_payload.dart';
+import '../../utils/trip_payload.dart';
 import '../../utils/welcome_cta_payload.dart';
 import '../../theme/locale_controller.dart';
 
@@ -152,6 +153,14 @@ class ConversationMerge {
     }
     // type=7 : JSON contact — ne jamais exposer le content brut.
     if (type == 7) return contactPreviewLabel(content);
+    // type=9 : JSON de trajet — ne jamais exposer le content brut. Sans cette
+    // branche, le cas générique plus bas renvoie le contenu tel quel, et la
+    // liste des conversations affiche du JSON.
+    if (type == kTripMessageType) {
+      final trajet = TripCardPayload.tryParse(content);
+      if (trajet != null) return trajet.previewLabel(resolveL10n());
+      return resolveL10n().tripsCardFallback;
+    }
     if (type == kWelcomeCtaMessageType) {
       final cta = WelcomeCtaPayload.tryParse(content);
       if (cta != null && cta.buttons.isNotEmpty) {

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../db/app_database.dart';
 import '../constants/default_contact_lists.dart';
 import '../theme/contact_list_colors.dart';
+import '../utils/call_log_preview.dart';
 import '../utils/media_album.dart';
 import '../utils/user_search.dart';
 import '../../talky_api_client.dart';
@@ -645,6 +646,12 @@ class LocalCacheRepository {
     await _db.delete(_db.localCalls).go();
     await _db.delete(_db.localContactListMembers).go();
     await _db.delete(_db.localContactLists).go();
+    // Trajets : la trace part la première, et sans condition. Des positions qui
+    // survivraient à une déconnexion sur un appareil partagé seraient la pire
+    // fuite possible pour ce volet.
+    await _db.delete(_db.localTripPoints).go();
+    await _db.delete(_db.localTripEvents).go();
+    await _db.delete(_db.localTrips).go();
     await _db.delete(_db.localUsers).go();
   }
 
@@ -809,8 +816,12 @@ class LocalCacheRepository {
     required Call call,
   }) async {
     final preview = call.isVideo ? LocaleController.instance.l10n.videoCallPreview : LocaleController.instance.l10n.voiceCallPreview;
-    // 10/11 : aperçus d'appel locaux (évite collision avec message.type 5=location).
-    final type = call.isVideo ? 11 : 10;
+    // Constantes partagées : ce sont les MÊMES valeurs que celles écrites par le
+    // serveur. C'est tout l'objet du correctif — trois écrivains numérotaient
+    // différemment le même fait, et se réécrivaient mutuellement en boucle.
+    final type = call.isVideo
+        ? kCallLogVideoPreviewType
+        : kCallLogAudioPreviewType;
     final at = _parseDate(call.createdAt) ?? DateTime.now();
     final normalized = normalizeConversationPreview(preview);
     final companion = LocalConversationsCompanion(

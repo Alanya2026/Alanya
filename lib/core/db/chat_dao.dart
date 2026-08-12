@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../services/chat/conversation_merge.dart';
+import '../utils/call_log_preview.dart';
 import '../utils/media_album.dart';
 import '../utils/system_event_payload.dart';
 import 'app_database.dart';
@@ -452,6 +453,15 @@ class ChatDao {
     // Ne pas écraser un envoi optimiste plus récent que le dernier confirmé.
     if (latest.msgID > 0 &&
         await hasPendingNewerThan(conversID, latest.sendAt)) {
+      return;
+    }
+
+    // Même garde que dans `ConversationSummaryReducer` : un journal d'appel plus
+    // récent que le dernier message est le dernier élément de la conversation.
+    // Sans elle, les deux écrivains se disputeraient l'aperçu à chaque synchro.
+    if (isCallLogPreviewType(conv.lastMessageType) &&
+        conv.lastMessageAt != null &&
+        !conv.lastMessageAt!.isBefore(latest.sendAt)) {
       return;
     }
 

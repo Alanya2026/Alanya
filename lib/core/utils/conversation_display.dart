@@ -3,6 +3,7 @@ import '../db/app_database.dart';
 import '../db/chat_dao.dart';
 import '../services/chat/conversation_merge.dart';
 import '../theme/locale_controller.dart';
+import 'call_log_preview.dart';
 import 'media_album.dart';
 import 'self_chat.dart';
 import 'system_event_payload.dart';
@@ -187,6 +188,13 @@ String conversationListPreview(
   int myId,
   AppLocalizations l10n,
 ) {
+  // Un journal d'appel se reconstruit depuis son type, jamais depuis la chaîne
+  // stockée : celle du serveur est en français en dur. C'est le seul moyen qu'un
+  // lecteur anglophone ne trouve pas « Appel vocal » dans sa liste.
+  if (isCallLogPreviewType(conv.lastMessageType)) {
+    return callLogPreviewLabel(conv.lastMessageType!, l10n);
+  }
+
   final body = displayConversationPreview(conv.lastMessage, l10n);
   if (!conv.isGroup || conv.lastMessage == null) return body;
   if (conv.lastMessageType == kSystemMessageType) return body;

@@ -11,6 +11,7 @@ import '../../utils/backend_url.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
+import '../../utils/trip_payload.dart';
 import '../alanya_media_export_service.dart';
 import '../local_notification_helper.dart';
 import '../notifications/badge_sync_service.dart';
@@ -1775,6 +1776,37 @@ class ChatRepository {
 
   Future<void> _recomputeSummary(int conversID) {
     return _reducer.recompute(conversID, _myId);
+  }
+
+  /// Réécrit le contenu d'une carte de trajet (type 9) déjà en cache.
+  ///
+  /// Appelé sur `trip:card_update`, quand le serveur a fait passer un trajet
+  /// d'un état à un autre. Sans cette écriture, la bulle et l'aperçu de la
+  /// conversation restaient sur l'ancien état jusqu'au prochain sync HTTP :
+  /// « bien arrivée » continuait de s'afficher « trajet en cours ».
+  ///
+  /// Volontairement, on ne touche ni à `sendAt` ni au compteur de non-lus — une
+  /// transition d'état n'est pas un nouveau message.
+  Future<void> updateTripCard(int tripId, String content) async {
+    final lignes = await (_db.select(_db.localMessages)
+          ..where((m) => m.type.equals(kTripMessageType)))
+        .get();
+
+    final concernees = lignes.where((m) {
+      final p = TripCardPayload.tryParse(m.content);
+      return p != null && p.tripId == tripId;
+    }).toList();
+    if (concernees.isEmpty) return;
+
+    final convs = <int>{};
+    for (final m in concernees) {
+      await (_db.update(_db.localMessages)..where((r) => r.msgID.equals(m.msgID)))
+          .write(LocalMessagesCompanion(content: Value(content)));
+      convs.add(m.conversationID);
+    }
+    for (final c in convs) {
+      await _recomputeSummary(c);
+    }
   }
 
   LocalConversationsCompanion _convToCompanion(Conversation c, Map<String, dynamic> raw) {

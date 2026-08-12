@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../../utils/call_log_preview.dart';
 import '../../utils/media_album.dart';
 import 'conversation_merge.dart';
 
@@ -62,6 +63,37 @@ class ConversationSummaryReducer {
       if (latest.msgID > 0 &&
           await _dao.hasPendingNewerThan(conversID, latest.sendAt)) {
         // Unread toujours dérivé (même pendant pending).
+        final unread = await _dao.countUnread(conversID, myId);
+        final mentionne = await _hasUnreadMention(conversID, myId);
+        if (unread != conv.unreadCount ||
+            mentionne != conv.hasUnreadMention) {
+          await (_db.update(_db.localConversations)
+                ..where((c) => c.conversID.equals(conversID)))
+              .write(LocalConversationsCompanion(
+            unreadCount: Value(unread),
+            hasUnreadMention: Value(mentionne),
+          ));
+        }
+        return;
+      }
+
+      // Le dernier élément de la conversation n'est pas un message.
+      //
+      // Un appel n'habite pas `messages` : il vit dans `local_calls`. Ce
+      // réducteur, lui, ne connaît que les messages — il prenait donc le dernier
+      // message pour le dernier élément et réécrivait l'aperçu par-dessus celui
+      // du journal d'appel. Le serveur le reposait à la synchronisation
+      // suivante, le réducteur le réécrasait : l'aperçu battait entre « Appel
+      // vocal » et le dernier message, indéfiniment.
+      //
+      // On ne possède l'aperçu que lorsque le message est bien la chose la plus
+      // récente. Sinon on ne touche qu'aux compteurs, qui restent dérivés des
+      // messages dans tous les cas.
+      final journalPlusRecent = isCallLogPreviewType(conv.lastMessageType) &&
+          conv.lastMessageAt != null &&
+          !conv.lastMessageAt!.isBefore(latest.sendAt);
+
+      if (journalPlusRecent) {
         final unread = await _dao.countUnread(conversID, myId);
         final mentionne = await _hasUnreadMention(conversID, myId);
         if (unread != conv.unreadCount ||
