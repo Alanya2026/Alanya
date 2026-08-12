@@ -153,10 +153,14 @@ extension SocketApi on TalkyApiClient {
 
   void connectSocket() {
     if (_accessToken == null) return;
-    if (_socket?.connected == true) return;
-
     if (_socket != null) {
-      _teardownSocketInstance();
+      // Une socket peut être en cours de handshake : `connected` est encore
+      // false jusqu'à `auth:verified`. Ne pas la détruire lorsqu'un second
+      // appel arrive pendant ce court intervalle (notamment accept CallKit au
+      // cold start puis bind des providers), sinon le signaling entrant est
+      // retardé par un nouveau handshake. Les sockets réellement mortes sont
+      // déjà recréées explicitement par ensureSocketReady/forceReconnect.
+      return;
     }
 
     _socket = io.io(TalkyApiClient.socketUrl, <String, dynamic>{

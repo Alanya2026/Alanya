@@ -316,6 +316,12 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   /// Sérialise logout → login : évite qu'un re-login rapide (même compte)
   /// soit ignoré pendant que le vidage local est encore en cours.
   Future<void> _sessionBindingsChain = Future.value();
+  // `AuthProvider.init()` notifie dès que les credentials locaux sont lus. Au
+  // cold start CallKit, le bootstrap choisit explicitement l'ordre : accepter /
+  // connecter le signaling, puis binder chat et statuts. Sans cette garde, ce
+  // premier notify déclencherait un bind concurrent avant la récupération de
+  // l'action CallKit.
+  bool _initialBootstrapInProgress = true;
   VoidCallback? _onBackOnline;
   ConnectivityProvider? _connectivityForListener;
   void Function(dynamic)? _onCallLogUpdated;
@@ -485,14 +491,13 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         // Toujours retirer le splash : sinon écran figé si init échoue.
         FlutterNativeSplash.remove();
       }
-      await _syncSessionBindings();
-
-      // Actions CallKit dispatchées AVANT PushService.init : un accept depuis
-      // la notification (app tuée) doit atteindre CallService dès que la
-      // session locale est restaurée. PushService.init fait du réseau
-      // (getToken FCM) et d'éventuels dialogues de permission — l'attendre
-      // ici retardait l'écran d'appel de plusieurs secondes après le tap
-      // « Accepter » (spinner → home → appel).
+      // Chemin critique d'un accept CallKit après cold start : le service
+      // d'appel n'a besoin que de la session restaurée localement. Il doit donc
+      // recevoir l'action avant les synchronisations chat/statuts, lesquelles
+      // peuvent faire du réseau. `acceptIncomingCallFromPush` ouvre aussitôt le
+      // socket ; le serveur y rejoue alors l'`incoming_call` avec son offer.
+      // Les binds restent inchangés et continuent juste après, en parallèle du
+      // signaling de l'appel.
       void dispatch(IncomingCallAction action) {
         if (!mounted) return;
         final callService = Provider.of<CallService>(context, listen: false);
@@ -577,6 +582,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         }
       }
 
+      // Les synchronisations applicatives ne doivent pas retarder le replay
+      // socket de l'offre et la réponse à un appel déjà accepté.
+      await _syncSessionBindings();
+      _initialBootstrapInProgress = false;
+
       if (!mounted) return;
       // Refus CallKit persistés (app tuée) : rejouer dès que possible.
       if (authProvider.isLoggedIn) {
@@ -603,6 +613,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         debugPrint('[AuthWrapper] PushService init failed: $e');
       }
     } catch (e) {
+      _initialBootstrapInProgress = false;
       debugPrint('[AuthWrapper] ** Erreur init: $e');
       debugPrint('[AuthWrapper] Stack: ${StackTrace.current}');
     }
@@ -611,6 +622,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   /// Appelé sur chaque changement d'AuthProvider (login, logout, refresh user).
   /// Déclenche un bind/unbind des providers dépendants de l'identité.
   void _onAuthChanged() {
+    if (_initialBootstrapInProgress) return;
     _sessionBindingsChain = _sessionBindingsChain.then((_) async {
       if (!mounted) return;
       await _syncSessionBindings();
