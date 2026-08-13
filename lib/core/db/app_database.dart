@@ -361,8 +361,8 @@ class LocalTrips extends Table {
   IntColumn get id => integer()();
   IntColumn get ownerId => integer()();
 
-  /// `taxi` | `meeting` | `sos`.
-  TextColumn get kind => text().withDefault(const Constant('meeting'))();
+  /// `taxi` | `walk` | `sos` (`meeting` legacy = walk).
+  TextColumn get kind => text().withDefault(const Constant('taxi'))();
 
   /// `active` | `awaiting_confirm` | `alert` | `sos` | `closed_*`.
   TextColumn get state => text().withDefault(const Constant('active'))();

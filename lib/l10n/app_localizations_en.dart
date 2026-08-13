@@ -4191,7 +4191,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutSupport => 'Contact support';
 
   @override
-  String get aboutCopyright => '© 2026 Alanya · Made with care in Douala';
+  String get aboutCopyright => '© 2026 Alanya · Made with care in Yaoundé';
 
   @override
   String get exportDataTitle => 'Data & account';
@@ -4878,10 +4878,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tripsKindTaxiHint => 'A ride, with an expected arrival';
 
   @override
-  String get tripsKindMeeting => 'Appointment';
+  String get tripsKindWalk => 'On foot';
 
   @override
-  String get tripsKindMeetingHint => 'A place, and a time to be back';
+  String get tripsKindWalkHint => 'A walk, with an expected arrival';
+
+  @override
+  String get tripsKindMeeting => 'On foot';
+
+  @override
+  String get tripsKindMeetingHint => 'A walk, with an expected arrival';
 
   @override
   String get tripsArrivalIn => 'Arriving in';

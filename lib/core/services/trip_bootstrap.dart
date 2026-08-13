@@ -118,6 +118,7 @@ class TripBootstrap {
         trips: _trips,
         socket: _socket,
         etaAt: mien.etaAt,
+        kind: mien.kind,
       );
     } catch (e) {
       // Best-effort : une reprise ratée ne doit pas empêcher l'application de

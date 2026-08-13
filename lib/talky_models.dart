@@ -1422,8 +1422,18 @@ class TripCloseInfo {
 
 abstract final class TripKind {
   static const taxi = 'taxi';
+  static const walk = 'walk';
+
+  /// Alias historique (« rendez-vous ») — normalisé en [walk].
   static const meeting = 'meeting';
   static const sos = 'sos';
+
+  /// `taxi` reste taxi ; tout le reste (walk, meeting, sos, inconnu) → walk
+  /// pour le filtre GPS. Le SOS bascule vite en régime alerte côté cadence.
+  static String normalize(String? raw) {
+    if (raw == taxi) return taxi;
+    return walk;
+  }
 }
 
 /// Une position d'un trajet.
@@ -1548,7 +1558,7 @@ class Trip {
     return Trip(
       id: (json['id'] as num?)?.toInt() ?? 0,
       ownerId: (json['ownerId'] as num?)?.toInt() ?? 0,
-      kind: json['kind']?.toString() ?? TripKind.meeting,
+      kind: json['kind']?.toString() ?? TripKind.taxi,
       state: json['state']?.toString() ?? TripState.active,
       etaAt: DateTime.tryParse(json['etaAt']?.toString() ?? '')?.toLocal(),
       graceMinutes: (json['graceMinutes'] as num?)?.toInt() ?? 10,
@@ -1621,6 +1631,10 @@ class TripWatcher {
 /// ne renvoie pas le champ (version antérieure, réponse tronquée).
 class TripPolicy {
   final Map<String, TripRegime> regimes;
+
+  /// DistanceFilter du régime nominal selon le type (taxi / walk).
+  /// Servi par le serveur ; défauts locaux si absent (serveur ancien).
+  final Map<String, int> filterMByKind;
   final int staleFactor;
   final int staleMarginS;
   final int maxAccuracyM;
@@ -1635,6 +1649,7 @@ class TripPolicy {
 
   const TripPolicy({
     required this.regimes,
+    this.filterMByKind = const {TripKind.taxi: 450, TripKind.walk: 75},
     this.staleFactor = 3,
     this.staleMarginS = 30,
     this.maxAccuracyM = 100,
@@ -1653,6 +1668,25 @@ class TripPolicy {
 
   TripRegime regime(String name) => regimes[name] ?? regimes['nominal']!;
 
+  /// Filtre mètres du régime **nominal** pour ce type de trajet.
+  int filterMForKind(String kind) {
+    final k = TripKind.normalize(kind);
+    return filterMByKind[k] ?? (k == TripKind.taxi ? 450 : 75);
+  }
+
+  /// Régime à appliquer, avec le filtre nominal écrasé selon [kind].
+  /// Approche / alerte : inchangés (plus serrés, indépendants du moyen).
+  TripRegime regimeForKind(String name, String kind) {
+    final r = regime(name);
+    if (name != 'nominal') return r;
+    return TripRegime(
+      accuracy: r.accuracy,
+      filterM: filterMForKind(kind),
+      floorS: r.floorS,
+      beatS: r.beatS,
+    );
+  }
+
   /// Délai de silence au-delà duquel on affiche « position indisponible ».
   /// Dérivé du battement : sans rythme attendu, aucun moyen de décider à quel
   /// moment un silence devient anormal.
@@ -1663,11 +1697,24 @@ class TripPolicy {
     if (json == null) return fallback;
     final raw = json['regimes'];
     if (raw is! Map || raw.isEmpty) return fallback;
+    final byKind = <String, int>{
+      TripKind.taxi: 450,
+      TripKind.walk: 75,
+    };
+    final rawKind = json['filterMByKind'];
+    if (rawKind is Map) {
+      final taxi = (rawKind['taxi'] as num?)?.toInt();
+      final walk = (rawKind['walk'] as num?)?.toInt() ??
+          (rawKind['meeting'] as num?)?.toInt();
+      if (taxi != null) byKind[TripKind.taxi] = taxi;
+      if (walk != null) byKind[TripKind.walk] = walk;
+    }
     return TripPolicy(
       regimes: raw.map((k, v) => MapEntry(
             k.toString(),
             TripRegime.fromJson((v as Map).cast<String, dynamic>()),
           )),
+      filterMByKind: byKind,
       staleFactor: (json['staleFactor'] as num?)?.toInt() ?? 3,
       staleMarginS: (json['staleMarginS'] as num?)?.toInt() ?? 30,
       maxAccuracyM: (json['maxAccuracyM'] as num?)?.toInt() ?? 100,

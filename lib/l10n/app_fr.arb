@@ -3048,8 +3048,10 @@
   "tripsNew": "Nouveau trajet",
   "tripsKindTaxi": "Taxi",
   "tripsKindTaxiHint": "Un déplacement, une arrivée attendue",
-  "tripsKindMeeting": "Rendez-vous",
-  "tripsKindMeetingHint": "Un lieu, une heure de retour",
+  "tripsKindWalk": "À pied",
+  "tripsKindWalkHint": "Un trajet à pied, une arrivée attendue",
+  "tripsKindMeeting": "À pied",
+  "tripsKindMeetingHint": "Un trajet à pied, une arrivée attendue",
   "tripsArrivalIn": "Arrivée dans",
   "tripsMinutes": "{count} min",
   "@tripsMinutes": {

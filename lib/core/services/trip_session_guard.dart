@@ -53,6 +53,7 @@ class TripSessionGuard with WidgetsBindingObserver {
   int? _tripId;
   DateTime? _etaAt;
   TripPolicy _policy = TripPolicy.fallback;
+  String _kind = TripKind.taxi;
 
   StreamSubscription<Position>? _flux;
   Timer? _battement;
@@ -141,10 +142,17 @@ class TripSessionGuard with WidgetsBindingObserver {
     required TripRepository trips,
     required TripSocketService socket,
     DateTime? etaAt,
+    String kind = TripKind.taxi,
   }) async {
     _cede = null;
     socket.claimDevice(tripId);
-    await acquire(tripId: tripId, trips: trips, socket: socket, etaAt: etaAt);
+    await acquire(
+      tripId: tripId,
+      trips: trips,
+      socket: socket,
+      etaAt: etaAt,
+      kind: kind,
+    );
   }
 
   /// Émet-on réellement des positions ? `isActive` ne suffit pas : un garde peut
@@ -178,6 +186,7 @@ class TripSessionGuard with WidgetsBindingObserver {
     required TripRepository trips,
     required TripSocketService socket,
     DateTime? etaAt,
+    String kind = TripKind.taxi,
   }) async {
     if (_tripId == tripId) return;
     if (_tripId != null) await release();
@@ -186,6 +195,7 @@ class TripSessionGuard with WidgetsBindingObserver {
     _trips = trips;
     _socket = socket;
     _etaAt = etaAt;
+    _kind = TripKind.normalize(kind);
     _policy = trips.policy;
     _seq = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
@@ -224,8 +234,8 @@ class TripSessionGuard with WidgetsBindingObserver {
     await _appliquerRegime(_choisirRegime());
 
     // Indispensable : sans ce relevé forcé, un départ à l'arrêt — taxi qui
-    // attend, rendez-vous avant de partir — n'émet strictement rien tant que le
-    // `distanceFilter` n'est pas franchi. Le cercle ouvre une carte vide.
+    // attend, départ à pied avant de bouger — n'émet strictement rien tant que
+    // le `distanceFilter` n'est pas franchi. Le cercle ouvre une carte vide.
     await _envoyerMaintenant(force: true);
 
     // La revue de régime est indépendante du flux : à l'arrêt, aucun point
@@ -260,6 +270,7 @@ class TripSessionGuard with WidgetsBindingObserver {
     _batterieFaible = false;
     _batterieCritique = false;
     _permissionToujours = false;
+    _kind = TripKind.taxi;
     WidgetsBinding.instance.removeObserver(this);
     await _arreterServiceAvantPlan();
     if (id != null) _socket?.unsubscribe(id);
@@ -413,19 +424,21 @@ class TripSessionGuard with WidgetsBindingObserver {
   /// applique la sienne de son côté ; l'appliquer aussi ici évite d'émettre à
   /// pleine cadence des points que le serveur écarterait de toute façon — ce qui
   /// dépenserait la batterie qu'on cherche justement à préserver.
-  TripRegime _effectif(TripRegime r) {
-    if (!_batterieFaible) return r;
+  TripRegime _effectif() {
+    // Filtre nominal taxi/walk : servi par le serveur (filterMByKind).
+    final base = _policy.regimeForKind(_regime, _kind);
+    if (!_batterieFaible) return base;
     return TripRegime(
       // La précision ne baisse pas : une position rare et fausse ne vaut rien.
       // C'est la fréquence qu'on sacrifie, jamais la justesse.
-      accuracy: r.accuracy,
-      filterM: r.filterM,
-      floorS: r.floorS < 60 ? 60 : r.floorS,
-      beatS: r.beatS < 120 ? 120 : r.beatS,
+      accuracy: base.accuracy,
+      filterM: base.filterM,
+      floorS: base.floorS < 60 ? 60 : base.floorS,
+      beatS: base.beatS < 120 ? 120 : base.beatS,
     );
   }
 
-  TripRegime get _reglageCourant => _effectif(_policy.regime(_regime));
+  TripRegime get _reglageCourant => _effectif();
 
   Future<void> _appliquerRegime(String nom) async {
     _regime = nom;

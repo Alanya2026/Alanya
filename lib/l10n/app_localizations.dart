@@ -7385,7 +7385,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutCopyright.
   ///
   /// In fr, this message translates to:
-  /// **'© 2026 Alanya · Fait avec soin à Douala'**
+  /// **'© 2026 Alanya · Fait avec soin à Yaoundé'**
   String get aboutCopyright;
 
   /// No description provided for @exportDataTitle.
@@ -8576,16 +8576,28 @@ abstract class AppLocalizations {
   /// **'Un déplacement, une arrivée attendue'**
   String get tripsKindTaxiHint;
 
+  /// No description provided for @tripsKindWalk.
+  ///
+  /// In fr, this message translates to:
+  /// **'À pied'**
+  String get tripsKindWalk;
+
+  /// No description provided for @tripsKindWalkHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un trajet à pied, une arrivée attendue'**
+  String get tripsKindWalkHint;
+
   /// No description provided for @tripsKindMeeting.
   ///
   /// In fr, this message translates to:
-  /// **'Rendez-vous'**
+  /// **'À pied'**
   String get tripsKindMeeting;
 
   /// No description provided for @tripsKindMeetingHint.
   ///
   /// In fr, this message translates to:
-  /// **'Un lieu, une heure de retour'**
+  /// **'Un trajet à pied, une arrivée attendue'**
   String get tripsKindMeetingHint;
 
   /// No description provided for @tripsArrivalIn.

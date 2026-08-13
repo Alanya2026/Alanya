@@ -7996,7 +7996,7 @@ class $LocalTripsTable extends LocalTrips
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('meeting'),
+    defaultValue: const Constant('taxi'),
   );
   static const VerificationMeta _stateMeta = const VerificationMeta('state');
   @override
@@ -8553,7 +8553,7 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
   final int id;
   final int ownerId;
 
-  /// `taxi` | `meeting` | `sos`.
+  /// `taxi` | `walk` | `sos`.
   final String kind;
 
   /// `active` | `awaiting_confirm` | `alert` | `sos` | `closed_*`.

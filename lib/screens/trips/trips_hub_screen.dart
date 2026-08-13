@@ -144,10 +144,10 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _carteType(
-                      Icons.place_rounded,
-                      l10n.tripsKindMeeting,
-                      l10n.tripsKindMeetingHint,
-                      TripKind.meeting,
+                      Icons.directions_walk_rounded,
+                      l10n.tripsKindWalk,
+                      l10n.tripsKindWalkHint,
+                      TripKind.walk,
                     ),
                   ],
                   // Le SOS est atteignable SANS trajet en cours : le danger

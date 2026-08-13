@@ -2166,8 +2166,10 @@
   "tripsNew": "New trip",
   "tripsKindTaxi": "Taxi",
   "tripsKindTaxiHint": "A ride, with an expected arrival",
-  "tripsKindMeeting": "Appointment",
-  "tripsKindMeetingHint": "A place, and a time to be back",
+  "tripsKindWalk": "On foot",
+  "tripsKindWalkHint": "A walk, with an expected arrival",
+  "tripsKindMeeting": "On foot",
+  "tripsKindMeetingHint": "A walk, with an expected arrival",
   "tripsArrivalIn": "Arriving in",
   "tripsMinutes": "{count} min",
   "@tripsMinutes": {

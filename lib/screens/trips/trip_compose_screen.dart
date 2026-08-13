@@ -97,6 +97,7 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
         trips: trips,
         socket: socket,
         etaAt: trajet.etaAt,
+        kind: trajet.kind,
       );
       if (mounted) Navigator.pop(context, true);
     } on TalkyException catch (e) {
@@ -137,7 +138,7 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
       appBar: AppBar(
         title: Text(widget.kind == TripKind.taxi
             ? l10n.tripsKindTaxi
-            : l10n.tripsKindMeeting),
+            : l10n.tripsKindWalk),
       ),
       body: StreamBuilder<List<LocalContactList>>(
         stream: cache.watchContactLists(),

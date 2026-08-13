@@ -4232,7 +4232,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get aboutSupport => 'Contacter le support';
 
   @override
-  String get aboutCopyright => '© 2026 Alanya · Fait avec soin à Douala';
+  String get aboutCopyright => '© 2026 Alanya · Fait avec soin à Yaoundé';
 
   @override
   String get exportDataTitle => 'Données et compte';
@@ -4930,10 +4930,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tripsKindTaxiHint => 'Un déplacement, une arrivée attendue';
 
   @override
-  String get tripsKindMeeting => 'Rendez-vous';
+  String get tripsKindWalk => 'À pied';
 
   @override
-  String get tripsKindMeetingHint => 'Un lieu, une heure de retour';
+  String get tripsKindWalkHint => 'Un trajet à pied, une arrivée attendue';
+
+  @override
+  String get tripsKindMeeting => 'À pied';
+
+  @override
+  String get tripsKindMeetingHint => 'Un trajet à pied, une arrivée attendue';
 
   @override
   String get tripsArrivalIn => 'Arrivée dans';

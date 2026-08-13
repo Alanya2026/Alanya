@@ -21,7 +21,7 @@ extension TripsApi on TalkyApiClient {
   /// `TRUST_LIST_EMPTY` (409), `TRIP_ALREADY_ACTIVE` (409), `INVALID_ETA` (400).
   Future<Map<String, dynamic>> createTrip({
     required String clientId,
-    String kind = 'meeting',
+    String kind = 'taxi',
     int? durationMin,
     DateTime? etaAt,
     String? note,

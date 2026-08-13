@@ -62,6 +62,7 @@ class _TripOtherDeviceBannerState extends State<TripOtherDeviceBanner> {
         trips: context.read<TripRepository>(),
         socket: context.read<TripSocketService>(),
         etaAt: widget.trip.etaAt,
+        kind: widget.trip.kind,
       );
     } finally {
       if (mounted) setState(() => _occupe = false);

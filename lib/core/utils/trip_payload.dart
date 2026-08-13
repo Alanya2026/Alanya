@@ -122,7 +122,7 @@ class TripCardPayload {
 
       return TripCardPayload(
         tripId: id,
-        kind: j['kind']?.toString() ?? TripKind.meeting,
+        kind: j['kind']?.toString() ?? TripKind.taxi,
         state: j['state']?.toString() ?? TripState.active,
         etaAt: DateTime.tryParse(j['etaAt']?.toString() ?? '')?.toLocal(),
         destLabel: _nonVide(j['destLabel']),

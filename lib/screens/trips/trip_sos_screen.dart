@@ -138,6 +138,7 @@ class _TripSosScreenState extends State<TripSosScreen>
         tripId: trajet.id,
         trips: trips,
         socket: socket,
+        kind: trajet.kind,
       );
       if (!mounted) return;
       setState(() {
