@@ -723,10 +723,14 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
           label: l10n.tripsEtaAt(TripFormat.hhmm(t.etaAt!)),
           tint: v.tone == TripTone.awaiting ? v.ink : null,
         ),
-      TripFactChip(
-        icon: Icons.group_outlined,
-        label: l10n.tripsWatcherCount(t.watcherCount),
-      ),
+      // Owner : ne pas afficher watcherCount ici (= taille du cercle, promesse).
+      // Le vrai suivi est dans TripWatchersRow (« X sur Y ont vu » / seenAt).
+      // Membre : décompte anonymisé uniquement (pas les identités du cercle).
+      if (!widget.isOwner)
+        TripFactChip(
+          icon: Icons.group_outlined,
+          label: l10n.tripsWatcherCount(t.watcherCount),
+        ),
       if (t.lastAccuracyM != null)
         TripFactChip(
           icon: Icons.adjust,
