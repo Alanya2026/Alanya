@@ -5324,4 +5324,55 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get tripsPreviewFalseAlarm => '✅ Fausse alerte';
+
+  @override
+  String get tripsAlertChannelName => 'Alertes de trajet';
+
+  @override
+  String get tripsAlertChannelBody =>
+      'Un proche n\'a pas confirmé son arrivée, ou a déclenché un SOS. Ces alertes traversent le mode silencieux.';
+
+  @override
+  String get tripsChannelName => 'Trajets de confiance';
+
+  @override
+  String get tripsChannelBody =>
+      'Rappels de confirmation d\'arrivée, pour vos propres trajets.';
+
+  @override
+  String tripsRevokeTitle(String name) {
+    return 'Retirer $name ?';
+  }
+
+  @override
+  String get tripsRevokeBody =>
+      'Cette personne cessera de voir votre position et l\'état de ce trajet. Elle n\'en sera pas informée.';
+
+  @override
+  String get tripsRevokeAction => 'Retirer';
+
+  @override
+  String get tripsWatchersNoneSeen => 'Personne n\'a encore ouvert';
+
+  @override
+  String tripsWatchersSeenCount(int seen, int total) {
+    return '$seen sur $total ont vu';
+  }
+
+  @override
+  String get tripsWatcherSeen => 'a vu';
+
+  @override
+  String get tripsOtherDeviceTitle =>
+      'Trajet en cours sur votre autre appareil';
+
+  @override
+  String get tripsOtherDeviceBody =>
+      'Un seul appareil envoie la position, sinon la trace sauterait d\'un endroit à l\'autre.';
+
+  @override
+  String get tripsOtherDeviceTake => 'Suivre depuis cet appareil';
+
+  @override
+  String get tripsOtherDeviceKeep => 'Rester en lecture seule';
 }

@@ -9235,6 +9235,90 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'✅ Fausse alerte'**
   String get tripsPreviewFalseAlarm;
+
+  /// No description provided for @tripsAlertChannelName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alertes de trajet'**
+  String get tripsAlertChannelName;
+
+  /// No description provided for @tripsAlertChannelBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un proche n\'a pas confirmé son arrivée, ou a déclenché un SOS. Ces alertes traversent le mode silencieux.'**
+  String get tripsAlertChannelBody;
+
+  /// No description provided for @tripsChannelName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajets de confiance'**
+  String get tripsChannelName;
+
+  /// No description provided for @tripsChannelBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rappels de confirmation d\'arrivée, pour vos propres trajets.'**
+  String get tripsChannelBody;
+
+  /// No description provided for @tripsRevokeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {name} ?'**
+  String tripsRevokeTitle(String name);
+
+  /// No description provided for @tripsRevokeBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette personne cessera de voir votre position et l\'état de ce trajet. Elle n\'en sera pas informée.'**
+  String get tripsRevokeBody;
+
+  /// No description provided for @tripsRevokeAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get tripsRevokeAction;
+
+  /// No description provided for @tripsWatchersNoneSeen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne n\'a encore ouvert'**
+  String get tripsWatchersNoneSeen;
+
+  /// No description provided for @tripsWatchersSeenCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{seen} sur {total} ont vu'**
+  String tripsWatchersSeenCount(int seen, int total);
+
+  /// No description provided for @tripsWatcherSeen.
+  ///
+  /// In fr, this message translates to:
+  /// **'a vu'**
+  String get tripsWatcherSeen;
+
+  /// No description provided for @tripsOtherDeviceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet en cours sur votre autre appareil'**
+  String get tripsOtherDeviceTitle;
+
+  /// No description provided for @tripsOtherDeviceBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un seul appareil envoie la position, sinon la trace sauterait d\'un endroit à l\'autre.'**
+  String get tripsOtherDeviceBody;
+
+  /// No description provided for @tripsOtherDeviceTake.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivre depuis cet appareil'**
+  String get tripsOtherDeviceTake;
+
+  /// No description provided for @tripsOtherDeviceKeep.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rester en lecture seule'**
+  String get tripsOtherDeviceKeep;
 }
 
 class _AppLocalizationsDelegate

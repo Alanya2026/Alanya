@@ -227,6 +227,12 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
     );
   } else if (type == 'meeting_invite' || type == 'meeting_reminder') {
     await LocalNotificationHelper.showMeetingNotification(data);
+  } else if (type != null && type.startsWith('trip_')) {
+    // Filet : ce chemin ne sert que si la poussée arrive sans bloc
+    // `notification` (repli legacy, plateforme inconnue). Passer par
+    // `showGenericNotification` la poserait sur le canal des messages et lui
+    // ferait perdre la traversée du mode silencieux.
+    await LocalNotificationHelper.showTripNotification(data);
   } else {
     await LocalNotificationHelper.showGenericNotification(
       data,
@@ -506,6 +512,21 @@ class PushService {
 
     if (type == 'meeting_invite' || type == 'meeting_reminder') {
       await LocalNotificationHelper.showMeetingNotification(data);
+      _dispatchNotificationAction(
+        NotificationAction.fromMap(data, fromTap: false),
+      );
+      return;
+    }
+
+    // Trajets de confiance. Application ouverte, Android n'affiche pas le bloc
+    // `notification` de FCM : sans cette branche, une alerte reçue pendant que
+    // l'utilisateur consulte une autre conversation ne produirait rien à
+    // l'écran. C'est précisément le cas où un proche a besoin d'être détourné
+    // de ce qu'il fait.
+    if (type != null && type.startsWith('trip_')) {
+      await LocalNotificationHelper.showTripNotification(data);
+      // `fromTap: false` : on ne navigue pas, mais on resynchronise le trajet
+      // pour que la carte de conversation et le bandeau soient à jour.
       _dispatchNotificationAction(
         NotificationAction.fromMap(data, fromTap: false),
       );

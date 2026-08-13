@@ -5269,4 +5269,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tripsPreviewFalseAlarm => '✅ False alarm';
+
+  @override
+  String get tripsAlertChannelName => 'Trip alerts';
+
+  @override
+  String get tripsAlertChannelBody =>
+      'A contact didn\'t confirm arrival, or triggered an SOS. These alerts go through silent mode.';
+
+  @override
+  String get tripsChannelName => 'Trusted trips';
+
+  @override
+  String get tripsChannelBody =>
+      'Arrival confirmation reminders, for your own trips.';
+
+  @override
+  String tripsRevokeTitle(String name) {
+    return 'Remove $name?';
+  }
+
+  @override
+  String get tripsRevokeBody =>
+      'They will stop seeing your position and this trip\'s status. They won\'t be told.';
+
+  @override
+  String get tripsRevokeAction => 'Remove';
+
+  @override
+  String get tripsWatchersNoneSeen => 'Nobody has opened it yet';
+
+  @override
+  String tripsWatchersSeenCount(int seen, int total) {
+    return '$seen of $total have seen';
+  }
+
+  @override
+  String get tripsWatcherSeen => 'has seen';
+
+  @override
+  String get tripsOtherDeviceTitle => 'Trip running on your other device';
+
+  @override
+  String get tripsOtherDeviceBody =>
+      'Only one device sends the position, otherwise the trace would jump between places.';
+
+  @override
+  String get tripsOtherDeviceTake => 'Track from this device';
+
+  @override
+  String get tripsOtherDeviceKeep => 'Stay read-only';
 }

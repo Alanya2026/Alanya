@@ -3289,5 +3289,36 @@
   "tripsPreviewSos": "🆘 SOS",
   "tripsPreviewConfirmed": "✅ Bien arrivé·e",
   "tripsPreviewStopped": "🧭 Trajet arrêté",
-  "tripsPreviewFalseAlarm": "✅ Fausse alerte"
+  "tripsPreviewFalseAlarm": "✅ Fausse alerte",
+  "tripsAlertChannelName": "Alertes de trajet",
+  "tripsAlertChannelBody": "Un proche n'a pas confirmé son arrivée, ou a déclenché un SOS. Ces alertes traversent le mode silencieux.",
+  "tripsChannelName": "Trajets de confiance",
+  "tripsChannelBody": "Rappels de confirmation d'arrivée, pour vos propres trajets.",
+  "tripsRevokeTitle": "Retirer {name} ?",
+  "@tripsRevokeTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsRevokeBody": "Cette personne cessera de voir votre position et l'état de ce trajet. Elle n'en sera pas informée.",
+  "tripsRevokeAction": "Retirer",
+  "tripsWatchersNoneSeen": "Personne n'a encore ouvert",
+  "tripsWatchersSeenCount": "{seen} sur {total} ont vu",
+  "@tripsWatchersSeenCount": {
+    "placeholders": {
+      "seen": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsWatcherSeen": "a vu",
+  "tripsOtherDeviceTitle": "Trajet en cours sur votre autre appareil",
+  "tripsOtherDeviceBody": "Un seul appareil envoie la position, sinon la trace sauterait d'un endroit à l'autre.",
+  "tripsOtherDeviceTake": "Suivre depuis cet appareil",
+  "tripsOtherDeviceKeep": "Rester en lecture seule"
 }

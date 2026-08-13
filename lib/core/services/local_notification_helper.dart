@@ -31,9 +31,57 @@ AndroidNotificationChannel get _kChannelMeetings => AndroidNotificationChannel(
   playSound: true,
 );
 
+/// Alertes de trajet de confiance — **le seul canal de l'application conçu pour
+/// traverser le silence.**
+///
+/// `audioAttributesUsage: alarm` n'est pas un détail de son : sur Android, un
+/// canal en usage *alarme* passe la catégorie « alarmes » de « Ne pas déranger »,
+/// autorisée par défaut, là où un canal en usage *notification* est étouffé.
+/// C'est la seule voie accessible sans `ACCESS_NOTIFICATION_POLICY`, une
+/// permission que l'utilisateur doit accorder à la main dans les réglages
+/// système et que presque personne n'accorde.
+///
+/// Une alerte de sûreté qu'un mode silencieux peut étouffer n'est pas une
+/// alerte. Ce canal est réservé à `trip_alert` et `trip_sos` — l'étendre à
+/// autre chose apprendrait à l'utilisateur à le couper, et le jour où il compte
+/// il serait déjà désactivé.
+///
+/// L'identifiant doit rester **exactement** celui qu'envoie le serveur dans
+/// `message.android.notification.channelId` (notificationService.js) : un
+/// identifiant inconnu fait retomber Android sur un canal par défaut, et tout ce
+/// qui précède est perdu.
+AndroidNotificationChannel get _kChannelTripAlert => AndroidNotificationChannel(
+  'alanya_trip_alert',
+  resolveL10n().tripsAlertChannelName,
+  description: resolveL10n().tripsAlertChannelBody,
+  importance: Importance.max,
+  playSound: true,
+  enableVibration: true,
+  audioAttributesUsage: AudioAttributesUsage.alarm,
+);
+
+/// Rappels de trajet adressés au porteur seul : échéance et relances.
+///
+/// Canal distinct et **ordinaire**, délibérément. Ces rappels ne réveillent
+/// personne d'autre, et les faire passer par le canal d'alarme reviendrait à
+/// crier quatre fois par trajet — au bout de trois trajets, l'utilisateur
+/// couperait le canal, alerte comprise.
+AndroidNotificationChannel get _kChannelTrip => AndroidNotificationChannel(
+  'alanya_trip',
+  resolveL10n().tripsChannelName,
+  description: resolveL10n().tripsChannelBody,
+  importance: Importance.high,
+  playSound: true,
+);
+
 const String kPushActiveConvKey = 'push_active_conv_id';
 const String kConvTagPrefix = 'conv_';
 const int kMeetingNotifOffset = 1000000000;
+
+/// Décalage des identifiants de notification de trajet. Sans lui, un trajet et
+/// une conversation pourraient produire le même identifiant et s'effacer l'un
+/// l'autre dans le tiroir.
+const int kTripNotifOffset = 1200000000;
 const int kMaxBufferedMessages = 7;
 
 /// Utilisateur local dans MessagingStyle (aligné sur MessageNotificationHelper Kotlin).
@@ -89,6 +137,8 @@ class LocalNotificationHelper {
     } catch (_) {}
     await android?.createNotificationChannel(_kChannelMessages);
     await android?.createNotificationChannel(_kChannelMeetings);
+    await android?.createNotificationChannel(_kChannelTripAlert);
+    await android?.createNotificationChannel(_kChannelTrip);
 
     // Ancienne notif résumé « X conversations » — ne plus utiliser.
     await _plugin.cancel(0);
@@ -327,6 +377,78 @@ class LocalNotificationHelper {
   }
 
   // ── Affichage générique (statuts, etc.) ──────────────────────────────
+
+  /// Notification de trajet de confiance, affichée par l'application.
+  ///
+  /// N'intervient qu'au **premier plan** : application ouverte, Android
+  /// n'affiche pas lui-même le bloc `notification` de FCM et laisse la main à
+  /// Dart. Fermée ou en arrière-plan, c'est le système qui affiche, sur le canal
+  /// que le serveur a désigné — d'où l'obligation d'employer ici exactement les
+  /// mêmes identifiants de canal, sans quoi la même alerte aurait deux
+  /// comportements selon l'état de l'application.
+  ///
+  /// L'identifiant de notification dérive du **trajet**, pas du type : un trajet
+  /// occupe une ligne, et le rappel d'échéance remplace le pré-avis au lieu de
+  /// s'empiler à côté. C'est le pendant du `tag` posé côté serveur.
+  static Future<void> showTripNotification(
+    Map<String, dynamic> data, {
+    String? title,
+    String? body,
+  }) async {
+    if (kIsWeb) return;
+    await ensureInitialized();
+
+    final type = data['type']?.toString() ?? '';
+    final notifTitle =
+        title ?? data['title']?.toString() ?? resolveL10n().trips;
+    final notifBody = body ?? data['body']?.toString() ?? '';
+    if (notifTitle.isEmpty && notifBody.isEmpty) return;
+
+    final alerte = type == 'trip_alert' || type == 'trip_sos';
+    final canal = alerte ? _kChannelTripAlert : _kChannelTrip;
+
+    final tripId = int.tryParse(data['tripId']?.toString() ?? '') ?? 0;
+    final id = kTripNotifOffset + (tripId % 100000);
+
+    await _plugin.show(
+      id,
+      notifTitle,
+      notifBody,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          canal.id,
+          canal.name,
+          channelDescription: canal.description,
+          importance: alerte ? Importance.max : Importance.high,
+          priority: alerte ? Priority.max : Priority.high,
+          // `category: alarm` double le réglage du canal. Le canal décide, mais
+          // la catégorie oriente les surfaces qui ne le lisent pas — écran de
+          // verrouillage, Android Auto, montres connectées.
+          category: alerte ? AndroidNotificationCategory.alarm : null,
+          icon: kNotificationIcon,
+          color: alerte ? const Color(0xFFEF4444) : kNotificationAccentColor,
+          largeIcon: kNotificationLargeIcon,
+          styleInformation: notifBody.isNotEmpty
+              ? BigTextStyleInformation(notifBody)
+              : null,
+        ),
+        iOS: DarwinNotificationDetails(
+          // Un fil par trajet : les rappels se regroupent au lieu d'inonder.
+          threadIdentifier: 'trip_$tripId',
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: alerte
+              // `timeSensitive` traverse « Mode de concentration » sur iOS.
+              // C'est l'équivalent le plus proche du canal d'alarme Android, et
+              // il ne demande aucune permission particulière.
+              ? InterruptionLevel.timeSensitive
+              : InterruptionLevel.active,
+        ),
+      ),
+      payload: encodeNotificationPayload(data),
+    );
+  }
 
   static Future<void> showGenericNotification(
     Map<String, dynamic> data, {

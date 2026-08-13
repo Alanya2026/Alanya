@@ -2407,5 +2407,36 @@
   "tripsPreviewSos": "🆘 SOS",
   "tripsPreviewConfirmed": "✅ Arrived safely",
   "tripsPreviewStopped": "🧭 Trip stopped",
-  "tripsPreviewFalseAlarm": "✅ False alarm"
+  "tripsPreviewFalseAlarm": "✅ False alarm",
+  "tripsAlertChannelName": "Trip alerts",
+  "tripsAlertChannelBody": "A contact didn't confirm arrival, or triggered an SOS. These alerts go through silent mode.",
+  "tripsChannelName": "Trusted trips",
+  "tripsChannelBody": "Arrival confirmation reminders, for your own trips.",
+  "tripsRevokeTitle": "Remove {name}?",
+  "@tripsRevokeTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsRevokeBody": "They will stop seeing your position and this trip's status. They won't be told.",
+  "tripsRevokeAction": "Remove",
+  "tripsWatchersNoneSeen": "Nobody has opened it yet",
+  "tripsWatchersSeenCount": "{seen} of {total} have seen",
+  "@tripsWatchersSeenCount": {
+    "placeholders": {
+      "seen": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsWatcherSeen": "has seen",
+  "tripsOtherDeviceTitle": "Trip running on your other device",
+  "tripsOtherDeviceBody": "Only one device sends the position, otherwise the trace would jump between places.",
+  "tripsOtherDeviceTake": "Track from this device",
+  "tripsOtherDeviceKeep": "Stay read-only"
 }

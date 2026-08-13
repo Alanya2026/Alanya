@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/status_provider.dart';
 import '../../core/theme/app_dimens.dart';
@@ -27,6 +28,8 @@ import '../calls/ongoing_call_screen.dart';
 import '../../widgets/common/offline_banner.dart';
 import '../../widgets/trips/trip_banner.dart';
 import 'glass_nav_bar.dart';
+import '../../core/services/trip_repository.dart';
+import '../trips/trip_live_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.initialTab = 0});
@@ -249,6 +252,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _handleMeetingNotification(action);
     } else if (type == 'status_view') {
       if (action.fromTap) _switchToTab(_tabStatuses);
+    } else if (type.startsWith('trip_')) {
+      unawaited(_handleTripNotification(action));
     } else if (type == 'broadcast') {
       if (action.fromTap) {
         unawaited(_handleBroadcastTap(action.data));
@@ -259,6 +264,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       }
     }
+  }
+
+  /// Ouvre le trajet visé par une notification.
+  ///
+  /// Deux publics, un seul écran. `ownerId` du payload comparé au compte courant
+  /// suffit à trancher : une alerte reçue en tant que destinataire ouvre la vue
+  /// membre, un rappel d'échéance ouvre la vue propriétaire avec son bouton de
+  /// confirmation. Se tromper de vue afficherait « Je suis bien arrivé·e » à
+  /// quelqu'un qui n'est pas parti.
+  ///
+  /// La synchronisation précède l'ouverture : la notification est justement le
+  /// cas où l'application était fermée, donc où le cache local est en retard.
+  /// Sans elle, l'écran s'ouvrirait sur un trajet inconnu et un tourniquet.
+  Future<void> _handleTripNotification(NotificationAction action) async {
+    final tripId = int.tryParse(action.data['tripId'] ?? '') ?? 0;
+    if (tripId == 0) return;
+
+    final ownerId = int.tryParse(action.data['ownerId'] ?? '') ?? 0;
+    final myId = context.read<AuthProvider>().currentUser?.alanyaID ?? 0;
+    final isOwner = ownerId != 0 && ownerId == myId;
+
+    final trips = context.read<TripRepository>();
+    // Même sans tap, on rattrape : une alerte reçue au premier plan doit mettre
+    // la carte de conversation à jour, que l'utilisateur l'ouvre ou non.
+    await trips.syncTrip(tripId, isOwner: isOwner);
+    if (!mounted || !action.fromTap) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TripLiveScreen(tripId: tripId, isOwner: isOwner),
+      ),
+    );
   }
 
   Future<void> _handleBroadcastTap(Map<String, String> data) async {
