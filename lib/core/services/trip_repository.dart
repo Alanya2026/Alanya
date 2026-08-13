@@ -97,6 +97,42 @@ class TripRepository {
   /// Elle doit **nommer** les personnes qui reçoivent la position : une
   /// notification de suivi qui ne le dit pas se comporte comme un logiciel
   /// espion. C'est ce détail qui distingue les deux.
+  /// Les destinataires d'un trajet, avec leur accusé de réception.
+  ///
+  /// Lus au réseau, jamais mis en cache : ces identités appartiennent au trajet,
+  /// pas à l'appareil. Les garder en base ferait du téléphone un registre de
+  /// qui surveille qui, ce que le volet s'applique à ne pas être — c'est déjà la
+  /// raison pour laquelle un membre n'a aucun historique.
+  ///
+  /// Réservé au propriétaire : le serveur ne renvoie `watchers` qu'à lui.
+  Future<List<TripWatcher>> loadWatchers(int tripId) async {
+    try {
+      final data = await _api.getTrip(tripId);
+      final trip = data['trip'];
+      final raw = trip is Map ? (trip['watchers'] as List?) : null;
+      return (raw ?? const [])
+          .whereType<Map>()
+          .map((w) => TripWatcher.fromJson(w.cast<String, dynamic>()))
+          .where((w) => w.alanyaID != 0)
+          .toList();
+    } catch (e) {
+      debugPrint('[Trips] loadWatchers échoué: $e');
+      return const [];
+    }
+  }
+
+  /// Retire un destinataire d'un trajet en cours.
+  ///
+  /// Le cercle est figé au départ : retirer quelqu'un de sa liste Confiance ne
+  /// le sort pas d'un trajet déjà lancé. C'est le seul geste qui le fasse, et
+  /// c'est pour cela qu'il doit exister — sans lui, une personne ajoutée au
+  /// cercle avant un trajet le suit jusqu'au bout, quoi qu'il arrive entre-temps.
+  ///
+  /// Si c'était le dernier, le serveur arme la clôture du trajet : un trajet
+  /// sans témoin n'est plus de la sécurité.
+  Future<void> revokeWatcher(int tripId, int alanyaID) =>
+      _api.revokeTripWatcher(tripId, alanyaID);
+
   Future<List<String>> watcherNames(int tripId) async {
     try {
       final data = await _api.getTrip(tripId);

@@ -20,8 +20,10 @@ import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/trips/trip_arrival_sheet.dart';
 import '../../widgets/trips/trip_degraded_banner.dart';
+import '../../widgets/trips/trip_other_device_banner.dart';
 import '../../widgets/trips/trip_rail.dart';
 import '../../widgets/trips/trip_visuals.dart';
+import '../../widgets/trips/trip_watchers_row.dart';
 import 'trip_sos_screen.dart';
 import '../../talky_models.dart';
 
@@ -127,6 +129,7 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
             children: [
               _bandeauEtat(l10n, t, v),
               TripRail(state: t.state, stale: t.stale),
+              if (widget.isOwner) TripOtherDeviceBanner(trip: t),
               if (widget.isOwner)
                 TripDegradedBanner(trip: t, onAction: _ouvrirReglages),
               Expanded(child: _carteGeo(t, v)),
@@ -416,6 +419,11 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
           children: [
             Wrap(spacing: 6, runSpacing: 6, children: faits),
             if (!widget.isOwner) _actionsMembre(l10n, t, v),
+            // Qui regarde, et qui a ouvert. Réservé au propriétaire : un membre
+            // n'a pas à connaître le carnet d'adresses de quelqu'un d'autre —
+            // c'est aussi pourquoi il ne voit qu'un décompte.
+            if (widget.isOwner && TripState.isOpen(t.state))
+              TripWatchersRow(tripId: widget.tripId),
             if (widget.isOwner) ...[
               const SizedBox(height: AppSpacing.lg),
               // Confirmer est l'action dominante dès que l'échéance approche :

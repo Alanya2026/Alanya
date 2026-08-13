@@ -170,6 +170,21 @@ extension TripsApi on TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
+  /// Retire un destinataire d'un trajet en cours.
+  ///
+  /// 404 si l'intéressé n'était pas — ou plus — destinataire actif : le serveur
+  /// ne distingue pas les deux, et c'est voulu. Personne n'apprend qu'il a été
+  /// retiré d'un cercle.
+  Future<void> revokeTripWatcher(int tripId, int alanyaID) async {
+    await _handleRequest(
+      () => _client.delete(
+        Uri.parse(
+            '${TalkyApiClient.baseUrl}/trips/$tripId/watchers/$alanyaID'),
+        headers: _headers,
+      ),
+    );
+  }
+
   Future<void> deleteTrip(int tripId) async {
     await _handleRequest(
       () => _client.delete(

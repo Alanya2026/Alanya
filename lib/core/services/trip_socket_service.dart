@@ -41,6 +41,28 @@ class TripSocketService {
   final _deviceRevoked = StreamController<int>.broadcast();
   Stream<int> get deviceRevoked => _deviceRevoked.stream;
 
+  /// « Maman a vu ». Émis quand un destinataire ouvre la carte du trajet.
+  ///
+  /// C'est le **seul retour qu'un membre du cercle puisse donner** : il ne peut
+  /// ni clore le trajet, ni consulter l'historique. Le laisser s'arrêter au
+  /// serveur — ce qui était le cas, l'événement n'étant écouté nulle part —
+  /// revenait à priver la personne suivie de la seule preuve que quelqu'un la
+  /// regarde.
+  final _watcherSeen =
+      StreamController<({int tripId, int alanyaID})>.broadcast();
+  Stream<({int tripId, int alanyaID})> get watcherSeen => _watcherSeen.stream;
+
+  /// Le serveur a refusé nos positions : un autre appareil du compte porte le
+  /// trajet (`DEVICE_NOT_OWNER`).
+  ///
+  /// Sans cet écouteur — et il n'existait pas — le téléphone dépossédé
+  /// continuait d'émettre dans le vide : service en avant-plan actif, batterie
+  /// consommée, bandeau affichant « trajet en cours », et pas une position
+  /// acceptée. Un seul appareil émet, c'est le verrou du volet ; encore
+  /// faut-il que le perdant l'apprenne.
+  final _deviceNotOwner = StreamController<int>.broadcast();
+  Stream<int> get deviceNotOwner => _deviceNotOwner.stream;
+
   void start() {
     if (_demarre) return;
     _demarre = true;
@@ -52,6 +74,8 @@ class TripSocketService {
     _api.onSocketEvent(SocketEvents.tripStateEvent, _onState);
     _api.onSocketEvent(SocketEvents.tripCardUpdate, _onCardUpdate);
     _api.onSocketEvent(SocketEvents.tripDeviceRevoked, _onDeviceRevoked);
+    _api.onSocketEvent(SocketEvents.tripWatcherSeen, _onWatcherSeen);
+    _api.onSocketEvent(SocketEvents.tripError, _onError);
 
     // ── Événements de room : uniquement si l'on est abonné ───────────
     _api.onSocketEvent(SocketEvents.tripPosition, _onPosition);
@@ -72,6 +96,7 @@ class TripSocketService {
       SocketEvents.tripStateEvent, SocketEvents.tripCardUpdate,
       SocketEvents.tripDeviceRevoked, SocketEvents.tripPosition,
       SocketEvents.tripStale, SocketEvents.tripSignal,
+      SocketEvents.tripWatcherSeen, SocketEvents.tripError,
     ]) {
       _api.offSocketEvent(e);
     }
@@ -82,6 +107,8 @@ class TripSocketService {
     // événement de trajet n'arriverait de toute la session.
     _demarre = false;
     _deviceRevoked.close();
+    _watcherSeen.close();
+    _deviceNotOwner.close();
   }
 
   /// Détache les écouteurs sans fermer le service — à la déconnexion du compte.
@@ -92,6 +119,7 @@ class TripSocketService {
       SocketEvents.tripStateEvent, SocketEvents.tripCardUpdate,
       SocketEvents.tripDeviceRevoked, SocketEvents.tripPosition,
       SocketEvents.tripStale, SocketEvents.tripSignal,
+      SocketEvents.tripWatcherSeen, SocketEvents.tripError,
     ]) {
       _api.offSocketEvent(e);
     }
@@ -233,6 +261,17 @@ class TripSocketService {
     await _trips.setStale(id, data is Map ? data['stale'] != false : true);
   }
 
+  void _onWatcherSeen(dynamic data) {
+    final id = _tripId(data);
+    if (id == null || data is! Map) return;
+    final qui = (data['alanyaID'] as num?)?.toInt() ??
+        (data['watcherId'] as num?)?.toInt();
+    if (qui == null || qui == 0) return;
+    if (!_watcherSeen.isClosed) {
+      _watcherSeen.add((tripId: id, alanyaID: qui));
+    }
+  }
+
   Future<void> _onSignal(dynamic data) async {
     final id = _tripId(data);
     if (id == null) return;
@@ -261,6 +300,15 @@ class TripSocketService {
   // ignore: use_setters_to_change_properties
   void bindCardWriter(Future<void> Function(int, String) writer) {
     _onTripCardContent = writer;
+  }
+
+  void _onError(dynamic data) {
+    if (data is! Map) return;
+    if (data['code']?.toString() != 'DEVICE_NOT_OWNER') return;
+    final id = _tripId(data);
+    if (id == null) return;
+    debugPrint('[Trips] positions refusées : le trajet $id est porté ailleurs');
+    if (!_deviceNotOwner.isClosed) _deviceNotOwner.add(id);
   }
 
   void _onDeviceRevoked(dynamic data) {
