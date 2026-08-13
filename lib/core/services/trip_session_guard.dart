@@ -151,6 +151,24 @@ class TripSessionGuard with WidgetsBindingObserver {
   /// être attaché à un trajet sans autorisation de localisation.
   bool get isStreaming => _flux != null;
 
+  /// Vrai si le suivi **survit à la mise en arrière-plan**.
+  ///
+  /// Sur Android, cela tient au service en avant-plan ; sur iOS, à
+  /// l'autorisation « Toujours » couplée au mode `location` de l'Info.plist.
+  /// Sans l'une ou l'autre, le partage s'interrompt dès qu'on quitte
+  /// l'application.
+  ///
+  /// L'écran s'en sert pour ne pas mentir. Il affirmait jusqu'ici « le partage
+  /// continue même écran verrouillé » dans tous les cas — une phrase fausse sur
+  /// un iPhone où l'utilisateur n'a accordé que « Pendant l'utilisation », et
+  /// une promesse de sûreté est la dernière chose qu'on doive arrondir.
+  bool get suitEnArrierePlan =>
+      _androidNatif ? _fgsActif : _permissionToujours;
+
+  /// Autorisation « Toujours » (iOS) ou son équivalent. Relevée à chaque
+  /// vérification de permission.
+  bool _permissionToujours = false;
+
   // ── Cycle de vie ──────────────────────────────────────────────────
 
   /// Démarre l'émission pour un trajet. Idempotent : réappeler pour le même
@@ -241,6 +259,7 @@ class TripSessionGuard with WidgetsBindingObserver {
     _niveauBatterie = null;
     _batterieFaible = false;
     _batterieCritique = false;
+    _permissionToujours = false;
     WidgetsBinding.instance.removeObserver(this);
     await _arreterServiceAvantPlan();
     if (id != null) _socket?.unsubscribe(id);
@@ -350,6 +369,7 @@ class TripSessionGuard with WidgetsBindingObserver {
       if (p == LocationPermission.denied) {
         p = await Geolocator.requestPermission();
       }
+      _permissionToujours = p == LocationPermission.always;
       return p == LocationPermission.always ||
           p == LocationPermission.whileInUse;
     } catch (e) {

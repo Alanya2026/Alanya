@@ -50,6 +50,15 @@
 			<string>audio</string>
 			<string>remote-notification</string>
 			<string>voip</string>
+			<!-- Trajets de confiance. Sans ce mode, iOS coupe les mises à jour de
+			     position dès que l'application quitte le premier plan — c'est-à-dire
+			     au moment précis où le suivi sert. La pastille bleue reste visible
+			     (showBackgroundLocationIndicator) : on ne masque jamais le fait
+			     qu'on suit une position.
+			     ⚠ Exige un profil de provisionnement adapté et une justification à
+			     la revue Apple : « partage de position en direct, limité à un trajet
+			     que l'utilisateur a explicitement démarré ». -->
+			<string>location</string>
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
@@ -61,8 +70,15 @@
 		<string>Alanya enregistre les photos et vidéos reçues dans l'album Alanya.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Alanya enregistre les photos et vidéos reçues dans l'album Alanya.</string>
+		<!-- Ces phrases sont lues telles quelles par l'utilisateur ET par la revue
+		     Apple : elles doivent décrire TOUS les usages. Celle d'origine ne
+		     mentionnait que le partage ponctuel en conversation, alors que le volet
+		     des trajets suit la position en continu — un motif de rejet, et surtout
+		     une information incomplète donnée au moment où l'on décide. -->
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Alanya a besoin de votre position pour partager une localisation dans une conversation.</string>
+		<string>Alanya utilise votre position pour partager un lieu dans une conversation, et pour suivre un trajet de confiance que vous avez démarré.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Pendant un trajet de confiance, Alanya partage votre position avec les proches que vous avez choisis, même écran verrouillé. Le partage s'arrête à la fin du trajet. Jamais avant, jamais après.</string>
 		<key>NSFaceIDUsageDescription</key>
 		<string>Alanya utilise Face ID ou Touch ID pour verrouiller l'accès à l'application.</string>
 		<key>UIFileSharingEnabled</key>
