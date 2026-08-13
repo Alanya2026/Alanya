@@ -73,6 +73,39 @@ class TripCardPayload {
   bool get isFalseAlarm =>
       closeReason == 'false_alarm' && state == TripState.closedCancelled;
 
+  /// Encode le payload tel que le serveur l'écrit dans `message.content`.
+  String encode() => jsonEncode({
+        'v': currentVersion,
+        'tripId': tripId,
+        'kind': kind,
+        'state': state,
+        'etaAt': etaAt?.toUtc().toIso8601String(),
+        'destLabel': destLabel,
+        'note': note,
+        'closeReason': closeReason,
+        'lastLat': lastLat,
+        'lastLng': lastLng,
+        'lastAt': lastAt?.toUtc().toIso8601String(),
+      });
+
+  /// Construit une carte à jour depuis un [Trip] (après confirm / cancel).
+  ///
+  /// Sert à réécrire le cache local **sans attendre** `trip:card_update` :
+  /// l'owner qui vient de clôturer ne doit pas revoir « Suivre en direct »
+  /// ni pouvoir rappuyer sur « Je suis bien arrivé·e ».
+  factory TripCardPayload.fromTrip(Trip t) => TripCardPayload(
+        tripId: t.id,
+        kind: t.kind,
+        state: t.state,
+        etaAt: t.etaAt,
+        destLabel: t.destLabel,
+        note: t.note,
+        closeReason: t.closeReason,
+        lastLat: t.lastPoint?.lat,
+        lastLng: t.lastPoint?.lng,
+        lastAt: t.lastPoint?.recordedAt,
+      );
+
   /// Renvoie `null` sur tout contenu non reconnu — y compris une version future
   /// du format. L'appelant rend alors un repli explicite.
   static TripCardPayload? tryParse(String? content) {

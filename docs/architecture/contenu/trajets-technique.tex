@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS trip (
   dest_lat      DECIMAL(9,6) NULL,
   dest_lng      DECIMAL(9,6) NULL,
   dest_label    VARCHAR(160) NULL,               -- geocode UNE fois a la creation
-  dest_radius_m SMALLINT     NOT NULL DEFAULT 150,
+  dest_radius_m SMALLINT     NOT NULL DEFAULT 100,
   eta_at        DATETIME     NULL,
   grace_minutes SMALLINT     NOT NULL DEFAULT 10,
   extensions    SMALLINT     NOT NULL DEFAULT 0,
@@ -438,8 +438,8 @@ l'arrêt, il n'émet rien.
 \thd{Régime} & \thd{Déclencheur} & \thd{Précision} & \thd{Filtre} & \thd{Plancher} &
 \thd{Battement} \\
 \midrule
-Nominal  & à plus de 10 min de l'ETA         & \code{balanced} & 75 m & 15 s & 90 s \\
-Approche & à moins de 10 min, ou 1 km du but & \code{high}     & 30 m &  8 s & 30 s \\
+Nominal  & à plus de 10 min de l'ETA         & \code{balanced} & 25 m &  5 s & 45 s \\
+Approche & à moins de 10 min, ou 1 km du but & \code{high}     & 15 m &  4 s & 20 s \\
 Alerte   & états \code{alert} et \code{sos}  & \code{best}     & 15 m &  5 s & 15 s \\
 \bottomrule
 \end{tabularx}
@@ -494,16 +494,16 @@ permet à un réglage de prendre effet \textbf{sur un trajet déjà en cours}.
 \toprule
 \thd{Variable} & \thd{Défaut} & \thd{Ce que coûte un réglage plus large} \\
 \midrule
-\code{TRIP\_FILTER\_M\_NOMINAL}    & 75 m  & Trace plus anguleuse en ville~; sans effet sur
+\code{TRIP\_FILTER\_M\_NOMINAL}    & 25 m  & Trace plus anguleuse en ville~; sans effet sur
                                             la sûreté. \\
-\code{TRIP\_FLOOR\_S\_NOMINAL}     & 15 s  & Le pin saccade. C'est la molette la plus sûre à
+\code{TRIP\_FLOOR\_S\_NOMINAL}     &  5 s  & Le pin saccade. C'est la molette la plus sûre à
                                             tourner~: elle ne change que le nombre de
                                             paquets. \\
-\code{TRIP\_BEAT\_S\_NOMINAL}      & 90 s  & Un arrêt met plus longtemps à se confirmer, et
+\code{TRIP\_BEAT\_S\_NOMINAL}      & 45 s  & Un arrêt met plus longtemps à se confirmer, et
                                             le seuil de péremption recule d'autant. \\
-\code{TRIP\_FILTER\_M\_APPROACH}   & 30 m  & L'arrivée se détecte plus tard. \\
-\code{TRIP\_FLOOR\_S\_APPROACH}    & 8 s   & --- \\
-\code{TRIP\_BEAT\_S\_APPROACH}     & 30 s  & --- \\
+\code{TRIP\_FILTER\_M\_APPROACH}   & 15 m  & L'arrivée se détecte plus tard. \\
+\code{TRIP\_FLOOR\_S\_APPROACH}    & 4 s   & --- \\
+\code{TRIP\_BEAT\_S\_APPROACH}     & 20 s  & --- \\
 \code{TRIP\_FILTER\_M\_ALERT}      & 15 m  & \textbf{À ne pas relâcher} --- c'est le seul
                                             régime où la précision sert vraiment. \\
 \code{TRIP\_FLOOR\_S\_ALERT}       & 5 s   & \textbf{À ne pas relâcher.} \\
@@ -553,7 +553,7 @@ il ne doit pas être confondu avec une disparition.
 Trois conditions cumulatives, et une conséquence~:
 
 \begin{enumerate}[leftmargin=1.6em]
-  \item être à moins de \code{dest\_radius\_m} (150~m par défaut)~;
+  \item être à moins de \code{dest\_radius\_m} (100~m par défaut)~;
   \item y rester \textbf{60~s} --- l'hystérésis~;
   \item se déplacer à moins de $\sim$15 km/h --- le portillon de vitesse.
 \end{enumerate}
@@ -562,11 +562,12 @@ Les relevés dont \code{acc\_m > 100} sont \textbf{ignorés pour la détection},
 quand même, grisés, avec leur cercle de précision. Mieux vaut dire « à 60~m près » que
 planter un point mensonger.
 
-\begin{note}[Pourquoi 150 m, et pas 50]
+\begin{note}[Pourquoi 100 m, et pas 50]
 En ville, la précision courante est de 20 à 65~m, et le multi-trajet en canyon urbain
 dépasse régulièrement 100~m. Un rayon de 50~m ne déclencherait jamais en centre-ville~; 500~m
-déclencherait à un pâté de maisons. L'hystérésis et le portillon de vitesse font le reste du
-travail~: passer devant sa rue sans s'arrêter est le faux positif numéro un.
+déclencherait à un pâté de maisons. Le défaut est donc \textbf{100~m} (compromis entre
+détection fiable et question trop précoce)~; l'hystérésis et le portillon de vitesse font le
+reste du travail~: passer devant sa rue sans s'arrêter est le faux positif numéro un.
 \end{note}
 
 Et la conséquence, déjà énoncée mais qui mérite d'être répétée ici~: \textbf{une arrivée
@@ -667,6 +668,29 @@ $T+10$ min & \code{trip\_grace\_expired} & État \code{alert}~: le cercle est pr
 \bottomrule
 \end{tabularx}
 \end{center}
+
+\begin{constat}[Les cinq types de notification poussée]
+Chaque étape de l'escalade porte son propre type, et chacun compose son \emph{titre} et
+son \emph{corps} côté serveur~: les envois sont \emph{data-only}, et quand l'application
+est tuée c'est le système qui affiche~--- il n'y a personne pour traduire. Une charge
+utile sans ces deux champs produit une notification parfaitement silencieuse.
+
+\code{trip\_eta\_soon}, \code{trip\_due} et \code{trip\_reminder} vont au
+\textbf{propriétaire seul}, sur le canal \code{alanya\_trip}, en priorité haute mais
+\textbf{sans} traverser « Ne pas déranger »~: ce sont des rappels, pas des alertes.
+
+\code{trip\_alert} et \code{trip\_sos} vont au cercle, sur le canal
+\code{alanya\_trip\_alert}, dont l'usage audio est déclaré \code{alarm}. C'est ce qui
+leur fait passer la catégorie « alarmes » de « Ne pas déranger », autorisée par défaut~---
+la seule voie sans \code{ACCESS\_NOTIFICATION\_POLICY}, permission que l'utilisateur
+doit accorder à la main. Sur iOS, \code{InterruptionLevel.timeSensitive} joue le même
+rôle face au mode Concentration. Ce sont les deux seuls types de toute l'application
+autorisés à traverser le silence.
+
+Le \emph{tag} de notification dérive du trajet et non du type~: un trajet occupe une
+ligne dans le tiroir, et le rappel d'échéance remplace le pré-avis au lieu de s'empiler à
+côté. Même principe que la carte de conversation, réécrite sur place.
+\end{constat}
 
 \begin{note}[Pourquoi dix minutes, et non cinq]
 En deçà de cinq minutes, chaque embouteillage devient une alerte, et le cercle apprend à

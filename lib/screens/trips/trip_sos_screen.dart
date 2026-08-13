@@ -34,7 +34,7 @@ class TripSosScreen extends StatefulWidget {
   State<TripSosScreen> createState() => _TripSosScreenState();
 }
 
-enum _Phase { repos, maintien, decompte, envoye }
+enum _Phase { repos, maintien, decompte, envoi, envoye }
 
 class _TripSosScreenState extends State<TripSosScreen>
     with SingleTickerProviderStateMixin {
@@ -99,6 +99,8 @@ class _TripSosScreenState extends State<TripSosScreen>
       if (!mounted) return t.cancel();
       if (_restant <= 1) {
         t.cancel();
+        // Quitter le décompte AVANT l'appel réseau : sinon « 1 » reste affiché
+        // pendant tout le RTT et Annuler reste cliquable pendant l'envoi.
         unawaited(_envoyer());
       } else {
         setState(() => _restant--);
@@ -118,6 +120,9 @@ class _TripSosScreenState extends State<TripSosScreen>
   // ── L'envoi, puis le silence ──────────────────────────────────────
 
   Future<void> _envoyer() async {
+    if (!mounted) return;
+    setState(() => _phase = _Phase.envoi);
+
     final l10n = context.l10n;
     final trips = context.read<TripRepository>();
     final socket = context.read<TripSocketService>();
@@ -197,15 +202,20 @@ class _TripSosScreenState extends State<TripSosScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final titreDiscret =
+        _phase == _Phase.envoye || _phase == _Phase.envoi;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_phase == _Phase.envoye ? l10n.trips : l10n.tripsSosTitle),
+        title: Text(titreDiscret ? l10n.trips : l10n.tripsSosTitle),
+        // Pendant l'envoi, on ne quitte pas par accident le flux.
+        automaticallyImplyLeading: _phase != _Phase.envoi,
       ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
           child: switch (_phase) {
             _Phase.envoye => _apresEnvoi(l10n),
+            _Phase.envoi => _envoiEnCours(l10n),
             _Phase.decompte => _decompte(l10n),
             _ => _armement(l10n),
           },
@@ -336,6 +346,50 @@ class _TripSosScreenState extends State<TripSosScreen>
                       ?.copyWith(fontWeight: FontWeight.w700)),
             ),
           ),
+        ],
+      );
+
+  /// Attente réseau après le décompte — même grammaire visuelle que le mode
+  /// discret (pas de rouge), pour ne jamais laisser « 1 » collé à l'écran.
+  Widget _envoiEnCours(AppLocalizations l10n) => Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 96,
+            height: 96,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: context.colors.surfaceContainerHighest,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: context.colors.onSurfaceVariant.withValues(alpha: 0.55),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(l10n.tripsSosSendingNow,
+              style: context.text.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center),
+          const SizedBox(height: AppSpacing.sm),
+          Text(l10n.tripsSosSendingNowBody,
+              style: context.text.bodyMedium
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
+              textAlign: TextAlign.center),
+          const Spacer(),
         ],
       );
 

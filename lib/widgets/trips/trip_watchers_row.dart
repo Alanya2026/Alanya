@@ -25,9 +25,20 @@ import '../common/common.dart';
 /// déjà lancé. Ce geste est le seul qui le fasse, et il vit là où l'on voit qui
 /// regarde — pas dans un écran de réglages qu'on n'ouvrira pas en chemin.
 class TripWatchersRow extends StatefulWidget {
-  const TripWatchersRow({super.key, required this.tripId});
+  const TripWatchersRow({
+    super.key,
+    required this.tripId,
+    this.allowRevoke = true,
+    this.pastTense = false,
+  });
 
   final int tripId;
+
+  /// Faux sur un trajet clos : on ne révoque plus personne.
+  final bool allowRevoke;
+
+  /// Libellé d'historique : « X personnes ont suivi » (vus), pas « suivent ».
+  final bool pastTense;
 
   @override
   State<TripWatchersRow> createState() => _TripWatchersRowState();
@@ -139,9 +150,12 @@ class _TripWatchersRowState extends State<TripWatchersRow> {
           Text(
             // « 2 sur 5 ont vu » plutôt que « 5 personnes suivent » : le nombre
             // de destinataires est une promesse, le nombre de vus est un fait.
-            vus == 0
-                ? l10n.tripsWatchersNoneSeen
-                : l10n.tripsWatchersSeenCount(vus, _destinataires.length),
+            // En historique, on dit seulement combien ont réellement suivi.
+            widget.pastTense
+                ? l10n.tripsWatcherFollowedCount(vus)
+                : (vus == 0
+                    ? l10n.tripsWatchersNoneSeen
+                    : l10n.tripsWatchersSeenCount(vus, _destinataires.length)),
             style: context.text.labelSmall?.copyWith(
               color: context.colors.onSurfaceVariant,
               fontWeight: FontWeight.w600,
@@ -171,7 +185,9 @@ class _TripWatchersRowState extends State<TripWatchersRow> {
       child: GestureDetector(
         // Appui long, pas un bouton : révoquer doit être atteignable sans être
         // à portée de pouce distrait pendant un trajet.
-        onLongPress: _occupe ? null : () => _revoquer(w),
+        onLongPress: (!widget.allowRevoke || _occupe)
+            ? null
+            : () => _revoquer(w),
         child: SizedBox(
           width: 44,
           child: Column(

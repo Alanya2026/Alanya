@@ -35,11 +35,16 @@ class TripMessageCard extends StatelessWidget {
     super.key,
     required this.payload,
     required this.senderName,
+    this.isOwner = false,
     this.onOpen,
   });
 
   final TripCardPayload payload;
   final String senderName;
+
+  /// Vue propriétaire de la bulle (message sortant). Change le CTA et le ton
+  /// une fois le trajet clos — le vert « bien arrivé » reste pour le cercle.
+  final bool isOwner;
   final VoidCallback? onOpen;
 
   /// La vignette n'apparaît que là où elle répond à une question.
@@ -54,12 +59,18 @@ class TripMessageCard extends StatelessWidget {
   /// charge des tuiles pour des dizaines de trajets terminés il y a des mois.
   bool get _vignette => TripState.isOpen(payload.state);
 
+  bool get _clos => !TripState.isOpen(payload.state);
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Côté owner, un trajet clos se lit en gris : ce n'est plus une alerte ni
+    // une bonne nouvelle à célébrer dans son propre fil, c'est une archive.
     final v = TripVisual.resolve(
       context,
-      state: payload.state,
+      state: isOwner && _clos && !payload.isFalseAlarm
+          ? TripState.closedCancelled
+          : payload.state,
       fausseAlerte: payload.isFalseAlarm,
     );
 
@@ -80,16 +91,16 @@ class TripMessageCard extends StatelessWidget {
       _ => l10n.tripsCardStarted(senderName),
     };
 
-    final action = switch (payload.state) {
-      TripState.sos || TripState.alert => l10n.tripsCardSeeLast,
-      TripState.awaitingConfirm => l10n.tripsCardSeePosition,
-      TripState.closedConfirmed ||
-      TripState.closedCancelled ||
-      TripState.closedExpired ||
-      TripState.closedUnwatched =>
-        null,
-      _ => l10n.tripsCardFollow,
-    };
+    final String? action;
+    if (_clos) {
+      action = isOwner ? l10n.tripsCardView : null;
+    } else {
+      action = switch (payload.state) {
+        TripState.sos || TripState.alert => l10n.tripsCardSeeLast,
+        TripState.awaitingConfirm => l10n.tripsCardSeePosition,
+        _ => l10n.tripsCardFollow,
+      };
+    }
 
     final faits = <Widget>[
       if (payload.destLabel != null)

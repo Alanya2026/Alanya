@@ -18,6 +18,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
+import '../../widgets/common/common.dart';
 import '../../widgets/trips/trip_arrival_sheet.dart';
 import '../../widgets/trips/trip_degraded_banner.dart';
 import '../../widgets/trips/trip_other_device_banner.dart';
@@ -60,6 +61,14 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
   /// le moment où elle devient l'information la plus utile de l'écran.
   Timer? _horloge;
 
+  /// Nom du porteur pour l'écran de fin (évite de relancer la requête Drift
+  /// à chaque rebuild du [FutureBuilder]).
+  Future<String>? _nomFin;
+
+  /// Carte edge-to-edge : masque bandeau, rail et pied pour laisser lire le
+  /// déplacement. Owner et watcher.
+  bool _immersif = false;
+
   @override
   void initState() {
     super.initState();
@@ -70,7 +79,13 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
     // recevoir une position toutes les cinq secondes pour une carte que
     // personne ne regarde.
     socket.subscribe(widget.tripId);
-    unawaited(trips.syncTrip(widget.tripId, isOwner: widget.isOwner));
+    // On se reconstruit à l'issue de la synchronisation, et pas seulement sur
+    // le flux Drift : quand elle échoue, rien n'est écrit en base, donc le flux
+    // n'émet pas — et l'écran resterait sur son tourniquet alors que le verdict
+    // est tombé.
+    unawaited(trips.syncTrip(widget.tripId, isOwner: widget.isOwner).then((_) {
+      if (mounted) setState(() {});
+    }));
 
     // Côté destinataire, ouvrir l'écran vaut « j'ai vu » — c'est le seul retour
     // qu'il puisse donner, et il remonte au propriétaire.
@@ -92,6 +107,7 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
     if (!(guard.isActive && guard.tripId == widget.tripId)) {
       context.read<TripSocketService>().unsubscribe(widget.tripId);
     }
+    context.read<TripRepository>().clearCloseInfo(widget.tripId);
     super.dispose();
   }
 
@@ -100,45 +116,263 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
     final l10n = context.l10n;
     final trips = context.read<TripRepository>();
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.trips)),
-      body: StreamBuilder<LocalTrip?>(
-        stream: trips.watchTrip(widget.tripId),
-        builder: (context, snap) {
-          final t = snap.data;
-          if (t == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final v = TripVisual.resolve(context, state: t.state, stale: t.stale);
+    return PopScope(
+      canPop: !_immersif,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _immersif) setState(() => _immersif = false);
+      },
+      child: Scaffold(
+        appBar: _immersif ? null : AppBar(title: Text(l10n.trips)),
+        body: StreamBuilder<LocalTrip?>(
+          stream: trips.watchTrip(widget.tripId),
+          builder: (context, snap) {
+            final t = snap.data;
+            if (t == null) return _sansTrajet(l10n, trips);
+            final v = TripVisual.resolve(context, state: t.state, stale: t.stale);
 
-          // La question d'arrivée s'impose d'elle-même : c'est le moment pour
-          // lequel toute la fonctionnalité existe, il ne doit pas dépendre du
-          // fait que l'utilisateur pense à regarder le pied d'écran.
-          if (widget.isOwner &&
-              t.state == TripState.awaitingConfirm &&
-              !_feuillePosee) {
-            _feuillePosee = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) unawaited(_demanderArrivee(t));
-            });
-          } else if (t.state != TripState.awaitingConfirm) {
-            _feuillePosee = false;
-          }
+            // La question d'arrivée s'impose d'elle-même : c'est le moment pour
+            // lequel toute la fonctionnalité existe, il ne doit pas dépendre du
+            // fait que l'utilisateur pense à regarder le pied d'écran.
+            if (widget.isOwner &&
+                t.state == TripState.awaitingConfirm &&
+                !_feuillePosee) {
+              _feuillePosee = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) unawaited(_demanderArrivee(t));
+              });
+            } else if (t.state != TripState.awaitingConfirm) {
+              _feuillePosee = false;
+            }
 
-          return Column(
-            children: [
-              _bandeauEtat(l10n, t, v),
-              TripRail(state: t.state, stale: t.stale),
-              if (widget.isOwner) TripOtherDeviceBanner(trip: t),
-              if (widget.isOwner)
-                TripDegradedBanner(trip: t, onAction: _ouvrirReglages),
-              Expanded(child: _carteGeo(t, v)),
-              _pied(l10n, t, v),
-            ],
-          );
-        },
+            if (_immersif) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  _carteGeo(t, v),
+                  if (TripState.isOpen(t.state)) _overlayImmersif(l10n, t, v),
+                  if (!TripState.isOpen(t.state)) _overlayClos(l10n, t, v),
+                ],
+              );
+            }
+
+            return Column(
+              children: [
+                _bandeauEtat(l10n, t, v),
+                TripRail(state: t.state, stale: t.stale),
+                if (widget.isOwner && TripState.isOpen(t.state))
+                  TripOtherDeviceBanner(trip: t),
+                if (widget.isOwner && TripState.isOpen(t.state))
+                  TripDegradedBanner(trip: t, onAction: _ouvrirReglages),
+                Expanded(child: _carteGeo(t, v)),
+                if (TripState.isOpen(t.state))
+                  _pied(l10n, t, v)
+                else
+                  _piedClos(l10n, t, v),
+              ],
+            );
+          },
+        ),
       ),
     );
+  }
+
+  /// Chrome minimal en mode carte immersif.
+  Widget _overlayImmersif(dynamic l10n, LocalTrip t, TripVisual v) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Flexible(
+                  child: Material(
+                    color: context.colors.surface.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TripPulse(color: v.ink, size: 8, animate: v.pulses),
+                          const SizedBox(width: AppSpacing.sm),
+                          Flexible(
+                            child: Text(
+                              v.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.text.labelLarge?.copyWith(
+                                color: v.ink,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Material(
+                  color: context.colors.surface.withValues(alpha: 0.92),
+                  shape: const CircleBorder(),
+                  elevation: 2,
+                  child: IconButton(
+                    tooltip: l10n.tripsMapReduce,
+                    onPressed: () => setState(() => _immersif = false),
+                    icon: const Icon(Icons.fullscreen_exit),
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (widget.isOwner &&
+                    t.state == TripState.awaitingConfirm) ...[
+                  FloatingActionButton.extended(
+                    heroTag: 'trip-immersive-confirm',
+                    backgroundColor: context.semantic.success,
+                    foregroundColor: context.semantic.onSuccess,
+                    onPressed: _occupe ? null : _confirmer,
+                    icon: const Icon(Icons.check_rounded),
+                    label: Text(l10n.tripsConfirmArrival),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                if (widget.isOwner)
+                  FloatingActionButton(
+                    heroTag: 'trip-immersive-sos',
+                    backgroundColor: context.colors.error,
+                    foregroundColor: context.colors.onError,
+                    tooltip: l10n.tripsSosButton,
+                    onPressed: _occupe ? null : _sos,
+                    child: const Icon(Icons.warning_amber_rounded),
+                  )
+                else
+                  FloatingActionButton(
+                    heroTag: 'trip-immersive-call',
+                    backgroundColor: v.tone == TripTone.alerted
+                        ? context.colors.error
+                        : context.colors.primary,
+                    foregroundColor: Colors.white,
+                    tooltip: l10n.tripsCall,
+                    onPressed: _occupe ? null : () => _appeler(t),
+                    child: const Icon(Icons.call),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Le trajet n'est pas — ou plus — dans le cache.
+  ///
+  /// Trois situations très différentes, qui appelaient toutes le même
+  /// tourniquet infini. C'est le pire des états : l'utilisateur ne sait pas
+  /// s'il doit attendre, et il attendra donc pour toujours.
+  ///
+  /// Le serveur répond **404 indifférencié** à qui n'est plus destinataire, et
+  /// c'est délibéré : personne ne doit apprendre qu'un trajet existe encore, ni
+  /// pourquoi il n'y a plus accès. La pierre tombale ne donne donc **aucune
+  /// raison** — c'est exactement ce que prévoit la conception, et ce qui
+  /// empêche la révocation de devenir une accusation.
+  ///
+  /// Exception : si l'on suivait déjà le trajet et qu'on a reçu sa clôture
+  /// ([TripCloseInfo]), on peut dire « bien arrivé·e » / « partage arrêté »
+  /// sans inventer une raison — c'est l'état qu'on a vu passer.
+  Widget _sansTrajet(dynamic l10n, TripRepository trips) {
+    final fin = trips.closeInfoOf(widget.tripId);
+    if (fin != null) {
+      _nomFin ??= _nomProprietaire(fin.ownerId);
+      return FutureBuilder<String>(
+        future: _nomFin,
+        builder: (context, snap) {
+          final nom = snap.data?.trim() ?? '';
+          final v = TripVisual.resolve(context, state: fin.state);
+          final titre = fin.arrivedSafely
+              ? (nom.isEmpty
+                  ? l10n.tripsLiveEndedArrived
+                  : l10n.tripsCardArrived(nom))
+              : (nom.isEmpty
+                  ? l10n.tripsLiveEndedStopped
+                  : l10n.tripsCardStopped(nom));
+          return EmptyState(
+            icon: v.icon,
+            iconColor: v.ink,
+            title: titre,
+            message: l10n.tripsLiveEndedBody,
+            action: FilledButton(
+              onPressed: () {
+                trips.clearCloseInfo(widget.tripId);
+                Navigator.pop(context);
+              },
+              child: Text(l10n.commonClose),
+            ),
+          );
+        },
+      );
+    }
+
+    switch (trips.accessOf(widget.tripId)) {
+      case TripAccess.plusPartage:
+        return EmptyState(
+          icon: Icons.lock_outline,
+          title: l10n.tripsNoLongerShared,
+          message: l10n.tripsNoLongerSharedBody,
+          action: FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.commonClose),
+          ),
+        );
+
+      case TripAccess.injoignable:
+        return EmptyState(
+          icon: Icons.cloud_off,
+          title: l10n.tripsUnreachable,
+          message: l10n.tripsUnreachableBody,
+          action: FilledButton(
+            onPressed: () async {
+              await trips.syncTrip(widget.tripId, isOwner: widget.isOwner);
+              if (mounted) setState(() {});
+            },
+            child: Text(l10n.retry),
+          ),
+        );
+
+      // Accès encore « ok » mais cache vide : oubli / course, pas un chargement.
+      // Sans ce filet, le tourniquet revient dès qu'un forget n'a pas posé _fin.
+      case TripAccess.ok:
+        return EmptyState(
+          icon: Icons.lock_outline,
+          title: l10n.tripsNoLongerShared,
+          message: l10n.tripsNoLongerSharedBody,
+          action: FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.commonClose),
+          ),
+        );
+
+      // La première synchronisation n'a encore ni abouti ni échoué : c'est le
+      // seul cas où un tourniquet est honnête.
+      case TripAccess.inconnu:
+        return const Center(child: CircularProgressIndicator());
+    }
+  }
+
+  Future<String> _nomProprietaire(int ownerId) async {
+    final cache = context.read<LocalCacheRepository>();
+    final u = await cache.getKnownUser(ownerId);
+    if (u == null) return '';
+    final nom = u.nom.trim();
+    if (nom.isNotEmpty) return nom;
+    return u.pseudo.trim();
   }
 
   // ── Bandeau d'état ────────────────────────────────────────────────
@@ -235,6 +469,14 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
               options: MapOptions(
                 initialCenter: position ?? but ?? const LatLng(3.848, 11.5021),
                 initialZoom: 15,
+                // Bornes de la CAMÉRA, distinctes de celles de la couche de
+                // tuiles. Sans elles, le geste de zoom n'est jamais arrêté :
+                // on dépasse le dernier niveau dessinable et on tombe sur un
+                // aplat uni qu'on prend pour une panne. Bridée, la carte bute
+                // — comportement normal, compris de tout le monde.
+                maxZoom: MapTiles.maxDisplayZoom,
+                minZoom: MapTiles.minDisplayZoom,
+                backgroundColor: MapTiles.background(context),
                 interactionOptions: const InteractionOptions(
                   flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                 ),
@@ -251,7 +493,7 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                     circles: [
                       CircleMarker(
                         point: but,
-                        radius: (t.destRadiusM ?? 150).toDouble(),
+                        radius: (t.destRadiusM ?? 100).toDouble(),
                         useRadiusInMeter: true,
                         color: context.colors.primary.withValues(alpha: 0.10),
                         borderColor:
@@ -326,6 +568,23 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                   ),
                 ),
               ),
+
+            if (!_immersif)
+              Positioned(
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
+                child: SizedBox(
+                  width: AppSizes.minTapTarget,
+                  height: AppSizes.minTapTarget,
+                  child: FloatingActionButton(
+                    heroTag: 'trip-expand',
+                    tooltip: l10n.tripsMapExpand,
+                    elevation: 3,
+                    onPressed: () => setState(() => _immersif = true),
+                    child: const Icon(Icons.fullscreen, size: AppIconSize.sm),
+                  ),
+                ),
+              ),
           ],
         );
       },
@@ -368,6 +627,88 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
         alignment: Alignment.center,
         child: const Icon(Icons.flag_rounded, size: 16, color: Colors.white),
       );
+
+  /// Pied quand le trajet est déjà clos — plus de Confirmer / SOS.
+  Widget _piedClos(dynamic l10n, LocalTrip t, TripVisual v) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: AppRadius.sheetTop,
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x1F000000), blurRadius: 16, offset: Offset(0, -4)),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(v.icon, color: v.ink),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    v.label,
+                    style: context.text.titleSmall?.copyWith(
+                      color: v.ink,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonClose),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _overlayClos(dynamic l10n, LocalTrip t, TripVisual v) {
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Material(
+            color: context.colors.surface.withValues(alpha: 0.94),
+            borderRadius: AppRadius.brMd,
+            elevation: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  Icon(v.icon, color: v.ink),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(v.label,
+                        style: context.text.labelLarge?.copyWith(
+                          color: v.ink,
+                          fontWeight: FontWeight.w700,
+                        )),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(l10n.commonClose),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   // ── Pied d'écran ──────────────────────────────────────────────────
 
@@ -467,7 +808,14 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      l10n.tripsKeepsRunning,
+                      // On dit ce qui est vrai sur CET appareil, pas ce qui est
+                      // vrai en général. Sur un iPhone où seul « Pendant
+                      // l'utilisation » a été accordé, le partage s'interrompt
+                      // dès qu'on quitte l'application — affirmer le contraire
+                      // serait la pire des promesses à arrondir.
+                      TripSessionGuard.instance.suitEnArrierePlan
+                          ? l10n.tripsKeepsRunning
+                          : l10n.tripsForegroundOnly,
                       style: context.text.bodySmall?.copyWith(
                           color: context.colors.onSurfaceVariant, height: 1.35),
                     ),
@@ -538,7 +886,10 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
     final urgent = v.tone == TripTone.alerted;
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.lg),
-      child: urgent
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          urgent
           ? FilledButton.icon(
               onPressed: _occupe ? null : () => _appeler(t),
               icon: const Icon(Icons.call),
@@ -558,7 +909,59 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                 minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
               ),
             ),
+          const SizedBox(height: AppSpacing.xs),
+          // Discret, et à sa place : sortir ne doit jamais concurrencer
+          // « Appeler », mais doit rester trouvable. Personne n'a demandé à
+          // entrer dans un cercle, et la décision de suivre appartient à celui
+          // qu'on y a mis.
+          TextButton(
+            onPressed: _occupe ? null : () => _quitter(t),
+            child: Text(l10n.tripsLeave),
+          ),
+        ],
+      ),
     );
+  }
+
+  /// Quitter le suivi d'un trajet.
+  ///
+  /// On demande confirmation, contrairement à « Arrêter le partage » côté
+  /// porteur qui reste sans frein. Les deux gestes n'ont pas le même risque :
+  /// arrêter son propre partage doit rester gratuit, sous peine de devenir
+  /// punissable ; cesser de veiller sur quelqu'un mérite une seconde de
+  /// réflexion, et le texte dit exactement ce qu'on perd.
+  Future<void> _quitter(LocalTrip t) async {
+    final l10n = context.l10n;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(l10n.tripsLeaveTitle),
+        content: Text(l10n.tripsLeaveBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text(l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(c).colorScheme.error,
+            ),
+            child: Text(l10n.tripsLeave),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    await _agir(() async {
+      final moi = context.read<AuthProvider>().currentUser?.alanyaID ?? 0;
+      if (moi == 0) return;
+      await context.read<TripRepository>().leaveTrip(t.id, moi);
+      if (!mounted) return;
+      context.read<TripSocketService>().unsubscribe(t.id);
+      Navigator.pop(context);
+    });
   }
 
   /// Appelle la personne suivie.
@@ -652,6 +1055,7 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
   /// continue de courir. C'est écrit dans la feuille, et c'est ce qui distingue
   /// une sortie honnête d'une échappatoire trompeuse.
   Future<void> _demanderArrivee(LocalTrip t) async {
+    if (_immersif) setState(() => _immersif = false);
     final choix = await TripArrivalSheet.montrer(
       context,
       // Une arrivée détectée par le rayon est une hypothèse ; une échéance

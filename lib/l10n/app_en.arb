@@ -2158,7 +2158,6 @@
   },
   "optionsAction": "Options",
   "trips": "Trusted trips",
-  "tripsSubtitle": "Let your circle know, and get home confirmed",
   "tripsCircleEmptyTitle": "Your trusted circle is empty",
   "tripsCircleEmptyBody": "Pick up to five people. They alone will see your trips, and only the ones you share.",
   "tripsComposeCircle": "Set up my circle",
@@ -2181,8 +2180,6 @@
   "tripsNoteLabel": "Note for your circle",
   "tripsNoteHint": "Yellow taxi, plate LT 4471",
   "tripsStart": "Start sharing",
-  "tripsContinue": "Continue",
-  "tripsConfirmTitle": "Confirm departure",
   "tripsContract": "Your {count} contacts will see your live location until {eta}. If you haven't confirmed by {alert}, they will be alerted with your last known position.",
   "@tripsContract": {
     "placeholders": {
@@ -2205,6 +2202,14 @@
   "tripsAlerted": "Alert sent",
   "tripsWatcherCount": "{count, plural, =1{1 person is following} other{{count} people are following}}",
   "@tripsWatcherCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsWatcherFollowedCount": "{count, plural, =0{Nobody followed} =1{1 person followed} other{{count} people followed}}",
+  "@tripsWatcherFollowedCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -2273,6 +2278,7 @@
     }
   },
   "tripsCardFollow": "Follow live",
+  "tripsCardView": "View",
   "tripsCardSeePosition": "See location",
   "tripsCardSeeLast": "See last known location",
   "tripsCardFallback": "Trusted trip — please update the app",
@@ -2328,6 +2334,8 @@
       }
     }
   },
+  "tripsSosSendingNow": "Sending…",
+  "tripsSosSendingNowBody": "Your circle will be alerted in a moment.",
   "tripsSosSent": "Your circle has been alerted",
   "tripsSosDiscreet": "No sound, no vibration. Your location keeps being shared.",
   "tripsSosTooMany": "Too many SOS alerts in the last 24 hours.",
@@ -2336,7 +2344,7 @@
   "tripsKeepsRunning": "Sharing continues even with the screen locked. A notification reminds you, and lets you stop it.",
   "tripsDestination": "Destination",
   "tripsDestinationOptional": "Pick a destination (optional)",
-  "tripsDestinationRadius": "Arrival will be detected within 150 m",
+  "tripsDestinationRadius": "Arrival will be detected within 100 m",
   "tripsShort": "Trusted",
   "tripsRailStart": "Start",
   "tripsRailFollow": "Follow",
@@ -2346,6 +2354,8 @@
   "tripsDeleteTitle": "Delete this trip?",
   "tripsDeleteBody": "The trip and its trace will be erased. This cannot be undone.",
   "tripsRecenter": "Recentre on position",
+  "tripsMapExpand": "Full screen",
+  "tripsMapReduce": "Exit full screen",
   "tripsArrivalReachedTitle": "Have you arrived?",
   "tripsArrivalReachedBody": "You've been at your destination for a minute.",
   "tripsArrivalDueTitle": "Confirm your arrival",
@@ -2438,5 +2448,31 @@
   "tripsOtherDeviceTitle": "Trip running on your other device",
   "tripsOtherDeviceBody": "Only one device sends the position, otherwise the trace would jump between places.",
   "tripsOtherDeviceTake": "Track from this device",
-  "tripsOtherDeviceKeep": "Stay read-only"
+  "tripsOtherDeviceKeep": "Stay read-only",
+  "tripsNoLongerShared": "This trip is no longer shared with you",
+  "tripsNoLongerSharedBody": "It may have ended, or you were removed. No further information is given.",
+  "tripsLiveEndedArrived": "Arrived safely",
+  "tripsLiveEndedStopped": "Sharing has ended",
+  "tripsLiveEndedBody": "Location sharing has ended.",
+  "tripsDetailTitle": "Trip details",
+  "tripsDetailTimeline": "Timeline",
+  "tripsDetailNoEvents": "No events recorded.",
+  "tripsTraceExpired": "Trace expired",
+  "tripsTraceExpiredBody": "Location points for this trip have been purged. The summary and timeline remain available.",
+  "tripsEventStarted": "Started",
+  "tripsEventExtended": "Extended",
+  "tripsEventArrivalDetected": "Arrival detected",
+  "tripsEventEtaDue": "ETA reached",
+  "tripsEventAlerted": "Alert sent",
+  "tripsEventClosed": "Closed",
+  "tripsEventSignalBack": "Signal restored",
+  "tripsEventLowBattery": "Low battery",
+  "tripsEventWatcherSeen": "Seen by a contact",
+  "tripsEventWatcherRevoked": "Watcher removed",
+  "tripsEventDeviceTakeover": "Taken over on another device",
+  "tripsUnreachable": "Trip unavailable",
+  "tripsUnreachableBody": "The server can't be reached. Your connection may be down.",
+  "tripsLeave": "Stop following",
+  "tripsLeaveTitle": "Stop following this trip?",
+  "tripsLeaveBody": "You'll no longer see their position, and won't be alerted if they don't confirm arrival."
 }

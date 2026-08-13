@@ -4853,9 +4853,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trips => 'Trusted trips';
 
   @override
-  String get tripsSubtitle => 'Let your circle know, and get home confirmed';
-
-  @override
   String get tripsCircleEmptyTitle => 'Your trusted circle is empty';
 
   @override
@@ -4904,12 +4901,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tripsStart => 'Start sharing';
 
   @override
-  String get tripsContinue => 'Continue';
-
-  @override
-  String get tripsConfirmTitle => 'Confirm departure';
-
-  @override
   String tripsContract(int count, String eta, String alert) {
     return 'Your $count contacts will see your live location until $eta. If you haven\'t confirmed by $alert, they will be alerted with your last known position.';
   }
@@ -4940,6 +4931,18 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other: '$count people are following',
       one: '1 person is following',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tripsWatcherFollowedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people followed',
+      one: '1 person followed',
+      zero: 'Nobody followed',
     );
     return '$_temp0';
   }
@@ -4997,6 +5000,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tripsCardFollow => 'Follow live';
+
+  @override
+  String get tripsCardView => 'View';
 
   @override
   String get tripsCardSeePosition => 'See location';
@@ -5094,6 +5100,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get tripsSosSendingNow => 'Sending…';
+
+  @override
+  String get tripsSosSendingNowBody =>
+      'Your circle will be alerted in a moment.';
+
+  @override
   String get tripsSosSent => 'Your circle has been alerted';
 
   @override
@@ -5120,7 +5133,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tripsDestinationOptional => 'Pick a destination (optional)';
 
   @override
-  String get tripsDestinationRadius => 'Arrival will be detected within 150 m';
+  String get tripsDestinationRadius => 'Arrival will be detected within 100 m';
 
   @override
   String get tripsShort => 'Trusted';
@@ -5149,6 +5162,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tripsRecenter => 'Recentre on position';
+
+  @override
+  String get tripsMapExpand => 'Full screen';
+
+  @override
+  String get tripsMapReduce => 'Exit full screen';
 
   @override
   String get tripsArrivalReachedTitle => 'Have you arrived?';
@@ -5319,4 +5338,86 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tripsOtherDeviceKeep => 'Stay read-only';
+
+  @override
+  String get tripsNoLongerShared => 'This trip is no longer shared with you';
+
+  @override
+  String get tripsNoLongerSharedBody =>
+      'It may have ended, or you were removed. No further information is given.';
+
+  @override
+  String get tripsLiveEndedArrived => 'Arrived safely';
+
+  @override
+  String get tripsLiveEndedStopped => 'Sharing has ended';
+
+  @override
+  String get tripsLiveEndedBody => 'Location sharing has ended.';
+
+  @override
+  String get tripsDetailTitle => 'Trip details';
+
+  @override
+  String get tripsDetailTimeline => 'Timeline';
+
+  @override
+  String get tripsDetailNoEvents => 'No events recorded.';
+
+  @override
+  String get tripsTraceExpired => 'Trace expired';
+
+  @override
+  String get tripsTraceExpiredBody =>
+      'Location points for this trip have been purged. The summary and timeline remain available.';
+
+  @override
+  String get tripsEventStarted => 'Started';
+
+  @override
+  String get tripsEventExtended => 'Extended';
+
+  @override
+  String get tripsEventArrivalDetected => 'Arrival detected';
+
+  @override
+  String get tripsEventEtaDue => 'ETA reached';
+
+  @override
+  String get tripsEventAlerted => 'Alert sent';
+
+  @override
+  String get tripsEventClosed => 'Closed';
+
+  @override
+  String get tripsEventSignalBack => 'Signal restored';
+
+  @override
+  String get tripsEventLowBattery => 'Low battery';
+
+  @override
+  String get tripsEventWatcherSeen => 'Seen by a contact';
+
+  @override
+  String get tripsEventWatcherRevoked => 'Watcher removed';
+
+  @override
+  String get tripsEventDeviceTakeover => 'Taken over on another device';
+
+  @override
+  String get tripsUnreachable => 'Trip unavailable';
+
+  @override
+  String get tripsUnreachableBody =>
+      'The server can\'t be reached. Your connection may be down.';
+
+  @override
+  String get tripsLeave => 'Stop following';
+
+  @override
+  String get tripsLeaveTitle => 'Stop following this trip?';
+
+  @override
+  String get tripsLeaveBody =>
+      'You\'ll no longer see their position, and won\'t be alerted if they don\'t confirm arrival.';
 }

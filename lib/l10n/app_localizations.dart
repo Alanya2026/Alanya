@@ -8528,12 +8528,6 @@ abstract class AppLocalizations {
   /// **'Trajets de confiance'**
   String get trips;
 
-  /// No description provided for @tripsSubtitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Prévenir ses proches, et rentrer confirmé'**
-  String get tripsSubtitle;
-
   /// No description provided for @tripsCircleEmptyTitle.
   ///
   /// In fr, this message translates to:
@@ -8624,18 +8618,6 @@ abstract class AppLocalizations {
   /// **'Démarrer le partage'**
   String get tripsStart;
 
-  /// No description provided for @tripsContinue.
-  ///
-  /// In fr, this message translates to:
-  /// **'Continuer'**
-  String get tripsContinue;
-
-  /// No description provided for @tripsConfirmTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Confirmer le départ'**
-  String get tripsConfirmTitle;
-
   /// No description provided for @tripsContract.
   ///
   /// In fr, this message translates to:
@@ -8683,6 +8665,13 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{count, plural, =1{1 personne suit} other{{count} personnes suivent}}'**
   String tripsWatcherCount(int count);
+
+  /// No description provided for @tripsWatcherFollowedCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Personne n\'a suivi} =1{1 personne a suivi} other{{count} personnes ont suivi}}'**
+  String tripsWatcherFollowedCount(int count);
+
 
   /// No description provided for @tripsEtaAt.
   ///
@@ -8761,6 +8750,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Suivre en direct'**
   String get tripsCardFollow;
+
+  /// No description provided for @tripsCardView.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir'**
+  String get tripsCardView;
 
   /// No description provided for @tripsCardSeePosition.
   ///
@@ -8924,6 +8919,18 @@ abstract class AppLocalizations {
   /// **'Envoi dans {count} secondes'**
   String tripsSosSending(int count);
 
+  /// No description provided for @tripsSosSendingNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi en cours…'**
+  String get tripsSosSendingNow;
+
+  /// No description provided for @tripsSosSendingNowBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos proches seront prévenus dans un instant.'**
+  String get tripsSosSendingNowBody;
+
   /// No description provided for @tripsSosSent.
   ///
   /// In fr, this message translates to:
@@ -8975,7 +8982,7 @@ abstract class AppLocalizations {
   /// No description provided for @tripsDestinationRadius.
   ///
   /// In fr, this message translates to:
-  /// **'L\'arrivée sera détectée dans un rayon de 150 m'**
+  /// **'L\'arrivée sera détectée dans un rayon de 100 m'**
   String get tripsDestinationRadius;
 
   /// No description provided for @tripsShort.
@@ -9031,6 +9038,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Recentrer sur la position'**
   String get tripsRecenter;
+
+  /// No description provided for @tripsMapExpand.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plein écran'**
+  String get tripsMapExpand;
+
+  /// No description provided for @tripsMapReduce.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réduire'**
+  String get tripsMapReduce;
 
   /// No description provided for @tripsArrivalReachedTitle.
   ///
@@ -9319,6 +9338,162 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Rester en lecture seule'**
   String get tripsOtherDeviceKeep;
+
+  /// No description provided for @tripsNoLongerShared.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce trajet n\'est plus partagé avec vous'**
+  String get tripsNoLongerShared;
+
+  /// No description provided for @tripsNoLongerSharedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il a pu être clos, ou vous en avez été retiré. Aucune autre information n\'est donnée.'**
+  String get tripsNoLongerSharedBody;
+
+  /// No description provided for @tripsLiveEndedArrived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée confirmée'**
+  String get tripsLiveEndedArrived;
+
+  /// No description provided for @tripsLiveEndedStopped.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le partage est terminé'**
+  String get tripsLiveEndedStopped;
+
+  /// No description provided for @tripsLiveEndedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le partage de position est terminé.'**
+  String get tripsLiveEndedBody;
+
+  /// No description provided for @tripsDetailTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détail du trajet'**
+  String get tripsDetailTitle;
+
+  /// No description provided for @tripsDetailTimeline.
+  ///
+  /// In fr, this message translates to:
+  /// **'Frise'**
+  String get tripsDetailTimeline;
+
+  /// No description provided for @tripsDetailNoEvents.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun événement enregistré.'**
+  String get tripsDetailNoEvents;
+
+  /// No description provided for @tripsTraceExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trace expirée'**
+  String get tripsTraceExpired;
+
+  /// No description provided for @tripsTraceExpiredBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les positions de ce trajet ont été purgées. Le résumé et la frise restent disponibles.'**
+  String get tripsTraceExpiredBody;
+
+  /// No description provided for @tripsEventStarted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Départ'**
+  String get tripsEventStarted;
+
+  /// No description provided for @tripsEventExtended.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prolongation'**
+  String get tripsEventExtended;
+
+  /// No description provided for @tripsEventArrivalDetected.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée détectée'**
+  String get tripsEventArrivalDetected;
+
+  /// No description provided for @tripsEventEtaDue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échéance atteinte'**
+  String get tripsEventEtaDue;
+
+  /// No description provided for @tripsEventAlerted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alerte envoyée'**
+  String get tripsEventAlerted;
+
+  /// No description provided for @tripsEventClosed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Clôture'**
+  String get tripsEventClosed;
+
+  /// No description provided for @tripsEventSignalBack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signal rétabli'**
+  String get tripsEventSignalBack;
+
+  /// No description provided for @tripsEventLowBattery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Batterie faible'**
+  String get tripsEventLowBattery;
+
+  /// No description provided for @tripsEventWatcherSeen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vu par un proche'**
+  String get tripsEventWatcherSeen;
+
+  /// No description provided for @tripsEventWatcherRevoked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Destinataire retiré'**
+  String get tripsEventWatcherRevoked;
+
+  /// No description provided for @tripsEventDeviceTakeover.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reprise sur un autre appareil'**
+  String get tripsEventDeviceTakeover;
+
+  /// No description provided for @tripsUnreachable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet indisponible'**
+  String get tripsUnreachable;
+
+  /// No description provided for @tripsUnreachableBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de joindre le serveur. Votre connexion est peut-être coupée.'**
+  String get tripsUnreachableBody;
+
+  /// No description provided for @tripsLeave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter le suivi'**
+  String get tripsLeave;
+
+  /// No description provided for @tripsLeaveTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter ce trajet ?'**
+  String get tripsLeaveTitle;
+
+  /// No description provided for @tripsLeaveBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne verrez plus sa position et ne serez pas alerté s\'il ne confirme pas son arrivée.'**
+  String get tripsLeaveBody;
 }
 
 class _AppLocalizationsDelegate

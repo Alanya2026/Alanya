@@ -1056,12 +1056,25 @@ extension _ChatBubbles on _ChatDetailScreenState {
       // Le nom vient de l'en-tête de conversation : dans un 1-1, c'est
       // toujours celui de l'interlocuteur.
       senderName: isMe ? context.l10n.meLabel : _chatTitle(context),
-      onOpen: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TripLiveScreen(tripId: payload.tripId, isOwner: isMe),
-        ),
-      ),
+      isOwner: isMe,
+      onOpen: () {
+        if (isMe && !TripState.isOpen(payload.state)) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TripDetailScreen(tripId: payload.tripId),
+            ),
+          );
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                TripLiveScreen(tripId: payload.tripId, isOwner: isMe),
+          ),
+        );
+      },
     );
   }
 

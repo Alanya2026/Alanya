@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import '../db/app_database.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../utils/trip_payload.dart';
 
 /// Trajets de confiance — REST et cache Drift.
 ///
@@ -79,6 +80,13 @@ class TripRepository {
     return q.watch();
   }
 
+  Future<List<LocalTripEvent>> getEventsOnce(int tripId) {
+    final q = _db.select(_db.localTripEvents)
+      ..where((e) => e.tripId.equals(tripId))
+      ..orderBy([(e) => OrderingTerm.asc(e.seq)]);
+    return q.get();
+  }
+
   /// Trace en cache, pour tracer la polyligne sans attendre le réseau.
   Stream<List<LocalTripPoint>> watchPoints(int tripId) {
     final q = _db.select(_db.localTripPoints)
@@ -132,6 +140,23 @@ class TripRepository {
   /// sans témoin n'est plus de la sécurité.
   Future<void> revokeWatcher(int tripId, int alanyaID) =>
       _api.revokeTripWatcher(tripId, alanyaID);
+
+  /// Quitter un trajet que l'on suit, de sa propre initiative.
+  ///
+  /// La même route que la révocation : côté serveur, le résultat en base est
+  /// identique, seul l'auteur change. Ce geste doit exister — sans lui, une
+  /// personne ajoutée à un cercle suit tous les trajets de son porteur sans
+  /// aucune sortie de son côté, et se fait réveiller la nuit par des alertes
+  /// qu'elle n'a pas demandé à recevoir. La liste Confiance appartient à son
+  /// porteur ; la décision de suivre appartient à celui qu'on y a mis.
+  ///
+  /// Le trajet quitte le cache immédiatement : on ne garde pas la position de
+  /// quelqu'un qu'on a cessé de suivre.
+  Future<void> leaveTrip(int tripId, int myId) async {
+    await _api.revokeTripWatcher(tripId, myId);
+    _acces[tripId] = TripAccess.plusPartage;
+    await forget(tripId);
+  }
 
   Future<List<String>> watcherNames(int tripId) async {
     try {
@@ -203,6 +228,18 @@ class TripRepository {
   }
 
   /// Détail et frise. Utilisé à l'ouverture de l'écran de suivi.
+  /// Ce qu'une synchronisation de trajet a conclu.
+  ///
+  /// Le serveur répond **404 indifférencié** à qui n'est plus destinataire :
+  /// c'est délibéré, personne ne doit apprendre qu'un trajet existe encore, ni
+  /// pourquoi il n'y a plus accès. Le client ne peut donc pas distinguer
+  /// « révoqué » de « trajet inconnu » — et n'a pas à le faire.
+  ///
+  /// En revanche il doit distinguer **« plus accessible »** de **« réseau
+  /// coupé »** : la première appelle une pierre tombale, la seconde un bouton
+  /// « Réessayer ». Sans cette distinction, `syncTrip` avalait tout et rendait
+  /// `null`, et l'écran restait sur un tourniquet **indéfiniment** — le pire des
+  /// états, celui où l'on ne sait pas s'il faut attendre.
   Future<Trip?> syncTrip(int tripId, {bool isOwner = false}) async {
     try {
       final data = await _api.getTrip(tripId);
@@ -211,6 +248,7 @@ class TripRepository {
       final raw = data['trip'];
       if (raw is! Map) return null;
       final t = Trip.fromJson(raw.cast<String, dynamic>(), isOwner: isOwner);
+      _acces[tripId] = TripAccess.ok;
       await _upsert(t);
 
       final events = (data['events'] as List?) ?? const [];
@@ -234,8 +272,40 @@ class TripRepository {
       return t;
     } catch (e) {
       debugPrint('[Trips] syncTrip($tripId) échoué: $e');
+      if (e is TalkyException && e.statusCode == 404) {
+        _acces[tripId] = TripAccess.plusPartage;
+        // Le trajet quitte le cache : le garder afficherait une carte figée
+        // sur des données auxquelles on n'a plus droit.
+        await forget(tripId);
+      } else {
+        _acces[tripId] = TripAccess.injoignable;
+      }
       return null;
     }
+  }
+
+  /// Verdict de la dernière synchronisation, par trajet.
+  final _acces = <int, TripAccess>{};
+
+  /// Dernière clôture connue pour un trajet suivi (écran de fin live).
+  ///
+  /// Le cache Drift est purgé dès la clôture côté membre ; ce snapshot mémoire
+  /// permet d'afficher « bien arrivé·e » / « partage arrêté » au lieu d'un
+  /// tourniquet. Absent sur 404 / leave : la pierre tombale reste indifférenciée.
+  final _fin = <int, TripCloseInfo>{};
+
+  TripAccess accessOf(int tripId) => _acces[tripId] ?? TripAccess.inconnu;
+
+  TripCloseInfo? closeInfoOf(int tripId) => _fin[tripId];
+
+  void clearCloseInfo(int tripId) => _fin.remove(tripId);
+
+  /// Clôture d'un trajet suivi : snapshot + accès terminal, puis purge cache.
+  Future<void> _oublierApresCloture(int tripId,
+      {required String state, required int ownerId}) async {
+    _fin[tripId] = TripCloseInfo(state: state, ownerId: ownerId);
+    _acces[tripId] = TripAccess.plusPartage;
+    await forget(tripId);
   }
 
   // ── MUTATIONS ───────────────────────────────────────────────────────
@@ -336,7 +406,21 @@ class TripRepository {
       isOwner: true,
     );
     await _upsert(trip);
+    // Ne pas attendre le socket : l'owner qui vient de confirmer / arrêter
+    // doit voir sa carte type 9 se mettre à jour tout de suite, sinon il
+    // rouvre le live et rappuie sur « Je suis bien arrivé·e ».
+    if (!trip.isOpen) await _rewriterCarteLocale(trip);
     return trip;
+  }
+
+  Future<void> _rewriterCarteLocale(Trip trip) async {
+    final writer = cardWriter;
+    if (writer == null) return;
+    try {
+      await writer(trip.id, TripCardPayload.fromTrip(trip).encode());
+    } catch (e) {
+      debugPrint('[Trips] réécriture carte locale échouée: $e');
+    }
   }
 
   /// Mes trajets passés. Ils ne vivent PAS dans le cache : l'historique se lit
@@ -407,7 +491,9 @@ class TripRepository {
 
     // Un trajet suivi qui se clôt sort du cache immédiatement : le membre n'a
     // pas d'historique, c'est une règle produit et non un oubli.
-    if (!t.isOwner && !t.isOpen) await forget(t.id);
+    if (!t.isOwner && !t.isOpen) {
+      await _oublierApresCloture(t.id, state: t.state, ownerId: t.ownerId);
+    }
   }
 
   /// Applique un changement d'état reçu par socket, sans aller-retour réseau.
@@ -423,7 +509,9 @@ class TripRepository {
     );
     if (!TripState.isOpen(state)) {
       final t = await getTripOnce(tripId);
-      if (t != null && !t.isOwner) await forget(tripId);
+      if (t != null && !t.isOwner) {
+        await _oublierApresCloture(tripId, state: state, ownerId: t.ownerId);
+      }
     }
   }
 

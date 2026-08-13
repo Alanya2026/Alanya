@@ -1384,6 +1384,42 @@ abstract final class TripState {
   static bool isAlerting(String s) => alerting.contains(s);
 }
 
+/// Verdict de la dernière synchronisation d'un trajet.
+///
+/// Le serveur répond **404 indifférencié** à qui n'est plus destinataire, et
+/// c'est délibéré : personne ne doit apprendre qu'un trajet existe encore, ni
+/// pourquoi il n'y a plus accès. Le client ne peut donc pas distinguer
+/// « révoqué » de « trajet inconnu ».
+///
+/// Il doit en revanche distinguer **« plus accessible »** de **« réseau
+/// coupé »** : la première appelle une pierre tombale, la seconde un bouton
+/// « Réessayer ». Confondre les deux produit un tourniquet sans fin, l'état le
+/// plus désagréable de tous — on ne sait pas s'il faut attendre.
+enum TripAccess {
+  /// Aucune synchronisation n'a encore abouti ni échoué.
+  inconnu,
+
+  /// Le trajet est accessible.
+  ok,
+
+  /// 404 : révoqué, clos et purgé, ou jamais destinataire. Sans distinction.
+  plusPartage,
+
+  /// Réseau ou serveur indisponible. Réessayer a du sens.
+  injoignable,
+}
+
+/// Clôture vue par un membre pendant qu'il suivait — conservée en mémoire
+/// après [TripRepository.forget], pour l'écran de fin (pas d'historique).
+class TripCloseInfo {
+  const TripCloseInfo({required this.state, required this.ownerId});
+
+  final String state;
+  final int ownerId;
+
+  bool get arrivedSafely => state == TripState.closedConfirmed;
+}
+
 abstract final class TripKind {
   static const taxi = 'taxi';
   static const meeting = 'meeting';
@@ -1467,6 +1503,10 @@ class Trip {
   final String? closeReason;
   final bool isOwner;
   final int watcherCount;
+
+  /// Destinataires qui ont ouvert le suivi (`seen_at`). Null si non fourni
+  /// (réponse ancienne / trajet live sans ce champ).
+  final int? watchersSeenCount;
   final List<TripWatcher> watchers;
 
   const Trip({
@@ -1490,6 +1530,7 @@ class Trip {
     this.closeReason,
     this.isOwner = false,
     this.watcherCount = 0,
+    this.watchersSeenCount,
     this.watchers = const [],
   });
 
@@ -1531,6 +1572,13 @@ class Trip {
       isOwner: isOwner ?? false,
       watcherCount: (json['watcherCount'] as num?)?.toInt() ??
           (json['watchers'] is List ? (json['watchers'] as List).length : 0),
+      watchersSeenCount: (json['watchersSeenCount'] as num?)?.toInt() ??
+          (json['watchers'] is List
+              ? (json['watchers'] as List)
+                  .whereType<Map>()
+                  .where((w) => w['seenAt'] != null)
+                  .length
+              : null),
       watchers: json['watchers'] is List
           ? (json['watchers'] as List)
               .whereType<Map>()

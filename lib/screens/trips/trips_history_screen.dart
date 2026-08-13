@@ -8,6 +8,7 @@ import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/trips/trip_visuals.dart';
+import 'trip_detail_screen.dart';
 
 /// Historique des trajets — **du propriétaire uniquement**.
 ///
@@ -151,71 +152,84 @@ class _TripsHistoryScreenState extends State<TripsHistoryScreen> {
     );
     final duree = t.closedAt?.difference(t.startedAt).inMinutes;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.md, AppSpacing.sm, AppSpacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TripCrest(visual: v, size: 40),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  t.destLabel ?? v.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.text.bodyLarge
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  // La date reste en clair : c'est la clé de lecture d'un
-                  // historique, elle ne se met pas en puce avec le reste.
-                  '${_dateCourte(t.startedAt)} · ${v.label}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.text.bodySmall?.copyWith(
-                    color: v.tone == TripTone.alerted
-                        ? v.ink
-                        : context.colors.onSurfaceVariant,
-                    fontWeight: v.tone == TripTone.alerted
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                TripDetailScreen(tripId: t.id, initial: t),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.md, AppSpacing.sm, AppSpacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TripCrest(visual: v, size: 40),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (duree != null)
-                      TripFactChip(
-                        icon: Icons.timelapse,
-                        label: l10n.tripsMinutes(duree),
-                        dense: true,
+                    Text(
+                      t.destLabel ?? v.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.bodyLarge
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      // La date reste en clair : c'est la clé de lecture d'un
+                      // historique, elle ne se met pas en puce avec le reste.
+                      '${_dateCourte(t.startedAt)} · ${v.label}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.bodySmall?.copyWith(
+                        color: v.tone == TripTone.alerted
+                            ? v.ink
+                            : context.colors.onSurfaceVariant,
+                        fontWeight: v.tone == TripTone.alerted
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if (duree != null)
+                          TripFactChip(
+                            icon: Icons.timelapse,
+                            label: l10n.tripsMinutes(duree),
+                            dense: true,
+                          ),
                     TripFactChip(
                       icon: Icons.group_outlined,
-                      label: l10n.tripsWatcherCount(t.watcherCount),
+                      label: l10n.tripsWatcherFollowedCount(
+                          t.watchersSeenCount ?? 0),
                       dense: true,
+                    ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                iconSize: AppIconSize.sm,
+                color: context.colors.onSurfaceVariant,
+                tooltip: l10n.commonDelete,
+                onPressed: () => _supprimer(l10n, t),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            iconSize: AppIconSize.sm,
-            color: context.colors.onSurfaceVariant,
-            tooltip: l10n.commonDelete,
-            onPressed: () => _supprimer(l10n, t),
-          ),
-        ],
+        ),
       ),
     );
   }

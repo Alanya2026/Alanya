@@ -3040,7 +3040,6 @@
   },
   "optionsAction": "Options",
   "trips": "Trajets de confiance",
-  "tripsSubtitle": "Prévenir ses proches, et rentrer confirmé",
   "tripsCircleEmptyTitle": "Votre cercle de confiance est vide",
   "tripsCircleEmptyBody": "Choisissez jusqu'à cinq proches. Eux seuls verront vos trajets, et seulement ceux que vous partagez.",
   "tripsComposeCircle": "Composer mon cercle",
@@ -3063,8 +3062,6 @@
   "tripsNoteLabel": "Note pour le cercle",
   "tripsNoteHint": "Taxi jaune, plaque LT 4471",
   "tripsStart": "Démarrer le partage",
-  "tripsContinue": "Continuer",
-  "tripsConfirmTitle": "Confirmer le départ",
   "tripsContract": "Vos {count} proches verront votre position en direct jusqu'à {eta}. Si vous n'avez pas confirmé à {alert}, ils seront prévenus avec votre dernière position.",
   "@tripsContract": {
     "placeholders": {
@@ -3087,6 +3084,14 @@
   "tripsAlerted": "Alerte envoyée",
   "tripsWatcherCount": "{count, plural, =1{1 personne suit} other{{count} personnes suivent}}",
   "@tripsWatcherCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsWatcherFollowedCount": "{count, plural, =0{Personne n'a suivi} =1{1 personne a suivi} other{{count} personnes ont suivi}}",
+  "@tripsWatcherFollowedCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -3155,6 +3160,7 @@
     }
   },
   "tripsCardFollow": "Suivre en direct",
+  "tripsCardView": "Voir",
   "tripsCardSeePosition": "Voir la position",
   "tripsCardSeeLast": "Voir la dernière position",
   "tripsCardFallback": "Trajet de confiance — mettez à jour l'application",
@@ -3210,6 +3216,8 @@
       }
     }
   },
+  "tripsSosSendingNow": "Envoi en cours…",
+  "tripsSosSendingNowBody": "Vos proches seront prévenus dans un instant.",
   "tripsSosSent": "Vos proches ont été prévenus",
   "tripsSosDiscreet": "Aucun son, aucune vibration. Votre position continue d'être partagée.",
   "tripsSosTooMany": "Trop de SOS sur les dernières 24 heures.",
@@ -3218,7 +3226,7 @@
   "tripsKeepsRunning": "Le partage continue même écran verrouillé. Une notification vous le rappelle et permet de l'arrêter.",
   "tripsDestination": "Destination",
   "tripsDestinationOptional": "Choisir une destination (facultatif)",
-  "tripsDestinationRadius": "L'arrivée sera détectée dans un rayon de 150 m",
+  "tripsDestinationRadius": "L'arrivée sera détectée dans un rayon de 100 m",
   "tripsShort": "Confiance",
   "tripsRailStart": "Partir",
   "tripsRailFollow": "Suivre",
@@ -3228,6 +3236,8 @@
   "tripsDeleteTitle": "Supprimer ce trajet ?",
   "tripsDeleteBody": "Le trajet et sa trace seront effacés. Cette action est définitive.",
   "tripsRecenter": "Recentrer sur la position",
+  "tripsMapExpand": "Plein écran",
+  "tripsMapReduce": "Réduire",
   "tripsArrivalReachedTitle": "Vous êtes arrivé·e ?",
   "tripsArrivalReachedBody": "Vous êtes à votre destination depuis une minute.",
   "tripsArrivalDueTitle": "Confirmez votre arrivée",
@@ -3320,5 +3330,31 @@
   "tripsOtherDeviceTitle": "Trajet en cours sur votre autre appareil",
   "tripsOtherDeviceBody": "Un seul appareil envoie la position, sinon la trace sauterait d'un endroit à l'autre.",
   "tripsOtherDeviceTake": "Suivre depuis cet appareil",
-  "tripsOtherDeviceKeep": "Rester en lecture seule"
+  "tripsOtherDeviceKeep": "Rester en lecture seule",
+  "tripsNoLongerShared": "Ce trajet n'est plus partagé avec vous",
+  "tripsNoLongerSharedBody": "Il a pu être clos, ou vous en avez été retiré. Aucune autre information n'est donnée.",
+  "tripsLiveEndedArrived": "Arrivée confirmée",
+  "tripsLiveEndedStopped": "Le partage est terminé",
+  "tripsLiveEndedBody": "Le partage de position est terminé.",
+  "tripsDetailTitle": "Détail du trajet",
+  "tripsDetailTimeline": "Frise",
+  "tripsDetailNoEvents": "Aucun événement enregistré.",
+  "tripsTraceExpired": "Trace expirée",
+  "tripsTraceExpiredBody": "Les positions de ce trajet ont été purgées. Le résumé et la frise restent disponibles.",
+  "tripsEventStarted": "Départ",
+  "tripsEventExtended": "Prolongation",
+  "tripsEventArrivalDetected": "Arrivée détectée",
+  "tripsEventEtaDue": "Échéance atteinte",
+  "tripsEventAlerted": "Alerte envoyée",
+  "tripsEventClosed": "Clôture",
+  "tripsEventSignalBack": "Signal rétabli",
+  "tripsEventLowBattery": "Batterie faible",
+  "tripsEventWatcherSeen": "Vu par un proche",
+  "tripsEventWatcherRevoked": "Destinataire retiré",
+  "tripsEventDeviceTakeover": "Reprise sur un autre appareil",
+  "tripsUnreachable": "Trajet indisponible",
+  "tripsUnreachableBody": "Impossible de joindre le serveur. Votre connexion est peut-être coupée.",
+  "tripsLeave": "Quitter le suivi",
+  "tripsLeaveTitle": "Quitter ce trajet ?",
+  "tripsLeaveBody": "Vous ne verrez plus sa position et ne serez pas alerté s'il ne confirme pas son arrivée."
 }
