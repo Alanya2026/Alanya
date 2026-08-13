@@ -102,6 +102,51 @@ class TripSessionGuard with WidgetsBindingObserver {
   int? get tripId => _tripId;
   String get regime => _regime;
 
+  /// Trajet dont l'émission a été **cédée à un autre appareil du compte**.
+  ///
+  /// Un seul appareil porte un trajet : `trip.owner_device` en décide côté
+  /// serveur, qui rejette les positions des autres avec `DEVICE_NOT_OWNER`.
+  /// Sans mémoire de cette cession, la reprise au démarrage réacquérait
+  /// aussitôt le trajet, le service en avant-plan repartait, et le téléphone
+  /// dépossédé consommait sa batterie pour des positions systématiquement
+  /// refusées.
+  ///
+  /// Retenu par identifiant et non par booléen : l'utilisateur peut céder un
+  /// trajet, en démarrer un autre plus tard, et celui-là doit émettre.
+  int? _cede;
+  int? get cededTripId => _cede;
+  bool cedeSur(int tripId) => _cede == tripId;
+
+  final _cessions = StreamController<int>.broadcast();
+
+  /// Émis quand ce téléphone cesse de porter un trajet au profit d'un autre.
+  Stream<int> get ceded => _cessions.stream;
+
+  /// Cède l'émission : on relâche tout, et on s'en souvient.
+  Future<void> ceder(int tripId) async {
+    if (_cede == tripId && !isActive) return;
+    _cede = tripId;
+    if (_tripId == tripId) await release();
+    if (!_cessions.isClosed) _cessions.add(tripId);
+    debugPrint('[TripGuard] émission cédée à un autre appareil (trajet $tripId)');
+  }
+
+  /// Reprend l'émission sur cet appareil.
+  ///
+  /// `claimDevice` bascule `owner_device` côté serveur ; l'ancien porteur reçoit
+  /// `trip:device_revoked` et s'arrête de lui-même. La bascule est explicite des
+  /// deux côtés : personne ne perd le rôle sans le savoir.
+  Future<void> reprendre({
+    required int tripId,
+    required TripRepository trips,
+    required TripSocketService socket,
+    DateTime? etaAt,
+  }) async {
+    _cede = null;
+    socket.claimDevice(tripId);
+    await acquire(tripId: tripId, trips: trips, socket: socket, etaAt: etaAt);
+  }
+
   /// Émet-on réellement des positions ? `isActive` ne suffit pas : un garde peut
   /// être attaché à un trajet sans autorisation de localisation.
   bool get isStreaming => _flux != null;
@@ -420,6 +465,11 @@ class TripSessionGuard with WidgetsBindingObserver {
     return AppleSettings(
       accuracy: precision,
       distanceFilter: r.filterM,
+      // Le pendant iOS du service en avant-plan Android. Sans lui, le système
+      // coupe le flux dès que l'application quitte le premier plan — au moment
+      // précis où le suivi sert. Exige `location` dans `UIBackgroundModes`
+      // (Info.plist) ; sans la déclaration, ce drapeau fait lever CoreLocation.
+      allowBackgroundLocationUpdates: true,
       // La pastille bleue reste visible : on ne masque jamais le fait qu'on
       // suit la position.
       showBackgroundLocationIndicator: true,

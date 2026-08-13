@@ -46,7 +46,22 @@ class TripBootstrap {
       unawaited(resume());
       unawaited(_adopterFondDeCarte());
     });
+
+    // Un seul appareil porte un trajet. Deux signaux disent qu'on l'a perdu, et
+    // il faut les deux : `device_revoked` quand un autre appareil le réclame
+    // explicitement, `DEVICE_NOT_OWNER` quand on découvre le refus en émettant
+    // — le cas d'une application relancée sur l'ancien téléphone.
+    //
+    // Sans cette écoute, le perdant gardait son service en avant-plan actif et
+    // envoyait des positions systématiquement rejetées, batterie comprise.
+    _cessionSub = _socket.deviceRevoked.listen(_ceder);
+    _refusSub = _socket.deviceNotOwner.listen(_ceder);
   }
+
+  StreamSubscription<int>? _cessionSub;
+  StreamSubscription<int>? _refusSub;
+
+  void _ceder(int tripId) => unawaited(TripSessionGuard.instance.ceder(tripId));
 
   /// Récupère la source des tuiles servie par le serveur.
   ///
@@ -88,6 +103,15 @@ class TripBootstrap {
 
       if (!TripState.isOpen(mien.state)) return;
 
+      // Trajet cédé à un autre appareil : on ne le reprend pas de force. La
+      // reprise est un geste explicite (`TripSessionGuard.reprendre`), proposé
+      // par l'écran de suivi — sinon deux téléphones se disputeraient le rôle à
+      // chaque redémarrage, et la trace sauterait de l'un à l'autre.
+      if (TripSessionGuard.instance.cedeSur(mien.id)) {
+        debugPrint('[Trips] trajet ${mien.id} porté par un autre appareil');
+        return;
+      }
+
       debugPrint('[Trips] reprise du suivi du trajet ${mien.id}');
       await TripSessionGuard.instance.acquire(
         tripId: mien.id,
@@ -107,6 +131,13 @@ class TripBootstrap {
   /// À la déconnexion du compte : on arrête d'émettre, sans clore le trajet —
   /// il appartient au serveur, pas à cette session.
   Future<void> stop() async {
+    await _cessionSub?.cancel();
+    await _refusSub?.cancel();
+    _cessionSub = null;
+    _refusSub = null;
+    // `_demarre` revient à faux pour que `start()` réattache les écoutes à la
+    // reconnexion suivante — même raison que dans `TripSocketService.detach`.
+    _demarre = false;
     await TripSessionGuard.instance.release();
     _socket.detach();
   }
