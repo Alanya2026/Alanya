@@ -8672,7 +8672,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{Personne n\'a suivi} =1{1 personne a suivi} other{{count} personnes ont suivi}}'**
   String tripsWatcherFollowedCount(int count);
 
-
   /// No description provided for @tripsEtaAt.
   ///
   /// In fr, this message translates to:
