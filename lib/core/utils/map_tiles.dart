@@ -42,7 +42,51 @@ class MapTiles {
 
   static String _url = _urlDefaut;
   static String _attribution = _attributionDefaut;
+
+  /// Dernier niveau que le fournisseur publie vraiment. La feuille OSM standard
+  /// s'arrête à 19.
   static int _maxZoom = 19;
+
+  /// Niveaux de zoom autorisés **au-delà** de ce que le fournisseur publie.
+  ///
+  /// Deux crans : la carte devient floue mais reste utilisable, et c'est tout
+  /// l'enjeu. Sur un suivi, on zoome pour distinguer deux positions séparées de
+  /// quelques mètres — savoir si la personne est devant l'immeuble ou dans la
+  /// cour. À cet instant, la netteté des noms de rue ne sert à rien : c'est
+  /// l'écart entre les deux points qui compte, et lui reste net.
+  ///
+  /// Au-delà de deux crans, l'image devient une bouillie de pixels qui donne une
+  /// fausse impression de précision — le pire résultat possible sur une carte de
+  /// sûreté.
+  static const _zoomSupplementaire = 2;
+
+  /// Zoom maximal que la **caméra** doit autoriser.
+  ///
+  /// À passer à `MapOptions.maxZoom`, et pas seulement à la couche de tuiles.
+  /// Sans cette borne, `MapOptions.maxZoom` vaut `null` : le geste de zoom n'est
+  /// jamais arrêté, l'utilisateur dépasse le dernier niveau dessinable et se
+  /// retrouve devant un aplat uni. Brider la caméra fait que le geste **bute**
+  /// — c'est un comportement de carte normal, que tout le monde comprend, au
+  /// lieu d'un écran vide qu'on prend pour une panne.
+  static double get maxDisplayZoom =>
+      (_maxZoom + _zoomSupplementaire).toDouble();
+
+  /// Zoom minimal. En deçà, on voit la planète entourée de vide : les tuiles
+  /// existent, mais le monde ne remplit plus l'écran.
+  static const double minDisplayZoom = 3;
+
+  /// Couleur du fond, sous les tuiles.
+  ///
+  /// `flutter_map` utilise par défaut un gris clair **fixe** (`#E0E0E0`), le
+  /// même dans les deux thèmes. On le voit à chaque instant où une tuile manque
+  /// — chargement, réseau lent, tuile en erreur — et en thème sombre, cela
+  /// produit un aplat clair en plein écran, exactement l'effet « la carte est
+  /// blanche ».
+  ///
+  /// La surface du thème, elle, se fond dans l'écran : une tuile qui tarde
+  /// laisse un trou discret au lieu d'un rectangle éclatant.
+  static Color background(BuildContext context) =>
+      Theme.of(context).colorScheme.surfaceContainerHighest;
 
   /// Identifie l'application auprès du fournisseur. C'est une exigence de la
   /// politique d'usage OSM — et l'unité par laquelle on se ferait bloquer, ce
@@ -114,8 +158,18 @@ class MapTiles {
     return TileLayer(
       urlTemplate: _url,
       userAgentPackageName: _userAgent,
-      // Au-delà du zoom publié, le serveur renvoie du vide et la carte blanchit.
-      maxZoom: _maxZoom.toDouble(),
+      // ⚠ Deux molettes, et c'est la mauvaise qui était réglée.
+      //
+      // `maxNativeZoom` dit jusqu'où le fournisseur publie réellement des
+      // tuiles. Au-delà, flutter_map réutilise celles de ce niveau **en les
+      // agrandissant** : la carte reste affichée, simplement plus floue.
+      //
+      // `maxZoom` coupe la couche : au-dessus, plus rien n'est dessiné. La
+      // renseigner à 19 rendait la carte **blanche** dès qu'on zoomait un cran
+      // trop loin, au lieu de flouter. `MapOptions.maxZoom` étant nul par
+      // défaut, la caméra, elle, ne bridait rien.
+      maxNativeZoom: _maxZoom,
+      maxZoom: (_maxZoom + _zoomSupplementaire).toDouble(),
       tileProvider: _CachedTileProvider(_gestionnaire),
       // Les tuiles manquantes restent transparentes plutôt que d'afficher un
       // carré gris : sur un réseau lent, un damier gris donne l'impression que

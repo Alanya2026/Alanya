@@ -337,6 +337,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             options: MapOptions(
               initialCenter: _center,
               initialZoom: 15,
+              maxZoom: MapTiles.maxDisplayZoom,
+              minZoom: MapTiles.minDisplayZoom,
+              backgroundColor: MapTiles.background(context),
               onPositionChanged: _onMapMoved,
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all & ~InteractiveFlag.rotate,

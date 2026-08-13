@@ -94,6 +94,7 @@ class TripMapThumb extends StatelessWidget {
                     // pouvoir déplacer la carte ; plus loin, le point ne dit
                     // plus où la personne se trouve.
                     initialZoom: 15,
+                    backgroundColor: MapTiles.background(context),
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.none,
                     ),

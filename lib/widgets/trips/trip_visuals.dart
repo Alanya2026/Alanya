@@ -96,10 +96,15 @@ class TripVisual {
   ///
   /// **Étage 1, la teinte.** Pour une couleur saturée, on garde la teinte — c'est
   /// elle qui porte le sens — et on ne corrige que la luminosité : vers le bas en
-  /// thème clair, vers le haut en sombre. Les seuils 0,32 et 0,72 sont ceux où
-  /// le vert, l'ambre et le rouge du volet franchissent 4,5:1 contre la surface
-  /// du thème correspondant. On ne monte pas plus haut en sombre : au-delà, la
-  /// teinte se délave et le rouge cesse de se distinguer de l'ambre.
+  /// thème clair, vers le haut en sombre.
+  ///
+  /// Les seuils 0,30 et 0,72 sont ceux où **la plus défavorable** des couleurs
+  /// du volet franchit 4,5:1 contre la surface du thème correspondant. C'est le
+  /// vert qui commande en clair : à 0,32 il plafonnait à 4,42:1 — assez pour
+  /// passer inaperçu à l'œil, pas assez pour être lisible. `trip_visuals_test`
+  /// vérifie chaque état dans les deux thèmes plutôt que de s'en remettre à
+  /// cette note. On ne monte pas plus haut en sombre : au-delà, la teinte se
+  /// délave et le rouge cesse de se distinguer de l'ambre.
   ///
   /// **Étage 2, le filet.** Si le résultat n'atteint pas 3:1 contre la surface,
   /// on rend `onSurfaceVariant`. Ce filet existe pour une erreur précise, qui a
@@ -118,7 +123,7 @@ class TripVisual {
       final sombre = Theme.of(context).brightness == Brightness.dark;
       final l = sombre
           ? (hsl.lightness < 0.72 ? 0.72 : hsl.lightness)
-          : (hsl.lightness > 0.32 ? 0.32 : hsl.lightness);
+          : (hsl.lightness > 0.30 ? 0.30 : hsl.lightness);
       candidat = hsl.withLightness(l).toColor();
     }
 
