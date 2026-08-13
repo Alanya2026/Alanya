@@ -82,6 +82,12 @@ const int kMeetingNotifOffset = 1000000000;
 /// une conversation pourraient produire le même identifiant et s'effacer l'un
 /// l'autre dans le tiroir.
 const int kTripNotifOffset = 1200000000;
+
+/// Identifiant du bouton « Appeler » posé sur une alerte de trajet.
+///
+/// Il revient dans `NotificationResponse.actionId` et permet de distinguer
+/// « il a appuyé sur Appeler » de « il a appuyé sur la notification ».
+const String kTripCallAction = 'trip_call';
 const int kMaxBufferedMessages = 7;
 
 /// Utilisateur local dans MessagingStyle (aligné sur MessageNotificationHelper Kotlin).
@@ -430,6 +436,27 @@ class LocalNotificationHelper {
           largeIcon: kNotificationLargeIcon,
           styleInformation: notifBody.isNotEmpty
               ? BigTextStyleInformation(notifBody)
+              : null,
+          // « Appeler », directement depuis la notification.
+          //
+          // Sans ce bouton, le parcours d'un proche inquiet est : appuyer sur la
+          // notification, attendre l'écran de suivi, trouver le bouton, appuyer.
+          // Trois gestes au moment où l'on en veut zéro. Suivre un point sur une
+          // carte pendant que quelqu'un ne confirme pas son arrivée est une
+          // position insupportable si l'on n'a rien à en faire ; l'appel est le
+          // seul geste qui transforme l'inquiétude en action.
+          //
+          // Réservé aux alertes : sur un rappel d'échéance adressé au porteur
+          // lui-même, « Appeler » n'aurait aucun sens.
+          actions: alerte
+              ? <AndroidNotificationAction>[
+                  AndroidNotificationAction(
+                    kTripCallAction,
+                    resolveL10n().tripsCall,
+                    showsUserInterface: true,
+                    cancelNotification: false,
+                  ),
+                ]
               : null,
         ),
         iOS: DarwinNotificationDetails(

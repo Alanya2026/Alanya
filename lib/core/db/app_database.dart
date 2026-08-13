@@ -557,41 +557,53 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(localStatuses);
           }
           if (from < 3) {
-            await m.addColumn(localMessages, localMessages.deliveredAt);
-            await m.addColumn(localMessages, localMessages.editedAt);
-            await m.addColumn(localMessages, localMessages.deletedForID);
-            await m.addColumn(localMessages, localMessages.lastEmittedAt);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.deliveredAt);
+            await _addColumnIfMissing(m, localMessages, localMessages.editedAt);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.deletedForID);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.lastEmittedAt);
           }
           if (from < 4) {
-            await m.addColumn(localMessages, localMessages.retryCount);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.retryCount);
           }
           if (from < 5) {
-            await m.addColumn(localMessages, localMessages.isForwarded);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.isForwarded);
           }
           if (from < 6) {
-            await m.addColumn(localMessages, localMessages.isPinned);
+            await _addColumnIfMissing(m, localMessages, localMessages.isPinned);
           }
           if (from < 7) {
-            await m.addColumn(localMessages, localMessages.isViewOnce);
-            await m.addColumn(localMessages, localMessages.viewedAt);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.isViewOnce);
+            await _addColumnIfMissing(m, localMessages, localMessages.viewedAt);
           }
           if (from < 8) {
-            await m.addColumn(localMessages, localMessages.clickSentAt);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.clickSentAt);
           }
           if (from < 9) {
             await _migrateLegacyHttpsUrls(m.database);
           }
           if (from < 10) {
-            await m.addColumn(localMessages, localMessages.mediaThumb);
-            await m.addColumn(localMessages, localMessages.messageTz);
-            await m.addColumn(localMessages, localMessages.messageTzOffset);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.mediaThumb);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.messageTz);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.messageTzOffset);
           }
           if (from < 11) {
             await _migrateToNewHost(m.database);
           }
           if (from < 12) {
-            await m.addColumn(localMessages, localMessages.mediaSize);
-            await m.addColumn(localMessages, localMessages.mediaPageCount);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.mediaSize);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.mediaPageCount);
           }
           if (from < 13) {
             await m.createTable(localMessageReactions);
@@ -602,65 +614,81 @@ class AppDatabase extends _$AppDatabase {
           if (from < 15) {
             // Groupes enrichis (migration serveur 024). Que des addColumn :
             // le cache existant n'est pas vidé.
-            await m.addColumn(localConversations, localConversations.description);
-            await m.addColumn(localConversations, localConversations.createdBy);
-            await m.addColumn(localConversations, localConversations.metaUpdatedAt);
-            await m.addColumn(
-                localConversations, localConversations.onlyAdminsCanSend);
-            await m.addColumn(
-                localConversations, localConversations.onlyAdminsCanEditInfo);
-            await m.addColumn(localConversations, localConversations.myRole);
-            await m.addColumn(localConversations, localConversations.mutedUntil);
-            await m.addColumn(localConversations, localConversations.muteForever);
-            await m.addColumn(localConversations, localConversations.mentionsOnly);
-            await m.addColumn(
-                localConversations, localConversations.hasUnreadMention);
-            await m.addColumn(localMessages, localMessages.mentionsJson);
-            await m.addColumn(localMessages, localMessages.failureCode);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.description);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.createdBy);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.metaUpdatedAt);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.onlyAdminsCanSend);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.onlyAdminsCanEditInfo);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.myRole);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.mutedUntil);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.muteForever);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.mentionsOnly);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.hasUnreadMention);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.mentionsJson);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.failureCode);
           }
           if (from < 16) {
             // Origine des contacts préférés (migration serveur 027). Que des
             // addColumn : le cache existant n'est pas vidé.
-            await m.addColumn(localUsers, localUsers.addedViaQr);
-            await m.addColumn(localUsers, localUsers.preferredAddedAt);
+            await _addColumnIfMissing(m, localUsers, localUsers.addedViaQr);
+            await _addColumnIfMissing(
+                m, localUsers, localUsers.preferredAddedAt);
           }
           if (from < 17) {
-            await m.addColumn(localUsers, localUsers.preferredNote);
+            await _addColumnIfMissing(m, localUsers, localUsers.preferredNote);
           }
           if (from < 18) {
             // Historique masqué + ack « Rester » (migration serveur 028).
-            await m.addColumn(
-                localConversations, localConversations.hideHistoryForNewMembers);
-            await m.addColumn(
-                localConversations, localConversations.myPendingJoinMsgID);
-            await m.addColumn(
-                localConversations, localConversations.myHistoryCutoffAt);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.hideHistoryForNewMembers);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.myPendingJoinMsgID);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.myHistoryCutoffAt);
           }
           if (from < 19) {
-            await m.addColumn(
-                localConversations, localConversations.onlyAdminsCanAddMembers);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.onlyAdminsCanAddMembers);
           }
           if (from < 20) {
-            await m.addColumn(localUsers, localUsers.accountType);
-            await m.addColumn(localUsers, localUsers.verificationStatus);
-            await m.addColumn(localUsers, localUsers.verifiedUntil);
+            await _addColumnIfMissing(m, localUsers, localUsers.accountType);
+            await _addColumnIfMissing(
+                m, localUsers, localUsers.verificationStatus);
+            await _addColumnIfMissing(m, localUsers, localUsers.verifiedUntil);
           }
           if (from < 21) {
             // Listes de contacts (migration serveur 038). Deux créations de
             // tables : rien du cache existant n'est vidé.
             await m.createTable(localContactLists);
             await m.createTable(localContactListMembers);
-            // Rattrapage installs v20 Alfred (tables ok, colonnes compte officiel
-            // manquantes) — no-op si déjà migrées via v20 broadcast.
-            await m.addColumn(localUsers, localUsers.accountType);
-            await m.addColumn(localUsers, localUsers.verificationStatus);
-            await m.addColumn(localUsers, localUsers.verifiedUntil);
+            // Rattrapage installs v20 Alfred (tables ok, colonnes compte
+            // officiel manquantes). Réellement no-op quand la v20 broadcast les
+            // a déjà posées : `_addColumnIfMissing` teste avant d'ALTER, là où
+            // `m.addColumn` échouait en « duplicate column name ».
+            await _addColumnIfMissing(m, localUsers, localUsers.accountType);
+            await _addColumnIfMissing(
+                m, localUsers, localUsers.verificationStatus);
+            await _addColumnIfMissing(m, localUsers, localUsers.verifiedUntil);
           }
           if (from < 22) {
-            await m.addColumn(localContactLists, localContactLists.memberLimit);
+            await _addColumnIfMissing(
+                m, localContactLists, localContactLists.memberLimit);
           }
           if (from < 23) {
-            await m.addColumn(localContactLists, localContactLists.kind);
+            await _addColumnIfMissing(
+                m, localContactLists, localContactLists.kind);
           }
           if (from < 24) {
             // Trajets de confiance (migration serveur 051). Trois créations de
@@ -673,12 +701,44 @@ class AppDatabase extends _$AppDatabase {
           if (from < 25) {
             // Coordonnées de destination : le serveur les renvoyait déjà, le
             // cache les jetait. Trois colonnes nullables, aucun trajet perdu.
-            await m.addColumn(localTrips, localTrips.destLat);
-            await m.addColumn(localTrips, localTrips.destLng);
-            await m.addColumn(localTrips, localTrips.destRadiusM);
+            await _addColumnIfMissing(m, localTrips, localTrips.destLat);
+            await _addColumnIfMissing(m, localTrips, localTrips.destLng);
+            await _addColumnIfMissing(m, localTrips, localTrips.destRadiusM);
           }
         },
       );
+
+  /// Ajoute [column] à [table] seulement si la colonne manque réellement.
+  ///
+  /// `Migrator.addColumn` émet un `ALTER TABLE … ADD COLUMN` nu, que SQLite
+  /// refuse par « duplicate column name » quand la colonne est déjà là — il n'y
+  /// a pas d'`IF NOT EXISTS` pour les colonnes. Or une base peut avoir reçu la
+  /// colonne par un autre chemin que celui prévu par l'échelle des versions :
+  /// deux branches ayant revendiqué le même numéro de schéma (cas des colonnes
+  /// de compte officiel, posées en v20 *et* rejouées en v21), ou une migration
+  /// interrompue après l'ALTER mais avant la mise à jour de `user_version`.
+  ///
+  /// L'échec est irrattrapable pour l'utilisateur : il survient dans
+  /// `beforeOpen`, donc `ensureOpen()` rejette et **toute** requête sur le cache
+  /// échoue — plus une seule conversation à l'écran. Et comme `user_version`
+  /// n'est jamais incrémenté, la même migration replante à chaque lancement,
+  /// jusqu'à l'effacement des données. Tester avant d'ALTER rend chaque barreau
+  /// rejouable et répare au passage les bases déjà bloquées.
+  static Future<void> _addColumnIfMissing(
+    Migrator m,
+    TableInfo table,
+    GeneratedColumn column,
+  ) async {
+    final rows = await m.database
+        .customSelect('PRAGMA table_info(${_quote(table.aliasedName)})')
+        .get();
+    final exists = rows.any((row) => row.read<String>('name') == column.name);
+    if (exists) return;
+    await m.addColumn(table, column);
+  }
+
+  /// Littéral SQL entre guillemets simples, apostrophes doublées.
+  static String _quote(String value) => "'${value.replaceAll("'", "''")}'";
 
   static Future<void> _createLocalMessagesIndexes(GeneratedDatabase db) async {
     await db.customStatement(

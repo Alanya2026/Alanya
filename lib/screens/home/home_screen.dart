@@ -14,6 +14,7 @@ import '../../core/services/realtime_sync_service.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/call/ended_call_registry.dart';
 import '../../core/services/callkit_service.dart';
+import '../../core/services/local_notification_helper.dart';
 import '../../core/services/notification_navigation.dart';
 import '../../core/services/push_service.dart';
 import '../../core/services/welcome_delivery_service.dart';
@@ -291,12 +292,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await trips.syncTrip(tripId, isOwner: isOwner);
     if (!mounted || !action.fromTap) return;
 
+    // Appui sur le bouton « Appeler » de la notification, pas sur la
+    // notification elle-même. On appelle **directement** : ouvrir l'écran de
+    // suivi d'abord annulerait tout l'intérêt du bouton, qui est justement
+    // d'épargner deux gestes à quelqu'un d'inquiet.
+    if (action.data['notifAction'] == kTripCallAction && ownerId != 0) {
+      await _appelerDepuisNotification(ownerId);
+      return;
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => TripLiveScreen(tripId: tripId, isOwner: isOwner),
       ),
     );
+  }
+
+  /// Lance l'appel sans détour par l'écran de suivi.
+  ///
+  /// Le profil vient du cache local : au moment où quelqu'un appuie sur
+  /// « Appeler » depuis une alerte, le réseau peut être mauvais, et un appel qui
+  /// attend une requête de profil est un appel qu'on n'a pas passé. C'est un
+  /// membre du cercle, il est dans le cache par construction.
+  Future<void> _appelerDepuisNotification(int ownerId) async {
+    final me = context.read<AuthProvider>().currentUser;
+    if (me == null) return;
+    final proprietaire =
+        await context.read<LocalCacheRepository>().getKnownUserProfile(ownerId);
+    if (!mounted) return;
+
+    try {
+      await context.read<CallService>().initiateCall(
+            targetUserId: ownerId,
+            myId: me.alanyaID,
+            myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
+            myPhoto: me.avatarUrl,
+            targetUserName: proprietaire?.nom ?? '',
+            targetUserPhoto: proprietaire?.avatarUrl ?? '',
+            isVideo: false,
+          );
+    } catch (e) {
+      debugPrint('[HomeScreen] appel depuis notification échoué: $e');
+    }
   }
 
   Future<void> _handleBroadcastTap(Map<String, String> data) async {

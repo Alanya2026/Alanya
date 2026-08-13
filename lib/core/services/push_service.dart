@@ -644,8 +644,20 @@ class PushService {
   }
 
   static void _onLocalNotifTap(NotificationResponse response) {
-    final action = decodeNotificationPayload(response.payload);
+    var action = decodeNotificationPayload(response.payload);
     if (action == null) return;
+
+    // Un appui sur un BOUTON de la notification, et non sur la notification
+    // elle-même : on transporte l'identifiant du bouton dans la charge utile
+    // pour que l'écran d'accueil sache quoi faire à l'arrivée.
+    final bouton = response.actionId;
+    if (bouton != null && bouton.isNotEmpty) {
+      action = NotificationAction(
+        type: action.type,
+        data: {...action.data, 'notifAction': bouton},
+        fromTap: true,
+      );
+    }
     NotificationDiagnostics.tapAction(
       type: action.type,
       conversationId: int.tryParse(action.data['conversationId'] ?? ''),
