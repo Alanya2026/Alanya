@@ -57,33 +57,33 @@
 \contentsline {chapter}{\numberline {10}L'échéance et l'escalade}{34}{chapter.10}%
 \contentsline {section}{\numberline {10.1}L'escalade en trois temps}{34}{section.10.1}%
 \contentsline {section}{\numberline {10.2}Les huit \texttt {\small kind} de jobs}{34}{section.10.2}%
-\contentsline {chapter}{\numberline {11}API}{35}{chapter.11}%
-\contentsline {section}{\numberline {11.1}REST --- \texttt {\small src/routes/trips.js}}{35}{section.11.1}%
-\contentsline {section}{\numberline {11.2}Socket.IO --- \texttt {\small src/\allowbreak socket/\allowbreak handlers/\allowbreak trips.js}}{36}{section.11.2}%
-\contentsline {section}{\numberline {11.3}Le verrou d'appareil}{36}{section.11.3}%
-\contentsline {chapter}{\numberline {12}Le message de type 9}{37}{chapter.12}%
-\contentsline {section}{\numberline {12.1}Pourquoi un type de message}{37}{section.12.1}%
-\contentsline {section}{\numberline {12.2}L'état dans le message, le mouvement dans le socket}{37}{section.12.2}%
-\contentsline {section}{\numberline {12.3}Compatibilité descendante}{37}{section.12.3}%
-\contentsline {chapter}{\numberline {13}Notifications}{38}{chapter.13}%
-\contentsline {chapter}{\numberline {14}Client Flutter}{39}{chapter.14}%
-\contentsline {section}{\numberline {14.1}Cache local --- Drift 23 $\rightarrow $ 24}{39}{section.14.1}%
-\contentsline {section}{\numberline {14.2}Le service de localisation en avant-plan (Android)}{39}{section.14.2}%
-\contentsline {section}{\numberline {14.3}Permissions à ajouter}{40}{section.14.3}%
-\contentsline {section}{\numberline {14.4}iOS --- ce qui est garanti, et ce qui ne l'est pas}{40}{section.14.4}%
-\contentsline {section}{\numberline {14.5}Interface}{40}{section.14.5}%
-\contentsline {chapter}{\numberline {15}Vie privée, coercition et administration}{42}{chapter.15}%
-\contentsline {section}{\numberline {15.1}Base légale et minimisation}{42}{section.15.1}%
-\contentsline {section}{\numberline {15.2}Rétention --- le tableau fait foi}{42}{section.15.2}%
-\contentsline {section}{\numberline {15.3}Ce que l'administration voit --- et ce qu'on refuse de construire}{42}{section.15.3}%
-\contentsline {section}{\numberline {15.4}Détournement et coercition}{43}{section.15.4}%
-\contentsline {section}{\numberline {15.5}Le blocage, et le cercle qui se vide}{43}{section.15.5}%
-\contentsline {chapter}{\numberline {16}Impact fichier par fichier}{45}{chapter.16}%
-\contentsline {section}{\numberline {16.1}Backend}{45}{section.16.1}%
-\contentsline {section}{\numberline {16.2}Mobile}{46}{section.16.2}%
-\contentsline {section}{\numberline {16.3}Administration}{46}{section.16.3}%
-\contentsline {chapter}{\numberline {17}Vérification}{47}{chapter.17}%
-\contentsline {section}{\numberline {17.1}Backend}{47}{section.17.1}%
-\contentsline {section}{\numberline {17.2}Client}{47}{section.17.2}%
-\contentsline {section}{\numberline {17.3}Recette terrain --- ce qui ne se teste que dehors}{47}{section.17.3}%
-\contentsline {section}{\numberline {17.4}Points ouverts}{48}{section.17.4}%
+\contentsline {chapter}{\numberline {11}API}{36}{chapter.11}%
+\contentsline {section}{\numberline {11.1}REST --- \texttt {\small src/routes/trips.js}}{36}{section.11.1}%
+\contentsline {section}{\numberline {11.2}Socket.IO --- \texttt {\small src/\allowbreak socket/\allowbreak handlers/\allowbreak trips.js}}{37}{section.11.2}%
+\contentsline {section}{\numberline {11.3}Le verrou d'appareil}{37}{section.11.3}%
+\contentsline {chapter}{\numberline {12}Le message de type 9}{38}{chapter.12}%
+\contentsline {section}{\numberline {12.1}Pourquoi un type de message}{38}{section.12.1}%
+\contentsline {section}{\numberline {12.2}L'état dans le message, le mouvement dans le socket}{38}{section.12.2}%
+\contentsline {section}{\numberline {12.3}Compatibilité descendante}{38}{section.12.3}%
+\contentsline {chapter}{\numberline {13}Notifications}{39}{chapter.13}%
+\contentsline {chapter}{\numberline {14}Client Flutter}{40}{chapter.14}%
+\contentsline {section}{\numberline {14.1}Cache local --- Drift 23 $\rightarrow $ 24}{40}{section.14.1}%
+\contentsline {section}{\numberline {14.2}Le service de localisation en avant-plan (Android)}{40}{section.14.2}%
+\contentsline {section}{\numberline {14.3}Permissions à ajouter}{41}{section.14.3}%
+\contentsline {section}{\numberline {14.4}iOS --- ce qui est garanti, et ce qui ne l'est pas}{41}{section.14.4}%
+\contentsline {section}{\numberline {14.5}Interface}{41}{section.14.5}%
+\contentsline {chapter}{\numberline {15}Vie privée, coercition et administration}{43}{chapter.15}%
+\contentsline {section}{\numberline {15.1}Base légale et minimisation}{43}{section.15.1}%
+\contentsline {section}{\numberline {15.2}Rétention --- le tableau fait foi}{43}{section.15.2}%
+\contentsline {section}{\numberline {15.3}Ce que l'administration voit --- et ce qu'on refuse de construire}{43}{section.15.3}%
+\contentsline {section}{\numberline {15.4}Détournement et coercition}{44}{section.15.4}%
+\contentsline {section}{\numberline {15.5}Le blocage, et le cercle qui se vide}{44}{section.15.5}%
+\contentsline {chapter}{\numberline {16}Impact fichier par fichier}{46}{chapter.16}%
+\contentsline {section}{\numberline {16.1}Backend}{46}{section.16.1}%
+\contentsline {section}{\numberline {16.2}Mobile}{47}{section.16.2}%
+\contentsline {section}{\numberline {16.3}Administration}{47}{section.16.3}%
+\contentsline {chapter}{\numberline {17}Vérification}{48}{chapter.17}%
+\contentsline {section}{\numberline {17.1}Backend}{48}{section.17.1}%
+\contentsline {section}{\numberline {17.2}Client}{48}{section.17.2}%
+\contentsline {section}{\numberline {17.3}Recette terrain --- ce qui ne se teste que dehors}{48}{section.17.3}%
+\contentsline {section}{\numberline {17.4}Points ouverts}{49}{section.17.4}%
