@@ -43,6 +43,23 @@ object MessageNotificationHelper {
     const val EXTRA_GROUP_NAME = "groupName"
     const val KEY_REPLY_TEXT = "key_reply_text"
 
+    /**
+     * Retire jusqu'à [maxStrips] préfixes `sender: ` en tête du corps.
+     * 2 = contrat serveur + ancien préfixe client encore en buffer.
+     */
+    fun stripLeadingSenderPrefix(sender: String, body: String, maxStrips: Int = 2): String {
+        val name = sender.trim()
+        if (name.isEmpty() || body.isEmpty() || maxStrips <= 0) return body
+        val prefix = "$name: "
+        var out = body
+        var n = 0
+        while (n < maxStrips && out.startsWith(prefix)) {
+            out = out.substring(prefix.length)
+            n++
+        }
+        return out
+    }
+
     fun shouldSuppress(context: Context, data: Map<String, String>): Boolean {
         val convId = data["conversationId"]?.toIntOrNull() ?: return false
         val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
@@ -64,12 +81,20 @@ object MessageNotificationHelper {
             return
         }
 
-        val senderName = data["senderName"] ?: data["title"] ?: "Alanya"
-        val body = data["body"] ?: ""
         val isGroup = data["isGroup"] == "1"
         val groupName = data["groupName"] ?: ""
-
-        val displayBody = if (isGroup) "$senderName: $body" else body
+        // En groupe, `title` est le nom du groupe : ne pas s'en servir comme
+        // Person MessagingStyle, sinon chaque ligne s'affiche « Groupe: … ».
+        val senderName = data["senderName"]?.takeIf { it.isNotBlank() }
+            ?: if (isGroup) "Alanya" else (data["title"] ?: "Alanya")
+        val rawBody = data["body"] ?: ""
+        // Le serveur préfixe déjà `Nom: ` pour iOS / FCM système. MessagingStyle
+        // réaffiche le nom via Person : re-préfixer donnait « Nom: Nom: Nom: ».
+        val displayBody = if (isGroup) {
+            stripLeadingSenderPrefix(senderName, rawBody)
+        } else {
+            rawBody
+        }
         val buffer = appendBuffer(context, convId, senderName, displayBody, msgID)
         val openExtras = mapOf(
             "type" to (data["type"] ?: "message"),
@@ -171,7 +196,13 @@ object MessageNotificationHelper {
             } else {
                 Person.Builder().setName(entry.sender).build()
             }
-            style.addMessage(entry.body, entry.timestamp, person)
+            // File locale : anciennes lignes encore préfixées par le client.
+            val line = if (isGroup && !entry.isOutgoing) {
+                stripLeadingSenderPrefix(entry.sender, entry.body)
+            } else {
+                entry.body
+            }
+            style.addMessage(line, entry.timestamp, person)
         }
 
         val title = if (isGroup && groupName.isNotEmpty()) groupName else senderName

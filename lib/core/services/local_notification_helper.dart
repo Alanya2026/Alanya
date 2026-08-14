@@ -9,6 +9,7 @@ import 'notification_navigation.dart';
 import 'notifications/notification_dedup_store.dart';
 import 'notifications/notification_diagnostics.dart';
 import 'notifications/notification_identity.dart';
+import 'notifications/notification_body.dart';
 import 'notifications/notification_buffer_store.dart';
 import 'notifications/notification_prefs_cache.dart';
 import '../theme/locale_controller.dart';
@@ -229,19 +230,30 @@ class LocalNotificationHelper {
       return;
     }
 
-    final senderName = title ?? data['title']?.toString() ?? resolveL10n().appTitle;
-    final messageBody = body ?? bodyFromPayload(data);
-    if (messageBody.isEmpty && senderName.isEmpty) return;
-
     final isGroup = data['isGroup'] == '1' || data['isGroup'] == true;
     final groupName = data['groupName']?.toString() ?? '';
+    final senderName = NotificationBody.resolveSenderName(
+      data: data,
+      title: title,
+      isGroup: isGroup,
+      fallback: resolveL10n().appTitle,
+    );
+    var messageBody = body ?? bodyFromPayload(data);
+    if (isGroup) {
+      messageBody = NotificationBody.stripLeadingSenderPrefix(
+        senderName,
+        messageBody,
+      );
+    }
+    if (messageBody.isEmpty && senderName.isEmpty) return;
 
     final displayTitle = isGroup && groupName.isNotEmpty
         ? groupName
         : senderName;
-    final displayBody = isGroup
-        ? NotificationPrefsCache.sanitizeBodyForDisplay('$senderName: $messageBody')
-        : NotificationPrefsCache.sanitizeBodyForDisplay(messageBody);
+    // Pas de re-préfixe : MessagingStyle (Person) et iOS (subtitle) portent
+    // déjà le nom. Le serveur préfixe `body` pour le FCM système / APNs.
+    final displayBody =
+        NotificationPrefsCache.sanitizeBodyForDisplay(messageBody);
 
     final buffer = await NotificationBufferStore.append(
       conversationId: conversationId,
@@ -554,10 +566,13 @@ class LocalNotificationHelper {
     if (buffer.isEmpty) return '';
 
     final lines = buffer.map((m) {
-      final body = m['body'] ?? '';
-      if (!isGroup) return body;
+      final raw = m['body'] ?? '';
+      if (!isGroup) return raw;
       final sender = (m['sender'] ?? '').trim();
-      return sender.isNotEmpty ? '$sender: $body' : body;
+      if (sender.isEmpty) return raw;
+      final body = NotificationBody.stripLeadingSenderPrefix(sender, raw);
+      if (body.startsWith('$sender: ')) return body;
+      return '$sender: $body';
     }).where((line) => line.isNotEmpty);
 
     return lines.join('\n');
@@ -630,8 +645,12 @@ class LocalNotificationHelper {
       final ts = DateTime.tryParse(m['ts'] ?? '') ?? DateTime.now();
       final sender = (m['sender'] ?? '').trim();
       final isLocalUser = sender == _kMessagingStyleLocalUser;
+      final raw = m['body'] ?? '';
+      final text = isGroup && !isLocalUser
+          ? NotificationBody.stripLeadingSenderPrefix(sender, raw)
+          : raw;
       return Message(
-        m['body'] ?? '',
+        text,
         ts,
         isLocalUser
             ? null

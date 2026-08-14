@@ -55,6 +55,17 @@ void main() {
       );
     });
 
+    test('does not re-prefix a body that already has the sender', () {
+      final buffer = [
+        {'sender': 'Alice', 'body': 'Alice: Hello'},
+        {'sender': 'Bob', 'body': 'Bob: Bob: Hi'},
+      ];
+      expect(
+        LocalNotificationHelper.bufferedDisplayBody(buffer, isGroup: true),
+        'Alice: Hello\nBob: Hi',
+      );
+    });
+
     test('returns empty string for empty buffer', () {
       expect(
         LocalNotificationHelper.bufferedDisplayBody([], isGroup: false),
