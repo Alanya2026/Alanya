@@ -19,6 +19,9 @@ class ChatSyncTimer {
       try {
         debugPrint('[ChatSyncTimer] Periodic flushOutbox tick');
         await _repo.flushOutbox();
+        // Réponses rapides déposées par le natif (POST HTTP échoué) : sans
+        // ceci elles n'étaient rejouées qu'à l'ouverture de la discussion.
+        await _repo.flushPendingNotificationActions();
         // Filet léger : delta messages si socket down, sync liste complète
         // seulement si le dernier sync est vieux (> 5 min).
         if (!_repo.isSocketReady || _repo.needsPeriodicListSync) {
