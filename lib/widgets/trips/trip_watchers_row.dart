@@ -148,14 +148,11 @@ class _TripWatchersRowState extends State<TripWatchersRow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            // Live : « X personnes suivent » = ceux qui ont ouvert (seenAt),
-            // pas la taille du cercle. « X sur Y ont vu » reste utile pour
-            // rappeler le dénominateur. Historique : « ont suivi » (passé).
             widget.pastTense
                 ? l10n.tripsWatcherFollowedCount(vus)
                 : (vus == 0
                     ? l10n.tripsWatchersNoneSeen
-                    : l10n.tripsWatcherCount(vus)),
+                    : l10n.tripsWatchersSeenCount(vus, _destinataires.length)),
             style: context.text.labelSmall?.copyWith(
               color: context.colors.onSurfaceVariant,
               fontWeight: FontWeight.w600,

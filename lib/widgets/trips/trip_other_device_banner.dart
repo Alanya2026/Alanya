@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/db/app_database.dart';
 import '../../core/services/trip_repository.dart';
@@ -34,16 +35,25 @@ class TripOtherDeviceBanner extends StatefulWidget {
 }
 
 class _TripOtherDeviceBannerState extends State<TripOtherDeviceBanner> {
+  static const _prefsPrefix = 'trip_other_device_dismissed_';
+
   StreamSubscription<int>? _cessions;
   bool _occupe = false;
+  bool _masque = false;
+  bool _prefsChargees = false;
+
+  String get _prefsKey => '$_prefsPrefix${widget.trip.id}';
 
   @override
   void initState() {
     super.initState();
+    unawaited(_chargerMasque());
     // La cession peut survenir alors que l'écran est déjà ouvert : l'autre
-    // téléphone réclame le trajet pendant qu'on le regarde.
+    // téléphone réclame le trajet pendant qu'on le regarde. Une nouvelle
+    // cession annule le dismiss : la question redevient pertinente.
     _cessions = TripSessionGuard.instance.ceded.listen((id) {
-      if (mounted && id == widget.trip.id) setState(() {});
+      if (!mounted || id != widget.trip.id) return;
+      unawaited(_oublierMasque());
     });
   }
 
@@ -51,6 +61,28 @@ class _TripOtherDeviceBannerState extends State<TripOtherDeviceBanner> {
   void dispose() {
     _cessions?.cancel();
     super.dispose();
+  }
+
+  Future<void> _chargerMasque() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _masque = prefs.getBool(_prefsKey) == true;
+      _prefsChargees = true;
+    });
+  }
+
+  Future<void> _masquer() async {
+    setState(() => _masque = true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefsKey, true);
+  }
+
+  Future<void> _oublierMasque() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefsKey);
+    if (!mounted) return;
+    setState(() => _masque = false);
   }
 
   Future<void> _reprendre() async {
@@ -64,6 +96,7 @@ class _TripOtherDeviceBannerState extends State<TripOtherDeviceBanner> {
         etaAt: widget.trip.etaAt,
         kind: widget.trip.kind,
       );
+      await _oublierMasque();
     } finally {
       if (mounted) setState(() => _occupe = false);
     }
@@ -71,7 +104,9 @@ class _TripOtherDeviceBannerState extends State<TripOtherDeviceBanner> {
 
   @override
   Widget build(BuildContext context) {
-    if (!TripSessionGuard.instance.cedeSur(widget.trip.id)) {
+    if (!_prefsChargees ||
+        _masque ||
+        !TripSessionGuard.instance.cedeSur(widget.trip.id)) {
       return const SizedBox.shrink();
     }
 
@@ -114,37 +149,30 @@ class _TripOtherDeviceBannerState extends State<TripOtherDeviceBanner> {
                   ],
                 ),
               ),
+              IconButton(
+                tooltip: l10n.commonClose,
+                onPressed: _occupe ? null : _masquer,
+                visualDensity: VisualDensity.compact,
+                icon: Icon(Icons.close,
+                    size: 18, color: context.colors.onSurfaceVariant),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _occupe ? null : _reprendre,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(AppSizes.minTapTarget),
-                    foregroundColor: encre,
-                    side: BorderSide(color: sem.info.withValues(alpha: 0.45)),
-                  ),
-                  child: Text(l10n.tripsOtherDeviceTake,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                ),
+          // Un seul CTA : « rester en lecture seule » est déjà l'état courant ;
+          // un second bouton no-op sous stress n'apporte que de l'incertitude.
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _occupe ? null : _reprendre,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(AppSizes.minTapTarget),
+                foregroundColor: encre,
+                side: BorderSide(color: sem.info.withValues(alpha: 0.45)),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              // « Rester en lecture seule » n'est pas un bouton d'action : c'est
-              // déjà l'état courant. Il ne fait que refermer la question.
-              Expanded(
-                child: TextButton(
-                  onPressed: _occupe ? null : () => setState(() {}),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size.fromHeight(AppSizes.minTapTarget),
-                  ),
-                  child: Text(l10n.tripsOtherDeviceKeep,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                ),
-              ),
-            ],
+              child: Text(l10n.tripsOtherDeviceTake,
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
           ),
         ],
       ),

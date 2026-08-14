@@ -5144,7 +5144,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tripsSosTitle => 'SOS';
 
   @override
-  String get tripsSosHold => 'Maintenez trois secondes';
+  String get tripsSosHold => 'Maintenez environ deux secondes';
 
   @override
   String get tripsSosHoldBody =>
@@ -5172,6 +5172,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get tripsSosDiscreet =>
       'Aucun son, aucune vibration. Votre position continue d\'être partagée.';
+
+  @override
+  String get tripsSosActive => 'Partage actif';
+
+  @override
+  String get tripsSosActiveBody =>
+      'Votre position est partagée. Aucun son, aucune vibration.';
 
   @override
   String get tripsSosTooMany => 'Trop de SOS sur les dernières 24 heures.';
@@ -5229,6 +5236,44 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get tripsMapReduce => 'Réduire';
+
+  @override
+  String get tripsMapFitBounds => 'Voir position et destination';
+
+  @override
+  String get tripsDestinationSafetyNet =>
+      'Avec une destination, on vous demandera de confirmer dès l\'arrivée — pas seulement à l\'heure.';
+
+  @override
+  String tripsDistanceM(int meters) {
+    return '~$meters m';
+  }
+
+  @override
+  String tripsDistanceKm(double km) {
+    final intl.NumberFormat kmNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String kmString = kmNumberFormat.format(km);
+
+    return '~$kmString km';
+  }
+
+  @override
+  String tripsUpdatedAgo(String age) {
+    return 'maj il y a $age';
+  }
+
+  @override
+  String get tripsPositionFrozen => 'Position figée';
+
+  @override
+  String get tripsDeleteLockedHint => 'Conservé 30 jours après une alerte';
+
+  @override
+  String tripsEventWatcherSeenGroup(int count) {
+    return '$count proches ont vu';
+  }
 
   @override
   String get tripsArrivalReachedTitle => 'Vous êtes arrivé·e ?';

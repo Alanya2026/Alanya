@@ -2325,7 +2325,7 @@
     }
   },
   "tripsSosTitle": "SOS",
-  "tripsSosHold": "Hold for three seconds",
+  "tripsSosHold": "Hold for about two seconds",
   "tripsSosHoldBody": "Your circle will be alerted with your location, immediately.",
   "tripsSosNotEmergency": "SOS does not call emergency services. It alerts your trusted circle.",
   "tripsSosSending": "Sending in {count} seconds",
@@ -2340,6 +2340,8 @@
   "tripsSosSendingNowBody": "Your circle will be alerted in a moment.",
   "tripsSosSent": "Your circle has been alerted",
   "tripsSosDiscreet": "No sound, no vibration. Your location keeps being shared.",
+  "tripsSosActive": "Sharing active",
+  "tripsSosActiveBody": "Your location is being shared. No sound, no vibration.",
   "tripsSosTooMany": "Too many SOS alerts in the last 24 hours.",
   "tripsSosFalseAlarm": "False alarm, I'm fine",
   "tripsSosButton": "Trigger an SOS",
@@ -2358,6 +2360,43 @@
   "tripsRecenter": "Recentre on position",
   "tripsMapExpand": "Full screen",
   "tripsMapReduce": "Exit full screen",
+  "tripsMapFitBounds": "Show position and destination",
+  "tripsDestinationSafetyNet": "With a destination, we'll ask you to confirm on arrival — not only at the scheduled time.",
+  "tripsDistanceM": "~{meters} m",
+  "@tripsDistanceM": {
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsDistanceKm": "~{km} km",
+  "@tripsDistanceKm": {
+    "placeholders": {
+      "km": {
+        "type": "double",
+        "format": "compact"
+      }
+    }
+  },
+  "tripsUpdatedAgo": "updated {age} ago",
+  "@tripsUpdatedAgo": {
+    "placeholders": {
+      "age": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsPositionFrozen": "Position frozen",
+  "tripsDeleteLockedHint": "Kept for 30 days after an alert",
+  "tripsEventWatcherSeenGroup": "{count} contacts have seen",
+  "@tripsEventWatcherSeenGroup": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tripsArrivalReachedTitle": "Have you arrived?",
   "tripsArrivalReachedBody": "You've been at your destination for a minute.",
   "tripsArrivalDueTitle": "Confirm your arrival",

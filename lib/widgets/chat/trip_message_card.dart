@@ -102,6 +102,10 @@ class TripMessageCard extends StatelessWidget {
       };
     }
 
+    final figee = !_clos &&
+        payload.lastAt != null &&
+        DateTime.now().difference(payload.lastAt!).inSeconds > 180;
+
     final faits = <Widget>[
       if (payload.destLabel != null)
         TripFactChip(icon: Icons.place_outlined, label: payload.destLabel!),
@@ -114,6 +118,14 @@ class TripMessageCard extends StatelessWidget {
           tint: v.tone == TripTone.awaiting || v.tone == TripTone.alerted
               ? v.ink
               : null,
+        ),
+      if (payload.lastAt != null && !_clos)
+        TripFactChip(
+          icon: Icons.my_location,
+          label: figee
+              ? l10n.tripsPositionFrozen
+              : l10n.tripsUpdatedAgo(TripFormat.depuis(payload.lastAt!)),
+          tint: figee ? context.colors.onSurfaceVariant : null,
         ),
     ];
 

@@ -151,6 +151,16 @@ class _TripsHistoryScreenState extends State<TripsHistoryScreen> {
       alerte: t.alertedAt != null || t.state == TripState.closedExpired,
     );
     final duree = t.closedAt?.difference(t.startedAt).inMinutes;
+    final titre = t.destLabel?.trim().isNotEmpty == true
+        ? t.destLabel!
+        : (t.kind == TripKind.taxi
+            ? l10n.tripsKindTaxi
+            : t.kind == TripKind.walk || t.kind == TripKind.meeting
+                ? l10n.tripsKindWalk
+                : l10n.tripsSosTitle);
+    // Verrou anti-coercition : une alerte a été émise → pas de corbeille
+    // trompeuse (le serveur répondrait 423).
+    final verrouille = t.alertedAt != null;
 
     return Material(
       color: Colors.transparent,
@@ -175,7 +185,7 @@ class _TripsHistoryScreenState extends State<TripsHistoryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      t.destLabel ?? v.label,
+                      titre,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.text.bodyLarge
@@ -183,18 +193,11 @@ class _TripsHistoryScreenState extends State<TripsHistoryScreen> {
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      // La date reste en clair : c'est la clé de lecture d'un
-                      // historique, elle ne se met pas en puce avec le reste.
-                      '${_dateCourte(t.startedAt)} · ${v.label}',
+                      _dateCourte(t.startedAt),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.text.bodySmall?.copyWith(
-                        color: v.tone == TripTone.alerted
-                            ? v.ink
-                            : context.colors.onSurfaceVariant,
-                        fontWeight: v.tone == TripTone.alerted
-                            ? FontWeight.w600
-                            : FontWeight.w400,
+                        color: context.colors.onSurfaceVariant,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -203,30 +206,48 @@ class _TripsHistoryScreenState extends State<TripsHistoryScreen> {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
+                        TripFactChip(
+                          icon: v.icon,
+                          label: v.label,
+                          dense: true,
+                          tint: v.tone == TripTone.alerted ||
+                                  v.tone == TripTone.arrived
+                              ? v.ink
+                              : null,
+                        ),
                         if (duree != null)
                           TripFactChip(
                             icon: Icons.timelapse,
                             label: l10n.tripsMinutes(duree),
                             dense: true,
                           ),
-                    TripFactChip(
-                      icon: Icons.group_outlined,
-                      label: l10n.tripsWatcherFollowedCount(
-                          t.watchersSeenCount ?? 0),
-                      dense: true,
-                    ),
+                        TripFactChip(
+                          icon: Icons.group_outlined,
+                          label: l10n.tripsWatcherFollowedCount(
+                              t.watchersSeenCount ?? 0),
+                          dense: true,
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline),
-                iconSize: AppIconSize.sm,
-                color: context.colors.onSurfaceVariant,
-                tooltip: l10n.commonDelete,
-                onPressed: () => _supprimer(l10n, t),
-              ),
+              if (verrouille)
+                IconButton(
+                  icon: const Icon(Icons.lock_outline),
+                  iconSize: AppIconSize.sm,
+                  color: context.colors.onSurfaceVariant,
+                  tooltip: l10n.tripsDeleteLockedHint,
+                  onPressed: null,
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  iconSize: AppIconSize.sm,
+                  color: context.colors.onSurfaceVariant,
+                  tooltip: l10n.commonDelete,
+                  onPressed: () => _supprimer(l10n, t),
+                ),
             ],
           ),
         ),

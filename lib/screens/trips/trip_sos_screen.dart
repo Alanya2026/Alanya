@@ -214,12 +214,20 @@ class _TripSosScreenState extends State<TripSosScreen>
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
-          child: switch (_phase) {
-            _Phase.envoye => _apresEnvoi(l10n),
-            _Phase.envoi => _envoiEnCours(l10n),
-            _Phase.decompte => _decompte(l10n),
-            _ => _armement(l10n),
-          },
+          child: AnimatedSwitcher(
+            duration: AppDurations.normal,
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: KeyedSubtree(
+              key: ValueKey(_phase),
+              child: switch (_phase) {
+                _Phase.envoye => _apresEnvoi(l10n),
+                _Phase.envoi => _envoiEnCours(l10n),
+                _Phase.decompte => _decompte(l10n),
+                _ => _armement(l10n),
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -350,77 +358,94 @@ class _TripSosScreenState extends State<TripSosScreen>
         ],
       );
 
-  /// Attente réseau après le décompte — même grammaire visuelle que le mode
-  /// discret (pas de rouge), pour ne jamais laisser « 1 » collé à l'écran.
-  Widget _envoiEnCours(AppLocalizations l10n) => Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 96,
-            height: 96,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: context.colors.surfaceContainerHighest,
-                    shape: BoxShape.circle,
+  /// Attente réseau après le décompte.
+  ///
+  /// Même cercle neutre que le mode discret : pas de rouge, spinner petit au
+  /// centre (pas un anneau quasi plein qui « mange » le disque). Sans
+  /// [Spacer] : avec `MainAxisAlignment.center`, un Spacer poussait tout en
+  /// haut et laissait un vide absurde sous le texte.
+  Widget _envoiEnCours(AppLocalizations l10n) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 96,
+              height: 96,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: context.colors.onSurfaceVariant
+                          .withValues(alpha: 0.65),
+                    ),
                   ),
                 ),
-                SizedBox(
-                  width: 72,
-                  height: 72,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: context.colors.onSurfaceVariant.withValues(alpha: 0.55),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(l10n.tripsSosSendingNow,
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              l10n.tripsSosSendingNow,
               style: context.text.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center),
-          const SizedBox(height: AppSpacing.sm),
-          Text(l10n.tripsSosSendingNowBody,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l10n.tripsSosSendingNowBody,
               style: context.text.bodyMedium
                   ?.copyWith(color: context.colors.onSurfaceVariant),
-              textAlign: TextAlign.center),
-          const Spacer(),
-        ],
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       );
 
   /// Mode discret. Aucun rouge, aucune célébration : l'écran ne doit rien
   /// révéler à quelqu'un qui le regarderait par-dessus l'épaule. C'est le moment
   /// le plus dangereux du parcours.
   Widget _apresEnvoi(AppLocalizations l10n) => Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              color: context.colors.surfaceContainerHighest,
-              shape: BoxShape.circle,
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: context.colors.surfaceContainerHighest,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(Icons.check,
+                        size: 40, color: context.colors.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    l10n.tripsSosActive,
+                    style: context.text.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    l10n.tripsSosActiveBody,
+                    style: context.text.bodyMedium
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-            alignment: Alignment.center,
-            child: Icon(Icons.check, size: 40, color: context.colors.onSurfaceVariant),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(l10n.tripsSosSent,
-              style: context.text.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center),
-          const SizedBox(height: AppSpacing.sm),
-          Text(l10n.tripsSosDiscreet,
-              style: context.text.bodyMedium
-                  ?.copyWith(color: context.colors.onSurfaceVariant),
-              textAlign: TextAlign.center),
-          const Spacer(),
           // Le démenti, en bouton bordé et non en action principale : il doit
           // être trouvable immédiatement par qui s'est trompé, sans jamais
           // attirer le pouce de qui ne s'est pas trompé.
@@ -428,7 +453,8 @@ class _TripSosScreenState extends State<TripSosScreen>
             onPressed: _dementiEnCours ? null : _dementir,
             icon: _dementiEnCours
                 ? const SizedBox(
-                    width: 16, height: 16,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_rounded, size: AppIconSize.sm),
             label: Text(l10n.tripsSosFalseAlarm),

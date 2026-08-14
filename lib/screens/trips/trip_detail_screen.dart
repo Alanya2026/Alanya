@@ -137,7 +137,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                               ),
                             )
                           else
-                            ..._events.map((e) => _ligneEvent(l10n, e)),
+                            ..._eventsAffiches().map((e) => _ligneEvent(l10n, e)),
                         ],
                       ),
                     ),
@@ -323,18 +323,111 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
-  Widget _ligneEvent(dynamic l10n, LocalTripEvent e) {
-    return ListTile(
-      dense: true,
-      leading: Icon(_iconeEvent(e.kind), size: 20,
-          color: context.colors.onSurfaceVariant),
-      title: Text(_libelleEvent(l10n, e.kind),
-          style: context.text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-      trailing: Text(
-        TripFormat.hhmm(e.at),
-        style: context.text.labelSmall?.copyWith(
-          color: context.colors.onSurfaceVariant,
-          fontFeatures: const [FontFeature.tabularFigures()],
+  /// Compresse les accusés `watcher_seen` répétitifs en une seule ligne.
+  List<_EvtFrise> _eventsAffiches() {
+    final out = <_EvtFrise>[];
+    var vus = 0;
+    LocalTripEvent? premierVu;
+    void flushVus() {
+      if (vus == 0 || premierVu == null) return;
+      out.add(vus == 1
+          ? _EvtFrise.simple(premierVu!)
+          : _EvtFrise.groupe(premierVu!, vus));
+      vus = 0;
+      premierVu = null;
+    }
+
+    for (final e in _events) {
+      if (e.kind == 'watcher_seen') {
+        premierVu ??= e;
+        vus++;
+      } else {
+        flushVus();
+        out.add(_EvtFrise.simple(e));
+      }
+    }
+    flushVus();
+    return out;
+  }
+
+  Widget _ligneEvent(dynamic l10n, _EvtFrise e) {
+    final critique = e.kind == 'alerted' ||
+        e.kind == 'sos' ||
+        e.kind == 'confirmed' ||
+        e.kind == 'signal_lost' ||
+        e.kind == 'resolved';
+    final couleur = critique
+        ? switch (e.kind) {
+            'confirmed' || 'resolved' => context.semantic.success,
+            'signal_lost' => context.colors.onSurfaceVariant,
+            _ => context.colors.error,
+          }
+        : context.colors.onSurfaceVariant;
+    final libelle = e.groupN != null
+        ? l10n.tripsEventWatcherSeenGroup(e.groupN!)
+        : _libelleEvent(l10n, e.kind);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 28,
+              child: Column(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: couleur,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 2),
+                      color: context.colors.outlineVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(_iconeEvent(e.kind), size: 18, color: couleur),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        libelle,
+                        style: context.text.bodyMedium?.copyWith(
+                          fontWeight:
+                              critique ? FontWeight.w700 : FontWeight.w600,
+                          color: critique
+                              ? TripVisual.encre(context, couleur)
+                              : null,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      TripFormat.hhmm(e.at),
+                      style: context.text.labelSmall?.copyWith(
+                        color: context.colors.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -351,7 +444,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         'signal_lost' => Icons.location_disabled,
         'signal_back' => Icons.my_location,
         'low_battery' => Icons.battery_alert,
-        'watcher_seen' => Icons.visibility_outlined,
+        'watcher_seen' || 'watcher_seen_group' => Icons.visibility_outlined,
         'watcher_revoked' => Icons.person_remove_outlined,
         'device_takeover' => Icons.phonelink_setup,
         _ => Icons.circle_outlined,
@@ -375,4 +468,21 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         'device_takeover' => l10n.tripsEventDeviceTakeover,
         _ => kind,
       };
+}
+
+/// Ligne de frise — événement brut ou groupe d'accusés de lecture.
+class _EvtFrise {
+  final String kind;
+  final DateTime at;
+  final int? groupN;
+
+  _EvtFrise.simple(LocalTripEvent e)
+      : kind = e.kind,
+        at = e.at,
+        groupN = null;
+
+  _EvtFrise.groupe(LocalTripEvent first, int n)
+      : kind = 'watcher_seen_group',
+        at = first.at,
+        groupN = n;
 }

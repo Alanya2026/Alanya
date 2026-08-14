@@ -3207,7 +3207,7 @@
     }
   },
   "tripsSosTitle": "SOS",
-  "tripsSosHold": "Maintenez trois secondes",
+  "tripsSosHold": "Maintenez environ deux secondes",
   "tripsSosHoldBody": "Vos proches recevront une alerte avec votre position, immédiatement.",
   "tripsSosNotEmergency": "Le SOS ne prévient pas les secours. Il prévient votre cercle de confiance.",
   "tripsSosSending": "Envoi dans {count} secondes",
@@ -3222,6 +3222,8 @@
   "tripsSosSendingNowBody": "Vos proches seront prévenus dans un instant.",
   "tripsSosSent": "Vos proches ont été prévenus",
   "tripsSosDiscreet": "Aucun son, aucune vibration. Votre position continue d'être partagée.",
+  "tripsSosActive": "Partage actif",
+  "tripsSosActiveBody": "Votre position est partagée. Aucun son, aucune vibration.",
   "tripsSosTooMany": "Trop de SOS sur les dernières 24 heures.",
   "tripsSosFalseAlarm": "Fausse alerte, je vais bien",
   "tripsSosButton": "Lancer un SOS",
@@ -3240,6 +3242,43 @@
   "tripsRecenter": "Recentrer sur la position",
   "tripsMapExpand": "Plein écran",
   "tripsMapReduce": "Réduire",
+  "tripsMapFitBounds": "Voir position et destination",
+  "tripsDestinationSafetyNet": "Avec une destination, on vous demandera de confirmer dès l'arrivée — pas seulement à l'heure.",
+  "tripsDistanceM": "~{meters} m",
+  "@tripsDistanceM": {
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "tripsDistanceKm": "~{km} km",
+  "@tripsDistanceKm": {
+    "placeholders": {
+      "km": {
+        "type": "double",
+        "format": "compact"
+      }
+    }
+  },
+  "tripsUpdatedAgo": "maj il y a {age}",
+  "@tripsUpdatedAgo": {
+    "placeholders": {
+      "age": {
+        "type": "String"
+      }
+    }
+  },
+  "tripsPositionFrozen": "Position figée",
+  "tripsDeleteLockedHint": "Conservé 30 jours après une alerte",
+  "tripsEventWatcherSeenGroup": "{count} proches ont vu",
+  "@tripsEventWatcherSeenGroup": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tripsArrivalReachedTitle": "Vous êtes arrivé·e ?",
   "tripsArrivalReachedBody": "Vous êtes à votre destination depuis une minute.",
   "tripsArrivalDueTitle": "Confirmez votre arrivée",

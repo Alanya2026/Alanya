@@ -148,14 +148,26 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
           return ListView(
             padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
             children: [
-              const TripRail(state: TripState.active),
+              const TripRail(state: TripState.active, composing: true),
               _titre(l10n.tripsDestination),
               _carteDestination(l10n),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                child: Text(
+                  l10n.tripsDestinationSafetyNet,
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+              ),
               _titre(l10n.tripsArrivalIn),
               _choixDuree(l10n),
               _titre(l10n.tripsNoteLabel),
               _champNote(l10n),
               _contrat(l10n, membres, grace),
+              _avatarsCercle(cache, snap.data),
               _mentionCercle(l10n),
             ],
           );
@@ -368,6 +380,78 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
       if (l.kind == ContactListKind.trust) return l.memberCount;
     }
     return 0;
+  }
+
+  LocalContactList? _trustList(List<LocalContactList>? listes) {
+    if (listes == null) return null;
+    for (final l in listes) {
+      if (l.kind == ContactListKind.trust) return l;
+    }
+    return null;
+  }
+
+  /// Visages du cercle au moment d'engager — lecture seule.
+  Widget _avatarsCercle(
+      LocalCacheRepository cache, List<LocalContactList>? listes) {
+    final trust = _trustList(listes);
+    if (trust == null) return const SizedBox.shrink();
+
+    return StreamBuilder<List<User>>(
+      stream: cache.watchListMembers(trust.idList),
+      builder: (context, snap) {
+        final users = snap.data ?? const <User>[];
+        if (users.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+          child: SizedBox(
+            height: 56,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: users.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: AppSpacing.md),
+              itemBuilder: (context, i) {
+                final u = users[i];
+                final nom = (u.pseudo.trim().isNotEmpty)
+                    ? u.pseudo.trim()
+                    : u.nom.trim();
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundImage: u.avatarUrl.isNotEmpty
+                          ? NetworkImage(u.avatarUrl)
+                          : null,
+                      child: u.avatarUrl.isEmpty
+                          ? Text(
+                              nom.isNotEmpty ? nom[0].toUpperCase() : '?',
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: 56,
+                      child: Text(
+                        nom,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: context.text.labelSmall?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _titre(String texte) => Padding(

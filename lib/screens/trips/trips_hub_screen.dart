@@ -518,16 +518,14 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
                     label: l10n.tripsEtaAt(TripFormat.hhmm(t.etaAt!)),
                     tint: v.tone == TripTone.awaiting ? v.ink : null,
                   ),
-                TripFactChip(
-                  icon: Icons.group_outlined,
-                  label: l10n.tripsWatcherCount(t.watcherCount),
-                ),
+                // Pas de watcherCount (= taille du cercle) : ce n'est pas le
+                // nombre de personnes qui suivent réellement.
                 if (t.lastAt != null)
                   TripFactChip(
                     icon: Icons.my_location,
-                    label: TripFormat.depuis(t.lastAt!),
-                    // Une position ancienne est l'information : elle prend la
-                    // couleur de l'état plutôt que de se fondre dans le gris.
+                    label: t.stale
+                        ? l10n.tripsPositionFrozen
+                        : l10n.tripsUpdatedAgo(TripFormat.depuis(t.lastAt!)),
                     tint: t.stale ? v.ink : null,
                   ),
               ],

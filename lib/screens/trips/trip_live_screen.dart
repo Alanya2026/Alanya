@@ -56,6 +56,9 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
   /// feuille ne doit s'ouvrir qu'une fois par passage en « à confirmer ».
   bool _feuillePosee = false;
 
+  /// Sheet urgence watcher : une fois par passage en alerte/SOS.
+  bool _alerteSheetPosee = false;
+
   /// Rafraîchit « maj il y a 8 s » sans attendre une nouvelle position : sans
   /// cela, l'ancienneté affichée gèle dès que le traceur se tait — exactement
   /// le moment où elle devient l'information la plus utile de l'écran.
@@ -68,6 +71,9 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
   /// Carte edge-to-edge : masque bandeau, rail et pied pour laisser lire le
   /// déplacement. Owner et watcher.
   bool _immersif = false;
+
+  /// Un seul cadrage automatique position+but au premier couple connu.
+  bool _cadreInitialFait = false;
 
   @override
   void initState() {
@@ -142,6 +148,18 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
               });
             } else if (t.state != TripState.awaitingConfirm) {
               _feuillePosee = false;
+            }
+
+            // Watcher : une seule décision au moment de l'alerte — Appeler.
+            if (!widget.isOwner &&
+                (t.state == TripState.alert || t.state == TripState.sos) &&
+                !_alerteSheetPosee) {
+              _alerteSheetPosee = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) unawaited(_feuilleUrgence(t, v));
+              });
+            } else if (t.state != TripState.alert && t.state != TripState.sos) {
+              _alerteSheetPosee = false;
             }
 
             if (_immersif) {
@@ -247,11 +265,15 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                 if (widget.isOwner)
                   FloatingActionButton(
                     heroTag: 'trip-immersive-sos',
-                    backgroundColor: context.colors.error,
-                    foregroundColor: context.colors.onError,
+                    // Neutre : le rouge n'apparaît que sur l'écran d'armement.
+                    // Un FAB rouge ici trahirait le SOS à qui regarde par-dessus
+                    // l'épaule — exactement l'inverse du mode discret.
+                    backgroundColor:
+                        context.colors.surface.withValues(alpha: 0.92),
+                    foregroundColor: context.colors.onSurface,
                     tooltip: l10n.tripsSosButton,
                     onPressed: _occupe ? null : _sos,
-                    child: const Icon(Icons.warning_amber_rounded),
+                    child: const Icon(Icons.sos_outlined),
                   )
                 else
                   FloatingActionButton(
@@ -452,7 +474,13 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
             .map((p) => LatLng(p.lat, p.lng))
             .toList();
 
-        if (position != null && _suitLaPosition) {
+        if (position != null && but != null && !_cadreInitialFait) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _cadreInitialFait) return;
+            _cadreInitialFait = true;
+            _cadrerTrajet(position, but);
+          });
+        } else if (position != null && _suitLaPosition) {
           // Recentrage doux : on ne reprend la main que si l'utilisateur n'a
           // pas déplacé la carte lui-même.
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -556,15 +584,57 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                 bottom: AppSpacing.lg,
                 // 48 dp au minimum : `FloatingActionButton.small` fait 40 et
                 // passait sous le seuil tactile.
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (but != null) ...[
+                      SizedBox(
+                        width: AppSizes.minTapTarget,
+                        height: AppSizes.minTapTarget,
+                        child: FloatingActionButton(
+                          heroTag: 'trip-fit',
+                          tooltip: l10n.tripsMapFitBounds,
+                          elevation: 3,
+                          onPressed: () => _cadrerTrajet(position, but),
+                          child: const Icon(Icons.zoom_out_map,
+                              size: AppIconSize.sm),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                    SizedBox(
+                      width: AppSizes.minTapTarget,
+                      height: AppSizes.minTapTarget,
+                      child: FloatingActionButton(
+                        heroTag: 'trip-recenter',
+                        tooltip: l10n.tripsRecenter,
+                        elevation: 3,
+                        onPressed: () =>
+                            setState(() => _suitLaPosition = true),
+                        child:
+                            const Icon(Icons.my_location, size: AppIconSize.sm),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Même accès au cadrage quand on suit encore la position (but hors
+            // cadre fréquent en ville dense).
+            if (_suitLaPosition && position != null && but != null)
+              Positioned(
+                right: AppSpacing.lg,
+                bottom: AppSpacing.lg,
                 child: SizedBox(
                   width: AppSizes.minTapTarget,
                   height: AppSizes.minTapTarget,
                   child: FloatingActionButton(
-                    heroTag: 'trip-recenter',
-                    tooltip: l10n.tripsRecenter,
+                    heroTag: 'trip-fit-follow',
+                    tooltip: l10n.tripsMapFitBounds,
                     elevation: 3,
-                    onPressed: () => setState(() => _suitLaPosition = true),
-                    child: const Icon(Icons.my_location, size: AppIconSize.sm),
+                    onPressed: () => _cadrerTrajet(position, but),
+                    child:
+                        const Icon(Icons.zoom_out_map, size: AppIconSize.sm),
                   ),
                 ),
               ),
@@ -716,12 +786,20 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
   /// coins arrondis. Sans ce relief, les boutons flottent sur les tuiles et on
   /// ne sait plus ce qui appartient à la carte et ce qui appartient au trajet.
   Widget _pied(dynamic l10n, LocalTrip t, TripVisual v) {
+    final distanceM = _distanceAuButM(t);
     final faits = <Widget>[
       if (t.etaAt != null)
         TripFactChip(
           icon: Icons.schedule,
           label: l10n.tripsEtaAt(TripFormat.hhmm(t.etaAt!)),
           tint: v.tone == TripTone.awaiting ? v.ink : null,
+        ),
+      if (distanceM != null)
+        TripFactChip(
+          icon: Icons.near_me_outlined,
+          label: distanceM >= 1000
+              ? l10n.tripsDistanceKm((distanceM / 1000))
+              : l10n.tripsDistanceM(distanceM),
         ),
       // Owner : ne pas afficher watcherCount ici (= taille du cercle, promesse).
       // Le vrai suivi est dans TripWatchersRow (« X sur Y ont vu » / seenAt).
@@ -743,6 +821,8 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
           tint: (t.lastBattery ?? 100) <= 15 ? context.semantic.warning : null,
         ),
     ];
+
+    final aConfirmer = t.state == TripState.awaitingConfirm;
 
     return Container(
       width: double.infinity,
@@ -770,36 +850,38 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
             if (widget.isOwner && TripState.isOpen(t.state))
               TripWatchersRow(tripId: widget.tripId),
             if (widget.isOwner) ...[
-              const SizedBox(height: AppSpacing.lg),
-              // Confirmer est l'action dominante dès que l'échéance approche :
-              // c'est la seule qui clôt le trajet, et la seule qui rassure.
-              FilledButton.icon(
-                onPressed: _occupe ? null : _confirmer,
-                icon: const Icon(Icons.check_rounded),
-                label: Text(l10n.tripsConfirmArrival,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-                style: FilledButton.styleFrom(
-                  backgroundColor: context.semantic.success,
-                  foregroundColor: context.semantic.onSuccess,
-                  minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(children: [
-                for (final m in const [15, 30]) ...[
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _occupe ? null : () => _prolonger(m),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize:
-                            const Size.fromHeight(AppSizes.minTapTarget),
-                      ),
-                      child: Text(l10n.tripsExtendBy(m)),
-                    ),
+              if (aConfirmer) ...[
+                const SizedBox(height: AppSpacing.lg),
+                // Confirmer n'est dominant qu'à l'arrivée : en trajet actif,
+                // un bouton vert plein ment sur l'urgence.
+                FilledButton.icon(
+                  onPressed: _occupe ? null : _confirmer,
+                  icon: const Icon(Icons.check_rounded),
+                  label: Text(l10n.tripsConfirmArrival,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: context.semantic.success,
+                    foregroundColor: context.semantic.onSuccess,
+                    minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
                   ),
-                  if (m == 15) const SizedBox(width: AppSpacing.sm),
-                ],
-              ]),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(children: [
+                  for (final m in const [15, 30]) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _occupe ? null : () => _prolonger(m),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize:
+                              const Size.fromHeight(AppSizes.minTapTarget),
+                        ),
+                        child: Text(l10n.tripsExtendBy(m)),
+                      ),
+                    ),
+                    if (m == 15) const SizedBox(width: AppSpacing.sm),
+                  ],
+                ]),
+              ],
               const SizedBox(height: AppSpacing.md),
               // Le suivi continue écran verrouillé grâce au service en
               // avant-plan. On le dit, parce que c'est exactement la question
@@ -827,46 +909,65 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _occupe ? null : _sos,
-                    icon: Icon(Icons.warning_amber_rounded,
-                        size: AppIconSize.sm, color: context.colors.error),
-                    label: Text(l10n.tripsSosButton,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: context.colors.error,
-                            fontWeight: FontWeight.w700)),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(AppSizes.minTapTarget),
-                      side: BorderSide(
-                          color: context.colors.error.withValues(alpha: 0.4)),
-                    ),
-                  ),
+              // Arrêter d'abord (discret) ; SOS tertiaire — le rouge n'occupe
+              // pas la moitié du pied pendant un trajet calme.
+              OutlinedButton.icon(
+                onPressed: _occupe ? null : _arreter,
+                icon: const Icon(Icons.stop_circle_outlined,
+                    size: AppIconSize.sm),
+                label: Text(l10n.tripsStop),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(AppSizes.minTapTarget),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                // « Arrêter » reste à un appui et sans confirmation : si
-                // arrêter coûtait cher, arrêter deviendrait punissable.
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _occupe ? null : _arreter,
-                    icon: const Icon(Icons.stop_circle_outlined,
-                        size: AppIconSize.sm),
-                    label: Text(l10n.tripsStop,
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(AppSizes.minTapTarget),
-                    ),
-                  ),
-                ),
-              ]),
+              ),
+              TextButton.icon(
+                onPressed: _occupe ? null : _sos,
+                icon: Icon(Icons.sos_outlined,
+                    size: AppIconSize.sm,
+                    color: context.colors.onSurfaceVariant),
+                label: Text(l10n.tripsSosButton,
+                    style: TextStyle(
+                        color: context.colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w600)),
+              ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  /// Cadre la position et le but. Coupe le suivi pin-seul pour ne pas
+  /// recentrer immédiatement sur un seul point.
+  void _cadrerTrajet(LatLng? position, LatLng? but) {
+    if (position == null || but == null) return;
+    setState(() => _suitLaPosition = false);
+    try {
+      _carte.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds(position, but),
+          padding: const EdgeInsets.all(56),
+          maxZoom: 16,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[TripLive] cadrage: $e');
+    }
+  }
+
+  int? _distanceAuButM(LocalTrip t) {
+    if (t.lastLat == null ||
+        t.lastLng == null ||
+        t.destLat == null ||
+        t.destLng == null) {
+      return null;
+    }
+    return Geolocator.distanceBetween(
+      t.lastLat!,
+      t.lastLng!,
+      t.destLat!,
+      t.destLng!,
+    ).round();
   }
 
   // ── Côté membre ───────────────────────────────────────────────────
@@ -966,6 +1067,86 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
       context.read<TripSocketService>().unsubscribe(t.id);
       Navigator.pop(context);
     });
+  }
+
+  /// Une décision pour le watcher en alerte : Appeler, ou rester sur la carte.
+  Future<void> _feuilleUrgence(LocalTrip t, TripVisual v) async {
+    if (!mounted) return;
+    final l10n = context.l10n;
+    final maj = t.lastAt != null
+        ? (t.stale
+            ? l10n.tripsPositionFrozen
+            : l10n.tripsUpdatedAgo(TripFormat.depuis(t.lastAt!)))
+        : l10n.tripsUnreachable;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (c) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    TripCrest(visual: v, size: 44),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            v.label,
+                            style: Theme.of(c).textTheme.titleMedium?.copyWith(
+                                  color: v.ink,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            maj,
+                            style: Theme.of(c).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(c)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.pop(c);
+                    unawaited(_appeler(t));
+                  },
+                  icon: const Icon(Icons.call),
+                  label: Text(l10n.tripsCall,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(c).colorScheme.error,
+                    foregroundColor: Theme.of(c).colorScheme.onError,
+                    minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextButton(
+                  onPressed: () => Navigator.pop(c),
+                  child: Text(l10n.tripsCardFollow),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// Appelle la personne suivie.

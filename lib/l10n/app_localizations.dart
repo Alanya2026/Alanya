@@ -8909,7 +8909,7 @@ abstract class AppLocalizations {
   /// No description provided for @tripsSosHold.
   ///
   /// In fr, this message translates to:
-  /// **'Maintenez trois secondes'**
+  /// **'Maintenez environ deux secondes'**
   String get tripsSosHold;
 
   /// No description provided for @tripsSosHoldBody.
@@ -8953,6 +8953,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aucun son, aucune vibration. Votre position continue d\'être partagée.'**
   String get tripsSosDiscreet;
+
+  /// No description provided for @tripsSosActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage actif'**
+  String get tripsSosActive;
+
+  /// No description provided for @tripsSosActiveBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre position est partagée. Aucun son, aucune vibration.'**
+  String get tripsSosActiveBody;
 
   /// No description provided for @tripsSosTooMany.
   ///
@@ -9061,6 +9073,54 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réduire'**
   String get tripsMapReduce;
+
+  /// No description provided for @tripsMapFitBounds.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir position et destination'**
+  String get tripsMapFitBounds;
+
+  /// No description provided for @tripsDestinationSafetyNet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec une destination, on vous demandera de confirmer dès l\'arrivée — pas seulement à l\'heure.'**
+  String get tripsDestinationSafetyNet;
+
+  /// No description provided for @tripsDistanceM.
+  ///
+  /// In fr, this message translates to:
+  /// **'~{meters} m'**
+  String tripsDistanceM(int meters);
+
+  /// No description provided for @tripsDistanceKm.
+  ///
+  /// In fr, this message translates to:
+  /// **'~{km} km'**
+  String tripsDistanceKm(double km);
+
+  /// No description provided for @tripsUpdatedAgo.
+  ///
+  /// In fr, this message translates to:
+  /// **'maj il y a {age}'**
+  String tripsUpdatedAgo(String age);
+
+  /// No description provided for @tripsPositionFrozen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Position figée'**
+  String get tripsPositionFrozen;
+
+  /// No description provided for @tripsDeleteLockedHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conservé 30 jours après une alerte'**
+  String get tripsDeleteLockedHint;
+
+  /// No description provided for @tripsEventWatcherSeenGroup.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} proches ont vu'**
+  String tripsEventWatcherSeenGroup(int count);
 
   /// No description provided for @tripsArrivalReachedTitle.
   ///

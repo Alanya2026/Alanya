@@ -18,22 +18,33 @@ import 'trip_visuals.dart';
 /// la couleur seule : un daltonien lit la coche, un écran au soleil lit le
 /// remplissage.
 class TripRail extends StatelessWidget {
-  const TripRail({super.key, required this.state, this.stale = false});
+  const TripRail({
+    super.key,
+    required this.state,
+    this.stale = false,
+    this.composing = false,
+  });
 
   final String state;
   final bool stale;
 
+  /// Écran de composition : l'étape courante est « Partir », pas « Suivre ».
+  final bool composing;
+
   /// Indice du temps en cours, ou -1 quand le trajet a basculé en alerte.
-  int get _etape => switch (state) {
-        TripState.alert || TripState.sos => -1,
-        TripState.awaitingConfirm => 2,
-        TripState.closedConfirmed ||
-        TripState.closedCancelled ||
-        TripState.closedExpired ||
-        TripState.closedUnwatched =>
-          3,
-        _ => 1,
-      };
+  int get _etape {
+    if (composing) return 0;
+    return switch (state) {
+      TripState.alert || TripState.sos => -1,
+      TripState.awaitingConfirm => 2,
+      TripState.closedConfirmed ||
+      TripState.closedCancelled ||
+      TripState.closedExpired ||
+      TripState.closedUnwatched =>
+        3,
+      _ => 1,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
