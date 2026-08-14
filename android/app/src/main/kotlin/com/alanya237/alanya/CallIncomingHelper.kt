@@ -1,6 +1,7 @@
 package com.alanya237.alanya
 
 import android.content.Context
+import android.os.Bundle
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.hiennv.flutter_callkit_incoming.CallkitConstants
@@ -55,7 +56,16 @@ object CallIncomingHelper {
             if (customPath != null) "silence" else resolveNativeRingtoneName(context)
         val bundle = buildIncomingBundle(data, ringtonePath)
         try {
-            notificationManager?.showIncomingNotification(bundle)
+            // Le plugin recharge une URL d'avatar puis reposte la notification.
+            // Sur certains Samsung, ce second `notify` redéclenche le
+            // fullScreenIntent et ouvre deux CallkitIncomingActivity pour le
+            // même callId. La notification native n'a donc pas d'avatar distant;
+            // l'entrée ACTIVE_CALLS conserve en revanche le bundle complet pour
+            // que Flutter retrouve callerPhoto après l'acceptation/cold start.
+            val notificationBundle = Bundle(bundle).apply {
+                putString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
+            }
+            notificationManager?.showIncomingNotification(notificationBundle)
             addCall(context.applicationContext, Data.fromBundle(bundle))
             if (customPath != null) {
                 CustomRingtonePlayer.start(context, customPath)

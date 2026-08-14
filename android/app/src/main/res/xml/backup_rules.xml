@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Règles de sauvegarde automatique (Android 11 et antérieurs).
+
+  `FlutterSecureStorage.xml` est le magasin chiffré de flutter_secure_storage
+  (tokens de session, profil, identifiant d'appareil). Il est chiffré par une
+  clé du Keystore Android, qui ne quitte JAMAIS l'appareil et n'est donc pas
+  restaurée avec lui. Sauvegardé puis restauré (nouvel appareil, réinstallation,
+  transfert d'appareil à appareil), le fichier devient définitivement
+  indéchiffrable : chaque lecture lève
+  `BadPaddingException: BAD_DECRYPT` et bloque l'écran de connexion.
+
+  On l'exclut donc de la sauvegarde : une session n'est de toute façon pas
+  restaurable d'un appareil à l'autre, et l'utilisateur se reconnecte
+  normalement.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+</full-backup-content>

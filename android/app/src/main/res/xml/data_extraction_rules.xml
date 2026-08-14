@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Règles de sauvegarde cloud et de transfert d'appareil à appareil (Android 12+).
+  Même motif que `backup_rules.xml` : le magasin chiffré de
+  flutter_secure_storage dépend d'une clé du Keystore non transférable, donc le
+  restaurer ne produit que des données illisibles (BAD_DECRYPT à la connexion).
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    </device-transfer>
+</data-extraction-rules>
