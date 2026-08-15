@@ -6,10 +6,11 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/location_payload.dart';
+import '../../core/utils/map_tiles.dart';
 
 /// Preview carte dans une bulle (style WhatsApp) :
-/// mêmes tuiles OSM que l'écran d'envoi, non interactive, un seul pin,
-/// libellé en overlay bas.
+/// mêmes tuiles que l'écran d'envoi (source servie par le serveur),
+/// non interactive, un seul pin, libellé en overlay bas.
 class LocationMessagePreview extends StatelessWidget {
   const LocationMessagePreview({
     super.key,
@@ -46,15 +47,10 @@ class LocationMessagePreview extends StatelessWidget {
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.none,
                   ),
-                  backgroundColor: context.semantic.surfaceMuted,
+                  backgroundColor: MapTiles.background(context),
                 ),
                 children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.alanya.talky',
-                    maxZoom: 19,
-                  ),
+                  MapTiles.layer(context),
                 ],
               ),
             ),
@@ -125,6 +121,32 @@ class LocationMessagePreview extends StatelessWidget {
                           ),
                         ],
                       ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Mention légale. Minuscule, mais présente : le fond est servi par le
+            // serveur (Mapbox, OSM, tuiles propres…), et sa licence exige
+            // l'attribution là où il est affiché — y compris dans cette bulle.
+            // Posée en haut à droite : le bas appartient au bandeau.
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IgnorePointer(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    MapTiles.attribution,
+                    style: const TextStyle(
+                      fontSize: 8,
+                      height: 1.2,
+                      color: Color(0xFF3C4048),
                     ),
                   ),
                 ),
