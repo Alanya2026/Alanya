@@ -12,6 +12,7 @@ import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/trips/trip_visuals.dart';
 import '../../widgets/trips/trip_watchers_row.dart';
+import 'trip_map_fullscreen.dart';
 
 /// Récapitulatif d'un trajet passé — **propriétaire uniquement**.
 ///
@@ -254,70 +255,116 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: ClipRRect(
         borderRadius: AppRadius.brMd,
-        child: SizedBox(
-          height: 240,
-          child: FlutterMap(
-            options: MapOptions(
-              initialCenter: dernier ?? but ?? const LatLng(3.848, 11.5021),
-              initialZoom: 14,
-              maxZoom: MapTiles.maxDisplayZoom,
-              minZoom: MapTiles.minDisplayZoom,
-              backgroundColor: MapTiles.background(context),
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+        child: Stack(
+          children: [
+            SizedBox(
+              height: 240,
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: dernier ?? but ?? const LatLng(3.848, 11.5021),
+                  initialZoom: 14,
+                  maxZoom: MapTiles.maxDisplayZoom,
+                  minZoom: MapTiles.minDisplayZoom,
+                  backgroundColor: MapTiles.background(context),
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                  ),
+                ),
+                children: [
+                  MapTiles.layer(context),
+                  if (but != null && t.destRadiusM != null)
+                    CircleLayer(
+                      circles: [
+                        CircleMarker(
+                          point: but,
+                          radius: (t.destRadiusM ?? 100).toDouble(),
+                          useRadiusInMeter: true,
+                          color: v.color.withValues(alpha: 0.12),
+                          borderColor: v.color.withValues(alpha: 0.45),
+                          borderStrokeWidth: 1.5,
+                        ),
+                      ],
+                    ),
+                  if (points.length >= 2)
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: points,
+                          color: v.color.withValues(alpha: 0.85),
+                          strokeWidth: 3.5,
+                        ),
+                      ],
+                    ),
+                  MarkerLayer(
+                    markers: [
+                      if (but != null)
+                        Marker(
+                          point: but,
+                          width: 28,
+                          height: 28,
+                          child:
+                              Icon(Icons.flag_rounded, color: v.ink, size: 22),
+                        ),
+                      if (dernier != null)
+                        Marker(
+                          point: dernier,
+                          width: 22,
+                          height: 22,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: v.color,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            children: [
-              MapTiles.layer(context),
-              if (but != null && t.destRadiusM != null)
-                CircleLayer(
-                  circles: [
-                    CircleMarker(
-                      point: but,
-                      radius: (t.destRadiusM ?? 100).toDouble(),
-                      useRadiusInMeter: true,
-                      color: v.color.withValues(alpha: 0.12),
-                      borderColor: v.color.withValues(alpha: 0.45),
-                      borderStrokeWidth: 1.5,
-                    ),
-                  ],
-                ),
-              if (points.length >= 2)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: points,
-                      color: v.color.withValues(alpha: 0.85),
-                      strokeWidth: 3.5,
-                    ),
-                  ],
-                ),
-              MarkerLayer(
-                markers: [
-                  if (but != null)
-                    Marker(
-                      point: but,
-                      width: 28,
-                      height: 28,
-                      child: Icon(Icons.flag_rounded, color: v.ink, size: 22),
-                    ),
-                  if (dernier != null)
-                    Marker(
-                      point: dernier,
-                      width: 22,
-                      height: 22,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: v.color,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+            // Bouton plein écran — ouvre la même carte mais en occupant tout
+            // l'écran, comme dans le suivi temps réel.
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.transparent,
+                child: Ink(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: 0.85),
+                    shape: BoxShape.circle,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.fullscreen, size: 22),
+                    tooltip: 'Voir en plein écran',
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TripMapFullscreen(
+                          points: points,
+                          destination: but,
+                          destRadiusM: t.destRadiusM?.toDouble(),
+                          lastPosition: dernier,
+                          visual: v,
                         ),
                       ),
                     ),
-                ],
+                  ),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
