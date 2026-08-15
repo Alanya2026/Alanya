@@ -5144,11 +5144,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tripsSosTitle => 'SOS';
 
   @override
-  String get tripsSosHold => 'Maintenez environ deux secondes';
+  String get tripsSosHold => 'Appuyez pour lancer le SOS';
 
   @override
   String get tripsSosHoldBody =>
-      'Vos proches recevront une alerte avec votre position, immédiatement.';
+      'Le compte à rebours commence immédiatement et vous pouvez annuler avant l\'envoi.';
 
   @override
   String get tripsSosNotEmergency =>

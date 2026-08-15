@@ -8909,13 +8909,13 @@ abstract class AppLocalizations {
   /// No description provided for @tripsSosHold.
   ///
   /// In fr, this message translates to:
-  /// **'Maintenez environ deux secondes'**
+  /// **'Appuyez pour lancer le SOS'**
   String get tripsSosHold;
 
   /// No description provided for @tripsSosHoldBody.
   ///
   /// In fr, this message translates to:
-  /// **'Vos proches recevront une alerte avec votre position, immédiatement.'**
+  /// **'Le compte à rebours commence immédiatement et vous pouvez annuler avant l\'envoi.'**
   String get tripsSosHoldBody;
 
   /// No description provided for @tripsSosNotEmergency.

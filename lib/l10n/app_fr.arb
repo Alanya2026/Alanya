@@ -3207,8 +3207,8 @@
     }
   },
   "tripsSosTitle": "SOS",
-  "tripsSosHold": "Maintenez environ deux secondes",
-  "tripsSosHoldBody": "Vos proches recevront une alerte avec votre position, immédiatement.",
+  "tripsSosHold": "Appuyez pour lancer le SOS",
+  "tripsSosHoldBody": "Le compte à rebours commence immédiatement et vous pouvez annuler avant l'envoi.",
   "tripsSosNotEmergency": "Le SOS ne prévient pas les secours. Il prévient votre cercle de confiance.",
   "tripsSosSending": "Envoi dans {count} secondes",
   "@tripsSosSending": {

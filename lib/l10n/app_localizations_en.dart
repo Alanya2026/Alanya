@@ -5090,11 +5090,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tripsSosTitle => 'SOS';
 
   @override
-  String get tripsSosHold => 'Hold for about two seconds';
+  String get tripsSosHold => 'Tap to trigger the SOS';
 
   @override
   String get tripsSosHoldBody =>
-      'Your circle will be alerted with your location, immediately.';
+      'The countdown starts immediately and you can cancel before it is sent.';
 
   @override
   String get tripsSosNotEmergency =>

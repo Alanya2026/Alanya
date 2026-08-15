@@ -2325,8 +2325,8 @@
     }
   },
   "tripsSosTitle": "SOS",
-  "tripsSosHold": "Hold for about two seconds",
-  "tripsSosHoldBody": "Your circle will be alerted with your location, immediately.",
+  "tripsSosHold": "Tap to trigger the SOS",
+  "tripsSosHoldBody": "The countdown starts immediately and you can cancel before it is sent.",
   "tripsSosNotEmergency": "SOS does not call emergency services. It alerts your trusted circle.",
   "tripsSosSending": "Sending in {count} seconds",
   "@tripsSosSending": {

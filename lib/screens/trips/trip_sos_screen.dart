@@ -15,15 +15,9 @@ import '../../widgets/trips/trip_visuals.dart';
 
 /// Déclenchement d'un SOS.
 ///
-/// **Deux gestes pour partir, puis le silence.** Un bouton d'alarme qui se
-/// déclenche en poche détruit la confiance du cercle en une fois ; un bouton
-/// qui célèbre son envoi met en danger la personne qu'il devait protéger.
-///
-///  1. **maintien de 3 secondes** — une poche ne maintient pas ;
-///  2. **décompte annulable de 5 secondes**, où « Annuler » est le plus gros
-///     élément de l'écran ;
-///  3. **mode discret** après l'envoi : aucun son, aucune vibration, un écran
-///     qui ne dit rien à quelqu'un qui regarderait par-dessus l'épaule.
+/// Un simple appui démarre le compte à rebours et laisse l'utilisateur annuler
+/// avant l'envoi. Le mode discret reste conservé après l'envoi pour éviter tout
+/// signal visible à qui regarderait par-dessus l'épaule.
 ///
 /// Fonctionne **sans trajet en cours** : exiger « démarrez d'abord un trajet »
 /// rendrait le SOS inutile dans le seul cas où il compte.
@@ -34,24 +28,10 @@ class TripSosScreen extends StatefulWidget {
   State<TripSosScreen> createState() => _TripSosScreenState();
 }
 
-enum _Phase { repos, maintien, decompte, envoi, envoye }
+enum _Phase { repos, decompte, envoi, envoye }
 
-class _TripSosScreenState extends State<TripSosScreen>
-    with SingleTickerProviderStateMixin {
-  // 1,5 s de maintien puis 3 s de décompte, soit 4,5 s au lieu de 8.
-  //
-  // Le compromis reste tenu : une poche ne maintient pas un appui 1,5 s, et
-  // « Annuler » — le plus gros élément de l'écran — reste largement atteignable
-  // en 3 s. On raccourcit l'attente sans supprimer les deux gestes qui
-  // protègent le cercle des fausses alertes.
-  static const _maintien = Duration(milliseconds: 1500);
+class _TripSosScreenState extends State<TripSosScreen> {
   static const _decompteS = 3;
-
-  late final AnimationController _anneau =
-      AnimationController(vsync: this, duration: _maintien)
-        ..addStatusListener((s) {
-          if (s == AnimationStatus.completed) _lancerDecompte();
-        });
 
   _Phase _phase = _Phase.repos;
   int _restant = _decompteS;
@@ -65,31 +45,13 @@ class _TripSosScreenState extends State<TripSosScreen>
   @override
   void dispose() {
     _tic?.cancel();
-    _anneau.dispose();
     super.dispose();
   }
 
-  // ── Geste 1 : le maintien ─────────────────────────────────────────
-
-  void _debutAppui() {
-    if (_phase != _Phase.repos) return;
-    setState(() => _phase = _Phase.maintien);
-    // Retour haptique : on doit sentir que le maintien a pris, sans regarder.
-    HapticFeedback.mediumImpact();
-    _anneau.forward(from: 0);
-  }
-
-  void _finAppui() {
-    if (_phase != _Phase.maintien) return;
-    _anneau.stop();
-    _anneau.reset();
-    setState(() => _phase = _Phase.repos);
-  }
-
-  // ── Geste 2 : le décompte ─────────────────────────────────────────
+  // ── Déclenchement immédiat du compte à rebours ───────────────────
 
   void _lancerDecompte() {
-    if (!mounted) return;
+    if (_phase != _Phase.repos || !mounted) return;
     HapticFeedback.heavyImpact();
     setState(() {
       _phase = _Phase.decompte;
@@ -110,7 +72,6 @@ class _TripSosScreenState extends State<TripSosScreen>
 
   void _annuler() {
     _tic?.cancel();
-    _anneau.reset();
     setState(() {
       _phase = _Phase.repos;
       _restant = _decompteS;
@@ -237,72 +198,36 @@ class _TripSosScreenState extends State<TripSosScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           GestureDetector(
-            onTapDown: (_) => _debutAppui(),
-            onTapUp: (_) => _finAppui(),
-            onTapCancel: _finAppui,
-            child: SizedBox(
+            onTap: _lancerDecompte,
+            child: Container(
               width: 176,
               height: 176,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // L'anneau montre la progression du maintien : on doit voir
-                  // que ça part, et pouvoir relâcher avant.
-                  SizedBox(
-                    width: 172,
-                    height: 172,
-                    child: AnimatedBuilder(
-                      animation: _anneau,
-                      builder: (_, __) => CircularProgressIndicator(
-                        value: _anneau.value,
-                        strokeWidth: 4,
-                        backgroundColor:
-                            context.colors.error.withValues(alpha: 0.18),
-                        color: context.colors.error,
-                      ),
-                    ),
-                  ),
-                  // Le bouton s'enfonce sous le doigt et son halo se resserre :
-                  // le maintien doit se sentir aussi bien qu'il se voit, parce
-                  // qu'on peut avoir à l'armer sans regarder l'écran.
-                  AnimatedScale(
-                    scale: _phase == _Phase.maintien ? 0.94 : 1,
-                    duration: AppDurations.fast,
-                    child: Container(
-                      width: 148,
-                      height: 148,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          center: const Alignment(-0.3, -0.4),
-                          radius: 1.1,
-                          colors: [
-                            Color.lerp(
-                                context.colors.error, Colors.white, 0.18)!,
-                            context.colors.error,
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.colors.error.withValues(
-                                alpha: _phase == _Phase.maintien ? 0.55 : 0.35),
-                            blurRadius: 28,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'SOS',
-                        style: context.text.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 3,
-                        ),
-                      ),
-                    ),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  center: const Alignment(-0.3, -0.4),
+                  radius: 1.1,
+                  colors: [
+                    Color.lerp(context.colors.error, Colors.white, 0.18)!,
+                    context.colors.error,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: context.colors.error.withValues(alpha: 0.35),
+                    blurRadius: 28,
+                    offset: const Offset(0, 8),
                   ),
                 ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'SOS',
+                style: context.text.headlineMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 3,
+                ),
               ),
             ),
           ),
@@ -317,8 +242,6 @@ class _TripSosScreenState extends State<TripSosScreen>
                   ?.copyWith(color: context.colors.onSurfaceVariant),
               textAlign: TextAlign.center),
           const Spacer(),
-          // Dire ce que le SOS ne fait pas vaut mieux qu'une promesse implicite
-          // qu'on ne tient pas.
           Text(l10n.tripsSosNotEmergency,
               style: context.text.bodySmall
                   ?.copyWith(color: context.colors.onSurfaceVariant),
