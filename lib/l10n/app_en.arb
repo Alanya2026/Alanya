@@ -2430,6 +2430,7 @@
   "locationPickerUseDestination": "Use this destination",
   "locationUseMyPosition": "Use my location",
   "locationPickerInstruction": "Search, move the map, or use your location",
+  "mapCompassNorth": "Reset north up",
   "tripsCardFalseAlarm": "{name} reported a false alarm",
   "@tripsCardFalseAlarm": {
     "placeholders": {

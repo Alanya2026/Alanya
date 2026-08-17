@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import '../../core/utils/map_tiles.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/location_payload.dart';
+import '../../core/utils/map_tiles.dart';
+import '../../widgets/maps/map_compass.dart';
 
 /// Résultat de l'écran de choix de position.
 class LocationSendResult {
@@ -427,11 +428,16 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               minZoom: MapTiles.minDisplayZoom,
               backgroundColor: MapTiles.background(context),
               onPositionChanged: _onMapMoved,
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-              ),
+              interactionOptions: MapTiles.interactive,
             ),
-            children: [MapTiles.layer(context), MapTiles.attributionWidget()],
+            children: [
+              MapTiles.layer(context),
+              MapTiles.attributionWidget(),
+              const MapCompass(
+                alignment: Alignment.topRight,
+                useSafeArea: true,
+              ),
+            ],
           ),
           // Pin fixe au centre (la carte bouge sous le pin).
           IgnorePointer(

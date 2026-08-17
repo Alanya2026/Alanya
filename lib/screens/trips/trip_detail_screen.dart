@@ -8,6 +8,7 @@ import '../../core/services/trip_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/map_tiles.dart';
+import '../../widgets/maps/map_compass.dart';
 import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/trips/trip_visuals.dart';
@@ -266,9 +267,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   maxZoom: MapTiles.maxDisplayZoom,
                   minZoom: MapTiles.minDisplayZoom,
                   backgroundColor: MapTiles.background(context),
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                  ),
+                  interactionOptions: MapTiles.interactive,
                 ),
                 children: [
                   MapTiles.layer(context),
@@ -296,6 +295,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       ],
                     ),
                   MarkerLayer(
+                    rotate: true,
                     markers: [
                       if (but != null)
                         Marker(
@@ -319,6 +319,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                           ),
                         ),
                     ],
+                  ),
+                  const MapCompass(
+                    alignment: Alignment.topLeft,
+                    padding: EdgeInsets.all(AppSpacing.sm),
                   ),
                 ],
               ),

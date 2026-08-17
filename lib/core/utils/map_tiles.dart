@@ -178,6 +178,22 @@ class MapTiles {
     );
   }
 
+  /// Gestes des cartes **manipulables** (choix de lieu, suivi, plein écran).
+  ///
+  /// Inclut la rotation à deux doigts. Elle a longtemps été coupée pour qu'un
+  /// pincement de zoom ne parte pas en biais : le seuil interne de flutter_map
+  /// (20°) départage déjà zoom et torsion, et la boussole remet le nord en un
+  /// appui — le geste devient réversible, donc utilisable.
+  static const InteractionOptions interactive = InteractionOptions(
+    flags: InteractiveFlag.all,
+  );
+
+  /// Vignettes du fil : aucun geste. Le défilement de la conversation doit
+  /// rester prioritaire ; un appui ouvre la carte plein écran.
+  static const InteractionOptions inert = InteractionOptions(
+    flags: InteractiveFlag.none,
+  );
+
   /// Mention légale — contrepartie du droit d'usage, pas une décoration.
   ///
   /// À placer **dans les `children` de [FlutterMap]**, jamais dans une pile

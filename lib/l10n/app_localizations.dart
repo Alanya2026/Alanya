@@ -9278,6 +9278,12 @@ abstract class AppLocalizations {
   /// **'Recherchez, déplacez la carte ou utilisez votre position'**
   String get locationPickerInstruction;
 
+  /// Tooltip de la boussole : remet la carte nord en haut
+  ///
+  /// In fr, this message translates to:
+  /// **'Remettre le nord en haut'**
+  String get mapCompassNorth;
+
   /// No description provided for @tripsCardFalseAlarm.
   ///
   /// In fr, this message translates to:

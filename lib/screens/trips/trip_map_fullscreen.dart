@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/map_tiles.dart';
+import '../../widgets/maps/map_compass.dart';
 import '../../widgets/trips/trip_visuals.dart';
 
 /// Carte plein écran pour visualiser un trajet passé.
@@ -109,9 +109,7 @@ class _TripMapFullscreenState extends State<TripMapFullscreen> {
           maxZoom: MapTiles.maxDisplayZoom,
           minZoom: MapTiles.minDisplayZoom,
           backgroundColor: MapTiles.background(context),
-          interactionOptions: const InteractionOptions(
-            flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-          ),
+          interactionOptions: MapTiles.interactive,
         ),
         children: [
           MapTiles.layer(context),
@@ -142,6 +140,7 @@ class _TripMapFullscreenState extends State<TripMapFullscreen> {
             ),
 
           MarkerLayer(
+            rotate: true,
             markers: [
               if (but != null)
                 Marker(
@@ -167,6 +166,7 @@ class _TripMapFullscreenState extends State<TripMapFullscreen> {
           ),
 
           MapTiles.attributionWidget(),
+          const MapCompass(alignment: Alignment.topRight),
         ],
       ),
     );
