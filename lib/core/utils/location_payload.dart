@@ -28,10 +28,7 @@ class LocationPayload {
   String get previewLabel => '📍 $displayLabel';
 
   String encode() {
-    final map = <String, dynamic>{
-      'lat': lat,
-      'lng': lng,
-    };
+    final map = <String, dynamic>{'lat': lat, 'lng': lng};
     final n = name?.trim();
     if (n != null && n.isNotEmpty) map['name'] = n;
     final a = address?.trim();
@@ -48,9 +45,12 @@ class LocationPayload {
       final lng = (data['lng'] as num?)?.toDouble();
       if (lat == null || lng == null) return null;
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-      final name = data['name'] is String ? (data['name'] as String).trim() : null;
-      final address =
-          data['address'] is String ? (data['address'] as String).trim() : null;
+      final name = data['name'] is String
+          ? (data['name'] as String).trim()
+          : null;
+      final address = data['address'] is String
+          ? (data['address'] as String).trim()
+          : null;
       return LocationPayload(
         lat: lat,
         lng: lng,
@@ -78,7 +78,6 @@ String locationPreviewLabel(String? content) {
   return loc?.previewLabel ?? LocaleController.instance.l10n.location;
 }
 
-
 /// Un résultat de recherche de lieu.
 class PlaceHit {
   const PlaceHit({
@@ -99,6 +98,15 @@ class PlaceHit {
   final String address;
 }
 
+/// Une recherche aboutie, même sans résultat, est distincte d'un échec réseau.
+class PlaceSearchResult {
+  const PlaceSearchResult.found(this.hits) : failed = false;
+  const PlaceSearchResult.failed() : hits = const [], failed = true;
+
+  final List<PlaceHit> hits;
+  final bool failed;
+}
+
 /// Recherche de lieu (géocodage direct) via Nominatim.
 ///
 /// Pendant du géocodage inverse déjà utilisé pour nommer une position. Même
@@ -111,13 +119,13 @@ class PlaceHit {
 ///
 /// [near] recentre la recherche autour d'un point : sans lui, « pharmacie »
 /// renvoie des résultats à l'autre bout du monde.
-Future<List<PlaceHit>> searchPlaces(
+Future<PlaceSearchResult> searchPlaces(
   String query, {
   LocationPayload? near,
   int limit = 8,
 }) async {
   final q = query.trim();
-  if (q.length < 3) return const [];
+  if (q.length < 3) return const PlaceSearchResult.found([]);
   try {
     final params = <String, String>{
       'format': 'json',
@@ -127,9 +135,10 @@ Future<List<PlaceHit>> searchPlaces(
       if (near != null)
         // Boîte englobante d'environ 1°, soit ~110 km : assez large pour ne
         // rien manquer localement, assez étroite pour écarter le reste.
-        'viewbox': '${near.lng - 0.5},${near.lat + 0.5},'
+        'viewbox':
+            '${near.lng - 0.5},${near.lat + 0.5},'
             '${near.lng + 0.5},${near.lat - 0.5}',
-      if (near != null) 'bounded': '0',
+      if (near != null) 'bounded': '1',
     };
     final res = await http
         .get(
@@ -140,28 +149,34 @@ Future<List<PlaceHit>> searchPlaces(
           },
         )
         .timeout(const Duration(seconds: 6));
-    if (res.statusCode != 200) return const [];
+    if (res.statusCode != 200) return const PlaceSearchResult.failed();
 
     final data = jsonDecode(res.body);
-    if (data is! List) return const [];
+    if (data is! List) return const PlaceSearchResult.failed();
 
-    return data.whereType<Map>().map((r) {
-      final lat = double.tryParse('${r['lat']}');
-      final lng = double.tryParse('${r['lon']}');
-      final display = '${r['display_name'] ?? ''}'.trim();
-      if (lat == null || lng == null || display.isEmpty) return null;
-      final parts = display.split(',');
-      return PlaceHit(
-        lat: lat,
-        lng: lng,
-        name: parts.first.trim(),
-        address: parts.length > 1 ? parts.sublist(1).join(',').trim() : display,
-      );
-    }).whereType<PlaceHit>().toList();
+    return PlaceSearchResult.found(
+      data
+          .whereType<Map>()
+          .map((r) {
+            final lat = double.tryParse('${r['lat']}');
+            final lng = double.tryParse('${r['lon']}');
+            final display = '${r['display_name'] ?? ''}'.trim();
+            if (lat == null || lng == null || display.isEmpty) return null;
+            final parts = display.split(',');
+            return PlaceHit(
+              lat: lat,
+              lng: lng,
+              name: parts.first.trim(),
+              address: parts.length > 1
+                  ? parts.sublist(1).join(',').trim()
+                  : display,
+            );
+          })
+          .whereType<PlaceHit>()
+          .toList(),
+    );
   } catch (_) {
-    // Réseau coupé, délai dépassé, quota atteint : on rend une liste vide.
-    // L'écran affiche « aucun résultat » et la carte reste utilisable.
-    return const [];
+    return const PlaceSearchResult.failed();
   }
 }
 

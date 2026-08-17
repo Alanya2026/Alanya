@@ -121,8 +121,9 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
   }
 
   void _erreur(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -136,9 +137,11 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.kind == TripKind.taxi
-            ? l10n.tripsKindTaxi
-            : l10n.tripsKindWalk),
+        title: Text(
+          widget.kind == TripKind.taxi
+              ? l10n.tripsKindTaxi
+              : l10n.tripsKindWalk,
+        ),
       ),
       body: StreamBuilder<List<LocalContactList>>(
         stream: cache.watchContactLists(),
@@ -151,17 +154,22 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
               const TripRail(state: TripState.active, composing: true),
               _titre(l10n.tripsDestination),
               _carteDestination(l10n),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-                child: Text(
-                  l10n.tripsDestinationSafetyNet,
-                  style: context.text.bodySmall?.copyWith(
-                    color: context.colors.onSurfaceVariant,
-                    height: 1.35,
+              if (_destination != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: Text(
+                    l10n.tripsDestinationSafetyNet,
+                    style: context.text.bodySmall?.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                      height: 1.35,
+                    ),
                   ),
                 ),
-              ),
               _titre(l10n.tripsArrivalIn),
               _choixDuree(l10n),
               _titre(l10n.tripsNoteLabel),
@@ -179,11 +187,15 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
           onPressed: _envoi ? null : _demarrer,
           icon: _envoi
               ? const SizedBox(
-                  width: 18, height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2))
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Icon(Icons.shield_rounded),
-          label: Text(l10n.tripsStart,
-              style: const TextStyle(fontWeight: FontWeight.w700)),
+          label: Text(
+            l10n.tripsStart,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
           ),
@@ -200,7 +212,11 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
   Future<void> _choisirDestination() async {
     final r = await Navigator.push<LocationSendResult>(
       context,
-      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+      MaterialPageRoute(
+        builder: (_) => const LocationPickerScreen(
+          purpose: LocationPickerPurpose.destination,
+        ),
+      ),
     );
     if (r != null && mounted) setState(() => _destination = r.payload);
   }
@@ -208,7 +224,9 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
   Widget _carteDestination(dynamic l10n) {
     final d = _destination;
     final choisie = d != null;
-    final teinte = choisie ? context.colors.primary : context.colors.onSurfaceVariant;
+    final teinte = choisie
+        ? context.colors.primary
+        : context.colors.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -241,7 +259,9 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
                   ),
                   alignment: Alignment.center,
                   child: Icon(
-                    choisie ? Icons.place_rounded : Icons.add_location_alt_outlined,
+                    choisie
+                        ? Icons.place_rounded
+                        : Icons.add_location_alt_outlined,
                     color: teinte,
                     size: 21,
                   ),
@@ -258,17 +278,21 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.text.bodyLarge?.copyWith(
-                          fontWeight:
-                              choisie ? FontWeight.w600 : FontWeight.w400,
-                          color: choisie ? null : context.colors.onSurfaceVariant,
+                          fontWeight: choisie
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: choisie
+                              ? null
+                              : context.colors.onSurfaceVariant,
                         ),
                       ),
                       if (choisie) ...[
                         const SizedBox(height: 2),
                         Text(
                           l10n.tripsDestinationRadius,
-                          style: context.text.bodySmall
-                              ?.copyWith(color: context.colors.onSurfaceVariant),
+                          style: context.text.bodySmall?.copyWith(
+                            color: context.colors.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ],
@@ -282,9 +306,11 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
                     onPressed: () => setState(() => _destination = null),
                   )
                 else
-                  Icon(Icons.chevron_right,
-                      size: AppIconSize.sm,
-                      color: context.colors.outlineVariant),
+                  Icon(
+                    Icons.chevron_right,
+                    size: AppIconSize.sm,
+                    color: context.colors.outlineVariant,
+                  ),
               ],
             ),
           ),
@@ -301,76 +327,83 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
   /// ligne, il faut faire l'addition de tête au moment précis où l'on est
   /// pressé de partir.
   Widget _choixDuree(dynamic l10n) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
           children: [
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final d in _durees)
-                  ChoiceChip(
-                    label: Text(l10n.tripsMinutes(d)),
-                    selected: _dureeMin == d,
-                    showCheckmark: false,
-                    labelStyle: context.text.labelLarge?.copyWith(
-                      fontWeight:
-                          _dureeMin == d ? FontWeight.w700 : FontWeight.w500,
-                      color: _dureeMin == d
-                          ? context.colors.onPrimaryContainer
-                          : context.colors.onSurfaceVariant,
-                    ),
-                    onSelected: (_) => setState(() => _dureeMin = d),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Icon(Icons.schedule,
-                    size: 15, color: context.colors.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Text(
-                  l10n.tripsEtaAt(TripFormat.hhmm(_eta)),
-                  style: context.text.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+            for (final d in _durees)
+              ChoiceChip(
+                label: Text(l10n.tripsMinutes(d)),
+                selected: _dureeMin == d,
+                showCheckmark: false,
+                labelStyle: context.text.labelLarge?.copyWith(
+                  fontWeight: _dureeMin == d
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  color: _dureeMin == d
+                      ? context.colors.onPrimaryContainer
+                      : context.colors.onSurfaceVariant,
                 ),
-              ],
+                onSelected: (_) => setState(() => _dureeMin = d),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Icon(
+              Icons.schedule,
+              size: 15,
+              color: context.colors.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              l10n.tripsEtaAt(TripFormat.hhmm(_eta)),
+              style: context.text.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ],
         ),
-      );
+      ],
+    ),
+  );
 
   // ── Note ──────────────────────────────────────────────────────────
 
   Widget _champNote(dynamic l10n) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: TextField(
-          controller: _note,
-          maxLength: 200,
-          maxLines: 2,
-          minLines: 1,
-          textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            hintText: l10n.tripsNoteHint,
-            filled: true,
-            fillColor: context.semantic.surfaceMuted,
-            prefixIcon: Icon(Icons.short_text,
-                size: AppIconSize.sm, color: context.colors.onSurfaceVariant),
-            border: OutlineInputBorder(
-              borderRadius: AppRadius.brMd,
-              borderSide: BorderSide(color: context.colors.outlineVariant),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: AppRadius.brMd,
-              borderSide: BorderSide(color: context.colors.outlineVariant),
-            ),
-          ),
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    child: TextField(
+      controller: _note,
+      maxLength: 200,
+      maxLines: 2,
+      minLines: 1,
+      textInputAction: TextInputAction.done,
+      decoration: InputDecoration(
+        hintText: l10n.tripsNoteHint,
+        filled: true,
+        fillColor: context.semantic.surfaceMuted,
+        prefixIcon: Icon(
+          Icons.short_text,
+          size: AppIconSize.sm,
+          color: context.colors.onSurfaceVariant,
         ),
-      );
+        border: OutlineInputBorder(
+          borderRadius: AppRadius.brMd,
+          borderSide: BorderSide(color: context.colors.outlineVariant),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadius.brMd,
+          borderSide: BorderSide(color: context.colors.outlineVariant),
+        ),
+      ),
+    ),
+  );
 
   // ── Le contrat ────────────────────────────────────────────────────
 
@@ -392,7 +425,9 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
 
   /// Visages du cercle au moment d'engager — lecture seule.
   Widget _avatarsCercle(
-      LocalCacheRepository cache, List<LocalContactList>? listes) {
+    LocalCacheRepository cache,
+    List<LocalContactList>? listes,
+  ) {
     final trust = _trustList(listes);
     if (trust == null) return const SizedBox.shrink();
 
@@ -403,14 +438,17 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
         if (users.isEmpty) return const SizedBox.shrink();
         return Padding(
           padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            0,
+          ),
           child: SizedBox(
             height: 56,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: users.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(width: AppSpacing.md),
+              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
               itemBuilder: (context, i) {
                 final u = users[i];
                 final nom = (u.pseudo.trim().isNotEmpty)
@@ -427,7 +465,9 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
                       child: u.avatarUrl.isEmpty
                           ? Text(
                               nom.isNotEmpty ? nom[0].toUpperCase() : '?',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             )
                           : null,
                     ),
@@ -455,17 +495,21 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
   }
 
   Widget _titre(String texte) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.sm),
-        child: Text(
-          texte.toUpperCase(),
-          style: context.text.labelSmall?.copyWith(
-            color: context.colors.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.1,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.xl,
+      AppSpacing.lg,
+      AppSpacing.sm,
+    ),
+    child: Text(
+      texte.toUpperCase(),
+      style: context.text.labelSmall?.copyWith(
+        color: context.colors.onSurfaceVariant,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.1,
+      ),
+    ),
+  );
 
   /// Le contrat, en toutes lettres. Les deux heures sont calculées, affichées —
   /// et **mises en gras dans la phrase** : ce sont les deux seuls nombres que la
@@ -478,7 +522,11 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, 0),
+        AppSpacing.lg,
+        AppSpacing.xxl,
+        AppSpacing.lg,
+        0,
+      ),
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: context.semantic.brandContainer,
@@ -490,8 +538,11 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.handshake_outlined,
-              size: AppIconSize.sm, color: context.colors.primary),
+          Icon(
+            Icons.handshake_outlined,
+            size: AppIconSize.sm,
+            color: context.colors.primary,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: RichText(
@@ -513,8 +564,14 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
   /// d'apparition — la traduction n'est pas tenue de les placer comme le
   /// français.
   List<TextSpan> _enGras(
-      BuildContext context, String phrase, Set<String> jetons) {
-    final motif = jetons.where((j) => j.isNotEmpty).map(RegExp.escape).join('|');
+    BuildContext context,
+    String phrase,
+    Set<String> jetons,
+  ) {
+    final motif = jetons
+        .where((j) => j.isNotEmpty)
+        .map(RegExp.escape)
+        .join('|');
     if (motif.isEmpty) return [TextSpan(text: phrase)];
 
     final spans = <TextSpan>[];
@@ -523,14 +580,16 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
       if (m.start > curseur) {
         spans.add(TextSpan(text: phrase.substring(curseur, m.start)));
       }
-      spans.add(TextSpan(
-        text: m.group(0),
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          color: context.colors.primary,
-          fontFeatures: const [FontFeature.tabularFigures()],
+      spans.add(
+        TextSpan(
+          text: m.group(0),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: context.colors.primary,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         ),
-      ));
+      );
       curseur = m.end;
     }
     if (curseur < phrase.length) {
@@ -540,22 +599,31 @@ class _TripComposeScreenState extends State<TripComposeScreen> {
   }
 
   Widget _mentionCercle(dynamic l10n) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.lock_outline,
-                size: 14, color: context.colors.onSurfaceVariant),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                l10n.tripsCircleFrozen,
-                style: context.text.bodySmall
-                    ?.copyWith(color: context.colors.onSurfaceVariant, height: 1.35),
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.md,
+      AppSpacing.lg,
+      AppSpacing.lg,
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.lock_outline,
+          size: 14,
+          color: context.colors.onSurfaceVariant,
         ),
-      );
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            l10n.tripsCircleFrozen,
+            style: context.text.bodySmall?.copyWith(
+              color: context.colors.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

@@ -318,6 +318,12 @@ extension _ChatActions on _ChatDetailScreenState {
               ?.label(_myId ?? 0, context.l10n) ??
           '';
     }
+    // Trajet : JSON — afficher un libellé lisible au lieu du payload brut.
+    if (m.type == kTripMessageType) {
+      final trajet = TripCardPayload.tryParse(m.content);
+      if (trajet != null) return trajet.previewLabel(context.l10n);
+      return context.l10n.tripsCardFallback;
+    }
     // Item d'album : aperçu du média seul (pas du groupe).
     if (isAlbumMarkerContent(m.content)) {
       return _mediaLabel(m.type, mediaName: m.mediaName);
