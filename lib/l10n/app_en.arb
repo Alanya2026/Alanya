@@ -54,6 +54,7 @@
   "settingsLanguage": "Language",
   "settingsLangFr": "French",
   "settingsLangEn": "English",
+  "settingsLangZh": "Chinese",
   "settingsLangSystem": "System",
   "settingsMedia": "Media",
   "settingsAutoDownload": "Automatic download",
@@ -2528,7 +2529,6 @@
   "tripsLeave": "Stop following",
   "tripsLeaveTitle": "Stop following this trip?",
   "tripsLeaveBody": "You'll no longer see their position, and won't be alerted if they don't confirm arrival.",
-
   "@_TRADUCTION": {},
   "translationSection": "Translation",
   "autoTranslate": "Automatic translation",

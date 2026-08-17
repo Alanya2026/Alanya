@@ -97,15 +97,15 @@ class AppSettingsSyncService extends ChangeNotifier {
     }
   }
 
+  /// Code serveur → préférence. Tout code inconnu retombe sur « système »,
+  /// jamais sur une langue forcée : un serveur en avance sur le client ne doit
+  /// pas figer l'app dans une langue qu'elle ne sait pas rendre.
   AppLocalePreference _localeFromString(String code) {
-    switch (code.toLowerCase()) {
-      case 'fr':
-        return AppLocalePreference.french;
-      case 'en':
-        return AppLocalePreference.english;
-      default:
-        return AppLocalePreference.system;
+    final normalized = code.toLowerCase().split(RegExp('[-_]')).first;
+    for (final preference in kForcedLocalePreferences) {
+      if (localeCodeOf(preference) == normalized) return preference;
     }
+    return AppLocalePreference.system;
   }
 
   String themeModeToString(ThemeMode mode) {
@@ -120,13 +120,6 @@ class AppSettingsSyncService extends ChangeNotifier {
   }
 
   String localeToString(AppLocalePreference preference) {
-    switch (preference) {
-      case AppLocalePreference.french:
-        return 'fr';
-      case AppLocalePreference.english:
-        return 'en';
-      case AppLocalePreference.system:
-        return 'system';
-    }
+    return localeCodeOf(preference) ?? 'system';
   }
 }

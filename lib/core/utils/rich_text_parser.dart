@@ -202,8 +202,29 @@ final Map<String, TextStyle Function(TextStyle)> _markers = {
   // couleur et les décorations héritées en passant `textStyle`. Caveat a une
   // hauteur d'œil plus faible que le sans-serif : on grossit pour aligner
   // visuellement le corps du message.
-  '#': (s) => GoogleFonts.caveat(textStyle: s).copyWith(fontSize: (s.fontSize ?? 16) * 1.5),
+  '#': (s) => GoogleFonts.caveat(textStyle: s).copyWith(
+        fontSize: (s.fontSize ?? 16) * 1.5,
+        fontFamilyFallback: _kHandwritingFallback,
+      ),
 };
+
+/// Repli de police pour le style manuscrit.
+///
+/// Caveat ne contient **aucun glyphe CJK** : un message écrit en chinois avec
+/// le marqueur `#` s'afficherait entièrement en carrés vides. Le repli ne
+/// s'applique qu'aux caractères absents de Caveat, donc un texte latin garde
+/// son rendu manuscrit — seuls les idéogrammes basculent sur la police
+/// système, qui n'est pas manuscrite mais reste lisible.
+///
+/// C'est le seul endroit de l'app où une police non système est appliquée à du
+/// texte saisi par l'utilisateur ; le thème de base n'impose aucune
+/// `fontFamily` et gère donc le CJK nativement.
+const List<String> _kHandwritingFallback = <String>[
+  'Noto Sans SC', // Android
+  'PingFang SC', // iOS / macOS
+  'Heiti SC', // iOS ancien
+  'Microsoft YaHei', // Windows (mode bureau)
+];
 
 /// Combine une nouvelle décoration avec celle déjà présente (barré + souligné).
 TextDecoration _addDecoration(TextStyle s, TextDecoration add) {

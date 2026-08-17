@@ -68,6 +68,7 @@
   "settingsLanguage": "Langue",
   "settingsLangFr": "Français",
   "settingsLangEn": "Anglais",
+  "settingsLangZh": "Chinois",
   "settingsLangSystem": "Système",
   "settingsMedia": "Médias",
   "settingsAutoDownload": "Téléchargement automatique",
@@ -3410,7 +3411,6 @@
   "tripsLeave": "Quitter le suivi",
   "tripsLeaveTitle": "Quitter ce trajet ?",
   "tripsLeaveBody": "Vous ne verrez plus sa position et ne serez pas alerté s'il ne confirme pas son arrivée.",
-
   "@_TRADUCTION": {},
   "translationSection": "Traduction",
   "autoTranslate": "Traduction automatique",

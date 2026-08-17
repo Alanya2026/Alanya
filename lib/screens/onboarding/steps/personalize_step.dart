@@ -138,6 +138,10 @@ class _PersonalizeStepState extends State<PersonalizeStep> {
                 label: Text(l10n.settingsLangEn),
               ),
               ButtonSegment(
+                value: AppLocalePreference.chinese,
+                label: Text(l10n.settingsLangZh),
+              ),
+              ButtonSegment(
                 value: AppLocalePreference.system,
                 label: Text(l10n.settingsLangSystem),
               ),

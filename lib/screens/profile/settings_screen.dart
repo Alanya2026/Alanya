@@ -227,6 +227,11 @@ class SettingsScreen extends StatelessWidget {
                       label: Text(l10n.settingsLangEn),
                     ),
                     ButtonSegment(
+                      value: AppLocalePreference.chinese,
+                      icon: const Icon(Icons.translate),
+                      label: Text(l10n.settingsLangZh),
+                    ),
+                    ButtonSegment(
                       value: AppLocalePreference.system,
                       icon: const Icon(Icons.brightness_auto_outlined),
                       label: Text(l10n.settingsLangSystem),
