@@ -74,21 +74,34 @@ class TripMessageCard extends StatelessWidget {
       fausseAlerte: payload.isFalseAlarm,
     );
 
+    // Côté propriétaire, « Moi a arrêté le partage » est illisible : les
+    // phrases à la 3e personne sont pour le cercle. Même voix « Vous » que
+    // les messages système (`sysTripSosByMe`, etc.).
     final titre = switch (payload.state) {
       // Le démenti passe avant l'état : après une alerte, le cercle attend une
       // réponse à la question qu'on lui a posée, pas un compte rendu d'arrêt.
-      _ when payload.isFalseAlarm => l10n.tripsCardFalseAlarm(senderName),
-      TripState.sos => l10n.tripsCardSos(senderName),
-      TripState.alert => l10n.tripsCardAlert(senderName),
-      TripState.awaitingConfirm => l10n.tripsCardAwaiting(senderName),
-      TripState.closedConfirmed => l10n.tripsCardArrived(senderName),
+      _ when payload.isFalseAlarm => isOwner
+          ? l10n.tripsCardFalseAlarmByMe
+          : l10n.tripsCardFalseAlarm(senderName),
+      TripState.sos =>
+        isOwner ? l10n.tripsCardSosByMe : l10n.tripsCardSos(senderName),
+      TripState.alert =>
+        isOwner ? l10n.tripsCardAlertByMe : l10n.tripsCardAlert(senderName),
+      TripState.awaitingConfirm =>
+        isOwner ? l10n.tripsCardAwaitingByMe : l10n.tripsCardAwaiting(senderName),
+      TripState.closedConfirmed =>
+        isOwner ? l10n.tripsCardArrivedByMe : l10n.tripsCardArrived(senderName),
       TripState.closedCancelled ||
       TripState.closedExpired ||
       TripState.closedUnwatched =>
         // Ton neutre, délibérément : si arrêter paraissait suspect, arrêter
         // deviendrait punissable.
-        l10n.tripsCardStopped(senderName),
-      _ => l10n.tripsCardStarted(senderName),
+        isOwner
+            ? l10n.tripsCardStoppedByMe
+            : l10n.tripsCardStopped(senderName),
+      _ => isOwner
+          ? l10n.tripsCardStartedByMe
+          : l10n.tripsCardStarted(senderName),
     };
 
     final String? action;

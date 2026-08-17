@@ -8726,11 +8726,23 @@ abstract class AppLocalizations {
   /// **'{name} a démarré un trajet'**
   String tripsCardStarted(String name);
 
+  /// No description provided for @tripsCardStartedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez démarré un trajet'**
+  String get tripsCardStartedByMe;
+
   /// No description provided for @tripsCardAwaiting.
   ///
   /// In fr, this message translates to:
   /// **'{name} devrait être arrivé·e'**
   String tripsCardAwaiting(String name);
+
+  /// No description provided for @tripsCardAwaitingByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous devriez être arrivé·e'**
+  String get tripsCardAwaitingByMe;
 
   /// No description provided for @tripsCardAlert.
   ///
@@ -8738,11 +8750,23 @@ abstract class AppLocalizations {
   /// **'{name} n\'a pas confirmé son arrivée'**
   String tripsCardAlert(String name);
 
+  /// No description provided for @tripsCardAlertByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas confirmé votre arrivée'**
+  String get tripsCardAlertByMe;
+
   /// No description provided for @tripsCardSos.
   ///
   /// In fr, this message translates to:
   /// **'{name} a déclenché un SOS'**
   String tripsCardSos(String name);
+
+  /// No description provided for @tripsCardSosByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez déclenché un SOS'**
+  String get tripsCardSosByMe;
 
   /// No description provided for @tripsCardArrived.
   ///
@@ -8750,11 +8774,23 @@ abstract class AppLocalizations {
   /// **'{name} est bien arrivé·e'**
   String tripsCardArrived(String name);
 
+  /// No description provided for @tripsCardArrivedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous êtes bien arrivé·e'**
+  String get tripsCardArrivedByMe;
+
   /// No description provided for @tripsCardStopped.
   ///
   /// In fr, this message translates to:
   /// **'{name} a arrêté le partage'**
   String tripsCardStopped(String name);
+
+  /// No description provided for @tripsCardStoppedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez arrêté le partage'**
+  String get tripsCardStoppedByMe;
 
   /// No description provided for @tripsCardFollow.
   ///
@@ -9212,11 +9248,47 @@ abstract class AppLocalizations {
   /// **'Aucun résultat. Vous pouvez toujours choisir sur la carte.'**
   String get locationSearchEmpty;
 
+  /// No description provided for @locationSearchUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'La recherche est indisponible. Vérifiez votre connexion et réessayez.'**
+  String get locationSearchUnavailable;
+
+  /// No description provided for @locationPickerChooseDestination.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir une destination'**
+  String get locationPickerChooseDestination;
+
+  /// No description provided for @locationPickerUseDestination.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir cette destination'**
+  String get locationPickerUseDestination;
+
+  /// No description provided for @locationUseMyPosition.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser ma position'**
+  String get locationUseMyPosition;
+
+  /// No description provided for @locationPickerInstruction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherchez, déplacez la carte ou utilisez votre position'**
+  String get locationPickerInstruction;
+
   /// No description provided for @tripsCardFalseAlarm.
   ///
   /// In fr, this message translates to:
   /// **'{name} a signalé une fausse alerte'**
   String tripsCardFalseAlarm(String name);
+
+  /// No description provided for @tripsCardFalseAlarmByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez signalé une fausse alerte'**
+  String get tripsCardFalseAlarmByMe;
 
   /// No description provided for @tripsSosFalseAlarmSent.
   ///

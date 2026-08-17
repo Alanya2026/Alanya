@@ -3121,6 +3121,7 @@
       }
     }
   },
+  "tripsCardStartedByMe": "Vous avez démarré un trajet",
   "tripsCardAwaiting": "{name} devrait être arrivé·e",
   "@tripsCardAwaiting": {
     "placeholders": {
@@ -3129,6 +3130,7 @@
       }
     }
   },
+  "tripsCardAwaitingByMe": "Vous devriez être arrivé·e",
   "tripsCardAlert": "{name} n'a pas confirmé son arrivée",
   "@tripsCardAlert": {
     "placeholders": {
@@ -3137,6 +3139,7 @@
       }
     }
   },
+  "tripsCardAlertByMe": "Vous n'avez pas confirmé votre arrivée",
   "tripsCardSos": "{name} a déclenché un SOS",
   "@tripsCardSos": {
     "placeholders": {
@@ -3145,6 +3148,7 @@
       }
     }
   },
+  "tripsCardSosByMe": "Vous avez déclenché un SOS",
   "tripsCardArrived": "{name} est bien arrivé·e",
   "@tripsCardArrived": {
     "placeholders": {
@@ -3153,6 +3157,7 @@
       }
     }
   },
+  "tripsCardArrivedByMe": "Vous êtes bien arrivé·e",
   "tripsCardStopped": "{name} a arrêté le partage",
   "@tripsCardStopped": {
     "placeholders": {
@@ -3161,6 +3166,7 @@
       }
     }
   },
+  "tripsCardStoppedByMe": "Vous avez arrêté le partage",
   "tripsCardFollow": "Suivre en direct",
   "tripsCardView": "Voir",
   "tripsCardSeePosition": "Voir la position",
@@ -3301,6 +3307,11 @@
   "tripsDegradedFix": "Réparer",
   "locationSearchHint": "Rechercher un lieu, une adresse…",
   "locationSearchEmpty": "Aucun résultat. Vous pouvez toujours choisir sur la carte.",
+  "locationSearchUnavailable": "La recherche est indisponible. Vérifiez votre connexion et réessayez.",
+  "locationPickerChooseDestination": "Choisir une destination",
+  "locationPickerUseDestination": "Choisir cette destination",
+  "locationUseMyPosition": "Utiliser ma position",
+  "locationPickerInstruction": "Recherchez, déplacez la carte ou utilisez votre position",
   "tripsCardFalseAlarm": "{name} a signalé une fausse alerte",
   "@tripsCardFalseAlarm": {
     "placeholders": {
@@ -3309,6 +3320,7 @@
       }
     }
   },
+  "tripsCardFalseAlarmByMe": "Vous avez signalé une fausse alerte",
   "tripsSosFalseAlarmSent": "Votre cercle a été prévenu que tout va bien.",
   "tripsCall": "Appeler",
   "tripsPermissionTitle": "Autoriser la localisation",

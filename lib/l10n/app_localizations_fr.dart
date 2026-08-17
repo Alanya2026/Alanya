@@ -5032,9 +5032,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get tripsCardStartedByMe => 'Vous avez démarré un trajet';
+
+  @override
   String tripsCardAwaiting(String name) {
     return '$name devrait être arrivé·e';
   }
+
+  @override
+  String get tripsCardAwaitingByMe => 'Vous devriez être arrivé·e';
 
   @override
   String tripsCardAlert(String name) {
@@ -5042,9 +5048,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get tripsCardAlertByMe => 'Vous n\'avez pas confirmé votre arrivée';
+
+  @override
   String tripsCardSos(String name) {
     return '$name a déclenché un SOS';
   }
+
+  @override
+  String get tripsCardSosByMe => 'Vous avez déclenché un SOS';
 
   @override
   String tripsCardArrived(String name) {
@@ -5052,9 +5064,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get tripsCardArrivedByMe => 'Vous êtes bien arrivé·e';
+
+  @override
   String tripsCardStopped(String name) {
     return '$name a arrêté le partage';
   }
+
+  @override
+  String get tripsCardStoppedByMe => 'Vous avez arrêté le partage';
 
   @override
   String get tripsCardFollow => 'Suivre en direct';
@@ -5329,9 +5347,29 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun résultat. Vous pouvez toujours choisir sur la carte.';
 
   @override
+  String get locationSearchUnavailable =>
+      'La recherche est indisponible. Vérifiez votre connexion et réessayez.';
+
+  @override
+  String get locationPickerChooseDestination => 'Choisir une destination';
+
+  @override
+  String get locationPickerUseDestination => 'Choisir cette destination';
+
+  @override
+  String get locationUseMyPosition => 'Utiliser ma position';
+
+  @override
+  String get locationPickerInstruction =>
+      'Recherchez, déplacez la carte ou utilisez votre position';
+
+  @override
   String tripsCardFalseAlarm(String name) {
     return '$name a signalé une fausse alerte';
   }
+
+  @override
+  String get tripsCardFalseAlarmByMe => 'Vous avez signalé une fausse alerte';
 
   @override
   String get tripsSosFalseAlarmSent =>

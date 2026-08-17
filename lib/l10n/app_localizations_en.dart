@@ -4980,9 +4980,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get tripsCardStartedByMe => 'You started a trip';
+
+  @override
   String tripsCardAwaiting(String name) {
     return '$name should have arrived';
   }
+
+  @override
+  String get tripsCardAwaitingByMe => 'You should have arrived';
 
   @override
   String tripsCardAlert(String name) {
@@ -4990,9 +4996,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get tripsCardAlertByMe => 'You did not confirm arrival';
+
+  @override
   String tripsCardSos(String name) {
     return '$name triggered an SOS';
   }
+
+  @override
+  String get tripsCardSosByMe => 'You triggered an SOS';
 
   @override
   String tripsCardArrived(String name) {
@@ -5000,9 +5012,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get tripsCardArrivedByMe => 'You arrived safely';
+
+  @override
   String tripsCardStopped(String name) {
     return '$name stopped sharing';
   }
+
+  @override
+  String get tripsCardStoppedByMe => 'You stopped sharing';
 
   @override
   String get tripsCardFollow => 'Follow live';
@@ -5274,9 +5292,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'No results. You can still pick on the map.';
 
   @override
+  String get locationSearchUnavailable =>
+      'Search is unavailable. Check your connection and try again.';
+
+  @override
+  String get locationPickerChooseDestination => 'Choose a destination';
+
+  @override
+  String get locationPickerUseDestination => 'Use this destination';
+
+  @override
+  String get locationUseMyPosition => 'Use my location';
+
+  @override
+  String get locationPickerInstruction =>
+      'Search, move the map, or use your location';
+
+  @override
   String tripsCardFalseAlarm(String name) {
     return '$name reported a false alarm';
   }
+
+  @override
+  String get tripsCardFalseAlarmByMe => 'You reported a false alarm';
 
   @override
   String get tripsSosFalseAlarmSent =>

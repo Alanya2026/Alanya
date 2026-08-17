@@ -1053,9 +1053,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
     return TripMessageCard(
       payload: payload,
-      // Le nom vient de l'en-tête de conversation : dans un 1-1, c'est
-      // toujours celui de l'interlocuteur.
-      senderName: isMe ? context.l10n.meLabel : _chatTitle(context),
+      // Pour le cercle uniquement. Côté owner, la carte lit « Vous… » et
+      // ignore ce nom — coller `meLabel` (« Moi ») dans « {name} a arrêté »
+      // cassait le français.
+      senderName: _chatTitle(context),
       isOwner: isMe,
       onOpen: () {
         if (isMe && !TripState.isOpen(payload.state)) {

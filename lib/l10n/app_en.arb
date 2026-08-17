@@ -2239,6 +2239,7 @@
       }
     }
   },
+  "tripsCardStartedByMe": "You started a trip",
   "tripsCardAwaiting": "{name} should have arrived",
   "@tripsCardAwaiting": {
     "placeholders": {
@@ -2247,6 +2248,7 @@
       }
     }
   },
+  "tripsCardAwaitingByMe": "You should have arrived",
   "tripsCardAlert": "{name} did not confirm arrival",
   "@tripsCardAlert": {
     "placeholders": {
@@ -2255,6 +2257,7 @@
       }
     }
   },
+  "tripsCardAlertByMe": "You did not confirm arrival",
   "tripsCardSos": "{name} triggered an SOS",
   "@tripsCardSos": {
     "placeholders": {
@@ -2263,6 +2266,7 @@
       }
     }
   },
+  "tripsCardSosByMe": "You triggered an SOS",
   "tripsCardArrived": "{name} arrived safely",
   "@tripsCardArrived": {
     "placeholders": {
@@ -2271,6 +2275,7 @@
       }
     }
   },
+  "tripsCardArrivedByMe": "You arrived safely",
   "tripsCardStopped": "{name} stopped sharing",
   "@tripsCardStopped": {
     "placeholders": {
@@ -2279,6 +2284,7 @@
       }
     }
   },
+  "tripsCardStoppedByMe": "You stopped sharing",
   "tripsCardFollow": "Follow live",
   "tripsCardView": "View",
   "tripsCardSeePosition": "See location",
@@ -2419,6 +2425,11 @@
   "tripsDegradedFix": "Fix",
   "locationSearchHint": "Search a place or address…",
   "locationSearchEmpty": "No results. You can still pick on the map.",
+  "locationSearchUnavailable": "Search is unavailable. Check your connection and try again.",
+  "locationPickerChooseDestination": "Choose a destination",
+  "locationPickerUseDestination": "Use this destination",
+  "locationUseMyPosition": "Use my location",
+  "locationPickerInstruction": "Search, move the map, or use your location",
   "tripsCardFalseAlarm": "{name} reported a false alarm",
   "@tripsCardFalseAlarm": {
     "placeholders": {
@@ -2427,6 +2438,7 @@
       }
     }
   },
+  "tripsCardFalseAlarmByMe": "You reported a false alarm",
   "tripsSosFalseAlarmSent": "Your circle has been told you're fine.",
   "tripsCall": "Call",
   "tripsPermissionTitle": "Allow location access",
