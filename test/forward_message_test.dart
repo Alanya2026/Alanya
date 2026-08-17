@@ -32,6 +32,7 @@ LocalMessage _msg({
     isForwarded: false,
     syncPending: false,
     retryCount: 0,
+    translationState: 0,
   );
 }
 

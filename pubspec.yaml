@@ -122,6 +122,20 @@ dependencies:
   # informé, parce qu'un téléphone qui meurt est un signal — pas une
   # disparition.
   battery_plus: ^7.1.1
+  # ── Traduction des messages, entièrement sur l'appareil ───────────
+  # Aucun contenu de message ne quitte le téléphone, et la traduction
+  # fonctionne hors ligne — cohérent avec le reste de l'architecture
+  # offline-first (drift + outbox + sync delta).
+  #
+  # Ces deux paquets imposent `IPHONEOS_DEPLOYMENT_TARGET = 15.5` (leurs
+  # podspecs le déclarent, et google_mlkit_commons avec eux). C'est ce qui a
+  # fait passer le projet de 13.0 à 15.5. Aucun appareil n'est perdu au
+  # passage : iOS 15 couvre le même parc qu'iOS 13 (iPhone 6s et ultérieurs).
+  # Contrairement à ce qu'on pourrait croire, mobile_scanner ne portait PAS
+  # déjà cette contrainte — il déclare 12.0 (son scan iOS passe par
+  # AVFoundation, pas par ML Kit).
+  google_mlkit_translation: ^0.14.0
+  google_mlkit_language_id: ^0.14.0
 
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la

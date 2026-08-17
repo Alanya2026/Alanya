@@ -72,6 +72,14 @@ class LocalConversations extends Table {
   BoolColumn get hasUnreadMention =>
       boolean().withDefault(const Constant(false))();
 
+  /// Traduction automatique pour cette conversation : `null` = suit le réglage
+  /// global, 0 = jamais, 1 = toujours.
+  ///
+  /// Purement local, et volontairement : la traduction s'appuie sur des modèles
+  /// ML Kit téléchargés **par appareil**. Un réglage synchronisé promettrait sur
+  /// le téléphone B ce que seul le téléphone A peut rendre.
+  IntColumn get translateMode => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {conversID};
 }
@@ -182,6 +190,30 @@ class LocalMessages extends Table {
   /// l'émission depuis cette ligne, et une mention envoyée hors ligne perdrait
   /// sinon sa notification au rejeu.
   TextColumn get mentionsJson => text().nullable()();
+
+  // ── Traduction sur l'appareil (ML Kit) ──────────────────────────────
+  // Ces trois colonnes ne voyagent jamais : elles ne sont ni envoyées au
+  // serveur ni reçues de lui. La traduction est propre au lecteur, et un
+  // appareil n'a qu'un lecteur — d'où le stockage sur la ligne du message
+  // plutôt que dans une table jointe. `watchMessages` reste ainsi un select
+  // sur une seule table, et la bulle se rafraîchit par le stream existant
+  // quand la traduction arrive, sans second flux ni jointure.
+
+  /// Texte traduit dans la langue de lecture, `null` tant qu'il n'existe pas.
+  TextColumn get translatedContent => text().nullable()();
+
+  /// Code BCP-47 de la langue source détectée (« traduit de l'anglais »).
+  TextColumn get sourceLang => text().nullable()();
+
+  /// Avancement de la traduction — voir `MessageTranslationState`.
+  ///
+  /// 0=à traiter 1=traduit 2=inutile (même langue, indéterminée, type non
+  /// traduisible) 3=modèle de langue absent 4=échec.
+  ///
+  /// Sans cette colonne, le worker ré-identifierait la langue de tout
+  /// l'historique à chaque lancement de l'app : c'est le cache qui remplace,
+  /// sur l'appareil, ce qu'une table serveur aurait fait.
+  IntColumn get translationState => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {clientId};
@@ -478,7 +510,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -704,6 +736,21 @@ class AppDatabase extends _$AppDatabase {
             await _addColumnIfMissing(m, localTrips, localTrips.destLat);
             await _addColumnIfMissing(m, localTrips, localTrips.destLng);
             await _addColumnIfMissing(m, localTrips, localTrips.destRadiusM);
+          }
+          if (from < 26) {
+            // Traduction des messages sur l'appareil. Quatre colonnes
+            // nullables ou à défaut : aucun message, aucune conversation et
+            // aucun média en cache n'est touché. Les messages déjà présents
+            // arrivent en `translationState = 0` et seront traités
+            // paresseusement à la relecture du fil.
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.translatedContent);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.sourceLang);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.translationState);
+            await _addColumnIfMissing(
+                m, localConversations, localConversations.translateMode);
           }
         },
       );

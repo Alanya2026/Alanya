@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../services/chat/conversation_merge.dart';
+import '../services/translation/translation_state.dart';
 import '../utils/call_log_preview.dart';
 import '../utils/media_album.dart';
 import '../utils/system_event_payload.dart';
@@ -756,6 +757,101 @@ class ChatDao {
   Future<void> clearLocalMediaPath(int msgID) {
     return (db.update(db.localMessages)..where((m) => m.msgID.equals(msgID)))
         .write(const LocalMessagesCompanion(localMediaPath: Value(null)));
+  }
+
+  // ── Traduction sur l'appareil ───────────────────────────────────────
+  // Tout se clé sur `clientId` et non sur `msgID` : `msgID` vaut 0 tant que le
+  // serveur n'a pas confirmé, donc y adosser une écriture toucherait d'un coup
+  // tous les messages en attente d'accusé.
+
+  /// Enregistre la traduction d'un message et le passe en
+  /// [MessageTranslationState.done]. L'écriture réveille `watchMessages`, donc
+  /// la bulle se met à jour d'elle-même.
+  Future<void> setTranslation(
+    String clientId, {
+    required String content,
+    required String sourceLang,
+  }) {
+    return (db.update(db.localMessages)
+          ..where((m) => m.clientId.equals(clientId)))
+        .write(LocalMessagesCompanion(
+      translatedContent: Value(content),
+      sourceLang: Value(sourceLang),
+      translationState: const Value(MessageTranslationState.done),
+    ));
+  }
+
+  /// Pose un état sans traduction (ignoré, modèle manquant, échec).
+  Future<void> setTranslationState(String clientId, int state) {
+    return (db.update(db.localMessages)
+          ..where((m) => m.clientId.equals(clientId)))
+        .write(LocalMessagesCompanion(translationState: Value(state)));
+  }
+
+  /// Messages d'une conversation restant à examiner, du plus récent au plus
+  /// ancien : ce que l'utilisateur a sous les yeux se traduit avant ce qu'il a
+  /// déjà dépassé en remontant le fil.
+  Future<List<LocalMessage>> pendingTranslations(
+    int conversationID, {
+    int limit = 50,
+  }) {
+    return (db.select(db.localMessages)
+          ..where((m) =>
+              m.conversationID.equals(conversationID) &
+              m.translationState
+                  .equals(MessageTranslationState.pending) &
+              m.isDeleted.equals(false))
+          ..orderBy([
+            (m) => OrderingTerm(expression: m.sendAt, mode: OrderingMode.desc)
+          ])
+          ..limit(limit))
+        .get();
+  }
+
+  /// Remet en file les messages bloqués faute de modèle, après installation
+  /// d'une langue. On ne sait pas ici *quelle* langue manquait — l'état ne la
+  /// mémorise pas — donc on relance tout le lot : le pipeline refiltrera, et
+  /// ceux dont le modèle manque encore retomberont en
+  /// [MessageTranslationState.missingModel] sans coût réseau.
+  Future<void> retryMissingModelTranslations() {
+    return (db.update(db.localMessages)
+          ..where((m) => m.translationState
+              .equals(MessageTranslationState.missingModel)))
+        .write(const LocalMessagesCompanion(
+      translationState: Value(MessageTranslationState.pending),
+    ));
+  }
+
+  /// Efface toutes les traductions et remet chaque message à examiner.
+  ///
+  /// Appelé quand l'utilisateur change de langue de lecture : les traductions
+  /// existantes visent l'ancienne langue et deviendraient trompeuses — une
+  /// bulle affichant « traduit de l'anglais » dans une langue que l'utilisateur
+  /// vient de quitter est pire qu'une bulle non traduite.
+  Future<void> clearAllTranslations() {
+    return db.update(db.localMessages).write(const LocalMessagesCompanion(
+          translatedContent: Value(null),
+          sourceLang: Value(null),
+          translationState: Value(MessageTranslationState.pending),
+        ));
+  }
+
+  /// Override de traduction d'une conversation : `null` quand elle suit le
+  /// réglage global (ou quand la conversation n'est pas encore en cache).
+  Future<int?> translateModeOf(int conversID) async {
+    final row = await (db.selectOnly(db.localConversations)
+          ..addColumns([db.localConversations.translateMode])
+          ..where(db.localConversations.conversID.equals(conversID))
+          ..limit(1))
+        .getSingleOrNull();
+    return row?.read(db.localConversations.translateMode);
+  }
+
+  /// Override de traduction d'une conversation (`null` = suit le global).
+  Future<void> setConversationTranslateMode(int conversID, int? mode) {
+    return (db.update(db.localConversations)
+          ..where((c) => c.conversID.equals(conversID)))
+        .write(LocalConversationsCompanion(translateMode: Value(mode)));
   }
 
   /// Messages vocaux (type 3) d'une conversation, pour réconciliation des chemins locaux.

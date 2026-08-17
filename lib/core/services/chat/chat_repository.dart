@@ -16,6 +16,7 @@ import '../alanya_media_export_service.dart';
 import '../local_notification_helper.dart';
 import '../notifications/badge_sync_service.dart';
 import '../notifications/pending_notification_action_store.dart';
+import '../translation/message_translation_service.dart';
 import '../media_cache_service.dart';
 import '../media_download_preferences.dart';
 import '../voice_asset_resolver.dart';
@@ -1393,6 +1394,15 @@ class ChatRepository {
 
     if (companions.isNotEmpty) {
       await _dao.upsertMessages(companions);
+      // Traduction sur l'appareil : le service relit lui-même ce qui reste à
+      // traiter. Appelé après l'upsert, jamais avant, et sans `await` — rien
+      // dans la synchronisation ne doit attendre une traduction.
+      final translation = MessageTranslationService.maybeInstance;
+      if (translation != null) {
+        for (final convID in affected) {
+          translation.scheduleScan(convID);
+        }
+      }
     }
 
     if (prefetchMedia && toPrefetch.isNotEmpty) {
@@ -1563,6 +1573,13 @@ class ChatRepository {
           '[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
       await _dao.upsertMessage(companion);
     });
+
+    // Traduction sur l'appareil, hors transaction et sans attente : la bulle
+    // s'affiche d'abord en version originale, la traduction la remplace quand
+    // elle arrive via le stream `watchMessages`.
+    if (convID != 0) {
+      MessageTranslationService.maybeInstance?.scheduleScan(convID);
+    }
 
     // Préfetch médias reçus si auto-download activé (images, vidéos, fichiers < 5 Mo).
     // Les vues uniques ne sont jamais mises en cache. Les vocaux restent manuels.

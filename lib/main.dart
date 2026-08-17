@@ -15,6 +15,9 @@ import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/db/app_database.dart';
+import 'core/db/chat_dao.dart';
+import 'core/services/translation/message_translation_service.dart';
+import 'core/services/translation/translation_settings.dart';
 // import 'core/network/cert_pinning.dart'; // réactiver avec le bloc certificate pinning
 import 'core/navigation/app_navigator.dart';
 import 'core/utils/app_log.dart';
@@ -157,6 +160,18 @@ class _TalkyAppState extends State<TalkyApp> {
       ChatProvider(api: _apiClient, database: _database);
   late final LocalCacheRepository _localCache =
       LocalCacheRepository(db: _database, api: _apiClient);
+
+  // Traduction des messages, entièrement sur l'appareil. Instanciée ici et non
+  // dans un `create:` paresseux : `ChatRepository` appelle le service par son
+  // instance statique dès la première synchronisation, avant que le moindre
+  // écran de réglages ne l'ait lu.
+  late final TranslationSettings _translationSettings = TranslationSettings()
+    ..load();
+  late final MessageTranslationService _translation =
+      MessageTranslationService(
+    dao: ChatDao(_database),
+    settings: _translationSettings,
+  );
   late final TripRepository _trips =
       TripRepository(db: _database, api: _apiClient);
   // Démarré ici et non dans un écran : les changements d'état d'un trajet
@@ -190,6 +205,13 @@ class _TalkyAppState extends State<TalkyApp> {
         // ThemeController en tête : MaterialApp en dépend via Consumer.
         ChangeNotifierProvider(create: (_) => ThemeController()..load()),
         ChangeNotifierProvider(create: (_) => LocaleController()..load()),
+        // Réglages de traduction : locaux et non synchronisés, car les modèles
+        // de langue ML Kit sont téléchargés par appareil. Fournis par valeur,
+        // donc réellement construits ici — le service doit exister avant la
+        // première synchronisation, pas au premier écran qui le lira.
+        ChangeNotifierProvider<TranslationSettings>.value(
+            value: _translationSettings),
+        Provider<MessageTranslationService>.value(value: _translation),
         ChangeNotifierProvider(
             create: (_) => MediaDownloadPreferences()..load()),
         Provider<TalkyApiClient>.value(value: _apiClient),

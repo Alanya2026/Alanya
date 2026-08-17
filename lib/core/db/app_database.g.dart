@@ -348,6 +348,17 @@ class $LocalConversationsTable extends LocalConversations
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _translateModeMeta = const VerificationMeta(
+    'translateMode',
+  );
+  @override
+  late final GeneratedColumn<int> translateMode = GeneratedColumn<int>(
+    'translate_mode',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     conversID,
@@ -377,6 +388,7 @@ class $LocalConversationsTable extends LocalConversations
     myPendingJoinMsgID,
     myHistoryCutoffAt,
     hasUnreadMention,
+    translateMode,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -606,6 +618,15 @@ class $LocalConversationsTable extends LocalConversations
         ),
       );
     }
+    if (data.containsKey('translate_mode')) {
+      context.handle(
+        _translateModeMeta,
+        translateMode.isAcceptableOrUnknown(
+          data['translate_mode']!,
+          _translateModeMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -723,6 +744,10 @@ class $LocalConversationsTable extends LocalConversations
         DriftSqlType.bool,
         data['${effectivePrefix}has_unread_mention'],
       )!,
+      translateMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}translate_mode'],
+      ),
     );
   }
 
@@ -783,6 +808,14 @@ class LocalConversation extends DataClass
   /// calculé par tuile : la liste des discussions ne peut pas se permettre une
   /// requête par ligne à chaque frame.
   final bool hasUnreadMention;
+
+  /// Traduction automatique pour cette conversation : `null` = suit le réglage
+  /// global, 0 = jamais, 1 = toujours.
+  ///
+  /// Purement local, et volontairement : la traduction s'appuie sur des modèles
+  /// ML Kit téléchargés **par appareil**. Un réglage synchronisé promettrait sur
+  /// le téléphone B ce que seul le téléphone A peut rendre.
+  final int? translateMode;
   const LocalConversation({
     required this.conversID,
     required this.isGroup,
@@ -811,6 +844,7 @@ class LocalConversation extends DataClass
     this.myPendingJoinMsgID,
     this.myHistoryCutoffAt,
     required this.hasUnreadMention,
+    this.translateMode,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -872,6 +906,9 @@ class LocalConversation extends DataClass
       map['my_history_cutoff_at'] = Variable<DateTime>(myHistoryCutoffAt);
     }
     map['has_unread_mention'] = Variable<bool>(hasUnreadMention);
+    if (!nullToAbsent || translateMode != null) {
+      map['translate_mode'] = Variable<int>(translateMode);
+    }
     return map;
   }
 
@@ -930,6 +967,9 @@ class LocalConversation extends DataClass
           ? const Value.absent()
           : Value(myHistoryCutoffAt),
       hasUnreadMention: Value(hasUnreadMention),
+      translateMode: translateMode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(translateMode),
     );
   }
 
@@ -976,6 +1016,7 @@ class LocalConversation extends DataClass
         json['myHistoryCutoffAt'],
       ),
       hasUnreadMention: serializer.fromJson<bool>(json['hasUnreadMention']),
+      translateMode: serializer.fromJson<int?>(json['translateMode']),
     );
   }
   @override
@@ -1013,6 +1054,7 @@ class LocalConversation extends DataClass
       'myPendingJoinMsgID': serializer.toJson<int?>(myPendingJoinMsgID),
       'myHistoryCutoffAt': serializer.toJson<DateTime?>(myHistoryCutoffAt),
       'hasUnreadMention': serializer.toJson<bool>(hasUnreadMention),
+      'translateMode': serializer.toJson<int?>(translateMode),
     };
   }
 
@@ -1044,6 +1086,7 @@ class LocalConversation extends DataClass
     Value<int?> myPendingJoinMsgID = const Value.absent(),
     Value<DateTime?> myHistoryCutoffAt = const Value.absent(),
     bool? hasUnreadMention,
+    Value<int?> translateMode = const Value.absent(),
   }) => LocalConversation(
     conversID: conversID ?? this.conversID,
     isGroup: isGroup ?? this.isGroup,
@@ -1088,6 +1131,9 @@ class LocalConversation extends DataClass
         ? myHistoryCutoffAt.value
         : this.myHistoryCutoffAt,
     hasUnreadMention: hasUnreadMention ?? this.hasUnreadMention,
+    translateMode: translateMode.present
+        ? translateMode.value
+        : this.translateMode,
   );
   LocalConversation copyWithCompanion(LocalConversationsCompanion data) {
     return LocalConversation(
@@ -1160,6 +1206,9 @@ class LocalConversation extends DataClass
       hasUnreadMention: data.hasUnreadMention.present
           ? data.hasUnreadMention.value
           : this.hasUnreadMention,
+      translateMode: data.translateMode.present
+          ? data.translateMode.value
+          : this.translateMode,
     );
   }
 
@@ -1192,7 +1241,8 @@ class LocalConversation extends DataClass
           ..write('mentionsOnly: $mentionsOnly, ')
           ..write('myPendingJoinMsgID: $myPendingJoinMsgID, ')
           ..write('myHistoryCutoffAt: $myHistoryCutoffAt, ')
-          ..write('hasUnreadMention: $hasUnreadMention')
+          ..write('hasUnreadMention: $hasUnreadMention, ')
+          ..write('translateMode: $translateMode')
           ..write(')'))
         .toString();
   }
@@ -1226,6 +1276,7 @@ class LocalConversation extends DataClass
     myPendingJoinMsgID,
     myHistoryCutoffAt,
     hasUnreadMention,
+    translateMode,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -1257,7 +1308,8 @@ class LocalConversation extends DataClass
           other.mentionsOnly == this.mentionsOnly &&
           other.myPendingJoinMsgID == this.myPendingJoinMsgID &&
           other.myHistoryCutoffAt == this.myHistoryCutoffAt &&
-          other.hasUnreadMention == this.hasUnreadMention);
+          other.hasUnreadMention == this.hasUnreadMention &&
+          other.translateMode == this.translateMode);
 }
 
 class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
@@ -1288,6 +1340,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
   final Value<int?> myPendingJoinMsgID;
   final Value<DateTime?> myHistoryCutoffAt;
   final Value<bool> hasUnreadMention;
+  final Value<int?> translateMode;
   const LocalConversationsCompanion({
     this.conversID = const Value.absent(),
     this.isGroup = const Value.absent(),
@@ -1316,6 +1369,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     this.myPendingJoinMsgID = const Value.absent(),
     this.myHistoryCutoffAt = const Value.absent(),
     this.hasUnreadMention = const Value.absent(),
+    this.translateMode = const Value.absent(),
   });
   LocalConversationsCompanion.insert({
     this.conversID = const Value.absent(),
@@ -1345,6 +1399,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     this.myPendingJoinMsgID = const Value.absent(),
     this.myHistoryCutoffAt = const Value.absent(),
     this.hasUnreadMention = const Value.absent(),
+    this.translateMode = const Value.absent(),
   });
   static Insertable<LocalConversation> custom({
     Expression<int>? conversID,
@@ -1374,6 +1429,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     Expression<int>? myPendingJoinMsgID,
     Expression<DateTime>? myHistoryCutoffAt,
     Expression<bool>? hasUnreadMention,
+    Expression<int>? translateMode,
   }) {
     return RawValuesInsertable({
       if (conversID != null) 'convers_i_d': conversID,
@@ -1408,6 +1464,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
         'my_pending_join_msg_i_d': myPendingJoinMsgID,
       if (myHistoryCutoffAt != null) 'my_history_cutoff_at': myHistoryCutoffAt,
       if (hasUnreadMention != null) 'has_unread_mention': hasUnreadMention,
+      if (translateMode != null) 'translate_mode': translateMode,
     });
   }
 
@@ -1439,6 +1496,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     Value<int?>? myPendingJoinMsgID,
     Value<DateTime?>? myHistoryCutoffAt,
     Value<bool>? hasUnreadMention,
+    Value<int?>? translateMode,
   }) {
     return LocalConversationsCompanion(
       conversID: conversID ?? this.conversID,
@@ -1471,6 +1529,7 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
       myPendingJoinMsgID: myPendingJoinMsgID ?? this.myPendingJoinMsgID,
       myHistoryCutoffAt: myHistoryCutoffAt ?? this.myHistoryCutoffAt,
       hasUnreadMention: hasUnreadMention ?? this.hasUnreadMention,
+      translateMode: translateMode ?? this.translateMode,
     );
   }
 
@@ -1564,6 +1623,9 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
     if (hasUnreadMention.present) {
       map['has_unread_mention'] = Variable<bool>(hasUnreadMention.value);
     }
+    if (translateMode.present) {
+      map['translate_mode'] = Variable<int>(translateMode.value);
+    }
     return map;
   }
 
@@ -1596,7 +1658,8 @@ class LocalConversationsCompanion extends UpdateCompanion<LocalConversation> {
           ..write('mentionsOnly: $mentionsOnly, ')
           ..write('myPendingJoinMsgID: $myPendingJoinMsgID, ')
           ..write('myHistoryCutoffAt: $myHistoryCutoffAt, ')
-          ..write('hasUnreadMention: $hasUnreadMention')
+          ..write('hasUnreadMention: $hasUnreadMention, ')
+          ..write('translateMode: $translateMode')
           ..write(')'))
         .toString();
   }
@@ -2069,6 +2132,41 @@ class $LocalMessagesTable extends LocalMessages
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _translatedContentMeta = const VerificationMeta(
+    'translatedContent',
+  );
+  @override
+  late final GeneratedColumn<String> translatedContent =
+      GeneratedColumn<String>(
+        'translated_content',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _sourceLangMeta = const VerificationMeta(
+    'sourceLang',
+  );
+  @override
+  late final GeneratedColumn<String> sourceLang = GeneratedColumn<String>(
+    'source_lang',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _translationStateMeta = const VerificationMeta(
+    'translationState',
+  );
+  @override
+  late final GeneratedColumn<int> translationState = GeneratedColumn<int>(
+    'translation_state',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientId,
@@ -2111,6 +2209,9 @@ class $LocalMessagesTable extends LocalMessages
     retryCount,
     failureCode,
     mentionsJson,
+    translatedContent,
+    sourceLang,
+    translationState,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2429,6 +2530,30 @@ class $LocalMessagesTable extends LocalMessages
         ),
       );
     }
+    if (data.containsKey('translated_content')) {
+      context.handle(
+        _translatedContentMeta,
+        translatedContent.isAcceptableOrUnknown(
+          data['translated_content']!,
+          _translatedContentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_lang')) {
+      context.handle(
+        _sourceLangMeta,
+        sourceLang.isAcceptableOrUnknown(data['source_lang']!, _sourceLangMeta),
+      );
+    }
+    if (data.containsKey('translation_state')) {
+      context.handle(
+        _translationStateMeta,
+        translationState.isAcceptableOrUnknown(
+          data['translation_state']!,
+          _translationStateMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2598,6 +2723,18 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.string,
         data['${effectivePrefix}mentions_json'],
       ),
+      translatedContent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}translated_content'],
+      ),
+      sourceLang: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_lang'],
+      ),
+      translationState: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}translation_state'],
+      )!,
     );
   }
 
@@ -2709,6 +2846,22 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   /// l'émission depuis cette ligne, et une mention envoyée hors ligne perdrait
   /// sinon sa notification au rejeu.
   final String? mentionsJson;
+
+  /// Texte traduit dans la langue de lecture, `null` tant qu'il n'existe pas.
+  final String? translatedContent;
+
+  /// Code BCP-47 de la langue source détectée (« traduit de l'anglais »).
+  final String? sourceLang;
+
+  /// Avancement de la traduction — voir `MessageTranslationState`.
+  ///
+  /// 0=à traiter 1=traduit 2=inutile (même langue, indéterminée, type non
+  /// traduisible) 3=modèle de langue absent 4=échec.
+  ///
+  /// Sans cette colonne, le worker ré-identifierait la langue de tout
+  /// l'historique à chaque lancement de l'app : c'est le cache qui remplace,
+  /// sur l'appareil, ce qu'une table serveur aurait fait.
+  final int translationState;
   const LocalMessage({
     required this.clientId,
     required this.msgID,
@@ -2750,6 +2903,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     required this.retryCount,
     this.failureCode,
     this.mentionsJson,
+    this.translatedContent,
+    this.sourceLang,
+    required this.translationState,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2844,6 +3000,13 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     if (!nullToAbsent || mentionsJson != null) {
       map['mentions_json'] = Variable<String>(mentionsJson);
     }
+    if (!nullToAbsent || translatedContent != null) {
+      map['translated_content'] = Variable<String>(translatedContent);
+    }
+    if (!nullToAbsent || sourceLang != null) {
+      map['source_lang'] = Variable<String>(sourceLang);
+    }
+    map['translation_state'] = Variable<int>(translationState);
     return map;
   }
 
@@ -2939,6 +3102,13 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       mentionsJson: mentionsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(mentionsJson),
+      translatedContent: translatedContent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(translatedContent),
+      sourceLang: sourceLang == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceLang),
+      translationState: Value(translationState),
     );
   }
 
@@ -2990,6 +3160,11 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       retryCount: serializer.fromJson<int>(json['retryCount']),
       failureCode: serializer.fromJson<String?>(json['failureCode']),
       mentionsJson: serializer.fromJson<String?>(json['mentionsJson']),
+      translatedContent: serializer.fromJson<String?>(
+        json['translatedContent'],
+      ),
+      sourceLang: serializer.fromJson<String?>(json['sourceLang']),
+      translationState: serializer.fromJson<int>(json['translationState']),
     );
   }
   @override
@@ -3036,6 +3211,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'retryCount': serializer.toJson<int>(retryCount),
       'failureCode': serializer.toJson<String?>(failureCode),
       'mentionsJson': serializer.toJson<String?>(mentionsJson),
+      'translatedContent': serializer.toJson<String?>(translatedContent),
+      'sourceLang': serializer.toJson<String?>(sourceLang),
+      'translationState': serializer.toJson<int>(translationState),
     };
   }
 
@@ -3080,6 +3258,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     int? retryCount,
     Value<String?> failureCode = const Value.absent(),
     Value<String?> mentionsJson = const Value.absent(),
+    Value<String?> translatedContent = const Value.absent(),
+    Value<String?> sourceLang = const Value.absent(),
+    int? translationState,
   }) => LocalMessage(
     clientId: clientId ?? this.clientId,
     msgID: msgID ?? this.msgID,
@@ -3135,6 +3316,11 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     retryCount: retryCount ?? this.retryCount,
     failureCode: failureCode.present ? failureCode.value : this.failureCode,
     mentionsJson: mentionsJson.present ? mentionsJson.value : this.mentionsJson,
+    translatedContent: translatedContent.present
+        ? translatedContent.value
+        : this.translatedContent,
+    sourceLang: sourceLang.present ? sourceLang.value : this.sourceLang,
+    translationState: translationState ?? this.translationState,
   );
   LocalMessage copyWithCompanion(LocalMessagesCompanion data) {
     return LocalMessage(
@@ -3220,6 +3406,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       mentionsJson: data.mentionsJson.present
           ? data.mentionsJson.value
           : this.mentionsJson,
+      translatedContent: data.translatedContent.present
+          ? data.translatedContent.value
+          : this.translatedContent,
+      sourceLang: data.sourceLang.present
+          ? data.sourceLang.value
+          : this.sourceLang,
+      translationState: data.translationState.present
+          ? data.translationState.value
+          : this.translationState,
     );
   }
 
@@ -3265,7 +3460,10 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('lastEmittedAt: $lastEmittedAt, ')
           ..write('retryCount: $retryCount, ')
           ..write('failureCode: $failureCode, ')
-          ..write('mentionsJson: $mentionsJson')
+          ..write('mentionsJson: $mentionsJson, ')
+          ..write('translatedContent: $translatedContent, ')
+          ..write('sourceLang: $sourceLang, ')
+          ..write('translationState: $translationState')
           ..write(')'))
         .toString();
   }
@@ -3312,6 +3510,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     retryCount,
     failureCode,
     mentionsJson,
+    translatedContent,
+    sourceLang,
+    translationState,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -3356,7 +3557,10 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.lastEmittedAt == this.lastEmittedAt &&
           other.retryCount == this.retryCount &&
           other.failureCode == this.failureCode &&
-          other.mentionsJson == this.mentionsJson);
+          other.mentionsJson == this.mentionsJson &&
+          other.translatedContent == this.translatedContent &&
+          other.sourceLang == this.sourceLang &&
+          other.translationState == this.translationState);
 }
 
 class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
@@ -3400,6 +3604,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<int> retryCount;
   final Value<String?> failureCode;
   final Value<String?> mentionsJson;
+  final Value<String?> translatedContent;
+  final Value<String?> sourceLang;
+  final Value<int> translationState;
   final Value<int> rowid;
   const LocalMessagesCompanion({
     this.clientId = const Value.absent(),
@@ -3442,6 +3649,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.retryCount = const Value.absent(),
     this.failureCode = const Value.absent(),
     this.mentionsJson = const Value.absent(),
+    this.translatedContent = const Value.absent(),
+    this.sourceLang = const Value.absent(),
+    this.translationState = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LocalMessagesCompanion.insert({
@@ -3485,6 +3695,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.retryCount = const Value.absent(),
     this.failureCode = const Value.absent(),
     this.mentionsJson = const Value.absent(),
+    this.translatedContent = const Value.absent(),
+    this.sourceLang = const Value.absent(),
+    this.translationState = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientId = Value(clientId),
        conversationID = Value(conversationID),
@@ -3531,6 +3744,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<int>? retryCount,
     Expression<String>? failureCode,
     Expression<String>? mentionsJson,
+    Expression<String>? translatedContent,
+    Expression<String>? sourceLang,
+    Expression<int>? translationState,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3574,6 +3790,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (retryCount != null) 'retry_count': retryCount,
       if (failureCode != null) 'failure_code': failureCode,
       if (mentionsJson != null) 'mentions_json': mentionsJson,
+      if (translatedContent != null) 'translated_content': translatedContent,
+      if (sourceLang != null) 'source_lang': sourceLang,
+      if (translationState != null) 'translation_state': translationState,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3619,6 +3838,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<int>? retryCount,
     Value<String?>? failureCode,
     Value<String?>? mentionsJson,
+    Value<String?>? translatedContent,
+    Value<String?>? sourceLang,
+    Value<int>? translationState,
     Value<int>? rowid,
   }) {
     return LocalMessagesCompanion(
@@ -3662,6 +3884,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       retryCount: retryCount ?? this.retryCount,
       failureCode: failureCode ?? this.failureCode,
       mentionsJson: mentionsJson ?? this.mentionsJson,
+      translatedContent: translatedContent ?? this.translatedContent,
+      sourceLang: sourceLang ?? this.sourceLang,
+      translationState: translationState ?? this.translationState,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3789,6 +4014,15 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (mentionsJson.present) {
       map['mentions_json'] = Variable<String>(mentionsJson.value);
     }
+    if (translatedContent.present) {
+      map['translated_content'] = Variable<String>(translatedContent.value);
+    }
+    if (sourceLang.present) {
+      map['source_lang'] = Variable<String>(sourceLang.value);
+    }
+    if (translationState.present) {
+      map['translation_state'] = Variable<int>(translationState.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3838,6 +4072,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('retryCount: $retryCount, ')
           ..write('failureCode: $failureCode, ')
           ..write('mentionsJson: $mentionsJson, ')
+          ..write('translatedContent: $translatedContent, ')
+          ..write('sourceLang: $sourceLang, ')
+          ..write('translationState: $translationState, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8553,7 +8790,7 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
   final int id;
   final int ownerId;
 
-  /// `taxi` | `walk` | `sos`.
+  /// `taxi` | `walk` | `sos` (`meeting` legacy = walk).
   final String kind;
 
   /// `active` | `awaiting_confirm` | `alert` | `sos` | `closed_*`.
@@ -10313,6 +10550,7 @@ typedef $$LocalConversationsTableCreateCompanionBuilder =
       Value<int?> myPendingJoinMsgID,
       Value<DateTime?> myHistoryCutoffAt,
       Value<bool> hasUnreadMention,
+      Value<int?> translateMode,
     });
 typedef $$LocalConversationsTableUpdateCompanionBuilder =
     LocalConversationsCompanion Function({
@@ -10343,6 +10581,7 @@ typedef $$LocalConversationsTableUpdateCompanionBuilder =
       Value<int?> myPendingJoinMsgID,
       Value<DateTime?> myHistoryCutoffAt,
       Value<bool> hasUnreadMention,
+      Value<int?> translateMode,
     });
 
 class $$LocalConversationsTableFilterComposer
@@ -10486,6 +10725,11 @@ class $$LocalConversationsTableFilterComposer
 
   ColumnFilters<bool> get hasUnreadMention => $composableBuilder(
     column: $table.hasUnreadMention,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get translateMode => $composableBuilder(
+    column: $table.translateMode,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -10633,6 +10877,11 @@ class $$LocalConversationsTableOrderingComposer
     column: $table.hasUnreadMention,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get translateMode => $composableBuilder(
+    column: $table.translateMode,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalConversationsTableAnnotationComposer
@@ -10766,6 +11015,11 @@ class $$LocalConversationsTableAnnotationComposer
     column: $table.hasUnreadMention,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get translateMode => $composableBuilder(
+    column: $table.translateMode,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalConversationsTableTableManager
@@ -10835,6 +11089,7 @@ class $$LocalConversationsTableTableManager
                 Value<int?> myPendingJoinMsgID = const Value.absent(),
                 Value<DateTime?> myHistoryCutoffAt = const Value.absent(),
                 Value<bool> hasUnreadMention = const Value.absent(),
+                Value<int?> translateMode = const Value.absent(),
               }) => LocalConversationsCompanion(
                 conversID: conversID,
                 isGroup: isGroup,
@@ -10863,6 +11118,7 @@ class $$LocalConversationsTableTableManager
                 myPendingJoinMsgID: myPendingJoinMsgID,
                 myHistoryCutoffAt: myHistoryCutoffAt,
                 hasUnreadMention: hasUnreadMention,
+                translateMode: translateMode,
               ),
           createCompanionCallback:
               ({
@@ -10893,6 +11149,7 @@ class $$LocalConversationsTableTableManager
                 Value<int?> myPendingJoinMsgID = const Value.absent(),
                 Value<DateTime?> myHistoryCutoffAt = const Value.absent(),
                 Value<bool> hasUnreadMention = const Value.absent(),
+                Value<int?> translateMode = const Value.absent(),
               }) => LocalConversationsCompanion.insert(
                 conversID: conversID,
                 isGroup: isGroup,
@@ -10921,6 +11178,7 @@ class $$LocalConversationsTableTableManager
                 myPendingJoinMsgID: myPendingJoinMsgID,
                 myHistoryCutoffAt: myHistoryCutoffAt,
                 hasUnreadMention: hasUnreadMention,
+                translateMode: translateMode,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -10993,6 +11251,9 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<int> retryCount,
       Value<String?> failureCode,
       Value<String?> mentionsJson,
+      Value<String?> translatedContent,
+      Value<String?> sourceLang,
+      Value<int> translationState,
       Value<int> rowid,
     });
 typedef $$LocalMessagesTableUpdateCompanionBuilder =
@@ -11037,6 +11298,9 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<int> retryCount,
       Value<String?> failureCode,
       Value<String?> mentionsJson,
+      Value<String?> translatedContent,
+      Value<String?> sourceLang,
+      Value<int> translationState,
       Value<int> rowid,
     });
 
@@ -11246,6 +11510,21 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<String> get mentionsJson => $composableBuilder(
     column: $table.mentionsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get translatedContent => $composableBuilder(
+    column: $table.translatedContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceLang => $composableBuilder(
+    column: $table.sourceLang,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get translationState => $composableBuilder(
+    column: $table.translationState,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11458,6 +11737,21 @@ class $$LocalMessagesTableOrderingComposer
     column: $table.mentionsJson,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get translatedContent => $composableBuilder(
+    column: $table.translatedContent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceLang => $composableBuilder(
+    column: $table.sourceLang,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get translationState => $composableBuilder(
+    column: $table.translationState,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalMessagesTableAnnotationComposer
@@ -11630,6 +11924,21 @@ class $$LocalMessagesTableAnnotationComposer
     column: $table.mentionsJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get translatedContent => $composableBuilder(
+    column: $table.translatedContent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourceLang => $composableBuilder(
+    column: $table.sourceLang,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get translationState => $composableBuilder(
+    column: $table.translationState,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalMessagesTableTableManager
@@ -11703,6 +12012,9 @@ class $$LocalMessagesTableTableManager
                 Value<int> retryCount = const Value.absent(),
                 Value<String?> failureCode = const Value.absent(),
                 Value<String?> mentionsJson = const Value.absent(),
+                Value<String?> translatedContent = const Value.absent(),
+                Value<String?> sourceLang = const Value.absent(),
+                Value<int> translationState = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion(
                 clientId: clientId,
@@ -11745,6 +12057,9 @@ class $$LocalMessagesTableTableManager
                 retryCount: retryCount,
                 failureCode: failureCode,
                 mentionsJson: mentionsJson,
+                translatedContent: translatedContent,
+                sourceLang: sourceLang,
+                translationState: translationState,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11789,6 +12104,9 @@ class $$LocalMessagesTableTableManager
                 Value<int> retryCount = const Value.absent(),
                 Value<String?> failureCode = const Value.absent(),
                 Value<String?> mentionsJson = const Value.absent(),
+                Value<String?> translatedContent = const Value.absent(),
+                Value<String?> sourceLang = const Value.absent(),
+                Value<int> translationState = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalMessagesCompanion.insert(
                 clientId: clientId,
@@ -11831,6 +12149,9 @@ class $$LocalMessagesTableTableManager
                 retryCount: retryCount,
                 failureCode: failureCode,
                 mentionsJson: mentionsJson,
+                translatedContent: translatedContent,
+                sourceLang: sourceLang,
+                translationState: translationState,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
