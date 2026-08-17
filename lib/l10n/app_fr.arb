@@ -3409,5 +3409,62 @@
   "tripsUnreachableBody": "Impossible de joindre le serveur. Votre connexion est peut-être coupée.",
   "tripsLeave": "Quitter le suivi",
   "tripsLeaveTitle": "Quitter ce trajet ?",
-  "tripsLeaveBody": "Vous ne verrez plus sa position et ne serez pas alerté s'il ne confirme pas son arrivée."
+  "tripsLeaveBody": "Vous ne verrez plus sa position et ne serez pas alerté s'il ne confirme pas son arrivée.",
+
+  "@_TRADUCTION": {},
+  "translationSection": "Traduction",
+  "autoTranslate": "Traduction automatique",
+  "autoTranslateDescription": "Traduire les messages reçus qui ne sont pas dans votre langue de lecture.",
+  "onDeviceTranslationNotice": "La traduction s'effectue sur votre appareil. Aucun message n'est envoyé à un service tiers, et elle fonctionne hors ligne.",
+  "translateTo": "Traduire vers",
+  "translatedFrom": "Traduit du {language}",
+  "@translatedFrom": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "showOriginal": "voir l'original",
+  "showTranslation": "voir la traduction",
+  "translate": "Traduire",
+  "translating": "Traduction…",
+  "translationFailed": "Traduction impossible",
+  "languageModels": "Modèles de langue",
+  "languageModelsDescription": "Chaque langue occupe environ {size} Mo sur votre appareil.",
+  "@languageModelsDescription": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadLanguageModel": "Télécharger {language} ({size} Mo) pour traduire",
+  "@downloadLanguageModel": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadModel": "Télécharger",
+  "deleteModel": "Supprimer",
+  "downloadingModel": "Téléchargement de {language}…",
+  "@downloadingModel": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "modelDownloadFailed": "Téléchargement impossible. Vérifiez votre connexion Wi-Fi.",
+  "modelDownloadWifiNotice": "Le téléchargement se fait en Wi-Fi pour préserver vos données mobiles.",
+  "translateThisConversation": "Traduire cette conversation",
+  "translateModeAuto": "Automatique",
+  "translateModeAlways": "Toujours",
+  "translateModeNever": "Jamais",
+  "translateModeAutoSubtitle": "Suit le réglage général"
 }

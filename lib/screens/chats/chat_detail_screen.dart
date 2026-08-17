@@ -25,6 +25,11 @@ import '../../core/services/chat/view_once_download_manager.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
+import '../../core/services/translation/message_translation_service.dart';
+import '../../core/services/translation/translatable_content.dart';
+import '../../core/services/translation/translation_languages.dart';
+import '../../core/services/translation/translation_state.dart';
+import '../profile/translation_settings_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -274,6 +279,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   final Set<String> _downloadingAlbumIds = {};
   /// Chemins résolus avant que le flux Drift ne rafraîchisse l'UI.
   final Map<int, String> _localMediaPathOverrides = {};
+
+  /// `clientId` des messages dont le lecteur a demandé la version originale.
+  ///
+  /// Volontairement non persisté : voir l'original est un geste de
+  /// consultation, pas un réglage. Repartir sur la traduction à la prochaine
+  /// ouverture est le comportement attendu.
+  final Set<String> _showOriginalIds = {};
   List<LocalMessage> _currentMessages = const [];
   /// Réactions de la conversation active, regroupées par `msgID` — alimenté
   /// par l'abonnement dédié et lu par la barre de réaction rapide

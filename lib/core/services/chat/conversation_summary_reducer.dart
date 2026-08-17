@@ -123,9 +123,16 @@ class ConversationSummaryReducer {
       final unread = await _dao.countUnread(conversID, myId);
       final mentionne = await _hasUnreadMention(conversID, myId);
 
+      // Aperçu traduit : uniquement pour le texte pur. Pour un média, l'aperçu
+      // est un libellé localisé (« 📷 Photo ») que le client redérive déjà —
+      // y injecter une légende traduite mélangerait deux registres.
+      final translatedPreview =
+          latest.type == 0 && !latest.isDeleted ? latest.translatedContent : null;
+
       final needsUpdate = conv.lastMessageSenderID != latest.senderID ||
           conv.lastMessageType != latest.type ||
           conv.lastMessage != preview ||
+          conv.lastMessageTranslated != translatedPreview ||
           conv.lastMessageAt != latest.sendAt ||
           conv.lastMessageStatus != desiredStatus ||
           conv.unreadCount != unread ||
@@ -137,6 +144,7 @@ class ConversationSummaryReducer {
             ..where((c) => c.conversID.equals(conversID)))
           .write(LocalConversationsCompanion(
         lastMessage: Value(preview),
+        lastMessageTranslated: Value(translatedPreview),
         lastMessageSenderID: Value(latest.senderID),
         lastMessageType: Value(latest.type),
         lastMessageAt: Value(latest.sendAt),

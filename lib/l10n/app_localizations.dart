@@ -9637,6 +9637,150 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vous ne verrez plus sa position et ne serez pas alerté s\'il ne confirme pas son arrivée.'**
   String get tripsLeaveBody;
+
+  /// No description provided for @translationSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction'**
+  String get translationSection;
+
+  /// No description provided for @autoTranslate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction automatique'**
+  String get autoTranslate;
+
+  /// No description provided for @autoTranslateDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire les messages reçus qui ne sont pas dans votre langue de lecture.'**
+  String get autoTranslateDescription;
+
+  /// No description provided for @onDeviceTranslationNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'La traduction s\'effectue sur votre appareil. Aucun message n\'est envoyé à un service tiers, et elle fonctionne hors ligne.'**
+  String get onDeviceTranslationNotice;
+
+  /// No description provided for @translateTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire vers'**
+  String get translateTo;
+
+  /// No description provided for @translatedFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduit du {language}'**
+  String translatedFrom(String language);
+
+  /// No description provided for @showOriginal.
+  ///
+  /// In fr, this message translates to:
+  /// **'voir l\'original'**
+  String get showOriginal;
+
+  /// No description provided for @showTranslation.
+  ///
+  /// In fr, this message translates to:
+  /// **'voir la traduction'**
+  String get showTranslation;
+
+  /// No description provided for @translate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire'**
+  String get translate;
+
+  /// No description provided for @translating.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction…'**
+  String get translating;
+
+  /// No description provided for @translationFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduction impossible'**
+  String get translationFailed;
+
+  /// No description provided for @languageModels.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modèles de langue'**
+  String get languageModels;
+
+  /// No description provided for @languageModelsDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque langue occupe environ {size} Mo sur votre appareil.'**
+  String languageModelsDescription(int size);
+
+  /// No description provided for @downloadLanguageModel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger {language} ({size} Mo) pour traduire'**
+  String downloadLanguageModel(String language, int size);
+
+  /// No description provided for @downloadModel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger'**
+  String get downloadModel;
+
+  /// No description provided for @deleteModel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get deleteModel;
+
+  /// No description provided for @downloadingModel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement de {language}…'**
+  String downloadingModel(String language);
+
+  /// No description provided for @modelDownloadFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement impossible. Vérifiez votre connexion Wi-Fi.'**
+  String get modelDownloadFailed;
+
+  /// No description provided for @modelDownloadWifiNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le téléchargement se fait en Wi-Fi pour préserver vos données mobiles.'**
+  String get modelDownloadWifiNotice;
+
+  /// No description provided for @translateThisConversation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Traduire cette conversation'**
+  String get translateThisConversation;
+
+  /// No description provided for @translateModeAuto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Automatique'**
+  String get translateModeAuto;
+
+  /// No description provided for @translateModeAlways.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toujours'**
+  String get translateModeAlways;
+
+  /// No description provided for @translateModeNever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jamais'**
+  String get translateModeNever;
+
+  /// No description provided for @translateModeAutoSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suit le réglage général'**
+  String get translateModeAutoSubtitle;
 }
 
 class _AppLocalizationsDelegate

@@ -2527,5 +2527,62 @@
   "tripsUnreachableBody": "The server can't be reached. Your connection may be down.",
   "tripsLeave": "Stop following",
   "tripsLeaveTitle": "Stop following this trip?",
-  "tripsLeaveBody": "You'll no longer see their position, and won't be alerted if they don't confirm arrival."
+  "tripsLeaveBody": "You'll no longer see their position, and won't be alerted if they don't confirm arrival.",
+
+  "@_TRADUCTION": {},
+  "translationSection": "Translation",
+  "autoTranslate": "Automatic translation",
+  "autoTranslateDescription": "Translate incoming messages that aren't in your reading language.",
+  "onDeviceTranslationNotice": "Translation happens on your device. No message is sent to a third-party service, and it works offline.",
+  "translateTo": "Translate into",
+  "translatedFrom": "Translated from {language}",
+  "@translatedFrom": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "showOriginal": "see original",
+  "showTranslation": "see translation",
+  "translate": "Translate",
+  "translating": "Translating…",
+  "translationFailed": "Couldn't translate",
+  "languageModels": "Language models",
+  "languageModelsDescription": "Each language takes about {size} MB on your device.",
+  "@languageModelsDescription": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadLanguageModel": "Download {language} ({size} MB) to translate",
+  "@downloadLanguageModel": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadModel": "Download",
+  "deleteModel": "Delete",
+  "downloadingModel": "Downloading {language}…",
+  "@downloadingModel": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "modelDownloadFailed": "Download failed. Check your Wi-Fi connection.",
+  "modelDownloadWifiNotice": "Downloads use Wi-Fi to spare your mobile data.",
+  "translateThisConversation": "Translate this conversation",
+  "translateModeAuto": "Automatic",
+  "translateModeAlways": "Always",
+  "translateModeNever": "Never",
+  "translateModeAutoSubtitle": "Follows the general setting"
 }

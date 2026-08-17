@@ -195,7 +195,12 @@ String conversationListPreview(
     return callLogPreviewLabel(conv.lastMessageType!, l10n);
   }
 
-  final body = displayConversationPreview(conv.lastMessage, l10n);
+  // Aperçu traduit quand il existe : sans cela, la liste contredirait le fil,
+  // qui affiche déjà la traduction.
+  final body = displayConversationPreview(
+    conv.lastMessageTranslated ?? conv.lastMessage,
+    l10n,
+  );
   if (!conv.isGroup || conv.lastMessage == null) return body;
   if (conv.lastMessageType == kSystemMessageType) return body;
 

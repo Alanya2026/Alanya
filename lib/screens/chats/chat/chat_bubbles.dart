@@ -233,7 +233,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     if (msg.type != 0) _buildMedia(msg, isMe),
                     // Vue unique : la légende n'apparaît que dans la visionneuse.
                     if (!msg.isViewOnce) ...[
-                      if (_captionText(msg) case final caption?)
+                      if (_displayText(msg) case final caption?)
                         Padding(
                           padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
                           child: Text.rich(
@@ -250,6 +250,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
                             ),
                           ),
                         ),
+                      if (_buildTranslationChip(msg, isMe) case final chip?)
+                        chip,
                       // Carte d'aperçu du premier lien du message (si le site
                       // expose des métadonnées Open Graph).
                       if (_captionText(msg) case final caption?
@@ -945,6 +947,93 @@ extension _ChatBubbles on _ChatDetailScreenState {
   }
 
   /// Texte affiché sous un média : légende utilisateur, hors marqueur album.
+  /// Ouvre les réglages de traduction — chemin de sortie du chip
+  /// « modèle manquant », qui n'a de sens que si l'on peut l'installer.
+  void _openTranslationSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const TranslationSettingsScreen(),
+      ),
+    );
+  }
+
+  /// Le message est-il affiché traduit en ce moment ?
+  bool _isShowingTranslation(LocalMessage msg) =>
+      msg.translationState == MessageTranslationState.done &&
+      msg.translatedContent != null &&
+      !_showOriginalIds.contains(msg.clientId);
+
+  /// Texte du corps de la bulle : la traduction quand elle existe et que le
+  /// lecteur n'a pas demandé l'original, le texte d'origine sinon.
+  ///
+  /// L'aperçu de lien reste adossé à [_captionText] : une URL passée au
+  /// traducteur peut ressortir déformée, et c'est bien la page d'origine qu'il
+  /// faut aller chercher.
+  String? _displayText(LocalMessage msg) {
+    if (_isShowingTranslation(msg)) return msg.translatedContent;
+    return _captionText(msg);
+  }
+
+  /// Bandeau « traduit de … · voir l'original », ou l'invite à télécharger le
+  /// modèle manquant. `null` quand il n'y a rien à signaler.
+  Widget? _buildTranslationChip(LocalMessage msg, bool isMe) {
+    final l10n = context.l10n;
+    final muted = _bubbleMuted(isMe);
+    final style = context.text.labelSmall?.copyWith(color: muted, fontSize: 11);
+
+    if (msg.translationState == MessageTranslationState.missingModel) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: InkWell(
+          onTap: _openTranslationSettings,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.download_outlined, size: 12, color: muted),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(l10n.downloadModel, style: style),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (msg.translationState != MessageTranslationState.done ||
+        msg.translatedContent == null) {
+      return null;
+    }
+
+    final showingTranslation = _isShowingTranslation(msg);
+    final source = msg.sourceLang;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: InkWell(
+        onTap: () => rebuild(() {
+          if (!_showOriginalIds.remove(msg.clientId)) {
+            _showOriginalIds.add(msg.clientId);
+          }
+        }),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.translate, size: 12, color: muted),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                showingTranslation && source != null
+                    ? '${l10n.translatedFrom(nativeNameOf(source))} · ${l10n.showOriginal}'
+                    : l10n.showTranslation,
+                style: style,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String? _captionText(LocalMessage msg) {
     // Localisation / contact / trajet : le content est du JSON, rendu par une
     // bulle carte. L'afficher en légende exposerait le JSON brut.

@@ -99,6 +99,8 @@ class MessageTranslationService {
 
   Future<void> dispose() async {
     _settings.removeListener(_onSettingsChanged);
+    _lifecycle?.dispose();
+    _lifecycle = null;
     _scanTimer?.cancel();
     _queue.clear();
     _queuedIds.clear();
@@ -313,6 +315,9 @@ class MessageTranslationService {
         content: translated,
         sourceLang: source.bcpCode,
       );
+      // La liste des discussions lit un aperçu dénormalisé : sans ce recalage,
+      // le fil afficherait la traduction et l'inbox l'original.
+      await _dao.refreshTranslatedPreview(message.conversationID);
     } catch (e) {
       debugPrint('[traduction] échec sur ${message.clientId} : $e');
       await _dao.setTranslationState(

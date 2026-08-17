@@ -72,6 +72,15 @@ class LocalConversations extends Table {
   BoolColumn get hasUnreadMention =>
       boolean().withDefault(const Constant(false))();
 
+  /// Aperçu traduit du dernier message, `null` s'il n'y en a pas.
+  ///
+  /// Dénormalisé à côté de `lastMessage`, et pour la même raison : la liste des
+  /// discussions ne peut pas se permettre une requête par ligne à chaque frame.
+  /// Alimenté par [ConversationSummaryReducer] quand le dernier message change,
+  /// et rafraîchi par le service de traduction quand une traduction arrive
+  /// après coup.
+  TextColumn get lastMessageTranslated => text().nullable()();
+
   /// Traduction automatique pour cette conversation : `null` = suit le réglage
   /// global, 0 = jamais, 1 = toujours.
   ///
@@ -751,6 +760,8 @@ class AppDatabase extends _$AppDatabase {
                 m, localMessages, localMessages.translationState);
             await _addColumnIfMissing(
                 m, localConversations, localConversations.translateMode);
+            await _addColumnIfMissing(m, localConversations,
+                localConversations.lastMessageTranslated);
           }
         },
       );

@@ -836,6 +836,36 @@ class ChatDao {
         ));
   }
 
+  /// Recale l'aperçu traduit de la liste des discussions après qu'une
+  /// traduction est arrivée.
+  ///
+  /// Le réducteur pose déjà ce champ quand le *dernier message change* ; ici on
+  /// couvre le cas inverse — le dernier message n'a pas bougé, mais sa
+  /// traduction vient d'atterrir, quelques centaines de millisecondes après.
+  ///
+  /// Réservé au texte pur : pour un média, l'aperçu est un libellé localisé que
+  /// le client redérive, et y glisser une légende traduite mélangerait deux
+  /// registres.
+  Future<void> refreshTranslatedPreview(int conversationID) async {
+    final latest = await (db.select(db.localMessages)
+          ..where((m) => m.conversationID.equals(conversationID))
+          ..orderBy([
+            (m) => OrderingTerm(expression: m.sendAt, mode: OrderingMode.desc)
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+    if (latest == null) return;
+
+    final translated =
+        latest.type == 0 && !latest.isDeleted ? latest.translatedContent : null;
+
+    await (db.update(db.localConversations)
+          ..where((c) => c.conversID.equals(conversationID)))
+        .write(LocalConversationsCompanion(
+      lastMessageTranslated: Value(translated),
+    ));
+  }
+
   /// Override de traduction d'une conversation : `null` quand elle suit le
   /// réglage global (ou quand la conversation n'est pas encore en cache).
   Future<int?> translateModeOf(int conversID) async {

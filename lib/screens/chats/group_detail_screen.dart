@@ -28,6 +28,7 @@ import 'contact_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
 import '../../widgets/conversation_mute_sheet.dart';
+import '../../widgets/conversation_translate_sheet.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final int conversationId;
@@ -547,6 +548,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                     ConversationMuteListTile(
                       conversationId: widget.conversationId,
                       conversationName: group.groupName ?? widget.groupName,
+                    ),
+                    ConversationTranslateListTile(
+                      conversationId: widget.conversationId,
                     ),
                     // C'est ce qui rend enfin effectif le flag `mentionsOnly`,
                     // qu'aucun appelant ne passait : la colonne serveur se

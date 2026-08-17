@@ -5509,4 +5509,88 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tripsLeaveBody =>
       'You\'ll no longer see their position, and won\'t be alerted if they don\'t confirm arrival.';
+
+  @override
+  String get translationSection => 'Translation';
+
+  @override
+  String get autoTranslate => 'Automatic translation';
+
+  @override
+  String get autoTranslateDescription =>
+      'Translate incoming messages that aren\'t in your reading language.';
+
+  @override
+  String get onDeviceTranslationNotice =>
+      'Translation happens on your device. No message is sent to a third-party service, and it works offline.';
+
+  @override
+  String get translateTo => 'Translate into';
+
+  @override
+  String translatedFrom(String language) {
+    return 'Translated from $language';
+  }
+
+  @override
+  String get showOriginal => 'see original';
+
+  @override
+  String get showTranslation => 'see translation';
+
+  @override
+  String get translate => 'Translate';
+
+  @override
+  String get translating => 'Translating…';
+
+  @override
+  String get translationFailed => 'Couldn\'t translate';
+
+  @override
+  String get languageModels => 'Language models';
+
+  @override
+  String languageModelsDescription(int size) {
+    return 'Each language takes about $size MB on your device.';
+  }
+
+  @override
+  String downloadLanguageModel(String language, int size) {
+    return 'Download $language ($size MB) to translate';
+  }
+
+  @override
+  String get downloadModel => 'Download';
+
+  @override
+  String get deleteModel => 'Delete';
+
+  @override
+  String downloadingModel(String language) {
+    return 'Downloading $language…';
+  }
+
+  @override
+  String get modelDownloadFailed =>
+      'Download failed. Check your Wi-Fi connection.';
+
+  @override
+  String get modelDownloadWifiNotice =>
+      'Downloads use Wi-Fi to spare your mobile data.';
+
+  @override
+  String get translateThisConversation => 'Translate this conversation';
+
+  @override
+  String get translateModeAuto => 'Automatic';
+
+  @override
+  String get translateModeAlways => 'Always';
+
+  @override
+  String get translateModeNever => 'Never';
+
+  @override
+  String get translateModeAutoSubtitle => 'Follows the general setting';
 }

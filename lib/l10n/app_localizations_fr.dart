@@ -5565,4 +5565,88 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get tripsLeaveBody =>
       'Vous ne verrez plus sa position et ne serez pas alerté s\'il ne confirme pas son arrivée.';
+
+  @override
+  String get translationSection => 'Traduction';
+
+  @override
+  String get autoTranslate => 'Traduction automatique';
+
+  @override
+  String get autoTranslateDescription =>
+      'Traduire les messages reçus qui ne sont pas dans votre langue de lecture.';
+
+  @override
+  String get onDeviceTranslationNotice =>
+      'La traduction s\'effectue sur votre appareil. Aucun message n\'est envoyé à un service tiers, et elle fonctionne hors ligne.';
+
+  @override
+  String get translateTo => 'Traduire vers';
+
+  @override
+  String translatedFrom(String language) {
+    return 'Traduit du $language';
+  }
+
+  @override
+  String get showOriginal => 'voir l\'original';
+
+  @override
+  String get showTranslation => 'voir la traduction';
+
+  @override
+  String get translate => 'Traduire';
+
+  @override
+  String get translating => 'Traduction…';
+
+  @override
+  String get translationFailed => 'Traduction impossible';
+
+  @override
+  String get languageModels => 'Modèles de langue';
+
+  @override
+  String languageModelsDescription(int size) {
+    return 'Chaque langue occupe environ $size Mo sur votre appareil.';
+  }
+
+  @override
+  String downloadLanguageModel(String language, int size) {
+    return 'Télécharger $language ($size Mo) pour traduire';
+  }
+
+  @override
+  String get downloadModel => 'Télécharger';
+
+  @override
+  String get deleteModel => 'Supprimer';
+
+  @override
+  String downloadingModel(String language) {
+    return 'Téléchargement de $language…';
+  }
+
+  @override
+  String get modelDownloadFailed =>
+      'Téléchargement impossible. Vérifiez votre connexion Wi-Fi.';
+
+  @override
+  String get modelDownloadWifiNotice =>
+      'Le téléchargement se fait en Wi-Fi pour préserver vos données mobiles.';
+
+  @override
+  String get translateThisConversation => 'Traduire cette conversation';
+
+  @override
+  String get translateModeAuto => 'Automatique';
+
+  @override
+  String get translateModeAlways => 'Toujours';
+
+  @override
+  String get translateModeNever => 'Jamais';
+
+  @override
+  String get translateModeAutoSubtitle => 'Suit le réglage général';
 }

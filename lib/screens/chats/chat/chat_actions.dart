@@ -464,6 +464,20 @@ extension _ChatActions on _ChatDetailScreenState {
                   _shareMessage(msg);
                 },
               ),
+            // Traduction à la demande : le chemin pour l'historique, pour qui a
+            // désactivé l'automatique, et le rattrapage quand la détection a
+            // renvoyé « indéterminé ». Masqué si le message est déjà traduit.
+            if (!isMe &&
+                translatableTextOf(msg) != null &&
+                msg.translationState != MessageTranslationState.done)
+              ListTile(
+                leading: Icon(Icons.translate, color: primary),
+                title: Text(context.l10n.translate),
+                onTap: () {
+                  Navigator.pop(context);
+                  MessageTranslationService.maybeInstance?.translateNow(msg);
+                },
+              ),
             if (msg.msgID != 0 && !msg.isDeleted)
               ListTile(
                 leading: Icon(

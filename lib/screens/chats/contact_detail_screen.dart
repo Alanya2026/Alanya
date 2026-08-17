@@ -28,6 +28,7 @@ import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
 import '../../widgets/conversation_mute_sheet.dart';
+import '../../widgets/conversation_translate_sheet.dart';
 
 /// Fiche détaillée d'un contact, réutilisable depuis :
 /// — l'en-tête d'une discussion 1-1
@@ -613,9 +614,16 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         if (!isSelf && _effectiveConvId != null) ...[
           _Card(
             padding: EdgeInsets.zero,
-            child: ConversationMuteListTile(
-              conversationId: _effectiveConvId!,
-              conversationName: u.nom.isNotEmpty ? u.nom : u.pseudo,
+            child: Column(
+              children: [
+                ConversationMuteListTile(
+                  conversationId: _effectiveConvId!,
+                  conversationName: u.nom.isNotEmpty ? u.nom : u.pseudo,
+                ),
+                ConversationTranslateListTile(
+                  conversationId: _effectiveConvId!,
+                ),
+              ],
             ),
           ),
           AppSpacing.vGapLg,
