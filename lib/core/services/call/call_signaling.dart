@@ -151,7 +151,11 @@ extension CallSignaling on CallService {
         }
       } else {
         unawaited(_dismissStrayIncomingCallKit(incomingCallId));
-        _ringtone.startIncomingRingtone().catchError((e) {
+        _ringtone
+            .startIncomingRingtone(
+              override: ListRingtonePreferences.resolveCall(_remoteUserId!),
+            )
+            .catchError((e) {
           debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
         });
         _armIncomingRingSafety();

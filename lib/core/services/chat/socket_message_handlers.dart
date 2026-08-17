@@ -8,6 +8,7 @@ import '../../db/chat_dao.dart';
 import '../alanya_media_export_service.dart';
 import '../media_cache_service.dart';
 import '../media_download_preferences.dart';
+import '../list_ringtone_preferences.dart';
 import '../notifications/badge_sync_service.dart';
 import 'chat_api.dart';
 import 'message_ack_watchdog.dart';
@@ -127,7 +128,9 @@ class SocketMessageHandlers {
     // discussion actuellement ouverte (sinon rien — en arrière-plan / autre
     // conversation, c'est la notification qui signale).
     if (isActive) {
-      MessageSoundService.instance.playReceived();
+      MessageSoundService.instance.playReceived(
+        override: ListRingtonePreferences.resolveMessage(senderID0),
+      );
     }
 
     // Conversation ouverte ET app au premier plan → message lu immédiatement.

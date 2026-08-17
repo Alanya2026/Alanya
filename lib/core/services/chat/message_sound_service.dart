@@ -2,6 +2,8 @@ import 'package:audio_session/audio_session.dart' show AndroidAudioAttributes, A
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../ringtone_preferences.dart';
+
 /// Retours sonores UI :
 ///  - envoi / réception de message,
 ///  - scan QR réussi (contact ou connexion appareil),
@@ -88,7 +90,36 @@ class MessageSoundService {
 
   /// Son de réception d'un nouveau message (à jouer app au premier plan ;
   /// en arrière-plan c'est la notification qui sonne — voir appelant).
-  void playReceived() => _replay(_receivedPlayer);
+  void playReceived({RingtoneOption? override}) {
+    if (override == null || override.type == RingtoneSourceType.system) {
+      _replay(_receivedPlayer);
+      return;
+    }
+    _playOptionOnce(override);
+  }
+
+  Future<void> _playOptionOnce(RingtoneOption option) async {
+    if (kIsWeb) return;
+    final player = _receivedPlayer;
+    if (player == null || !_ready) return;
+    try {
+      if (option.type == RingtoneSourceType.bundled) {
+        await player.setAsset(option.assetPath!);
+      } else {
+        await player.setFilePath(option.filePath!);
+      }
+      await player.setLoopMode(LoopMode.off);
+      await player.seek(Duration.zero);
+      await player.play();
+      // Le prochain message sans personnalisation retrouve le son standard.
+      await player.setAsset(_receivedAsset);
+    } catch (e) {
+      debugPrint('[MessageSound] son de liste échoué: $e');
+      try {
+        await player.setAsset(_receivedAsset);
+      } catch (_) {}
+    }
+  }
 
   /// Son de scan QR réussi : contact ajouté / déjà connu, ou code de connexion
   /// appareil reconnu. Pas d'erreur, pas son propre code.

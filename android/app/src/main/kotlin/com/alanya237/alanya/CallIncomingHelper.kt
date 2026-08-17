@@ -1,9 +1,10 @@
 package com.alanya237.alanya
 
 import android.content.Context
-import android.os.Bundle
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
+import org.json.JSONArray
+import org.json.JSONObject
 import com.hiennv.flutter_callkit_incoming.CallkitConstants
 import com.hiennv.flutter_callkit_incoming.CallkitNotificationManager
 import com.hiennv.flutter_callkit_incoming.CallkitNotificationService
@@ -48,24 +49,18 @@ object CallIncomingHelper {
         // Sonnerie importée par l'utilisateur : le plugin CallKit ne sait pas
         // jouer un fichier arbitraire, on la joue nous-mêmes et on rend CallKit
         // muet (voir [CustomRingtonePlayer]).
-        val customPath = resolveCustomRingtonePath(context)
+        val listChoice = resolveListCallRingtone(context, data["callerId"].orEmpty())
+        val customPath = listChoice?.first ?: resolveCustomRingtonePath(context)
         // Fichier importé → CallKit muet + on joue le fichier. Sinon CallKit
-        // joue lui-même la ressource compilée résolue par Flutter ('ringback'
-        // pour la Sonnerie Alanya, 'system_ringtone_default', ...).
-        val ringtonePath =
-            if (customPath != null) "silence" else resolveNativeRingtoneName(context)
+        // joue lui-même la ressource compilée résolue par Flutter.
+        val ringtonePath = if (customPath != null) {
+            "silence"
+        } else {
+            listChoice?.second ?: resolveNativeRingtoneName(context)
+        }
         val bundle = buildIncomingBundle(data, ringtonePath)
         try {
-            // Le plugin recharge une URL d'avatar puis reposte la notification.
-            // Sur certains Samsung, ce second `notify` redéclenche le
-            // fullScreenIntent et ouvre deux CallkitIncomingActivity pour le
-            // même callId. La notification native n'a donc pas d'avatar distant;
-            // l'entrée ACTIVE_CALLS conserve en revanche le bundle complet pour
-            // que Flutter retrouve callerPhoto après l'acceptation/cold start.
-            val notificationBundle = Bundle(bundle).apply {
-                putString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
-            }
-            notificationManager?.showIncomingNotification(notificationBundle)
+            notificationManager?.showIncomingNotification(bundle)
             addCall(context.applicationContext, Data.fromBundle(bundle))
             if (customPath != null) {
                 CustomRingtonePlayer.start(context, customPath)
@@ -73,6 +68,75 @@ object CallIncomingHelper {
             Log.d(TAG, "showIncoming callId=$callId caller=${data["callerId"]} custom=${customPath != null}")
         } catch (e: Exception) {
             Log.e(TAG, "showIncoming failed", e)
+        }
+    }
+
+    /** Résout la sonnerie d'appel de la première liste prioritaire du contact. */
+    private fun resolveListCallRingtone(
+        context: Context,
+        callerId: String,
+    ): Pair<String?, String>? {
+        if (callerId.isBlank()) return null
+        return try {
+            val prefs = context.getSharedPreferences(
+                "FlutterSharedPreferences", Context.MODE_PRIVATE,
+            )
+            val settings = JSONObject(
+                prefs.getString("flutter.list_ringtone_settings_v1", "{}") ?: "{}",
+            )
+            val members = JSONObject(
+                prefs.getString("flutter.list_ringtone_members_v1", "{}") ?: "{}",
+            )
+            val priorityRaw = prefs.all["flutter.list_ringtone_priority_v1"]
+            val priority = when (priorityRaw) {
+                is Set<*> -> priorityRaw.map { it.toString() }
+                is String -> try {
+                    val array = JSONArray(priorityRaw)
+                    (0 until array.length()).map { array.getString(it) }
+                } catch (_: Exception) { emptyList() }
+                else -> emptyList()
+            }
+            val ordered = priority + settings.keys().asSequence().toList()
+                .filterNot { priority.contains(it) }
+            for (listId in ordered) {
+                val listMembers = members.optJSONArray(listId) ?: continue
+                val belongs = (0 until listMembers.length())
+                    .any { listMembers.optString(it) == callerId }
+                if (!belongs) continue
+                val optionId = settings.optJSONObject(listId)
+                    ?.optString("callRingtoneId")
+                    ?.takeIf { it.isNotBlank() && it != "null" }
+                    ?: continue
+                if (optionId.startsWith("bundled_son")) {
+                    val number = optionId.removePrefix("bundled_son")
+                    return Pair(null, "rt_son$number")
+                }
+                if (optionId == "__system_default__") {
+                    return Pair(null, "system_ringtone_default")
+                }
+                val customRaw = prefs.all["flutter.call_ringtone_custom_list"]
+                val entries = when (customRaw) {
+                    is Set<*> -> customRaw.map { it.toString() }
+                    is String -> try {
+                        val array = JSONArray(customRaw)
+                        (0 until array.length()).map { array.getString(it) }
+                    } catch (_: Exception) { emptyList() }
+                    else -> emptyList()
+                }
+                for (raw in entries) {
+                    val item = JSONObject(raw)
+                    if (item.optString("id") == optionId) {
+                        val path = item.optString("filePath")
+                        if (path.isNotBlank() && java.io.File(path).exists()) {
+                            return Pair(path, "silence")
+                        }
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "resolveListCallRingtone failed", e)
+            null
         }
     }
 

@@ -34,7 +34,9 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
-    unawaited(context.read<LocalCacheRepository>().syncContactLists());
+    unawaited(
+      context.read<LocalCacheRepository>().syncContactListsWithMembers(),
+    );
   }
 
   @override

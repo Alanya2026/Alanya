@@ -12,6 +12,7 @@ import 'audio_helper.dart' as audio;
 import 'callkit_service.dart';
 import 'call_session_guard.dart';
 import 'ringtone_service.dart';
+import 'list_ringtone_preferences.dart';
 import 'webrtc_service.dart';
 import 'call/speaking_detector.dart'; // détection locale du locuteur actif
 import '../navigation/app_navigator.dart';
@@ -675,9 +676,17 @@ class CallService extends ChangeNotifier {
 
     await dismissIncomingCallKitForForeground();
     if (_status == CallStatus.incoming && !_isAutoAnsweringFromPush) {
-      unawaited(_ringtone.startIncomingRingtone().catchError((Object e) {
-        debugPrint('[CallService] reprise sonnerie (foreground) échouée: $e');
-      }));
+      unawaited(
+        _ringtone
+            .startIncomingRingtone(
+              override: _remoteUserId == null
+                  ? null
+                  : ListRingtonePreferences.resolveCall(_remoteUserId!),
+            )
+            .catchError((Object e) {
+          debugPrint('[CallService] reprise sonnerie (foreground) échouée: $e');
+        }),
+      );
       _armIncomingRingSafety();
     }
     notify();

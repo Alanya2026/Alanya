@@ -21,6 +21,7 @@ import 'notifications/notification_diagnostics.dart';
 import 'notifications/notification_dedup_store.dart';
 import 'notifications/push_device_coordinator.dart';
 import 'ringtone_preferences.dart';
+import 'list_ringtone_preferences.dart';
 import 'ringtone_service.dart';
 import 'call/ended_call_registry.dart';
 import 'call/call_permissions_helper.dart';
@@ -103,7 +104,11 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         // l'arrivée d'un appel (pas de PushKit) : on laisse CallKit gérer
         // son propre son, inchangé.
         await RingtonePreferences.preload();
-        final selection = RingtonePreferences.currentSelection;
+        await ListRingtonePreferences.preload();
+        final callerId =
+            int.tryParse((data['callerId'] ?? '').toString()) ?? 0;
+        final selection = ListRingtonePreferences.resolveCall(callerId) ??
+            RingtonePreferences.currentSelection;
         final playCustomRingtoneOurselves =
             Platform.isAndroid && selection.type != RingtoneSourceType.system;
 
@@ -122,7 +127,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         );
 
         if (playCustomRingtoneOurselves) {
-          await _playCustomRingtoneUntilCallResolved(callId);
+          await _playCustomRingtoneUntilCallResolved(callId, selection);
         }
       }
     } else if (type == 'call_ended') {
@@ -249,7 +254,10 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
 /// N'est appelée que quand CallKit a été mis en silencieux côté Android
 /// (voir [firebaseMessagingBackgroundHandler]) : sans ça les deux sonneries
 /// se superposeraient.
-Future<void> _playCustomRingtoneUntilCallResolved(String callId) async {
+Future<void> _playCustomRingtoneUntilCallResolved(
+  String callId,
+  RingtoneOption selection,
+) async {
   StreamSubscription<CallEvent?>? sub;
   Timer? safetyTimer;
   final resolved = Completer<void>();
@@ -260,7 +268,7 @@ Future<void> _playCustomRingtoneUntilCallResolved(String callId) async {
 
   try {
     await RingtoneService.instance.init();
-    await RingtoneService.instance.startIncomingRingtone();
+    await RingtoneService.instance.startIncomingRingtone(override: selection);
 
     sub = FlutterCallkitIncoming.onEvent.listen((event) {
       if (event == null) return;

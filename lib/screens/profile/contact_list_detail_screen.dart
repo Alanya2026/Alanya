@@ -17,6 +17,7 @@ import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
 import '../chats/contact_detail_screen.dart';
 import '../chats/create_group_screen.dart';
+import 'list_ringtone_screen.dart';
 
 /// Détail d'une liste : ses membres **et** les autres favoris, dans la même
 /// liste, chacun avec une case à cocher.
@@ -170,6 +171,21 @@ class _ContactListDetailScreenState extends State<ContactListDetailScreen> {
                       onPressed: () => Navigator.pop(context),
                     ),
                     actions: [
+                      if (list != null)
+                        IconButton(
+                          tooltip: 'Sonneries de la liste',
+                          icon: const Icon(Icons.notifications_active_outlined),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ListRingtoneScreen(
+                                list: list,
+                                allLists: listsSnapshot.data ??
+                                    const <LocalContactList>[],
+                              ),
+                            ),
+                          ),
+                        ),
                       Padding(
                         padding: const EdgeInsets.only(right: AppSpacing.lg),
                         child: Center(

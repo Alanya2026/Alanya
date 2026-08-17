@@ -13,6 +13,7 @@ import '../utils/user_search.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
 import 'media_cache_service.dart';
+import 'list_ringtone_preferences.dart';
 import '../theme/locale_controller.dart';
 
 /// Cache lecture-seule pour les modules secondaires (contacts préférés,
@@ -139,6 +140,7 @@ class LocalCacheRepository {
         .go();
     // Les `memberCount` des listes touchées viennent du serveur.
     await syncContactLists();
+    await _publishListMembershipsForRingtones();
   }
 
   /// Stocke un user vu de passage (résolu via getUserById) — utile pour
@@ -234,6 +236,33 @@ class LocalCacheRepository {
 
   Future<List<LocalContactList>> getContactListsOnce() {
     return (_db.select(_db.localContactLists)).get().then(_sortContactLists);
+  }
+
+  /// Rafraîchit les entêtes puis les appartenances de toutes les listes.
+  ///
+  /// Les écrans qui filtrent plusieurs listes à la fois (discussions et
+  /// contacts préférés) ont besoin de l'index complet `contact → listes`, pas
+  /// uniquement du compteur renvoyé avec chaque entête. Les appels restent
+  /// best-effort grâce à [syncContactLists] et [syncListMembers] : hors ligne,
+  /// le cache existant continue d'être affiché.
+  Future<void> syncContactListsWithMembers() async {
+    await syncContactLists();
+    final lists = await getContactListsOnce();
+    // Séquentiel volontairement : un compte peut avoir beaucoup de listes et
+    // ouvrir l'écran ne doit pas provoquer une rafale de requêtes simultanées.
+    for (final list in lists) {
+      await syncListMembers(list.idList);
+    }
+    await _publishListMembershipsForRingtones();
+  }
+
+  Future<void> _publishListMembershipsForRingtones() async {
+    final rows = await _db.select(_db.localContactListMembers).get();
+    final byList = <int, Set<int>>{};
+    for (final row in rows) {
+      byList.putIfAbsent(row.idList, () => <int>{}).add(row.idFriend);
+    }
+    await ListRingtonePreferences.updateMemberships(byList);
   }
 
   List<LocalContactList> _sortContactLists(List<LocalContactList> lists) {
@@ -442,6 +471,7 @@ class LocalCacheRepository {
       await syncListMembers(created.idList);
     }
     await syncContactLists();
+    await _publishListMembershipsForRingtones();
     return created;
   }
 
@@ -454,6 +484,7 @@ class LocalCacheRepository {
   Future<void> deleteContactList(int idList) async {
     await _api.deleteContactList(idList);
     await _forgetLists({idList});
+    await _publishListMembershipsForRingtones();
   }
 
   Future<void> addListMember(int idList, int friendID) =>
@@ -468,12 +499,14 @@ class LocalCacheRepository {
     }
     await syncListMembers(idList);
     await syncContactLists();
+    await _publishListMembershipsForRingtones();
   }
 
   Future<void> removeListMember(int idList, int friendID) async {
     await _api.removeListMember(idList, friendID);
     await syncListMembers(idList);
     await syncContactLists();
+    await _publishListMembershipsForRingtones();
   }
 
   /// Oublie localement des listes (et leurs appartenances) — les profils des

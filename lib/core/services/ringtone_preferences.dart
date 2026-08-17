@@ -241,6 +241,17 @@ class RingtonePreferences extends ChangeNotifier {
     return match.isNotEmpty ? match.first : RingtoneOption.system;
   }
 
+  /// Résout une option enregistrée par son identifiant. Sert notamment aux
+  /// sonneries propres aux listes de contacts.
+  static RingtoneOption? optionById(String id) {
+    final options = _bound?.allOptions ??
+        [RingtoneOption.system, ...RingtoneOption.bundled, ..._cachedCustom];
+    for (final option in options) {
+      if (option.id == id) return option;
+    }
+    return null;
+  }
+
   /// Résout l'identifiant natif à passer à CallKit (écran d'appel
   /// système en arrière-plan) pour la sélection courante.
   ///
