@@ -49,9 +49,7 @@ class LocationMessagePreview extends StatelessWidget {
                 options: MapOptions(
                   initialCenter: point,
                   initialZoom: 15,
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.none,
-                  ),
+                  interactionOptions: MapTiles.inert,
                   backgroundColor: MapTiles.background(context),
                 ),
                 children: [

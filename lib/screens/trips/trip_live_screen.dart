@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
-import '../../core/utils/map_tiles.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -16,9 +15,12 @@ import '../../core/services/trip_session_guard.dart';
 import '../../core/services/trip_socket_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/map_tiles.dart';
 import '../../providers/auth_provider.dart';
 import '../../talky_api_client.dart';
+import '../../talky_models.dart';
 import '../../widgets/common/common.dart';
+import '../../widgets/maps/map_compass.dart';
 import '../../widgets/trips/trip_arrival_sheet.dart';
 import '../../widgets/trips/trip_degraded_banner.dart';
 import '../../widgets/trips/trip_other_device_banner.dart';
@@ -26,7 +28,6 @@ import '../../widgets/trips/trip_rail.dart';
 import '../../widgets/trips/trip_visuals.dart';
 import '../../widgets/trips/trip_watchers_row.dart';
 import 'trip_sos_screen.dart';
-import '../../talky_models.dart';
 
 /// Suivi d'un trajet en direct — vue propriétaire et vue destinataire.
 ///
@@ -505,10 +506,19 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                 maxZoom: MapTiles.maxDisplayZoom,
                 minZoom: MapTiles.minDisplayZoom,
                 backgroundColor: MapTiles.background(context),
-                interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                ),
-                onPointerDown: (_, __) => setState(() => _suitLaPosition = false),
+                interactionOptions: MapTiles.interactive,
+                onMapEvent: (event) {
+                  if (!_suitLaPosition) return;
+                  final source = event.source;
+                  // Uniquement un glisser : zoom et rotation ne doivent pas
+                  // couper le suivi — c'est précisément en suivant qu'on
+                  // oriente la carte.
+                  if (source == MapEventSource.dragStart ||
+                      source == MapEventSource.onDrag ||
+                      source == MapEventSource.flingAnimationController) {
+                    setState(() => _suitLaPosition = false);
+                  }
+                },
               ),
               children: [
                 MapTiles.layer(context),
@@ -552,7 +562,7 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                   ),
 
                 if (but != null)
-                  MarkerLayer(markers: [
+                  MarkerLayer(rotate: true, markers: [
                     Marker(
                       point: but,
                       width: 34,
@@ -562,7 +572,7 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                   ]),
 
                 if (position != null)
-                  MarkerLayer(markers: [
+                  MarkerLayer(rotate: true, markers: [
                     Marker(
                       point: position,
                       width: 40,
@@ -575,6 +585,10 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
                 // la mention s'abonne aux événements de la carte pour se
                 // replier quand on la déplace.
                 MapTiles.attributionWidget(),
+                MapCompass(
+                  alignment: Alignment.centerLeft,
+                  useSafeArea: _immersif,
+                ),
               ],
             ),
 

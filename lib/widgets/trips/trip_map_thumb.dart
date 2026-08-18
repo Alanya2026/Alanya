@@ -95,9 +95,7 @@ class TripMapThumb extends StatelessWidget {
                     // plus où la personne se trouve.
                     initialZoom: 15,
                     backgroundColor: MapTiles.background(context),
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.none,
-                    ),
+                    interactionOptions: MapTiles.inert,
                   ),
                   children: [
                     MapTiles.layer(context),

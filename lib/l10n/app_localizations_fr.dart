@@ -5367,6 +5367,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Recherchez, déplacez la carte ou utilisez votre position';
 
   @override
+  String get mapCompassNorth => 'Remettre le nord en haut';
+
+  @override
   String tripsCardFalseAlarm(String name) {
     return '$name a signalé une fausse alerte';
   }

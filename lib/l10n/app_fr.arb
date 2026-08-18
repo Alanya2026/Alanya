@@ -3313,6 +3313,10 @@
   "locationPickerUseDestination": "Choisir cette destination",
   "locationUseMyPosition": "Utiliser ma position",
   "locationPickerInstruction": "Recherchez, déplacez la carte ou utilisez votre position",
+  "mapCompassNorth": "Remettre le nord en haut",
+  "@mapCompassNorth": {
+    "description": "Tooltip de la boussole : remet la carte nord en haut"
+  },
   "tripsCardFalseAlarm": "{name} a signalé une fausse alerte",
   "@tripsCardFalseAlarm": {
     "placeholders": {

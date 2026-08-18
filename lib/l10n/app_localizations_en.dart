@@ -5312,6 +5312,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Search, move the map, or use your location';
 
   @override
+  String get mapCompassNorth => 'Reset north up';
+
+  @override
   String tripsCardFalseAlarm(String name) {
     return '$name reported a false alarm';
   }
