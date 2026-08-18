@@ -17,11 +17,16 @@ class LocationMessagePreview extends StatelessWidget {
     required this.location,
     this.width = 240,
     this.height = 160,
+    this.borderRadius,
   });
 
   final LocationPayload location;
   final double width;
   final double height;
+
+  /// `BorderRadius.zero` quand la bulle découpe elle-même le média (rendu
+  /// bord à bord) : deux arrondis superposés laissent un liseré dans les coins.
+  final BorderRadius? borderRadius;
 
   static const _pinColor = Color(0xFFE53935);
 
@@ -32,7 +37,7 @@ class LocationMessagePreview extends StatelessWidget {
     final subtitle = _subtitle;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderRadius: borderRadius ?? BorderRadius.circular(AppRadius.md),
       child: SizedBox(
         width: width,
         height: height,

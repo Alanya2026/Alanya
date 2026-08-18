@@ -97,6 +97,7 @@ import '../trips/trip_live_screen.dart';
 import '../trips/trip_detail_screen.dart';
 import '../../core/utils/trip_payload.dart';
 import '../../widgets/chat/trip_message_card.dart';
+import '../../widgets/chat/translation_model_prompt.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels
@@ -1131,6 +1132,43 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                             ChatListSingle(:final message) => message,
                                             ChatListAlbum(:final messages) => messages.first,
                                           };
+                                          // Salve : messages consécutifs d'un
+                                          // même expéditeur. Seule la première
+                                          // porte l'en-tête d'expéditeur, seule
+                                          // la dernière porte la queue et la
+                                          // marge pleine — chacune garde son
+                                          // heure. Tout ce qui s'intercale
+                                          // visuellement (date, frontière
+                                          // « non lus ») referme la salve, y
+                                          // compris quand le séparateur
+                                          // appartient au message d'en dessous.
+                                          final olderItem = feedIndex <
+                                                  reversedFeed.length - 1
+                                              ? reversedFeed[feedIndex + 1]
+                                              : null;
+                                          final newerItem = feedIndex > 0
+                                              ? reversedFeed[feedIndex - 1]
+                                              : null;
+                                          final showUnread =
+                                              _openFirstUnreadMsgId != null &&
+                                                  premierDuBloc.msgID ==
+                                                      _openFirstUnreadMsgId;
+                                          final newerBreaks = newerItem == null ||
+                                              !_sameDay(
+                                                  itemTime.toLocal(),
+                                                  _feedTime(newerItem).toLocal()) ||
+                                              (_openFirstUnreadMsgId != null &&
+                                                  _burstEdge(newerItem,
+                                                              newest: false)
+                                                          ?.msgID ==
+                                                      _openFirstUnreadMsgId);
+                                          final burst = BubbleBurst(
+                                            isFirst: showDate ||
+                                                showUnread ||
+                                                !_sameBurst(olderItem, chatItem),
+                                            isLast: newerBreaks ||
+                                                !_sameBurst(chatItem, newerItem),
+                                          );
                                           return Column(
                                             key: msg.msgID != 0 ? _keyForMessage(msg.msgID) : null,
                                             children: [
@@ -1148,9 +1186,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                                     message,
                                                     message.senderID == _myId,
                                                     reactions: _currentReactionsByMsg[message.msgID] ?? const [],
+                                                    burst: burst,
                                                   ),
                                                 ChatListAlbum(:final messages) =>
-                                                  _buildAlbumBubble(messages, messages.first.senderID == _myId),
+                                                  _buildAlbumBubble(
+                                                    messages,
+                                                    messages.first.senderID == _myId,
+                                                    burst: burst,
+                                                  ),
                                               },
                                             ],
                                           );

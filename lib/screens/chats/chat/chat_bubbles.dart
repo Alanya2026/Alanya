@@ -1,6 +1,56 @@
 // Rendu des bulles de message et des médias. part of chat_detail_screen.dart.
 part of '../chat_detail_screen.dart';
 
+// ── Géométrie des bulles ──────────────────────────────────────────────
+// Le fil est dense : une bulle courte coûtait 65 px pour 22 px de texte
+// (padding 16/12, ligne d'horodatage dédiée, marge 12). Trois leviers, ici :
+// l'heure remonte en fin de dernière ligne, les messages consécutifs d'un
+// même expéditeur se resserrent en salve, et les médias remplissent la bulle.
+const double _kBubbleRadius = 18;
+
+/// Coin « queue », côté expéditeur : porté par la DERNIÈRE bulle d'une salve.
+const double _kBubbleTail = 5;
+const EdgeInsets _kBubblePadding =
+    EdgeInsets.symmetric(horizontal: 12, vertical: 7);
+
+/// Entre deux bulles d'une même salve.
+const double _kBurstGap = 2;
+
+/// Entre deux salves (ou deux expéditeurs).
+const double _kBubbleGap = 6;
+
+/// Au-delà, deux messages du même expéditeur ne sont plus la même prise de
+/// parole : la salve se referme même si personne n'a répondu entre-temps.
+const Duration _kBurstWindow = Duration(minutes: 3);
+
+/// Filet des bulles entrantes et du pourtour des médias. Volontairement
+/// sous le pixel : il sépare sans dessiner de cadre.
+const double _kHairline = 0.6;
+
+/// Hauteur réservée à l'horodatage en fin de ligne. Ne rallonge pas une
+/// ligne de texte (plus basse que son interligne), mais garantit qu'une
+/// réserve renvoyée à la ligne peut accueillir l'heure sans la recouvrir.
+const double _kMetaHeight = 12;
+
+/// Place d'une bulle dans une salve — messages consécutifs d'un même
+/// expéditeur, à quelques minutes d'intervalle.
+///
+/// Ne porte pas l'horodatage : chaque bulle garde le sien. La salve ne joue
+/// que sur la géométrie — en-tête d'expéditeur en tête, queue en pied,
+/// interligne resserré entre les deux.
+class BubbleBurst {
+  const BubbleBurst({this.isFirst = true, this.isLast = true});
+
+  /// Première bulle : porte l'avatar et le nom (groupes).
+  final bool isFirst;
+
+  /// Dernière bulle : porte la queue et la marge pleine.
+  final bool isLast;
+
+  /// Message isolé : à la fois première et dernière.
+  static const single = BubbleBurst();
+}
+
 extension _ChatBubbles on _ChatDetailScreenState {
   BoxDecoration _bubbleDecoration({
     required bool isMe,
@@ -8,6 +58,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     required BorderRadius borderRadius,
     required Color baseColor,
     bool highlighted = false,
+    bool hairline = false,
   }) {
     final bg = baseColor;
 
@@ -24,15 +75,84 @@ extension _ChatBubbles on _ChatDetailScreenState {
         color: isMe ? context.colors.onPrimary : context.colors.primary,
         width: 2,
       );
+    } else if (hairline) {
+      border = Border.all(
+        color: context.colors.outline.withValues(alpha: 0.9),
+        width: _kHairline,
+      );
     }
 
     return BoxDecoration(
       color: bg,
       borderRadius: borderRadius,
       border: border,
-      boxShadow: AppShadows.subtle,
     );
   }
+
+  /// Arrondi d'une bulle : la queue n'apparaît qu'en pied de salve, sinon
+  /// deux bulles empilées se toucheraient par un angle vif.
+  BorderRadius _bubbleRadius({required bool isMe, required bool isLast}) {
+    const r = Radius.circular(_kBubbleRadius);
+    const tail = Radius.circular(_kBubbleTail);
+    return BorderRadius.only(
+      topLeft: r,
+      topRight: r,
+      bottomLeft: !isMe && isLast ? tail : r,
+      bottomRight: isMe && isLast ? tail : r,
+    );
+  }
+
+  /// Faut-il cerner cette bulle d'un filet ?
+  ///
+  /// Toujours autour d'un média bord à bord : une photo claire, ou un fond de
+  /// carte, se fondrait sinon dans le fil.
+  ///
+  /// Pour une bulle de texte, en thème clair seulement : elle y est blanche
+  /// sur presque blanc et le filet remplace l'ombre supprimée. En sombre, sa
+  /// surface se détache déjà du fond, et le même filet s'y lisait comme un
+  /// contour blanc dessiné autour de chaque message reçu.
+  bool _needsHairline({required bool isMe, required bool bleed}) =>
+      bleed ||
+      (!isMe && Theme.of(context).brightness == Brightness.light);
+
+  /// Message de bord d'un élément du fil, pour juger de la continuité d'une
+  /// salve : le plus ancien d'un album quand on regarde vers le haut, le plus
+  /// récent quand on regarde vers le bas. `null` pour un appel — une entrée
+  /// de journal coupe toujours la salve.
+  LocalMessage? _burstEdge(Object item, {required bool newest}) =>
+      switch (item) {
+        ChatListSingle(:final message) => message,
+        ChatListAlbum(:final messages) => newest ? messages.last : messages.first,
+        _ => null,
+      };
+
+  /// Deux éléments consécutifs appartiennent-ils à la même salve ?
+  ///
+  /// [older] est affiché au-dessus de [newer]. Le séparateur de date et la
+  /// frontière « non lus » cassent la salve eux aussi, mais ils ne sont pas
+  /// connus ici : c'est l'appelant qui les ajoute.
+  bool _sameBurst(Object? older, Object? newer) {
+    if (older == null || newer == null) return false;
+    final a = _burstEdge(older, newest: true);
+    final b = _burstEdge(newer, newest: false);
+    if (a == null || b == null) return false;
+    if (a.senderID != b.senderID) return false;
+    if (a.type == kSystemMessageType || b.type == kSystemMessageType) {
+      return false;
+    }
+    // Un message supprimé fait bande à part : sa bulle n'a ni le fond ni la
+    // hauteur des autres, la serrer contre elles se lit comme une erreur.
+    if (a.isDeleted != b.isDeleted) return false;
+    return b.sendAt.difference(a.sendAt).abs() < _kBurstWindow;
+  }
+
+  /// Types rendus bord à bord : le média occupe toute la bulle, cerné d'un
+  /// simple filet. Les cartes (contact, trajet, document) gardent leur
+  /// padding — elles ont déjà leur propre mise en page interne.
+  bool _isBleedMedia(LocalMessage msg) =>
+      !msg.isViewOnce &&
+      !msg.isDeleted &&
+      (msg.type == 1 || msg.type == 2 || msg.type == 5);
 
   Widget _selectionCheckbox(bool selected) {
     return Padding(
@@ -130,6 +250,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     LocalMessage msg,
     bool isMe, {
     List<LocalMessageReaction> reactions = const [],
+    BubbleBurst burst = BubbleBurst.single,
   }) {
     // Court-circuit AVANT toute logique `isMe` : un message système porte le
     // senderID de l'acteur, donc mes propres actions s'aligneraient à droite
@@ -145,11 +266,37 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final reactionGroups = officialIncoming
         ? const <ReactionGroup>[]
         : groupReactions(reactions, _myId ?? 0);
+
+    // Tout ce qui précède le corps (chips, citation) réclame du padding : un
+    // média ne peut aller jusqu'au bord que s'il est seul dans la bulle.
+    final hasPrelude = msg.isStatusReply != 0 ||
+        msg.isForwarded ||
+        (msg.replyToContent != null && msg.replyToContent!.isNotEmpty);
+    final hidesBody = msg.isViewOnce || msg.isDeleted;
+    final caption = hidesBody ? null : _displayText(msg);
+    final translationChip = hidesBody ? null : _buildTranslationChip(msg, isMe);
+    String? linkUrl;
+    if (!hidesBody) {
+      final source = _captionText(msg);
+      if (source != null) linkUrl = firstUrlIn(source);
+    }
+
+    final bleed = _isBleedMedia(msg) && !hasPrelude;
+    // Trois places pour l'heure, dans cet ordre de préférence : en fin de
+    // dernière ligne quand le texte clôt la bulle, sur le média quand celui-ci
+    // va au bord, sur sa propre ligne sinon (vocal, fichier, carte, supprimé).
+    final inlineMeta =
+        caption != null && translationChip == null && linkUrl == null;
+    final overlayMeta = bleed && caption == null;
+
     return Column(
       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         // Groupe, messages entrants : avatar + nom (pas sur les sortants).
-        if (widget.isGroup && !isMe) _buildGroupSenderHeader(msg),
+        // En tête de salve seulement — le répéter à chaque bulle d'une même
+        // rafale ne dit rien de neuf et double la hauteur.
+        if (widget.isGroup && !isMe && burst.isFirst)
+          _buildGroupSenderHeader(msg),
         Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
           child: _wrapSelectableBubble(
@@ -161,13 +308,21 @@ extension _ChatBubbles on _ChatDetailScreenState {
             onLongPress: () => _showMessageMenu(msg, isMe),
             onTap: () => _toggleSelection(msg),
             bubble: Container(
-              margin: EdgeInsets.only(bottom: reactionGroups.isEmpty ? AppSpacing.md : AppSpacing.xs),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+              margin: EdgeInsets.only(
+                bottom: reactionGroups.isEmpty
+                    ? (burst.isLast ? _kBubbleGap : _kBurstGap)
+                    : _kBurstGap,
+              ),
+              padding: bleed ? EdgeInsets.zero : _kBubblePadding,
               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              // Le média bord à bord doit épouser l'arrondi de la bulle,
+              // queue comprise : c'est le Container qui le découpe.
+              clipBehavior: bleed ? Clip.antiAlias : Clip.none,
               decoration: _bubbleDecoration(
                 isMe: isMe,
                 selected: selected,
                 highlighted: _highlightMsgId == msg.msgID,
+                hairline: _needsHairline(isMe: isMe, bleed: bleed),
                 // Fond teinté quand JE suis mentionné : c'est ce qui rend le
                 // bouton de saut lisible — on voit où l'on atterrit. Pas de
                 // liseré (décision produit) : un troisième traitement visuel
@@ -178,12 +333,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                     : (_mentionsMe(msg)
                         ? context.colors.primaryContainer
                         : context.colors.surface),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(AppRadius.lg),
-                  topRight: const Radius.circular(AppRadius.lg),
-                  bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
-                  bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
-                ),
+                borderRadius: _bubbleRadius(isMe: isMe, isLast: burst.isLast),
               ),
               // Largeur = max(citation, corps), plafonnée par maxWidth du Container.
               child: IntrinsicWidth(
@@ -230,81 +380,56 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       ],
                     )
                   else ...[
-                    if (msg.type != 0) _buildMedia(msg, isMe),
+                    if (msg.type != 0)
+                      if (overlayMeta)
+                        Stack(
+                          children: [
+                            _buildMedia(msg, isMe, bleed: bleed),
+                            _mediaMetaOverlay(msg, isMe),
+                          ],
+                        )
+                      else
+                        _buildMedia(msg, isMe, bleed: bleed),
                     // Vue unique : la légende n'apparaît que dans la visionneuse.
                     if (!msg.isViewOnce) ...[
-                      if (_displayText(msg) case final caption?)
+                      if (caption != null)
                         Padding(
-                          padding: EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
-                          child: Text.rich(
-                            TextSpan(
-                              children: parseRichSpans(
-                                caption,
-                                (context.text.bodyLarge ?? const TextStyle())
-                                    .copyWith(color: _bubbleText(isMe)),
-                                linkColor: isMe
-                                    ? context.colors.onPrimary
-                                    : context.colors.primary,
-                                mentions: _mentionSpec(isMe),
-                              ),
-                            ),
+                          // Bord à bord, la légende reste le seul élément à
+                          // porter le retrait : le média, lui, touche le bord.
+                          padding: bleed
+                              ? const EdgeInsets.fromLTRB(12, 6, 12, 7)
+                              : EdgeInsets.only(top: msg.type != 0 ? 6 : 0),
+                          child: _buildBubbleBody(
+                            isMe,
+                            caption,
+                            inlineMeta:
+                                inlineMeta ? _metaRow(msg, isMe) : null,
+                            reservedWidth: inlineMeta
+                                ? _metaReservedWidth(msg, isMe)
+                                : 0,
                           ),
                         ),
-                      if (_buildTranslationChip(msg, isMe) case final chip?)
-                        chip,
+                      if (translationChip != null) translationChip,
                       // Carte d'aperçu du premier lien du message (si le site
                       // expose des métadonnées Open Graph).
-                      if (_captionText(msg) case final caption?
-                          when firstUrlIn(caption) != null)
+                      if (linkUrl != null)
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 260),
                           child: LinkPreviewCard(
-                            url: firstUrlIn(caption)!,
+                            url: linkUrl,
                             isMe: isMe,
                           ),
                         ),
                     ],
                   ],
-                  const SizedBox(height: AppSpacing.xs),
-                  Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatTime(msg.sendAt),
-                        style: context.text.labelSmall?.copyWith(
-                          color: _bubbleMuted(isMe),
-                          fontSize: 10,
-                        ),
-                      ),
-                      if (msg.isEdited && !msg.isDeleted) ...[
-                        const SizedBox(width: AppSpacing.xs),
-                        Tooltip(
-                          message: msg.editedAt != null
-                              ? context.l10n.editedAt(_formatTime(msg.editedAt!))
-                              : context.l10n.edited2,
-                          child: Text(
-                            context.l10n.edited,
-                            style: context.text.labelSmall?.copyWith(
-                              color: _bubbleMuted(isMe),
-                              fontSize: 10,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (msg.isPinned && !msg.isDeleted) ...[
-                        const SizedBox(width: 4),
-                        Icon(Icons.push_pin, size: 11, color: _bubbleMuted(isMe)),
-                      ],
-                      if (isMe && !msg.isDeleted) ...[
-                        const SizedBox(width: 4),
-                        _statusIcon(msg.status, deliveredAt: msg.deliveredAt, readAt: msg.readAt, retryClientId: msg.clientId, failureCode: msg.failureCode),
-                      ],
-                    ],
-                  ),
-                  ),
+                  if (!inlineMeta && !overlayMeta) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Align(
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: _metaRow(msg, isMe),
+                    ),
+                  ],
                 ],
               ),
               ),
@@ -314,9 +439,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
         if (reactionGroups.isNotEmpty)
           Padding(
             padding: EdgeInsets.only(
-              bottom: AppSpacing.md,
-              left: isMe ? 0 : AppSpacing.lg,
-              right: isMe ? AppSpacing.lg : 0,
+              bottom: burst.isLast ? _kBubbleGap : _kBurstGap,
+              left: isMe ? 0 : AppSpacing.md,
+              right: isMe ? AppSpacing.md : 0,
             ),
             child: Align(
               alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -327,6 +452,168 @@ extension _ChatBubbles on _ChatDetailScreenState {
             ),
           ),
       ],
+    );
+  }
+
+  /// Corps texte de la bulle, l'heure logée en fin de dernière ligne.
+  ///
+  /// L'heure n'est PAS un span : elle est posée en surimpression, et le texte
+  /// se contente de lui réserver la largeur. Un span aurait suivi l'alignement
+  /// du paragraphe et serait reparti coller à gauche dès qu'il change de
+  /// ligne ; la réserve, elle, tombe alors sur une ligne vide où l'heure
+  /// reprend sa place à droite.
+  Widget _buildBubbleBody(
+    bool isMe,
+    String caption, {
+    Widget? inlineMeta,
+    double reservedWidth = 0,
+  }) {
+    final spans = parseRichSpans(
+      caption,
+      (context.text.bodyLarge ?? const TextStyle())
+          .copyWith(color: _bubbleText(isMe)),
+      linkColor: isMe ? context.colors.onPrimary : context.colors.primary,
+      mentions: _mentionSpec(isMe),
+    );
+    if (inlineMeta == null) return Text.rich(TextSpan(children: spans));
+
+    return Stack(
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              ...spans,
+              WidgetSpan(
+                alignment: PlaceholderAlignment.bottom,
+                child: SizedBox(width: reservedWidth, height: _kMetaHeight),
+              ),
+            ],
+          ),
+        ),
+        PositionedDirectional(end: 0, bottom: 0, child: inlineMeta),
+      ],
+    );
+  }
+
+  /// Style de l'horodatage — partagé par le rendu et par sa mesure, pour que
+  /// la réserve de largeur ne puisse pas diverger de ce qui sera dessiné.
+  TextStyle _metaTextStyle(bool isMe, {bool onScrim = false}) =>
+      (context.text.labelSmall ?? const TextStyle()).copyWith(
+        color: onScrim ? AppColors.white : _bubbleMuted(isMe),
+        fontSize: 10,
+      );
+
+  /// Heure d'envoi, « modifié », épingle et accusé de réception.
+  ///
+  /// [status], [retryClientId], [failureCode] et [showStatus] existent pour
+  /// l'album, dont l'accusé est celui du pire de ses médias et non celui d'un
+  /// message en particulier.
+  Widget _metaRow(
+    LocalMessage msg,
+    bool isMe, {
+    bool onScrim = false,
+    int? status,
+    String? retryClientId,
+    String? failureCode,
+    bool showStatus = true,
+  }) {
+    final style = _metaTextStyle(isMe, onScrim: onScrim);
+    final iconColor = onScrim ? AppColors.white : _bubbleMuted(isMe);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(_formatTime(msg.sendAt), style: style),
+        if (msg.isEdited && !msg.isDeleted) ...[
+          const SizedBox(width: AppSpacing.xs),
+          Tooltip(
+            message: msg.editedAt != null
+                ? context.l10n.editedAt(_formatTime(msg.editedAt!))
+                : context.l10n.edited2,
+            child: Text(
+              context.l10n.edited,
+              style: style.copyWith(fontStyle: FontStyle.italic),
+            ),
+          ),
+        ],
+        if (msg.isPinned && !msg.isDeleted) ...[
+          const SizedBox(width: 4),
+          Icon(Icons.push_pin, size: 11, color: iconColor),
+        ],
+        if (showStatus && isMe && !msg.isDeleted) ...[
+          const SizedBox(width: 4),
+          _statusIcon(
+            status ?? msg.status,
+            deliveredAt: msg.deliveredAt,
+            readAt: msg.readAt,
+            retryClientId: retryClientId ?? msg.clientId,
+            failureCode: failureCode ?? msg.failureCode,
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Largeur à réserver en fin de texte pour y loger l'heure.
+  ///
+  /// Mesurée, pas estimée : « 17:43 », « modifié » et l'accusé n'ont pas la
+  /// même empreinte selon la langue et la taille de police du système, et une
+  /// réserve trop courte laisserait l'heure recouvrir le dernier mot.
+  double _metaReservedWidth(
+    LocalMessage msg,
+    bool isMe, {
+    int? status,
+    bool showStatus = true,
+  }) {
+    final style = _metaTextStyle(isMe);
+    double widthOf(String text, {TextStyle? override}) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: override ?? style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      final width = painter.width;
+      // Le painter tient un ui.Paragraph natif : sans dispose, chaque build
+      // de chaque bulle en fuit un.
+      painter.dispose();
+      return width;
+    }
+
+    var width = widthOf(_formatTime(msg.sendAt));
+    if (msg.isEdited && !msg.isDeleted) {
+      width += AppSpacing.xs +
+          widthOf(
+            context.l10n.edited,
+            override: style.copyWith(fontStyle: FontStyle.italic),
+          );
+    }
+    if (msg.isPinned && !msg.isDeleted) width += 4 + 11;
+    // Même condition que [_statusIcon] : dans une conversation avec soi-même,
+    // les accusés 1..3 ne sont pas rendus, donc rien à réserver pour eux.
+    final shown = status ?? msg.status;
+    if (showStatus &&
+        isMe &&
+        !msg.isDeleted &&
+        !(_isSelfChat && shown >= 1 && shown <= 3)) {
+      width += 4 + (shown == 0 ? 11 : 12);
+    }
+    // Gouttière entre la fin du texte et l'heure.
+    return width + AppSpacing.sm;
+  }
+
+  /// Horodatage posé sur un média bord à bord : pastille sombre, seul fond
+  /// qui tienne aussi bien sur une photo surexposée que sur une scène de nuit.
+  Widget _mediaMetaOverlay(LocalMessage msg, bool isMe) {
+    return PositionedDirectional(
+      end: 6,
+      bottom: 6,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppColors.black.withValues(alpha: 0.42),
+          borderRadius: AppRadius.brPill,
+        ),
+        child: _metaRow(msg, isMe, onScrim: true),
+      ),
     );
   }
 
@@ -982,17 +1269,43 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final style = context.text.labelSmall?.copyWith(color: muted, fontSize: 11);
 
     if (msg.translationState == MessageTranslationState.missingModel) {
+      final source = msg.sourceLang;
       return Padding(
         padding: const EdgeInsets.only(top: 4),
         child: InkWell(
-          onTap: _openTranslationSettings,
+          // Télécharge sur place, au lieu d'ouvrir les réglages. Renvoyer
+          // l'utilisateur chercher le modèle ailleurs faisait cinq étapes pour
+          // traduire un message qu'il venait de demander — et donnait
+          // l'impression que le bouton ne faisait rien.
+          //
+          // Repli sur les réglages si la langue n'a pas pu être identifiée :
+          // on ne sait alors pas quoi proposer.
+          onTap: () async {
+            if (source == null || source.isEmpty) {
+              _openTranslationSettings();
+              return;
+            }
+            if (await promptTranslationModelDownload(context, source)) {
+              await MessageTranslationService.maybeInstance?.translateNow(msg);
+            }
+          },
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.download_outlined, size: 12, color: muted),
               const SizedBox(width: 4),
               Flexible(
-                child: Text(l10n.downloadModel, style: style),
+                // Nommer la langue et la taille : « Télécharger » seul
+                // n'indiquait ni quoi, ni ce que ça coûte en données.
+                child: Text(
+                  source == null || source.isEmpty
+                      ? l10n.downloadModel
+                      : l10n.downloadLanguageModel(
+                          nativeNameOf(source),
+                          kApproxModelSizeMb,
+                        ),
+                  style: style,
+                ),
               ),
             ],
           ),
@@ -1052,13 +1365,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
   }
 
   // ── Rendu média selon le type ──────────────────────────────────────
-  Widget _buildMedia(LocalMessage msg, bool isMe) {
+  /// [bleed] : le média touche les bords de la bulle, qui se charge alors de
+  /// l'arrondi — les aperçus ne doivent plus poser le leur, sinon un liseré de
+  /// fond réapparaît dans chaque coin.
+  Widget _buildMedia(LocalMessage msg, bool isMe, {bool bleed = false}) {
     if (msg.isViewOnce) return _buildViewOnceMedia(msg, isMe);
     switch (msg.type) {
       case 1:
-        return _buildImageMedia(msg);
+        return _buildImageMedia(msg, bleed: bleed);
       case 2:
-        return _buildVideoMedia(msg);
+        return _buildVideoMedia(msg, bleed: bleed);
       case 3:
         final chatContext = _convId != null
             ? VoiceChatContext(
@@ -1104,7 +1420,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
       case 4:
         return _buildFileMedia(msg, isMe);
       case 5:
-        return _buildLocationMedia(msg, isMe);
+        return _buildLocationMedia(msg, isMe, bleed: bleed);
       case 7:
         return _buildContactMedia(msg, isMe);
       case kTripMessageType:
@@ -1168,7 +1484,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildLocationMedia(LocalMessage msg, bool isMe) {
+  Widget _buildLocationMedia(LocalMessage msg, bool isMe,
+      {bool bleed = false}) {
     final loc = LocationPayload.tryParse(msg.content);
     final muted = _bubbleMuted(isMe);
 
@@ -1189,7 +1506,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => _openLocationInMaps(loc),
-      child: LocationMessagePreview(location: loc),
+      child: LocationMessagePreview(
+        location: loc,
+        borderRadius:
+            bleed ? BorderRadius.zero : BorderRadius.circular(AppRadius.md),
+      ),
     );
   }
 
@@ -1459,7 +1780,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildImageMedia(LocalMessage msg) {
+  Widget _buildImageMedia(LocalMessage msg, {bool bleed = false}) {
     final uploading = msg.status == 0;
     final needsDl = _needsMediaDownload(msg);
     final downloading = _mediaDownloadingIds.contains(msg.msgID);
@@ -1472,7 +1793,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
         await _openViewer(msg, isVideo: false);
       },
       child: ClipRRect(
-        borderRadius: AppRadius.brSm,
+        borderRadius: bleed ? BorderRadius.zero : AppRadius.brSm,
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -1492,7 +1813,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildVideoMedia(LocalMessage msg) {
+  Widget _buildVideoMedia(LocalMessage msg, {bool bleed = false}) {
     final uploading = msg.status == 0;
     final needsDl = _needsMediaDownload(msg);
     final downloading = _mediaDownloadingIds.contains(msg.msgID);
@@ -1514,6 +1835,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
             durationSeconds: msg.mediaDuration,
             width: 240,
             height: 160,
+            borderRadius: bleed ? BorderRadius.zero : null,
             playIconSize: 30,
             playPadding: 8,
             // Masque le play natif si download requis (badge download à la place).
@@ -1866,7 +2188,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildAlbumBubble(List<LocalMessage> items, bool isMe) {
+  Widget _buildAlbumBubble(
+    List<LocalMessage> items,
+    bool isMe, {
+    BubbleBurst burst = BubbleBurst.single,
+  }) {
     final sorted = List<LocalMessage>.from(items)
       ..sort((a, b) {
         final ma = parseAlbumMarker(a.content);
@@ -1880,17 +2206,33 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final anyDeleted = sorted.any((m) => m.isDeleted);
     // Pire statut de l'album (min) : pas de ✓✓ bleu tant que tous ne le sont pas.
     final worstStatus = sorted.map((m) => m.status).reduce((a, b) => a < b ? a : b);
-    final borderRadius = BorderRadius.only(
-      topLeft: const Radius.circular(AppRadius.lg),
-      topRight: const Radius.circular(AppRadius.lg),
-      bottomLeft: isMe ? const Radius.circular(AppRadius.lg) : Radius.zero,
-      bottomRight: isMe ? Radius.zero : const Radius.circular(AppRadius.lg),
+    final borderRadius = _bubbleRadius(isMe: isMe, isLast: burst.isLast);
+
+    // La grille va au bord comme un média unique ; un chip « transféré » ou
+    // une grille remplacée par « message supprimé » ramènent le padding.
+    final bleed = !anyDeleted && !first.isForwarded;
+    final caption = anyDeleted ? null : albumCaptionFromMessages(sorted);
+    final albumMeta = _metaRow(
+      last,
+      isMe,
+      onScrim: bleed && caption == null,
+      status: worstStatus,
+      showStatus: !anyDeleted,
+      retryClientId:
+          sorted.where((m) => m.status == 4).map((m) => m.clientId).firstOrNull,
+      // Un seul refus définitif dans l'album suffit à retirer le bouton :
+      // le renvoi est global.
+      failureCode: sorted
+          .where((m) => m.status == 4)
+          .map((m) => m.failureCode)
+          .firstWhere((c) => c != null, orElse: () => null),
     );
 
     return Column(
       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        if (widget.isGroup && !isMe) _buildGroupSenderHeader(first),
+        if (widget.isGroup && !isMe && burst.isFirst)
+          _buildGroupSenderHeader(first),
         Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
           child: _wrapSelectableBubble(
@@ -1900,15 +2242,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
             onLongPress: () => _showAlbumMenu(sorted, isMe),
             onTap: _selectionMode ? null : () => _toggleSelection(sorted.first),
             bubble: Container(
-              margin: const EdgeInsets.only(bottom: AppSpacing.md),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.sm,
+              margin: EdgeInsets.only(
+                bottom: burst.isLast ? _kBubbleGap : _kBurstGap,
               ),
+              padding: bleed ? EdgeInsets.zero : _kBubblePadding,
               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              clipBehavior: bleed ? Clip.antiAlias : Clip.none,
               decoration: _bubbleDecoration(
                 isMe: isMe,
                 selected: selected,
+                hairline: _needsHairline(isMe: isMe, bleed: bleed),
                 // Fond teinté quand JE suis mentionné : c'est ce qui rend le
                 // bouton de saut lisible — on voit où l'on atterrit. Pas de
                 // liseré (décision produit) : un troisième traitement visuel
@@ -1941,66 +2284,53 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       ],
                     )
                   else ...[
-                    _buildAlbumGrid(sorted, isMe),
-                    if (albumCaptionFromMessages(sorted) case final caption?)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.sm,
-                          AppSpacing.sm,
-                          AppSpacing.sm,
-                          0,
-                        ),
-                        child: Align(
-                          alignment: isMe
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Text.rich(
-                            TextSpan(
-                              children: parseRichSpans(
-                                caption,
-                                (context.text.bodyLarge ?? const TextStyle())
-                                    .copyWith(color: _bubbleText(isMe)),
-                                linkColor: isMe
-                                    ? context.colors.onPrimary
-                                    : context.colors.primary,
-                                mentions: _mentionSpec(isMe),
+                    if (caption == null)
+                      Stack(
+                        children: [
+                          _buildAlbumGrid(sorted, isMe, bleed: bleed),
+                          if (bleed)
+                            PositionedDirectional(
+                              end: 6,
+                              bottom: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.black
+                                      .withValues(alpha: 0.42),
+                                  borderRadius: AppRadius.brPill,
+                                ),
+                                child: albumMeta,
                               ),
                             ),
+                        ],
+                      )
+                    else ...[
+                      _buildAlbumGrid(sorted, isMe, bleed: bleed),
+                      Padding(
+                        padding: bleed
+                            ? const EdgeInsets.fromLTRB(12, 6, 12, 7)
+                            : const EdgeInsets.only(top: AppSpacing.sm),
+                        child: _buildBubbleBody(
+                          isMe,
+                          caption,
+                          inlineMeta: albumMeta,
+                          reservedWidth: _metaReservedWidth(
+                            last,
+                            isMe,
+                            status: worstStatus,
+                            showStatus: !anyDeleted,
                           ),
                         ),
                       ),
-                  ],
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatTime(last.sendAt),
-                        style: context.text.labelSmall?.copyWith(
-                          color: _bubbleMuted(isMe),
-                          fontSize: 10,
-                        ),
-                      ),
-                      if (isMe && !anyDeleted) ...[
-                        const SizedBox(width: 4),
-                        _statusIcon(
-                          worstStatus,
-                          deliveredAt: last.deliveredAt,
-                          readAt: last.readAt,
-                          retryClientId: sorted
-                              .where((m) => m.status == 4)
-                              .map((m) => m.clientId)
-                              .firstOrNull,
-                          // Un seul refus définitif dans l'album suffit à
-                          // retirer le bouton : le renvoi est global.
-                          failureCode: sorted
-                              .where((m) => m.status == 4)
-                              .map((m) => m.failureCode)
-                              .firstWhere((c) => c != null, orElse: () => null),
-                        ),
-                      ],
                     ],
-                  ),
+                  ],
+                  // Album supprimé, ou grille sans légende encadrée : l'heure
+                  // n'a trouvé ni fin de ligne ni média où se poser.
+                  if (anyDeleted || (caption == null && !bleed)) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    albumMeta,
+                  ],
                 ],
               ),
             ),
@@ -2028,7 +2358,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildAlbumGrid(List<LocalMessage> items, bool isMe) {
+  Widget _buildAlbumGrid(List<LocalMessage> items, bool isMe,
+      {bool bleed = false}) {
     final hideCellDownloadBadge =
         items.any(_needsMediaDownload) && !_selectionMode;
     final count = items.length;
@@ -2050,6 +2381,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 0,
                 items,
                 hideDownloadBadge: hideCellDownloadBadge,
+                bleed: bleed,
               ),
             ),
             const SizedBox(width: gap),
@@ -2060,6 +2392,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 1,
                 items,
                 hideDownloadBadge: hideCellDownloadBadge,
+                bleed: bleed,
               ),
             ),
           ],
@@ -2082,6 +2415,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       0,
                       items,
                       hideDownloadBadge: hideCellDownloadBadge,
+                      bleed: bleed,
                     ),
                   ),
                   const SizedBox(width: gap),
@@ -2092,6 +2426,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       1,
                       items,
                       hideDownloadBadge: hideCellDownloadBadge,
+                      bleed: bleed,
                     ),
                   ),
                 ],
@@ -2106,6 +2441,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 2,
                 items,
                 hideDownloadBadge: hideCellDownloadBadge,
+                bleed: bleed,
               ),
             ),
           ],
@@ -2129,6 +2465,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       0,
                       items,
                       hideDownloadBadge: hideCellDownloadBadge,
+                      bleed: bleed,
                     ),
                   ),
                   const SizedBox(width: gap),
@@ -2139,6 +2476,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       1,
                       items,
                       hideDownloadBadge: hideCellDownloadBadge,
+                      bleed: bleed,
                     ),
                   ),
                 ],
@@ -2157,6 +2495,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                             2,
                             items,
                             hideDownloadBadge: hideCellDownloadBadge,
+                            bleed: bleed,
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -2170,6 +2509,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
                             items,
                             overlayExtra: count > 4 ? count - 4 : null,
                             hideDownloadBadge: hideCellDownloadBadge,
+                            bleed: bleed,
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -2212,6 +2552,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
     List<LocalMessage> all, {
     int? overlayExtra,
     bool hideDownloadBadge = false,
+    /// Grille collée aux bords de la bulle : les cellules sont alors carrées,
+    /// c'est la bulle qui porte l'arrondi extérieur.
+    bool bleed = false,
   }) {
     final uploading = msg.status == 0;
     final isVideo = msg.type == 2;
@@ -2246,7 +2589,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
         _showMessageMenu(msg, isMe);
       },
       child: ClipRRect(
-        borderRadius: AppRadius.brSm,
+        borderRadius: bleed ? BorderRadius.zero : AppRadius.brSm,
         child: Stack(
           fit: StackFit.expand,
           children: [
