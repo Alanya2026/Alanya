@@ -418,14 +418,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   'all',
                   Icons.apps_rounded,
                 ),
-                // Les listes personnalisées sont des filtres de premier rang,
-                // juste après « Tous », comme dans la référence WhatsApp.
-                for (final list in _contactLists) ...[
-                  AppSpacing.hGapSm,
-                  _buildContactListFilterChip(list, myId),
-                ],
-                AppSpacing.hGapSm,
-                _buildAddListButton(),
                 AppSpacing.hGapSm,
                 _buildFilterChip(
                   context.l10n.chats,
@@ -456,6 +448,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   'archived',
                   Icons.archive_outlined,
                 ),
+                // Listes personnalisées et bouton + à la fin des filtres
+                // pour ne pas casser la visualisation des filtres principaux.
+                for (final list in _contactLists) ...[
+                  AppSpacing.hGapSm,
+                  _buildContactListFilterChip(list, myId),
+                ],
+                AppSpacing.hGapSm,
+                _buildAddListButton(),
               ],
             ),
           ),
