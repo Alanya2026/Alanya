@@ -131,6 +131,94 @@ class RingtoneOption {
     ),
   ];
 
+  /// Sons de **notification de message** fournis avec l'app — catalogue
+  /// volontairement distinct de [bundled] : ces sons durent 1 à 2 s (contre 15
+  /// à 60 s pour une sonnerie d'appel) et n'ont de sens que pour signaler
+  /// l'arrivée d'un message. Les deux listes ne se mélangent jamais dans les
+  /// sélecteurs — voir `RingtonePreferences.allOptions` (appels) et
+  /// `notificationOptions` (messages).
+  ///
+  /// Même contrainte de double dépôt que [bundled], avec le préfixe `nt_` au
+  /// lieu de `rt_` :
+  ///  - asset Flutter `assets/sounds/notifications/<nom>.ogg` (aperçu + app au
+  ///    premier plan, via `just_audio`) ;
+  ///  - ressource Android compilée `res/raw/nt_<nom>.ogg` référencée par
+  ///    [androidRawResource] (canal de notification quand l'app est tuée —
+  ///    voir `MessageNotificationHelper.resolveListMessageSound`, qui déduit le
+  ///    nom de ressource du préfixe `notif_` de l'identifiant).
+  static const List<RingtoneOption> notifications = [
+    RingtoneOption(
+      id: 'notif_pop',
+      label: 'Pop',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/pop.ogg',
+      androidRawResource: 'nt_pop',
+    ),
+    RingtoneOption(
+      id: 'notif_ping',
+      label: 'Ping',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/ping.ogg',
+      androidRawResource: 'nt_ping',
+    ),
+    RingtoneOption(
+      id: 'notif_duo',
+      label: 'Duo',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/duo.ogg',
+      androidRawResource: 'nt_duo',
+    ),
+    RingtoneOption(
+      id: 'notif_trio',
+      label: 'Trio',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/trio.ogg',
+      androidRawResource: 'nt_trio',
+    ),
+    RingtoneOption(
+      id: 'notif_tick',
+      label: 'Tic',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/tick.ogg',
+      androidRawResource: 'nt_tick',
+    ),
+    RingtoneOption(
+      id: 'notif_chime',
+      label: 'Carillon',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/chime.ogg',
+      androidRawResource: 'nt_chime',
+    ),
+    RingtoneOption(
+      id: 'notif_drop',
+      label: 'Goutte',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/drop.ogg',
+      androidRawResource: 'nt_drop',
+    ),
+    RingtoneOption(
+      id: 'notif_blip',
+      label: 'Bip',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/blip.ogg',
+      androidRawResource: 'nt_blip',
+    ),
+    RingtoneOption(
+      id: 'notif_bloom',
+      label: 'Éclosion',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/bloom.ogg',
+      androidRawResource: 'nt_bloom',
+    ),
+    RingtoneOption(
+      id: 'notif_tap',
+      label: 'Marimba',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/tap.ogg',
+      androidRawResource: 'nt_tap',
+    ),
+  ];
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'label': label,
@@ -210,11 +298,21 @@ class RingtonePreferences extends ChangeNotifier {
     }
   }
 
-  /// Toutes les options proposées à l'utilisateur : système + fournies +
-  /// importées.
+  /// Options proposées pour les **appels** : système + sonneries d'appel
+  /// fournies + sonneries importées. Ne contient volontairement pas les sons
+  /// de notification de message (voir [notificationOptions]).
   List<RingtoneOption> get allOptions => [
         RingtoneOption.system,
         ...RingtoneOption.bundled,
+        ..._custom,
+      ];
+
+  /// Options proposées pour les **notifications de message** : système + sons
+  /// de notification fournis + sonneries importées (l'utilisateur qui a
+  /// importé un son court doit pouvoir s'en servir ici aussi).
+  List<RingtoneOption> get notificationOptions => [
+        RingtoneOption.system,
+        ...RingtoneOption.notifications,
         ..._custom,
       ];
 
@@ -243,10 +341,19 @@ class RingtonePreferences extends ChangeNotifier {
 
   /// Résout une option enregistrée par son identifiant. Sert notamment aux
   /// sonneries propres aux listes de contacts.
+  ///
+  /// Cherche dans les DEUX catalogues (appels et notifications) : le même
+  /// appel sert à résoudre `callRingtoneId` et `messageRingtoneId`, et une
+  /// liste configurée avant l'arrivée des sons de notification peut encore
+  /// pointer vers une sonnerie d'appel — on continue de la résoudre.
   static RingtoneOption? optionById(String id) {
-    final options = _bound?.allOptions ??
-        [RingtoneOption.system, ...RingtoneOption.bundled, ..._cachedCustom];
-    for (final option in options) {
+    final custom = _bound?.customRingtones ?? _cachedCustom;
+    for (final option in [
+      RingtoneOption.system,
+      ...RingtoneOption.bundled,
+      ...RingtoneOption.notifications,
+      ...custom,
+    ]) {
       if (option.id == id) return option;
     }
     return null;

@@ -346,6 +346,14 @@ object MessageNotificationHelper {
                 val optionId = settings.optJSONObject(listId)?.optString("messageRingtoneId")
                     ?.takeIf { it.isNotBlank() && it != "null" } ?: continue
                 if (optionId == "__system_default__") return null
+                // Sons de notification de message : `notif_pop` -> `res/raw/nt_pop`.
+                // Catalogue déclaré côté Dart dans `RingtoneOption.notifications`.
+                if (optionId.startsWith("notif_")) {
+                    return ListMessageSound(optionId, rawName = "nt_${optionId.removePrefix("notif_")}")
+                }
+                // Sonneries d'appel : `bundled_son3` -> `res/raw/rt_son3`. Toujours
+                // accepté ici — une liste configurée avant la séparation
+                // appels / notifications continue de sonner comme avant.
                 if (optionId.startsWith("bundled_son")) {
                     return ListMessageSound(optionId, rawName = "rt_son${optionId.removePrefix("bundled_son")}")
                 }
