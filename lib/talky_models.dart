@@ -1325,6 +1325,38 @@ class ContactList {
   final int? memberLimit;
   final int memberCount;
 
+  /// Sonneries de la liste, **préférence du compte** partagée par tous les
+  /// appareils (migration serveur 055). `builtin` = son fourni avec l'app,
+  /// identifié par son id stable ; `custom` = son importé par l'utilisateur,
+  /// identifié par le SHA-256 de son CONTENU — le fichier audio, lui, ne
+  /// quitte jamais l'appareil. Null = liste jamais configurée, à distinguer de
+  /// « sonnerie système », qui vaut builtin/`__system_default__`.
+  ///
+  /// Appliquées localement par `ListRingtonePreferences.applyFromServer`.
+  final String? messageSoundType;
+  final String? messageSoundId;
+
+  /// Nom du fichier importé — **affichage uniquement**. Deux fichiers de même
+  /// nom mais de contenu différent restent deux sons différents : seul
+  /// [messageSoundId] (le hash) fait foi.
+  final String? messageSoundName;
+
+  final String? callSoundType;
+  final String? callSoundId;
+  final String? callSoundName;
+
+  /// Rang de la liste quand un contact appartient à plusieurs listes : la
+  /// première l'emporte. Null = jamais ordonnée (passe après les autres).
+  final int? soundPriority;
+
+  /// La réponse du serveur portait-elle les champs de son ?
+  ///
+  /// Sert à distinguer « le compte n'a aucune sonnerie pour cette liste » d'un
+  /// **serveur pas encore à jour** (migration 055 non appliquée) : dans le
+  /// second cas les champs sont simplement absents, et effacer les réglages
+  /// locaux là-dessus reviendrait à perdre le choix de l'utilisateur.
+  final bool soundSyncSupported;
+
   ContactList({
     required this.idList,
     required this.name,
@@ -1332,6 +1364,14 @@ class ContactList {
     this.color,
     this.memberLimit,
     this.memberCount = 0,
+    this.messageSoundType,
+    this.messageSoundId,
+    this.messageSoundName,
+    this.callSoundType,
+    this.callSoundId,
+    this.callSoundName,
+    this.soundPriority,
+    this.soundSyncSupported = false,
   });
 
   factory ContactList.fromJson(Map<String, dynamic> json) => ContactList(
@@ -1343,6 +1383,16 @@ class ContactList {
             : json['color'].toString(),
         memberLimit: (json['memberLimit'] as num?)?.toInt(),
         memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+        messageSoundType: _nonEmpty(json['messageSoundType']),
+        messageSoundId: _nonEmpty(json['messageSoundId']),
+        messageSoundName: _nonEmpty(json['messageSoundName']),
+        callSoundType: _nonEmpty(json['callSoundType']),
+        callSoundId: _nonEmpty(json['callSoundId']),
+        callSoundName: _nonEmpty(json['callSoundName']),
+        soundPriority: (json['soundPriority'] as num?)?.toInt(),
+        soundSyncSupported: json.containsKey('messageSoundType') ||
+            json.containsKey('callSoundType') ||
+            json.containsKey('soundPriority'),
       );
 
   Map<String, dynamic> toJson() => {
@@ -1352,7 +1402,20 @@ class ContactList {
         'color': color,
         'memberLimit': memberLimit,
         'memberCount': memberCount,
+        'messageSoundType': messageSoundType,
+        'messageSoundId': messageSoundId,
+        'messageSoundName': messageSoundName,
+        'callSoundType': callSoundType,
+        'callSoundId': callSoundId,
+        'callSoundName': callSoundName,
+        'soundPriority': soundPriority,
       };
+}
+
+String? _nonEmpty(dynamic raw) {
+  if (raw == null) return null;
+  final s = raw.toString().trim();
+  return s.isEmpty ? null : s;
 }
 
 String? _nullableContactListKind(dynamic raw) {

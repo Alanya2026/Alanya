@@ -269,6 +269,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ringtonePreviewError => 'Impossible de lire cette sonnerie';
 
   @override
+  String get ringtoneSyncInfoTitle => 'Synchronisation entre appareils';
+
+  @override
+  String get ringtoneSyncInfoBody =>
+      'Cette sonnerie est enregistrée sur cet appareil uniquement : le fichier audio n\'est jamais envoyé sur nos serveurs.\n\nPour l\'entendre aussi sur vos autres appareils, importez-y le même fichier audio. Alanya reconnaît un fichier à son contenu, pas à son nom : un fichier différent portant le même nom ne sera pas reconnu.\n\nEn attendant, vos autres appareils jouent leur son habituel — votre choix, lui, est conservé, et la sonnerie revient dès que le fichier y est importé.';
+
+  @override
+  String get ringtoneSyncInfoTooltip =>
+      'Utiliser ce son sur mes autres appareils';
+
+  @override
+  String get listRingtoneSoundMissing => 'fichier absent sur cet appareil';
+
+  @override
+  String get listRingtoneSyncedNote =>
+      'Ce choix suit votre compte : il s\'applique à tous vos appareils. Une sonnerie importée doit être présente sur un appareil pour y être jouée.';
+
+  @override
   String get settingsPrivacy => 'Confidentialité';
 
   @override

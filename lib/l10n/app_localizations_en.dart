@@ -268,6 +268,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ringtonePreviewError => 'Couldn\'t play this ringtone';
 
   @override
+  String get ringtoneSyncInfoTitle => 'Syncing across devices';
+
+  @override
+  String get ringtoneSyncInfoBody =>
+      'This ringtone is stored on this device only: the audio file is never uploaded to our servers.\n\nTo hear it on your other devices, import the same audio file there too. Alanya recognises a file by its content, not by its name: a different file with the same name won\'t be recognised.\n\nIn the meantime your other devices play their usual sound — your choice is kept, and the ringtone comes back as soon as the file is imported there.';
+
+  @override
+  String get ringtoneSyncInfoTooltip => 'Use this sound on my other devices';
+
+  @override
+  String get listRingtoneSoundMissing => 'file missing on this device';
+
+  @override
+  String get listRingtoneSyncedNote =>
+      'This choice follows your account and applies to all your devices. An imported ringtone must be present on a device to be played there.';
+
+  @override
   String get settingsPrivacy => 'Privacy';
 
   @override

@@ -203,7 +203,11 @@ class _TalkyAppState extends State<TalkyApp> {
         ChangeNotifierProvider(
             create: (_) => RingtonePreferences()..load()),
         ChangeNotifierProvider(
-            create: (_) => ListRingtonePreferences()..load()),
+          // L'API sert à pousser les sonneries de liste sur le compte : le
+          // choix suit l'utilisateur sur tous ses appareils.
+          create: (ctx) =>
+              ListRingtonePreferences(api: ctx.read<TalkyApiClient>())..load(),
+        ),
         ChangeNotifierProvider(
             create: (_) => AuthProvider(apiClient: _apiClient)),
         ChangeNotifierProvider(

@@ -8,6 +8,12 @@ import '../../core/services/ringtone_preferences.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/contact_list_display.dart';
+import '../../widgets/common/ringtone_sync_info.dart';
+
+/// Préfixe des entrées « son personnalisé choisi ailleurs, absent ici ».
+/// Elles ne sont pas sélectionnables : elles disent seulement ce que la liste
+/// attend, pour que l'utilisateur ne croie pas son réglage perdu.
+const String _kMissingPrefix = 'missing:';
 
 class ListRingtoneScreen extends StatefulWidget {
   const ListRingtoneScreen({
@@ -38,6 +44,10 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
   Future<void> _togglePreview(RingtoneOption option) async {
     // La sonnerie système n'existe pas sous forme de fichier lisible par l'app.
     if (option.type == RingtoneSourceType.system) return;
+    // Son personnalisé attendu mais absent de cet appareil : rien à écouter.
+    if (option.type == RingtoneSourceType.custom && option.filePath == null) {
+      return;
+    }
 
     if (_previewingId == option.id) {
       await _previewPlayer.stop();
@@ -99,6 +109,37 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
     ];
   }
 
+  /// Ajoute en tête l'entrée décrivant un son personnalisé attendu par la
+  /// liste mais absent de cet appareil. La préférence n'est pas perdue : elle
+  /// reprendra dès que le fichier sera importé ici (reconnaissance par le
+  /// contenu du fichier, pas par son nom).
+  List<RingtoneOption> _withMissing(
+    List<RingtoneOption> catalogue,
+    ListSoundChoice? sound,
+    String? localId,
+  ) {
+    if (sound?.type != ListSoundType.custom) return catalogue;
+    if (localId != null && localId.isNotEmpty) return catalogue;
+    final name = sound!.name?.trim();
+    return [
+      RingtoneOption(
+        id: '$_kMissingPrefix${sound.id}',
+        label: '${name == null || name.isEmpty ? 'Sonnerie importée' : name} '
+            '— ${context.l10n.listRingtoneSoundMissing}',
+        type: RingtoneSourceType.custom,
+      ),
+      ...catalogue,
+    ];
+  }
+
+  String _valueFor(String? localId, ListSoundChoice? sound) {
+    if (localId != null && localId.isNotEmpty) return localId;
+    if (sound?.type == ListSoundType.custom) {
+      return '$_kMissingPrefix${sound!.id}';
+    }
+    return RingtoneOption.systemId;
+  }
+
   @override
   Widget build(BuildContext context) {
     final list = widget.list;
@@ -108,13 +149,20 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
     final setting = listPrefs.settingFor(list.idList);
     // Deux catalogues distincts : sons courts pour les messages, sonneries
     // pour les appels.
-    final messageOptions = _withLegacy(
-      ringtonePrefs.notificationOptions,
+    final messageOptions = _withMissing(
+      _withLegacy(
+        ringtonePrefs.notificationOptions,
+        setting.messageRingtoneId,
+        note: '(sonnerie d’appel)',
+      ),
+      setting.messageSound,
       setting.messageRingtoneId,
-      note: '(sonnerie d’appel)',
     );
-    final callOptions =
-        _withLegacy(ringtonePrefs.allOptions, setting.callRingtoneId);
+    final callOptions = _withMissing(
+      _withLegacy(ringtonePrefs.allOptions, setting.callRingtoneId),
+      setting.callSound,
+      setting.callRingtoneId,
+    );
     final ordered = <LocalContactList>[
       for (final id in listPrefs.priority)
         ...allLists.where((item) => item.idList == id),
@@ -149,29 +197,31 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
           _RingtoneDropdown(
             title: 'Nouveaux messages',
             icon: Icons.message_outlined,
-            value: setting.messageRingtoneId ?? RingtoneOption.systemId,
+            value: _valueFor(setting.messageRingtoneId, setting.messageSound),
             options: messageOptions,
             optionLabel: label,
             previewingId: _previewingId,
             onPreview: _togglePreview,
-            onChanged: (id) => listPrefs.setRingtone(
-              list.idList,
-              messageRingtoneId: id,
-            ),
+            onChanged: (id) {
+              // Ré-appuyer sur l'entrée « fichier absent » ne doit rien
+              // enregistrer : ce n'est pas un son sélectionnable.
+              if (id.startsWith(_kMissingPrefix)) return;
+              listPrefs.setRingtone(list.idList, messageRingtoneId: id);
+            },
           ),
           AppSpacing.vGapMd,
           _RingtoneDropdown(
             title: 'Appels entrants',
             icon: Icons.phone_in_talk_outlined,
-            value: setting.callRingtoneId ?? RingtoneOption.systemId,
+            value: _valueFor(setting.callRingtoneId, setting.callSound),
             options: callOptions,
             optionLabel: label,
             previewingId: _previewingId,
             onPreview: _togglePreview,
-            onChanged: (id) => listPrefs.setRingtone(
-              list.idList,
-              callRingtoneId: id,
-            ),
+            onChanged: (id) {
+              if (id.startsWith(_kMissingPrefix)) return;
+              listPrefs.setRingtone(list.idList, callRingtoneId: id);
+            },
           ),
           AppSpacing.vGapXl,
           Text('Ordre de priorité', style: context.text.titleMedium),
@@ -214,11 +264,19 @@ class _ListRingtoneScreenState extends State<ListRingtoneScreen> {
             ),
           ),
           AppSpacing.vGapLg,
-          Text(
-            'Ce réglage est enregistré uniquement sur cet appareil. Les fichiers importés doivent rester présents sur le téléphone.',
-            style: context.text.bodySmall?.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  context.l10n.listRingtoneSyncedNote,
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const RingtoneSyncInfoButton(),
+            ],
           ),
         ],
       ),
@@ -256,7 +314,8 @@ class _RingtoneDropdown extends StatelessWidget {
       (option) => option.id == validValue,
       orElse: () => RingtoneOption.system,
     );
-    final canPreview = current.type != RingtoneSourceType.system;
+    final canPreview = current.type == RingtoneSourceType.bundled ||
+        (current.type == RingtoneSourceType.custom && current.filePath != null);
     final playing = previewingId == current.id;
     return Container(
       padding: const EdgeInsets.symmetric(

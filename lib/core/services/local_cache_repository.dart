@@ -285,11 +285,13 @@ class LocalCacheRepository {
       final previousIds =
           (await getContactListsOnce()).map((l) => l.idList).toSet();
       final newIds = <int>{};
+      final parsed = <ContactList>[];
       await _db.batch((b) {
         for (final r in raw.whereType<Map<String, dynamic>>()) {
           final l = ContactList.fromJson(r);
           if (l.idList == 0) continue;
           newIds.add(l.idList);
+          parsed.add(l);
           final companion = LocalContactListsCompanion(
             idList: Value(l.idList),
             name: Value(l.name),
@@ -313,6 +315,10 @@ class LocalCacheRepository {
         await _forgetLists(removed);
       }
       await _backfillListColors();
+      // Les sonneries de liste voyagent avec les listes : elles ne sont pas
+      // mises en cache ici (elles vivent dans les SharedPreferences, d'où le
+      // natif les relit quand l'app est tuée) mais confiées à leur service.
+      await ListRingtonePreferences.applyServerLists(parsed);
     } catch (e) {
       debugPrint('[LocalCacheRepo] syncContactLists échouée: $e');
     }
