@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +33,19 @@ class RingtoneOption {
   /// dossier documents de l'app pour rester disponible hors sandbox du picker.
   final String? filePath;
 
+  /// Empreinte SHA-256 du **contenu** du fichier (`custom` uniquement).
+  ///
+  /// C'est l'identité du son entre appareils : l'[id] (`custom_<horodatage>`)
+  /// et le nom du fichier ne valent que sur cet appareil-ci — deux fichiers
+  /// peuvent s'appeler `MaSonnerie.mp3` sans être le même son, et le même
+  /// fichier importé deux fois donne deux ids différents. Le hash, lui, ne
+  /// dépend que des octets : c'est ce qui permet à une liste configurée sur
+  /// l'appareil A de retrouver son son sur l'appareil B (voir
+  /// `ListRingtonePreferences`). Null pour les entrées importées avant
+  /// l'arrivée de la synchronisation — [RingtonePreferences.load] les
+  /// complète.
+  final String? contentHash;
+
   /// Nom de la ressource `android/app/src/main/res/raw/<nom>.mp3` (SANS
   /// extension), pour les sonneries `bundled` uniquement. CallKit/Android
   /// résout les sonneries par nom de ressource compilée — un fichier
@@ -52,6 +66,7 @@ class RingtoneOption {
     required this.type,
     this.assetPath,
     this.filePath,
+    this.contentHash,
     this.androidRawResource,
     this.iosCafResource,
   });
@@ -131,10 +146,99 @@ class RingtoneOption {
     ),
   ];
 
+  /// Sons de **notification de message** fournis avec l'app — catalogue
+  /// volontairement distinct de [bundled] : ces sons durent 1 à 2 s (contre 15
+  /// à 60 s pour une sonnerie d'appel) et n'ont de sens que pour signaler
+  /// l'arrivée d'un message. Les deux listes ne se mélangent jamais dans les
+  /// sélecteurs — voir `RingtonePreferences.allOptions` (appels) et
+  /// `notificationOptions` (messages).
+  ///
+  /// Même contrainte de double dépôt que [bundled], avec le préfixe `nt_` au
+  /// lieu de `rt_` :
+  ///  - asset Flutter `assets/sounds/notifications/<nom>.ogg` (aperçu + app au
+  ///    premier plan, via `just_audio`) ;
+  ///  - ressource Android compilée `res/raw/nt_<nom>.ogg` référencée par
+  ///    [androidRawResource] (canal de notification quand l'app est tuée —
+  ///    voir `MessageNotificationHelper.resolveListMessageSound`, qui déduit le
+  ///    nom de ressource du préfixe `notif_` de l'identifiant).
+  static const List<RingtoneOption> notifications = [
+    RingtoneOption(
+      id: 'notif_pop',
+      label: 'Pop',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/pop.ogg',
+      androidRawResource: 'nt_pop',
+    ),
+    RingtoneOption(
+      id: 'notif_ping',
+      label: 'Ping',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/ping.ogg',
+      androidRawResource: 'nt_ping',
+    ),
+    RingtoneOption(
+      id: 'notif_duo',
+      label: 'Duo',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/duo.ogg',
+      androidRawResource: 'nt_duo',
+    ),
+    RingtoneOption(
+      id: 'notif_trio',
+      label: 'Trio',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/trio.ogg',
+      androidRawResource: 'nt_trio',
+    ),
+    RingtoneOption(
+      id: 'notif_tick',
+      label: 'Tic',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/tick.ogg',
+      androidRawResource: 'nt_tick',
+    ),
+    RingtoneOption(
+      id: 'notif_chime',
+      label: 'Carillon',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/chime.ogg',
+      androidRawResource: 'nt_chime',
+    ),
+    RingtoneOption(
+      id: 'notif_drop',
+      label: 'Goutte',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/drop.ogg',
+      androidRawResource: 'nt_drop',
+    ),
+    RingtoneOption(
+      id: 'notif_blip',
+      label: 'Bip',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/blip.ogg',
+      androidRawResource: 'nt_blip',
+    ),
+    RingtoneOption(
+      id: 'notif_bloom',
+      label: 'Éclosion',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/bloom.ogg',
+      androidRawResource: 'nt_bloom',
+    ),
+    RingtoneOption(
+      id: 'notif_tap',
+      label: 'Marimba',
+      type: RingtoneSourceType.bundled,
+      assetPath: 'assets/sounds/notifications/tap.ogg',
+      androidRawResource: 'nt_tap',
+    ),
+  ];
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'label': label,
         'filePath': filePath,
+        'contentHash': contentHash,
       };
 
   factory RingtoneOption.fromJson(Map<String, dynamic> json) => RingtoneOption(
@@ -142,6 +246,18 @@ class RingtoneOption {
         label: json['label'] as String,
         type: RingtoneSourceType.custom,
         filePath: json['filePath'] as String?,
+        contentHash: json['contentHash'] as String?,
+      );
+
+  RingtoneOption copyWith({String? contentHash}) => RingtoneOption(
+        id: id,
+        label: label,
+        type: type,
+        assetPath: assetPath,
+        filePath: filePath,
+        contentHash: contentHash ?? this.contentHash,
+        androidRawResource: androidRawResource,
+        iosCafResource: iosCafResource,
       );
 }
 
@@ -210,11 +326,21 @@ class RingtonePreferences extends ChangeNotifier {
     }
   }
 
-  /// Toutes les options proposées à l'utilisateur : système + fournies +
-  /// importées.
+  /// Options proposées pour les **appels** : système + sonneries d'appel
+  /// fournies + sonneries importées. Ne contient volontairement pas les sons
+  /// de notification de message (voir [notificationOptions]).
   List<RingtoneOption> get allOptions => [
         RingtoneOption.system,
         ...RingtoneOption.bundled,
+        ..._custom,
+      ];
+
+  /// Options proposées pour les **notifications de message** : système + sons
+  /// de notification fournis + sonneries importées (l'utilisateur qui a
+  /// importé un son court doit pouvoir s'en servir ici aussi).
+  List<RingtoneOption> get notificationOptions => [
+        RingtoneOption.system,
+        ...RingtoneOption.notifications,
         ..._custom,
       ];
 
@@ -241,6 +367,57 @@ class RingtonePreferences extends ChangeNotifier {
     return match.isNotEmpty ? match.first : RingtoneOption.system;
   }
 
+  /// Notifié après toute mutation de la liste des sonneries importées :
+  /// import, suppression, complétion des empreintes.
+  ///
+  /// `ListRingtonePreferences` s'y abonne pour rebrancher les listes dont le
+  /// son personnalisé vient d'apparaître (fichier réimporté) ou de disparaître
+  /// sur cet appareil, sans que l'utilisateur ait à refaire sa sélection. Un
+  /// simple rappel plutôt qu'un import croisé : la couche « sonneries » ne
+  /// connaît pas la couche « listes ».
+  static VoidCallback? onCustomRingtonesChanged;
+
+  /// Empreinte SHA-256 du contenu d'un fichier de sonnerie.
+  ///
+  /// Lecture en un bloc : l'import plafonne les fichiers à
+  /// [kMaxRingtoneFileSizeBytes] (5 Mo).
+  static Future<String> computeContentHash(File file) async {
+    final bytes = await file.readAsBytes();
+    return sha256.convert(bytes).toString();
+  }
+
+  /// Sonnerie importée présente sur CET appareil dont le contenu correspond à
+  /// [hash], ou null. Seul le contenu compte : deux fichiers homonymes de
+  /// contenu différent ne s'apparient pas, et le même fichier importé sous un
+  /// autre nom s'apparie quand même.
+  static RingtoneOption? customByContentHash(String hash) {
+    if (hash.isEmpty) return null;
+    for (final option in _bound?.customRingtones ?? _cachedCustom) {
+      if (option.contentHash == hash) return option;
+    }
+    return null;
+  }
+
+  /// Résout une option enregistrée par son identifiant. Sert notamment aux
+  /// sonneries propres aux listes de contacts.
+  ///
+  /// Cherche dans les DEUX catalogues (appels et notifications) : le même
+  /// appel sert à résoudre `callRingtoneId` et `messageRingtoneId`, et une
+  /// liste configurée avant l'arrivée des sons de notification peut encore
+  /// pointer vers une sonnerie d'appel — on continue de la résoudre.
+  static RingtoneOption? optionById(String id) {
+    final custom = _bound?.customRingtones ?? _cachedCustom;
+    for (final option in [
+      RingtoneOption.system,
+      ...RingtoneOption.bundled,
+      ...RingtoneOption.notifications,
+      ...custom,
+    ]) {
+      if (option.id == id) return option;
+    }
+    return null;
+  }
+
   /// Résout l'identifiant natif à passer à CallKit (écran d'appel
   /// système en arrière-plan) pour la sélection courante.
   ///
@@ -262,6 +439,16 @@ class RingtonePreferences extends ChangeNotifier {
   static String? resolveIosCallKitRingtone() {
     final selection = currentSelection;
     return selection.iosCafResource; // null → CallKit garde son défaut iOS.
+  }
+
+  /// Remet le cache statique à zéro (tests uniquement).
+  @visibleForTesting
+  static void resetForTesting() {
+    _bound = null;
+    _prefsLoaded = false;
+    _cachedSelectedId = RingtoneOption.systemId;
+    _cachedCustom = const [];
+    onCustomRingtonesChanged = null;
   }
 
   /// À appeler avant `runApp`, comme `MediaDownloadPreferences.preload()`.
@@ -320,6 +507,41 @@ class RingtonePreferences extends ChangeNotifier {
     // Backfill / resynchronise la clé plate lue par le natif (utile pour une
     // sélection faite avant l'introduction de `_kActivePathKey`).
     await _persistActivePath();
+    // Complète les empreintes manquantes (sonneries importées avant la
+    // synchronisation entre appareils). Volontairement ici et pas dans
+    // `preload()` : celui-ci est attendu avant `runApp`, et hacher jusqu'à
+    // 10 fichiers de 5 Mo retarderait le premier écran pour rien.
+    await _backfillContentHashes();
+  }
+
+  /// Calcule et enregistre l'empreinte des sonneries importées qui n'en ont
+  /// pas encore. Sans elle, une sonnerie importée avant cette version ne
+  /// pourrait pas être reconnue par un autre appareil du compte.
+  Future<void> _backfillContentHashes() async {
+    if (_custom.every((o) => o.contentHash != null)) return;
+    final updated = <RingtoneOption>[];
+    var changed = false;
+    for (final option in _custom) {
+      if (option.contentHash != null || option.filePath == null) {
+        updated.add(option);
+        continue;
+      }
+      try {
+        final hash = await computeContentHash(File(option.filePath!));
+        updated.add(option.copyWith(contentHash: hash));
+        changed = true;
+      } catch (_) {
+        // Fichier illisible : on garde l'entrée telle quelle, elle reste
+        // jouable localement — seule la reconnaissance entre appareils manque.
+        updated.add(option);
+      }
+    }
+    if (!changed) return;
+    _custom = updated;
+    _cachedCustom = updated;
+    await _persistCustomList();
+    notifyListeners();
+    onCustomRingtonesChanged?.call();
   }
 
   Future<void> select(String id) async {
@@ -381,17 +603,32 @@ class RingtonePreferences extends ChangeNotifier {
     final destPath = '${ringtonesDir.path}/$id.$ext';
     await sourceFile.copy(destPath);
 
+    // Empreinte du contenu : identité du son entre les appareils du compte.
+    // Calculée sur la copie, donc sur les octets réellement conservés.
+    String? contentHash;
+    try {
+      contentHash = await computeContentHash(File(destPath));
+    } catch (_) {
+      // Import tout de même accepté : la sonnerie marche sur cet appareil, elle
+      // ne pourra simplement pas être reconnue sur les autres.
+      contentHash = null;
+    }
+
     final option = RingtoneOption(
       id: id,
       label: label.trim().isEmpty ? 'Sonnerie personnalisée' : label.trim(),
       type: RingtoneSourceType.custom,
       filePath: destPath,
+      contentHash: contentHash,
     );
 
     _custom = [..._custom, option];
     _cachedCustom = _custom;
     notifyListeners();
     await _persistCustomList();
+    // Une liste qui attendait ce son (préférence synchronisée depuis un autre
+    // appareil) se rebranche ici, sans que l'utilisateur refasse son choix.
+    onCustomRingtonesChanged?.call();
     return option;
   }
 
@@ -424,6 +661,12 @@ class RingtonePreferences extends ChangeNotifier {
     } catch (_) {
       // Non bloquant : au pire le fichier orphelin reste sur le disque.
     }
+
+    // Les listes qui utilisaient ce son retombent sur leur son de remplacement.
+    // Leur préférence synchronisée, elle, est CONSERVÉE : un autre appareil du
+    // compte peut très bien posséder encore le fichier, et un réimport ici
+    // rebranchera la liste tout seul.
+    onCustomRingtonesChanged?.call();
   }
 
   Future<void> _persistCustomList() async {

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/ringtone_preferences.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/common/ringtone_sync_info.dart';
 
 /// Réglages de la sonnerie d'appel : choix entre la sonnerie du téléphone,
 /// les sonneries fournies avec l'app, ou une sonnerie importée par
@@ -479,6 +480,10 @@ class _RingtoneTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // Synchronisation entre appareils : n'a de sens que pour un
+              // fichier importé, qui n'existe que sur cet appareil-ci.
+              if (option.type == RingtoneSourceType.custom)
+                const RingtoneSyncInfoButton(),
               // Aperçu
               if (onPreview != null)
                 IconButton(

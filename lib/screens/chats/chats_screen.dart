@@ -9,6 +9,8 @@ import '../../core/services/local_cache_repository.dart';
 import '../../core/services/local_hidden_store.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/contact_list_colors.dart';
+import '../../core/utils/contact_list_display.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/rich_text_parser.dart';
 import '../../providers/auth_provider.dart';
@@ -23,6 +25,7 @@ import '../../widgets/qr_pin.dart';
 import '../../widgets/status_ringed_avatar.dart';
 import '../../providers/status_provider.dart';
 import '../status/status_viewer_screen.dart';
+import '../profile/contact_lists_screen.dart';
 import '../../widgets/typing_indicator.dart';
 import '../../widgets/chat/message_status_icon.dart';
 import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
@@ -60,6 +63,16 @@ class _ChatsScreenState extends State<ChatsScreen> {
   Set<int> _qrAddedIds = const {};
   StreamSubscription<List<LocalUser>>? _qrIdsSub;
 
+  /// Listes et appartenances locales utilisées par les puces de filtre.
+  /// `_listsByMember` évite une requête Drift pour chaque conversation quand
+  /// il faut tester l'appartenance de son interlocuteur.
+  List<LocalContactList> _contactLists = const [];
+  Map<int, List<LocalContactList>> _listsByMember = const {};
+  StreamSubscription<List<LocalContactList>>? _contactListsSub;
+  StreamSubscription<Map<int, List<LocalContactList>>>? _listMembershipsSub;
+
+  static const _listFilterPrefix = 'list:';
+
   @override
   void initState() {
     super.initState();
@@ -69,10 +82,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
     } else {
       _chatProvider!.addListener(_onChatProviderChanged);
     }
-    _qrIdsSub = context
-        .read<LocalCacheRepository>()
-        .watchPreferredContacts()
-        .listen((contacts) {
+    final cache = context.read<LocalCacheRepository>();
+    _qrIdsSub = cache.watchPreferredContacts().listen((contacts) {
       final ids = {
         for (final c in contacts)
           if (c.addedViaQr) c.alanyaID,
@@ -81,6 +92,25 @@ class _ChatsScreenState extends State<ChatsScreen> {
         setState(() => _qrAddedIds = ids);
       }
     });
+    _contactListsSub = cache.watchContactLists().listen((lists) {
+      if (!mounted) return;
+      final selectedListId = _selectedListId;
+      setState(() {
+        _contactLists = lists;
+        // Une liste supprimée sur un autre appareil ne doit pas laisser un
+        // filtre invisible actif et donc un écran artificiellement vide.
+        if (selectedListId != null &&
+            !lists.any((list) => list.idList == selectedListId)) {
+          _filter = 'all';
+        }
+      });
+    });
+    _listMembershipsSub = cache.watchListsByMember().listen((memberships) {
+      if (mounted) setState(() => _listsByMember = memberships);
+    });
+    unawaited(cache.syncContactListsWithMembers());
+    // L'éditeur ouvert par le bouton + propose immédiatement les favoris.
+    unawaited(cache.syncPreferredContacts());
     // Rafraîchit les statuts pour que les anneaux autour des avatars (1v1)
     // reflètent l'état courant dès l'ouverture de la liste des chats.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -105,6 +135,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
     _chatProvider?.removeListener(_onChatProviderChanged);
     _chatProvider = null;
     _qrIdsSub?.cancel();
+    _contactListsSub?.cancel();
+    _listMembershipsSub?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -117,6 +149,42 @@ class _ChatsScreenState extends State<ChatsScreen> {
         _search = '';
       }
     });
+  }
+
+  int? get _selectedListId {
+    if (!_filter.startsWith(_listFilterPrefix)) return null;
+    return int.tryParse(_filter.substring(_listFilterPrefix.length));
+  }
+
+  String _listFilterValue(int idList) => '$_listFilterPrefix$idList';
+
+  Future<void> _createListFromFilters() async {
+    final cache = context.read<LocalCacheRepository>();
+    final usedColors = {
+      for (final list in await cache.getContactListsOnce())
+        if (parseListColor(list.color) != null) list.color!.toUpperCase(),
+    };
+    if (!mounted) return;
+    final draft = await showListEditorSheet(
+      context,
+      initialColor: nextFreeContactListColor(usedColors),
+    );
+    if (draft == null || !mounted) return;
+
+    try {
+      final created = await cache.createContactList(
+        draft.name,
+        color: draft.color,
+        memberIds: draft.memberIds,
+      );
+      if (!mounted || created.idList == 0) return;
+      setState(() => _filter = _listFilterValue(created.idList));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.listSaveFailed)),
+      );
+    }
   }
 
   void _enterSelectionMode(LocalConversation conv) {
@@ -345,17 +413,49 @@ class _ChatsScreenState extends State<ChatsScreen> {
             ),
             child: Row(
               children: [
-                _buildFilterChip(context.l10n.allFilter, 'all', Icons.apps_rounded),
+                _buildFilterChip(
+                  context.l10n.allFilter,
+                  'all',
+                  Icons.apps_rounded,
+                ),
                 AppSpacing.hGapSm,
-                _buildFilterChip(context.l10n.chats, 'discussions', Icons.person_outline),
+                _buildFilterChip(
+                  context.l10n.chats,
+                  'discussions',
+                  Icons.person_outline,
+                ),
                 AppSpacing.hGapSm,
-                _buildFilterChip(context.l10n.groupsFilter, 'groups', Icons.groups_rounded),
+                _buildFilterChip(
+                  context.l10n.groupsFilter,
+                  'groups',
+                  Icons.groups_rounded,
+                ),
                 AppSpacing.hGapSm,
-                _buildFilterChip(context.l10n.qrContactsFilterQr, 'qr', Icons.qr_code_2),
+                _buildFilterChip(
+                  context.l10n.qrContactsFilterQr,
+                  'qr',
+                  Icons.qr_code_2,
+                ),
                 AppSpacing.hGapSm,
-                _buildFilterChip(context.l10n.unread, 'unread', Icons.mark_email_unread_outlined),
+                _buildFilterChip(
+                  context.l10n.unread,
+                  'unread',
+                  Icons.mark_email_unread_outlined,
+                ),
                 AppSpacing.hGapSm,
-                _buildFilterChip(context.l10n.archived, 'archived', Icons.archive_outlined),
+                _buildFilterChip(
+                  context.l10n.archived,
+                  'archived',
+                  Icons.archive_outlined,
+                ),
+                // Listes personnalisées et bouton + à la fin des filtres
+                // pour ne pas casser la visualisation des filtres principaux.
+                for (final list in _contactLists) ...[
+                  AppSpacing.hGapSm,
+                  _buildContactListFilterChip(list, myId),
+                ],
+                AppSpacing.hGapSm,
+                _buildAddListButton(),
               ],
             ),
           ),
@@ -791,12 +891,127 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
+  Widget _buildContactListFilterChip(LocalContactList list, int myId) {
+    final colors = context.colors;
+    final value = _listFilterValue(list.idList);
+    final isActive = _filter == value;
+    final resolvedColors = resolveListColors(_contactLists);
+    final tint = parseListColor(resolvedColors[list.idList]) ?? colors.primary;
+    final unreadCount = _latestConversations.where((conversation) {
+      return !conversation.isArchived &&
+          conversation.unreadCount > 0 &&
+          _conversationBelongsToList(conversation, myId, list.idList);
+    }).length;
+
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: list.displayName(context.l10n),
+      child: InkWell(
+        borderRadius: AppRadius.brPill,
+        onTap: () => setState(() => _filter = value),
+        child: AnimatedContainer(
+          duration: AppDurations.fast,
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: isActive
+                ? tint.withValues(alpha: 0.14)
+                : Colors.transparent,
+            borderRadius: AppRadius.brPill,
+            border: Border.all(
+              color: isActive ? tint : colors.outlineVariant,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
+              ),
+              AppSpacing.hGapSm,
+              Text(
+                list.displayName(context.l10n),
+                style: context.text.labelMedium?.copyWith(
+                  color: isActive ? tint : colors.onSurfaceVariant,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+              if (unreadCount > 0) ...[
+                AppSpacing.hGapSm,
+                Text(
+                  unreadCount.toString(),
+                  style: context.text.labelMedium?.copyWith(
+                    color: isActive ? tint : colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddListButton() {
+    return Tooltip(
+      message: context.l10n.newList,
+      child: Semantics(
+        button: true,
+        label: context.l10n.newList,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _createListFromFilters,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: context.colors.outlineVariant),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.add,
+              size: 22,
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _conversationBelongsToList(
+    LocalConversation conversation,
+    int myId,
+    int idList,
+  ) {
+    if (conversation.isGroup) return false;
+    final otherId = conversationOtherUserId(conversation, myId);
+    if (otherId == null) return false;
+    return (_listsByMember[otherId] ?? const <LocalContactList>[])
+        .any((list) => list.idList == idList);
+  }
+
   List<LocalConversation> _applyFilter(List<LocalConversation> convs, int myId) {
     if (_filter == 'archived') {
       return convs.where((c) => c.isArchived).toList();
     }
     // Pour tous les autres chips, on exclut les conversations archivées.
     final visible = convs.where((c) => !c.isArchived);
+    final selectedListId = _selectedListId;
+    if (selectedListId != null) {
+      return visible
+          .where((c) =>
+              _conversationBelongsToList(c, myId, selectedListId))
+          .toList();
+    }
     switch (_filter) {
       case 'discussions':
         return visible.where((c) => !c.isGroup).toList();

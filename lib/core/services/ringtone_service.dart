@@ -36,13 +36,13 @@ class RingtoneService {
     _audioSession ??= await AudioSession.instance;
   } 
 
-  Future<void> startIncomingRingtone() async {
+  Future<void> startIncomingRingtone({RingtoneOption? override}) async {
     if (kIsWeb) return;
     if (_active == _ActiveSound.incoming) return;
     if (_active != _ActiveSound.none) await stop();
     _active = _ActiveSound.incoming;
 
-    final selection = RingtonePreferences.currentSelection;
+    final selection = override ?? RingtonePreferences.currentSelection;
 
     if (selection.type == RingtoneSourceType.system) {
       debugPrint('[RingtoneService] 🔔 Sonnerie système (appelé)');

@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.os.Build
+import android.net.Uri
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -96,6 +97,11 @@ object MessageNotificationHelper {
             rawBody
         }
         val buffer = appendBuffer(context, convId, senderName, displayBody, msgID)
+        val listSound = resolveListMessageSound(context, data["senderId"].orEmpty())
+        val channelId = ensureMessageChannel(context, listSound)
+        if (listSound?.customPath != null) {
+            MessageRingtonePlayer.playOnce(context, listSound.customPath)
+        }
         val openExtras = mapOf(
             "type" to (data["type"] ?: "message"),
             EXTRA_CONVERSATION_ID to convId.toString(),
@@ -118,6 +124,7 @@ object MessageNotificationHelper {
             displayBody,
             buffer,
             openExtras,
+            channelId = channelId,
         )
         NotificationDedupHelper.markShown(context, msgID, eventId)
     }
@@ -176,6 +183,7 @@ object MessageNotificationHelper {
         buffer: List<BufferEntry>,
         openExtras: Map<String, String> = emptyMap(),
         alertOnce: Boolean = false,
+        channelId: String = CHANNEL_ID,
     ) {
         ensureChannel(context)
         val notifId = notificationIdForConversation(convId)
@@ -230,7 +238,7 @@ object MessageNotificationHelper {
             pendingFlags(),
         )
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_stat_notification)
             .setColor(0xFF114B86.toInt())
             .setContentTitle(title)
@@ -308,6 +316,91 @@ object MessageNotificationHelper {
             "Lu",
             pending,
         ).build()
+    }
+
+    private data class ListMessageSound(
+        val optionId: String,
+        val rawName: String? = null,
+        val customPath: String? = null,
+    )
+
+    private fun resolveListMessageSound(context: Context, senderId: String): ListMessageSound? {
+        if (senderId.isBlank()) return null
+        return try {
+            val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            val settings = JSONObject(prefs.getString("flutter.list_ringtone_settings_v1", "{}") ?: "{}")
+            val members = JSONObject(prefs.getString("flutter.list_ringtone_members_v1", "{}") ?: "{}")
+            val priorityRaw = prefs.all["flutter.list_ringtone_priority_v1"]
+            val priority = when (priorityRaw) {
+                is Set<*> -> priorityRaw.map { it.toString() }
+                is String -> try {
+                    val array = JSONArray(priorityRaw)
+                    (0 until array.length()).map { array.getString(it) }
+                } catch (_: Exception) { emptyList() }
+                else -> emptyList()
+            }
+            val ordered = priority + settings.keys().asSequence().toList().filterNot { priority.contains(it) }
+            for (listId in ordered) {
+                val listMembers = members.optJSONArray(listId) ?: continue
+                if (!(0 until listMembers.length()).any { listMembers.optString(it) == senderId }) continue
+                val optionId = settings.optJSONObject(listId)?.optString("messageRingtoneId")
+                    ?.takeIf { it.isNotBlank() && it != "null" } ?: continue
+                if (optionId == "__system_default__") return null
+                // Sons de notification de message : `notif_pop` -> `res/raw/nt_pop`.
+                // Catalogue déclaré côté Dart dans `RingtoneOption.notifications`.
+                if (optionId.startsWith("notif_")) {
+                    return ListMessageSound(optionId, rawName = "nt_${optionId.removePrefix("notif_")}")
+                }
+                // Sonneries d'appel : `bundled_son3` -> `res/raw/rt_son3`. Toujours
+                // accepté ici — une liste configurée avant la séparation
+                // appels / notifications continue de sonner comme avant.
+                if (optionId.startsWith("bundled_son")) {
+                    return ListMessageSound(optionId, rawName = "rt_son${optionId.removePrefix("bundled_son")}")
+                }
+                val customRaw = prefs.all["flutter.call_ringtone_custom_list"]
+                val entries = when (customRaw) {
+                    is Set<*> -> customRaw.map { it.toString() }
+                    is String -> try {
+                        val array = JSONArray(customRaw)
+                        (0 until array.length()).map { array.getString(it) }
+                    } catch (_: Exception) { emptyList() }
+                    else -> emptyList()
+                }
+                for (raw in entries) {
+                    val item = JSONObject(raw)
+                    if (item.optString("id") == optionId) {
+                        val path = item.optString("filePath")
+                        if (path.isNotBlank() && java.io.File(path).exists()) {
+                            return ListMessageSound(optionId, customPath = path)
+                        }
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "resolveListMessageSound failed", e)
+            null
+        }
+    }
+
+    private fun ensureMessageChannel(context: Context, sound: ListMessageSound?): String {
+        if (sound == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return CHANNEL_ID
+        val channelId = "talky_list_${sound.optionId.hashCode().toUInt().toString(16)}"
+        val mgr = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (mgr.getNotificationChannel(channelId) != null) return channelId
+        val attrs = AudioAttributes.Builder()
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .build()
+        val channel = NotificationChannel(channelId, "Messages — liste personnalisée", NotificationManager.IMPORTANCE_HIGH)
+        channel.enableVibration(true)
+        if (sound.rawName != null) {
+            channel.setSound(Uri.parse("android.resource://${context.packageName}/raw/${sound.rawName}"), attrs)
+        } else {
+            channel.setSound(null, null)
+        }
+        mgr.createNotificationChannel(channel)
+        return channelId
     }
 
     private fun ensureChannel(context: Context) {

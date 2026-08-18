@@ -48,6 +48,43 @@ extension ContactListsApi on TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
+  /// Enregistre les sonneries d'une liste sur le compte (elles suivent alors
+  /// l'utilisateur sur tous ses appareils — voir `ListRingtonePreferences`).
+  ///
+  /// [patch] ne contient QUE les champs à écrire : `messageSoundType`,
+  /// `messageSoundId`, `messageSoundName`, et leurs équivalents `call*`. Une
+  /// valeur `null` explicite efface le choix ; un champ absent le laisse tel
+  /// quel. Aucun fichier audio n'est transmis : pour un son importé,
+  /// `*SoundId` est le SHA-256 du contenu du fichier, qui reste sur
+  /// l'appareil.
+  Future<Map<String, dynamic>> updateContactListSounds(
+    int idList,
+    Map<String, dynamic> patch,
+  ) async {
+    final data = await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/contact-lists/$idList'),
+        headers: _headers,
+        body: jsonEncode(patch),
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  /// Ordre de priorité des sonneries : quand un contact appartient à plusieurs
+  /// listes, la première de [orderedListIds] désigne le son joué. Synchronisé
+  /// comme les sons eux-mêmes, sinon deux appareils d'accord sur les sons
+  /// pourraient encore diverger sur un contact multi-listes.
+  Future<void> updateContactListSoundOrder(List<int> orderedListIds) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/contact-lists/sound-order'),
+        headers: _headers,
+        body: jsonEncode({'order': orderedListIds}),
+      ),
+    );
+  }
+
   Future<void> deleteContactList(int idList) async {
     await _handleRequest(
       () => _client.delete(
