@@ -5140,6 +5140,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get locationPickerInstruction => '搜索、移动地图，或使用当前位置';
 
   @override
+  String get mapCompassNorth => '恢复正北朝上';
+
+  @override
   String tripsCardFalseAlarm(String name) {
     return '$name 说明是误触';
   }

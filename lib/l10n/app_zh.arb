@@ -1531,6 +1531,7 @@
   "locationPickerUseDestination": "使用该目的地",
   "locationUseMyPosition": "使用我的位置",
   "locationPickerInstruction": "搜索、移动地图，或使用当前位置",
+  "mapCompassNorth": "恢复正北朝上",
   "tripsCardFalseAlarm": "{name} 说明是误触",
   "tripsCardFalseAlarmByMe": "您说明是误触",
   "tripsSosFalseAlarmSent": "您的信任圈已知道您没事。",
