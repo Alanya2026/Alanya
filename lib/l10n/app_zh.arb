@@ -1602,6 +1602,7 @@
   "translate": "翻译",
   "translating": "翻译中…",
   "translationFailed": "无法翻译",
+  "translationUnavailable": "该消息暂无可用翻译。",
   "languageModels": "语言模型",
   "languageModelsDescription": "每种语言约占用设备 {size} MB 空间。",
   "downloadLanguageModel": "下载{language}（{size} MB）以进行翻译",

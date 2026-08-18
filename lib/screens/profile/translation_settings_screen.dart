@@ -42,6 +42,51 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
     });
   }
 
+  /// Bascule le réglage général, et propose le modèle manquant à l'activation.
+  ///
+  /// Sans cela, activer la traduction ne produisait **rien** : aucun modèle
+  /// n'est téléchargé à l'installation, donc chaque message étranger se
+  /// contentait d'afficher « Télécharger … pour traduire » et l'utilisateur
+  /// devait deviner qu'il fallait redescendre dans cet écran. La fonctionnalité
+  /// paraissait cassée au premier essai.
+  ///
+  /// C'est une **proposition**, jamais un téléchargement silencieux : trente
+  /// mégaoctets ne se prennent pas sans le dire.
+  Future<void> _toggleAuto(TranslationSettings settings, bool value) async {
+    await settings.setAuto(value);
+    if (!value || !mounted) return;
+
+    final target = kTranslationTargets.firstWhere(
+      (l) => l.code == settings.target,
+      orElse: () => kTranslationTargets.first,
+    );
+    if (_downloaded.contains(target.code) || _busy.contains(target.code)) return;
+
+    final l10n = context.l10n;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(l10n.languageModels),
+        content: Text(
+          '${l10n.downloadLanguageModel(target.nativeName, kApproxModelSizeMb)}'
+          '\n\n${l10n.modelDownloadWifiNotice}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.notNow),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.downloadModel),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _download(target);
+  }
+
   Future<void> _download(TranslationLanguage lang) async {
     setState(() => _busy.add(lang.code));
     var ok = false;
@@ -100,7 +145,7 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
                 title: Text(l10n.autoTranslate),
                 subtitle: Text(l10n.autoTranslateDescription),
                 value: settings.auto,
-                onChanged: (v) => settings.setAuto(v),
+                onChanged: (v) => _toggleAuto(settings, v),
               ),
               const SizedBox(height: AppSpacing.md),
 
@@ -109,14 +154,20 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // `outline` est un ton de bordure (#E2E5EC en clair) : posé
+                  // sur du texte ou une icône, il tombe à 1,26:1 de contraste,
+                  // très en dessous du seuil WCAG de 4,5:1. Le thème a déjà
+                  // tranché ailleurs — voir le commentaire du Switch dans
+                  // app_theme.dart : « onSurfaceVariant (pas outline) pour
+                  // rester lisible ».
                   Icon(Icons.lock_outline,
-                      size: 16, color: context.colors.outline),
+                      size: 16, color: context.colors.onSurfaceVariant),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       l10n.onDeviceTranslationNotice,
                       style: context.text.bodySmall
-                          ?.copyWith(color: context.colors.outline),
+                          ?.copyWith(color: context.colors.onSurfaceVariant),
                     ),
                   ),
                 ],
@@ -148,13 +199,13 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
               Text(
                 l10n.languageModelsDescription(kApproxModelSizeMb),
                 style: context.text.bodySmall
-                    ?.copyWith(color: context.colors.outline),
+                    ?.copyWith(color: context.colors.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 l10n.modelDownloadWifiNotice,
                 style: context.text.bodySmall
-                    ?.copyWith(color: context.colors.outline),
+                    ?.copyWith(color: context.colors.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpacing.sm),
               if (_loading)
@@ -176,24 +227,46 @@ class _TranslationSettingsScreenState extends State<TranslationSettingsScreen> {
     final installed = _downloaded.contains(lang.code);
     final busy = _busy.contains(lang.code);
 
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(lang.nativeName),
-      subtitle: installed
-          ? null
-          : Text('$kApproxModelSizeMb Mo',
-              style: context.text.bodySmall
-                  ?.copyWith(color: context.colors.outline)),
-      trailing: busy
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : TextButton(
-              onPressed: () => installed ? _delete(lang) : _download(lang),
-              child: Text(installed ? l10n.deleteModel : l10n.downloadModel),
+    final secondary =
+        context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(lang.nativeName),
+          subtitle: busy
+              ? Text(l10n.downloadingModel(lang.nativeName), style: secondary)
+              : installed
+                  ? null
+                  : Text('$kApproxModelSizeMb Mo', style: secondary),
+          trailing: busy
+              ? null
+              : TextButton(
+                  onPressed: () => installed ? _delete(lang) : _download(lang),
+                  child:
+                      Text(installed ? l10n.deleteModel : l10n.downloadModel),
+                ),
+        ),
+        // Barre pleine largeur plutôt qu'un cercle de 20 px en bout de ligne :
+        // un modèle pèse une trentaine de mégaoctets et l'attente se compte en
+        // dizaines de secondes — il faut que l'utilisateur voie sans hésiter
+        // qu'il se passe quelque chose.
+        //
+        // Indéterminée, et ce n'est pas un raccourci : `ModelManager`
+        // n'expose aucune progression. `downloadModel()` est un appel unique
+        // qui ne rend la main qu'une fois le fichier complet. Afficher un
+        // pourcentage supposerait de l'inventer.
+        if (busy)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: LinearProgressIndicator(
+              minHeight: 3,
+              backgroundColor: context.colors.surfaceContainerHighest,
             ),
+          ),
+      ],
     );
   }
 }

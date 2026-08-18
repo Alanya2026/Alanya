@@ -5365,6 +5365,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get translationFailed => '无法翻译';
 
   @override
+  String get translationUnavailable => '该消息暂无可用翻译。';
+
+  @override
   String get languageModels => '语言模型';
 
   @override

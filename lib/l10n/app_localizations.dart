@@ -9712,6 +9712,12 @@ abstract class AppLocalizations {
   /// **'Traduction impossible'**
   String get translationFailed;
 
+  /// No description provided for @translationUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune traduction disponible pour ce message.'**
+  String get translationUnavailable;
+
   /// No description provided for @languageModels.
   ///
   /// In fr, this message translates to:

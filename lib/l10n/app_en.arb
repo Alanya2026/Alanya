@@ -2548,6 +2548,7 @@
   "translate": "Translate",
   "translating": "Translating…",
   "translationFailed": "Couldn't translate",
+  "translationUnavailable": "No translation available for this message.",
   "languageModels": "Language models",
   "languageModelsDescription": "Each language takes about {size} MB on your device.",
   "@languageModelsDescription": {

@@ -5551,6 +5551,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get translationFailed => 'Couldn\'t translate';
 
   @override
+  String get translationUnavailable =>
+      'No translation available for this message.';
+
+  @override
   String get languageModels => 'Language models';
 
   @override

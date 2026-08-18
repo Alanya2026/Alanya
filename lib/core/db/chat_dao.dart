@@ -782,10 +782,25 @@ class ChatDao {
   }
 
   /// Pose un état sans traduction (ignoré, modèle manquant, échec).
-  Future<void> setTranslationState(String clientId, int state) {
+  ///
+  /// [sourceLang] est renseigné quand la langue a pu être identifiée mais que
+  /// la traduction n'a pas abouti — typiquement un modèle absent. Sans lui,
+  /// l'interface ne saurait pas **quel** modèle proposer au téléchargement :
+  /// elle a détecté la langue puis jeté l'information.
+  Future<void> setTranslationState(
+    String clientId,
+    int state, {
+    String? sourceLang,
+  }) {
     return (db.update(db.localMessages)
           ..where((m) => m.clientId.equals(clientId)))
-        .write(LocalMessagesCompanion(translationState: Value(state)));
+        .write(LocalMessagesCompanion(
+      translationState: Value(state),
+      // `Value.absent()` laisse la colonne intacte : on n'efface pas une langue
+      // déjà connue quand l'appelant n'en fournit pas de nouvelle.
+      sourceLang:
+          sourceLang == null ? const Value.absent() : Value(sourceLang),
+    ));
   }
 
   /// Messages d'une conversation restant à examiner, du plus récent au plus

@@ -5607,6 +5607,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get translationFailed => 'Traduction impossible';
 
   @override
+  String get translationUnavailable =>
+      'Aucune traduction disponible pour ce message.';
+
+  @override
   String get languageModels => 'Modèles de langue';
 
   @override

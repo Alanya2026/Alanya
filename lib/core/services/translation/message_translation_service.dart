@@ -12,6 +12,13 @@ import 'translation_languages.dart';
 import 'translation_settings.dart';
 import 'translation_state.dart';
 
+/// Issue d'une tentative de traduction.
+///
+/// La langue source accompagne l'état : quand un modèle manque, c'est elle qui
+/// permet à l'interface de proposer le bon téléchargement plutôt que d'envoyer
+/// l'utilisateur chercher dans les réglages.
+typedef TranslationOutcome = ({int state, String? sourceLang});
+
 /// Traduction des messages reçus, entièrement sur l'appareil.
 ///
 /// Aucun contenu ne quitte le téléphone et la traduction fonctionne hors
@@ -180,8 +187,15 @@ class MessageTranslationService {
   /// Court-circuite le réglage automatique et l'override de conversation —
   /// c'est une demande explicite — mais pas les filtres de contenu : un JSON
   /// de trajet reste intraduisible, quoi qu'on en demande.
-  Future<void> translateNow(LocalMessage message) async {
-    await _process(message, respectSettings: false);
+  ///
+  /// **Renvoie l'état final**, que l'appelant doit exploiter. Deux issues ne
+  /// produisent aucun changement visible dans la bulle —
+  /// [MessageTranslationState.skipped] (message déjà dans la langue de lecture,
+  /// langue indéterminée ou non supportée) et [MessageTranslationState.failed] —
+  /// et sans retour à l'écran, l'utilisateur qui vient d'appuyer sur « Traduire »
+  /// croirait l'action perdue.
+  Future<TranslationOutcome> translateNow(LocalMessage message) async {
+    return _process(message, respectSettings: false);
   }
 
   /// Après installation d'un modèle : relance les messages qui l'attendaient.
@@ -254,28 +268,27 @@ class MessageTranslationService {
     }
   }
 
-  Future<void> _process(
+  /// Traite un message et renvoie l'état dans lequel il a été laissé.
+  Future<TranslationOutcome> _process(
     LocalMessage message, {
     required bool respectSettings,
   }) async {
-    final text = translatableTextOf(message);
-    if (text == null) {
-      await _dao.setTranslationState(
-          message.clientId, MessageTranslationState.skipped);
-      return;
+    Future<TranslationOutcome> mark(int state, {String? sourceLang}) async {
+      await _dao.setTranslationState(message.clientId, state,
+          sourceLang: sourceLang);
+      return (state: state, sourceLang: sourceLang);
     }
+
+    final text = translatableTextOf(message);
+    if (text == null) return mark(MessageTranslationState.skipped);
 
     if (respectSettings && !await _isEnabledFor(message.conversationID)) {
       // On laisse l'état à `pending` : la conversation peut être réactivée.
-      return;
+      return (state: MessageTranslationState.pending, sourceLang: null);
     }
 
     final target = mlKitLanguageOf(_settings.target);
-    if (target == null) {
-      await _dao.setTranslationState(
-          message.clientId, MessageTranslationState.skipped);
-      return;
-    }
+    if (target == null) return mark(MessageTranslationState.skipped);
 
     try {
       final identifier = _identifier ??=
@@ -286,16 +299,16 @@ class MessageTranslationService {
       // Indéterminé, romanisé, non supporté, ou déjà dans la langue de
       // lecture : rien à faire, et c'est définitif.
       if (source == null || source == target) {
-        await _dao.setTranslationState(
-            message.clientId, MessageTranslationState.skipped);
-        return;
+        return mark(MessageTranslationState.skipped);
       }
 
+      // La langue est retenue **avec** l'état : c'est elle qui permettra à
+      // l'interface de proposer le bon modèle. Sans elle, l'app aurait détecté
+      // la langue puis l'aurait oubliée, et n'aurait plus su quoi télécharger.
       final ready = await _modelsReady(source, target);
       if (!ready) {
-        await _dao.setTranslationState(
-            message.clientId, MessageTranslationState.missingModel);
-        return;
+        return mark(MessageTranslationState.missingModel,
+            sourceLang: source.bcpCode);
       }
 
       final translator = await _translatorFor(source, target);
@@ -305,9 +318,7 @@ class MessageTranslationService {
       // faire. Afficher une « traduction » identique à l'original, chip
       // compris, ne ferait que dérouter.
       if (translated.trim().isEmpty || translated.trim() == text.trim()) {
-        await _dao.setTranslationState(
-            message.clientId, MessageTranslationState.skipped);
-        return;
+        return mark(MessageTranslationState.skipped);
       }
 
       await _dao.setTranslation(
@@ -318,10 +329,13 @@ class MessageTranslationService {
       // La liste des discussions lit un aperçu dénormalisé : sans ce recalage,
       // le fil afficherait la traduction et l'inbox l'original.
       await _dao.refreshTranslatedPreview(message.conversationID);
+      return (
+        state: MessageTranslationState.done,
+        sourceLang: source.bcpCode,
+      );
     } catch (e) {
       debugPrint('[traduction] échec sur ${message.clientId} : $e');
-      await _dao.setTranslationState(
-          message.clientId, MessageTranslationState.failed);
+      return mark(MessageTranslationState.failed);
     }
   }
 

@@ -473,9 +473,44 @@ extension _ChatActions on _ChatDetailScreenState {
               ListTile(
                 leading: Icon(Icons.translate, color: primary),
                 title: Text(context.l10n.translate),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  MessageTranslationService.maybeInstance?.translateNow(msg);
+                  final service = MessageTranslationService.maybeInstance;
+                  if (service == null) return;
+                  var outcome = await service.translateNow(msg);
+                  if (!mounted) return;
+
+                  // Modèle manquant : on propose le téléchargement ici même.
+                  // L'utilisateur vient de demander une traduction — l'envoyer
+                  // la chercher dans les réglages lui faisait cinq étapes, et
+                  // donnait l'impression que le bouton n'avait rien fait.
+                  final source = outcome.sourceLang;
+                  if (outcome.state == MessageTranslationState.missingModel &&
+                      source != null &&
+                      source.isNotEmpty) {
+                    if (await promptTranslationModelDownload(context, source)) {
+                      if (!mounted) return;
+                      outcome = await service.translateNow(msg);
+                    }
+                    if (!mounted) return;
+                  }
+                  final state = outcome.state;
+
+                  // `done` et `missingModel` se voient dans la bulle : elle
+                  // affiche la traduction ou le bouton de téléchargement.
+                  // Les deux autres issues ne changent rien à l'écran — sans
+                  // ce retour, l'action semblerait n'avoir servi à rien.
+                  final l10n = context.l10n;
+                  final String? message = switch (state) {
+                    MessageTranslationState.skipped =>
+                      l10n.translationUnavailable,
+                    MessageTranslationState.failed => l10n.translationFailed,
+                    _ => null,
+                  };
+                  if (message != null) {
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text(message)));
+                  }
                 },
               ),
             if (msg.msgID != 0 && !msg.isDeleted)

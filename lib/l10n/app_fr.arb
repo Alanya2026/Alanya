@@ -3430,6 +3430,7 @@
   "translate": "Traduire",
   "translating": "Traduction…",
   "translationFailed": "Traduction impossible",
+  "translationUnavailable": "Aucune traduction disponible pour ce message.",
   "languageModels": "Modèles de langue",
   "languageModelsDescription": "Chaque langue occupe environ {size} Mo sur votre appareil.",
   "@languageModelsDescription": {
