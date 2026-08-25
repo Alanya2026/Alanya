@@ -25,6 +25,7 @@ import 'call/pending_call_reject_store.dart';
 import 'call/pending_outgoing_call_store.dart';
 import 'call/call_conf_routing.dart';
 import 'call/call_restart_roles.dart';
+import 'call/call_permissions_helper.dart';
 import 'call/incoming_presentation.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
@@ -250,6 +251,69 @@ class CallService extends ChangeNotifier {
 
   /// true si cet appareil a initié l'appel 1-à-1 (restart ICE = caller only).
   bool _isOutgoingCaller = false;
+
+  // ── Trickle ICE sortant ────────────────────────────────────────────
+  // L'appelant génère ses candidats dès la création de l'offre, soit plusieurs
+  // secondes avant que l'appelé — réveillé par push, démarrage à froid — n'ait
+  // un socket puis un peerConnection. Émis à ce moment-là ils sont perdus :
+  // ICE ne trouve aucune paire, échoue au bout de ~20 s, et seul un ICE restart
+  // rétablit le son. On les met donc en file jusqu'à réception de l'answer,
+  // preuve que le pair est en ligne.
+  final List<Map<String, dynamic>> _pendingLocalIceCandidates = [];
+  bool _peerReadyForIce = false;
+  static const int _maxPendingLocalIceCandidates = 128;
+
+  /// Émet le candidat si le pair peut le recevoir, sinon le met en file.
+  void _sendOrQueueIceCandidate(Map<String, dynamic> payload) {
+    if (_peerReadyForIce) {
+      _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload);
+      return;
+    }
+    // Borne le tampon : un gathering pathologique ne doit pas gonfler sans fin.
+    if (_pendingLocalIceCandidates.length >= _maxPendingLocalIceCandidates) {
+      _pendingLocalIceCandidates.removeAt(0);
+      debugPrint('[CallService] 🧊 file ICE pleine → plus ancien candidat abandonné');
+    }
+    _pendingLocalIceCandidates.add(payload);
+    debugPrint(
+      '[CallService] 🧊 candidat ICE en file (${_pendingLocalIceCandidates.length} en attente)',
+    );
+  }
+
+  /// Le pair est joignable : vider la file et passer en émission directe.
+  void _flushLocalIceCandidates() {
+    _peerReadyForIce = true;
+    if (_pendingLocalIceCandidates.isEmpty) return;
+    debugPrint(
+      '[CallService] 🧊 envoi de ${_pendingLocalIceCandidates.length} candidat(s) ICE en attente',
+    );
+    for (final payload in _pendingLocalIceCandidates) {
+      _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload);
+    }
+    _pendingLocalIceCandidates.clear();
+  }
+
+  void _resetLocalIceCandidateQueue() {
+    _pendingLocalIceCandidates.clear();
+    _peerReadyForIce = false;
+  }
+
+  // ── Préchauffage des iceServers ────────────────────────────────────
+  // fetchIceServers est un aller-retour HTTP. Placé juste avant _webrtc.init(),
+  // il retarde d'autant l'ouverture du micro (~2 s mesurées sur démarrage à
+  // froid). On l'amorce dès que l'appel est connu et on ne l'attend qu'au
+  // moment d'initialiser WebRTC.
+  Future<List<Map<String, dynamic>>>? _iceServersWarmup;
+
+  void _warmUpIceServers() {
+    // fetchIceServers ne lève jamais (repli STUN public en cas d'échec), le
+    // future non attendu ne peut donc pas produire d'erreur asynchrone.
+    _iceServersWarmup ??= _apiClient.fetchIceServers();
+  }
+
+  Future<List<Map<String, dynamic>>> _iceServersForCall() {
+    return _iceServersWarmup ?? _apiClient.fetchIceServers();
+  }
 
   Timer? _reconnectGraceTimer;
   Timer? _globalReconnectTimer;

@@ -84,6 +84,14 @@ class TalkyApiClient {
 
   Future<String>? _stableDeviceIdFuture;
 
+  // File de rejeu des émissions de signalisation d'appel perdues quand le
+  // socket n'est pas authentifié (voir sendSocketEvent dans socket_api.dart).
+  // Cas réel : au démarrage à froid, le refresh du token relance auth:login
+  // pendant que createAnswer() calcule le SDP ; l'answer arrivait alors sur un
+  // socket connected=true/auth=false et était jetée — l'appelant sonnait dans
+  // le vide jusqu'au timeout. Chaque entrée : {event, data, at}.
+  final List<Map<String, dynamic>> _pendingSocketEmits = [];
+
   // Cache TURN/ICE (voir fetchIceServers dans misc_api.dart)
   List<Map<String, dynamic>>? _cachedIceServers;
   DateTime? _iceServersExpiresAt;

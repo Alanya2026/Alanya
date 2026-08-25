@@ -48,6 +48,30 @@ class CallPermissionsHelper {
     }
   }
 
+  /// true si le verrouillage d'écran est affiché.
+  ///
+  /// Le service FCM natif n'affiche l'UI CallKit que lorsque le keyguard est
+  /// verrouillé ou l'app en arrière-plan. Dart, lui, ne voyait que le cycle de
+  /// vie Flutter : écran verrouillé mais activité encore résumée, les deux
+  /// couches revendiquaient chacune leur écran d'appel entrant, avec chacune sa
+  /// sonnerie. Cette méthode permet à Dart d'appliquer le même critère.
+  ///
+  /// Renvoie false en cas d'échec (canal absent au démarrage à froid, iOS,
+  /// tests) : c'est le repli sûr, on conserve alors le comportement historique
+  /// plutôt que de supprimer l'écran Flutter à tort.
+  static Future<bool> isScreenLocked() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final locked = await _channel.invokeMethod<bool>('isKeyguardLocked');
+      return locked ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('[CallPermissions] isKeyguardLocked: $e');
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   static Future<void> _openFullScreenIntentSettings() async {
     try {
       await _channel.invokeMethod<void>('openFullScreenIntentSettings');

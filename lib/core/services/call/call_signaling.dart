@@ -83,14 +83,31 @@ extension CallSignaling on CallService {
       _cancelAwaitingOfferTimeout();
       _currentCallId = incomingCallId;
       _status = CallStatus.incoming;
+      // Couvre l'entrée par socket (app déjà lancée) : la config TURN est
+      // prête avant que l'utilisateur ne décroche.
+      _warmUpIceServers();
       debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
 
       _ensureRemoteIdentityResolved();
 
+      // TalkyFirebaseMessagingService affiche CallKit dès que le keyguard est
+      // verrouillé, quand bien même l'activité reste résumée et _isAppForeground
+      // vrai. Dans ce cas Dart revendiquait aussi l'écran Flutter et lançait
+      // RingtoneService : deux UI entrantes et deux sonneries simultanées. On
+      // aligne donc Dart sur le critère du natif — écran verrouillé, CallKit est
+      // seul maître, l'écran Flutter serait de toute façon masqué par le verrou.
+      final screenLocked = await CallPermissionsHelper.isScreenLocked();
+      final canOwnFlutterUi = _isAppForeground && !screenLocked;
+      if (screenLocked && _isAppForeground) {
+        debugPrint(
+          '[CallService] 🔒 écran verrouillé → UI entrante laissée à CallKit (callId=$incomingCallId)',
+        );
+      }
+
       // Owner UI avant notify : FG → Flutter, BG → CallKit (pas IncomingCallScreen).
       if (_isAutoAnsweringFromPush) {
         _clearIncomingPresentation(callId: incomingCallId);
-      } else if (_isAppForeground) {
+      } else if (canOwnFlutterUi) {
         _claimIncomingPresentation(
           incomingCallId,
           IncomingPresentationOwner.flutterScreen,
@@ -104,13 +121,19 @@ extension CallSignaling on CallService {
       notify();
 
       if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
-        debugPrint('[CallService] ⚡ Auto-answer en 500ms (CallKit pré-accepté)');
+        debugPrint('[CallService] ⚡ Auto-answer immédiat (CallKit pré-accepté)');
         _autoAnswerOnNextIncoming = false;
         _autoAnswerCallerId = null;
 
-        // !! Attendre 500ms pour que l'app soit bien initialisée avant d'auto-répondre
-        await Future.delayed(const Duration(milliseconds: 500));
-
+        // Plus d'attente fixe ici. Le délai de 500 ms qui précédait visait à
+        // « laisser l'app s'initialiser », mais answerCall() borne désormais
+        // lui-même ses deux prérequis par une condition réelle plutôt qu'une
+        // durée : _pendingOffer absent → _armAwaitingOfferTimeout() au lieu
+        // d'un échec, et ensureSocketReady() attend la connexion + l'auth du
+        // socket (borné à 5 s, recrée une instance morte). À ce point du flux
+        // l'offre est de toute façon déjà posée et le socket vient de livrer
+        // cet événement, donc l'attente était systématiquement du temps mort
+        // (0,502 s mesurées à l'identique sur 5 appels).
         try {
           await answerCall();
         } catch (e) {
@@ -124,9 +147,11 @@ extension CallSignaling on CallService {
       //  - app en arrière-plan → CallKit (UI système + sonnerie), même si FCM
       //    n'est pas encore arrivé / a échoué.
       //  - app au premier plan → RingtoneService (IncomingCallScreen).
+      //  - écran verrouillé → CallKit, même si l'activité est encore résumée
+      //    (sinon RingtoneService doublait la sonnerie du natif).
       if (_isAutoAnsweringFromPush) {
         debugPrint('[CallService] 🔇 Sonnerie entrante ignorée: auto-réponse en cours');
-      } else if (!_isAppForeground) {
+      } else if (!canOwnFlutterUi) {
         if (_nativeAndroidHandlesIncomingCallUi) {
           debugPrint(
             '[CallService] 📲 CallKit natif Android (socket ignoré pour UI): '
@@ -178,6 +203,10 @@ extension CallSignaling on CallService {
 
       try {
         final answer = data['answer'] as Map;
+        // L'answer prouve que l'appelé est en ligne avec un peerConnection :
+        // ses candidats peuvent enfin lui parvenir. On vide la file avant
+        // handleAnswer pour que le checking ICE démarre au plus tôt.
+        _flushLocalIceCandidates();
         await _webrtc.handleAnswer(
           RTCSessionDescription(answer['sdp'] as String, 'answer'),
         );

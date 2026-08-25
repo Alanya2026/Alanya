@@ -1,7 +1,10 @@
 package com.alanya237.alanya
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.hiennv.flutter_callkit_incoming.CallkitConstants
@@ -140,6 +143,33 @@ object CallIncomingHelper {
     }
 
     /**
+     * Annule la vibration d'appel entrant.
+     *
+     * La présentation entrante démarre une vibration à motif RÉPÉTITIF (un seul
+     * appel à `service.vibrate`, puis des cycles on/off toutes les 2 s). Retirer
+     * la notification ne l'arrête pas : une vibration lancée par programme avec
+     * répétition court jusqu'à annulation explicite. Mesuré sur la trace B2 du
+     * 25/08 : notification republiée retirée à 16:07:51.615, son coupé à
+     * 16:07:52.122, mais vibration de 16:07:51.309 à 16:08:15.309 — 24 s après
+     * le décrochage, perçues comme une seconde sonnerie.
+     */
+    fun stopVibration(context: Context) {
+        try {
+            val vibrator: Vibrator? =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    (context.applicationContext.getSystemService(Context.VIBRATOR_MANAGER_SERVICE)
+                        as? VibratorManager)?.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.applicationContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                }
+            vibrator?.cancel()
+        } catch (e: Exception) {
+            Log.e(TAG, "stopVibration failed", e)
+        }
+    }
+
+    /**
      * Annule explicitement la notification d'appel EN COURS d'un [callId] (id
      * calqué sur le plugin : `("ongoing_$callId").hashCode()`). Complète
      * stopService : sur certains OEM la notif de service au premier plan ne
@@ -159,8 +189,19 @@ object CallIncomingHelper {
     fun endCall(context: Context, data: Map<String, String>) {
         ensureInitialized(context)
         lastShownCallId = null
+        // Annuler la vibration entrante : son motif est répétitif et survit au
+        // retrait de la notification comme à l'arrêt du lecteur audio.
+        stopVibration(context)
         // Couper la sonnerie importée jouée nativement (voir CustomRingtonePlayer).
         CustomRingtonePlayer.stop()
+        // …et la sonnerie par défaut jouée par le soundManager de CETTE instance.
+        // Elle n'était coupée que dans la branche `callId.isEmpty()` plus bas :
+        // avec un callId précis — le cas de dismissIncomingSilently, donc de la
+        // preview dupliquée — elle continuait jusqu'au timeout du plugin. Mesuré
+        // sur la trace T17 : vibrations de 16:08:00.831 à 16:08:30.831, soit
+        // 30,2 s après l'accept, puis 44 s en T18. L'arrêt de ACTIVE_CALLS ne
+        // suffit pas, il dépend qu'aucun entrant non accepté ne subsiste.
+        soundManager?.stop()
         // Coupe aussi le service/notification d'appel EN COURS (chronomètre +
         // raccrocher). Le plugin ne le fait pas quand getInstance() est null
         // (app tuée) → sinon notification fantôme aux boutons morts après l'appel.
@@ -285,6 +326,10 @@ object CallIncomingHelper {
         val id = callId.trim()
         if (id.isEmpty()) return
         ensureInitialized(context)
+        // Point le plus précoce du flux : TalkyApplication appelle ceci dès la
+        // bascule isAccepted. La vibration répétitive doit y être annulée aussi,
+        // sans quoi elle survit au retrait de la notification.
+        stopVibration(context)
         try {
             val bundle = Data(hashMapOf<String, Any?>("id" to id)).toBundle()
             notificationManager?.clearIncomingNotification(bundle, true)

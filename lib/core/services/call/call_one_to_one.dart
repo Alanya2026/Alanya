@@ -25,8 +25,12 @@ extension CallOneToOne on CallService {
       notify();
       return;
     }
+    // Amorce la config TURN pendant l'établissement du socket : elle sera prête
+    // quand _webrtc.init() en aura besoin, au lieu de le faire attendre.
+    _warmUpIceServers();
     if (!await _ensureFullyConnectedForOutgoingCall()) return;
     _errorMessage = null;
+    _resetLocalIceCandidateQueue();
     _status = CallStatus.outgoing;
     _isOutgoingCaller = true;
     _remoteUserId = targetUserId;
@@ -36,7 +40,7 @@ extension CallOneToOne on CallService {
     notify();
 
     try {
-      final iceServers = await _apiClient.fetchIceServers(force: true);
+      final iceServers = await _iceServersForCall();
       await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
@@ -49,9 +53,11 @@ extension CallOneToOne on CallService {
         debugPrint('[CallService] 🔊 Routage audio initialisé (haut-parleur ${isVideo ? "ON" : "OFF"})');
       }
 
-      // ICE candidates envoyés au destinataire
+      // ICE candidates envoyés au destinataire. Mis en file tant que l'answer
+      // n'est pas revenue : avant ça l'appelé n'a pas de peerConnection (voire
+      // pas de socket s'il démarre à froid) et les candidats seraient perdus.
       _webrtc.onIceCandidate = (candidate) {
-        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
+        _sendOrQueueIceCandidate({
           'targetUserId': targetUserId.toString(),
           'candidate': {
             'candidate': candidate.candidate,
@@ -192,7 +198,7 @@ extension CallOneToOne on CallService {
     _pendingOffer = null;
 
     try {
-      final iceServers = await _apiClient.fetchIceServers(force: true);
+      final iceServers = await _iceServersForCall();
       await _webrtc.init(_isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
       _webrtc.onLocalStream  = (_) { notify(); };
       _webrtc.onRemoteStream = (_) { notify(); };
@@ -202,8 +208,11 @@ extension CallOneToOne on CallService {
         await audio.AudioHelper.setSpeakerphoneOn(_isVideo);
       }
 
+      // Côté appelé, l'appelant est forcément déjà en ligne (c'est lui qui a
+      // envoyé l'offre) : émission directe, sans mise en file.
+      _flushLocalIceCandidates();
       _webrtc.onIceCandidate = (candidate) {
-        _apiClient.sendSocketEvent(SocketEvents.iceCandidate, {
+        _sendOrQueueIceCandidate({
           'targetUserId': _remoteUserId.toString(),
           'candidate': {
             'candidate': candidate.candidate,
@@ -427,6 +436,12 @@ extension CallOneToOne on CallService {
   void _resetCallState() {
     _resetCallUiState();
     _clearIncomingPresentation();
+    // Un appel non abouti ne doit pas laisser ses candidats en file : ils
+    // seraient rejoués sur l'appel suivant, avec une génération périmée.
+    _resetLocalIceCandidateQueue();
+    // Le prochain appel réamorce sa config TURN (fetchIceServers reste servi
+    // par son cache 50 min, donc sans coût réseau quand elle est encore valide).
+    _iceServersWarmup = null;
     _cancelOutgoingTimeout();
     _cancelAwaitingOfferTimeout();
     _cancelIncomingRingSafety();

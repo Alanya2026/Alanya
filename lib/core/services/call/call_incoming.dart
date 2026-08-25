@@ -41,6 +41,11 @@ extension CallIncoming on CallService {
       _apiClient.connectSocket();
     }
 
+    // Démarrage à froid : la config TURN est récupérée en parallèle de
+    // l'attente de l'offre et de l'auto-answer, au lieu de retarder l'ouverture
+    // du micro une fois l'answer déclenchée.
+    _warmUpIceServers();
+
     final isConf = isConferenceCallIncoming(
       sessionKind: sessionKind,
       callId: callId,
@@ -247,6 +252,32 @@ extension CallIncoming on CallService {
       return;
     }
 
+    // L'état Dart ne suffit pas : si l'événement `accept` s'est perdu — observé
+    // sur la trace B2 du 25/08, accept à 16:30:57.850 sans jamais atteindre
+    // acceptIncomingCallFromPush — _status reste `idle`, et cette preview est
+    // alors prise pour un NOUVEL appel entrant : écran Flutter + RingtoneService
+    // (2ᵉ écran et 2ᵉ sonnerie à 16:30:58.224 et 16:30:58.298).
+    // CallKit, lui, sait que l'appel a été accepté. On s'appuie donc sur cette
+    // vérité native plutôt que sur notre propre état, qui peut être vide.
+    if (callId.isNotEmpty) {
+      try {
+        final active = await _callKit.getActiveCall();
+        final sameCall = active != null && active['callId']?.toString() == callId;
+        if (sameCall && active['isAccepted'] == true) {
+          debugPrint(
+            '[CallService] 🛡 preview ignorée — déjà acceptée côté natif: $callId '
+            '(status Dart=$_status)',
+          );
+          await _dismissStrayIncomingCallKit(callId);
+          return;
+        }
+      } catch (e) {
+        // Repli : en cas d'échec on garde le comportement historique plutôt que
+        // de bloquer un appel entrant légitime.
+        debugPrint('[CallService] getActiveCall (preview) échoué: $e');
+      }
+    }
+
     // Premier plan : Flutter gère l'UI — retirer CallKit sans refuser l'appel.
     if (_isAppForeground) {
       await _dismissStrayIncomingCallKit(callId);
@@ -290,6 +321,43 @@ extension CallIncoming on CallService {
       callerName: callerName,
       roomId: roomId,
     )) {
+      // canPrepareIncomingFromCallKit refuse dès que _status != idle. Or une
+      // preview CallKit dupliquée arrive précisément pendant qu'on répond à CET
+      // appel : endAll() le marquerait alors terminé dans EndedCallRegistry, et
+      // syncWithEndedRegistry() raccrocherait la communication en cours (accept
+      // à 15:11:38.313 → decline à 15:11:39.681 sur la trace T11).
+      final isOurActiveCall = callId.isNotEmpty &&
+          callId == _currentCallId &&
+          _status != CallStatus.idle &&
+          _status != CallStatus.ended;
+      if (isOurActiveCall) {
+        // Ignorer ne suffit pas : cette preview a rouvert une présentation
+        // entrante qui sonne et vibre jusqu'à son timeout — 30,2 s mesurées
+        // après l'accept sur la trace T17 (vibrations 16:08:00.831 →
+        // 16:08:30.831), et startCall() à 16:08:01.731 ne l'interrompt pas.
+        // On la referme donc explicitement, mais en mode « silencieux » :
+        // dismissIncomingUiSilently marque le retrait comme programmatique
+        // (CallDismissRegistry), ce qui empêche le natif d'en déduire un refus
+        // ou un raccrochage.
+        //
+        // Restreint aux états antérieurs à l'acquisition de la session CallKit
+        // « en cours » : après startCall(), refermer cet id supprimerait l'UI
+        // d'appel actif au lieu de la présentation entrante résiduelle.
+        final beforeOngoingCallKit = _status == CallStatus.incoming ||
+            _status == CallStatus.connecting;
+        if (beforeOngoingCallKit) {
+          debugPrint(
+            '[CallService] 🛡 preview CallKit dupliquée (status=$_status): $callId '
+            '→ fermeture silencieuse de la présentation entrante',
+          );
+          await _dismissStrayIncomingCallKit(callId);
+        } else {
+          debugPrint(
+            '[CallService] 🛡 preview CallKit dupliquée ignorée (session déjà active, status=$_status): $callId',
+          );
+        }
+        return;
+      }
       debugPrint(
         '[CallService] 🛡 PushKit preview refusé (occupé ou invalide): $callId',
       );
@@ -375,6 +443,9 @@ extension CallIncoming on CallService {
 
   /// Dispatch centralisé des actions CallKit (accept / decline / ended).
   Future<void> handleCallKitAction(IncomingCallAction action) async {
+    debugPrint(
+      '[CallService] ⇢ handleCallKitAction ${action.action} callId=${action.callId} status=$_status',
+    );
     switch (action.action) {
       case IncomingCallActionType.incomingPreview:
         await handleIncomingCallKitPreview(

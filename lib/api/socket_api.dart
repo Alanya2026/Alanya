@@ -182,6 +182,9 @@ extension SocketApi on TalkyApiClient {
       debugPrint('[Socket] Authentifié: ${data['alanyaID']}');
       _isSocketAuthVerified = true;
       _cancelSocketReconnectWatchdog();
+      // Avant tout listener externe : une answer retenue pendant la ré-auth
+      // doit repartir au plus tôt, l'appelant étant en attente.
+      _flushPendingSocketEmits();
       final external = _socketListeners[SocketEvents.authVerified];
       if (external == null || external.isEmpty) {
         debugPrint('[Socket] ⚠ auth:verified sans listeners externes enregistrés');
@@ -373,6 +376,9 @@ extension SocketApi on TalkyApiClient {
     _stopConditionalHealthCheck();
     _isSocketAuthVerified = false;
     _pendingMessagesCallback = null;
+    // Déconnexion explicite (logout / changement de compte) : la signalisation
+    // retenue n'a plus de destinataire valide, elle ne doit pas survivre.
+    _pendingSocketEmits.clear();
     _socketCallbackWrappers.clear();
     _socket?.disconnect();
     _socket?.dispose();
@@ -380,12 +386,79 @@ extension SocketApi on TalkyApiClient {
     _socketListeners.clear();
   }
 
+  /// Événements de signalisation d'appel rejoués après ré-authentification.
+  /// Volontairement restreint : rejouer tout le trafic socket remettrait en vol
+  /// des accusés de lecture ou des indicateurs de frappe périmés. Une
+  /// signalisation d'appel, elle, est soit encore utile quelques secondes, soit
+  /// écartée par les garde-fous de génération / callId côté récepteur.
+  static const Set<String> _replayableSocketEvents = {
+    SocketEvents.callUser,
+    SocketEvents.answerCall,
+    SocketEvents.iceCandidate,
+    SocketEvents.groupOffer,
+    SocketEvents.groupAnswer,
+    SocketEvents.groupIceCandidate,
+    SocketEvents.meetingOffer,
+    SocketEvents.meetingAnswer,
+    SocketEvents.meetingIceCandidate,
+  };
+
+  static const int _maxPendingSocketEmits = 96;
+
+  /// Au-delà, l'appel a de toute façon échoué côté appelant (timeout no-answer) :
+  /// rejouer une answer périmée ressusciterait un appel déjà soldé.
+  static const Duration _pendingSocketEmitTtl = Duration(seconds: 20);
+
   void sendSocketEvent(String event, dynamic data) {
     if (!isSocketReady) {
-      debugPrint('[Socket] ** emit "$event" différé (socket non prêt — connected=$isSocketConnected, auth=$_isSocketAuthVerified)');
+      if (_replayableSocketEvents.contains(event)) {
+        if (_pendingSocketEmits.length >= _maxPendingSocketEmits) {
+          _pendingSocketEmits.removeAt(0);
+        }
+        _pendingSocketEmits.add({
+          'event': event,
+          'data': data,
+          'at': DateTime.now(),
+        });
+        debugPrint(
+          '[Socket] 📥 emit "$event" mis en file pour rejeu '
+          '(${_pendingSocketEmits.length} en attente — connected=$isSocketConnected, auth=$_isSocketAuthVerified)',
+        );
+        return;
+      }
+      debugPrint('[Socket] ** emit "$event" abandonné (socket non prêt — connected=$isSocketConnected, auth=$_isSocketAuthVerified)');
       return;
     }
     _socket!.emit(event, data);
+  }
+
+  /// Rejoue les émissions de signalisation retenues, dans l'ordre d'origine.
+  /// Appelé dès que `auth:verified` repasse le socket en état prêt.
+  void _flushPendingSocketEmits() {
+    if (_pendingSocketEmits.isEmpty) return;
+    final queued = List<Map<String, dynamic>>.from(_pendingSocketEmits);
+    _pendingSocketEmits.clear();
+    final now = DateTime.now();
+    var sent = 0;
+    var expired = 0;
+    for (final item in queued) {
+      final at = item['at'] as DateTime;
+      if (now.difference(at) > _pendingSocketEmitTtl) {
+        expired++;
+        continue;
+      }
+      if (!isSocketReady) {
+        // Le socket est retombé pendant le rejeu : on remet le reste en file.
+        _pendingSocketEmits.add(item);
+        continue;
+      }
+      _socket!.emit(item['event'] as String, item['data']);
+      sent++;
+    }
+    debugPrint(
+      '[Socket] 📤 rejeu signalisation: $sent envoyé(s), $expired périmé(s), '
+      '${_pendingSocketEmits.length} restant(s)',
+    );
   }
 
   void onSocketEvent(String event, void Function(dynamic) callback) {

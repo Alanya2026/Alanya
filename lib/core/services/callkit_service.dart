@@ -403,8 +403,14 @@ class CallKitService {
     // accept/reject. Sans listener (événement avant _bootstrap), pending est
     // le seul canal et sera consommé au démarrage.
     if (_actions.hasListener) {
+      debugPrint('[CallKit] → action $actionType callId=${action.callId} émise sur le stream');
       _actions.add(action);
     } else {
+      // Sur la trace B2 du 25/08, un accept (16:30:57.850) n'a jamais atteint
+      // acceptIncomingCallFromPush : ni action traitée, ni garde-fou déclenché.
+      // Ce log distingue les deux hypothèses — perdue faute d'écouteur, ou
+      // émise mais non consommée en aval.
+      debugPrint('[CallKit] → action $actionType callId=${action.callId} MISE EN PENDING (aucun écouteur)');
       _pendingAction = action;
     }
   }

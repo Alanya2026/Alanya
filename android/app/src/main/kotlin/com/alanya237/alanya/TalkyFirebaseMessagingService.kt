@@ -104,24 +104,46 @@ class TalkyFirebaseMessagingService : FirebaseMessagingService() {
         )
     }
 
-    /** Copie de la logique FlutterFirebaseMessagingUtils (classe package-private). */
+    /**
+     * Copie de la logique FlutterFirebaseMessagingUtils (classe package-private).
+     *
+     * Le test d'importance était strictement `== IMPORTANCE_FOREGROUND` (100).
+     * Or quand FCM réveille ce service, le processus est fréquemment rapporté
+     * en `IMPORTANCE_FOREGROUND_SERVICE` (125) alors que l'activité est bien
+     * visible : la comparaison échouait, la fonction renvoyait toujours faux,
+     * et l'UI CallKit native s'affichait par-dessus l'IncomingCallScreen de
+     * Flutter — double UI entrante, dont le decline raccrochait l'appel.
+     * On accepte donc les deux niveaux, et on journalise la décision.
+     */
     private fun isApplicationForeground(context: Context): Boolean {
         val keyguardManager =
             context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-        if (keyguardManager?.isKeyguardLocked == true) return false
+        val locked = keyguardManager?.isKeyguardLocked == true
 
         val activityManager =
-            context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return false
-        val processes = activityManager.runningAppProcesses ?: return false
+            context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val processes = activityManager?.runningAppProcesses
         val packageName = context.packageName
-        for (process in processes) {
-            if (process.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
-                process.processName == packageName
-            ) {
-                return true
+        var importance = -1
+        if (processes != null) {
+            for (process in processes) {
+                if (process.processName == packageName) {
+                    importance = process.importance
+                    break
+                }
             }
         }
-        return false
+
+        val visible = importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND ||
+            importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE
+        // Écran verrouillé : l'UI native plein écran reste la bonne réponse,
+        // même si le processus est encore visible.
+        val foreground = !locked && visible
+        Log.d(
+            TAG,
+            "isApplicationForeground=$foreground (keyguardLocked=$locked, importance=$importance, visible=$visible)",
+        )
+        return foreground
     }
 
     companion object {

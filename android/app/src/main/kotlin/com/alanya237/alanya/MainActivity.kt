@@ -8,7 +8,9 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
+import android.app.KeyguardManager
 import android.app.NotificationManager
+import android.content.Context
 import android.util.Log
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -94,6 +96,16 @@ class MainActivity : FlutterFragmentActivity() {
                         } else {
                             result.success(true)
                         }
+                    }
+                    // TalkyFirebaseMessagingService décide d'afficher CallKit sur
+                    // le critère keyguard + importance ; Dart ne connaissait que
+                    // le cycle de vie Flutter. Écran verrouillé avec l'app encore
+                    // résumée, les deux revendiquaient chacun leur UI entrante :
+                    // deux écrans et deux sonneries. Ce canal aligne Dart sur le
+                    // même critère que le natif.
+                    "isKeyguardLocked" -> {
+                        val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                        result.success(km?.isKeyguardLocked ?: false)
                     }
                     "openFullScreenIntentSettings" -> {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

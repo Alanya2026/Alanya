@@ -210,30 +210,66 @@ extension CallGroup on CallService {
   }
 
   Future<void> _createGroupPeerAndOffer(String userId, {bool iceRestart = false}) async {
-    final pc = await _createGroupPeerConnection(userId);
+    // Instrumentation : cette fonction était muette entre la création du
+    // PeerConnection et l'envoi de l'offre. Un ajout de participant peut y
+    // échouer sans laisser de trace — _onConfJoined l'appelle depuis un
+    // handler socket sans try/catch, donc l'exception se perd.
+    debugPrint('[CallGroup] ▶ createPeerAndOffer peer=$userId iceRestart=$iceRestart');
+    try {
+      final pc = await _createGroupPeerConnection(userId);
+      debugPrint('[CallGroup] · PeerConnection prêt peer=$userId');
 
-    if (!iceRestart) {
-      _webrtc.localStream?.getTracks().forEach((track) {
-        pc.addTrack(track, _webrtc.localStream!);
+      if (!iceRestart) {
+        final ls = _webrtc.localStream;
+        final tracks = ls?.getTracks() ?? const [];
+        debugPrint(
+          '[CallGroup] · localStream=${ls == null ? "NULL" : ls.id} tracks=${tracks.length}',
+        );
+        var added = 0;
+        for (final track in tracks) {
+          try {
+            await pc.addTrack(track, ls!);
+            added++;
+          } catch (e) {
+            debugPrint('[CallGroup] ✖ addTrack échoué peer=$userId kind=${track.kind}: $e');
+          }
+        }
+        debugPrint('[CallGroup] · tracks ajoutées=$added/${tracks.length} peer=$userId');
+      }
+
+      final generation = iceRestart
+          ? (_groupPeerIceGeneration[userId] = (_groupPeerIceGeneration[userId] ?? 0) + 1)
+          : (_groupPeerIceGeneration[userId] ??= 0);
+
+      final offer = iceRestart
+          ? await pc.createOffer({'iceRestart': true})
+          : await pc.createOffer();
+      // Un SDP sans m-line ne déclenche aucun gathering ICE : le pair reste
+      // muet sans qu'aucune erreur ne soit levée. On le rend visible.
+      final mLines = RegExp(r'^m=', multiLine: true).allMatches(offer.sdp ?? '').length;
+      debugPrint(
+        '[CallGroup] · offre créée peer=$userId sdp=${offer.sdp?.length ?? 0} m-lines=$mLines gen=$generation',
+      );
+      if (mLines == 0) {
+        debugPrint('[CallGroup] ⚠ OFFRE SANS MEDIA peer=$userId — aucun candidat ICE ne sera collecté');
+      }
+
+      await pc.setLocalDescription(offer);
+      debugPrint('[CallGroup] · setLocalDescription OK peer=$userId → gathering ICE');
+
+      _apiClient.sendSocketEvent(SocketEvents.groupOffer, {
+        'roomId': _groupRoomId,
+        'fromUserId': '',
+        'toUserId': userId,
+        'offer': {'sdp': offer.sdp, 'type': offer.type},
+        'generation': generation,
       });
+      debugPrint('[CallGroup] ✔ group_offer envoyé peer=$userId room=$_groupRoomId');
+    } catch (e, st) {
+      debugPrint('[CallGroup] ✖ createPeerAndOffer ÉCHEC peer=$userId: $e');
+      debugPrint('[CallGroup]   $st');
+      rethrow;
     }
-
-    final generation = iceRestart
-        ? (_groupPeerIceGeneration[userId] = (_groupPeerIceGeneration[userId] ?? 0) + 1)
-        : (_groupPeerIceGeneration[userId] ??= 0);
-
-    final offer = iceRestart
-        ? await pc.createOffer({'iceRestart': true})
-        : await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    _apiClient.sendSocketEvent(SocketEvents.groupOffer, {
-      'roomId': _groupRoomId,
-      'fromUserId': '',
-      'toUserId': userId,
-      'offer': {'sdp': offer.sdp, 'type': offer.type},
-      'generation': generation,
-    });
   }
 
   Future<void> _handleGroupOffer(
@@ -241,6 +277,10 @@ extension CallGroup on CallService {
     Map offer, {
     int? generation,
   }) async {
+    debugPrint(
+      '[CallGroup] ◀ group_offer reçu peer=$fromUserId gen=$generation '
+      'sdp=${(offer['sdp'] as String?)?.length ?? 0}',
+    );
     final pc = await _createGroupPeerConnection(fromUserId);
 
     if (generation != null) {
@@ -301,13 +341,29 @@ extension CallGroup on CallService {
     _groupPeerIceGeneration.putIfAbsent(userId, () => 0);
 
     pc.onTrack = (event) {
+      debugPrint(
+        '[CallGroup] 🎥 track distant peer=$userId kind=${event.track.kind} '
+        'streams=${event.streams.length}',
+      );
       if (event.streams.isNotEmpty) {
         _groupRemoteStreams[userId] = event.streams[0];
         notify();
       }
     };
 
+    // Les PeerConnection de groupe sont créées ici en direct (pas via
+    // WebRTCService), donc aucun de ses logs ne les couvre : sans ce compteur,
+    // leur gathering ICE est totalement invisible dans logcat.
+    var iceCount = 0;
     pc.onIceCandidate = (candidate) {
+      iceCount++;
+      final c = candidate.candidate ?? '';
+      final type = c.contains('typ relay')
+          ? 'relay/TURN'
+          : c.contains('typ srflx')
+              ? 'srflx/STUN'
+              : 'host/LAN';
+      debugPrint('[CallGroup] 🧊 candidat #$iceCount peer=$userId type=$type');
       _apiClient.sendSocketEvent(SocketEvents.groupIceCandidate, {
         'roomId': _groupRoomId,
         'fromUserId': '',
@@ -322,6 +378,7 @@ extension CallGroup on CallService {
     };
 
     pc.onConnectionState = (state) {
+      debugPrint('[CallGroup] 🔌 peer=$userId state=${state.name}');
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         _cancelGroupPeerDisconnectGrace(userId);
         _groupPeerRetryCount[userId] = 0;
