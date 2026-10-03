@@ -29,6 +29,23 @@ extension BillingApi on TalkyApiClient {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  /// Active un code d'abonnement reçu après un paiement sur le site : une année,
+  /// à la suite de ce qui court (l'essai compris). Rend les droits à jour.
+  ///
+  /// Rejouable par le même compte sans effet de plus. Refus : `INVALID_CODE`,
+  /// `INVALID_CODE_FORMAT`, `CODE_ALREADY_USED`, `CODE_EXPIRED`, `CODE_REVOKED`,
+  /// `CODE_LOCKED` (avec `retryAfterSeconds` dans `details`).
+  Future<Map<String, dynamic>> redeemActivationCode(String code) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/billing/redeem'),
+        headers: _headers,
+        body: jsonEncode({'code': code}),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   /// Demande un paiement mobile money.
   ///
   /// La réponse n'est jamais « payé » : l'opérateur confirme plus tard, et

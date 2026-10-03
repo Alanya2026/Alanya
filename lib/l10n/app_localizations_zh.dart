@@ -6668,6 +6668,94 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subscriptionSourceCode => '激活码';
 
   @override
+  String get redeemTitle => '我有激活码';
+
+  @override
+  String get redeemIntro => '在网站付款后，您会收到一个代码。在此输入即可解锁全部功能一年。';
+
+  @override
+  String get redeemFieldLabel => '激活码';
+
+  @override
+  String get redeemFieldHint => 'XXXXX-XXXXX-XXXXX';
+
+  @override
+  String get redeemSubmit => '激活';
+
+  @override
+  String get redeemChecksumError => '这个代码似乎不正确，请检查每个字符。';
+
+  @override
+  String get redeemSuccessTitle => '订阅已激活';
+
+  @override
+  String redeemSuccessActive(String date) {
+    return '您的订阅有效期至 $date。';
+  }
+
+  @override
+  String redeemSuccessScheduled(String start, String end) {
+    return '您的免费试用继续。订阅将于 $start 开始，持续至 $end。';
+  }
+
+  @override
+  String get redeemDone => '完成';
+
+  @override
+  String get redeemPaste => '粘贴代码';
+
+  @override
+  String redeemLocked(int minutes) {
+    return '尝试次数过多。请在 $minutes 分钟后重试。';
+  }
+
+  @override
+  String get paywallOutgoingTitle => '订阅后继续使用';
+
+  @override
+  String get paywallOutgoingBody => '您的免费试用已结束。您仍可接收消息和来电，但发送消息和拨打电话需要订阅。';
+
+  @override
+  String get paywallTrialTitle => '订阅 Alanya';
+
+  @override
+  String get paywallTrialBody =>
+      '一年的订阅将解锁全部功能：发送消息、拨打电话、翻译、备份和可信行程。在免费试用期内即可订阅：订阅将从试用结束时开始。';
+
+  @override
+  String get paywallPayOnline => '在线付款';
+
+  @override
+  String get paywallHaveCode => '我有激活码';
+
+  @override
+  String get paywallPayHint => '您将在我们的网站付款，然后收到一个代码，在此输入。';
+
+  @override
+  String get paywallPayUnavailable => '在线付款暂未开通。如果您有激活码，请输入。';
+
+  @override
+  String get paywallPayOpenFailed => '无法打开付款网站。';
+
+  @override
+  String get errCodeInvalidCode => '此代码不存在，请检查。';
+
+  @override
+  String get errCodeInvalidCodeFormat => '此代码输入有误，应为 15 个字符。';
+
+  @override
+  String get errCodeCodeAlreadyUsed => '此代码已被使用。';
+
+  @override
+  String get errCodeCodeExpired => '此代码已过期。';
+
+  @override
+  String get errCodeCodeRevoked => '此代码已被取消。';
+
+  @override
+  String get errCodeCodeLocked => '尝试次数过多，请几分钟后重试。';
+
+  @override
   String get verificationTitle => '获取认证标记';
 
   @override
