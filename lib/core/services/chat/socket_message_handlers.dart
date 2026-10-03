@@ -12,6 +12,7 @@ import '../list_ringtone_preferences.dart';
 import '../notifications/badge_sync_service.dart';
 import 'chat_api.dart';
 import 'message_ack_watchdog.dart';
+import '../billing/entitlement_service.dart';
 import 'message_sound_service.dart';
 import 'message_path_tracer.dart';
 import 'receipt_service.dart';
@@ -33,6 +34,10 @@ const Set<String> kTerminalSendFailures = {
   'CONVERSATION_NOT_FOUND',
   'OFFICIAL_READONLY',
 };
+
+/// Code du refus d'envoi faute d'abonnement. Absent de [kTerminalSendFailures] à
+/// dessein : il se lève dès qu'un code est activé.
+const String kSubscriptionRequired = 'SUBSCRIPTION_REQUIRED';
 
 class SocketMessageHandlers {
   SocketMessageHandlers({
@@ -286,6 +291,12 @@ class SocketMessageHandlers {
       clientId,
       failureCode: kTerminalSendFailures.contains(code) ? code : null,
     );
+    // Essai fini, aucun abonnement : pas un refus définitif — un code activé
+    // rouvrirait tout, et « réessayer » doit alors marcher (le message n'est
+    // donc PAS marqué terminal). Mais on le dit, une fois : le panneau.
+    if (code == kSubscriptionRequired) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+    }
   }
 
   /// (Dés)épingle un message. Optimistic : on écrit localement d'abord pour un
@@ -319,6 +330,12 @@ class SocketMessageHandlers {
     int? conversationID,
   }) async {
     if (msgID == 0 || emoji.isEmpty) return;
+    // Réagir est émettre : refusé sans abonnement, avant l'écriture optimiste
+    // (il n'y aurait rien à défaire). Retirer SA réaction reste permis.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
     final myId = _myId();
     final convID = conversationID ?? await _conversationIdForMsg(msgID);
     if (convID == null) return;

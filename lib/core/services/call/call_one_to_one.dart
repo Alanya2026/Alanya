@@ -25,6 +25,13 @@ extension CallOneToOne on CallService {
       notify();
       return;
     }
+    // Essai fini, aucun abonnement : le compte reçoit, il n'appelle pas. Refusé
+    // ici, avant toute fenêtre d'appel — rien à défaire. Le panneau de
+    // l'abonnement s'ouvre ; le serveur refuserait de toute façon.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
     if (!await _ensureFullyConnectedForOutgoingCall()) return;
     _errorMessage = null;
     _status = CallStatus.outgoing;

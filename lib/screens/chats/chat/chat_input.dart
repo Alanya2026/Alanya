@@ -68,8 +68,51 @@ extension _ChatInput on _ChatDetailScreenState {
   Widget _buildComposerLockBanner() => switch (_composerLock) {
         ComposerLock.adminsOnly => _buildAnnouncementBanner(),
         ComposerLock.official => _buildOfficialBanner(),
+        ComposerLock.subscription => _buildSubscriptionBanner(),
         _ => _buildBlockedBanner(),
       };
+
+  /// Essai fini, aucun abonnement : on reçoit, on n'écrit pas. Le bandeau est
+  /// une porte, pas un cul-de-sac : il ouvre le panneau où payer et saisir le code.
+  Widget _buildSubscriptionBanner() {
+    final colors = context.colors;
+    return Material(
+      color: context.semantic.brandContainer,
+      child: InkWell(
+        onTap: () => unawaited(showPaywall(context, null, outgoing: true)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.lock_outline_rounded, size: 18, color: colors.primary),
+              AppSpacing.hGapSm,
+              Expanded(
+                child: Text(
+                  context.l10n.composerSubscriptionRequired,
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.semantic.onBrandContainer,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              AppSpacing.hGapSm,
+              Text(
+                context.l10n.plusCardSubscribe,
+                style: context.text.labelLarge?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 18, color: colors.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Compte officiel : diffusion en lecture seule, pas de réponse possible.
   Widget _buildOfficialBanner() {

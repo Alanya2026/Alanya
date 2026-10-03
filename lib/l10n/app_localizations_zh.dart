@@ -6705,6 +6705,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get redeemPaste => '粘贴代码';
 
   @override
+  String get composerSubscriptionRequired => '您的试用已结束：您仍可接收消息，但发送消息需要订阅。';
+
+  @override
   String redeemLocked(int minutes) {
     return '尝试次数过多。请在 $minutes 分钟后重试。';
   }

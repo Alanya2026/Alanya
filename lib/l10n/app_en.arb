@@ -3118,6 +3118,7 @@
   "@redeemSuccessScheduled": {"placeholders": {"start": {"type": "String"}, "end": {"type": "String"}}},
   "redeemDone": "Done",
   "redeemPaste": "Paste the code",
+  "composerSubscriptionRequired": "Your trial has ended: you still receive your messages, but you need a subscription to send them.",
   "redeemLocked": "Too many attempts. Try again in {minutes, plural, =1{1 minute} other{{minutes} minutes}}.",
   "@redeemLocked": {"placeholders": {"minutes": {"type": "int"}}},
   "paywallOutgoingTitle": "Subscribe to continue",

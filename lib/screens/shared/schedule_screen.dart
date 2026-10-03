@@ -1,6 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/services/billing/entitlement_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
@@ -112,6 +115,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       return;
     }
 
+    // Planifier une réunion est émettre : refusé sans abonnement. Le formulaire
+    // reste à l'écran, rien n'est perdu — le panneau de l'abonnement s'ouvre.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -140,6 +150,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       AppLog.e('ScheduleScreen', 'Création de la réunion échouée', e, st);
       if (mounted) {
         setState(() => _isLoading = false);
+        // Le serveur refuse faute d'abonnement (le droit en cache était périmé) :
+        // le panneau parle, pas une phrase générique.
+        if (refusAlanyaPlus(e) != null) {
+          afficherErreur(context, e, domaine: ErrorDomain.reunion);
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.unableToCreateTheMeetingTry)),
         );

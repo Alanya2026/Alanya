@@ -7074,6 +7074,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get redeemPaste => 'Coller le code';
 
   @override
+  String get composerSubscriptionRequired =>
+      'Votre essai est terminé : vous recevez vos messages, mais il faut un abonnement pour en envoyer.';
+
+  @override
   String redeemLocked(int minutes) {
     String _temp0 = intl.Intl.pluralLogic(
       minutes,

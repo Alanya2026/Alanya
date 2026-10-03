@@ -20,6 +20,7 @@ import '../music_metadata_service.dart';
 import '../pdf_thumbnail_service.dart';
 import '../video_thumbnail_service.dart';
 import '../../utils/audio_message_kind.dart';
+import '../billing/entitlement_service.dart';
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../../talky_models.dart';
 import 'chat_api.dart';
@@ -57,6 +58,19 @@ class MessageSender {
 
   static const int maxAlbumItems = 30;
 
+  /// Le compte peut-il envoyer ? Essai fini et aucun abonnement : non — rien
+  /// n'est mis en file, le panneau de l'abonnement s'ouvre. Les écrans ferment
+  /// déjà la saisie ; ceci rattrape les autres chemins (transfert, partage,
+  /// réponse à un statut, note vocale) sans leur demander de le prévoir.
+  ///
+  /// Sans droits connus (serveur ancien, démarrage), tout est permis : le
+  /// téléphone ne ferme jamais l'envoi faute de réponse.
+  bool _outgoingAllowed() {
+    if (EntitlementService.allowsOutgoing) return true;
+    EntitlementService.maybeInstance?.reportOutgoingBlocked();
+    return false;
+  }
+
   Future<void> sendText({
     required int conversationID,
     required String content,
@@ -75,6 +89,7 @@ class MessageSender {
       debugPrint('[MessageSender] sendText ignoré : utilisateur non lié (myId=0)');
       return;
     }
+    if (!_outgoingAllowed()) return;
     clientId ??= _newClientId();
     final localNow = DateTime.now();
     final now = localNow.toUtc();
@@ -129,6 +144,7 @@ class MessageSender {
       debugPrint('[MessageSender] sendLocation ignoré : utilisateur non lié (myId=0)');
       return;
     }
+    if (!_outgoingAllowed()) return;
     final clientId = _newClientId();
     final now = DateTime.now().toUtc();
     final content = location.encode();
@@ -175,6 +191,7 @@ class MessageSender {
       debugPrint('[MessageSender] sendContact ignoré : utilisateur non lié (myId=0)');
       return;
     }
+    if (!_outgoingAllowed()) return;
     final clientId = _newClientId();
     final now = DateTime.now().toUtc();
     final content = contact.encode();
@@ -246,6 +263,7 @@ class MessageSender {
       debugPrint('[MessageSender] sendMedia ignoré : utilisateur non lié (myId=0)');
       return;
     }
+    if (!_outgoingAllowed()) return;
     final clientId = _newClientId();
     final localNow = DateTime.now();
     final now = localNow.toUtc();
@@ -312,6 +330,7 @@ class MessageSender {
       debugPrint('[MessageSender] sendMediaFile ignoré : utilisateur non lié (myId=0)');
       return;
     }
+    if (!_outgoingAllowed()) return;
     final clientId = _newClientId();
     final now = DateTime.now().toUtc();
     File uploadFile;
@@ -399,6 +418,7 @@ class MessageSender {
       debugPrint('[MessageSender] sendMediaFiles ignoré : utilisateur non lié (myId=0)');
       return;
     }
+    if (!_outgoingAllowed()) return;
     if (items.isEmpty) return;
     if (items.length == 1) {
       final item = items.first;
@@ -501,6 +521,7 @@ class MessageSender {
       debugPrint('[MessageSender] sendMediaAlbum ignoré : utilisateur non lié (myId=0)');
       return;
     }
+    if (!_outgoingAllowed()) return;
     if (items.isEmpty) return;
     final caption = content?.trim();
     final effectiveCaption =

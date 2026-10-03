@@ -18,6 +18,7 @@ import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/services/billing/entitlement_service.dart';
 import 'core/services/billing/entitlements.dart';
+import 'widgets/billing/paywall_sheet.dart' show showPaywall;
 import 'core/db/app_database.dart';
 import 'dart:convert';
 import 'core/services/backup/restore_state.dart';
@@ -269,6 +270,7 @@ class _TalkyAppState extends State<TalkyApp> {
   // premier message reçu.
   late final EntitlementService _entitlements =
       EntitlementService(api: _apiClient)..loadFromCache();
+  StreamSubscription<void>? _outgoingBlockedSub;
   late final MessageTranslationService _translation =
       MessageTranslationService(
     dao: ChatDao(_database),
@@ -298,6 +300,23 @@ class _TalkyAppState extends State<TalkyApp> {
     // conversation. Seul le dépôt de chat sait retrouver la ligne et relancer le
     // recalcul de l'aperçu ; le service socket lui délègue.
     _tripSocket.bindCardWriter(_chatProvider.repository.updateTripCard);
+    // Un envoi ou un appel refusé faute d'abonnement — par le téléphone, qui le
+    // savait, ou par le serveur — ouvre le panneau de l'abonnement, d'où qu'il
+    // vienne : un écran de conversation, un transfert, un message remis en file,
+    // un appel lancé depuis le journal. Un seul écouteur, ici, au lieu d'un
+    // `showPaywall` à penser dans chaque appelant.
+    _outgoingBlockedSub = _entitlements.outgoingBlocked.listen((_) {
+      final context = appNavigatorKey.currentContext;
+      if (context != null) {
+        unawaited(showPaywall(context, null, outgoing: true));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_outgoingBlockedSub?.cancel());
+    super.dispose();
   }
 
   @override

@@ -12118,6 +12118,12 @@ abstract class AppLocalizations {
   /// **'Coller le code'**
   String get redeemPaste;
 
+  /// No description provided for @composerSubscriptionRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre essai est terminé : vous recevez vos messages, mais il faut un abonnement pour en envoyer.'**
+  String get composerSubscriptionRequired;
+
   /// No description provided for @redeemLocked.
   ///
   /// In fr, this message translates to:

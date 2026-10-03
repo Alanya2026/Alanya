@@ -6990,6 +6990,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get redeemPaste => 'Paste the code';
 
   @override
+  String get composerSubscriptionRequired =>
+      'Your trial has ended: you still receive your messages, but you need a subscription to send them.';
+
+  @override
   String redeemLocked(int minutes) {
     String _temp0 = intl.Intl.pluralLogic(
       minutes,

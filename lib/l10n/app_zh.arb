@@ -2058,6 +2058,7 @@
   "@redeemSuccessScheduled": {"placeholders": {"start": {"type": "String"}, "end": {"type": "String"}}},
   "redeemDone": "完成",
   "redeemPaste": "粘贴代码",
+  "composerSubscriptionRequired": "您的试用已结束：您仍可接收消息，但发送消息需要订阅。",
   "redeemLocked": "尝试次数过多。请在 {minutes} 分钟后重试。",
   "@redeemLocked": {"placeholders": {"minutes": {"type": "int"}}},
   "paywallOutgoingTitle": "订阅后继续使用",

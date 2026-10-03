@@ -85,12 +85,18 @@ class EntitlementService extends ChangeNotifier {
   /// ensemble) ne font qu'un seul signal : le panneau ne s'ouvre pas cinq fois.
   Stream<void> get outgoingBlocked => _outgoingBlocked.stream;
 
+  /// Fenêtre où des refus rapprochés ne font qu'un signal. Assez longue pour une
+  /// rafale (des messages en file qui échouent ensemble arrivent à quelques
+  /// millisecondes), assez courte pour qu'un appui volontaire — « réessayer »,
+  /// un bouton d'appel — rouvre le panneau juste après qu'on l'a fermé.
+  static const _outgoingCoalesce = Duration(seconds: 2);
+
   /// Signale un refus d'émettre, et relit les droits : le compte a peut-être
   /// été abonné depuis un autre appareil, que le cache ne sait pas encore.
   void reportOutgoingBlocked() {
     final now = DateTime.now();
     final last = _lastOutgoingBlock;
-    if (last != null && now.difference(last) < const Duration(seconds: 5)) return;
+    if (last != null && now.difference(last) < _outgoingCoalesce) return;
     _lastOutgoingBlock = now;
     if (!_outgoingBlocked.isClosed) _outgoingBlocked.add(null);
     unawaited(refresh());

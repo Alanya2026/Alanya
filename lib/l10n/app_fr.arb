@@ -3897,6 +3897,7 @@
   "@redeemSuccessScheduled": {"placeholders": {"start": {"type": "String"}, "end": {"type": "String"}}},
   "redeemDone": "Terminé",
   "redeemPaste": "Coller le code",
+  "composerSubscriptionRequired": "Votre essai est terminé : vous recevez vos messages, mais il faut un abonnement pour en envoyer.",
   "redeemLocked": "Trop d'essais. Réessayez dans {minutes, plural, =1{1 minute} other{{minutes} minutes}}.",
   "@redeemLocked": {"placeholders": {"minutes": {"type": "int"}}},
   "paywallOutgoingTitle": "Abonnez-vous pour continuer",

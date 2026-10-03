@@ -17,7 +17,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
 import '../../providers/status_provider.dart';
 import '../../widgets/common/common.dart';
+import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/services/billing/entitlement_service.dart';
 import '../../core/errors/error_presenter.dart';
 
 enum _StatusType { text, photo, video, audio }
@@ -411,6 +413,12 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 
   Future<void> _publish() async {
     if (!_canPublish) return;
+    // Publier un statut est émettre : refusé sans abonnement. Le brouillon reste
+    // à l'écran, rien n'est perdu — le panneau de l'abonnement s'ouvre.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
     HapticFeedback.lightImpact();
     setState(() {
       _publishing = true;
@@ -454,6 +462,12 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
           _publishing = false;
         });
         if (_drafts.isNotEmpty) _jumpTo(0);
+        // Le serveur refuse faute d'abonnement (le droit en cache était périmé) :
+        // le panneau parle, pas une phrase d'échec générique.
+        if (refusAlanyaPlus(e) != null) {
+          afficherErreur(context, e, domaine: ErrorDomain.statut);
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(presenterErreur(context.l10n, e,
