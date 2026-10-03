@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import '../../core/services/billing/entitlement_service.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/services/media_cache_service.dart';
@@ -68,7 +69,7 @@ class StatusViewerScreen extends StatefulWidget {
 class _StatusViewerScreenState extends State<StatusViewerScreen>
     with SingleTickerProviderStateMixin {
   static const Duration _textImageDuration = Duration(seconds: 5);
-  static const int _maxMediaBytes = 50 * 1024 * 1024;
+  static int get _maxMediaBytes => EntitlementService.maxUploadBytes;
 
   late int _contactIndex;
   late int _itemIndex;
@@ -550,7 +551,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
       final mb = (size / (1024 * 1024)).toStringAsFixed(1);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(context.l10n.fileTooLarge(mb)),
+          content: Text(context.l10n.fileTooLarge(mb, '${EntitlementService.maxUploadMb}')),
           backgroundColor: context.colors.error,
         ));
       }

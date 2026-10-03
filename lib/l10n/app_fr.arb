@@ -230,18 +230,24 @@
       }
     }
   },
-  "videoTooLarge": "Vidéo ignorée ({mb} Mo). Limite : 50 Mo.",
+  "videoTooLarge": "Vidéo ignorée ({mb} Mo). Limite : {limit} Mo.",
   "@videoTooLarge": {
     "placeholders": {
       "mb": {
         "type": "String"
+      },
+      "limit": {
+        "type": "String"
       }
     }
   },
-  "fileTooLarge": "Fichier trop volumineux ({mb} Mo). Limite : 50 Mo.",
+  "fileTooLarge": "Fichier trop volumineux ({mb} Mo). Limite : {limit} Mo.",
   "@fileTooLarge": {
     "placeholders": {
       "mb": {
+        "type": "String"
+      },
+      "limit": {
         "type": "String"
       }
     }
@@ -1256,11 +1262,14 @@
       }
     }
   },
-  "filesSkippedTooLarge": "{count} fichier(s) ignoré(s) : limite 50 Mo.",
+  "filesSkippedTooLarge": "{count} fichier(s) ignoré(s) : limite {limit} Mo.",
   "@filesSkippedTooLarge": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "limit": {
+        "type": "String"
       }
     }
   },

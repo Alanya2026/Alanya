@@ -519,7 +519,7 @@ class ChatRepository {
   }
 
 
-  static const int maxAlbumItems = MessageSender.maxAlbumItems;
+  static int get maxAlbumItems => MessageSender.maxAlbumItems;
 
   /// Le compte peut-il émettre ? Sinon le panneau de l'abonnement s'ouvre.
   /// Voir `MessageSender._outgoingAllowed` : sans droits connus, tout passe.

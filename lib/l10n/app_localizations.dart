@@ -865,14 +865,14 @@ abstract class AppLocalizations {
   /// No description provided for @videoTooLarge.
   ///
   /// In fr, this message translates to:
-  /// **'Vidéo ignorée ({mb} Mo). Limite : 50 Mo.'**
-  String videoTooLarge(String mb);
+  /// **'Vidéo ignorée ({mb} Mo). Limite : {limit} Mo.'**
+  String videoTooLarge(String mb, String limit);
 
   /// No description provided for @fileTooLarge.
   ///
   /// In fr, this message translates to:
-  /// **'Fichier trop volumineux ({mb} Mo). Limite : 50 Mo.'**
-  String fileTooLarge(String mb);
+  /// **'Fichier trop volumineux ({mb} Mo). Limite : {limit} Mo.'**
+  String fileTooLarge(String mb, String limit);
 
   /// No description provided for @minutesShort.
   ///
@@ -4645,8 +4645,8 @@ abstract class AppLocalizations {
   /// No description provided for @filesSkippedTooLarge.
   ///
   /// In fr, this message translates to:
-  /// **'{count} fichier(s) ignoré(s) : limite 50 Mo.'**
-  String filesSkippedTooLarge(int count);
+  /// **'{count} fichier(s) ignoré(s) : limite {limit} Mo.'**
+  String filesSkippedTooLarge(int count, String limit);
 
   /// No description provided for @maxMedias.
   ///

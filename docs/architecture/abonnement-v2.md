@@ -44,6 +44,34 @@ trois mois à partir d'elle). Payer pendant l'essai est permis : l'année commen
 - Le rachat est une seule transaction : deux saisies simultanées du même code, un seul compte
   l'obtient. Rejouer son propre code rend le même succès sans seconde période.
 
+## Limites selon l'abonnement
+
+Le palier se décide sur une seule ligne de partage : **a payé** = phase payante ET (abonnement en
+cours, payé, offert ou par code, OU compte exempté). En essai, en grâce ou payant éteint, tout le
+monde est au palier standard.
+
+| | Standard | A payé |
+|---|---|---|
+| Taille d'un fichier envoyé | 50 Mo | 200 Mo |
+| Médias d'un album | 30 | 100 |
+| Médias gardés sur le serveur | durée « standard » (page Purges) | durée « Alanya Plus » (page Purges) |
+
+Le serveur envoie `limits: { maxUploadBytes, maxAlbumItems, tier }` avec les droits ; l'application
+les lit (jamais de 50 ni de 30 codés en dur) et refuse tôt, en disant le bon plafond. Le serveur
+applique la taille : le ticket d'envoi direct (`/upload/ticket`) et l'envoi par formulaire
+(`/upload/media`, avant et après multer). Les plafonds sont des constantes
+(`TIER_LIMITS`, `constants/billing.js`).
+
+Le nombre de médias d'un album n'est contrôlé que par l'application : un album est une suite de
+messages, le serveur ne connaît pas son total.
+
+La **conservation sur le serveur** n'est pas une constante mais deux réglages de la page Purges
+(« Rétention des médias — standard » et « — Alanya Plus »). Pour « 15 jours en essai, un an pour
+qui a payé » : standard = 15, Alanya Plus = 365. Attention : la purge nocturne supprime alors,
+définitivement, les médias de plus de 15 jours de tous les comptes hors abonnement — y compris
+pendant la grâce, où personne n'est abonné. À régler le jour de l'activation, après l'avoir
+annoncé aux utilisateurs ; la purge s'arrête d'elle-même si elle dépasse son seuil d'alerte.
+
 ## Ce que le site de paiement doit faire
 
 Le site n'existe pas encore, et il n'y a pas encore de prestataire. Tout est prêt pour qu'il se

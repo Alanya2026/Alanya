@@ -73,6 +73,13 @@ class EntitlementService extends ChangeNotifier {
   /// Le compte peut-il envoyer un message ou lancer un appel ?
   bool get canSend => _current.canSend;
 
+  /// Plafonds d'envoi du compte, lus sans contexte : la taille d'un fichier et le
+  /// nombre de médias d'un album. Palier standard sans service ni droits connus.
+  static PlusLimits get limits => _instance?._current.limits ?? PlusLimits.standard;
+  static int get maxUploadBytes => limits.maxUploadBytes;
+  static int get maxUploadMb => limits.maxUploadMb;
+  static int get maxAlbumItems => limits.maxAlbumItems;
+
   /// Lecture synchrone du droit d'émettre, pour les services sans contexte.
   /// Sans service (tests, démarrage), rien n'est fermé.
   static bool get allowsOutgoing => _instance?.canSend ?? true;

@@ -45,6 +45,71 @@ Map<String, dynamic> _trialPayload({
     };
 
 void main() {
+  group('Plafonds d\'envoi', () {
+    const mb = 1024 * 1024;
+
+    test('sans mention du serveur : palier standard, 50 Mo et 30 médias', () {
+      final e = Entitlements.fromJson(_payload());
+      expect(e.limits.maxUploadBytes, 50 * mb);
+      expect(e.limits.maxAlbumItems, 30);
+      expect(e.limits.paid, isFalse);
+      expect(e.limits.maxUploadMb, 50);
+      expect(Entitlements.unrestricted.limits.maxAlbumItems, 30);
+    });
+
+    test('abonné : 200 Mo et 100 médias, tels que le serveur les annonce', () {
+      final e = Entitlements.fromJson({
+        ..._payload(),
+        'limits': {'maxUploadBytes': 200 * mb, 'maxAlbumItems': 100, 'tier': 'paid'},
+      });
+      expect(e.limits.maxUploadBytes, 200 * mb);
+      expect(e.limits.maxUploadMb, 200);
+      expect(e.limits.maxAlbumItems, 100);
+      expect(e.limits.paid, isTrue);
+    });
+
+    test('une valeur absurde ne donne jamais un plafond nul ou négatif', () {
+      for (final bad in [0, -5, 'abc', null]) {
+        final e = Entitlements.fromJson({
+          ..._payload(),
+          'limits': {'maxUploadBytes': bad, 'maxAlbumItems': bad},
+        });
+        expect(e.limits.maxUploadBytes, 50 * mb, reason: '$bad');
+        expect(e.limits.maxAlbumItems, 30, reason: '$bad');
+      }
+    });
+
+    test('les plafonds survivent au cache local', () {
+      final e = Entitlements.fromJson({
+        ..._payload(),
+        'limits': {'maxUploadBytes': 200 * mb, 'maxAlbumItems': 100, 'tier': 'paid'},
+      });
+      final back = Entitlements.fromJson(e.toJson());
+      expect(back.limits.maxUploadBytes, 200 * mb);
+      expect(back.limits.maxAlbumItems, 100);
+      expect(back.limits.paid, isTrue);
+    });
+
+    test('le service les rend sans contexte, et les reprend à l\'expiration', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = EntitlementService(api: TalkyApiClient());
+      expect(EntitlementService.maxUploadBytes, 50 * mb);
+      await s.apply({
+        ..._payload(),
+        'limits': {'maxUploadBytes': 200 * mb, 'maxAlbumItems': 100, 'tier': 'paid'},
+      });
+      expect(EntitlementService.maxUploadBytes, 200 * mb);
+      expect(EntitlementService.maxUploadMb, 200);
+      expect(EntitlementService.maxAlbumItems, 100);
+      // L'abonnement a pris fin : le serveur n'annonce plus que le palier standard.
+      await s.apply(_payload());
+      expect(EntitlementService.maxUploadBytes, 50 * mb);
+      expect(EntitlementService.maxAlbumItems, 30);
+      s.dispose();
+      expect(EntitlementService.maxAlbumItems, 30, reason: 'sans service : standard');
+    });
+  });
+
   group('Régime essai', () {
     test('un serveur qui n\'en parle pas : Alanya Plus, tout est permis', () {
       final e = Entitlements.fromJson(_payload());

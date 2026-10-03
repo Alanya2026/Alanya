@@ -88,6 +88,55 @@ class PlusPeriod {
       };
 }
 
+/// Ce que le compte peut envoyer en une fois : la taille d'un fichier et le
+/// nombre de médias d'un album. Le serveur les calcule selon que le compte a
+/// payé ou non, et les applique — le téléphone ne fait que les lire, pour
+/// refuser tôt et dire le bon plafond.
+class PlusLimits {
+  const PlusLimits({
+    this.maxUploadBytes = kStandardUploadBytes,
+    this.maxAlbumItems = kStandardAlbumItems,
+    this.paid = false,
+  });
+
+  /// Palier standard : ce que fait un compte sans abonnement, et ce que suppose
+  /// un serveur qui n'envoie pas de limites.
+  static const standard = PlusLimits();
+
+  final int maxUploadBytes;
+  final int maxAlbumItems;
+
+  /// Le compte a payé (palier de 200 Mo et 100 médias).
+  final bool paid;
+
+  /// Le plafond d'un fichier, en Mo entiers, pour les messages.
+  int get maxUploadMb => (maxUploadBytes / (1024 * 1024)).round();
+
+  static PlusLimits fromJson(Object? json) {
+    if (json is! Map) return standard;
+    int positive(Object? v, int fallback) {
+      final n = v is num ? v.toInt() : int.tryParse('$v');
+      return n != null && n > 0 ? n : fallback;
+    }
+    return PlusLimits(
+      maxUploadBytes: positive(json['maxUploadBytes'], kStandardUploadBytes),
+      maxAlbumItems: positive(json['maxAlbumItems'], kStandardAlbumItems),
+      paid: json['tier'] == 'paid',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'maxUploadBytes': maxUploadBytes,
+        'maxAlbumItems': maxAlbumItems,
+        'tier': paid ? 'paid' : 'standard',
+      };
+}
+
+/// Plafonds du palier standard : 50 Mo par fichier, 30 médias par album. Les
+/// mêmes que ceux du serveur (constants/billing.js, TIER_LIMITS.standard).
+const int kStandardUploadBytes = 50 * 1024 * 1024;
+const int kStandardAlbumItems = 30;
+
 /// L'essai gratuit du compte (régime [PlusModel.trial]).
 class PlusTrial {
   const PlusTrial({required this.endsAt, required this.active});
@@ -117,6 +166,7 @@ class Entitlements {
     required this.known,
     this.model = PlusModel.plus,
     this.trial,
+    this.limits = PlusLimits.standard,
     this.phase = PlusPhase.free,
     this.graceUntil,
     this.period,
@@ -144,6 +194,10 @@ class Entitlements {
   /// L'essai du compte ; nul hors régime [PlusModel.trial], payant éteint ou
   /// pour un compte exempté.
   final PlusTrial? trial;
+
+  /// Ce que le compte peut envoyer en une fois. Sans mention du serveur : palier
+  /// standard — le téléphone ne promet jamais plus que ce qu'on lui a dit.
+  final PlusLimits limits;
   final PlusPhase phase;
   final DateTime? graceUntil;
   final PlusPeriod? period;
@@ -217,6 +271,7 @@ class Entitlements {
       known: true,
       model: _model(json['model']),
       trial: PlusTrial.fromJson(json['trial']),
+      limits: PlusLimits.fromJson(json['limits']),
       phase: _phase(json['phase']),
       graceUntil: _date(json['graceUntil']),
       period: period == null ? null : PlusPeriod.fromJson(period),
@@ -236,6 +291,7 @@ class Entitlements {
   Map<String, dynamic> toJson() => {
         'model': model == PlusModel.trial ? 2 : 1,
         if (trial != null) 'trial': trial!.toJson(),
+        'limits': limits.toJson(),
         'phase': phase.name,
         'graceUntil': graceUntil?.toUtc().toIso8601String(),
         'period': period?.toJson(),

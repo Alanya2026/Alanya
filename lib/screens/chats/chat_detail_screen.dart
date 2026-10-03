@@ -116,7 +116,8 @@ part 'chat/chat_bubbles.dart';  // rendu des bulles & médias
 part 'chat/chat_input.dart';    // barre de saisie, emoji, bandeau réponse
 
 // Limite alignée sur multer (50 Mo) côté backend.
-const int _maxMediaBytes = 50 * 1024 * 1024;
+/// Plafond d'un fichier envoyé : 50 Mo, ou 200 Mo pour qui a payé.
+int get _maxMediaBytes => EntitlementService.maxUploadBytes;
 const Duration _messageEditWindow = Duration(minutes: 30);
 const int _maxSelectionCount = 50;
 

@@ -56,7 +56,8 @@ class MessageSender {
   final Set<String> _inFlightUploads;
   final MessageAckWatchdog? _ackWatchdog;
 
-  static const int maxAlbumItems = 30;
+  /// Médias d'un album : 30, ou 100 pour qui a payé (voir [PlusLimits]).
+  static int get maxAlbumItems => EntitlementService.maxAlbumItems;
 
   /// Le compte peut-il envoyer ? Essai fini et aucun abonnement : non — rien
   /// n'est mis en file, le panneau de l'abonnement s'ouvre. Les écrans ferment
