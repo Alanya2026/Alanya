@@ -6982,6 +6982,59 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.';
 
   @override
+  String get plusCardTrialKicker => 'Essai gratuit';
+
+  @override
+  String plusCardTrialTitle(String date) {
+    return 'Gratuit jusqu\'au $date';
+  }
+
+  @override
+  String get plusCardTrialBody =>
+      'Tout est ouvert. Ensuite, vous recevrez toujours vos messages et vos appels, mais il faudra un abonnement pour envoyer et appeler.';
+
+  @override
+  String plusCardTrialDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'encore $count jours d\'essai',
+      one: 'encore 1 jour d\'essai',
+      zero: 'dernier jour d\'essai',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardSubscribe => 'S\'abonner';
+
+  @override
+  String get plusCardRestrictedKicker => 'Essai terminé';
+
+  @override
+  String get plusCardRestrictedTitle =>
+      'Vous ne pouvez plus envoyer ni appeler';
+
+  @override
+  String get plusCardRestrictedBody =>
+      'Vous recevez toujours vos messages et vos appels. Abonnez-vous pour envoyer des messages et appeler de nouveau.';
+
+  @override
+  String get plusCardLapsedTrialBody =>
+      'Vous recevez toujours vos messages et vos appels. Entrez un nouveau code pour reprendre.';
+
+  @override
+  String get plusCardRenewByCode =>
+      'Pour renouveler, il vous faudra un nouveau code.';
+
+  @override
+  String get plusCardScheduledTrialBody =>
+      'Votre essai gratuit continue jusque-là, puis l\'abonnement prend le relais.';
+
+  @override
+  String get subscriptionSourceCode => 'Code d\'activation';
+
+  @override
   String get verificationTitle => 'Obtenir la coche';
 
   @override

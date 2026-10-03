@@ -6900,6 +6900,57 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your Plus settings and history have been deleted. Subscribe again to get your features back.';
 
   @override
+  String get plusCardTrialKicker => 'Free trial';
+
+  @override
+  String plusCardTrialTitle(String date) {
+    return 'Free until $date';
+  }
+
+  @override
+  String get plusCardTrialBody =>
+      'Everything is open. After that, you will still receive your messages and calls, but you will need a subscription to send and call.';
+
+  @override
+  String plusCardTrialDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trial days left',
+      one: '1 trial day left',
+      zero: 'last trial day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardSubscribe => 'Subscribe';
+
+  @override
+  String get plusCardRestrictedKicker => 'Trial ended';
+
+  @override
+  String get plusCardRestrictedTitle => 'You can no longer send or call';
+
+  @override
+  String get plusCardRestrictedBody =>
+      'You still receive your messages and calls. Subscribe to send messages and call again.';
+
+  @override
+  String get plusCardLapsedTrialBody =>
+      'You still receive your messages and calls. Enter a new code to resume.';
+
+  @override
+  String get plusCardRenewByCode => 'To renew, you will need a new code.';
+
+  @override
+  String get plusCardScheduledTrialBody =>
+      'Your free trial continues until then, then the subscription takes over.';
+
+  @override
+  String get subscriptionSourceCode => 'Activation code';
+
+  @override
   String get verificationTitle => 'Get the badge';
 
   @override

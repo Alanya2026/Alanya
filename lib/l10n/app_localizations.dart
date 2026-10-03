@@ -11980,6 +11980,78 @@ abstract class AppLocalizations {
   /// **'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.'**
   String get plusCardPurgedBody;
 
+  /// No description provided for @plusCardTrialKicker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essai gratuit'**
+  String get plusCardTrialKicker;
+
+  /// No description provided for @plusCardTrialTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gratuit jusqu\'au {date}'**
+  String plusCardTrialTitle(String date);
+
+  /// No description provided for @plusCardTrialBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout est ouvert. Ensuite, vous recevrez toujours vos messages et vos appels, mais il faudra un abonnement pour envoyer et appeler.'**
+  String get plusCardTrialBody;
+
+  /// No description provided for @plusCardTrialDaysLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{dernier jour d\'essai} =1{encore 1 jour d\'essai} other{encore {count} jours d\'essai}}'**
+  String plusCardTrialDaysLeft(int count);
+
+  /// No description provided for @plusCardSubscribe.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'abonner'**
+  String get plusCardSubscribe;
+
+  /// No description provided for @plusCardRestrictedKicker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essai terminé'**
+  String get plusCardRestrictedKicker;
+
+  /// No description provided for @plusCardRestrictedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne pouvez plus envoyer ni appeler'**
+  String get plusCardRestrictedTitle;
+
+  /// No description provided for @plusCardRestrictedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous recevez toujours vos messages et vos appels. Abonnez-vous pour envoyer des messages et appeler de nouveau.'**
+  String get plusCardRestrictedBody;
+
+  /// No description provided for @plusCardLapsedTrialBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous recevez toujours vos messages et vos appels. Entrez un nouveau code pour reprendre.'**
+  String get plusCardLapsedTrialBody;
+
+  /// No description provided for @plusCardRenewByCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour renouveler, il vous faudra un nouveau code.'**
+  String get plusCardRenewByCode;
+
+  /// No description provided for @plusCardScheduledTrialBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre essai gratuit continue jusque-là, puis l\'abonnement prend le relais.'**
+  String get plusCardScheduledTrialBody;
+
+  /// No description provided for @subscriptionSourceCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d\'activation'**
+  String get subscriptionSourceCode;
+
   /// No description provided for @verificationTitle.
   ///
   /// In fr, this message translates to:

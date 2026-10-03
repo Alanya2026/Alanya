@@ -6622,6 +6622,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String get plusCardPurgedBody => '您的 Plus 设置和历史记录已被删除。重新订阅即可恢复您的功能。';
 
   @override
+  String get plusCardTrialKicker => '免费试用';
+
+  @override
+  String plusCardTrialTitle(String date) {
+    return '免费至 $date';
+  }
+
+  @override
+  String get plusCardTrialBody => '所有功能均已开放。之后您仍可接收消息和来电，但发送消息和拨打电话需要订阅。';
+
+  @override
+  String plusCardTrialDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '试用还剩 $count 天',
+      zero: '试用最后一天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardSubscribe => '订阅';
+
+  @override
+  String get plusCardRestrictedKicker => '试用已结束';
+
+  @override
+  String get plusCardRestrictedTitle => '您无法再发送消息或拨打电话';
+
+  @override
+  String get plusCardRestrictedBody => '您仍可接收消息和来电。订阅后即可再次发送消息和拨打电话。';
+
+  @override
+  String get plusCardLapsedTrialBody => '您仍可接收消息和来电。输入新的代码即可恢复。';
+
+  @override
+  String get plusCardRenewByCode => '续订需要一个新的代码。';
+
+  @override
+  String get plusCardScheduledTrialBody => '免费试用持续到那时，之后由订阅接替。';
+
+  @override
+  String get subscriptionSourceCode => '激活码';
+
+  @override
   String get verificationTitle => '获取认证标记';
 
   @override
