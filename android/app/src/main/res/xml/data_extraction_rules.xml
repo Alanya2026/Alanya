@@ -14,16 +14,21 @@
     qui ne doivent de toute façon pas rejouer sur un autre appareil.
 
   — `talky_native_notif.xml` conserve le corps des messages par conversation.
+  — `e2ee/` porte l'état Signal (identité, sessions) : restauré, il ramènerait
+    des sessions en arrière ; transféré, il serait illisible sans la clé du
+    Keystore. L'appareil recrée une identité à la place.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
         <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
         <exclude domain="sharedpref" path="talky_native_notif.xml" />
+        <exclude domain="file" path="e2ee/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
         <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
         <exclude domain="sharedpref" path="talky_native_notif.xml" />
+        <exclude domain="file" path="e2ee/" />
     </device-transfer>
 </data-extraction-rules>

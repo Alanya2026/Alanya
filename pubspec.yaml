@@ -104,6 +104,7 @@ dependencies:
   open_filex: ^4.5.0                  # Ouvrir un fichier (PDF, doc…) avec l'app système
   archive: ^4.0.9                     # Assemblage des archives d'export (zip, mode stocké)
   cryptography: ^2.7.0                # AES-GCM des sauvegardes chiffrées
+  libsignal_protocol_dart: ^0.8.2     # Protocole Signal (X3DH, Double Ratchet) du chiffrement de bout en bout
   google_sign_in: ^6.2.1              # Connexion au compte Google (portée drive.file)
   googleapis: ^13.2.0                 # API Drive v3
   extension_google_sign_in_as_googleapis_auth: ^2.0.12  # Pont auth → client googleapis

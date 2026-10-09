@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../core/e2ee/e2ee_service.dart';
 import '../core/services/billing/entitlement_service.dart';
 import '../core/services/video_codec_policy.dart';
 import '../core/services/storage_service.dart';
@@ -505,6 +506,13 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     currentSessionEndReason = SessionEndReason.explicitLogout;
     await _detachPushDevice();
+    // Le bundle de chiffrement est retiré du serveur AVANT l'effacement des
+    // jetons, pour la même raison que l'appareil push : après, la requête
+    // partirait sans autorisation. Sans ce retrait, les correspondants
+    // chiffreraient pour une identité dont plus personne ne détient la
+    // privée (docs/e2ee, chapitre 22). Borné à 5 s, et un échec n'empêche
+    // pas la déconnexion.
+    await E2eeService.maybeInstance?.oublier(retirerDuServeur: true);
     _apiClient.logout();
     await _storage.clearAll();
     // Les droits d'un compte ne passent pas au suivant.

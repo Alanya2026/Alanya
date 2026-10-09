@@ -17,6 +17,7 @@ import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
 import 'core/services/safebox/safebox_controller.dart';
+import 'core/e2ee/e2ee_service.dart';
 import 'core/services/billing/entitlement_service.dart';
 import 'core/services/billing/entitlements.dart';
 import 'widgets/billing/paywall_sheet.dart' show showPaywall;
@@ -334,6 +335,9 @@ class _TalkyAppState extends State<TalkyApp> {
   @override
   void initState() {
     super.initState();
+    // Chiffrement de bout en bout : installé ici, utilisé à l'ouverture de
+    // session. Inerte tant que le serveur ne l'ouvre pas pour le compte.
+    E2eeService.installer(_apiClient);
     // Un changement d'état de trajet doit réécrire la carte déjà posée dans la
     // conversation. Seul le dépôt de chat sait retrouver la ligne et relancer le
     // recalcul de l'aperçu ; le service socket lui délègue.
@@ -1482,6 +1486,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       // savoir si le pair de leur conversation ouvre la traduction.
       MessageTranslationService.maybeInstance?.bind(myId);
       await chatProvider.bind(myId);
+      // Clés de chiffrement : publiées, regarnies, tournées. Sans attente — la
+      // session ne dépend pas d'elles — et sans échec possible : une panne
+      // laisse la messagerie en clair, comme avant.
+      final e2ee = E2eeService.maybeInstance;
+      if (e2ee != null) unawaited(e2ee.synchroniser(myId));
       if (mounted) {
         final cache = Provider.of<LocalCacheRepository>(context, listen: false);
         cache.syncPreferredContacts();
@@ -1576,6 +1585,14 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       await hidden.clearAll();
     } catch (e) {
       debugPrint('[AuthWrapper] LocalHiddenStore.clearAll échoué: $e');
+    }
+    // L'état Signal part avec la session, comme les messages qu'il a servi à
+    // lire. Le retrait du bundle sur le serveur a déjà eu lieu dans
+    // `AuthProvider.logout`, tant que le jeton était valide.
+    try {
+      await E2eeService.maybeInstance?.oublier();
+    } catch (e) {
+      debugPrint('[AuthWrapper] oubli du coffre E2EE échoué: $e');
     }
     // Files déposées par la couche native : les actions et accusés d'un compte
     // ne doivent jamais être rejoués avec le token d'un autre.

@@ -255,7 +255,48 @@ private enum VoipCallHandler {
     NotificationActionHandler.registerCategories()
     registerVoipPush()
     attachProximityChannel()
+    attachBackupExclusionChannel()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// Exclusion d'un dossier de la sauvegarde iCloud / iTunes.
+  /// Canal : `com.alanya237.alanya/backup_exclusion` (exclude { path }).
+  ///
+  /// Sert l'état Signal du chiffrement de bout en bout (`<Application
+  /// Support>/e2ee/`). Restauré depuis une sauvegarde, il ramènerait des
+  /// sessions en arrière et chaque message suivant serait illisible. iOS
+  /// sauvegarde par défaut tout `Application Support` ; seul ce drapeau, posé
+  /// sur le dossier, l'en retire. Le pendant Android est dans
+  /// `res/xml/backup_rules.xml`.
+  private func attachBackupExclusionChannel() {
+    guard let controller = window?.rootViewController as? FlutterViewController else {
+      NSLog("[BackupExclusion] FlutterViewController introuvable — canal non attaché")
+      return
+    }
+
+    let channel = FlutterMethodChannel(
+      name: "com.alanya237.alanya/backup_exclusion",
+      binaryMessenger: controller.binaryMessenger
+    )
+
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "exclude",
+            let args = call.arguments as? [String: Any],
+            let path = args["path"] as? String else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      var url = URL(fileURLWithPath: path)
+      var values = URLResourceValues()
+      values.isExcludedFromBackup = true
+      do {
+        try url.setResourceValues(values)
+        result(true)
+      } catch {
+        NSLog("[BackupExclusion] échec sur \(path) : \(error)")
+        result(false)
+      }
+    }
   }
 
   /// Extinction de l'écran à l'approche du visage, pendant un appel.

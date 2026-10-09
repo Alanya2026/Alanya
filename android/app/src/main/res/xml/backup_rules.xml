@@ -37,9 +37,18 @@
   `MessageNotificationHelper` y conserve le **corps des messages** par
   conversation, pour reconstruire le fil MessagingStyle. Aucune raison qu'il
   parte dans une sauvegarde cloud.
+  ── e2ee/ (domaine « file », getApplicationSupportDirectory) ─────────────────
+  L'état Signal de l'appareil : identité, pré-clés, sessions du chiffrement
+  de bout en bout (`lib/core/e2ee/e2ee_database.dart`). Restauré, il
+  ramènerait des sessions en arrière — compteurs déjà servis, clés de message
+  déjà consommées — et chaque message suivant serait illisible. Ses
+  enregistrements sont de toute façon scellés par une clé du Keystore, qui ne
+  part pas avec la sauvegarde. Perdu, il est recréé : l'appareil publie une
+  identité neuve, comme après une réinstallation.
 -->
 <full-backup-content>
     <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
     <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
     <exclude domain="sharedpref" path="talky_native_notif.xml" />
+    <exclude domain="file" path="e2ee/" />
 </full-backup-content>
