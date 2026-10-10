@@ -1385,6 +1385,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchComingSoon => 'Search coming soon';
 
   @override
+  String get searchInConversationHint => 'Search this chat';
+
+  @override
+  String get searchNoResult => 'No messages found';
+
+  @override
+  String searchResultCounter(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get searchPrevious => 'Previous result';
+
+  @override
+  String get searchNext => 'Next result';
+
+  @override
+  String get searchExit => 'Close search';
+
+  @override
   String get takeAPhoto => 'Take a photo';
 
   @override

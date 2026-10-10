@@ -24,6 +24,7 @@ import '../../core/services/call_service.dart';
 import '../../core/services/music_metadata_service.dart';
 import '../../core/services/message_share_service.dart';
 import '../../core/services/chat/chat_draft_store.dart';
+import '../../core/services/chat/message_search.dart';
 import '../../core/services/chat/view_once_download_manager.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
@@ -115,6 +116,7 @@ import '../../core/errors/error_presenter.dart';
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels
 part 'chat/chat_bubbles.dart';  // rendu des bulles & médias
 part 'chat/chat_input.dart';    // barre de saisie, emoji, bandeau réponse
+part 'chat/chat_search.dart';   // recherche de messages dans la conversation
 
 // Limite alignée sur multer (50 Mo) côté backend.
 const int _maxMediaBytes = 50 * 1024 * 1024;
@@ -147,6 +149,11 @@ class ChatDetailScreen extends StatefulWidget {
   /// pour ramener jusqu'à la bulle qui joue, pas seulement à la conversation.
   final int? focusMessageId;
 
+  /// Entre en mode recherche dès que la conversation est connue (bouton
+  /// « Rechercher » de la fiche contact, quand elle n'a pas été ouverte depuis
+  /// cette discussion).
+  final bool openSearch;
+
   const ChatDetailScreen({
     super.key,
     required this.userName,
@@ -155,6 +162,7 @@ class ChatDetailScreen extends StatefulWidget {
     this.isGroup = false,
     this.avatarUrl,
     this.focusMessageId,
+    this.openSearch = false,
   });
 
   @override
@@ -291,6 +299,29 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   int _peerVerificationStatus = 0;
 
   bool _selectionMode = false;
+
+  // Recherche de messages (voir chat/chat_search.dart).
+  bool _searchMode = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+
+  /// `msgID` trouvés, du plus récent (index 0) au plus ancien.
+  List<int> _searchResults = const [];
+  int _searchIndex = 0;
+  Timer? _searchDebounce;
+
+  /// Numéro de la dernière recherche lancée : un résultat qui arrive avec un
+  /// autre numéro est celui d'une requête dépassée.
+  int _searchToken = 0;
+  bool _searchJumpInFlight = false;
+
+  /// Vrai quand [_searchResults] est la réponse à la saisie actuelle : sans
+  /// cela, « Aucun message trouvé » clignoterait à chaque frappe.
+  bool _searchSettled = false;
+
+  /// `openSearch` ne s'applique qu'une fois : `_attachToConversation` peut
+  /// être rappelée, et ne doit pas rouvrir la recherche que l'on a fermée.
+  bool _openSearchHandled = false;
   final Set<int> _selectedMsgIDs = {};
   /// msgID en cours de téléchargement manuel (overlay WhatsApp).
   final Set<int> _mediaDownloadingIds = {};
@@ -593,6 +624,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     // auquel cas le premier appel avait un convId nul.
     _watchGroupState();
     unawaited(_restoreDraft(convId));
+
+    if (widget.openSearch && !_openSearchHandled && mounted) {
+      _openSearchHandled = true;
+      _enterSearchMode();
+    }
 
     // Nouvelle conversation attachée → la pagination repart de zéro.
     _reachedStart = false;
@@ -1056,6 +1092,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _typingTimer?.cancel();
     _recordTimer?.cancel();
     _highlightTimer?.cancel();
+    _searchDebounce?.cancel();
     _reactionsSub?.cancel();
     _groupWatch?.cancel();
     for (final r in _mentionRecognizers) {
@@ -1075,6 +1112,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _messageController.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
+    _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -1089,19 +1128,29 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
           partnerUserId: widget.isGroup ? null : widget.userId,
         );
     return PopScope(
-      canPop: !_selectionMode,
+      canPop: !_selectionMode && !_searchMode,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _selectionMode) _exitSelectionMode();
+        if (didPop) return;
+        if (_selectionMode) {
+          _exitSelectionMode();
+        } else if (_searchMode) {
+          _exitSearchMode();
+        }
       },
       child: Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
-      appBar: _selectionMode ? _buildSelectionAppBar() : _buildChatAppBar(partnerTyping),
+      appBar: _selectionMode
+          ? _buildSelectionAppBar()
+          : _searchMode
+              ? _buildSearchAppBar()
+              : _buildChatAppBar(partnerTyping),
       body: Stack(
         children: [
           const Positioned.fill(child: ChatWallpaper()),
           Column(
             children: [
               const OfflineBanner(wrapSafeArea: false),
+              _buildSearchNoResultBanner(),
               _buildPinnedBanner(),
               if (widget.isGroup && _myPendingJoinMsgID != null)
                 GroupJoinBanner(

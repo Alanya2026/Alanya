@@ -2500,6 +2500,42 @@ abstract class AppLocalizations {
   /// **'Recherche à venir'**
   String get searchComingSoon;
 
+  /// No description provided for @searchInConversationHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher dans la discussion'**
+  String get searchInConversationHint;
+
+  /// No description provided for @searchNoResult.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun message trouvé'**
+  String get searchNoResult;
+
+  /// Compteur de résultats de la recherche dans une discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'{index}/{total}'**
+  String searchResultCounter(int index, int total);
+
+  /// No description provided for @searchPrevious.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résultat précédent'**
+  String get searchPrevious;
+
+  /// No description provided for @searchNext.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résultat suivant'**
+  String get searchNext;
+
+  /// No description provided for @searchExit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer la recherche'**
+  String get searchExit;
+
   /// No description provided for @takeAPhoto.
   ///
   /// In fr, this message translates to:

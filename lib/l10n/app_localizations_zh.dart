@@ -1324,6 +1324,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchComingSoon => '搜索功能即将推出';
 
   @override
+  String get searchInConversationHint => '在聊天中搜索';
+
+  @override
+  String get searchNoResult => '未找到消息';
+
+  @override
+  String searchResultCounter(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get searchPrevious => '上一个结果';
+
+  @override
+  String get searchNext => '下一个结果';
+
+  @override
+  String get searchExit => '关闭搜索';
+
+  @override
   String get takeAPhoto => '拍照';
 
   @override

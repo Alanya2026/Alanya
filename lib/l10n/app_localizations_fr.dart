@@ -1404,6 +1404,26 @@ class AppLocalizationsFr extends AppLocalizations {
   String get searchComingSoon => 'Recherche à venir';
 
   @override
+  String get searchInConversationHint => 'Rechercher dans la discussion';
+
+  @override
+  String get searchNoResult => 'Aucun message trouvé';
+
+  @override
+  String searchResultCounter(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get searchPrevious => 'Résultat précédent';
+
+  @override
+  String get searchNext => 'Résultat suivant';
+
+  @override
+  String get searchExit => 'Fermer la recherche';
+
+  @override
   String get takeAPhoto => 'Prendre une photo';
 
   @override
