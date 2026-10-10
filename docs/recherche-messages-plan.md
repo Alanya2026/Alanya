@@ -16,7 +16,7 @@ But : retrouver un message dans une conversation, à deux ou de groupe, comme su
 | Accents et majuscules | Ignorés : « reunion » trouve « Réunion ». **Sans migration de la base** : la normalisation est faite en Dart (voir *Conception*). L'index plein texte FTS5 viendra plus tard, si le volume l'exige. |
 | Longueur minimale | 2 caractères, après normalisation. En dessous, aucune recherche n'est lancée. |
 | Ordre | Du plus récent au plus ancien. « 1/12 » est le plus récent ; la flèche ↑ remonte vers les plus anciens. |
-| Points d'entrée | Bouton « Rechercher » de la fiche contact (A17) ; entrée « Rechercher » du menu de la barre du haut de la discussion ; bouton « Rechercher » des infos du groupe. |
+| Points d'entrée | Bouton « Rechercher » de la fiche contact (A17) ; entrée « Rechercher » du menu de la barre du haut de la discussion, qui sert aussi pour les groupes. |
 | Historique non chargé | On ne trouve que ce qui est en base locale. Quand la conversation a encore un historique plus ancien sur le serveur, la liste se termine par « Charger plus d'historique pour chercher plus loin ». |
 
 ## Conception
@@ -26,11 +26,11 @@ But : retrouver un message dans une conversation, à deux ou de groupe, comme su
 SQLite (`LIKE`) ne compare sans casse que l'ASCII, et ne sait rien des accents : « é » ne correspond pas à « e ». Plutôt qu'une colonne normalisée, qui demanderait une migration (schéma 26 → 27), la recherche se fait en deux temps :
 
 1. **SQL** — `ChatDao.searchCandidates(convId, myId)` lit seulement `clientId`, `msgID`, `content`, `type` et `sendAt` des messages cherchables de la conversation, en appliquant les exclusions ci-dessus. On évite ainsi de charger les vignettes, les réactions et le reste.
-2. **Dart** — `MessageSearch.filtrer(candidats, requete)` normalise le contenu et la requête (minuscules, accents retirés, apostrophes et espaces unifiés), garde les messages qui contiennent la requête, et renvoie pour chacun la ou les positions trouvées dans le texte **d'origine**, pour pouvoir le surligner.
+2. **Dart** — `MessageSearch.filtrer(candidats, requete)` normalise le contenu et la requête (minuscules, accents retirés, apostrophes et espaces unifiés), et garde les messages qui contiennent la requête. Il renvoie les `msgID`, du plus récent au plus ancien.
 
 Au-delà de 5 000 candidats, le filtrage passe dans un isolate (`compute`), pour ne pas geler l'écran. Une conversation de groupe très active atteint ce volume en quelques mois.
 
-La normalisation est une table de correspondance écrite à la main (`à â ä → a`, `é è ê ë → e`, `ç → c`, `œ → oe`, etc.), sans dépendance. Le cas difficile : retirer un accent ne change pas la longueur des lettres simples, mais `œ → oe` l'allonge. La fonction tient donc une table qui ramène chaque position du texte normalisé à sa position dans le texte d'origine.
+La normalisation est une table de correspondance écrite à la main (`à â ä → a`, `é è ê ë → e`, `ç → c`, `œ → oe`, etc.), sans dépendance. Le cas difficile : retirer un accent ne change pas la longueur des lettres simples, mais `œ → oe` l'allonge. La fonction tient donc une table qui ramène chaque position du texte normalisé à sa position dans le texte d'origine. Le surlignage en a besoin (voir plus bas).
 
 ### Écran de discussion
 
@@ -39,7 +39,7 @@ La normalisation est une table de correspondance écrite à la main (`à â ä �
 - **Barre du haut** : en mode recherche, le titre est remplacé par un champ (`autofocus`), suivi du compteur « 3/12 » et des flèches ↑ ↓. Le bouton retour quitte le mode recherche, pas la conversation.
 - **Recherche à la frappe**, avec un anti-rebond de 250 ms. Une nouvelle frappe annule la recherche en cours.
 - **Aller à un résultat** : on réutilise le saut vers un message existant. `_ensureMessageLoaded` charge l'historique plus ancien jusqu'au message, le défilement l'amène à l'écran, et `_highlightMessage` le met en surbrillance 2 s. C'est le même chemin que le saut vers les mentions (`_jumpToNextMention`).
-- **Surlignage du mot** dans la bulle : `parseRichSpans` (`rich_text_parser.dart`, appelé par `chat_bubbles.dart`) reçoit les plages trouvées par un nouveau paramètre `highlights`, transmis à `_SpanOptions`, et les colore (fond `primaryContainer`, texte en gras) sans casser les liens, les mentions ni le gras et l'italique.
+- **Surlignage du mot** dans la bulle : **après** `parseRichSpans` (`_buildBubbleBody`, `chat_bubbles.dart`). Une fonction pure `surlignerSpans(spans, requete, style)` parcourt les `TextSpan` produits et découpe ceux dont le texte contient la requête normalisée, en gardant le style et le `recognizer` de chaque morceau (liens, mentions). On ne peut pas passer des positions calculées sur le texte brut, car `_parse` retire les marqueurs de mise en forme (`*gras*`, `_italique_`, `~barré~`) : le texte affiché n'a plus la même longueur. Une occurrence à cheval sur deux styles n'est surlignée que partiellement, ce qui est acceptable.
 - **Aucun résultat** : le compteur affiche « 0 », et une ligne « Aucun message trouvé » apparaît sous la barre.
 - La barre de saisie reste visible, et le brouillon (`ChatDraftStore`) n'est pas touché.
 
@@ -49,7 +49,7 @@ La normalisation est une table de correspondance écrite à la main (`à â ä �
 |---|---|
 | Menu de la barre du haut de la discussion | Nouvelle entrée « Rechercher » (à côté de « contact », « media », « translation ») → mode recherche. |
 | Fiche contact, bouton « Rechercher » | Si la fiche a été ouverte depuis cette même discussion : on revient en arrière avec le résultat `'search'`, et la discussion passe en mode recherche. Sinon : on ouvre la discussion avec `openSearch: true`. |
-| Infos du groupe | Même logique que la fiche contact. |
+| Infos du groupe | Pas de bouton « Rechercher » aujourd'hui. Les groupes passent par le menu de la discussion. |
 
 ## Fichiers
 
@@ -59,8 +59,8 @@ La normalisation est une table de correspondance écrite à la main (`à â ä �
 | `lib/core/services/chat/message_search.dart` (nouveau) | `MessageSearch.filtrer` (pur), passage en isolate, types de résultat |
 | `lib/core/db/chat_dao.dart` | `searchCandidates(convId, myId)` |
 | `lib/screens/chats/chat_detail_screen.dart` + `chat/chat_search.dart` (nouvelle partie) | Mode recherche, paramètre `openSearch`, navigation entre résultats |
-| `lib/core/utils/rich_text_parser.dart`, `chat/chat_bubbles.dart` | Paramètre `highlights` de `parseRichSpans`, passé par la bulle quand la recherche est active |
-| `lib/screens/chats/contact_detail_screen.dart`, `group_detail_screen.dart` | Branchement des boutons « Rechercher » |
+| `lib/core/utils/search_highlight.dart` (nouveau), `chat/chat_bubbles.dart` | `surlignerSpans`, appliqué dans `_buildBubbleBody` quand la recherche est active |
+| `lib/screens/chats/contact_detail_screen.dart` | Branchement du bouton « Rechercher » |
 | `lib/l10n/app_{fr,en,zh}.arb` | `searchInConversation`, `searchNoResult`, `searchResultCounter`, `searchLoadMoreHistory`, `searchPrevious`, `searchNext` |
 | `test/search_normalizer_test.dart`, `test/message_search_test.dart` (nouveaux) | Tests purs |
 
@@ -72,7 +72,7 @@ La clé `searchComingSoon` devient inutile : elle est retirée.
 2. **Requête DAO** `searchCandidates`, plus un test sur base Drift en mémoire (`ChatRepository.forTesting` / `AppDatabase` de test) : exclusions, conversation, `deletedForID`.
 3. **Mode recherche** dans `ChatDetailScreen` : champ, compteur, flèches, saut vers les résultats.
 4. **Surlignage** dans les bulles.
-5. **Points d'entrée** : menu, fiche contact, infos du groupe ; retrait de `searchComingSoon`.
+5. **Points d'entrée** : menu de la discussion, fiche contact ; retrait de `searchComingSoon`.
 6. **Traductions**, puis vérification sur téléphone.
 
 Chaque étape est commitée séparément. Les étapes 1 et 2 ne changent rien de visible.
