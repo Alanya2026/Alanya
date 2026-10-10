@@ -12,6 +12,7 @@ import 'call/call_audio_routes.dart';
 import 'call/call_notification_content.dart';
 import 'call/session_video_renderers.dart';
 import 'callkit_service.dart';
+import 'lock_screen_policy.dart';
 
 enum SessionMode { audio, video }
 
@@ -215,6 +216,7 @@ class CallSessionGuard with WidgetsBindingObserver {
     }
 
     _refCount++;
+    LockScreenPolicy.setSessionHeld(true);
 
     _mode = mode;
     _callId = callId;
@@ -341,6 +343,7 @@ class CallSessionGuard with WidgetsBindingObserver {
     _refCount--;
     if (_refCount > 0) return;
 
+    LockScreenPolicy.setSessionHeld(false);
     WidgetsBinding.instance.removeObserver(this);
 
     // Avant tout le reste : un écran resté noir parce que le verrou de

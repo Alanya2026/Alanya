@@ -49,6 +49,9 @@ object CallNativeBridge {
     }
 
     fun notifyCallEnded(callId: String?, callerId: String?) {
+        // Filet : l'appel est fini côté CallKit, même si Flutter n'a pas pu
+        // jouer sa clôture — l'app ne doit plus passer par-dessus le verrou.
+        LockScreenBridge.apply(false)
         if (!ready) return
         Handler(Looper.getMainLooper()).post {
             channel?.invokeMethod(
