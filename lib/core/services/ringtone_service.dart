@@ -3,11 +3,30 @@ import 'dart:io' show Platform;
 
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:vibration/vibration.dart';
 
 import 'ringtone_preferences.dart';
+
+/// Ce qu'une sonnerie entrante a le droit de faire, selon le mode du téléphone
+/// (`AudioManager.ringerMode` : 0 silencieux, 1 vibreur, 2 normal ; `null`
+/// quand on ne sait pas, hors Android).
+///
+/// La sonnerie personnalisée jouée par Flutter et la boucle de vibration n'en
+/// tenaient pas compte : le téléphone sonnait et vibrait en silencieux
+/// (groupe 3GI 2029, bug A9).
+({bool son, bool vibration}) sonnerieAutorisee(int? ringerMode) {
+  switch (ringerMode) {
+    case 0:
+      return (son: false, vibration: false);
+    case 1:
+      return (son: false, vibration: true);
+    default:
+      return (son: true, vibration: true);
+  }
+}
 
 /// Centralise les sons d'appel.
 
@@ -20,6 +39,15 @@ class RingtoneService {
   }
 
   static const _ringbackAsset = 'assets/sounds/ringback.wav';
+
+  static const _nativeCallChannel = MethodChannel('com.alanya/call_native');
+
+  /// Attributs de la sonnerie entrante : flux « sonnerie », que le système
+  /// règle et coupe comme celui de toutes les sonneries du téléphone.
+  static const _ringtoneAttributes = AndroidAudioAttributes(
+    contentType: AndroidAudioContentType.sonification,
+    usage: AndroidAudioUsage.notificationRingtone,
+  );
 
   final FlutterRingtonePlayer _systemRingtone = FlutterRingtonePlayer();
   AudioPlayer? _ringbackPlayer;
@@ -34,7 +62,17 @@ class RingtoneService {
   Future<void> init() async {
     if (kIsWeb) return;
     _ringbackPlayer ??= AudioPlayer();
-    _incomingCustomPlayer ??= AudioPlayer();
+    // `androidApplyAudioAttributes: false` : la session est configurée en
+    // « signalisation d'appel » (voir `_configureCallAudioSession`), un flux que
+    // le mode silencieux ne coupe pas. La sonnerie porte ses propres attributs.
+    if (_incomingCustomPlayer == null) {
+      _incomingCustomPlayer = AudioPlayer(androidApplyAudioAttributes: false);
+      try {
+        await _incomingCustomPlayer!.setAndroidAudioAttributes(_ringtoneAttributes);
+      } catch (e) {
+        debugPrint('[RingtoneService] ** attributs sonnerie: $e');
+      }
+    }
     _audioSession ??= await AudioSession.instance;
   } 
 
@@ -43,6 +81,15 @@ class RingtoneService {
     if (_active == _ActiveSound.incoming) return;
     if (_active != _ActiveSound.none) await stop();
     _active = _ActiveSound.incoming;
+
+    final autorise = sonnerieAutorisee(await _ringerMode());
+    // Arrêtée pendant qu'on interrogeait le téléphone (appel décroché/annulé).
+    if (_active != _ActiveSound.incoming) return;
+    if (!autorise.son) {
+      debugPrint('[RingtoneService] 🔕 Téléphone en silencieux/vibreur : pas de sonnerie');
+      if (autorise.vibration) _startVibrationLoop();
+      return;
+    }
 
     final selection = override ?? RingtonePreferences.currentSelection;
 
@@ -174,6 +221,17 @@ class RingtoneService {
     ));
     await session.setActive(true);
     _holdsAudioFocus = true;
+  }
+
+  /// Mode de sonnerie du téléphone, `null` hors Android ou en cas d'échec.
+  Future<int?> _ringerMode() async {
+    if (kIsWeb || !Platform.isAndroid) return null;
+    try {
+      return await _nativeCallChannel.invokeMethod<int>('getRingerMode');
+    } catch (e) {
+      debugPrint('[RingtoneService] ** getRingerMode: $e');
+      return null;
+    }
   }
 
   void _startVibrationLoop() {
