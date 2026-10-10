@@ -765,7 +765,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   AppSpacing.hGapSm,
                   Expanded(
                     child: Text(
-                      conv.isGroup ? context.l10n.someoneIsTyping : context.l10n.typing2,
+                      conv.isGroup
+                          ? _groupTypingLabel(context, chat, conv)
+                          : context.l10n.typing2,
                       style: context.text.bodyMedium?.copyWith(
                         color: colors.primary,
                         fontWeight: FontWeight.w500,
@@ -1233,3 +1235,19 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 }
 
+/// « X écrit… » dans un groupe ; « Quelqu'un écrit… » si le nom est inconnu.
+///
+/// L'interface n'affichait jamais le nom, que l'application connaît pourtant
+/// (groupe 3GI 2029, bug A15).
+String _groupTypingLabel(
+  BuildContext context,
+  ChatProvider chat,
+  LocalConversation conv,
+) {
+  final userId = chat.typingUserId(conv.conversID);
+  final name =
+      userId == null ? null : participantDisplayName(conv, userId);
+  return name == null
+      ? context.l10n.someoneIsTyping
+      : context.l10n.nameIsTyping(name);
+}

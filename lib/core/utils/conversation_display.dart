@@ -72,6 +72,19 @@ bool isSelfConversation(LocalConversation conv, int myId) {
   return parts.any((p) => conversationParticipantId(p['alanyaID']) == myId);
 }
 
+/// Nom d'un participant de [conv] (nom, sinon pseudo), ou `null` s'il n'y
+/// figure pas.
+String? participantDisplayName(LocalConversation conv, int userId) {
+  for (final p in decodeParticipants(conv.participantsJson)) {
+    if (conversationParticipantId(p['alanyaID']) != userId) continue;
+    final nom = (p['nom'] as String?)?.trim() ?? '';
+    if (nom.isNotEmpty) return nom;
+    final pseudo = (p['pseudo'] as String?)?.trim() ?? '';
+    return pseudo.isNotEmpty ? pseudo : null;
+  }
+  return null;
+}
+
 String conversationDisplayName(LocalConversation conv, int myId) {
   final l10n = resolveL10n();
   if (conv.isGroup) return conv.groupName ?? l10n.groupFallback;

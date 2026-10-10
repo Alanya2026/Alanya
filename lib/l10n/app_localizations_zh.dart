@@ -1396,6 +1396,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get someoneIsTyping => '有人正在输入…';
 
   @override
+  String nameIsTyping(String name) {
+    return '$name 正在输入…';
+  }
+
+  @override
   String get lastWeek => '上周';
 
   @override

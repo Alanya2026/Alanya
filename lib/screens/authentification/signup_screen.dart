@@ -34,6 +34,9 @@ class _SignupScreenState extends State<SignupScreen> {
   final _pseudoController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  // Double saisie : une faute de frappe dans un mot de passe masqué rendait le
+  // compte inaccessible dès sa création (groupe 3GI 2029, bug A18).
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
@@ -42,6 +45,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _pseudoController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -72,6 +76,7 @@ class _SignupScreenState extends State<SignupScreen> {
     }
 
     _passwordController.clear();
+    _confirmPasswordController.clear();
     // AuthWrapper bascule sur PostAuthGate : retirer SignupScreen de la pile.
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
@@ -162,6 +167,21 @@ class _SignupScreenState extends State<SignupScreen> {
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
+                  ),
+                ),
+                AppSpacing.vGapLg,
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscurePassword,
+                  validator: (v) => Validators.passwordMatch(
+                    v,
+                    _passwordController.text,
+                    l10n: l10n,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: l10n?.forgotConfirmPasswordHint ??
+                        context.l10n.forgotConfirmPasswordHint,
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                 ),
                 AppSpacing.vGapLg,

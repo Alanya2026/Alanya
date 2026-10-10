@@ -2644,6 +2644,12 @@ abstract class AppLocalizations {
   /// **'Quelqu\'un écrit…'**
   String get someoneIsTyping;
 
+  /// Indicateur de saisie dans un groupe, avec le nom de la personne
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} écrit…'**
+  String nameIsTyping(String name);
+
   /// No description provided for @lastWeek.
   ///
   /// In fr, this message translates to:

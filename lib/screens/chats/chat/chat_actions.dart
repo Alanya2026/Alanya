@@ -287,6 +287,7 @@ extension _ChatActions on _ChatDetailScreenState {
     );
 
     _messageController.clear();
+    _clearDraft();
     rebuild(() {
       _hasText = false;
       _replyTo = null;
@@ -1507,6 +1508,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (has != _hasText) rebuild(() => _hasText = has);
     _refreshMentionSuggestions(value);
     if (_convId == null) return;
+    _scheduleDraftSave();
     if (value.isEmpty) {
       _stopTyping();
       return;

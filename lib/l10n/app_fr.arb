@@ -826,6 +826,15 @@
   "verifyCode": "Vérifier le code",
   "notDeliveredYet": "Pas encore livré",
   "someoneIsTyping": "Quelqu'un écrit…",
+  "nameIsTyping": "{name} écrit…",
+  "@nameIsTyping": {
+    "description": "Indicateur de saisie dans un groupe, avec le nom de la personne",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "lastWeek": "Dernière semaine",
   "otherResults": "Autres résultats",
   "changeMedia": "Changer le média",

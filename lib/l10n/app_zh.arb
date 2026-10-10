@@ -440,6 +440,7 @@
   "verifyCode": "验证码校验",
   "notDeliveredYet": "尚未送达",
   "someoneIsTyping": "有人正在输入…",
+  "nameIsTyping": "{name} 正在输入…",
   "lastWeek": "上周",
   "otherResults": "其他结果",
   "changeMedia": "更换媒体",

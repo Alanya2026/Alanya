@@ -454,6 +454,7 @@
   "verifyCode": "Verify code",
   "notDeliveredYet": "Not delivered yet",
   "someoneIsTyping": "Someone is typing…",
+  "nameIsTyping": "{name} is typing…",
   "lastWeek": "Last week",
   "otherResults": "Other results",
   "changeMedia": "Change media",

@@ -1477,6 +1477,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get someoneIsTyping => 'Quelqu\'un écrit…';
 
   @override
+  String nameIsTyping(String name) {
+    return '$name écrit…';
+  }
+
+  @override
   String get lastWeek => 'Dernière semaine';
 
   @override

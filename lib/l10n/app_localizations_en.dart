@@ -1458,6 +1458,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get someoneIsTyping => 'Someone is typing…';
 
   @override
+  String nameIsTyping(String name) {
+    return '$name is typing…';
+  }
+
+  @override
   String get lastWeek => 'Last week';
 
   @override
