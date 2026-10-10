@@ -52,6 +52,7 @@ import '../../core/services/alanya_media_export_service.dart';
 import '../../core/utils/media_save_feedback.dart';
 import '../../core/utils/media_viewer_items.dart';
 import '../../core/utils/rich_text_parser.dart';
+import '../../core/utils/search_highlight.dart';
 import '../../l10n/app_localizations.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'view_once_viewer_screen.dart';

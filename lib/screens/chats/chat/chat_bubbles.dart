@@ -452,7 +452,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     Widget? inlineMeta,
     double reservedWidth = 0,
   }) {
-    final spans = parseRichSpans(
+    final rawSpans = parseRichSpans(
       caption,
       (context.text.bodyLarge ?? const TextStyle())
           .copyWith(color: _bubbleText(isMe)),
@@ -464,6 +464,19 @@ extension _ChatBubbles on _ChatDetailScreenState {
       // dans une liste qui défile.
       recognizerSink: _mentionRecognizers,
     );
+    // Toutes les bulles visibles sont surlignées, pas seulement le résultat
+    // courant : celui-ci a déjà l'encadré de `_scrollToReply`.
+    final spans = _searchHighlightQuery == null
+        ? rawSpans
+        : surlignerSpans(
+            rawSpans,
+            _searchController.text,
+            (s) => s.copyWith(
+              backgroundColor: context.colors.primaryContainer,
+              color: context.colors.onPrimaryContainer,
+              fontWeight: FontWeight.w700,
+            ),
+          );
     if (inlineMeta == null) return Text.rich(TextSpan(children: spans));
 
     return Stack(
