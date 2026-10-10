@@ -30,6 +30,18 @@ enum PlusFeature {
 /// Phase du payant : tout gratuit, grâce annoncée, ou réservé aux abonnés.
 enum PlusPhase { free, grace, paid }
 
+/// Le régime en vigueur, choisi par l'administration. Le téléphone ne code ni
+/// l'un ni l'autre : il lit ce que dit le serveur.
+///
+///  - [plus] : Alanya Plus — des fonctionnalités annexes payantes, paiement
+///    dans l'application, messages et appels ouverts à tous. C'est aussi ce que
+///    suppose un serveur qui n'envoie pas de régime.
+///  - [trial] : un essai gratuit, puis la réception seule jusqu'à
+///    l'activation d'un code d'abonnement.
+enum PlusModel { plus, trial }
+
+PlusModel _model(Object? v) => v == 2 ? PlusModel.trial : PlusModel.plus;
+
 PlusPhase _phase(Object? v) => switch (v) {
       'grace' => PlusPhase.grace,
       'paid' => PlusPhase.paid,
@@ -55,7 +67,7 @@ class PlusPeriod {
   /// Fin de la chaîne de périodes : un renouvellement anticipé la repousse.
   final DateTime? endsAt;
 
-  /// 0 paiement, 1 essai, 2 offert, 3 compensation.
+  /// 0 paiement, 1 essai, 2 offert, 3 compensation, 4 code d'activation.
   final int source;
   final bool autoRenew;
 
@@ -76,9 +88,85 @@ class PlusPeriod {
       };
 }
 
+/// Ce que le compte peut envoyer en une fois : la taille d'un fichier et le
+/// nombre de médias d'un album. Le serveur les calcule selon que le compte a
+/// payé ou non, et les applique — le téléphone ne fait que les lire, pour
+/// refuser tôt et dire le bon plafond.
+class PlusLimits {
+  const PlusLimits({
+    this.maxUploadBytes = kStandardUploadBytes,
+    this.maxAlbumItems = kStandardAlbumItems,
+    this.paid = false,
+  });
+
+  /// Palier standard : ce que fait un compte sans abonnement, et ce que suppose
+  /// un serveur qui n'envoie pas de limites.
+  static const standard = PlusLimits();
+
+  final int maxUploadBytes;
+  final int maxAlbumItems;
+
+  /// Le compte a payé (palier de 200 Mo et 100 médias).
+  final bool paid;
+
+  /// Le plafond d'un fichier, en Mo entiers, pour les messages.
+  int get maxUploadMb => (maxUploadBytes / (1024 * 1024)).round();
+
+  static PlusLimits fromJson(Object? json) {
+    if (json is! Map) return standard;
+    int positive(Object? v, int fallback) {
+      final n = v is num ? v.toInt() : int.tryParse('$v');
+      return n != null && n > 0 ? n : fallback;
+    }
+    return PlusLimits(
+      maxUploadBytes: positive(json['maxUploadBytes'], kStandardUploadBytes),
+      maxAlbumItems: positive(json['maxAlbumItems'], kStandardAlbumItems),
+      paid: json['tier'] == 'paid',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'maxUploadBytes': maxUploadBytes,
+        'maxAlbumItems': maxAlbumItems,
+        'tier': paid ? 'paid' : 'standard',
+      };
+}
+
+/// Plafonds du palier standard : 50 Mo par fichier, 30 médias par album. Les
+/// mêmes que ceux du serveur (constants/billing.js, TIER_LIMITS.standard).
+const int kStandardUploadBytes = 50 * 1024 * 1024;
+const int kStandardAlbumItems = 30;
+
+/// L'essai gratuit du compte (régime [PlusModel.trial]).
+class PlusTrial {
+  const PlusTrial({required this.endsAt, required this.active});
+
+  /// Fin de l'essai : trois mois après l'inscription, ou la fin de la grâce
+  /// pour un compte qui existait déjà à l'activation du payant.
+  final DateTime endsAt;
+
+  /// Il court encore : tout est ouvert.
+  final bool active;
+
+  static PlusTrial? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final ends = _date(json['endsAt']);
+    if (ends == null) return null;
+    return PlusTrial(endsAt: ends, active: json['active'] == true);
+  }
+
+  Map<String, dynamic> toJson() => {
+        'endsAt': endsAt.toUtc().toIso8601String(),
+        'active': active,
+      };
+}
+
 class Entitlements {
   const Entitlements({
     required this.known,
+    this.model = PlusModel.plus,
+    this.trial,
+    this.limits = PlusLimits.standard,
     this.phase = PlusPhase.free,
     this.graceUntil,
     this.period,
@@ -99,6 +187,17 @@ class Entitlements {
 
   /// Faux tant que le serveur n'a pas envoyé de droits.
   final bool known;
+
+  /// Le régime en vigueur. Absent d'un serveur antérieur : Alanya Plus.
+  final PlusModel model;
+
+  /// L'essai du compte ; nul hors régime [PlusModel.trial], payant éteint ou
+  /// pour un compte exempté.
+  final PlusTrial? trial;
+
+  /// Ce que le compte peut envoyer en une fois. Sans mention du serveur : palier
+  /// standard — le téléphone ne promet jamais plus que ce qu'on lui a dit.
+  final PlusLimits limits;
   final PlusPhase phase;
   final DateTime? graceUntil;
   final PlusPeriod? period;
@@ -136,6 +235,18 @@ class Entitlements {
   /// Une fonctionnalité inconnue du serveur n'est pas verrouillée.
   bool has(PlusFeature feature) => !known || (features[feature.code] ?? true);
 
+  /// Le compte peut-il ENVOYER un message ou LANCER un appel ? Recevoir, lui,
+  /// n'est jamais soumis à rien.
+  ///
+  /// Même règle que `has` : sans droits, ou avec un serveur qui ne parle pas de
+  /// ce droit (`features.outgoing`), tout est permis. Le téléphone ne ferme
+  /// jamais l'envoi faute de réponse — le serveur, lui, refuse pour de bon.
+  bool get canSend => !known || (features['outgoing'] ?? true);
+
+  /// Régime essai, interrupteur allumé : ce que le compte peut faire dépend de
+  /// son essai et de son abonnement.
+  bool get isTrialModel => known && model == PlusModel.trial;
+
   bool get isSubscribed => period != null;
 
   bool isStale(DateTime now) =>
@@ -158,6 +269,9 @@ class Entitlements {
     final verification = map(json['verification']);
     return Entitlements(
       known: true,
+      model: _model(json['model']),
+      trial: PlusTrial.fromJson(json['trial']),
+      limits: PlusLimits.fromJson(json['limits']),
       phase: _phase(json['phase']),
       graceUntil: _date(json['graceUntil']),
       period: period == null ? null : PlusPeriod.fromJson(period),
@@ -175,6 +289,9 @@ class Entitlements {
 
   /// Forme serveur, pour le cache local : relue par [Entitlements.fromJson].
   Map<String, dynamic> toJson() => {
+        'model': model == PlusModel.trial ? 2 : 1,
+        if (trial != null) 'trial': trial!.toJson(),
+        'limits': limits.toJson(),
         'phase': phase.name,
         'graceUntil': graceUntil?.toUtc().toIso8601String(),
         'period': period?.toJson(),

@@ -1306,7 +1306,7 @@ extension _ChatActions on _ChatDetailScreenState {
         if (mounted) {
           final mb = (size / (1024 * 1024)).toStringAsFixed(1);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(context.l10n.videoTooLarge('$mb')),
+            content: Text(context.l10n.videoTooLarge('$mb', '${EntitlementService.maxUploadMb}')),
             backgroundColor: AppColors.error,
           ));
         }
@@ -1389,7 +1389,7 @@ extension _ChatActions on _ChatDetailScreenState {
   }) async {
     if (picked == null || picked.isEmpty || _myId == null) return;
 
-    const max = ChatRepository.maxAlbumItems;
+    final max = ChatRepository.maxAlbumItems;
     if (picked.length > max && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1427,7 +1427,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (!mounted) return;
     if (skipped > 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(context.l10n.filesSkippedTooLarge(skipped)),
+        content: Text(context.l10n.filesSkippedTooLarge(skipped, '${EntitlementService.maxUploadMb}')),
         backgroundColor: AppColors.error,
       ));
     }
@@ -1459,7 +1459,7 @@ extension _ChatActions on _ChatDetailScreenState {
       if (!mounted) return;
       final mb = (size / (1024 * 1024)).toStringAsFixed(1);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(context.l10n.fileTooLarge(mb)),
+        content: Text(context.l10n.fileTooLarge(mb, '${EntitlementService.maxUploadMb}')),
         backgroundColor: AppColors.error,
       ));
       return;

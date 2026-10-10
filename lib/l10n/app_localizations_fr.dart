@@ -428,13 +428,13 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String videoTooLarge(String mb) {
-    return 'Vidéo ignorée ($mb Mo). Limite : 50 Mo.';
+  String videoTooLarge(String mb, String limit) {
+    return 'Vidéo ignorée ($mb Mo). Limite : $limit Mo.';
   }
 
   @override
-  String fileTooLarge(String mb) {
-    return 'Fichier trop volumineux ($mb Mo). Limite : 50 Mo.';
+  String fileTooLarge(String mb, String limit) {
+    return 'Fichier trop volumineux ($mb Mo). Limite : $limit Mo.';
   }
 
   @override
@@ -2552,8 +2552,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String filesSkippedTooLarge(int count) {
-    return '$count fichier(s) ignoré(s) : limite 50 Mo.';
+  String filesSkippedTooLarge(int count, String limit) {
+    return '$count fichier(s) ignoré(s) : limite $limit Mo.';
   }
 
   @override
@@ -7002,6 +7002,165 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get plusCardPurgedBody =>
       'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.';
+
+  @override
+  String get plusCardTrialKicker => 'Essai gratuit';
+
+  @override
+  String plusCardTrialTitle(String date) {
+    return 'Gratuit jusqu\'au $date';
+  }
+
+  @override
+  String get plusCardTrialBody =>
+      'Tout est ouvert. Ensuite, vous recevrez toujours vos messages et vos appels, mais il faudra un abonnement pour envoyer et appeler.';
+
+  @override
+  String plusCardTrialDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'encore $count jours d\'essai',
+      one: 'encore 1 jour d\'essai',
+      zero: 'dernier jour d\'essai',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardSubscribe => 'S\'abonner';
+
+  @override
+  String get plusCardRestrictedKicker => 'Essai terminé';
+
+  @override
+  String get plusCardRestrictedTitle =>
+      'Vous ne pouvez plus envoyer ni appeler';
+
+  @override
+  String get plusCardRestrictedBody =>
+      'Vous recevez toujours vos messages et vos appels. Abonnez-vous pour envoyer des messages et appeler de nouveau.';
+
+  @override
+  String get plusCardLapsedTrialBody =>
+      'Vous recevez toujours vos messages et vos appels. Entrez un nouveau code pour reprendre.';
+
+  @override
+  String get plusCardRenewByCode =>
+      'Pour renouveler, il vous faudra un nouveau code.';
+
+  @override
+  String get plusCardScheduledTrialBody =>
+      'Votre essai gratuit continue jusque-là, puis l\'abonnement prend le relais.';
+
+  @override
+  String get subscriptionSourceCode => 'Code d\'activation';
+
+  @override
+  String get redeemTitle => 'J\'ai un code';
+
+  @override
+  String get redeemIntro =>
+      'Après votre paiement sur le site, vous avez reçu un code. Entrez-le ici : il débloque tout pendant un an.';
+
+  @override
+  String get redeemFieldLabel => 'Code d\'activation';
+
+  @override
+  String get redeemFieldHint => 'XXXXX-XXXXX-XXXXX';
+
+  @override
+  String get redeemSubmit => 'Activer';
+
+  @override
+  String get redeemChecksumError =>
+      'Ce code ne semble pas correct. Vérifiez chaque caractère.';
+
+  @override
+  String get redeemSuccessTitle => 'Abonnement activé';
+
+  @override
+  String redeemSuccessActive(String date) {
+    return 'Votre abonnement est actif jusqu\'au $date.';
+  }
+
+  @override
+  String redeemSuccessScheduled(String start, String end) {
+    return 'Votre essai gratuit continue. L\'abonnement commencera le $start et durera jusqu\'au $end.';
+  }
+
+  @override
+  String get redeemDone => 'Terminé';
+
+  @override
+  String get redeemPaste => 'Coller le code';
+
+  @override
+  String get composerSubscriptionRequired =>
+      'Votre essai est terminé : vous recevez vos messages, mais il faut un abonnement pour en envoyer.';
+
+  @override
+  String redeemLocked(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutes',
+      one: '1 minute',
+    );
+    return 'Trop d\'essais. Réessayez dans $_temp0.';
+  }
+
+  @override
+  String get paywallOutgoingTitle => 'Abonnez-vous pour continuer';
+
+  @override
+  String get paywallOutgoingBody =>
+      'Votre essai gratuit est terminé. Vous recevez toujours vos messages et vos appels, mais il faut un abonnement pour envoyer des messages et appeler.';
+
+  @override
+  String get paywallTrialTitle => 'Abonnez-vous à Alanya';
+
+  @override
+  String get paywallTrialBody =>
+      'Un abonnement d\'un an débloque tout : envoyer des messages, appeler, traduire, sauvegarder et vos trajets de confiance. Pendant l\'essai gratuit, vous pouvez le prendre dès maintenant : il commencera à la fin de l\'essai.';
+
+  @override
+  String get paywallPayOnline => 'Payer en ligne';
+
+  @override
+  String get paywallHaveCode => 'J\'ai un code';
+
+  @override
+  String get paywallPayHint =>
+      'Vous paierez sur notre site, puis vous recevrez un code à entrer ici.';
+
+  @override
+  String get paywallPayUnavailable =>
+      'Le paiement en ligne n\'est pas encore disponible. Si vous avez un code, entrez-le.';
+
+  @override
+  String get paywallPayOpenFailed =>
+      'Impossible d\'ouvrir le site de paiement.';
+
+  @override
+  String get errCodeInvalidCode => 'Ce code n\'existe pas. Vérifiez-le.';
+
+  @override
+  String get errCodeInvalidCodeFormat =>
+      'Ce code est mal saisi. Il comporte 15 caractères.';
+
+  @override
+  String get errCodeCodeAlreadyUsed => 'Ce code a déjà été utilisé.';
+
+  @override
+  String get errCodeCodeExpired => 'Ce code a expiré.';
+
+  @override
+  String get errCodeCodeRevoked => 'Ce code a été annulé.';
+
+  @override
+  String get errCodeCodeLocked =>
+      'Trop d\'essais. Réessayez dans quelques minutes.';
 
   @override
   String get verificationTitle => 'Obtenir la coche';

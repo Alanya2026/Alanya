@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../core/services/billing/entitlement_service.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/db/app_database.dart';
@@ -21,7 +23,7 @@ import '../../widgets/common/common.dart';
 import 'new_chat_screen.dart';
 
 /// Limite alignée sur multer (50 Mo) côté backend.
-const int _maxMediaBytes = 50 * 1024 * 1024;
+int get _maxMediaBytes => EntitlementService.maxUploadBytes;
 
 /// Choisit une ou plusieurs conversations pour envoyer un contenu partagé
 /// depuis une autre app (Galerie, Fichiers, navigateur…).

@@ -15,6 +15,12 @@ extension CallConference on CallService {
     bool transfer = false,
   }) {
     if (!canAddParticipant) return;
+    // Inviter quelqu'un est émettre : refusé sans abonnement, même au milieu d'un
+    // appel que le compte a reçu.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
     final mode = transfer ? 'transfer' : 'join';
     debugPrint('[CallService] ➕ demande d\'ajout de $inviteeId mode=$mode');
     _confMode = mode;

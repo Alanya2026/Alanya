@@ -29,7 +29,142 @@ Map<String, dynamic> _payload({
       'validUntil': validUntil,
     };
 
+/// Charge utile du régime essai : le droit d'émettre est hors catalogue
+/// (`features.outgoing`), et `trial` donne la fin de l'essai.
+Map<String, dynamic> _trialPayload({
+  bool outgoing = true,
+  bool trialActive = true,
+  Map<String, dynamic>? period,
+  String phase = 'paid',
+}) =>
+    {
+      ..._payload(phase: phase, period: period),
+      'model': 2,
+      'trial': {'endsAt': '2026-12-01T00:00:00.000Z', 'active': trialActive},
+      'features': {'translation': trialActive, 'outgoing': outgoing},
+    };
+
 void main() {
+  group('Plafonds d\'envoi', () {
+    const mb = 1024 * 1024;
+
+    test('sans mention du serveur : palier standard, 50 Mo et 30 médias', () {
+      final e = Entitlements.fromJson(_payload());
+      expect(e.limits.maxUploadBytes, 50 * mb);
+      expect(e.limits.maxAlbumItems, 30);
+      expect(e.limits.paid, isFalse);
+      expect(e.limits.maxUploadMb, 50);
+      expect(Entitlements.unrestricted.limits.maxAlbumItems, 30);
+    });
+
+    test('abonné : 200 Mo et 100 médias, tels que le serveur les annonce', () {
+      final e = Entitlements.fromJson({
+        ..._payload(),
+        'limits': {'maxUploadBytes': 200 * mb, 'maxAlbumItems': 100, 'tier': 'paid'},
+      });
+      expect(e.limits.maxUploadBytes, 200 * mb);
+      expect(e.limits.maxUploadMb, 200);
+      expect(e.limits.maxAlbumItems, 100);
+      expect(e.limits.paid, isTrue);
+    });
+
+    test('une valeur absurde ne donne jamais un plafond nul ou négatif', () {
+      for (final bad in [0, -5, 'abc', null]) {
+        final e = Entitlements.fromJson({
+          ..._payload(),
+          'limits': {'maxUploadBytes': bad, 'maxAlbumItems': bad},
+        });
+        expect(e.limits.maxUploadBytes, 50 * mb, reason: '$bad');
+        expect(e.limits.maxAlbumItems, 30, reason: '$bad');
+      }
+    });
+
+    test('les plafonds survivent au cache local', () {
+      final e = Entitlements.fromJson({
+        ..._payload(),
+        'limits': {'maxUploadBytes': 200 * mb, 'maxAlbumItems': 100, 'tier': 'paid'},
+      });
+      final back = Entitlements.fromJson(e.toJson());
+      expect(back.limits.maxUploadBytes, 200 * mb);
+      expect(back.limits.maxAlbumItems, 100);
+      expect(back.limits.paid, isTrue);
+    });
+
+    test('le service les rend sans contexte, et les reprend à l\'expiration', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = EntitlementService(api: TalkyApiClient());
+      expect(EntitlementService.maxUploadBytes, 50 * mb);
+      await s.apply({
+        ..._payload(),
+        'limits': {'maxUploadBytes': 200 * mb, 'maxAlbumItems': 100, 'tier': 'paid'},
+      });
+      expect(EntitlementService.maxUploadBytes, 200 * mb);
+      expect(EntitlementService.maxUploadMb, 200);
+      expect(EntitlementService.maxAlbumItems, 100);
+      // L'abonnement a pris fin : le serveur n'annonce plus que le palier standard.
+      await s.apply(_payload());
+      expect(EntitlementService.maxUploadBytes, 50 * mb);
+      expect(EntitlementService.maxAlbumItems, 30);
+      s.dispose();
+      expect(EntitlementService.maxAlbumItems, 30, reason: 'sans service : standard');
+    });
+  });
+
+  group('Régime essai', () {
+    test('un serveur qui n\'en parle pas : Alanya Plus, tout est permis', () {
+      final e = Entitlements.fromJson(_payload());
+      expect(e.model, PlusModel.plus);
+      expect(e.isTrialModel, isFalse);
+      expect(e.trial, isNull);
+      // Le droit d'émettre n'existe pas dans cette charge utile : ouvert.
+      expect(e.canSend, isTrue);
+    });
+
+    test('essai en cours : on peut tout faire, la fin est connue', () {
+      final e = Entitlements.fromJson(_trialPayload());
+      expect(e.model, PlusModel.trial);
+      expect(e.isTrialModel, isTrue);
+      expect(e.canSend, isTrue);
+      expect(e.trial!.active, isTrue);
+      expect(e.trial!.endsAt, DateTime.utc(2026, 12, 1));
+      expect(e.has(PlusFeature.translation), isTrue);
+    });
+
+    test('essai fini, sans abonnement : on ne peut ni envoyer ni appeler', () {
+      final e = Entitlements.fromJson(_trialPayload(outgoing: false, trialActive: false));
+      expect(e.canSend, isFalse);
+      expect(e.trial!.active, isFalse);
+      expect(e.has(PlusFeature.translation), isFalse);
+    });
+
+    test('sans droits connus, ou sans mention du droit : on ne ferme jamais', () {
+      expect(Entitlements.unrestricted.canSend, isTrue);
+      final sansDroit = Entitlements.fromJson({..._trialPayload(), 'features': <String, bool>{}});
+      expect(sansDroit.canSend, isTrue);
+    });
+
+    test('le régime et l\'essai survivent au cache local', () {
+      final e = Entitlements.fromJson(_trialPayload(outgoing: false, trialActive: false));
+      final back = Entitlements.fromJson(e.toJson());
+      expect(back.model, PlusModel.trial);
+      expect(back.canSend, isFalse);
+      expect(back.trial!.endsAt, DateTime.utc(2026, 12, 1));
+      expect(back.trial!.active, isFalse);
+    });
+
+    test('une période née d\'un code porte la source 4', () {
+      final e = Entitlements.fromJson(_trialPayload(period: {
+        'plan': 'plus_annuel',
+        'startsAt': '2026-10-10T00:00:00.000Z',
+        'endsAt': '2027-10-10T00:00:00.000Z',
+        'source': 4,
+        'autoRenew': false,
+      }));
+      expect(e.period!.source, 4);
+      expect(e.isSubscribed, isTrue);
+    });
+  });
+
   group('Entitlements', () {
     test('sans droits connus, tout est permis', () {
       const e = Entitlements.unrestricted;
@@ -103,6 +238,27 @@ void main() {
       await s.applyFromProfile({'alanyaID': 7});
       expect(s.current.known, isFalse);
       expect(EntitlementService.allows(PlusFeature.backup), isTrue);
+    });
+
+    test('un refus d\'émettre est annoncé une fois, pas à chaque message', () async {
+      final s = EntitlementService(api: TalkyApiClient());
+      await s.apply(_trialPayload(outgoing: false, trialActive: false));
+      expect(s.canSend, isFalse);
+      expect(EntitlementService.allowsOutgoing, isFalse);
+
+      var signals = 0;
+      final sub = s.outgoingBlocked.listen((_) => signals++);
+      // Cinq messages en file qui échouent ensemble : un seul signal.
+      for (var i = 0; i < 5; i++) {
+        s.reportOutgoingBlocked();
+      }
+      await Future<void>.delayed(Duration.zero);
+      expect(signals, 1);
+      await sub.cancel();
+
+      await s.apply(_trialPayload());
+      expect(EntitlementService.allowsOutgoing, isTrue,
+          reason: 'un code activé rouvre l\'émission sans redémarrage');
     });
 
     test('les droits survivent au redémarrage, pas à la déconnexion', () async {
