@@ -1401,9 +1401,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get cameraDisabled => 'Caméra désactivée';
 
   @override
-  String get searchComingSoon => 'Recherche à venir';
-
-  @override
   String get searchInConversationHint => 'Rechercher dans la discussion';
 
   @override

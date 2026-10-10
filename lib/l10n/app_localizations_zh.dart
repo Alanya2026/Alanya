@@ -1321,9 +1321,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cameraDisabled => '摄像头已关闭';
 
   @override
-  String get searchComingSoon => '搜索功能即将推出';
-
-  @override
   String get searchInConversationHint => '在聊天中搜索';
 
   @override

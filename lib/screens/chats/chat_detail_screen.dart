@@ -1413,6 +1413,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   }
 
 
+  /// Fiche du contact ouverte depuis le menu : comme le tap sur l'en-tête, elle
+  /// peut rendre `'search'` pour passer la discussion en mode recherche.
+  Future<void> _openContactFromMenu() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ContactDetailScreen(
+          userId: widget.userId!,
+          conversationId: _convId,
+          initialName: _chatTitle(context),
+          initialAvatar: widget.avatarUrl ?? '',
+          openedFromConversation: true,
+        ),
+      ),
+    );
+    if (mounted && result == 'search') _enterSearchMode();
+  }
+
   PreferredSizeWidget _buildChatAppBar(bool partnerTyping) {
     return AppBar(
       titleSpacing: 0,
@@ -1436,7 +1454,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                 : null)
             : (widget.userId != null
                 ? () async {
-                    await Navigator.push(
+                    final result = await Navigator.push<String>(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ContactDetailScreen(
@@ -1444,10 +1462,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                           conversationId: _convId,
                           initialName: _chatTitle(context),
                           initialAvatar: widget.avatarUrl ?? '',
+                          openedFromConversation: true,
                         ),
                       ),
                     );
-                    if (mounted && !_isSelfChat) _loadBlockStatus();
+                    if (!mounted) return;
+                    if (!_isSelfChat) _loadBlockStatus();
+                    if (result == 'search') _enterSearchMode();
                   }
                 : null),
         child: Row(
@@ -1559,19 +1580,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
             offset: const Offset(0, 48),
             onSelected: (value) {
               switch (value) {
+                case 'search':
+                  _enterSearchMode();
                 case 'contact':
                   if (widget.userId != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ContactDetailScreen(
-                          userId: widget.userId!,
-                          conversationId: _convId,
-                          initialName: _chatTitle(context),
-                          initialAvatar: widget.avatarUrl ?? '',
-                        ),
-                      ),
-                    );
+                    unawaited(_openContactFromMenu());
                   }
                 case 'media':
                   if (_convId != null) {
@@ -1595,6 +1608,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
               }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'search',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.search),
+                  title: Text(context.l10n.commonSearch),
+                ),
+              ),
               PopupMenuItem(
                 value: 'contact',
                 child: ListTile(

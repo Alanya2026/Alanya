@@ -429,7 +429,6 @@
   "noCountryFound": "No country found",
   "addAPhoto": "Add a photo",
   "cameraDisabled": "Camera disabled",
-  "searchComingSoon": "Search coming soon",
   "searchInConversationHint": "Search this chat",
   "searchNoResult": "No messages found",
   "searchResultCounter": "{index}/{total}",

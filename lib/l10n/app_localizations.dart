@@ -2494,12 +2494,6 @@ abstract class AppLocalizations {
   /// **'Caméra désactivée'**
   String get cameraDisabled;
 
-  /// No description provided for @searchComingSoon.
-  ///
-  /// In fr, this message translates to:
-  /// **'Recherche à venir'**
-  String get searchComingSoon;
-
   /// No description provided for @searchInConversationHint.
   ///
   /// In fr, this message translates to:

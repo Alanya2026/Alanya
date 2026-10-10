@@ -1382,9 +1382,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cameraDisabled => 'Camera disabled';
 
   @override
-  String get searchComingSoon => 'Search coming soon';
-
-  @override
   String get searchInConversationHint => 'Search this chat';
 
   @override
