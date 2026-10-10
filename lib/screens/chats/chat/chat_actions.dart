@@ -723,6 +723,19 @@ extension _ChatActions on _ChatDetailScreenState {
   void _showMessageInfo(LocalMessage msg) {
     final isMe = msg.senderID == _myId;
 
+    // Mon message de groupe, confirmé par le serveur : qui l'a lu, reçu, ou pas
+    // encore reçu, membre par membre.
+    final convId = _convId;
+    if (widget.isGroup && isMe && msg.msgID > 0 && convId != null) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => GroupMessageInfoScreen(
+          message: msg,
+          conversationId: convId,
+        ),
+      ));
+      return;
+    }
+
     String fmt(DateTime? d) {
       if (d == null) return '—';
       final l = d.toLocal();

@@ -7319,4 +7319,64 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get accountSecurityPhoneCredit =>
       'Changement payé : choisissez votre numéro';
+
+  @override
+  String get receiptsTitle => 'Infos du message';
+
+  @override
+  String receiptsReadBy(int count) {
+    return 'Lu par $count';
+  }
+
+  @override
+  String receiptsOutOf(int total) {
+    return 'sur $total';
+  }
+
+  @override
+  String receiptsDeliveredBy(int count) {
+    return 'Reçu par $count';
+  }
+
+  @override
+  String receiptsPendingCount(int count) {
+    return 'En attente $count';
+  }
+
+  @override
+  String get receiptsReadSection => 'Lu';
+
+  @override
+  String receiptsShowAllReaders(int count) {
+    return 'Voir les $count lecteurs';
+  }
+
+  @override
+  String get receiptsDeliveredNotRead => 'Reçu, pas encore lu';
+
+  @override
+  String get receiptsNotDelivered => 'Pas encore reçu';
+
+  @override
+  String receiptsMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '1 membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get receiptsNoReaders => 'Personne ne l\'a encore lu';
+
+  @override
+  String get receiptsLoadError =>
+      'Impossible d\'afficher les accusés de lecture.';
+
+  @override
+  String receiptsBarLabel(int read, int delivered, int pending) {
+    return '$read lu, $delivered reçu sans être lu, $pending en attente';
+  }
 }

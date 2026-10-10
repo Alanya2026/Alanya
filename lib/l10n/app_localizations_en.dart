@@ -7233,4 +7233,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountSecurityPhoneCredit => 'Change paid: choose your number';
+
+  @override
+  String get receiptsTitle => 'Message info';
+
+  @override
+  String receiptsReadBy(int count) {
+    return 'Read by $count';
+  }
+
+  @override
+  String receiptsOutOf(int total) {
+    return 'of $total';
+  }
+
+  @override
+  String receiptsDeliveredBy(int count) {
+    return 'Delivered to $count';
+  }
+
+  @override
+  String receiptsPendingCount(int count) {
+    return 'Pending $count';
+  }
+
+  @override
+  String get receiptsReadSection => 'Read';
+
+  @override
+  String receiptsShowAllReaders(int count) {
+    return 'See all $count readers';
+  }
+
+  @override
+  String get receiptsDeliveredNotRead => 'Delivered, not read yet';
+
+  @override
+  String get receiptsNotDelivered => 'Not delivered yet';
+
+  @override
+  String receiptsMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get receiptsNoReaders => 'No one has read it yet';
+
+  @override
+  String get receiptsLoadError => 'Couldn\'t load read receipts.';
+
+  @override
+  String receiptsBarLabel(int read, int delivered, int pending) {
+    return '$read read, $delivered delivered but unread, $pending pending';
+  }
 }

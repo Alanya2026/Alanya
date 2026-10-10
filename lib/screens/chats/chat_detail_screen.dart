@@ -74,6 +74,7 @@ import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'group_detail_screen.dart';
+import 'group_message_info_screen.dart';
 import 'forward_message_screen.dart';
 import 'album_media_list_screen.dart';
 import 'media_send_screen.dart';
