@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/backend_url.dart';
 import '../utils/conversation_display.dart';
+import '../utils/sticker_payload.dart';
 import 'media_cache_service.dart';
 import 'notification_navigation.dart';
 import 'notifications/notification_dedup_store.dart';
@@ -649,6 +650,11 @@ class LocalNotificationHelper {
   static String bodyFromPayload(Map<String, dynamic> data) {
     final l10n = resolveL10n();
     final raw = data['body']?.toString();
+    // Sticker : « 😂 Sticker », jamais de JSON ni d'image dans le push.
+    if ((int.tryParse(data['msgType']?.toString() ?? '') ?? 0) ==
+        kStickerMessageType) {
+      return NotificationBody.stickerBody(raw ?? '', l10n: l10n);
+    }
     final normalized = displayConversationPreview(
       raw != null && raw.isNotEmpty ? raw : null,
       l10n,

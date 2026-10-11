@@ -4124,5 +4124,120 @@
         "type": "int"
       }
     }
-  }
+  },
+  "stickerWord": "Sticker",
+  "stickerPreview": "{emoji} Sticker",
+  "@stickerPreview": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerRemoved": "Sticker retiré",
+  "stickerUnsupported": "Sticker non pris en charge — mettez à jour l'application",
+  "stickerTabEmojis": "Émojis",
+  "stickerTabStickers": "Stickers",
+  "stickerRecents": "Récents",
+  "stickerFavorites": "Favoris",
+  "stickerEmptyRecents": "Vos stickers récents apparaîtront ici.",
+  "stickerEmptyFavorites": "Touchez ★ dans la fiche d'un sticker pour l'ajouter à vos favoris.",
+  "stickerLoadError": "Impossible de charger les stickers.",
+  "stickerRetry": "Réessayer",
+  "stickerLockedBanner": "Ce pack est réservé à Alanya Plus.",
+  "stickerUnlockCta": "Découvrir Alanya Plus",
+  "stickerLockedLabel": "Pack {name}, verrouillé",
+  "@stickerLockedLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerBadgeOfficial": "Officiel",
+  "stickerBadgePlus": "Plus",
+  "stickerFavoriteAdd": "Ajouter aux favoris",
+  "stickerFavoriteRemove": "Retirer des favoris",
+  "stickerViewPack": "Voir le pack",
+  "stickerForward": "Transférer",
+  "stickerSheetPack": "Pack : {name}",
+  "@stickerSheetPack": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSender": "Envoyé par {name}",
+  "@stickerSheetSender": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSize": "{w} × {h} px",
+  "@stickerSheetSize": {
+    "placeholders": {
+      "w": {
+        "type": "int"
+      },
+      "h": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerSheetWeight": "Poids : {size}",
+  "@stickerSheetWeight": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerAddPack": "Ajouter",
+  "stickerRemovePack": "Retirer",
+  "stickerAdded": "Pack ajouté.",
+  "stickerPackRemoved": "Pack retiré.",
+  "stickerMyPacks": "Mes packs",
+  "stickerCatalog": "Catalogue",
+  "stickerManage": "Gérer les stickers",
+  "stickerPackCount": "{count} stickers",
+  "@stickerPackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerPackInstalled": "Installé",
+  "stickerSendLockedPlus": "Ce sticker nécessite Alanya Plus.",
+  "stickerDomainError": "Les stickers ne sont pas disponibles pour le moment.",
+  "errCodeStickerNotFound": "Ce sticker n'existe plus.",
+  "errCodeStickerPackUnavailable": "Ce pack n'est plus disponible.",
+  "errCodeStickerInvalidPayload": "Ce sticker n'a pas pu être envoyé.",
+  "errCodeStickerAssetInvalid": "Cette image ne peut pas devenir un sticker.",
+  "errCodeStickerAssetBlocked": "Cette image est bloquée et ne peut pas être utilisée.",
+  "errCodeStickerQuotaExceeded": "Vous avez atteint votre limite de stickers.",
+  "errCodeStickerPackLimit": "Vous avez atteint le nombre maximal de packs.",
+  "plusFeatureStickers": "Stickers Royal",
+  "paywallStickersTitle": "Les stickers Royal",
+  "paywallStickersBody": "Le pack Royal fait partie d'Alanya Plus : couronnes, trophées et paillettes pour vos conversations.",
+  "stickerTrayLabel": "Stickers",
+  "stickerNoPacks": "Aucun pack installé. Ouvrez le catalogue pour en ajouter.",
+  "stickerPreviewTitle": "Aperçu du sticker",
+  "stickerReplyQuote": "Sticker",
+  "stickerSemantics": "Sticker {emoji}",
+  "@stickerSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerPackLockedSemantics": "Verrouillé, Alanya Plus requis",
+  "stickerSendFailed": "Le sticker n'a pas pu être envoyé.",
+  "stickerPackReorderHint": "Maintenez et glissez pour réordonner",
+  "stickerNoFavorites": "Aucun favori",
+  "stickerOfficialPackName": "Pack officiel"
 }

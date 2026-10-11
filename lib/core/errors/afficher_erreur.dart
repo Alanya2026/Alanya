@@ -11,6 +11,20 @@ import '../theme/app_theme.dart';
 import 'app_error.dart';
 import 'error_presenter.dart';
 
+/// Codes d'erreur des stickers (contrat §9, miroir de `docs/error-codes.md`
+/// côté backend). **Un code ne se renomme jamais.** Chacun a son texte dans
+/// `error_presenter.dart` (`_messagePourCode`) ; `SUBSCRIPTION_REQUIRED`
+/// (`feature: "stickers_premium"`) ouvre le panneau Plus via [afficherErreur].
+const List<String> kStickerErrorCodes = [
+  'STICKER_NOT_FOUND',
+  'STICKER_PACK_UNAVAILABLE',
+  'STICKER_INVALID_PAYLOAD',
+  'STICKER_ASSET_INVALID',
+  'STICKER_ASSET_BLOCKED',
+  'STICKER_QUOTA_EXCEEDED',
+  'STICKER_PACK_LIMIT',
+];
+
 /// Affiche une erreur en SnackBar, traduite par [presenterErreur].
 ///
 /// Prend l'erreur **brute** et jamais une `String` déjà composée : l'appelant

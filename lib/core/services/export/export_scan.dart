@@ -5,8 +5,19 @@ import 'package:path/path.dart' as p;
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
 import '../../utils/audio_message_kind.dart';
+import '../../utils/sticker_payload.dart';
 import '../media_expiry_policy.dart';
 import 'export_manifest.dart';
+
+/// Résout le fichier local d'un **sticker**, ou `null` s'il n'est pas là.
+///
+/// Un sticker ne renseigne pas `localMediaPath` : son fichier vit dans le cache
+/// dédié (`StickerCache`), indexé par URL. Le scan ne peut donc pas le lire
+/// comme un média ordinaire, et il ne doit surtout pas le télécharger — d'où
+/// cette injection : la couche export ne connaît ni le cache ni le réseau, et
+/// reste testable sans l'un ni l'autre. Un résolveur absent (appels historiques,
+/// tests) déclare le sticker manquant plutôt que de l'omettre en silence.
+typedef StickerFileResolver = Future<File?> Function(LocalMessage msg);
 
 /// Un média retenu pour l'archive, avec son fichier et sa place dedans.
 class ScannedMedia {
@@ -75,13 +86,14 @@ class ExportScanResult {
     required Map<int, int> sizes,
   }) {
     final rescored = missing
-        .map((m) => available.contains(m.msgID)
+        .map((m) => (available.contains(m.msgID) || m.isSticker)
             ? m
             : ExportMissing(
                 msgID: m.msgID,
                 clientId: m.clientId,
                 sentAt: m.sentAt,
                 reason: MissingReason.expired,
+                type: m.type,
               ))
         .toList();
 
@@ -127,7 +139,11 @@ class ExportScanResult {
 class ExportScanner {
   final ChatDao dao;
 
-  const ExportScanner(this.dao);
+  /// Résout le fichier d'un sticker (cache dédié). `null` = pas de résolveur :
+  /// un sticker sera déclaré manquant, jamais omis en silence.
+  final StickerFileResolver? stickerFile;
+
+  const ExportScanner(this.dao, {this.stickerFile});
 
   /// Dossier d'archive par famille de média. Reprend la nomenclature que
   /// `AlanyaMediaExportService` pose déjà dans `Download/Alanya/` : un inscrit
@@ -146,6 +162,10 @@ class ExportScanner {
         return audioKindFromName(mediaName) == AudioMessageKind.music
             ? 'Alanya Musique'
             : 'Alanya Vocaux';
+      case kStickerMessageType:
+        // Les stickers ont leur propre dossier : ils ne sont pas des photos,
+        // et les noyer dans « Alanya Images » les rendrait introuvables.
+        return 'Alanya Stickers';
       default:
         return 'Alanya Documents';
     }
@@ -157,7 +177,7 @@ class ExportScanner {
     int? conversationID,
     DateTime? from,
     DateTime? until,
-    List<int> types = kMyMediaTypes,
+    List<int> types = kExportMediaTypes,
     DateTime? now,
   }) async {
     final rows = await dao.mediaForExport(
@@ -179,19 +199,31 @@ class ExportScanner {
 
     for (final row in rows) {
       final msg = row.message;
-      final path = msg.localMediaPath;
+      final isSticker = msg.type == kStickerMessageType;
 
-      if (path == null) {
+      // Un sticker n'a pas de `localMediaPath` : son fichier vit dans le cache
+      // dédié, résolu par injection. On ne le télécharge jamais ici — un export
+      // qui ferait du réseau sans que l'inscrit l'ait accepté serait une faute.
+      final File? file;
+      if (isSticker) {
+        file = stickerFile == null ? null : await stickerFile!(msg);
+      } else {
+        final path = msg.localMediaPath;
+        file = path == null ? null : File(path);
+      }
+
+      if (file == null) {
         missing.add(_missing(msg, MissingReason.neverDownloaded, now));
         continue;
       }
 
-      final stat = FileStat.statSync(path);
+      final stat = FileStat.statSync(file.path);
       if (stat.type == FileSystemEntityType.notFound) {
         // La base annonçait un fichier que le disque n'a plus : effacé hors
         // de l'app. On la désynchronise, sinon la grille continuerait
-        // d'afficher un média qui n'existe pas.
-        await dao.clearLocalMediaPath(msg.msgID);
+        // d'afficher un média qui n'existe pas. Un sticker n'a pas de
+        // `localMediaPath` à effacer — et son `msgID` peut valoir 0.
+        if (!isSticker) await dao.clearLocalMediaPath(msg.msgID);
         missing.add(_missing(msg, MissingReason.fileGone, now));
         continue;
       }
@@ -208,11 +240,11 @@ class ExportScanner {
       present.add(ScannedMedia(
         message: msg,
         senderName: row.senderName,
-        file: File(path),
+        file: file,
         bytes: stat.size,
         archivePath: p.join(
           folder,
-          _archiveFileName(msg, row.senderName, index, path),
+          _archiveFileName(msg, row.senderName, index, file.path),
         ),
       ));
       total += stat.size;
@@ -237,6 +269,7 @@ class ExportScanner {
       clientId: msg.clientId,
       sentAt: msg.sendAt,
       reason: expired ? MissingReason.expired : reason,
+      type: msg.type,
     );
   }
 
@@ -257,7 +290,13 @@ class ExportScanner {
         '${date.day.toString().padLeft(2, '0')}';
     final who = _slug(senderName ?? 'alanya');
     final n = index.toString().padLeft(4, '0');
-    final ext = _extensionOf(msg.mediaName) ?? _extensionOf(localPath) ?? 'bin';
+    // Le nom d'origine puis le chemin local ; à défaut l'URL serveur — un
+    // sticker n'a ni l'un ni l'autre de nommé, mais son URL se termine par
+    // `.webp`, ce qui vaut mieux que le `bin` générique.
+    final ext = _extensionOf(msg.mediaName) ??
+        _extensionOf(localPath) ??
+        _extensionOf(msg.mediaUrl) ??
+        'bin';
     return '${day}_${who}_$n.$ext';
   }
 

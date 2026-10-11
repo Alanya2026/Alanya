@@ -3256,5 +3256,120 @@
   "receiptsMemberCount": "{count, plural, =1{1 member} other{{count} members}}",
   "receiptsNoReaders": "No one has read it yet",
   "receiptsLoadError": "Couldn't load read receipts.",
-  "receiptsBarLabel": "{read} read, {delivered} delivered but unread, {pending} pending"
+  "receiptsBarLabel": "{read} read, {delivered} delivered but unread, {pending} pending",
+  "stickerWord": "Sticker",
+  "stickerPreview": "{emoji} Sticker",
+  "@stickerPreview": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerRemoved": "Sticker removed",
+  "stickerUnsupported": "Unsupported sticker — update the app",
+  "stickerTabEmojis": "Emojis",
+  "stickerTabStickers": "Stickers",
+  "stickerRecents": "Recent",
+  "stickerFavorites": "Favorites",
+  "stickerEmptyRecents": "Your recent stickers will appear here.",
+  "stickerEmptyFavorites": "Tap ★ on a sticker to add it to your favorites.",
+  "stickerLoadError": "Couldn't load stickers.",
+  "stickerRetry": "Retry",
+  "stickerLockedBanner": "This pack is for Alanya Plus.",
+  "stickerUnlockCta": "Discover Alanya Plus",
+  "stickerLockedLabel": "{name} pack, locked",
+  "@stickerLockedLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerBadgeOfficial": "Official",
+  "stickerBadgePlus": "Plus",
+  "stickerFavoriteAdd": "Add to favorites",
+  "stickerFavoriteRemove": "Remove from favorites",
+  "stickerViewPack": "View pack",
+  "stickerForward": "Forward",
+  "stickerSheetPack": "Pack: {name}",
+  "@stickerSheetPack": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSender": "Sent by {name}",
+  "@stickerSheetSender": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSize": "{w} × {h} px",
+  "@stickerSheetSize": {
+    "placeholders": {
+      "w": {
+        "type": "int"
+      },
+      "h": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerSheetWeight": "Size: {size}",
+  "@stickerSheetWeight": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerAddPack": "Add",
+  "stickerRemovePack": "Remove",
+  "stickerAdded": "Pack added.",
+  "stickerPackRemoved": "Pack removed.",
+  "stickerMyPacks": "My packs",
+  "stickerCatalog": "Catalog",
+  "stickerManage": "Manage stickers",
+  "stickerPackCount": "{count} stickers",
+  "@stickerPackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerPackInstalled": "Installed",
+  "stickerSendLockedPlus": "This sticker needs Alanya Plus.",
+  "stickerDomainError": "Stickers are unavailable right now.",
+  "errCodeStickerNotFound": "This sticker no longer exists.",
+  "errCodeStickerPackUnavailable": "This pack is no longer available.",
+  "errCodeStickerInvalidPayload": "This sticker couldn't be sent.",
+  "errCodeStickerAssetInvalid": "This image can't be used as a sticker.",
+  "errCodeStickerAssetBlocked": "This image is blocked and can't be used.",
+  "errCodeStickerQuotaExceeded": "You've reached your sticker limit.",
+  "errCodeStickerPackLimit": "You've reached the maximum number of packs.",
+  "plusFeatureStickers": "Royal stickers",
+  "paywallStickersTitle": "Royal stickers",
+  "paywallStickersBody": "The Royal pack is part of Alanya Plus: crowns, trophies and sparkle for your chats.",
+  "stickerTrayLabel": "Stickers",
+  "stickerNoPacks": "No packs installed. Open the catalog to add some.",
+  "stickerPreviewTitle": "Sticker preview",
+  "stickerReplyQuote": "Sticker",
+  "stickerSemantics": "Sticker {emoji}",
+  "@stickerSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerPackLockedSemantics": "Locked, Alanya Plus required",
+  "stickerSendFailed": "The sticker couldn't be sent.",
+  "stickerPackReorderHint": "Hold and drag to reorder",
+  "stickerNoFavorites": "No favorites",
+  "stickerOfficialPackName": "Official pack"
 }

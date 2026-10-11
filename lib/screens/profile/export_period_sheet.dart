@@ -6,6 +6,7 @@ import '../../talky_api_client.dart';
 import 'package:provider/provider.dart';
 import 'package:path/path.dart' as p;
 
+import '../../core/db/app_database.dart';
 import '../../core/db/chat_dao.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
@@ -14,9 +15,11 @@ import '../../core/services/export/export_delivery.dart';
 import '../../core/services/export/export_scan.dart';
 import '../../core/services/export/export_zip_builder.dart';
 import '../../core/services/export/media_export_job.dart';
+import '../../core/services/stickers/sticker_cache.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
+import '../../core/utils/sticker_payload.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Périmètre à exporter, tel que les filtres de l'écran l'ont défini.
@@ -36,7 +39,7 @@ class ExportRequest {
     this.conversationName,
     this.from,
     this.until,
-    this.types = kMyMediaTypes,
+    this.types = kExportMediaTypes,
   });
 }
 
@@ -91,7 +94,8 @@ class _ExportPeriodSheetState extends State<ExportPeriodSheet> {
   Future<void> _loadPreview() async {
     final r = widget.request;
     try {
-      final scan = await MediaExportJob(widget.dao).preview(
+      final scan = await MediaExportJob(widget.dao, stickerFile: _stickerFile)
+          .preview(
         r.myId,
         mineOnly: r.mineOnly,
         conversationID: r.conversationID,
@@ -119,7 +123,12 @@ class _ExportPeriodSheetState extends State<ExportPeriodSheet> {
   /// quel. L'écran parlera alors d'estimation (`verifiedByServer` reste faux)
   /// au lieu de promettre.
   Future<ExportScanResult> _askServer(ExportScanResult scan) async {
+    // Les stickers sont laissés de côté : leur disponibilité ne se lit pas
+    // dans la partition média (ils ne sont pas purgés), et l'appelant sait
+    // déjà qu'un sticker absent du cache est simplement récupérable. Les
+    // interroger risquerait de les classer « perdus » à tort.
     final ids = scan.recoverable
+        .where((m) => !m.isSticker)
         .map((m) => m.msgID)
         .where((id) => id > 0)
         .toList();
@@ -151,7 +160,7 @@ class _ExportPeriodSheetState extends State<ExportPeriodSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final r = widget.request;
-    final job = MediaExportJob(widget.dao);
+    final job = MediaExportJob(widget.dao, stickerFile: _stickerFile);
     setState(() {
       _job = job;
       _error = null;
@@ -248,6 +257,18 @@ class _ExportPeriodSheetState extends State<ExportPeriodSheet> {
     }
   }
 
+  /// Fichier d'un sticker, lu dans le cache dédié ([StickerCache]) — **sans
+  /// réseau**. Un export ne télécharge rien que l'inscrit n'ait explicitement
+  /// accepté : un sticker absent du cache est simplement déclaré manquant.
+  ///
+  /// Un sticker ne renseigne pas `localMediaPath` : son image vit dans un cache
+  /// séparé, indexé par URL. C'est pourquoi l'export a besoin de ce résolveur.
+  Future<File?> _stickerFile(LocalMessage msg) async {
+    final url = msg.mediaUrl;
+    if (url == null || url.isEmpty) return null;
+    return StickerCache.instance.cachedFile(url);
+  }
+
   /// Récupération réseau d'un manquant, par sa clé primaire.
   ///
   /// Retourne `null` à la moindre difficulté — message introuvable, média à
@@ -261,6 +282,12 @@ class _ExportPeriodSheetState extends State<ExportPeriodSheet> {
     // Un média à vue unique n'a pas de copie persistante côté destinataire :
     // il n'a rien à faire dans une archive en clair.
     if (msg.isViewOnce) return null;
+    // Un sticker se télécharge dans son cache dédié, jamais dans le cache média
+    // général : c'est là que le scan va le chercher, et dans le dossier
+    // « Alanya Stickers » pour l'archive.
+    if (msg.type == kStickerMessageType) {
+      return (await StickerCache.instance.fileFor(url))?.path;
+    }
     return widget.repository.ensureReceivedMediaLocal(
       msgID: msg.msgID,
       mediaUrl: url,

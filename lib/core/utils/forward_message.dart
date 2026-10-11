@@ -5,6 +5,7 @@ import 'audio_message_kind.dart';
 import 'contact_payload.dart';
 import 'location_payload.dart';
 import 'media_album.dart';
+import 'sticker_payload.dart';
 import '../theme/locale_controller.dart';
 import '../services/media_expiry_policy.dart';
 
@@ -43,6 +44,13 @@ bool canForwardMessage(LocalMessage message) {
     return ContactPayload.tryParse(message.content) != null;
   }
 
+  // Sticker : transfert par référence, sans copie de fichier. Il faut un
+  // payload lisible ; l'image retirée se transfère quand même (le serveur
+  // tranche) mais un JSON illisible non.
+  if (message.type == kStickerMessageType) {
+    return StickerPayload.tryParse(message.content)?.isRenderable ?? false;
+  }
+
   // Une copie locale suffit toujours : elle sera renvoyée depuis l'appareil.
   if (_localMediaPath(message) != null) return true;
 
@@ -65,6 +73,7 @@ bool canBatchForwardOnServer(List<LocalMessage> sources) {
         (m.type == 0 ||
             m.type == 5 ||
             m.type == 7 ||
+            m.type == kStickerMessageType ||
             (m.mediaUrl?.isNotEmpty ?? false)),
   );
 }
@@ -89,6 +98,8 @@ String? resolveForwardCaption(LocalMessage source, String? userCaption) {
   final trimmed = userCaption?.trim();
   if (trimmed != null && trimmed.isNotEmpty) return trimmed;
   if (source.type == 0) return null;
+  // Le content d'un sticker est du JSON : jamais une légende.
+  if (source.type == kStickerMessageType) return null;
   if (isAlbumMarkerContent(source.content)) return null;
   final original = source.content?.trim();
   if (original != null && original.isNotEmpty) return original;
@@ -113,6 +124,8 @@ String mediaLabelForType(int type, {String? mediaName}) {
       return LocaleController.instance.l10n.location2;
     case 7:
       return LocaleController.instance.l10n.contact2;
+    case kStickerMessageType:
+      return LocaleController.instance.l10n.stickerWord;
     default:
       return LocaleController.instance.l10n.mediaFallback;
   }
@@ -130,6 +143,9 @@ String previewTextForForward(LocalMessage message) {
   }
   if (message.type == 7) {
     return contactPreviewLabel(message.content);
+  }
+  if (message.type == kStickerMessageType) {
+    return stickerPreviewLabel(message.content);
   }
   // Item d'album transféré seul : libellé du média, pas de l'album entier.
   if (isAlbumMarkerContent(message.content)) {

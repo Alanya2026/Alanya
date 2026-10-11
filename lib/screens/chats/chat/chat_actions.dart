@@ -245,6 +245,51 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  /// Envoi d'un sticker depuis le plateau (`type = 10`).
+  ///
+  /// Le verrou Plus est **imposé par le serveur** ; le catalogue (`locked`)
+  /// ne sert qu'à l'afficher et à éviter un aller-retour inutile. Un sticker
+  /// de pack verrouillé ouvre l'offre au lieu de partir.
+  Future<void> _sendSticker(StickerEntry entry) async {
+    if (_inputBlocked || _myId == null) return;
+    if (entry.locked) {
+      unawaited(openPlusOffer(context));
+      return;
+    }
+    final convId = await _ensureConversation();
+    if (convId == null || !mounted) return;
+    _dismissUnreadSeparator();
+
+    // Même résolution de citation que `_sendMessage` : msgID frais.
+    final reply = _replyTo;
+    int? replyId;
+    String? replyContent;
+    if (reply != null) {
+      replyContent = _previewOf(reply);
+      replyId = reply.msgID > 0 ? reply.msgID : null;
+      if (replyId == null) {
+        for (final m in _currentMessages) {
+          if (m.clientId == reply.clientId && m.msgID > 0) {
+            replyId = m.msgID;
+            break;
+          }
+        }
+      }
+    }
+
+    await _chat.repository.sendSticker(
+      conversationID: convId,
+      sticker: entry.payload,
+      mediaUrl: entry.sticker.url,
+      replyToID: replyId,
+      replyToContent: replyContent,
+    );
+    unawaited(context.read<StickerRepository>().markUsed(entry.sticker.stickerId));
+    if (!mounted) return;
+    rebuild(() => _replyTo = null);
+    _scrollToBottom();
+  }
+
   Future<void> _sendMessage() async {
     if (_inputBlocked) return;
     final text = _messageController.text.trim();
@@ -305,6 +350,8 @@ extension _ChatActions on _ChatDetailScreenState {
     if (m.type == 5) return locationPreviewLabel(m.content);
     // Contact : JSON — ne jamais exposer le content brut.
     if (m.type == 7) return contactPreviewLabel(m.content);
+    // Sticker : JSON — « 😂 Sticker », jamais le content brut.
+    if (m.type == kStickerMessageType) return stickerPreviewLabel(m.content);
     // Boutons de bienvenue : JSON également. Sans ce cas, une citation affichait
     // `{"buttons":[…]}` tel quel.
     if (m.type == kWelcomeCtaMessageType) {
@@ -549,6 +596,7 @@ extension _ChatActions on _ChatDetailScreenState {
                   Navigator.pop(context);
                 },
               ),
+            // Un sticker n'est jamais modifiable (isText exclut le type 10).
             if (isMe && isText && !msg.isDeleted && _canEditMessage(msg))
               ListTile(
                 leading: Icon(Icons.edit, color: primary),
@@ -2574,6 +2622,8 @@ extension _ChatActions on _ChatDetailScreenState {
         return context.l10n.location;
       case 7:
         return context.l10n.contact;
+      case kStickerMessageType:
+        return context.l10n.stickerWord;
       default:
         // Type inconnu (client plus ancien) : sans ça la bulle est vide.
         return context.l10n.mediaFallback;

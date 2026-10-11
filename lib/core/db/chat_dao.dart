@@ -7,6 +7,7 @@ import '../services/chat/message_search.dart';
 import '../services/translation/translation_state.dart';
 import '../utils/call_log_preview.dart';
 import '../utils/media_album.dart';
+import '../utils/sticker_payload.dart';
 import '../utils/system_event_payload.dart';
 import 'app_database.dart';
  
@@ -14,6 +15,18 @@ import 'app_database.dart';
 /// fichier. Le texte (0) et la localisation (5) n'ont pas de fichier joint,
 /// et le message système (6) encore moins.
 const kMyMediaTypes = <int>[1, 2, 3, 4];
+
+/// Types qu'une **archive** sait emporter : les familles de « Mes médias »,
+/// plus les stickers (type 10).
+///
+/// « Mes médias » reste [kMyMediaTypes] : un sticker n'a ni fichier à
+/// télécharger ni copie locale à libérer, il n'a rien à faire dans une grille
+/// de gestion du stockage. L'export, lui, part d'un principe opposé — il
+/// emporte une **référence** à tout ce qui a été échangé, sticker compris, pour
+/// ne rien perdre en silence. D'où deux listes distinctes plutôt qu'une
+/// élargie : la première borne ce que l'écran montre, la seconde ce que
+/// l'archive promet.
+const kExportMediaTypes = <int>[1, 2, 3, 4, kStickerMessageType];
 
 /// Une ligne de [ChatDao.watchLocalMedia] : le message porteur du média, plus
 /// le nom d'expéditeur résolu depuis le cache local de contacts

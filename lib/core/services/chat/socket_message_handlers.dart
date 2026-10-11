@@ -13,6 +13,7 @@ import '../notifications/badge_sync_service.dart';
 import 'chat_api.dart';
 import 'message_ack_watchdog.dart';
 import '../billing/entitlement_service.dart';
+import '../billing/entitlements.dart';
 import 'message_sound_service.dart';
 import 'message_path_tracer.dart';
 import 'receipt_service.dart';
@@ -33,6 +34,11 @@ const Set<String> kTerminalSendFailures = {
   'BLOCKED_BY_SENDER',
   'CONVERSATION_NOT_FOUND',
   'OFFICIAL_READONLY',
+  // Stickers : le serveur a relu `sid` et dit non (retiré, pack archivé,
+  // charge utile refusée). Renvoyer le même message échouerait à l'identique.
+  'STICKER_NOT_FOUND',
+  'STICKER_PACK_UNAVAILABLE',
+  'STICKER_INVALID_PAYLOAD',
 };
 
 /// Code du refus d'envoi faute d'abonnement. Absent de [kTerminalSendFailures] à
@@ -316,7 +322,14 @@ class SocketMessageHandlers {
     // rouvrirait tout, et « réessayer » doit alors marcher (le message n'est
     // donc PAS marqué terminal). Mais on le dit, une fois : le panneau.
     if (code == kSubscriptionRequired) {
-      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      // Pack Royal sans le droit : le refus vise la fonctionnalité, pas
+      // l'émission en général — c'est le panneau des stickers Plus qui s'ouvre.
+      final feature = PlusFeature.fromCode(json['feature']);
+      if (feature == PlusFeature.stickersPremium) {
+        EntitlementService.maybeInstance?.reportFeatureBlocked(feature!);
+      } else {
+        EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      }
     }
   }
 

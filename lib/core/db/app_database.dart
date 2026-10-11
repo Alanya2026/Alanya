@@ -498,6 +498,83 @@ class LocalTripEvents extends Table {
   Set<Column> get primaryKey => {tripId, seq};
 }
 
+
+// ── Stickers (type de message 10) ─────────────────────────────────────
+//
+// Miroir local de l'état serveur : le serveur tranche (droits, quotas, URLs),
+// ces tables ne font que permettre l'affichage hors ligne. `local_messages` ne
+// change pas : un message sticker est un message de type 10 dont `content` est
+// un JSON (cf. `core/utils/sticker_payload.dart`).
+
+/// Pack de stickers : catalogue officiel (`/stickers/catalog`) et état
+/// « installé » de l'utilisateur (`/stickers/me`).
+class LocalStickerPacks extends Table {
+  IntColumn get packId => integer()();
+  TextColumn get code => text()();
+
+  /// Nom et description **déjà résolus** par le serveur (langue du profil).
+  TextColumn get name => text().withDefault(const Constant(''))();
+  TextColumn get description => text().nullable()();
+  TextColumn get coverUrl => text().nullable()();
+  IntColumn get stickerCount => integer().withDefault(const Constant(0))();
+  BoolColumn get isPremium => boolean().withDefault(const Constant(false))();
+
+  /// Pack Plus dont le droit manque (valeur du serveur, jamais recalculée).
+  BoolColumn get locked => boolean().withDefault(const Constant(false))();
+  IntColumn get version => integer().withDefault(const Constant(1))();
+  BoolColumn get installedByDefault =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Pack dans « Mes packs ».
+  BoolColumn get installed => boolean().withDefault(const Constant(false))();
+
+  /// Rang dans « Mes packs » (ordre choisi par l'utilisateur).
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
+  /// Rang dans le catalogue (ordre du serveur).
+  IntColumn get catalogPosition => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {packId};
+}
+
+/// Sticker d'un pack (`/stickers/packs/:code`).
+class LocalStickers extends Table {
+  IntColumn get stickerId => integer()();
+  IntColumn get packId => integer()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+  TextColumn get emoji => text().withDefault(const Constant(''))();
+  TextColumn get name => text().nullable()();
+  TextColumn get url => text()();
+  TextColumn get thumbUrl => text().nullable()();
+  IntColumn get width => integer().withDefault(const Constant(512))();
+  IntColumn get height => integer().withDefault(const Constant(512))();
+  BoolColumn get animated => boolean().withDefault(const Constant(false))();
+  IntColumn get bytes => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {stickerId};
+}
+
+/// Favoris (identifiants seulement côté serveur ; les détails viennent de
+/// [LocalStickers]).
+class LocalStickerFavorites extends Table {
+  IntColumn get stickerId => integer()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {stickerId};
+}
+
+/// Stickers récemment envoyés — **local à l'appareil**, jamais synchronisé.
+class LocalStickerRecents extends Table {
+  IntColumn get stickerId => integer()();
+  DateTimeColumn get usedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {stickerId};
+}
+
 @DriftDatabase(
   tables: [
     LocalConversations,
@@ -512,6 +589,10 @@ class LocalTripEvents extends Table {
     LocalTrips,
     LocalTripPoints,
     LocalTripEvents,
+    LocalStickerPacks,
+    LocalStickers,
+    LocalStickerFavorites,
+    LocalStickerRecents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -519,7 +600,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -762,6 +843,14 @@ class AppDatabase extends _$AppDatabase {
                 m, localConversations, localConversations.translateMode);
             await _addColumnIfMissing(m, localConversations,
                 localConversations.lastMessageTranslated);
+          }
+          if (from < 27) {
+            // Stickers (migration serveur 097). Quatre créations de tables :
+            // rien du cache existant n'est touché, `local_messages` non plus.
+            await m.createTable(localStickerPacks);
+            await m.createTable(localStickers);
+            await m.createTable(localStickerFavorites);
+            await m.createTable(localStickerRecents);
           }
         },
       );

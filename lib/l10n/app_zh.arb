@@ -2196,5 +2196,120 @@
   "receiptsMemberCount": "{count} 位成员",
   "receiptsNoReaders": "还没有人读过",
   "receiptsLoadError": "无法加载已读回执。",
-  "receiptsBarLabel": "{read} 人已读，{delivered} 人已送达未读，{pending} 人未送达"
+  "receiptsBarLabel": "{read} 人已读，{delivered} 人已送达未读，{pending} 人未送达",
+  "stickerWord": "贴纸",
+  "stickerPreview": "{emoji} 贴纸",
+  "@stickerPreview": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerRemoved": "贴纸已移除",
+  "stickerUnsupported": "不支持的贴纸，请更新应用",
+  "stickerTabEmojis": "表情",
+  "stickerTabStickers": "贴纸",
+  "stickerRecents": "最近",
+  "stickerFavorites": "收藏",
+  "stickerEmptyRecents": "最近使用的贴纸会显示在这里。",
+  "stickerEmptyFavorites": "在贴纸详情中点按 ★ 即可收藏。",
+  "stickerLoadError": "无法加载贴纸。",
+  "stickerRetry": "重试",
+  "stickerLockedBanner": "此贴纸包仅限 Alanya Plus。",
+  "stickerUnlockCta": "了解 Alanya Plus",
+  "stickerLockedLabel": "{name} 贴纸包，已锁定",
+  "@stickerLockedLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerBadgeOfficial": "官方",
+  "stickerBadgePlus": "Plus",
+  "stickerFavoriteAdd": "添加到收藏",
+  "stickerFavoriteRemove": "从收藏中移除",
+  "stickerViewPack": "查看贴纸包",
+  "stickerForward": "转发",
+  "stickerSheetPack": "贴纸包：{name}",
+  "@stickerSheetPack": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSender": "发送者：{name}",
+  "@stickerSheetSender": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSize": "{w} × {h} 像素",
+  "@stickerSheetSize": {
+    "placeholders": {
+      "w": {
+        "type": "int"
+      },
+      "h": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerSheetWeight": "大小：{size}",
+  "@stickerSheetWeight": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerAddPack": "添加",
+  "stickerRemovePack": "移除",
+  "stickerAdded": "已添加贴纸包。",
+  "stickerPackRemoved": "已移除贴纸包。",
+  "stickerMyPacks": "我的贴纸包",
+  "stickerCatalog": "目录",
+  "stickerManage": "管理贴纸",
+  "stickerPackCount": "{count} 个贴纸",
+  "@stickerPackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerPackInstalled": "已安装",
+  "stickerSendLockedPlus": "此贴纸需要 Alanya Plus。",
+  "stickerDomainError": "贴纸暂时不可用。",
+  "errCodeStickerNotFound": "此贴纸已不存在。",
+  "errCodeStickerPackUnavailable": "此贴纸包已不可用。",
+  "errCodeStickerInvalidPayload": "无法发送此贴纸。",
+  "errCodeStickerAssetInvalid": "此图片无法用作贴纸。",
+  "errCodeStickerAssetBlocked": "此图片已被屏蔽，无法使用。",
+  "errCodeStickerQuotaExceeded": "您已达到贴纸数量上限。",
+  "errCodeStickerPackLimit": "您已达到贴纸包数量上限。",
+  "plusFeatureStickers": "Royal 贴纸",
+  "paywallStickersTitle": "Royal 贴纸",
+  "paywallStickersBody": "Royal 贴纸包属于 Alanya Plus：为您的聊天增添皇冠、奖杯和闪光。",
+  "stickerTrayLabel": "贴纸",
+  "stickerNoPacks": "尚未安装贴纸包。打开目录添加。",
+  "stickerPreviewTitle": "贴纸预览",
+  "stickerReplyQuote": "贴纸",
+  "stickerSemantics": "贴纸 {emoji}",
+  "@stickerSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerPackLockedSemantics": "已锁定，需要 Alanya Plus",
+  "stickerSendFailed": "无法发送贴纸。",
+  "stickerPackReorderHint": "长按并拖动以重新排序",
+  "stickerNoFavorites": "暂无收藏",
+  "stickerOfficialPackName": "官方贴纸包"
 }

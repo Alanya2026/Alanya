@@ -50,6 +50,9 @@ import 'core/services/callkit_service.dart';
 import 'core/services/call/ended_call_registry.dart';
 import 'core/services/local_cache_repository.dart';
 import 'core/services/trip_repository.dart';
+import 'core/services/stickers/sticker_api.dart';
+import 'core/services/stickers/sticker_cache.dart';
+import 'core/services/stickers/sticker_repository.dart';
 import 'core/services/trip_socket_service.dart';
 import 'core/services/trip_bootstrap.dart';
 import 'core/services/local_hidden_store.dart';
@@ -272,6 +275,15 @@ class _TalkyAppState extends State<TalkyApp> {
   late final EntitlementService _entitlements =
       EntitlementService(api: _apiClient)..loadFromCache();
   StreamSubscription<void>? _outgoingBlockedSub;
+  StreamSubscription<PlusFeature>? _featureBlockedSub;
+  // Stickers : miroir local du catalogue et de l'état de l'utilisateur. Le
+  // client réseau est injecté ; `stickers:sync` (autre appareil, back-office)
+  // relit l'état serveur.
+  late final StickerRepository _stickers = StickerRepository(
+    db: _database,
+    api: TalkyStickerApi(_apiClient),
+    cache: StickerCache.instance,
+  );
   late final MessageTranslationService _translation =
       MessageTranslationService(
     dao: ChatDao(_database),
@@ -312,11 +324,21 @@ class _TalkyAppState extends State<TalkyApp> {
         unawaited(showPaywall(context, null, outgoing: true));
       }
     });
+    // Un sticker Royal refusé hors de tout écran (message remis en file) :
+    // le panneau de la fonctionnalité, pas celui de l'émission.
+    _featureBlockedSub = _entitlements.featureBlocked.listen((feature) {
+      final context = appNavigatorKey.currentContext;
+      if (context != null) unawaited(showPaywall(context, feature));
+    });
+    _apiClient.onSocketEvent('stickers:sync', (data) {
+      unawaited(_stickers.onSyncEvent(data));
+    });
   }
 
   @override
   void dispose() {
     unawaited(_outgoingBlockedSub?.cancel());
+    unawaited(_featureBlockedSub?.cancel());
     super.dispose();
   }
 
@@ -343,6 +365,7 @@ class _TalkyAppState extends State<TalkyApp> {
         Provider<TripRepository>.value(value: _trips),
         Provider<TripSocketService>.value(value: _tripSocket),
         Provider<TripBootstrap>.value(value: _tripBootstrap),
+        Provider<StickerRepository>.value(value: _stickers),
         ChangeNotifierProvider(
             create: (_) => RingtonePreferences()..load()),
         ChangeNotifierProvider(

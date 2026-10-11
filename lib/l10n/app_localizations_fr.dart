@@ -7555,4 +7555,198 @@ class AppLocalizationsFr extends AppLocalizations {
   String receiptsBarLabel(int read, int delivered, int pending) {
     return '$read lu, $delivered reçu sans être lu, $pending en attente';
   }
+
+  @override
+  String get stickerWord => 'Sticker';
+
+  @override
+  String stickerPreview(String emoji) {
+    return '$emoji Sticker';
+  }
+
+  @override
+  String get stickerRemoved => 'Sticker retiré';
+
+  @override
+  String get stickerUnsupported =>
+      'Sticker non pris en charge — mettez à jour l\'application';
+
+  @override
+  String get stickerTabEmojis => 'Émojis';
+
+  @override
+  String get stickerTabStickers => 'Stickers';
+
+  @override
+  String get stickerRecents => 'Récents';
+
+  @override
+  String get stickerFavorites => 'Favoris';
+
+  @override
+  String get stickerEmptyRecents => 'Vos stickers récents apparaîtront ici.';
+
+  @override
+  String get stickerEmptyFavorites =>
+      'Touchez ★ dans la fiche d\'un sticker pour l\'ajouter à vos favoris.';
+
+  @override
+  String get stickerLoadError => 'Impossible de charger les stickers.';
+
+  @override
+  String get stickerRetry => 'Réessayer';
+
+  @override
+  String get stickerLockedBanner => 'Ce pack est réservé à Alanya Plus.';
+
+  @override
+  String get stickerUnlockCta => 'Découvrir Alanya Plus';
+
+  @override
+  String stickerLockedLabel(String name) {
+    return 'Pack $name, verrouillé';
+  }
+
+  @override
+  String get stickerBadgeOfficial => 'Officiel';
+
+  @override
+  String get stickerBadgePlus => 'Plus';
+
+  @override
+  String get stickerFavoriteAdd => 'Ajouter aux favoris';
+
+  @override
+  String get stickerFavoriteRemove => 'Retirer des favoris';
+
+  @override
+  String get stickerViewPack => 'Voir le pack';
+
+  @override
+  String get stickerForward => 'Transférer';
+
+  @override
+  String stickerSheetPack(String name) {
+    return 'Pack : $name';
+  }
+
+  @override
+  String stickerSheetSender(String name) {
+    return 'Envoyé par $name';
+  }
+
+  @override
+  String stickerSheetSize(int w, int h) {
+    return '$w × $h px';
+  }
+
+  @override
+  String stickerSheetWeight(String size) {
+    return 'Poids : $size';
+  }
+
+  @override
+  String get stickerAddPack => 'Ajouter';
+
+  @override
+  String get stickerRemovePack => 'Retirer';
+
+  @override
+  String get stickerAdded => 'Pack ajouté.';
+
+  @override
+  String get stickerPackRemoved => 'Pack retiré.';
+
+  @override
+  String get stickerMyPacks => 'Mes packs';
+
+  @override
+  String get stickerCatalog => 'Catalogue';
+
+  @override
+  String get stickerManage => 'Gérer les stickers';
+
+  @override
+  String stickerPackCount(int count) {
+    return '$count stickers';
+  }
+
+  @override
+  String get stickerPackInstalled => 'Installé';
+
+  @override
+  String get stickerSendLockedPlus => 'Ce sticker nécessite Alanya Plus.';
+
+  @override
+  String get stickerDomainError =>
+      'Les stickers ne sont pas disponibles pour le moment.';
+
+  @override
+  String get errCodeStickerNotFound => 'Ce sticker n\'existe plus.';
+
+  @override
+  String get errCodeStickerPackUnavailable => 'Ce pack n\'est plus disponible.';
+
+  @override
+  String get errCodeStickerInvalidPayload =>
+      'Ce sticker n\'a pas pu être envoyé.';
+
+  @override
+  String get errCodeStickerAssetInvalid =>
+      'Cette image ne peut pas devenir un sticker.';
+
+  @override
+  String get errCodeStickerAssetBlocked =>
+      'Cette image est bloquée et ne peut pas être utilisée.';
+
+  @override
+  String get errCodeStickerQuotaExceeded =>
+      'Vous avez atteint votre limite de stickers.';
+
+  @override
+  String get errCodeStickerPackLimit =>
+      'Vous avez atteint le nombre maximal de packs.';
+
+  @override
+  String get plusFeatureStickers => 'Stickers Royal';
+
+  @override
+  String get paywallStickersTitle => 'Les stickers Royal';
+
+  @override
+  String get paywallStickersBody =>
+      'Le pack Royal fait partie d\'Alanya Plus : couronnes, trophées et paillettes pour vos conversations.';
+
+  @override
+  String get stickerTrayLabel => 'Stickers';
+
+  @override
+  String get stickerNoPacks =>
+      'Aucun pack installé. Ouvrez le catalogue pour en ajouter.';
+
+  @override
+  String get stickerPreviewTitle => 'Aperçu du sticker';
+
+  @override
+  String get stickerReplyQuote => 'Sticker';
+
+  @override
+  String stickerSemantics(String emoji) {
+    return 'Sticker $emoji';
+  }
+
+  @override
+  String get stickerPackLockedSemantics => 'Verrouillé, Alanya Plus requis';
+
+  @override
+  String get stickerSendFailed => 'Le sticker n\'a pas pu être envoyé.';
+
+  @override
+  String get stickerPackReorderHint => 'Maintenez et glissez pour réordonner';
+
+  @override
+  String get stickerNoFavorites => 'Aucun favori';
+
+  @override
+  String get stickerOfficialPackName => 'Pack officiel';
 }

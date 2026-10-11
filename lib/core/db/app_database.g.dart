@@ -10550,6 +10550,1803 @@ class LocalTripEventsCompanion extends UpdateCompanion<LocalTripEvent> {
   }
 }
 
+class $LocalStickerPacksTable extends LocalStickerPacks
+    with TableInfo<$LocalStickerPacksTable, LocalStickerPack> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalStickerPacksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _packIdMeta = const VerificationMeta('packId');
+  @override
+  late final GeneratedColumn<int> packId = GeneratedColumn<int>(
+    'pack_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coverUrlMeta = const VerificationMeta(
+    'coverUrl',
+  );
+  @override
+  late final GeneratedColumn<String> coverUrl = GeneratedColumn<String>(
+    'cover_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stickerCountMeta = const VerificationMeta(
+    'stickerCount',
+  );
+  @override
+  late final GeneratedColumn<int> stickerCount = GeneratedColumn<int>(
+    'sticker_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isPremiumMeta = const VerificationMeta(
+    'isPremium',
+  );
+  @override
+  late final GeneratedColumn<bool> isPremium = GeneratedColumn<bool>(
+    'is_premium',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_premium" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _lockedMeta = const VerificationMeta('locked');
+  @override
+  late final GeneratedColumn<bool> locked = GeneratedColumn<bool>(
+    'locked',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("locked" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _installedByDefaultMeta =
+      const VerificationMeta('installedByDefault');
+  @override
+  late final GeneratedColumn<bool> installedByDefault = GeneratedColumn<bool>(
+    'installed_by_default',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("installed_by_default" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _installedMeta = const VerificationMeta(
+    'installed',
+  );
+  @override
+  late final GeneratedColumn<bool> installed = GeneratedColumn<bool>(
+    'installed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("installed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _catalogPositionMeta = const VerificationMeta(
+    'catalogPosition',
+  );
+  @override
+  late final GeneratedColumn<int> catalogPosition = GeneratedColumn<int>(
+    'catalog_position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    packId,
+    code,
+    name,
+    description,
+    coverUrl,
+    stickerCount,
+    isPremium,
+    locked,
+    version,
+    installedByDefault,
+    installed,
+    position,
+    catalogPosition,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_sticker_packs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalStickerPack> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('pack_id')) {
+      context.handle(
+        _packIdMeta,
+        packId.isAcceptableOrUnknown(data['pack_id']!, _packIdMeta),
+      );
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cover_url')) {
+      context.handle(
+        _coverUrlMeta,
+        coverUrl.isAcceptableOrUnknown(data['cover_url']!, _coverUrlMeta),
+      );
+    }
+    if (data.containsKey('sticker_count')) {
+      context.handle(
+        _stickerCountMeta,
+        stickerCount.isAcceptableOrUnknown(
+          data['sticker_count']!,
+          _stickerCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_premium')) {
+      context.handle(
+        _isPremiumMeta,
+        isPremium.isAcceptableOrUnknown(data['is_premium']!, _isPremiumMeta),
+      );
+    }
+    if (data.containsKey('locked')) {
+      context.handle(
+        _lockedMeta,
+        locked.isAcceptableOrUnknown(data['locked']!, _lockedMeta),
+      );
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('installed_by_default')) {
+      context.handle(
+        _installedByDefaultMeta,
+        installedByDefault.isAcceptableOrUnknown(
+          data['installed_by_default']!,
+          _installedByDefaultMeta,
+        ),
+      );
+    }
+    if (data.containsKey('installed')) {
+      context.handle(
+        _installedMeta,
+        installed.isAcceptableOrUnknown(data['installed']!, _installedMeta),
+      );
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
+    if (data.containsKey('catalog_position')) {
+      context.handle(
+        _catalogPositionMeta,
+        catalogPosition.isAcceptableOrUnknown(
+          data['catalog_position']!,
+          _catalogPositionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {packId};
+  @override
+  LocalStickerPack map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalStickerPack(
+      packId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pack_id'],
+      )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      coverUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_url'],
+      ),
+      stickerCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sticker_count'],
+      )!,
+      isPremium: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_premium'],
+      )!,
+      locked: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}locked'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      installedByDefault: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}installed_by_default'],
+      )!,
+      installed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}installed'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      catalogPosition: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}catalog_position'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalStickerPacksTable createAlias(String alias) {
+    return $LocalStickerPacksTable(attachedDatabase, alias);
+  }
+}
+
+class LocalStickerPack extends DataClass
+    implements Insertable<LocalStickerPack> {
+  final int packId;
+  final String code;
+
+  /// Nom et description **déjà résolus** par le serveur (langue du profil).
+  final String name;
+  final String? description;
+  final String? coverUrl;
+  final int stickerCount;
+  final bool isPremium;
+
+  /// Pack Plus dont le droit manque (valeur du serveur, jamais recalculée).
+  final bool locked;
+  final int version;
+  final bool installedByDefault;
+
+  /// Pack dans « Mes packs ».
+  final bool installed;
+
+  /// Rang dans « Mes packs » (ordre choisi par l'utilisateur).
+  final int position;
+
+  /// Rang dans le catalogue (ordre du serveur).
+  final int catalogPosition;
+  const LocalStickerPack({
+    required this.packId,
+    required this.code,
+    required this.name,
+    this.description,
+    this.coverUrl,
+    required this.stickerCount,
+    required this.isPremium,
+    required this.locked,
+    required this.version,
+    required this.installedByDefault,
+    required this.installed,
+    required this.position,
+    required this.catalogPosition,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['pack_id'] = Variable<int>(packId);
+    map['code'] = Variable<String>(code);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || coverUrl != null) {
+      map['cover_url'] = Variable<String>(coverUrl);
+    }
+    map['sticker_count'] = Variable<int>(stickerCount);
+    map['is_premium'] = Variable<bool>(isPremium);
+    map['locked'] = Variable<bool>(locked);
+    map['version'] = Variable<int>(version);
+    map['installed_by_default'] = Variable<bool>(installedByDefault);
+    map['installed'] = Variable<bool>(installed);
+    map['position'] = Variable<int>(position);
+    map['catalog_position'] = Variable<int>(catalogPosition);
+    return map;
+  }
+
+  LocalStickerPacksCompanion toCompanion(bool nullToAbsent) {
+    return LocalStickerPacksCompanion(
+      packId: Value(packId),
+      code: Value(code),
+      name: Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      coverUrl: coverUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverUrl),
+      stickerCount: Value(stickerCount),
+      isPremium: Value(isPremium),
+      locked: Value(locked),
+      version: Value(version),
+      installedByDefault: Value(installedByDefault),
+      installed: Value(installed),
+      position: Value(position),
+      catalogPosition: Value(catalogPosition),
+    );
+  }
+
+  factory LocalStickerPack.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalStickerPack(
+      packId: serializer.fromJson<int>(json['packId']),
+      code: serializer.fromJson<String>(json['code']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
+      coverUrl: serializer.fromJson<String?>(json['coverUrl']),
+      stickerCount: serializer.fromJson<int>(json['stickerCount']),
+      isPremium: serializer.fromJson<bool>(json['isPremium']),
+      locked: serializer.fromJson<bool>(json['locked']),
+      version: serializer.fromJson<int>(json['version']),
+      installedByDefault: serializer.fromJson<bool>(json['installedByDefault']),
+      installed: serializer.fromJson<bool>(json['installed']),
+      position: serializer.fromJson<int>(json['position']),
+      catalogPosition: serializer.fromJson<int>(json['catalogPosition']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'packId': serializer.toJson<int>(packId),
+      'code': serializer.toJson<String>(code),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String?>(description),
+      'coverUrl': serializer.toJson<String?>(coverUrl),
+      'stickerCount': serializer.toJson<int>(stickerCount),
+      'isPremium': serializer.toJson<bool>(isPremium),
+      'locked': serializer.toJson<bool>(locked),
+      'version': serializer.toJson<int>(version),
+      'installedByDefault': serializer.toJson<bool>(installedByDefault),
+      'installed': serializer.toJson<bool>(installed),
+      'position': serializer.toJson<int>(position),
+      'catalogPosition': serializer.toJson<int>(catalogPosition),
+    };
+  }
+
+  LocalStickerPack copyWith({
+    int? packId,
+    String? code,
+    String? name,
+    Value<String?> description = const Value.absent(),
+    Value<String?> coverUrl = const Value.absent(),
+    int? stickerCount,
+    bool? isPremium,
+    bool? locked,
+    int? version,
+    bool? installedByDefault,
+    bool? installed,
+    int? position,
+    int? catalogPosition,
+  }) => LocalStickerPack(
+    packId: packId ?? this.packId,
+    code: code ?? this.code,
+    name: name ?? this.name,
+    description: description.present ? description.value : this.description,
+    coverUrl: coverUrl.present ? coverUrl.value : this.coverUrl,
+    stickerCount: stickerCount ?? this.stickerCount,
+    isPremium: isPremium ?? this.isPremium,
+    locked: locked ?? this.locked,
+    version: version ?? this.version,
+    installedByDefault: installedByDefault ?? this.installedByDefault,
+    installed: installed ?? this.installed,
+    position: position ?? this.position,
+    catalogPosition: catalogPosition ?? this.catalogPosition,
+  );
+  LocalStickerPack copyWithCompanion(LocalStickerPacksCompanion data) {
+    return LocalStickerPack(
+      packId: data.packId.present ? data.packId.value : this.packId,
+      code: data.code.present ? data.code.value : this.code,
+      name: data.name.present ? data.name.value : this.name,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      coverUrl: data.coverUrl.present ? data.coverUrl.value : this.coverUrl,
+      stickerCount: data.stickerCount.present
+          ? data.stickerCount.value
+          : this.stickerCount,
+      isPremium: data.isPremium.present ? data.isPremium.value : this.isPremium,
+      locked: data.locked.present ? data.locked.value : this.locked,
+      version: data.version.present ? data.version.value : this.version,
+      installedByDefault: data.installedByDefault.present
+          ? data.installedByDefault.value
+          : this.installedByDefault,
+      installed: data.installed.present ? data.installed.value : this.installed,
+      position: data.position.present ? data.position.value : this.position,
+      catalogPosition: data.catalogPosition.present
+          ? data.catalogPosition.value
+          : this.catalogPosition,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStickerPack(')
+          ..write('packId: $packId, ')
+          ..write('code: $code, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('coverUrl: $coverUrl, ')
+          ..write('stickerCount: $stickerCount, ')
+          ..write('isPremium: $isPremium, ')
+          ..write('locked: $locked, ')
+          ..write('version: $version, ')
+          ..write('installedByDefault: $installedByDefault, ')
+          ..write('installed: $installed, ')
+          ..write('position: $position, ')
+          ..write('catalogPosition: $catalogPosition')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    packId,
+    code,
+    name,
+    description,
+    coverUrl,
+    stickerCount,
+    isPremium,
+    locked,
+    version,
+    installedByDefault,
+    installed,
+    position,
+    catalogPosition,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalStickerPack &&
+          other.packId == this.packId &&
+          other.code == this.code &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.coverUrl == this.coverUrl &&
+          other.stickerCount == this.stickerCount &&
+          other.isPremium == this.isPremium &&
+          other.locked == this.locked &&
+          other.version == this.version &&
+          other.installedByDefault == this.installedByDefault &&
+          other.installed == this.installed &&
+          other.position == this.position &&
+          other.catalogPosition == this.catalogPosition);
+}
+
+class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
+  final Value<int> packId;
+  final Value<String> code;
+  final Value<String> name;
+  final Value<String?> description;
+  final Value<String?> coverUrl;
+  final Value<int> stickerCount;
+  final Value<bool> isPremium;
+  final Value<bool> locked;
+  final Value<int> version;
+  final Value<bool> installedByDefault;
+  final Value<bool> installed;
+  final Value<int> position;
+  final Value<int> catalogPosition;
+  const LocalStickerPacksCompanion({
+    this.packId = const Value.absent(),
+    this.code = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.coverUrl = const Value.absent(),
+    this.stickerCount = const Value.absent(),
+    this.isPremium = const Value.absent(),
+    this.locked = const Value.absent(),
+    this.version = const Value.absent(),
+    this.installedByDefault = const Value.absent(),
+    this.installed = const Value.absent(),
+    this.position = const Value.absent(),
+    this.catalogPosition = const Value.absent(),
+  });
+  LocalStickerPacksCompanion.insert({
+    this.packId = const Value.absent(),
+    required String code,
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.coverUrl = const Value.absent(),
+    this.stickerCount = const Value.absent(),
+    this.isPremium = const Value.absent(),
+    this.locked = const Value.absent(),
+    this.version = const Value.absent(),
+    this.installedByDefault = const Value.absent(),
+    this.installed = const Value.absent(),
+    this.position = const Value.absent(),
+    this.catalogPosition = const Value.absent(),
+  }) : code = Value(code);
+  static Insertable<LocalStickerPack> custom({
+    Expression<int>? packId,
+    Expression<String>? code,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<String>? coverUrl,
+    Expression<int>? stickerCount,
+    Expression<bool>? isPremium,
+    Expression<bool>? locked,
+    Expression<int>? version,
+    Expression<bool>? installedByDefault,
+    Expression<bool>? installed,
+    Expression<int>? position,
+    Expression<int>? catalogPosition,
+  }) {
+    return RawValuesInsertable({
+      if (packId != null) 'pack_id': packId,
+      if (code != null) 'code': code,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (coverUrl != null) 'cover_url': coverUrl,
+      if (stickerCount != null) 'sticker_count': stickerCount,
+      if (isPremium != null) 'is_premium': isPremium,
+      if (locked != null) 'locked': locked,
+      if (version != null) 'version': version,
+      if (installedByDefault != null)
+        'installed_by_default': installedByDefault,
+      if (installed != null) 'installed': installed,
+      if (position != null) 'position': position,
+      if (catalogPosition != null) 'catalog_position': catalogPosition,
+    });
+  }
+
+  LocalStickerPacksCompanion copyWith({
+    Value<int>? packId,
+    Value<String>? code,
+    Value<String>? name,
+    Value<String?>? description,
+    Value<String?>? coverUrl,
+    Value<int>? stickerCount,
+    Value<bool>? isPremium,
+    Value<bool>? locked,
+    Value<int>? version,
+    Value<bool>? installedByDefault,
+    Value<bool>? installed,
+    Value<int>? position,
+    Value<int>? catalogPosition,
+  }) {
+    return LocalStickerPacksCompanion(
+      packId: packId ?? this.packId,
+      code: code ?? this.code,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      coverUrl: coverUrl ?? this.coverUrl,
+      stickerCount: stickerCount ?? this.stickerCount,
+      isPremium: isPremium ?? this.isPremium,
+      locked: locked ?? this.locked,
+      version: version ?? this.version,
+      installedByDefault: installedByDefault ?? this.installedByDefault,
+      installed: installed ?? this.installed,
+      position: position ?? this.position,
+      catalogPosition: catalogPosition ?? this.catalogPosition,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (packId.present) {
+      map['pack_id'] = Variable<int>(packId.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (coverUrl.present) {
+      map['cover_url'] = Variable<String>(coverUrl.value);
+    }
+    if (stickerCount.present) {
+      map['sticker_count'] = Variable<int>(stickerCount.value);
+    }
+    if (isPremium.present) {
+      map['is_premium'] = Variable<bool>(isPremium.value);
+    }
+    if (locked.present) {
+      map['locked'] = Variable<bool>(locked.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (installedByDefault.present) {
+      map['installed_by_default'] = Variable<bool>(installedByDefault.value);
+    }
+    if (installed.present) {
+      map['installed'] = Variable<bool>(installed.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (catalogPosition.present) {
+      map['catalog_position'] = Variable<int>(catalogPosition.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStickerPacksCompanion(')
+          ..write('packId: $packId, ')
+          ..write('code: $code, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('coverUrl: $coverUrl, ')
+          ..write('stickerCount: $stickerCount, ')
+          ..write('isPremium: $isPremium, ')
+          ..write('locked: $locked, ')
+          ..write('version: $version, ')
+          ..write('installedByDefault: $installedByDefault, ')
+          ..write('installed: $installed, ')
+          ..write('position: $position, ')
+          ..write('catalogPosition: $catalogPosition')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalStickersTable extends LocalStickers
+    with TableInfo<$LocalStickersTable, LocalSticker> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalStickersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _stickerIdMeta = const VerificationMeta(
+    'stickerId',
+  );
+  @override
+  late final GeneratedColumn<int> stickerId = GeneratedColumn<int>(
+    'sticker_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _packIdMeta = const VerificationMeta('packId');
+  @override
+  late final GeneratedColumn<int> packId = GeneratedColumn<int>(
+    'pack_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _emojiMeta = const VerificationMeta('emoji');
+  @override
+  late final GeneratedColumn<String> emoji = GeneratedColumn<String>(
+    'emoji',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _thumbUrlMeta = const VerificationMeta(
+    'thumbUrl',
+  );
+  @override
+  late final GeneratedColumn<String> thumbUrl = GeneratedColumn<String>(
+    'thumb_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _widthMeta = const VerificationMeta('width');
+  @override
+  late final GeneratedColumn<int> width = GeneratedColumn<int>(
+    'width',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(512),
+  );
+  static const VerificationMeta _heightMeta = const VerificationMeta('height');
+  @override
+  late final GeneratedColumn<int> height = GeneratedColumn<int>(
+    'height',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(512),
+  );
+  static const VerificationMeta _animatedMeta = const VerificationMeta(
+    'animated',
+  );
+  @override
+  late final GeneratedColumn<bool> animated = GeneratedColumn<bool>(
+    'animated',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("animated" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _bytesMeta = const VerificationMeta('bytes');
+  @override
+  late final GeneratedColumn<int> bytes = GeneratedColumn<int>(
+    'bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    stickerId,
+    packId,
+    position,
+    emoji,
+    name,
+    url,
+    thumbUrl,
+    width,
+    height,
+    animated,
+    bytes,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_stickers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalSticker> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sticker_id')) {
+      context.handle(
+        _stickerIdMeta,
+        stickerId.isAcceptableOrUnknown(data['sticker_id']!, _stickerIdMeta),
+      );
+    }
+    if (data.containsKey('pack_id')) {
+      context.handle(
+        _packIdMeta,
+        packId.isAcceptableOrUnknown(data['pack_id']!, _packIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
+    if (data.containsKey('emoji')) {
+      context.handle(
+        _emojiMeta,
+        emoji.isAcceptableOrUnknown(data['emoji']!, _emojiMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('url')) {
+      context.handle(
+        _urlMeta,
+        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_urlMeta);
+    }
+    if (data.containsKey('thumb_url')) {
+      context.handle(
+        _thumbUrlMeta,
+        thumbUrl.isAcceptableOrUnknown(data['thumb_url']!, _thumbUrlMeta),
+      );
+    }
+    if (data.containsKey('width')) {
+      context.handle(
+        _widthMeta,
+        width.isAcceptableOrUnknown(data['width']!, _widthMeta),
+      );
+    }
+    if (data.containsKey('height')) {
+      context.handle(
+        _heightMeta,
+        height.isAcceptableOrUnknown(data['height']!, _heightMeta),
+      );
+    }
+    if (data.containsKey('animated')) {
+      context.handle(
+        _animatedMeta,
+        animated.isAcceptableOrUnknown(data['animated']!, _animatedMeta),
+      );
+    }
+    if (data.containsKey('bytes')) {
+      context.handle(
+        _bytesMeta,
+        bytes.isAcceptableOrUnknown(data['bytes']!, _bytesMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {stickerId};
+  @override
+  LocalSticker map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalSticker(
+      stickerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sticker_id'],
+      )!,
+      packId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pack_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      emoji: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}emoji'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      url: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url'],
+      )!,
+      thumbUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}thumb_url'],
+      ),
+      width: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}width'],
+      )!,
+      height: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}height'],
+      )!,
+      animated: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}animated'],
+      )!,
+      bytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bytes'],
+      ),
+    );
+  }
+
+  @override
+  $LocalStickersTable createAlias(String alias) {
+    return $LocalStickersTable(attachedDatabase, alias);
+  }
+}
+
+class LocalSticker extends DataClass implements Insertable<LocalSticker> {
+  final int stickerId;
+  final int packId;
+  final int position;
+  final String emoji;
+  final String? name;
+  final String url;
+  final String? thumbUrl;
+  final int width;
+  final int height;
+  final bool animated;
+  final int? bytes;
+  const LocalSticker({
+    required this.stickerId,
+    required this.packId,
+    required this.position,
+    required this.emoji,
+    this.name,
+    required this.url,
+    this.thumbUrl,
+    required this.width,
+    required this.height,
+    required this.animated,
+    this.bytes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sticker_id'] = Variable<int>(stickerId);
+    map['pack_id'] = Variable<int>(packId);
+    map['position'] = Variable<int>(position);
+    map['emoji'] = Variable<String>(emoji);
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    map['url'] = Variable<String>(url);
+    if (!nullToAbsent || thumbUrl != null) {
+      map['thumb_url'] = Variable<String>(thumbUrl);
+    }
+    map['width'] = Variable<int>(width);
+    map['height'] = Variable<int>(height);
+    map['animated'] = Variable<bool>(animated);
+    if (!nullToAbsent || bytes != null) {
+      map['bytes'] = Variable<int>(bytes);
+    }
+    return map;
+  }
+
+  LocalStickersCompanion toCompanion(bool nullToAbsent) {
+    return LocalStickersCompanion(
+      stickerId: Value(stickerId),
+      packId: Value(packId),
+      position: Value(position),
+      emoji: Value(emoji),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      url: Value(url),
+      thumbUrl: thumbUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(thumbUrl),
+      width: Value(width),
+      height: Value(height),
+      animated: Value(animated),
+      bytes: bytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bytes),
+    );
+  }
+
+  factory LocalSticker.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalSticker(
+      stickerId: serializer.fromJson<int>(json['stickerId']),
+      packId: serializer.fromJson<int>(json['packId']),
+      position: serializer.fromJson<int>(json['position']),
+      emoji: serializer.fromJson<String>(json['emoji']),
+      name: serializer.fromJson<String?>(json['name']),
+      url: serializer.fromJson<String>(json['url']),
+      thumbUrl: serializer.fromJson<String?>(json['thumbUrl']),
+      width: serializer.fromJson<int>(json['width']),
+      height: serializer.fromJson<int>(json['height']),
+      animated: serializer.fromJson<bool>(json['animated']),
+      bytes: serializer.fromJson<int?>(json['bytes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'stickerId': serializer.toJson<int>(stickerId),
+      'packId': serializer.toJson<int>(packId),
+      'position': serializer.toJson<int>(position),
+      'emoji': serializer.toJson<String>(emoji),
+      'name': serializer.toJson<String?>(name),
+      'url': serializer.toJson<String>(url),
+      'thumbUrl': serializer.toJson<String?>(thumbUrl),
+      'width': serializer.toJson<int>(width),
+      'height': serializer.toJson<int>(height),
+      'animated': serializer.toJson<bool>(animated),
+      'bytes': serializer.toJson<int?>(bytes),
+    };
+  }
+
+  LocalSticker copyWith({
+    int? stickerId,
+    int? packId,
+    int? position,
+    String? emoji,
+    Value<String?> name = const Value.absent(),
+    String? url,
+    Value<String?> thumbUrl = const Value.absent(),
+    int? width,
+    int? height,
+    bool? animated,
+    Value<int?> bytes = const Value.absent(),
+  }) => LocalSticker(
+    stickerId: stickerId ?? this.stickerId,
+    packId: packId ?? this.packId,
+    position: position ?? this.position,
+    emoji: emoji ?? this.emoji,
+    name: name.present ? name.value : this.name,
+    url: url ?? this.url,
+    thumbUrl: thumbUrl.present ? thumbUrl.value : this.thumbUrl,
+    width: width ?? this.width,
+    height: height ?? this.height,
+    animated: animated ?? this.animated,
+    bytes: bytes.present ? bytes.value : this.bytes,
+  );
+  LocalSticker copyWithCompanion(LocalStickersCompanion data) {
+    return LocalSticker(
+      stickerId: data.stickerId.present ? data.stickerId.value : this.stickerId,
+      packId: data.packId.present ? data.packId.value : this.packId,
+      position: data.position.present ? data.position.value : this.position,
+      emoji: data.emoji.present ? data.emoji.value : this.emoji,
+      name: data.name.present ? data.name.value : this.name,
+      url: data.url.present ? data.url.value : this.url,
+      thumbUrl: data.thumbUrl.present ? data.thumbUrl.value : this.thumbUrl,
+      width: data.width.present ? data.width.value : this.width,
+      height: data.height.present ? data.height.value : this.height,
+      animated: data.animated.present ? data.animated.value : this.animated,
+      bytes: data.bytes.present ? data.bytes.value : this.bytes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSticker(')
+          ..write('stickerId: $stickerId, ')
+          ..write('packId: $packId, ')
+          ..write('position: $position, ')
+          ..write('emoji: $emoji, ')
+          ..write('name: $name, ')
+          ..write('url: $url, ')
+          ..write('thumbUrl: $thumbUrl, ')
+          ..write('width: $width, ')
+          ..write('height: $height, ')
+          ..write('animated: $animated, ')
+          ..write('bytes: $bytes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    stickerId,
+    packId,
+    position,
+    emoji,
+    name,
+    url,
+    thumbUrl,
+    width,
+    height,
+    animated,
+    bytes,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalSticker &&
+          other.stickerId == this.stickerId &&
+          other.packId == this.packId &&
+          other.position == this.position &&
+          other.emoji == this.emoji &&
+          other.name == this.name &&
+          other.url == this.url &&
+          other.thumbUrl == this.thumbUrl &&
+          other.width == this.width &&
+          other.height == this.height &&
+          other.animated == this.animated &&
+          other.bytes == this.bytes);
+}
+
+class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
+  final Value<int> stickerId;
+  final Value<int> packId;
+  final Value<int> position;
+  final Value<String> emoji;
+  final Value<String?> name;
+  final Value<String> url;
+  final Value<String?> thumbUrl;
+  final Value<int> width;
+  final Value<int> height;
+  final Value<bool> animated;
+  final Value<int?> bytes;
+  const LocalStickersCompanion({
+    this.stickerId = const Value.absent(),
+    this.packId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.emoji = const Value.absent(),
+    this.name = const Value.absent(),
+    this.url = const Value.absent(),
+    this.thumbUrl = const Value.absent(),
+    this.width = const Value.absent(),
+    this.height = const Value.absent(),
+    this.animated = const Value.absent(),
+    this.bytes = const Value.absent(),
+  });
+  LocalStickersCompanion.insert({
+    this.stickerId = const Value.absent(),
+    required int packId,
+    this.position = const Value.absent(),
+    this.emoji = const Value.absent(),
+    this.name = const Value.absent(),
+    required String url,
+    this.thumbUrl = const Value.absent(),
+    this.width = const Value.absent(),
+    this.height = const Value.absent(),
+    this.animated = const Value.absent(),
+    this.bytes = const Value.absent(),
+  }) : packId = Value(packId),
+       url = Value(url);
+  static Insertable<LocalSticker> custom({
+    Expression<int>? stickerId,
+    Expression<int>? packId,
+    Expression<int>? position,
+    Expression<String>? emoji,
+    Expression<String>? name,
+    Expression<String>? url,
+    Expression<String>? thumbUrl,
+    Expression<int>? width,
+    Expression<int>? height,
+    Expression<bool>? animated,
+    Expression<int>? bytes,
+  }) {
+    return RawValuesInsertable({
+      if (stickerId != null) 'sticker_id': stickerId,
+      if (packId != null) 'pack_id': packId,
+      if (position != null) 'position': position,
+      if (emoji != null) 'emoji': emoji,
+      if (name != null) 'name': name,
+      if (url != null) 'url': url,
+      if (thumbUrl != null) 'thumb_url': thumbUrl,
+      if (width != null) 'width': width,
+      if (height != null) 'height': height,
+      if (animated != null) 'animated': animated,
+      if (bytes != null) 'bytes': bytes,
+    });
+  }
+
+  LocalStickersCompanion copyWith({
+    Value<int>? stickerId,
+    Value<int>? packId,
+    Value<int>? position,
+    Value<String>? emoji,
+    Value<String?>? name,
+    Value<String>? url,
+    Value<String?>? thumbUrl,
+    Value<int>? width,
+    Value<int>? height,
+    Value<bool>? animated,
+    Value<int?>? bytes,
+  }) {
+    return LocalStickersCompanion(
+      stickerId: stickerId ?? this.stickerId,
+      packId: packId ?? this.packId,
+      position: position ?? this.position,
+      emoji: emoji ?? this.emoji,
+      name: name ?? this.name,
+      url: url ?? this.url,
+      thumbUrl: thumbUrl ?? this.thumbUrl,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      animated: animated ?? this.animated,
+      bytes: bytes ?? this.bytes,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (stickerId.present) {
+      map['sticker_id'] = Variable<int>(stickerId.value);
+    }
+    if (packId.present) {
+      map['pack_id'] = Variable<int>(packId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (emoji.present) {
+      map['emoji'] = Variable<String>(emoji.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (thumbUrl.present) {
+      map['thumb_url'] = Variable<String>(thumbUrl.value);
+    }
+    if (width.present) {
+      map['width'] = Variable<int>(width.value);
+    }
+    if (height.present) {
+      map['height'] = Variable<int>(height.value);
+    }
+    if (animated.present) {
+      map['animated'] = Variable<bool>(animated.value);
+    }
+    if (bytes.present) {
+      map['bytes'] = Variable<int>(bytes.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStickersCompanion(')
+          ..write('stickerId: $stickerId, ')
+          ..write('packId: $packId, ')
+          ..write('position: $position, ')
+          ..write('emoji: $emoji, ')
+          ..write('name: $name, ')
+          ..write('url: $url, ')
+          ..write('thumbUrl: $thumbUrl, ')
+          ..write('width: $width, ')
+          ..write('height: $height, ')
+          ..write('animated: $animated, ')
+          ..write('bytes: $bytes')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalStickerFavoritesTable extends LocalStickerFavorites
+    with TableInfo<$LocalStickerFavoritesTable, LocalStickerFavorite> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalStickerFavoritesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _stickerIdMeta = const VerificationMeta(
+    'stickerId',
+  );
+  @override
+  late final GeneratedColumn<int> stickerId = GeneratedColumn<int>(
+    'sticker_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [stickerId, position];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_sticker_favorites';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalStickerFavorite> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sticker_id')) {
+      context.handle(
+        _stickerIdMeta,
+        stickerId.isAcceptableOrUnknown(data['sticker_id']!, _stickerIdMeta),
+      );
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {stickerId};
+  @override
+  LocalStickerFavorite map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalStickerFavorite(
+      stickerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sticker_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalStickerFavoritesTable createAlias(String alias) {
+    return $LocalStickerFavoritesTable(attachedDatabase, alias);
+  }
+}
+
+class LocalStickerFavorite extends DataClass
+    implements Insertable<LocalStickerFavorite> {
+  final int stickerId;
+  final int position;
+  const LocalStickerFavorite({required this.stickerId, required this.position});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sticker_id'] = Variable<int>(stickerId);
+    map['position'] = Variable<int>(position);
+    return map;
+  }
+
+  LocalStickerFavoritesCompanion toCompanion(bool nullToAbsent) {
+    return LocalStickerFavoritesCompanion(
+      stickerId: Value(stickerId),
+      position: Value(position),
+    );
+  }
+
+  factory LocalStickerFavorite.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalStickerFavorite(
+      stickerId: serializer.fromJson<int>(json['stickerId']),
+      position: serializer.fromJson<int>(json['position']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'stickerId': serializer.toJson<int>(stickerId),
+      'position': serializer.toJson<int>(position),
+    };
+  }
+
+  LocalStickerFavorite copyWith({int? stickerId, int? position}) =>
+      LocalStickerFavorite(
+        stickerId: stickerId ?? this.stickerId,
+        position: position ?? this.position,
+      );
+  LocalStickerFavorite copyWithCompanion(LocalStickerFavoritesCompanion data) {
+    return LocalStickerFavorite(
+      stickerId: data.stickerId.present ? data.stickerId.value : this.stickerId,
+      position: data.position.present ? data.position.value : this.position,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStickerFavorite(')
+          ..write('stickerId: $stickerId, ')
+          ..write('position: $position')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(stickerId, position);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalStickerFavorite &&
+          other.stickerId == this.stickerId &&
+          other.position == this.position);
+}
+
+class LocalStickerFavoritesCompanion
+    extends UpdateCompanion<LocalStickerFavorite> {
+  final Value<int> stickerId;
+  final Value<int> position;
+  const LocalStickerFavoritesCompanion({
+    this.stickerId = const Value.absent(),
+    this.position = const Value.absent(),
+  });
+  LocalStickerFavoritesCompanion.insert({
+    this.stickerId = const Value.absent(),
+    this.position = const Value.absent(),
+  });
+  static Insertable<LocalStickerFavorite> custom({
+    Expression<int>? stickerId,
+    Expression<int>? position,
+  }) {
+    return RawValuesInsertable({
+      if (stickerId != null) 'sticker_id': stickerId,
+      if (position != null) 'position': position,
+    });
+  }
+
+  LocalStickerFavoritesCompanion copyWith({
+    Value<int>? stickerId,
+    Value<int>? position,
+  }) {
+    return LocalStickerFavoritesCompanion(
+      stickerId: stickerId ?? this.stickerId,
+      position: position ?? this.position,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (stickerId.present) {
+      map['sticker_id'] = Variable<int>(stickerId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStickerFavoritesCompanion(')
+          ..write('stickerId: $stickerId, ')
+          ..write('position: $position')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalStickerRecentsTable extends LocalStickerRecents
+    with TableInfo<$LocalStickerRecentsTable, LocalStickerRecent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalStickerRecentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _stickerIdMeta = const VerificationMeta(
+    'stickerId',
+  );
+  @override
+  late final GeneratedColumn<int> stickerId = GeneratedColumn<int>(
+    'sticker_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _usedAtMeta = const VerificationMeta('usedAt');
+  @override
+  late final GeneratedColumn<DateTime> usedAt = GeneratedColumn<DateTime>(
+    'used_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [stickerId, usedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_sticker_recents';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalStickerRecent> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sticker_id')) {
+      context.handle(
+        _stickerIdMeta,
+        stickerId.isAcceptableOrUnknown(data['sticker_id']!, _stickerIdMeta),
+      );
+    }
+    if (data.containsKey('used_at')) {
+      context.handle(
+        _usedAtMeta,
+        usedAt.isAcceptableOrUnknown(data['used_at']!, _usedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {stickerId};
+  @override
+  LocalStickerRecent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalStickerRecent(
+      stickerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sticker_id'],
+      )!,
+      usedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}used_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalStickerRecentsTable createAlias(String alias) {
+    return $LocalStickerRecentsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalStickerRecent extends DataClass
+    implements Insertable<LocalStickerRecent> {
+  final int stickerId;
+  final DateTime usedAt;
+  const LocalStickerRecent({required this.stickerId, required this.usedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sticker_id'] = Variable<int>(stickerId);
+    map['used_at'] = Variable<DateTime>(usedAt);
+    return map;
+  }
+
+  LocalStickerRecentsCompanion toCompanion(bool nullToAbsent) {
+    return LocalStickerRecentsCompanion(
+      stickerId: Value(stickerId),
+      usedAt: Value(usedAt),
+    );
+  }
+
+  factory LocalStickerRecent.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalStickerRecent(
+      stickerId: serializer.fromJson<int>(json['stickerId']),
+      usedAt: serializer.fromJson<DateTime>(json['usedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'stickerId': serializer.toJson<int>(stickerId),
+      'usedAt': serializer.toJson<DateTime>(usedAt),
+    };
+  }
+
+  LocalStickerRecent copyWith({int? stickerId, DateTime? usedAt}) =>
+      LocalStickerRecent(
+        stickerId: stickerId ?? this.stickerId,
+        usedAt: usedAt ?? this.usedAt,
+      );
+  LocalStickerRecent copyWithCompanion(LocalStickerRecentsCompanion data) {
+    return LocalStickerRecent(
+      stickerId: data.stickerId.present ? data.stickerId.value : this.stickerId,
+      usedAt: data.usedAt.present ? data.usedAt.value : this.usedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStickerRecent(')
+          ..write('stickerId: $stickerId, ')
+          ..write('usedAt: $usedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(stickerId, usedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalStickerRecent &&
+          other.stickerId == this.stickerId &&
+          other.usedAt == this.usedAt);
+}
+
+class LocalStickerRecentsCompanion extends UpdateCompanion<LocalStickerRecent> {
+  final Value<int> stickerId;
+  final Value<DateTime> usedAt;
+  const LocalStickerRecentsCompanion({
+    this.stickerId = const Value.absent(),
+    this.usedAt = const Value.absent(),
+  });
+  LocalStickerRecentsCompanion.insert({
+    this.stickerId = const Value.absent(),
+    required DateTime usedAt,
+  }) : usedAt = Value(usedAt);
+  static Insertable<LocalStickerRecent> custom({
+    Expression<int>? stickerId,
+    Expression<DateTime>? usedAt,
+  }) {
+    return RawValuesInsertable({
+      if (stickerId != null) 'sticker_id': stickerId,
+      if (usedAt != null) 'used_at': usedAt,
+    });
+  }
+
+  LocalStickerRecentsCompanion copyWith({
+    Value<int>? stickerId,
+    Value<DateTime>? usedAt,
+  }) {
+    return LocalStickerRecentsCompanion(
+      stickerId: stickerId ?? this.stickerId,
+      usedAt: usedAt ?? this.usedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (stickerId.present) {
+      map['sticker_id'] = Variable<int>(stickerId.value);
+    }
+    if (usedAt.present) {
+      map['used_at'] = Variable<DateTime>(usedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalStickerRecentsCompanion(')
+          ..write('stickerId: $stickerId, ')
+          ..write('usedAt: $usedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -10573,6 +12370,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalTripEventsTable localTripEvents = $LocalTripEventsTable(
     this,
   );
+  late final $LocalStickerPacksTable localStickerPacks =
+      $LocalStickerPacksTable(this);
+  late final $LocalStickersTable localStickers = $LocalStickersTable(this);
+  late final $LocalStickerFavoritesTable localStickerFavorites =
+      $LocalStickerFavoritesTable(this);
+  late final $LocalStickerRecentsTable localStickerRecents =
+      $LocalStickerRecentsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10590,6 +12394,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localTrips,
     localTripPoints,
     localTripEvents,
+    localStickerPacks,
+    localStickers,
+    localStickerFavorites,
+    localStickerRecents,
   ];
 }
 
@@ -15397,6 +17205,990 @@ typedef $$LocalTripEventsTableProcessedTableManager =
       LocalTripEvent,
       PrefetchHooks Function()
     >;
+typedef $$LocalStickerPacksTableCreateCompanionBuilder =
+    LocalStickerPacksCompanion Function({
+      Value<int> packId,
+      required String code,
+      Value<String> name,
+      Value<String?> description,
+      Value<String?> coverUrl,
+      Value<int> stickerCount,
+      Value<bool> isPremium,
+      Value<bool> locked,
+      Value<int> version,
+      Value<bool> installedByDefault,
+      Value<bool> installed,
+      Value<int> position,
+      Value<int> catalogPosition,
+    });
+typedef $$LocalStickerPacksTableUpdateCompanionBuilder =
+    LocalStickerPacksCompanion Function({
+      Value<int> packId,
+      Value<String> code,
+      Value<String> name,
+      Value<String?> description,
+      Value<String?> coverUrl,
+      Value<int> stickerCount,
+      Value<bool> isPremium,
+      Value<bool> locked,
+      Value<int> version,
+      Value<bool> installedByDefault,
+      Value<bool> installed,
+      Value<int> position,
+      Value<int> catalogPosition,
+    });
+
+class $$LocalStickerPacksTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalStickerPacksTable> {
+  $$LocalStickerPacksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverUrl => $composableBuilder(
+    column: $table.coverUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get stickerCount => $composableBuilder(
+    column: $table.stickerCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPremium => $composableBuilder(
+    column: $table.isPremium,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get locked => $composableBuilder(
+    column: $table.locked,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get installedByDefault => $composableBuilder(
+    column: $table.installedByDefault,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get installed => $composableBuilder(
+    column: $table.installed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get catalogPosition => $composableBuilder(
+    column: $table.catalogPosition,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalStickerPacksTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalStickerPacksTable> {
+  $$LocalStickerPacksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverUrl => $composableBuilder(
+    column: $table.coverUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get stickerCount => $composableBuilder(
+    column: $table.stickerCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPremium => $composableBuilder(
+    column: $table.isPremium,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get locked => $composableBuilder(
+    column: $table.locked,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get installedByDefault => $composableBuilder(
+    column: $table.installedByDefault,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get installed => $composableBuilder(
+    column: $table.installed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get catalogPosition => $composableBuilder(
+    column: $table.catalogPosition,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalStickerPacksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalStickerPacksTable> {
+  $$LocalStickerPacksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get packId =>
+      $composableBuilder(column: $table.packId, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverUrl =>
+      $composableBuilder(column: $table.coverUrl, builder: (column) => column);
+
+  GeneratedColumn<int> get stickerCount => $composableBuilder(
+    column: $table.stickerCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isPremium =>
+      $composableBuilder(column: $table.isPremium, builder: (column) => column);
+
+  GeneratedColumn<bool> get locked =>
+      $composableBuilder(column: $table.locked, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<bool> get installedByDefault => $composableBuilder(
+    column: $table.installedByDefault,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get installed =>
+      $composableBuilder(column: $table.installed, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<int> get catalogPosition => $composableBuilder(
+    column: $table.catalogPosition,
+    builder: (column) => column,
+  );
+}
+
+class $$LocalStickerPacksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalStickerPacksTable,
+          LocalStickerPack,
+          $$LocalStickerPacksTableFilterComposer,
+          $$LocalStickerPacksTableOrderingComposer,
+          $$LocalStickerPacksTableAnnotationComposer,
+          $$LocalStickerPacksTableCreateCompanionBuilder,
+          $$LocalStickerPacksTableUpdateCompanionBuilder,
+          (
+            LocalStickerPack,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalStickerPacksTable,
+              LocalStickerPack
+            >,
+          ),
+          LocalStickerPack,
+          PrefetchHooks Function()
+        > {
+  $$LocalStickerPacksTableTableManager(
+    _$AppDatabase db,
+    $LocalStickerPacksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalStickerPacksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalStickerPacksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalStickerPacksTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> packId = const Value.absent(),
+                Value<String> code = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> coverUrl = const Value.absent(),
+                Value<int> stickerCount = const Value.absent(),
+                Value<bool> isPremium = const Value.absent(),
+                Value<bool> locked = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<bool> installedByDefault = const Value.absent(),
+                Value<bool> installed = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<int> catalogPosition = const Value.absent(),
+              }) => LocalStickerPacksCompanion(
+                packId: packId,
+                code: code,
+                name: name,
+                description: description,
+                coverUrl: coverUrl,
+                stickerCount: stickerCount,
+                isPremium: isPremium,
+                locked: locked,
+                version: version,
+                installedByDefault: installedByDefault,
+                installed: installed,
+                position: position,
+                catalogPosition: catalogPosition,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> packId = const Value.absent(),
+                required String code,
+                Value<String> name = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> coverUrl = const Value.absent(),
+                Value<int> stickerCount = const Value.absent(),
+                Value<bool> isPremium = const Value.absent(),
+                Value<bool> locked = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<bool> installedByDefault = const Value.absent(),
+                Value<bool> installed = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<int> catalogPosition = const Value.absent(),
+              }) => LocalStickerPacksCompanion.insert(
+                packId: packId,
+                code: code,
+                name: name,
+                description: description,
+                coverUrl: coverUrl,
+                stickerCount: stickerCount,
+                isPremium: isPremium,
+                locked: locked,
+                version: version,
+                installedByDefault: installedByDefault,
+                installed: installed,
+                position: position,
+                catalogPosition: catalogPosition,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalStickerPacksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalStickerPacksTable,
+      LocalStickerPack,
+      $$LocalStickerPacksTableFilterComposer,
+      $$LocalStickerPacksTableOrderingComposer,
+      $$LocalStickerPacksTableAnnotationComposer,
+      $$LocalStickerPacksTableCreateCompanionBuilder,
+      $$LocalStickerPacksTableUpdateCompanionBuilder,
+      (
+        LocalStickerPack,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalStickerPacksTable,
+          LocalStickerPack
+        >,
+      ),
+      LocalStickerPack,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalStickersTableCreateCompanionBuilder =
+    LocalStickersCompanion Function({
+      Value<int> stickerId,
+      required int packId,
+      Value<int> position,
+      Value<String> emoji,
+      Value<String?> name,
+      required String url,
+      Value<String?> thumbUrl,
+      Value<int> width,
+      Value<int> height,
+      Value<bool> animated,
+      Value<int?> bytes,
+    });
+typedef $$LocalStickersTableUpdateCompanionBuilder =
+    LocalStickersCompanion Function({
+      Value<int> stickerId,
+      Value<int> packId,
+      Value<int> position,
+      Value<String> emoji,
+      Value<String?> name,
+      Value<String> url,
+      Value<String?> thumbUrl,
+      Value<int> width,
+      Value<int> height,
+      Value<bool> animated,
+      Value<int?> bytes,
+    });
+
+class $$LocalStickersTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalStickersTable> {
+  $$LocalStickersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get stickerId => $composableBuilder(
+    column: $table.stickerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get emoji => $composableBuilder(
+    column: $table.emoji,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get thumbUrl => $composableBuilder(
+    column: $table.thumbUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get width => $composableBuilder(
+    column: $table.width,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get height => $composableBuilder(
+    column: $table.height,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get animated => $composableBuilder(
+    column: $table.animated,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bytes => $composableBuilder(
+    column: $table.bytes,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalStickersTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalStickersTable> {
+  $$LocalStickersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get stickerId => $composableBuilder(
+    column: $table.stickerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get emoji => $composableBuilder(
+    column: $table.emoji,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get thumbUrl => $composableBuilder(
+    column: $table.thumbUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get width => $composableBuilder(
+    column: $table.width,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get height => $composableBuilder(
+    column: $table.height,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get animated => $composableBuilder(
+    column: $table.animated,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bytes => $composableBuilder(
+    column: $table.bytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalStickersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalStickersTable> {
+  $$LocalStickersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get stickerId =>
+      $composableBuilder(column: $table.stickerId, builder: (column) => column);
+
+  GeneratedColumn<int> get packId =>
+      $composableBuilder(column: $table.packId, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get emoji =>
+      $composableBuilder(column: $table.emoji, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<String> get thumbUrl =>
+      $composableBuilder(column: $table.thumbUrl, builder: (column) => column);
+
+  GeneratedColumn<int> get width =>
+      $composableBuilder(column: $table.width, builder: (column) => column);
+
+  GeneratedColumn<int> get height =>
+      $composableBuilder(column: $table.height, builder: (column) => column);
+
+  GeneratedColumn<bool> get animated =>
+      $composableBuilder(column: $table.animated, builder: (column) => column);
+
+  GeneratedColumn<int> get bytes =>
+      $composableBuilder(column: $table.bytes, builder: (column) => column);
+}
+
+class $$LocalStickersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalStickersTable,
+          LocalSticker,
+          $$LocalStickersTableFilterComposer,
+          $$LocalStickersTableOrderingComposer,
+          $$LocalStickersTableAnnotationComposer,
+          $$LocalStickersTableCreateCompanionBuilder,
+          $$LocalStickersTableUpdateCompanionBuilder,
+          (
+            LocalSticker,
+            BaseReferences<_$AppDatabase, $LocalStickersTable, LocalSticker>,
+          ),
+          LocalSticker,
+          PrefetchHooks Function()
+        > {
+  $$LocalStickersTableTableManager(_$AppDatabase db, $LocalStickersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalStickersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalStickersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalStickersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> stickerId = const Value.absent(),
+                Value<int> packId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> emoji = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String> url = const Value.absent(),
+                Value<String?> thumbUrl = const Value.absent(),
+                Value<int> width = const Value.absent(),
+                Value<int> height = const Value.absent(),
+                Value<bool> animated = const Value.absent(),
+                Value<int?> bytes = const Value.absent(),
+              }) => LocalStickersCompanion(
+                stickerId: stickerId,
+                packId: packId,
+                position: position,
+                emoji: emoji,
+                name: name,
+                url: url,
+                thumbUrl: thumbUrl,
+                width: width,
+                height: height,
+                animated: animated,
+                bytes: bytes,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> stickerId = const Value.absent(),
+                required int packId,
+                Value<int> position = const Value.absent(),
+                Value<String> emoji = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                required String url,
+                Value<String?> thumbUrl = const Value.absent(),
+                Value<int> width = const Value.absent(),
+                Value<int> height = const Value.absent(),
+                Value<bool> animated = const Value.absent(),
+                Value<int?> bytes = const Value.absent(),
+              }) => LocalStickersCompanion.insert(
+                stickerId: stickerId,
+                packId: packId,
+                position: position,
+                emoji: emoji,
+                name: name,
+                url: url,
+                thumbUrl: thumbUrl,
+                width: width,
+                height: height,
+                animated: animated,
+                bytes: bytes,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalStickersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalStickersTable,
+      LocalSticker,
+      $$LocalStickersTableFilterComposer,
+      $$LocalStickersTableOrderingComposer,
+      $$LocalStickersTableAnnotationComposer,
+      $$LocalStickersTableCreateCompanionBuilder,
+      $$LocalStickersTableUpdateCompanionBuilder,
+      (
+        LocalSticker,
+        BaseReferences<_$AppDatabase, $LocalStickersTable, LocalSticker>,
+      ),
+      LocalSticker,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalStickerFavoritesTableCreateCompanionBuilder =
+    LocalStickerFavoritesCompanion Function({
+      Value<int> stickerId,
+      Value<int> position,
+    });
+typedef $$LocalStickerFavoritesTableUpdateCompanionBuilder =
+    LocalStickerFavoritesCompanion Function({
+      Value<int> stickerId,
+      Value<int> position,
+    });
+
+class $$LocalStickerFavoritesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalStickerFavoritesTable> {
+  $$LocalStickerFavoritesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get stickerId => $composableBuilder(
+    column: $table.stickerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalStickerFavoritesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalStickerFavoritesTable> {
+  $$LocalStickerFavoritesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get stickerId => $composableBuilder(
+    column: $table.stickerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalStickerFavoritesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalStickerFavoritesTable> {
+  $$LocalStickerFavoritesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get stickerId =>
+      $composableBuilder(column: $table.stickerId, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+}
+
+class $$LocalStickerFavoritesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalStickerFavoritesTable,
+          LocalStickerFavorite,
+          $$LocalStickerFavoritesTableFilterComposer,
+          $$LocalStickerFavoritesTableOrderingComposer,
+          $$LocalStickerFavoritesTableAnnotationComposer,
+          $$LocalStickerFavoritesTableCreateCompanionBuilder,
+          $$LocalStickerFavoritesTableUpdateCompanionBuilder,
+          (
+            LocalStickerFavorite,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalStickerFavoritesTable,
+              LocalStickerFavorite
+            >,
+          ),
+          LocalStickerFavorite,
+          PrefetchHooks Function()
+        > {
+  $$LocalStickerFavoritesTableTableManager(
+    _$AppDatabase db,
+    $LocalStickerFavoritesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalStickerFavoritesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalStickerFavoritesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalStickerFavoritesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> stickerId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+              }) => LocalStickerFavoritesCompanion(
+                stickerId: stickerId,
+                position: position,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> stickerId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+              }) => LocalStickerFavoritesCompanion.insert(
+                stickerId: stickerId,
+                position: position,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalStickerFavoritesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalStickerFavoritesTable,
+      LocalStickerFavorite,
+      $$LocalStickerFavoritesTableFilterComposer,
+      $$LocalStickerFavoritesTableOrderingComposer,
+      $$LocalStickerFavoritesTableAnnotationComposer,
+      $$LocalStickerFavoritesTableCreateCompanionBuilder,
+      $$LocalStickerFavoritesTableUpdateCompanionBuilder,
+      (
+        LocalStickerFavorite,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalStickerFavoritesTable,
+          LocalStickerFavorite
+        >,
+      ),
+      LocalStickerFavorite,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalStickerRecentsTableCreateCompanionBuilder =
+    LocalStickerRecentsCompanion Function({
+      Value<int> stickerId,
+      required DateTime usedAt,
+    });
+typedef $$LocalStickerRecentsTableUpdateCompanionBuilder =
+    LocalStickerRecentsCompanion Function({
+      Value<int> stickerId,
+      Value<DateTime> usedAt,
+    });
+
+class $$LocalStickerRecentsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalStickerRecentsTable> {
+  $$LocalStickerRecentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get stickerId => $composableBuilder(
+    column: $table.stickerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get usedAt => $composableBuilder(
+    column: $table.usedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalStickerRecentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalStickerRecentsTable> {
+  $$LocalStickerRecentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get stickerId => $composableBuilder(
+    column: $table.stickerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get usedAt => $composableBuilder(
+    column: $table.usedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalStickerRecentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalStickerRecentsTable> {
+  $$LocalStickerRecentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get stickerId =>
+      $composableBuilder(column: $table.stickerId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get usedAt =>
+      $composableBuilder(column: $table.usedAt, builder: (column) => column);
+}
+
+class $$LocalStickerRecentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalStickerRecentsTable,
+          LocalStickerRecent,
+          $$LocalStickerRecentsTableFilterComposer,
+          $$LocalStickerRecentsTableOrderingComposer,
+          $$LocalStickerRecentsTableAnnotationComposer,
+          $$LocalStickerRecentsTableCreateCompanionBuilder,
+          $$LocalStickerRecentsTableUpdateCompanionBuilder,
+          (
+            LocalStickerRecent,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalStickerRecentsTable,
+              LocalStickerRecent
+            >,
+          ),
+          LocalStickerRecent,
+          PrefetchHooks Function()
+        > {
+  $$LocalStickerRecentsTableTableManager(
+    _$AppDatabase db,
+    $LocalStickerRecentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalStickerRecentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalStickerRecentsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalStickerRecentsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> stickerId = const Value.absent(),
+                Value<DateTime> usedAt = const Value.absent(),
+              }) => LocalStickerRecentsCompanion(
+                stickerId: stickerId,
+                usedAt: usedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> stickerId = const Value.absent(),
+                required DateTime usedAt,
+              }) => LocalStickerRecentsCompanion.insert(
+                stickerId: stickerId,
+                usedAt: usedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalStickerRecentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalStickerRecentsTable,
+      LocalStickerRecent,
+      $$LocalStickerRecentsTableFilterComposer,
+      $$LocalStickerRecentsTableOrderingComposer,
+      $$LocalStickerRecentsTableAnnotationComposer,
+      $$LocalStickerRecentsTableCreateCompanionBuilder,
+      $$LocalStickerRecentsTableUpdateCompanionBuilder,
+      (
+        LocalStickerRecent,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalStickerRecentsTable,
+          LocalStickerRecent
+        >,
+      ),
+      LocalStickerRecent,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15428,4 +18220,12 @@ class $AppDatabaseManager {
       $$LocalTripPointsTableTableManager(_db, _db.localTripPoints);
   $$LocalTripEventsTableTableManager get localTripEvents =>
       $$LocalTripEventsTableTableManager(_db, _db.localTripEvents);
+  $$LocalStickerPacksTableTableManager get localStickerPacks =>
+      $$LocalStickerPacksTableTableManager(_db, _db.localStickerPacks);
+  $$LocalStickersTableTableManager get localStickers =>
+      $$LocalStickersTableTableManager(_db, _db.localStickers);
+  $$LocalStickerFavoritesTableTableManager get localStickerFavorites =>
+      $$LocalStickerFavoritesTableTableManager(_db, _db.localStickerFavorites);
+  $$LocalStickerRecentsTableTableManager get localStickerRecents =>
+      $$LocalStickerRecentsTableTableManager(_db, _db.localStickerRecents);
 }

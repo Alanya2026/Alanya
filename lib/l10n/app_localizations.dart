@@ -12873,6 +12873,342 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{read} lu, {delivered} reçu sans être lu, {pending} en attente'**
   String receiptsBarLabel(int read, int delivered, int pending);
+
+  /// No description provided for @stickerWord.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker'**
+  String get stickerWord;
+
+  /// No description provided for @stickerPreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'{emoji} Sticker'**
+  String stickerPreview(String emoji);
+
+  /// No description provided for @stickerRemoved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker retiré'**
+  String get stickerRemoved;
+
+  /// No description provided for @stickerUnsupported.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker non pris en charge — mettez à jour l\'application'**
+  String get stickerUnsupported;
+
+  /// No description provided for @stickerTabEmojis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Émojis'**
+  String get stickerTabEmojis;
+
+  /// No description provided for @stickerTabStickers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stickers'**
+  String get stickerTabStickers;
+
+  /// No description provided for @stickerRecents.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récents'**
+  String get stickerRecents;
+
+  /// No description provided for @stickerFavorites.
+  ///
+  /// In fr, this message translates to:
+  /// **'Favoris'**
+  String get stickerFavorites;
+
+  /// No description provided for @stickerEmptyRecents.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos stickers récents apparaîtront ici.'**
+  String get stickerEmptyRecents;
+
+  /// No description provided for @stickerEmptyFavorites.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touchez ★ dans la fiche d\'un sticker pour l\'ajouter à vos favoris.'**
+  String get stickerEmptyFavorites;
+
+  /// No description provided for @stickerLoadError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les stickers.'**
+  String get stickerLoadError;
+
+  /// No description provided for @stickerRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get stickerRetry;
+
+  /// No description provided for @stickerLockedBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce pack est réservé à Alanya Plus.'**
+  String get stickerLockedBanner;
+
+  /// No description provided for @stickerUnlockCta.
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrir Alanya Plus'**
+  String get stickerUnlockCta;
+
+  /// No description provided for @stickerLockedLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack {name}, verrouillé'**
+  String stickerLockedLabel(String name);
+
+  /// No description provided for @stickerBadgeOfficial.
+  ///
+  /// In fr, this message translates to:
+  /// **'Officiel'**
+  String get stickerBadgeOfficial;
+
+  /// No description provided for @stickerBadgePlus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus'**
+  String get stickerBadgePlus;
+
+  /// No description provided for @stickerFavoriteAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter aux favoris'**
+  String get stickerFavoriteAdd;
+
+  /// No description provided for @stickerFavoriteRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer des favoris'**
+  String get stickerFavoriteRemove;
+
+  /// No description provided for @stickerViewPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le pack'**
+  String get stickerViewPack;
+
+  /// No description provided for @stickerForward.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transférer'**
+  String get stickerForward;
+
+  /// No description provided for @stickerSheetPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack : {name}'**
+  String stickerSheetPack(String name);
+
+  /// No description provided for @stickerSheetSender.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyé par {name}'**
+  String stickerSheetSender(String name);
+
+  /// No description provided for @stickerSheetSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'{w} × {h} px'**
+  String stickerSheetSize(int w, int h);
+
+  /// No description provided for @stickerSheetWeight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Poids : {size}'**
+  String stickerSheetWeight(String size);
+
+  /// No description provided for @stickerAddPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get stickerAddPack;
+
+  /// No description provided for @stickerRemovePack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get stickerRemovePack;
+
+  /// No description provided for @stickerAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack ajouté.'**
+  String get stickerAdded;
+
+  /// No description provided for @stickerPackRemoved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack retiré.'**
+  String get stickerPackRemoved;
+
+  /// No description provided for @stickerMyPacks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes packs'**
+  String get stickerMyPacks;
+
+  /// No description provided for @stickerCatalog.
+  ///
+  /// In fr, this message translates to:
+  /// **'Catalogue'**
+  String get stickerCatalog;
+
+  /// No description provided for @stickerManage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gérer les stickers'**
+  String get stickerManage;
+
+  /// No description provided for @stickerPackCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} stickers'**
+  String stickerPackCount(int count);
+
+  /// No description provided for @stickerPackInstalled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Installé'**
+  String get stickerPackInstalled;
+
+  /// No description provided for @stickerSendLockedPlus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sticker nécessite Alanya Plus.'**
+  String get stickerSendLockedPlus;
+
+  /// No description provided for @stickerDomainError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les stickers ne sont pas disponibles pour le moment.'**
+  String get stickerDomainError;
+
+  /// No description provided for @errCodeStickerNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sticker n\'existe plus.'**
+  String get errCodeStickerNotFound;
+
+  /// No description provided for @errCodeStickerPackUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce pack n\'est plus disponible.'**
+  String get errCodeStickerPackUnavailable;
+
+  /// No description provided for @errCodeStickerInvalidPayload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sticker n\'a pas pu être envoyé.'**
+  String get errCodeStickerInvalidPayload;
+
+  /// No description provided for @errCodeStickerAssetInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette image ne peut pas devenir un sticker.'**
+  String get errCodeStickerAssetInvalid;
+
+  /// No description provided for @errCodeStickerAssetBlocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette image est bloquée et ne peut pas être utilisée.'**
+  String get errCodeStickerAssetBlocked;
+
+  /// No description provided for @errCodeStickerQuotaExceeded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez atteint votre limite de stickers.'**
+  String get errCodeStickerQuotaExceeded;
+
+  /// No description provided for @errCodeStickerPackLimit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez atteint le nombre maximal de packs.'**
+  String get errCodeStickerPackLimit;
+
+  /// No description provided for @plusFeatureStickers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stickers Royal'**
+  String get plusFeatureStickers;
+
+  /// No description provided for @paywallStickersTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les stickers Royal'**
+  String get paywallStickersTitle;
+
+  /// No description provided for @paywallStickersBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le pack Royal fait partie d\'Alanya Plus : couronnes, trophées et paillettes pour vos conversations.'**
+  String get paywallStickersBody;
+
+  /// No description provided for @stickerTrayLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stickers'**
+  String get stickerTrayLabel;
+
+  /// No description provided for @stickerNoPacks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun pack installé. Ouvrez le catalogue pour en ajouter.'**
+  String get stickerNoPacks;
+
+  /// No description provided for @stickerPreviewTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu du sticker'**
+  String get stickerPreviewTitle;
+
+  /// No description provided for @stickerReplyQuote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker'**
+  String get stickerReplyQuote;
+
+  /// No description provided for @stickerSemantics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker {emoji}'**
+  String stickerSemantics(String emoji);
+
+  /// No description provided for @stickerPackLockedSemantics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Verrouillé, Alanya Plus requis'**
+  String get stickerPackLockedSemantics;
+
+  /// No description provided for @stickerSendFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le sticker n\'a pas pu être envoyé.'**
+  String get stickerSendFailed;
+
+  /// No description provided for @stickerPackReorderHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintenez et glissez pour réordonner'**
+  String get stickerPackReorderHint;
+
+  /// No description provided for @stickerNoFavorites.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun favori'**
+  String get stickerNoFavorites;
+
+  /// No description provided for @stickerOfficialPackName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack officiel'**
+  String get stickerOfficialPackName;
 }
 
 class _AppLocalizationsDelegate

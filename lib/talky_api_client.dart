@@ -41,6 +41,7 @@ part 'api/qr_api.dart';
 part 'api/qr_auth_api.dart';
 part 'api/welcome_api.dart';
 part 'api/reports_api.dart';
+part 'api/stickers_api.dart';
 part 'api/backup_api.dart';
 part 'api/billing_api.dart';
 part 'api/alanya_phone_api.dart';

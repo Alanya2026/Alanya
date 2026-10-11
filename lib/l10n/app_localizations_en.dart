@@ -7465,4 +7465,196 @@ class AppLocalizationsEn extends AppLocalizations {
   String receiptsBarLabel(int read, int delivered, int pending) {
     return '$read read, $delivered delivered but unread, $pending pending';
   }
+
+  @override
+  String get stickerWord => 'Sticker';
+
+  @override
+  String stickerPreview(String emoji) {
+    return '$emoji Sticker';
+  }
+
+  @override
+  String get stickerRemoved => 'Sticker removed';
+
+  @override
+  String get stickerUnsupported => 'Unsupported sticker — update the app';
+
+  @override
+  String get stickerTabEmojis => 'Emojis';
+
+  @override
+  String get stickerTabStickers => 'Stickers';
+
+  @override
+  String get stickerRecents => 'Recent';
+
+  @override
+  String get stickerFavorites => 'Favorites';
+
+  @override
+  String get stickerEmptyRecents => 'Your recent stickers will appear here.';
+
+  @override
+  String get stickerEmptyFavorites =>
+      'Tap ★ on a sticker to add it to your favorites.';
+
+  @override
+  String get stickerLoadError => 'Couldn\'t load stickers.';
+
+  @override
+  String get stickerRetry => 'Retry';
+
+  @override
+  String get stickerLockedBanner => 'This pack is for Alanya Plus.';
+
+  @override
+  String get stickerUnlockCta => 'Discover Alanya Plus';
+
+  @override
+  String stickerLockedLabel(String name) {
+    return '$name pack, locked';
+  }
+
+  @override
+  String get stickerBadgeOfficial => 'Official';
+
+  @override
+  String get stickerBadgePlus => 'Plus';
+
+  @override
+  String get stickerFavoriteAdd => 'Add to favorites';
+
+  @override
+  String get stickerFavoriteRemove => 'Remove from favorites';
+
+  @override
+  String get stickerViewPack => 'View pack';
+
+  @override
+  String get stickerForward => 'Forward';
+
+  @override
+  String stickerSheetPack(String name) {
+    return 'Pack: $name';
+  }
+
+  @override
+  String stickerSheetSender(String name) {
+    return 'Sent by $name';
+  }
+
+  @override
+  String stickerSheetSize(int w, int h) {
+    return '$w × $h px';
+  }
+
+  @override
+  String stickerSheetWeight(String size) {
+    return 'Size: $size';
+  }
+
+  @override
+  String get stickerAddPack => 'Add';
+
+  @override
+  String get stickerRemovePack => 'Remove';
+
+  @override
+  String get stickerAdded => 'Pack added.';
+
+  @override
+  String get stickerPackRemoved => 'Pack removed.';
+
+  @override
+  String get stickerMyPacks => 'My packs';
+
+  @override
+  String get stickerCatalog => 'Catalog';
+
+  @override
+  String get stickerManage => 'Manage stickers';
+
+  @override
+  String stickerPackCount(int count) {
+    return '$count stickers';
+  }
+
+  @override
+  String get stickerPackInstalled => 'Installed';
+
+  @override
+  String get stickerSendLockedPlus => 'This sticker needs Alanya Plus.';
+
+  @override
+  String get stickerDomainError => 'Stickers are unavailable right now.';
+
+  @override
+  String get errCodeStickerNotFound => 'This sticker no longer exists.';
+
+  @override
+  String get errCodeStickerPackUnavailable =>
+      'This pack is no longer available.';
+
+  @override
+  String get errCodeStickerInvalidPayload => 'This sticker couldn\'t be sent.';
+
+  @override
+  String get errCodeStickerAssetInvalid =>
+      'This image can\'t be used as a sticker.';
+
+  @override
+  String get errCodeStickerAssetBlocked =>
+      'This image is blocked and can\'t be used.';
+
+  @override
+  String get errCodeStickerQuotaExceeded =>
+      'You\'ve reached your sticker limit.';
+
+  @override
+  String get errCodeStickerPackLimit =>
+      'You\'ve reached the maximum number of packs.';
+
+  @override
+  String get plusFeatureStickers => 'Royal stickers';
+
+  @override
+  String get paywallStickersTitle => 'Royal stickers';
+
+  @override
+  String get paywallStickersBody =>
+      'The Royal pack is part of Alanya Plus: crowns, trophies and sparkle for your chats.';
+
+  @override
+  String get stickerTrayLabel => 'Stickers';
+
+  @override
+  String get stickerNoPacks =>
+      'No packs installed. Open the catalog to add some.';
+
+  @override
+  String get stickerPreviewTitle => 'Sticker preview';
+
+  @override
+  String get stickerReplyQuote => 'Sticker';
+
+  @override
+  String stickerSemantics(String emoji) {
+    return 'Sticker $emoji';
+  }
+
+  @override
+  String get stickerPackLockedSemantics => 'Locked, Alanya Plus required';
+
+  @override
+  String get stickerSendFailed => 'The sticker couldn\'t be sent.';
+
+  @override
+  String get stickerPackReorderHint => 'Hold and drag to reorder';
+
+  @override
+  String get stickerNoFavorites => 'No favorites';
+
+  @override
+  String get stickerOfficialPackName => 'Official pack';
 }

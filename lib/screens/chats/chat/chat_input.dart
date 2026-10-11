@@ -260,15 +260,21 @@ extension _ChatInput on _ChatDetailScreenState {
   }
 
   Widget _buildEmojiPicker() {
-    return SizedBox(
+    // Onglets Émojis · Stickers. L'onglet Stickers disparaît si le module est
+    // fermé côté serveur : le plateau redevient exactement celui d'avant.
+    return EmojiStickerPicker(
       height: 280,
-      child: EmojiPicker(
-        textEditingController: _messageController,
-        onEmojiSelected: (category, emoji) {
-          if (!_hasText) rebuild(() => _hasText = true);
-          _dismissUnreadSeparator();
-        },
-        config: const Config(height: 280),
+      onSendSticker: _sendSticker,
+      emojiPicker: SizedBox(
+        height: 280,
+        child: EmojiPicker(
+          textEditingController: _messageController,
+          onEmojiSelected: (category, emoji) {
+            if (!_hasText) rebuild(() => _hasText = true);
+            _dismissUnreadSeparator();
+          },
+          config: const Config(height: 280),
+        ),
       ),
     );
   }

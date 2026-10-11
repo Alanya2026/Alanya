@@ -7125,4 +7125,188 @@ class AppLocalizationsZh extends AppLocalizations {
   String receiptsBarLabel(int read, int delivered, int pending) {
     return '$read 人已读，$delivered 人已送达未读，$pending 人未送达';
   }
+
+  @override
+  String get stickerWord => '贴纸';
+
+  @override
+  String stickerPreview(String emoji) {
+    return '$emoji 贴纸';
+  }
+
+  @override
+  String get stickerRemoved => '贴纸已移除';
+
+  @override
+  String get stickerUnsupported => '不支持的贴纸，请更新应用';
+
+  @override
+  String get stickerTabEmojis => '表情';
+
+  @override
+  String get stickerTabStickers => '贴纸';
+
+  @override
+  String get stickerRecents => '最近';
+
+  @override
+  String get stickerFavorites => '收藏';
+
+  @override
+  String get stickerEmptyRecents => '最近使用的贴纸会显示在这里。';
+
+  @override
+  String get stickerEmptyFavorites => '在贴纸详情中点按 ★ 即可收藏。';
+
+  @override
+  String get stickerLoadError => '无法加载贴纸。';
+
+  @override
+  String get stickerRetry => '重试';
+
+  @override
+  String get stickerLockedBanner => '此贴纸包仅限 Alanya Plus。';
+
+  @override
+  String get stickerUnlockCta => '了解 Alanya Plus';
+
+  @override
+  String stickerLockedLabel(String name) {
+    return '$name 贴纸包，已锁定';
+  }
+
+  @override
+  String get stickerBadgeOfficial => '官方';
+
+  @override
+  String get stickerBadgePlus => 'Plus';
+
+  @override
+  String get stickerFavoriteAdd => '添加到收藏';
+
+  @override
+  String get stickerFavoriteRemove => '从收藏中移除';
+
+  @override
+  String get stickerViewPack => '查看贴纸包';
+
+  @override
+  String get stickerForward => '转发';
+
+  @override
+  String stickerSheetPack(String name) {
+    return '贴纸包：$name';
+  }
+
+  @override
+  String stickerSheetSender(String name) {
+    return '发送者：$name';
+  }
+
+  @override
+  String stickerSheetSize(int w, int h) {
+    return '$w × $h 像素';
+  }
+
+  @override
+  String stickerSheetWeight(String size) {
+    return '大小：$size';
+  }
+
+  @override
+  String get stickerAddPack => '添加';
+
+  @override
+  String get stickerRemovePack => '移除';
+
+  @override
+  String get stickerAdded => '已添加贴纸包。';
+
+  @override
+  String get stickerPackRemoved => '已移除贴纸包。';
+
+  @override
+  String get stickerMyPacks => '我的贴纸包';
+
+  @override
+  String get stickerCatalog => '目录';
+
+  @override
+  String get stickerManage => '管理贴纸';
+
+  @override
+  String stickerPackCount(int count) {
+    return '$count 个贴纸';
+  }
+
+  @override
+  String get stickerPackInstalled => '已安装';
+
+  @override
+  String get stickerSendLockedPlus => '此贴纸需要 Alanya Plus。';
+
+  @override
+  String get stickerDomainError => '贴纸暂时不可用。';
+
+  @override
+  String get errCodeStickerNotFound => '此贴纸已不存在。';
+
+  @override
+  String get errCodeStickerPackUnavailable => '此贴纸包已不可用。';
+
+  @override
+  String get errCodeStickerInvalidPayload => '无法发送此贴纸。';
+
+  @override
+  String get errCodeStickerAssetInvalid => '此图片无法用作贴纸。';
+
+  @override
+  String get errCodeStickerAssetBlocked => '此图片已被屏蔽，无法使用。';
+
+  @override
+  String get errCodeStickerQuotaExceeded => '您已达到贴纸数量上限。';
+
+  @override
+  String get errCodeStickerPackLimit => '您已达到贴纸包数量上限。';
+
+  @override
+  String get plusFeatureStickers => 'Royal 贴纸';
+
+  @override
+  String get paywallStickersTitle => 'Royal 贴纸';
+
+  @override
+  String get paywallStickersBody => 'Royal 贴纸包属于 Alanya Plus：为您的聊天增添皇冠、奖杯和闪光。';
+
+  @override
+  String get stickerTrayLabel => '贴纸';
+
+  @override
+  String get stickerNoPacks => '尚未安装贴纸包。打开目录添加。';
+
+  @override
+  String get stickerPreviewTitle => '贴纸预览';
+
+  @override
+  String get stickerReplyQuote => '贴纸';
+
+  @override
+  String stickerSemantics(String emoji) {
+    return '贴纸 $emoji';
+  }
+
+  @override
+  String get stickerPackLockedSemantics => '已锁定，需要 Alanya Plus';
+
+  @override
+  String get stickerSendFailed => '无法发送贴纸。';
+
+  @override
+  String get stickerPackReorderHint => '长按并拖动以重新排序';
+
+  @override
+  String get stickerNoFavorites => '暂无收藏';
+
+  @override
+  String get stickerOfficialPackName => '官方贴纸包';
 }
