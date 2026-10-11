@@ -43,12 +43,18 @@ class ContactDetailScreen extends StatefulWidget {
   final String initialName;
   final String initialAvatar;
 
+  /// Vrai quand la fiche a été ouverte depuis la discussion avec ce contact :
+  /// « Rechercher » referme alors la fiche et rend `'search'` à la discussion,
+  /// au lieu d'en empiler une seconde par-dessus.
+  final bool openedFromConversation;
+
   const ContactDetailScreen({
     super.key,
     required this.userId,
     this.conversationId,
     this.initialName = '',
     this.initialAvatar = '',
+    this.openedFromConversation = false,
   });
 
   @override
@@ -279,7 +285,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     }
   }
 
-  Future<void> _openChat() async {
+  Future<void> _openChat({bool openSearch = false}) async {
     if (_contact == null) return;
     if (!mounted) return;
 
@@ -314,6 +320,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           conversationId: convId,
           userId: widget.userId,
           avatarUrl: _contact!.avatarUrl,
+          openSearch: openSearch,
         ),
       ),
     );
@@ -644,7 +651,13 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           isFavorite: _isFavorite,
           showFavorite: !isSelf && !isOfficial,
           onToggleFavorite: _toggleFavorite,
-          onSearch: () => _snack(context.l10n.searchComingSoon),
+          onSearch: () {
+            if (widget.openedFromConversation) {
+              Navigator.pop(context, 'search');
+            } else {
+              unawaited(_openChat(openSearch: true));
+            }
+          },
           onClear: _clearMessages,
         ),
         AppSpacing.vGapLg,

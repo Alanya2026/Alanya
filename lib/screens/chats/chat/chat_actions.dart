@@ -27,6 +27,7 @@ extension _ChatActions on _ChatDetailScreenState {
 
   void _enterSelectionMode(LocalMessage seed) {
     if (!_isSelectableMessage(seed)) return;
+    _exitSearchMode(refocusInput: false);
     rebuild(() {
       _selectionMode = true;
       _selectedMsgIDs
@@ -41,6 +42,7 @@ extension _ChatActions on _ChatDetailScreenState {
         .map((m) => m.msgID)
         .toSet();
     if (ids.isEmpty) return;
+    _exitSearchMode(refocusInput: false);
     rebuild(() {
       _selectionMode = true;
       _selectedMsgIDs

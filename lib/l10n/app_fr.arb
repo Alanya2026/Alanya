@@ -807,7 +807,23 @@
   "noCountryFound": "Aucun pays trouvé",
   "addAPhoto": "Ajouter une photo",
   "cameraDisabled": "Caméra désactivée",
-  "searchComingSoon": "Recherche à venir",
+  "searchInConversationHint": "Rechercher dans la discussion",
+  "searchNoResult": "Aucun message trouvé",
+  "searchResultCounter": "{index}/{total}",
+  "@searchResultCounter": {
+    "description": "Compteur de résultats de la recherche dans une discussion",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "searchPrevious": "Résultat précédent",
+  "searchNext": "Résultat suivant",
+  "searchExit": "Fermer la recherche",
   "takeAPhoto": "Prendre une photo",
   "enableCamera": "Activer la caméra",
   "switchCamera": "Changer de caméra",

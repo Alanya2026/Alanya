@@ -108,3 +108,26 @@ Environ **1,5 à 2,5 jours** de développement, tests compris. Côté serveur : 
 - **Recherche globale** depuis la liste des discussions : une section « Messages » sous les conversations trouvées, avec l'extrait, l'auteur et la date. Un appui ouvre la discussion sur le message (`ChatDetailScreen(focusMessageId: …)` existe déjà). Environ 1 à 1,5 jour, sur le même `MessageSearch`.
 - **Index plein texte FTS5** : une table virtuelle alimentée par déclencheurs, avec le tokenizer `unicode61 remove_diacritics 2`, ce qui demande la migration du schéma 26 → 27. À envisager quand la recherche globale porte sur tous les messages du téléphone, ou si la mesure de volume ci-dessus dépasse le budget. Environ 1 jour.
 - **Chiffrement de bout en bout** (branche `feat/chiffrement-e2e`) : la recherche reste possible à condition que le texte déchiffré soit gardé dans la base locale, ou dans une colonne dédiée à la recherche. À vérifier au moment de fusionner les deux chantiers. Les deux touchent `LocalMessages`, et l'index FTS5 devrait être ajouté **après** le chiffrement, pour ne faire qu'une migration.
+
+## Implémenté
+
+Branche `feat/recherche-messages` (partie de `fix/bugs-3gi`), cinq commits locaux.
+
+**Fichiers créés**
+- `lib/core/utils/search_normalizer.dart` : `normaliserPourRecherche`, `TexteNormalise` (texte + table `origine`).
+- `lib/core/services/chat/message_search.dart` : `kSearchableMessageTypes` = {0, 1, 2, 4}, `kMinSearchQueryLength`, `CandidatRecherche`, `requeteValide`, `filtrerMessages`, `rechercherMessages` (isolate au-delà de 5 000).
+- `lib/core/utils/search_highlight.dart` : `surlignerSpans`.
+- `lib/screens/chats/chat/chat_search.dart` : mode recherche (partie de `chat_detail_screen.dart`).
+- Tests : `search_normalizer_test`, `message_search_test`, `chat_dao_search_test`, `search_highlight_test` (26 tests).
+
+**Fichiers modifiés** : `chat_dao.dart` (`searchCandidates`), `chat_detail_screen.dart` (état, `openSearch`, barre, `PopScope`, menu « ⋮ », deux ouvertures de la fiche), `chat/chat_bubbles.dart` (surlignage), `chat/chat_actions.dart` (la sélection quitte la recherche), `contact_detail_screen.dart` (`openedFromConversation`, `openSearch`), `app_{fr,en,zh}.arb` et `app_localizations*.dart`.
+
+**Mesure de volume** : 20 000 candidats filtrés par `filtrerMessages` en **127 ms** (test sur le fil principal, machine de développement, sans isolate). Le budget de 300 ms est tenu, même sans isolate.
+
+**Écarts par rapport au plan**
+- Pas de ligne « Charger plus d'historique pour chercher plus loin » ni de clé `searchLoadMoreHistory` : le brief d'exécution l'écarte (un message absent de la base locale n'est jamais un résultat).
+- La clé `searchInConversation` du plan s'appelle `searchInConversationHint`.
+- `searchComingSoon` retirée des trois `.arb`.
+- Seul le résultat courant est encadré (2 s, par `_scrollToReply`) ; tous les résultats visibles sont surlignés.
+
+**Non vérifié** : tout ce qui demande un téléphone (saut vers un message ancien, rendu du surlignage, bouton retour en mode recherche, ouverture depuis la fiche contact).

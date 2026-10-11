@@ -415,7 +415,23 @@
   "noCountryFound": "未找到国家/地区",
   "addAPhoto": "添加照片",
   "cameraDisabled": "摄像头已关闭",
-  "searchComingSoon": "搜索功能即将推出",
+  "searchInConversationHint": "在聊天中搜索",
+  "searchNoResult": "未找到消息",
+  "searchResultCounter": "{index}/{total}",
+  "@searchResultCounter": {
+    "description": "Compteur de résultats de la recherche dans une discussion",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "searchPrevious": "上一个结果",
+  "searchNext": "下一个结果",
+  "searchExit": "关闭搜索",
   "takeAPhoto": "拍照",
   "enableCamera": "开启摄像头",
   "switchCamera": "切换摄像头",
