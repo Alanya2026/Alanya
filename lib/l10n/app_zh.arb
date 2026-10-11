@@ -2492,5 +2492,36 @@
   "stickerCreatedInMyStickers": "已添加到“{name}”",
   "stickerView": "查看",
   "chatPanelExpand": "展开面板",
-  "chatPanelCollapse": "收起面板"
+  "chatPanelCollapse": "收起面板",
+  "stickerVideoTitle": "视频贴纸",
+  "stickerVideoPreviewLabel": "裁剪后的视频预览",
+  "stickerVideoStart": "开始",
+  "stickerVideoDuration": "时长",
+  "stickerVideoStartValue": "开始：{time}",
+  "@stickerVideoStartValue": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoDurationValue": "时长：{seconds} 秒",
+  "@stickerVideoDurationValue": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoPlay": "播放",
+  "stickerVideoPause": "暂停",
+  "stickerVideoHint": "选择要保留的片段（最长 3 秒，最短 500 毫秒）。视频在我们的服务器上裁剪，不含声音。",
+  "stickerVideoTooBig": "此视频超过 20 MB，请选择更短的视频。",
+  "stickerVideoFormat": "不支持此格式，请选择 MP4、MOV 或 WebM 视频。",
+  "stickerVideoUnsupported": "暂不支持视频。",
+  "stickerVideoTooShort": "此视频太短（至少 500 毫秒）。",
+  "stickerVideoLoadFailed": "无法播放此视频。",
+  "stickerVideoConverting": "正在上传并转换视频…",
+  "stickerVideoConvertingHint": "使用移动数据时可能需要最多一分钟。",
+  "stickerVideoInvalid": "不支持此视频，或内容过于复杂。请尝试更短或更简单的视频。"
 }

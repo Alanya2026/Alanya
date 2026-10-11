@@ -199,7 +199,7 @@ class _StickerAnimatedScreenState extends State<StickerAnimatedScreen> {
             ),
             if (_sending)
               Positioned.fill(
-                child: _SendingOverlay(onCancel: _cancelSend),
+                child: StickerConvertingOverlay(onCancel: _cancelSend),
               ),
           ],
         ),
@@ -267,10 +267,17 @@ class _ShapePreview extends StatelessWidget {
 }
 
 /// Voile de conversion : indicateur et « Annuler » (la conversion serveur peut
-/// durer jusqu'à ~15 s).
-class _SendingOverlay extends StatelessWidget {
-  const _SendingOverlay({required this.onCancel});
+/// durer jusqu'à ~15 s ; plus pour une vidéo, d'où [title] et [hint]).
+class StickerConvertingOverlay extends StatelessWidget {
+  const StickerConvertingOverlay({
+    super.key,
+    required this.onCancel,
+    this.title,
+    this.hint,
+  });
   final VoidCallback onCancel;
+  final String? title;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
@@ -286,7 +293,7 @@ class _SendingOverlay extends StatelessWidget {
           child: Semantics(
             container: true,
             liveRegion: true,
-            label: l10n.stickerAnimatedConverting,
+            label: title ?? l10n.stickerAnimatedConverting,
             child: Card(
               margin: const EdgeInsets.all(AppSpacing.xxl),
               child: Padding(
@@ -299,12 +306,12 @@ class _SendingOverlay extends StatelessWidget {
                     ),
                     AppSpacing.vGapLg,
                     Text(
-                      l10n.stickerAnimatedConverting,
+                      title ?? l10n.stickerAnimatedConverting,
                       style: context.text.titleSmall,
                     ),
                     AppSpacing.vGapXs,
                     Text(
-                      l10n.stickerAnimatedConvertingHint,
+                      hint ?? l10n.stickerAnimatedConvertingHint,
                       textAlign: TextAlign.center,
                       style: context.text.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,

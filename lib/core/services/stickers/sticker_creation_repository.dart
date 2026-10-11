@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../db/app_database.dart';
 import 'sticker_animated_check.dart';
+import 'sticker_video_check.dart';
 import 'sticker_creation_api.dart';
 import 'sticker_features.dart';
 import 'sticker_image_check.dart';
@@ -448,14 +449,75 @@ class StickerCreationRepository {
     final fixedName = filename.toLowerCase().endsWith(ext)
         ? filename
         : 'sticker$ext';
+    return _uploadAnimated(
+      packId,
+      bytes,
+      filename: fixedName,
+      shape: shape,
+      emoji: emoji,
+      name: name,
+      cancel: cancel,
+    );
+  }
+
+  /// Crée un sticker animé depuis une **vidéo** MP4 / MOV / WebM (V1c, contrat
+  /// §4d). La vidéo part **entière** (≤ 20 Mo) avec la fenêtre [window] ; le
+  /// serveur la découpe avec ffmpeg, recadre en 512×512, applique [shape] et
+  /// ré-encode (jusqu'à ~25 s). Refus local sans réseau : [StickerVideoRejected]
+  /// (serveur sans ffmpeg, format, > 20 Mo). Mêmes refus du serveur que
+  /// [addAnimatedSticker].
+  Future<StickerAnimatedResult> addVideoSticker(
+    int? packId,
+    Uint8List bytes, {
+    required String filename,
+    required StickerAnimatedShape shape,
+    required StickerVideoWindow window,
+    String? emoji,
+    String? name,
+    Future<void>? cancel,
+  }) async {
+    if (!features.video.value) {
+      throw const StickerVideoRejected(StickerVideoIssue.unsupported);
+    }
+    final kind = StickerVideoCheck.validate(bytes);
+    final lower = filename.toLowerCase();
+    final fixedName = (lower.endsWith(kind.extension) || lower.endsWith('.mov'))
+        ? filename
+        : 'sticker${kind.extension}';
+    return _uploadAnimated(
+      packId,
+      bytes,
+      filename: fixedName,
+      shape: shape,
+      emoji: emoji,
+      name: name,
+      startMs: window.startMs,
+      durationMs: window.durationMs,
+      cancel: cancel,
+    );
+  }
+
+  Future<StickerAnimatedResult> _uploadAnimated(
+    int? packId,
+    Uint8List bytes, {
+    required String filename,
+    required StickerAnimatedShape shape,
+    String? emoji,
+    String? name,
+    int? startMs,
+    int? durationMs,
+    Future<void>? cancel,
+  }) async {
     try {
       final res = await _api.uploadAnimatedAsset(
         bytes,
-        filename: fixedName,
+        filename: filename,
         shape: shape.wire,
         packId: packId,
         emoji: emoji,
         name: name,
+        startMs: startMs,
+        durationMs: durationMs,
         cancel: cancel,
       );
       await syncCreated();

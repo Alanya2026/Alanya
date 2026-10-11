@@ -8125,4 +8125,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatPanelCollapse => 'Collapse panel';
+
+  @override
+  String get stickerVideoTitle => 'Sticker from a video';
+
+  @override
+  String get stickerVideoPreviewLabel => 'Preview of the trimmed video';
+
+  @override
+  String get stickerVideoStart => 'Start';
+
+  @override
+  String get stickerVideoDuration => 'Length';
+
+  @override
+  String stickerVideoStartValue(String time) {
+    return 'Start: $time';
+  }
+
+  @override
+  String stickerVideoDurationValue(String seconds) {
+    return 'Length: $seconds s';
+  }
+
+  @override
+  String get stickerVideoPlay => 'Play';
+
+  @override
+  String get stickerVideoPause => 'Pause';
+
+  @override
+  String get stickerVideoHint =>
+      'Choose up to 3 seconds to keep (500 ms minimum). The video is trimmed on our servers, without sound.';
+
+  @override
+  String get stickerVideoTooBig =>
+      'This video is over 20 MB. Choose a shorter one.';
+
+  @override
+  String get stickerVideoFormat =>
+      'Unsupported format. Choose an MP4, MOV or WebM video.';
+
+  @override
+  String get stickerVideoUnsupported => 'Videos are not supported yet.';
+
+  @override
+  String get stickerVideoTooShort =>
+      'This video is too short (500 ms minimum).';
+
+  @override
+  String get stickerVideoLoadFailed => 'This video can\'t be played.';
+
+  @override
+  String get stickerVideoConverting => 'Sending and converting the video…';
+
+  @override
+  String get stickerVideoConvertingHint =>
+      'On mobile data, this can take up to a minute.';
+
+  @override
+  String get stickerVideoInvalid =>
+      'This video isn\'t supported or is too detailed. Try a shorter or simpler video.';
 }

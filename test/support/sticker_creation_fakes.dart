@@ -179,9 +179,14 @@ class FakeCreationApi implements StickerCreationApi {
       int? packId,
       String? emoji,
       String? name,
+      int? startMs,
+      int? durationMs,
       Future<void>? cancel}) async {
     _guard();
     calls.add('animated:$packId:$filename:$shape:${bytes.length}');
+    if (startMs != null || durationMs != null) {
+      calls.add('video:$filename:$startMs:$durationMs');
+    }
     animatedShapes.add(shape);
     final hold = holdAnimated;
     if (hold != null) {

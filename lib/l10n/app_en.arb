@@ -3552,5 +3552,36 @@
   "stickerCreatedInMyStickers": "Added to {name}",
   "stickerView": "View",
   "chatPanelExpand": "Expand panel",
-  "chatPanelCollapse": "Collapse panel"
+  "chatPanelCollapse": "Collapse panel",
+  "stickerVideoTitle": "Sticker from a video",
+  "stickerVideoPreviewLabel": "Preview of the trimmed video",
+  "stickerVideoStart": "Start",
+  "stickerVideoDuration": "Length",
+  "stickerVideoStartValue": "Start: {time}",
+  "@stickerVideoStartValue": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoDurationValue": "Length: {seconds} s",
+  "@stickerVideoDurationValue": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoPlay": "Play",
+  "stickerVideoPause": "Pause",
+  "stickerVideoHint": "Choose up to 3 seconds to keep (500 ms minimum). The video is trimmed on our servers, without sound.",
+  "stickerVideoTooBig": "This video is over 20 MB. Choose a shorter one.",
+  "stickerVideoFormat": "Unsupported format. Choose an MP4, MOV or WebM video.",
+  "stickerVideoUnsupported": "Videos are not supported yet.",
+  "stickerVideoTooShort": "This video is too short (500 ms minimum).",
+  "stickerVideoLoadFailed": "This video can't be played.",
+  "stickerVideoConverting": "Sending and converting the video…",
+  "stickerVideoConvertingHint": "On mobile data, this can take up to a minute.",
+  "stickerVideoInvalid": "This video isn't supported or is too detailed. Try a shorter or simpler video."
 }

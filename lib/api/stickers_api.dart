@@ -194,6 +194,8 @@ extension StickersApi on TalkyApiClient {
     int? packId,
     String? emoji,
     String? name,
+    int? startMs,
+    int? durationMs,
     Future<void>? cancel,
   }) =>
       _stickerCall(() async {
@@ -210,14 +212,25 @@ extension StickersApi on TalkyApiClient {
               filename: filename,
               contentType: MediaType.parse(_stickerAnimatedMimeOf(filename))))
           ..fields['shape'] = shape;
+        // Fenêtre de découpe d'une VIDÉO (contrat §4d), en millisecondes.
+        if (startMs != null) req.fields['start'] = '$startMs';
+        if (durationMs != null) req.fields['duration'] = '$durationMs';
         if (packId != null) req.fields['packId'] = '$packId';
         if (emoji != null && emoji.isNotEmpty) req.fields['emoji'] = emoji;
         if (name != null && name.isNotEmpty) req.fields['nom'] = name;
         return http.Response.fromStream(await _client.send(req));
-      }, timeout: const Duration(seconds: 90));
+      },
+      // Une vidéo de 20 Mo en données mobiles + ≈ 25 s de conversion : large délai.
+      timeout: Duration(seconds: startMs != null ? 240 : 90));
 
-  static String _stickerAnimatedMimeOf(String filename) =>
-      filename.toLowerCase().endsWith('.gif') ? 'image/gif' : 'image/webp';
+  static String _stickerAnimatedMimeOf(String filename) {
+    final f = filename.toLowerCase();
+    if (f.endsWith('.gif')) return 'image/gif';
+    if (f.endsWith('.mp4')) return 'video/mp4';
+    if (f.endsWith('.mov')) return 'video/quicktime';
+    if (f.endsWith('.webm')) return 'video/webm';
+    return 'image/webp';
+  }
 
   /// `DELETE /stickers/assets/:id` — supprime un de mes actifs.
   Future<void> deleteStickerAsset(int assetId) async {

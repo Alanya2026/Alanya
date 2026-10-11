@@ -14067,6 +14067,108 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réduire le panneau'**
   String get chatPanelCollapse;
+
+  /// No description provided for @stickerVideoTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker depuis une vidéo'**
+  String get stickerVideoTitle;
+
+  /// No description provided for @stickerVideoPreviewLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu de la vidéo découpée'**
+  String get stickerVideoPreviewLabel;
+
+  /// No description provided for @stickerVideoStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Début'**
+  String get stickerVideoStart;
+
+  /// No description provided for @stickerVideoDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée'**
+  String get stickerVideoDuration;
+
+  /// No description provided for @stickerVideoStartValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Début : {time}'**
+  String stickerVideoStartValue(String time);
+
+  /// No description provided for @stickerVideoDurationValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée : {seconds} s'**
+  String stickerVideoDurationValue(String seconds);
+
+  /// No description provided for @stickerVideoPlay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lecture'**
+  String get stickerVideoPlay;
+
+  /// No description provided for @stickerVideoPause.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pause'**
+  String get stickerVideoPause;
+
+  /// No description provided for @stickerVideoHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez les 3 secondes à garder (500 ms au minimum). La vidéo est découpée sur nos serveurs, sans le son.'**
+  String get stickerVideoHint;
+
+  /// No description provided for @stickerVideoTooBig.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette vidéo dépasse 20 Mo. Choisissez-en une plus courte.'**
+  String get stickerVideoTooBig;
+
+  /// No description provided for @stickerVideoFormat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Format non pris en charge. Choisissez une vidéo MP4, MOV ou WebM.'**
+  String get stickerVideoFormat;
+
+  /// No description provided for @stickerVideoUnsupported.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les vidéos ne sont pas encore prises en charge.'**
+  String get stickerVideoUnsupported;
+
+  /// No description provided for @stickerVideoTooShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette vidéo est trop courte (500 ms au minimum).'**
+  String get stickerVideoTooShort;
+
+  /// No description provided for @stickerVideoLoadFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire cette vidéo.'**
+  String get stickerVideoLoadFailed;
+
+  /// No description provided for @stickerVideoConverting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi et conversion de la vidéo…'**
+  String get stickerVideoConverting;
+
+  /// No description provided for @stickerVideoConvertingHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'En données mobiles, cela peut prendre jusqu\'à une minute.'**
+  String get stickerVideoConvertingHint;
+
+  /// No description provided for @stickerVideoInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette vidéo n\'est pas prise en charge ou est trop détaillée. Essayez une vidéo plus courte ou plus simple.'**
+  String get stickerVideoInvalid;
 }
 
 class _AppLocalizationsDelegate

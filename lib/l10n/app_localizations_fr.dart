@@ -8220,4 +8220,66 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatPanelCollapse => 'Réduire le panneau';
+
+  @override
+  String get stickerVideoTitle => 'Sticker depuis une vidéo';
+
+  @override
+  String get stickerVideoPreviewLabel => 'Aperçu de la vidéo découpée';
+
+  @override
+  String get stickerVideoStart => 'Début';
+
+  @override
+  String get stickerVideoDuration => 'Durée';
+
+  @override
+  String stickerVideoStartValue(String time) {
+    return 'Début : $time';
+  }
+
+  @override
+  String stickerVideoDurationValue(String seconds) {
+    return 'Durée : $seconds s';
+  }
+
+  @override
+  String get stickerVideoPlay => 'Lecture';
+
+  @override
+  String get stickerVideoPause => 'Pause';
+
+  @override
+  String get stickerVideoHint =>
+      'Choisissez les 3 secondes à garder (500 ms au minimum). La vidéo est découpée sur nos serveurs, sans le son.';
+
+  @override
+  String get stickerVideoTooBig =>
+      'Cette vidéo dépasse 20 Mo. Choisissez-en une plus courte.';
+
+  @override
+  String get stickerVideoFormat =>
+      'Format non pris en charge. Choisissez une vidéo MP4, MOV ou WebM.';
+
+  @override
+  String get stickerVideoUnsupported =>
+      'Les vidéos ne sont pas encore prises en charge.';
+
+  @override
+  String get stickerVideoTooShort =>
+      'Cette vidéo est trop courte (500 ms au minimum).';
+
+  @override
+  String get stickerVideoLoadFailed => 'Impossible de lire cette vidéo.';
+
+  @override
+  String get stickerVideoConverting => 'Envoi et conversion de la vidéo…';
+
+  @override
+  String get stickerVideoConvertingHint =>
+      'En données mobiles, cela peut prendre jusqu\'à une minute.';
+
+  @override
+  String get stickerVideoInvalid =>
+      'Cette vidéo n\'est pas prise en charge ou est trop détaillée. Essayez une vidéo plus courte ou plus simple.';
 }

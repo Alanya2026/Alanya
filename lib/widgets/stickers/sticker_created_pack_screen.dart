@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/db/app_database.dart';
 import '../../features/media_editor/media_editor_screen.dart';
 import '../../core/services/stickers/sticker_animated_check.dart';
+import '../../core/services/stickers/sticker_video_check.dart';
 import '../../core/services/stickers/sticker_creation_repository.dart';
 import '../../core/services/stickers/sticker_image_adapter.dart';
 import '../../core/services/stickers/sticker_image_check.dart';
@@ -19,6 +20,7 @@ import 'non_looping_animated_sticker.dart';
 import 'sticker_animated_screen.dart';
 import 'sticker_creation_flows.dart';
 import 'sticker_image.dart';
+import 'sticker_video_screen.dart';
 
 /// Choisit une image dans la galerie. Injectable pour les tests ; **sans**
 /// `maxWidth` ni `imageQuality` : le sélecteur ne doit rien ré-encoder, c'est
@@ -26,26 +28,46 @@ import 'sticker_image.dart';
 typedef StickerImagePicker =
     Future<({Uint8List bytes, String name})?> Function();
 
-Future<({Uint8List bytes, String name})?> _pickFromGallery() async {
-  final x = await ImagePicker().pickImage(source: ImageSource.gallery);
+Future<({Uint8List bytes, String name})?> _pickFromGallery({bool allowVideo = false}) async {
+  // Avec les vidéos ouvertes (§4d), la galerie propose photos ET vidéos.
+  final picker = ImagePicker();
+  final x = allowVideo
+      ? await picker.pickMedia()
+      : await picker.pickImage(source: ImageSource.gallery);
   if (x == null) return null;
   // Taille connue avant de lire : un fichier énorme n'est jamais chargé.
-  if (await x.length() > StickerImageAdapter.maxInputBytes) {
-    throw const StickerImageRejected(StickerImageIssue.inputTooBig);
+  final limit = allowVideo && StickerVideoCheck.maxBytes > StickerImageAdapter.maxInputBytes
+      ? StickerVideoCheck.maxBytes
+      : StickerImageAdapter.maxInputBytes;
+  if (await x.length() > limit) {
+    throw allowVideo
+        ? const StickerVideoRejected(StickerVideoIssue.tooBig)
+        : const StickerImageRejected(StickerImageIssue.inputTooBig);
   }
   return (bytes: await x.readAsBytes(), name: x.name);
 }
 
 /// Choisit un GIF ou un WebP animé dans la galerie (V1c). Injectable pour les
 /// tests ; le fichier n'est **pas** ré-encodé : il part tel quel au serveur.
-Future<({Uint8List bytes, String name})?> _pickAnimatedFromGallery() async {
-  final x = await ImagePicker().pickImage(source: ImageSource.gallery);
+Future<({Uint8List bytes, String name})?> _pickAnimatedFromGallery({bool allowVideo = false}) async {
+  final picker = ImagePicker();
+  final x = allowVideo
+      ? await picker.pickMedia()
+      : await picker.pickImage(source: ImageSource.gallery);
   if (x == null) return null;
-  // Taille connue avant de lire : plus de 3 Mo n'est jamais chargé.
-  if (await x.length() > StickerAnimatedCheck.maxBytes) {
+  // Taille connue avant de lire : un GIF de plus de 3 Mo n'est jamais chargé ;
+  // une vidéo peut aller jusqu'à 20 Mo (le format est vérifié après lecture).
+  final limit = allowVideo ? StickerVideoCheck.maxBytes : StickerAnimatedCheck.maxBytes;
+  if (await x.length() > limit) {
+    throw allowVideo
+        ? const StickerVideoRejected(StickerVideoIssue.tooBig)
+        : const StickerAnimatedRejected(StickerAnimatedIssue.tooBig);
+  }
+  final bytes = await x.readAsBytes();
+  if (allowVideo && !StickerVideoCheck.isVideo(bytes) && bytes.length > StickerAnimatedCheck.maxBytes) {
     throw const StickerAnimatedRejected(StickerAnimatedIssue.tooBig);
   }
-  return (bytes: await x.readAsBytes(), name: x.name);
+  return (bytes: bytes, name: x.name);
 }
 
 /// Ouvre l'écran « Sticker animé » (forme, aperçu, ajout). Injectable pour les
@@ -66,6 +88,31 @@ Future<StickerAnimatedResult?> openStickerAnimatedScreen(
 ) => Navigator.of(context).push<StickerAnimatedResult>(
   MaterialPageRoute(
     builder: (_) => StickerAnimatedScreen(
+      packId: packId,
+      bytes: bytes,
+      filename: filename,
+    ),
+  ),
+);
+
+/// Ouvre l'écran « Sticker depuis une vidéo » (fenêtre, forme, ajout).
+/// Injectable pour les tests ; rend le résultat du serveur, ou `null`.
+typedef StickerVideoFlow =
+    Future<StickerAnimatedResult?> Function(
+      BuildContext context,
+      int packId,
+      Uint8List bytes,
+      String filename,
+    );
+
+Future<StickerAnimatedResult?> openStickerVideoScreen(
+  BuildContext context,
+  int packId,
+  Uint8List bytes,
+  String filename,
+) => Navigator.of(context).push<StickerAnimatedResult>(
+  MaterialPageRoute(
+    builder: (_) => StickerVideoScreen(
       packId: packId,
       bytes: bytes,
       filename: filename,
@@ -105,18 +152,21 @@ class StickerCreatedPackScreen extends StatefulWidget {
   const StickerCreatedPackScreen({
     super.key,
     required this.packId,
-    this.pickImage = _pickFromGallery,
-    this.pickAnimated = _pickAnimatedFromGallery,
+    this.pickImage,
+    this.pickAnimated,
     this.animatedFlow = openStickerAnimatedScreen,
+    this.videoFlow = openStickerVideoScreen,
     this.adaptImage = StickerImageAdapter.adapt,
     this.editImage = openStickerEditor,
     this.shareText = _systemShare,
   });
 
   final int packId;
-  final StickerImagePicker pickImage;
-  final StickerImagePicker pickAnimated;
+  /// `null` : la galerie du téléphone (photos, et vidéos si le serveur les ouvre).
+  final StickerImagePicker? pickImage;
+  final StickerImagePicker? pickAnimated;
   final StickerAnimatedFlow animatedFlow;
+  final StickerVideoFlow videoFlow;
   final StickerImageAdaptation adaptImage;
   final StickerImageEditor editImage;
   final StickerTextSharer shareText;
@@ -155,6 +205,7 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
   /// aperçu, envoi du fichier tel quel). Refus clair avant tout envoi : format,
   /// plus de 3 Mo, fichier non animé ([StickerAnimatedRejected]).
   Future<void> _animatedFrom(({Uint8List bytes, String name}) picked) async {
+    if (StickerVideoCheck.isVideo(picked.bytes)) return _videoFrom(picked);
     StickerAnimatedCheck.validate(picked.bytes);
     if (!mounted) return;
     final r = await widget.animatedFlow(
@@ -174,16 +225,54 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
     );
   }
 
-  /// Cellule « Sticker animé » : choisit un GIF / WebP animé dans la galerie.
+  /// Vidéos ouvertes : animés ET `features.video` (ffmpeg côté serveur, §4d).
+  bool get _videoOpen =>
+      _repo.features.animated.value && _repo.features.video.value;
+
+  /// Une vidéo (MP4, MOV, WebM) part vers l'écran de découpe. Refus clair avant
+  /// tout envoi : serveur sans ffmpeg, format, plus de 20 Mo
+  /// ([StickerVideoRejected]).
+  Future<void> _videoFrom(({Uint8List bytes, String name}) picked) async {
+    if (!_videoOpen) {
+      throw const StickerVideoRejected(StickerVideoIssue.unsupported);
+    }
+    StickerVideoCheck.validate(picked.bytes);
+    if (!mounted) return;
+    final r = await widget.videoFlow(
+      context,
+      widget.packId,
+      picked.bytes,
+      picked.name,
+    );
+    if (r == null || !mounted) return;
+    final l10n = context.l10n;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(
+          r.upload.reused ? l10n.stickerAlreadyOwned : l10n.stickerAnimatedAdded,
+        ),
+      ),
+    );
+  }
+
+  /// Cellule « Sticker animé » : choisit un GIF / WebP animé (ou une vidéo si le
+  /// serveur les ouvre) dans la galerie.
   Future<void> _addAnimated() => _run(() async {
-    final picked = await widget.pickAnimated();
+    final picked = await (widget.pickAnimated ??
+        () => _pickAnimatedFromGallery(allowVideo: _videoOpen))();
     if (picked == null) return;
     await _animatedFrom(picked);
   });
 
   Future<void> _add() => _run(() async {
-    final picked = await widget.pickImage();
+    final picked = await (widget.pickImage ??
+        () => _pickFromGallery(allowVideo: _videoOpen))();
     if (picked == null) return;
+    // Une vidéo choisie par le bouton « image » : écran de découpe.
+    if (StickerVideoCheck.isVideo(picked.bytes)) {
+      await _videoFrom(picked);
+      return;
+    }
     // Un GIF / WebP animé choisi par le bouton « image » : avec les animés
     // ouverts, on le prend en charge au lieu de le refuser.
     if (_repo.features.animated.value &&

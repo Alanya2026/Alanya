@@ -10,11 +10,13 @@ import '../../core/services/stickers/sticker_creation_repository.dart';
 import '../../core/services/stickers/sticker_image_adapter.dart';
 import '../../core/services/stickers/sticker_image_check.dart';
 import '../../core/services/stickers/sticker_repository.dart';
+import '../../core/services/stickers/sticker_video_check.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import 'sticker_animated_screen.dart';
 import 'sticker_created_pack_screen.dart';
 import 'sticker_creation_flows.dart';
+import 'sticker_video_screen.dart';
 
 /// Ouvre l'écran « Sticker animé » pour le bouton « Créer » : sans pack (le
 /// serveur dépose le sticker dans le pack perso par défaut). Injectable.
@@ -36,18 +38,44 @@ Future<StickerAnimatedResult?> _openAnimated(
   ),
 );
 
+/// Ouvre l'écran « Sticker depuis une vidéo » pour le bouton « Créer » (sans
+/// pack : le serveur utilise le pack perso par défaut). Injectable.
+typedef StickerQuickVideoFlow =
+    Future<StickerAnimatedResult?> Function(
+      BuildContext context,
+      Uint8List bytes,
+      String filename,
+    );
+
+Future<StickerAnimatedResult?> _openVideo(
+  BuildContext context,
+  Uint8List bytes,
+  String filename,
+) => Navigator.of(context).push<StickerAnimatedResult>(
+  MaterialPageRoute(
+    builder: (_) =>
+        StickerVideoScreen(packId: null, bytes: bytes, filename: filename),
+  ),
+);
+
 /// Sélecteur de la galerie, **sans** `maxWidth` ni `imageQuality` (rien n'est
 /// ré-encodé ici : l'adaptation ou le serveur s'en charge). La taille est
 /// connue avant lecture : un fichier énorme n'est jamais chargé.
-Future<({Uint8List bytes, String name})?> _pickFromGallery() async {
-  final x = await ImagePicker().pickImage(source: ImageSource.gallery);
+Future<({Uint8List bytes, String name})?> _pickFromGallery({bool allowVideo = false}) async {
+  // Avec les vidéos ouvertes (§4d), la galerie propose photos ET vidéos.
+  final picker = ImagePicker();
+  final x = allowVideo
+      ? await picker.pickMedia()
+      : await picker.pickImage(source: ImageSource.gallery);
   if (x == null) return null;
   final limit = math.max(
-    StickerImageAdapter.maxInputBytes,
-    StickerAnimatedCheck.maxBytes,
+    math.max(StickerImageAdapter.maxInputBytes, StickerAnimatedCheck.maxBytes),
+    allowVideo ? StickerVideoCheck.maxBytes : 0,
   );
   if (await x.length() > limit) {
-    throw const StickerImageRejected(StickerImageIssue.inputTooBig);
+    throw allowVideo
+        ? const StickerVideoRejected(StickerVideoIssue.tooBig)
+        : const StickerImageRejected(StickerImageIssue.inputTooBig);
   }
   return (bytes: await x.readAsBytes(), name: x.name);
 }
@@ -60,12 +88,14 @@ class StickerCreateHooks {
     this.adaptImage,
     this.editImage,
     this.animatedFlow,
+    this.videoFlow,
   });
 
   final StickerImagePicker? pickImage;
   final StickerImageAdaptation? adaptImage;
   final StickerImageEditor? editImage;
   final StickerQuickAnimatedFlow? animatedFlow;
+  final StickerQuickVideoFlow? videoFlow;
 }
 
 /// Tuile « Créer » : première case de l'onglet Récents du plateau.
@@ -108,12 +138,28 @@ class _StickerCreateTileState extends State<StickerCreateTile> {
     var animated = false;
     try {
       if (!await ensureStickerPrivacyAck(context) || !mounted) return;
-      final picked = await (widget.hooks.pickImage ?? _pickFromGallery)();
+      final features = widget.creation.features;
+      final videoOpen = features.animated.value && features.video.value;
+      final picked = await (widget.hooks.pickImage ??
+          () => _pickFromGallery(allowVideo: videoOpen))();
       if (picked == null || !mounted) return;
 
       final StickerUploadResult? result;
-      // Un GIF / WebP animé : parcours animé si le serveur ouvre les animés.
-      if (widget.creation.features.animated.value &&
+      if (StickerVideoCheck.isVideo(picked.bytes)) {
+        // Une vidéo : écran de découpe (fenêtre, forme), si le serveur sait la convertir.
+        animated = true;
+        if (!videoOpen) {
+          throw const StickerVideoRejected(StickerVideoIssue.unsupported);
+        }
+        StickerVideoCheck.validate(picked.bytes);
+        final r = await (widget.hooks.videoFlow ?? _openVideo)(
+          context,
+          picked.bytes,
+          picked.name,
+        );
+        result = r?.upload;
+      } else if (widget.creation.features.animated.value &&
+          // Un GIF / WebP animé : parcours animé si le serveur ouvre les animés.
           StickerAnimatedCheck.isAnimated(picked.bytes)) {
         animated = true;
         StickerAnimatedCheck.validate(picked.bytes);

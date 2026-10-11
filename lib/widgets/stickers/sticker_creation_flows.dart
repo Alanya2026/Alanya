@@ -11,6 +11,7 @@ import '../../core/services/stickers/sticker_animated_check.dart';
 import '../../core/services/stickers/sticker_creation_repository.dart';
 import '../../core/services/stickers/sticker_image_check.dart';
 import '../../core/services/stickers/sticker_repository.dart';
+import '../../core/services/stickers/sticker_video_check.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -33,7 +34,7 @@ const int kPickNewStickerPack = -1;
 /// (`STICKER_QUOTA_EXCEEDED`, `STICKER_PACK_LIMIT`, `RATE_LIMITED`…).
 void showStickerCreationError(BuildContext context, Object error) {
   if (!context.mounted) return;
-  if (error is StickerAnimatedRejected) {
+  if (error is StickerAnimatedRejected || error is StickerVideoRejected) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(content: Text(stickerAnimatedErrorText(context.l10n, error)!)),
     );
@@ -51,7 +52,19 @@ void showStickerCreationError(BuildContext context, Object error) {
 /// Texte d'une erreur de **création animée** (V1c, contrat §4c), ou `null` si
 /// elle se présente comme les autres (`STICKER_QUOTA_EXCEEDED`,
 /// `STICKER_PACK_LIMIT`…, via `afficherErreur`).
-String? stickerAnimatedErrorText(AppLocalizations l10n, Object error) {
+String? stickerAnimatedErrorText(AppLocalizations l10n, Object error, {bool video = false}) {
+  if (error is StickerVideoRejected) {
+    switch (error.issue) {
+      case StickerVideoIssue.format:
+        return l10n.stickerVideoFormat;
+      case StickerVideoIssue.tooBig:
+        return l10n.stickerVideoTooBig;
+      case StickerVideoIssue.unsupported:
+        return l10n.stickerVideoUnsupported;
+      case StickerVideoIssue.tooShort:
+        return l10n.stickerVideoTooShort;
+    }
+  }
   if (error is StickerAnimatedRejected) {
     switch (error.issue) {
       case StickerAnimatedIssue.format:
@@ -65,7 +78,9 @@ String? stickerAnimatedErrorText(AppLocalizations l10n, Object error) {
   if (error is TalkyException) {
     // Animés fermés côté serveur : `404 NOT_FOUND` générique.
     if (StickerRepository.isModuleClosed(error)) return l10n.stickerAnimatedClosed;
-    if (error.code == 'STICKER_ASSET_INVALID') return l10n.stickerAnimatedInvalid;
+    if (error.code == 'STICKER_ASSET_INVALID') {
+      return video ? l10n.stickerVideoInvalid : l10n.stickerAnimatedInvalid;
+    }
     // 10 par heure et par compte : « dans une minute » serait faux. Le quota
     // de 200 stickers (`STICKER_QUOTA_EXCEEDED`, aussi en 429) garde son texte.
     if (error.code == 'RATE_LIMITED' ||
@@ -80,9 +95,9 @@ String? stickerAnimatedErrorText(AppLocalizations l10n, Object error) {
 }
 
 /// Présente une erreur de création animée (cf. [stickerAnimatedErrorText]).
-void showAnimatedCreationError(BuildContext context, Object error) {
+void showAnimatedCreationError(BuildContext context, Object error, {bool video = false}) {
   if (!context.mounted) return;
-  final text = stickerAnimatedErrorText(context.l10n, error);
+  final text = stickerAnimatedErrorText(context.l10n, error, video: video);
   if (text == null) {
     showStickerCreationError(context, error);
     return;

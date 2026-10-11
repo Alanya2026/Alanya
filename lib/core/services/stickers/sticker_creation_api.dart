@@ -33,6 +33,7 @@ abstract class StickerCreationApi {
 
   /// V1c (contrat §4c) : GIF ou WebP animé **tel quel**, `shape` =
   /// `cercle` | `carre-arrondi` | `carre`. [cancel] interrompt la requête.
+  /// Vidéo (§4d) : [startMs] et [durationMs] donnent la fenêtre à découper.
   Future<StickerHttpResult> uploadAnimatedAsset(
     List<int> bytes, {
     required String filename,
@@ -40,6 +41,8 @@ abstract class StickerCreationApi {
     int? packId,
     String? emoji,
     String? name,
+    int? startMs,
+    int? durationMs,
     Future<void>? cancel,
   });
 
@@ -116,6 +119,8 @@ class TalkyStickerCreationApi implements StickerCreationApi {
     int? packId,
     String? emoji,
     String? name,
+    int? startMs,
+    int? durationMs,
     Future<void>? cancel,
   }) => _client.uploadAnimatedStickerAsset(
     bytes,
@@ -124,6 +129,8 @@ class TalkyStickerCreationApi implements StickerCreationApi {
     packId: packId,
     emoji: emoji,
     name: name,
+    startMs: startMs,
+    durationMs: durationMs,
     cancel: cancel,
   );
   @override

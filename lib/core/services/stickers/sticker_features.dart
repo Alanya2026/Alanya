@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Fonctionnalités que le serveur ouvre à ce compte (`GET /me` →
-/// `features: {creation, animated}`, contrat §4c).
+/// `features: {creation, animated, video}`, contrats §4c et §4d).
 ///
 /// **Le serveur tranche** : l'application ne fait que refléter. Un champ absent
 /// vaut « fermé » (ancien serveur, module fermé). La dernière valeur connue est
@@ -18,9 +18,10 @@ class StickerFeatures {
 
   static const String creationKey = 'stickers_feature_creation';
   static const String animatedKey = 'stickers_feature_animated';
+  static const String videoKey = 'stickers_feature_video';
 
   /// Clés à oublier à la déconnexion (`clearSession`).
-  static const List<String> prefKeys = [creationKey, animatedKey];
+  static const List<String> prefKeys = [creationKey, animatedKey, videoKey];
 
   /// La création de stickers est ouverte (information de `/me` ; l'interface
   /// de création se règle, elle, sur `GET /me/created`).
@@ -29,6 +30,11 @@ class StickerFeatures {
   /// La création **et** la lecture des stickers animés sont ouvertes
   /// (`animated_enabled`). Faux : aucune option « animé » n'apparaît.
   final ValueNotifier<bool> animated = ValueNotifier<bool>(false);
+
+  /// Le serveur sait convertir une **vidéo** en sticker animé (ffmpeg présent,
+  /// contrat §4d). Toujours faux quand les animés sont fermés : l'option vidéo
+  /// n'existe que dans le parcours animé.
+  final ValueNotifier<bool> video = ValueNotifier<bool>(false);
 
   bool _restored = false;
 
@@ -40,6 +46,7 @@ class StickerFeatures {
     // Une valeur déjà posée par `/me` pendant l'attente l'emporte.
     if (!creation.value) creation.value = prefs.getBool(creationKey) ?? false;
     if (!animated.value) animated.value = prefs.getBool(animatedKey) ?? false;
+    if (!video.value) video.value = prefs.getBool(videoKey) ?? false;
   }
 
   /// Applique le champ `features` d'une réponse `/me` ; absent ou illisible =
@@ -47,14 +54,19 @@ class StickerFeatures {
   Future<void> apply(Object? raw) async {
     final map = raw is Map ? raw : const {};
     _restored = true;
-    await _set(creation: map['creation'] == true, animated: map['animated'] == true);
+    final animated = map['animated'] == true;
+    await _set(
+      creation: map['creation'] == true,
+      animated: animated,
+      video: animated && map['video'] == true,
+    );
   }
 
   /// Le serveur a répondu `404 NOT_FOUND` à la création animée : les animés
   /// sont fermés, l'option disparaît.
-  Future<void> animatedClosed() => _set(animated: false);
+  Future<void> animatedClosed() => _set(animated: false, video: false);
 
-  Future<void> _set({bool? creation, bool? animated}) async {
+  Future<void> _set({bool? creation, bool? animated, bool? video}) async {
     final prefs = await SharedPreferences.getInstance();
     if (creation != null) {
       this.creation.value = creation;
@@ -63,6 +75,10 @@ class StickerFeatures {
     if (animated != null) {
       this.animated.value = animated;
       await prefs.setBool(animatedKey, animated);
+    }
+    if (video != null) {
+      this.video.value = video;
+      await prefs.setBool(videoKey, video);
     }
   }
 }

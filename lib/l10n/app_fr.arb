@@ -4427,5 +4427,36 @@
   },
   "stickerView": "Voir",
   "chatPanelExpand": "Agrandir le panneau",
-  "chatPanelCollapse": "Réduire le panneau"
+  "chatPanelCollapse": "Réduire le panneau",
+  "stickerVideoTitle": "Sticker depuis une vidéo",
+  "stickerVideoPreviewLabel": "Aperçu de la vidéo découpée",
+  "stickerVideoStart": "Début",
+  "stickerVideoDuration": "Durée",
+  "stickerVideoStartValue": "Début : {time}",
+  "@stickerVideoStartValue": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoDurationValue": "Durée : {seconds} s",
+  "@stickerVideoDurationValue": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoPlay": "Lecture",
+  "stickerVideoPause": "Pause",
+  "stickerVideoHint": "Choisissez les 3 secondes à garder (500 ms au minimum). La vidéo est découpée sur nos serveurs, sans le son.",
+  "stickerVideoTooBig": "Cette vidéo dépasse 20 Mo. Choisissez-en une plus courte.",
+  "stickerVideoFormat": "Format non pris en charge. Choisissez une vidéo MP4, MOV ou WebM.",
+  "stickerVideoUnsupported": "Les vidéos ne sont pas encore prises en charge.",
+  "stickerVideoTooShort": "Cette vidéo est trop courte (500 ms au minimum).",
+  "stickerVideoLoadFailed": "Impossible de lire cette vidéo.",
+  "stickerVideoConverting": "Envoi et conversion de la vidéo…",
+  "stickerVideoConvertingHint": "En données mobiles, cela peut prendre jusqu'à une minute.",
+  "stickerVideoInvalid": "Cette vidéo n'est pas prise en charge ou est trop détaillée. Essayez une vidéo plus courte ou plus simple."
 }

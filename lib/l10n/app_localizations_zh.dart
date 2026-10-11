@@ -7749,4 +7749,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatPanelCollapse => '收起面板';
+
+  @override
+  String get stickerVideoTitle => '视频贴纸';
+
+  @override
+  String get stickerVideoPreviewLabel => '裁剪后的视频预览';
+
+  @override
+  String get stickerVideoStart => '开始';
+
+  @override
+  String get stickerVideoDuration => '时长';
+
+  @override
+  String stickerVideoStartValue(String time) {
+    return '开始：$time';
+  }
+
+  @override
+  String stickerVideoDurationValue(String seconds) {
+    return '时长：$seconds 秒';
+  }
+
+  @override
+  String get stickerVideoPlay => '播放';
+
+  @override
+  String get stickerVideoPause => '暂停';
+
+  @override
+  String get stickerVideoHint =>
+      '选择要保留的片段（最长 3 秒，最短 500 毫秒）。视频在我们的服务器上裁剪，不含声音。';
+
+  @override
+  String get stickerVideoTooBig => '此视频超过 20 MB，请选择更短的视频。';
+
+  @override
+  String get stickerVideoFormat => '不支持此格式，请选择 MP4、MOV 或 WebM 视频。';
+
+  @override
+  String get stickerVideoUnsupported => '暂不支持视频。';
+
+  @override
+  String get stickerVideoTooShort => '此视频太短（至少 500 毫秒）。';
+
+  @override
+  String get stickerVideoLoadFailed => '无法播放此视频。';
+
+  @override
+  String get stickerVideoConverting => '正在上传并转换视频…';
+
+  @override
+  String get stickerVideoConvertingHint => '使用移动数据时可能需要最多一分钟。';
+
+  @override
+  String get stickerVideoInvalid => '不支持此视频，或内容过于复杂。请尝试更短或更简单的视频。';
 }
