@@ -11,6 +11,7 @@ import '../../talky_models.dart';
 import '../../core/db/app_database.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/services/meeting/meeting_join_refusal.dart';
+import '../../core/services/billing/entitlement_service.dart';
 import '../../core/services/meeting_service.dart';
 import '../../talky_api_client.dart';
 import '../../core/services/push_service.dart';
@@ -22,6 +23,7 @@ import 'participant_picker_screen.dart';
 import '../shared/schedule_screen.dart';
 import '../../core/theme/locale_controller.dart';
 import 'package:intl/intl.dart';
+import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 
@@ -164,6 +166,12 @@ class _MeetsScreenState extends State<MeetsScreen>
   }
 
   Future<void> _createNewMeeting() async {
+    // Créer une réunion est émettre : refusé sans abonnement, avant même de
+    // choisir les invités. Rejoindre une réunion sur invitation reste permis.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
     if (_myId == 0) {
       final me = context.read<AuthProvider>().currentUser;
       if (me != null) setState(() => _myId = me.alanyaID);
@@ -218,6 +226,12 @@ class _MeetsScreenState extends State<MeetsScreen>
     final erreur = await echec;
     if (!mounted) return;
     if (erreur != null) {
+      // Le serveur refuse faute d'abonnement : le panneau parle.
+      if (refusAlanyaPlus(erreur) != null) {
+        afficherErreur(context, erreur, domaine: ErrorDomain.reunion);
+        _loadMeetings();
+        return;
+      }
       final message =
           refusPourErreur(erreur) == MeetingJoinRefusal.sessionOccupee
               ? context.l10n.meetingBlockedByCall

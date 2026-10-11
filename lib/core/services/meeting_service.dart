@@ -16,6 +16,7 @@ import '../navigation/app_navigator.dart';
 import '../theme/locale_controller.dart';
 import '../errors/app_error.dart';
 import '../errors/error_kind.dart';
+import 'billing/entitlement_service.dart';
 
 enum MeetingStatus { idle, joining, connected, ended }
 
@@ -901,6 +902,12 @@ class MeetingService extends ChangeNotifier {
   /// Envoie un message chat dans la réunion.
   void sendChatMessage(String message, int myId) {
     if (_currentMeeting == null) return;
+    // On rejoint une réunion sur invitation sans abonnement, on n'y écrit pas.
+    // Le serveur refuserait sans accusé : le refus se dit ici.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
 
     // !! Champs corrects : meetingID, userID
     _apiClient.sendSocketEvent(SocketEvents.meetingChat, {

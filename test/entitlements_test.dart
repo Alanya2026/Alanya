@@ -29,7 +29,77 @@ Map<String, dynamic> _payload({
       'validUntil': validUntil,
     };
 
+/// Charge utile du régime essai : le droit d'émettre est hors catalogue
+/// (`features.outgoing`), et `trial` donne la fin de l'essai.
+Map<String, dynamic> _trialPayload({
+  bool outgoing = true,
+  bool trialActive = true,
+  Map<String, dynamic>? period,
+  String phase = 'paid',
+}) =>
+    {
+      ..._payload(phase: phase, period: period),
+      'model': 2,
+      'trial': {'endsAt': '2026-12-01T00:00:00.000Z', 'active': trialActive},
+      'features': {'translation': trialActive, 'outgoing': outgoing},
+    };
+
 void main() {
+  group('Régime essai', () {
+    test('un serveur qui n\'en parle pas : Alanya Plus, tout est permis', () {
+      final e = Entitlements.fromJson(_payload());
+      expect(e.model, PlusModel.plus);
+      expect(e.isTrialModel, isFalse);
+      expect(e.trial, isNull);
+      // Le droit d'émettre n'existe pas dans cette charge utile : ouvert.
+      expect(e.canSend, isTrue);
+    });
+
+    test('essai en cours : on peut tout faire, la fin est connue', () {
+      final e = Entitlements.fromJson(_trialPayload());
+      expect(e.model, PlusModel.trial);
+      expect(e.isTrialModel, isTrue);
+      expect(e.canSend, isTrue);
+      expect(e.trial!.active, isTrue);
+      expect(e.trial!.endsAt, DateTime.utc(2026, 12, 1));
+      expect(e.has(PlusFeature.translation), isTrue);
+    });
+
+    test('essai fini, sans abonnement : on ne peut ni envoyer ni appeler', () {
+      final e = Entitlements.fromJson(_trialPayload(outgoing: false, trialActive: false));
+      expect(e.canSend, isFalse);
+      expect(e.trial!.active, isFalse);
+      expect(e.has(PlusFeature.translation), isFalse);
+    });
+
+    test('sans droits connus, ou sans mention du droit : on ne ferme jamais', () {
+      expect(Entitlements.unrestricted.canSend, isTrue);
+      final sansDroit = Entitlements.fromJson({..._trialPayload(), 'features': <String, bool>{}});
+      expect(sansDroit.canSend, isTrue);
+    });
+
+    test('le régime et l\'essai survivent au cache local', () {
+      final e = Entitlements.fromJson(_trialPayload(outgoing: false, trialActive: false));
+      final back = Entitlements.fromJson(e.toJson());
+      expect(back.model, PlusModel.trial);
+      expect(back.canSend, isFalse);
+      expect(back.trial!.endsAt, DateTime.utc(2026, 12, 1));
+      expect(back.trial!.active, isFalse);
+    });
+
+    test('une période née d\'un code porte la source 4', () {
+      final e = Entitlements.fromJson(_trialPayload(period: {
+        'plan': 'plus_annuel',
+        'startsAt': '2026-10-10T00:00:00.000Z',
+        'endsAt': '2027-10-10T00:00:00.000Z',
+        'source': 4,
+        'autoRenew': false,
+      }));
+      expect(e.period!.source, 4);
+      expect(e.isSubscribed, isTrue);
+    });
+  });
+
   group('Entitlements', () {
     test('sans droits connus, tout est permis', () {
       const e = Entitlements.unrestricted;
@@ -103,6 +173,27 @@ void main() {
       await s.applyFromProfile({'alanyaID': 7});
       expect(s.current.known, isFalse);
       expect(EntitlementService.allows(PlusFeature.backup), isTrue);
+    });
+
+    test('un refus d\'émettre est annoncé une fois, pas à chaque message', () async {
+      final s = EntitlementService(api: TalkyApiClient());
+      await s.apply(_trialPayload(outgoing: false, trialActive: false));
+      expect(s.canSend, isFalse);
+      expect(EntitlementService.allowsOutgoing, isFalse);
+
+      var signals = 0;
+      final sub = s.outgoingBlocked.listen((_) => signals++);
+      // Cinq messages en file qui échouent ensemble : un seul signal.
+      for (var i = 0; i < 5; i++) {
+        s.reportOutgoingBlocked();
+      }
+      await Future<void>.delayed(Duration.zero);
+      expect(signals, 1);
+      await sub.cancel();
+
+      await s.apply(_trialPayload());
+      expect(EntitlementService.allowsOutgoing, isTrue,
+          reason: 'un code activé rouvre l\'émission sans redémarrage');
     });
 
     test('les droits survivent au redémarrage, pas à la déconnexion', () async {

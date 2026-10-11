@@ -16,6 +16,12 @@ extension CallGroup on CallService {
     List<GroupParticipantInfo>? targets,
   }) async {
     if (_status != CallStatus.idle) return;
+    // Rejoindre un appel de groupe sur invitation reste permis sans
+    // abonnement ; en lancer un, non.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
     if (!await _ensureFullyConnectedForOutgoingCall()) return;
 
     final maxOthers = CallLimits.maxSelectable(isVideo: isVideo);

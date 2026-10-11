@@ -29,8 +29,9 @@ import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
 import '../../core/services/voice_playback_service.dart';
 import '../../core/services/translation/message_translation_service.dart';
+import '../../core/services/billing/entitlement_service.dart';
 import '../../core/services/billing/entitlements.dart' show PlusFeature;
-import '../../widgets/billing/paywall_sheet.dart' show guardPlus;
+import '../../widgets/billing/paywall_sheet.dart' show guardPlus, showPaywall;
 import '../../core/services/translation/translatable_content.dart';
 import '../../core/services/translation/translation_languages.dart';
 import '../../core/services/translation/translation_state.dart';
@@ -126,7 +127,12 @@ const int _maxSelectionCount = 50;
 /// Deux causes qui ne doivent pas être confondues : `blocked` est définitif
 /// tant que l'utilisateur ne débloque pas, `adminsOnly` peut être levé en
 /// direct par un administrateur. Elles n'affichent pas le même bandeau.
-enum ComposerLock { none, blocked, adminsOnly, official }
+///
+/// `subscription` : régime essai, essai fini et aucun abonnement — le compte
+/// reçoit, il n'écrit pas. Contrairement aux autres, il se lève en direct
+/// (un code activé, ici ou sur un autre appareil) et mène à une action : le
+/// panneau de l'abonnement.
+enum ComposerLock { none, blocked, adminsOnly, official, subscription }
 
 /// Plafond au-delà duquel on renonce à sauter au premier non-lu.
 ///
@@ -859,6 +865,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         !canSend(_myGroupRole, _groupOnlyAdminsCanSend)) {
       return ComposerLock.adminsOnly;
     }
+    if (!EntitlementService.allowsOutgoing) return ComposerLock.subscription;
     return ComposerLock.none;
   }
 
@@ -1082,6 +1089,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   Widget build(BuildContext context) {
     // Rebuild sur changement de présence / typing (header + bulle).
     final chat = Provider.of<ChatProvider>(context);
+    // Le droit d'écrire se lève (ou se ferme) en direct : un code activé ici ou
+    // sur un autre appareil rouvre la saisie sans quitter la conversation.
+    context.watch<EntitlementService>();
     final convId = _convId;
     final partnerTyping = convId != null &&
         chat.isPartnerTyping(

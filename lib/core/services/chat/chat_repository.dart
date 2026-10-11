@@ -22,6 +22,7 @@ import '../media_download_preferences.dart';
 import '../voice_asset_resolver.dart';
 import '../../../talky_api_client.dart' hide ChatHttpApi;
 import '../../../talky_models.dart';
+import '../billing/entitlement_service.dart';
 import 'chat_api.dart';
 import 'conversation_summary_reducer.dart';
 import 'conversation_sync.dart';
@@ -520,6 +521,14 @@ class ChatRepository {
 
   static const int maxAlbumItems = MessageSender.maxAlbumItems;
 
+  /// Le compte peut-il émettre ? Sinon le panneau de l'abonnement s'ouvre.
+  /// Voir `MessageSender._outgoingAllowed` : sans droits connus, tout passe.
+  bool _outgoingAllowed() {
+    if (EntitlementService.allowsOutgoing) return true;
+    EntitlementService.maybeInstance?.reportOutgoingBlocked();
+    return false;
+  }
+
   Future<void> sendText({
     required int conversationID,
     required String content,
@@ -660,6 +669,9 @@ class ChatRepository {
         succeeded: 0,
         failed: 0,
       );
+    }
+    if (!_outgoingAllowed()) {
+      return const ForwardResult(succeeded: 0, failed: 1);
     }
     if (!canForwardAlbum(sourceItems)) {
       return ForwardResult(
@@ -803,6 +815,9 @@ class ChatRepository {
         succeeded: 0,
         failed: 0,
       );
+    }
+    if (!_outgoingAllowed()) {
+      return const ForwardResult(succeeded: 0, failed: 1);
     }
     if (sources.isEmpty || targetConversationIDs.isEmpty) {
       return const ForwardResult(succeeded: 0, failed: 0);
@@ -953,6 +968,9 @@ class ChatRepository {
   Future<bool> hasSyncPending() => _dao.hasSyncPending();
 
   Future<void> editMessage(int msgID, String content) async {
+    // Modifier un message est émettre : refusé sans abonnement, AVANT la mise à
+    // jour locale — sinon l'écran montrerait un texte que le serveur a refusé.
+    if (!_outgoingAllowed()) return;
     await _dao.updateContentByServerId(msgID, content);
     // Aperçu à jour si c'était le dernier message.
     final convID = await _conversationIdForMsg(msgID);

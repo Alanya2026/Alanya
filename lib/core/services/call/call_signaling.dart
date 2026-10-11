@@ -419,6 +419,16 @@ extension CallSignaling on CallService {
         }
         return;
       }
+      // Le serveur refuse de lancer un appel de groupe : essai fini, aucun
+      // abonnement (le droit en cache disait oui — un code a pu expirer).
+      if (code == 'SUBSCRIPTION_REQUIRED') {
+        if (_status == CallStatus.outgoing) {
+          _cancelOutgoingTimeout();
+          await _terminateCall();
+        }
+        EntitlementService.maybeInstance?.reportOutgoingBlocked();
+        return;
+      }
       if (code == 'DEVICE_ID_REQUIRED' || code == 'CALL_ID_UNAVAILABLE') {
         if (!acceptsOutgoingTerminalEvent(
           callStatusName: _status.name,
@@ -461,6 +471,12 @@ extension CallSignaling on CallService {
       _cancelOutgoingTimeout();
       _markTerminalCallId(failedCallId ?? _currentCallId);
       await _terminateCall();
+      // Refus d'abonnement : le panneau parle, pas un texte du serveur affiché
+      // tel quel dans une barre d'état.
+      if (code == 'SUBSCRIPTION_REQUIRED') {
+        EntitlementService.maybeInstance?.reportOutgoingBlocked();
+        return;
+      }
       if (code == 'CALL_BLOCKED') {
         _showTransientMessage(LocaleController.instance.l10n.callImpossible);
       } else if (code == 'CALLER_BUSY') {
@@ -1009,6 +1025,9 @@ extension CallSignaling on CallService {
       if (data is! Map) return;
       final code = data['code']?.toString() ?? 'INTERNAL';
       debugPrint('[CallService] ✖ ajout refusé: $code');
+      if (code == 'SUBSCRIPTION_REQUIRED') {
+        EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      }
       _lastConfFailure = _addRejectionReason(code);
       // Deux appuis simultanés : le perdant peut recevoir le call_add_pending
       // du gagnant avant son propre refus. Effacer le tour ici retirerait la

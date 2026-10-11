@@ -6905,6 +6905,162 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your Plus settings and history have been deleted. Subscribe again to get your features back.';
 
   @override
+  String get plusCardTrialKicker => 'Free trial';
+
+  @override
+  String plusCardTrialTitle(String date) {
+    return 'Free until $date';
+  }
+
+  @override
+  String get plusCardTrialBody =>
+      'Everything is open. After that, you will still receive your messages and calls, but you will need a subscription to send and call.';
+
+  @override
+  String plusCardTrialDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trial days left',
+      one: '1 trial day left',
+      zero: 'last trial day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardSubscribe => 'Subscribe';
+
+  @override
+  String get plusCardRestrictedKicker => 'Trial ended';
+
+  @override
+  String get plusCardRestrictedTitle => 'You can no longer send or call';
+
+  @override
+  String get plusCardRestrictedBody =>
+      'You still receive your messages and calls. Subscribe to send messages and call again.';
+
+  @override
+  String get plusCardLapsedTrialBody =>
+      'You still receive your messages and calls. Enter a new code to resume.';
+
+  @override
+  String get plusCardRenewByCode => 'To renew, you will need a new code.';
+
+  @override
+  String get plusCardScheduledTrialBody =>
+      'Your free trial continues until then, then the subscription takes over.';
+
+  @override
+  String get subscriptionSourceCode => 'Activation code';
+
+  @override
+  String get redeemTitle => 'I have a code';
+
+  @override
+  String get redeemIntro =>
+      'After paying on the website, you received a code. Enter it here: it unlocks everything for one year.';
+
+  @override
+  String get redeemFieldLabel => 'Activation code';
+
+  @override
+  String get redeemFieldHint => 'XXXXX-XXXXX-XXXXX';
+
+  @override
+  String get redeemSubmit => 'Activate';
+
+  @override
+  String get redeemChecksumError =>
+      'This code doesn\'t look right. Check each character.';
+
+  @override
+  String get redeemSuccessTitle => 'Subscription activated';
+
+  @override
+  String redeemSuccessActive(String date) {
+    return 'Your subscription is active until $date.';
+  }
+
+  @override
+  String redeemSuccessScheduled(String start, String end) {
+    return 'Your free trial continues. The subscription will start on $start and run until $end.';
+  }
+
+  @override
+  String get redeemDone => 'Done';
+
+  @override
+  String get redeemPaste => 'Paste the code';
+
+  @override
+  String get composerSubscriptionRequired =>
+      'Your trial has ended: you still receive your messages, but you need a subscription to send them.';
+
+  @override
+  String redeemLocked(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutes',
+      one: '1 minute',
+    );
+    return 'Too many attempts. Try again in $_temp0.';
+  }
+
+  @override
+  String get paywallOutgoingTitle => 'Subscribe to continue';
+
+  @override
+  String get paywallOutgoingBody =>
+      'Your free trial has ended. You still receive your messages and calls, but you need a subscription to send messages and make calls.';
+
+  @override
+  String get paywallTrialTitle => 'Subscribe to Alanya';
+
+  @override
+  String get paywallTrialBody =>
+      'A one-year subscription unlocks everything: sending messages, calling, translating, backing up and trusted trips. During the free trial you can take it now: it will start when the trial ends.';
+
+  @override
+  String get paywallPayOnline => 'Pay online';
+
+  @override
+  String get paywallHaveCode => 'I have a code';
+
+  @override
+  String get paywallPayHint =>
+      'You will pay on our website, then receive a code to enter here.';
+
+  @override
+  String get paywallPayUnavailable =>
+      'Online payment is not available yet. If you have a code, enter it.';
+
+  @override
+  String get paywallPayOpenFailed => 'Couldn\'t open the payment website.';
+
+  @override
+  String get errCodeInvalidCode => 'This code doesn\'t exist. Check it.';
+
+  @override
+  String get errCodeInvalidCodeFormat =>
+      'This code is mistyped. It has 15 characters.';
+
+  @override
+  String get errCodeCodeAlreadyUsed => 'This code has already been used.';
+
+  @override
+  String get errCodeCodeExpired => 'This code has expired.';
+
+  @override
+  String get errCodeCodeRevoked => 'This code has been cancelled.';
+
+  @override
+  String get errCodeCodeLocked =>
+      'Too many attempts. Try again in a few minutes.';
+
+  @override
   String get verificationTitle => 'Get the badge';
 
   @override

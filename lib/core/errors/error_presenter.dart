@@ -173,6 +173,21 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
     case 'PAYMENT_PROVIDER_ERROR':
       return l10n.errCodePaymentProviderError;
 
+    // Codes d'activation (régime essai). `CODE_LOCKED` porte `retryAfterSeconds` :
+    // l'écran de saisie en tire des minutes, ce texte n'est que le repli.
+    case 'INVALID_CODE':
+      return l10n.errCodeInvalidCode;
+    case 'INVALID_CODE_FORMAT':
+      return l10n.errCodeInvalidCodeFormat;
+    case 'CODE_ALREADY_USED':
+      return l10n.errCodeCodeAlreadyUsed;
+    case 'CODE_EXPIRED':
+      return l10n.errCodeCodeExpired;
+    case 'CODE_REVOKED':
+      return l10n.errCodeCodeRevoked;
+    case 'CODE_LOCKED':
+      return l10n.errCodeCodeLocked;
+
     // Numéro Alanya choisi. `PHONE_UNAVAILABLE` porte sa raison : l'écran du
     // numéro l'affiche sous le champ, ce texte n'est que le repli.
     case 'PHONE_PURCHASE_UNAVAILABLE':
