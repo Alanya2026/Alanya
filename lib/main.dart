@@ -54,6 +54,7 @@ import 'core/services/stickers/sticker_api.dart';
 import 'core/services/stickers/sticker_cache.dart';
 import 'core/services/stickers/sticker_creation_api.dart';
 import 'core/services/stickers/sticker_creation_repository.dart';
+import 'core/services/stickers/sticker_features.dart';
 import 'core/services/stickers/sticker_repository.dart';
 import 'widgets/stickers/sticker_share_screens.dart';
 import 'core/services/trip_socket_service.dart';
@@ -282,10 +283,14 @@ class _TalkyAppState extends State<TalkyApp> {
   // Stickers : miroir local du catalogue et de l'état de l'utilisateur. Le
   // client réseau est injecté ; `stickers:sync` (autre appareil, back-office)
   // relit l'état serveur.
+  // `features` (`GET /me`, contrat §4c) est partagé avec la création : l'option
+  // « Sticker animé » suit `animated_enabled`.
+  final StickerFeatures _stickerFeatures = StickerFeatures();
   late final StickerRepository _stickers = StickerRepository(
     db: _database,
     api: TalkyStickerApi(_apiClient),
     cache: StickerCache.instance,
+    features: _stickerFeatures,
   );
   // V1b : mes packs créés et le partage. Le client est injecté comme pour le
   // reste ; fermé côté serveur (`404 NOT_FOUND`), il masque ses entrées.
@@ -293,6 +298,7 @@ class _TalkyAppState extends State<TalkyApp> {
       StickerCreationRepository(
     db: _database,
     api: TalkyStickerCreationApi(_apiClient),
+    features: _stickerFeatures,
   );
   late final MessageTranslationService _translation =
       MessageTranslationService(

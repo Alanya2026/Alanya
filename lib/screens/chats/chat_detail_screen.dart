@@ -71,6 +71,7 @@ import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/typing_indicator.dart';
 import '../../widgets/chat/chat_wallpaper.dart';
+import '../../widgets/chat/expandable_panel.dart';
 import '../../widgets/chat/message_status_icon.dart';
 import '../../widgets/chat/reaction_chips.dart';
 import '../calls/group_participants_picker_screen.dart';
@@ -110,6 +111,7 @@ import '../trips/trip_detail_screen.dart';
 import '../../core/utils/trip_payload.dart';
 import '../../core/utils/sticker_payload.dart';
 import '../../core/services/stickers/sticker_repository.dart';
+import '../../widgets/stickers/non_looping_animated_sticker.dart';
 import '../../widgets/stickers/sticker_image.dart';
 import '../../widgets/stickers/sticker_sheet.dart';
 import '../../widgets/stickers/sticker_tray.dart';
@@ -205,6 +207,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   String? _myName;
   bool _hasText = false;
   bool _showEmoji = false;
+
+  /// Panneau émojis · stickers extensible : niveau (normal / grand), hauteur à
+  /// réserver sous la liste. Grand et posé (`covering`), il masque le champ de
+  /// saisie.
+  final ExpandablePanelController _emojiPanel = ExpandablePanelController();
   bool _showFormatBar = false;
   bool _pendingViewOnce = false;
   bool _voiceViewOnce = false;
@@ -403,6 +410,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   @override
   void initState() {
     super.initState();
+    _emojiPanel.addListener(_onEmojiPanelChanged);
     _apiClient = Provider.of<TalkyApiClient>(context, listen: false);
     _chat = Provider.of<ChatProvider>(context, listen: false);
     _voice = Provider.of<VoicePlaybackService>(context, listen: false);
@@ -1127,6 +1135,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _messageController.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
+    _emojiPanel.removeListener(_onEmojiPanelChanged);
+    _emojiPanel.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -1146,13 +1156,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
           partnerUserId: widget.isGroup ? null : widget.userId,
         );
     return PopScope(
-      canPop: !_selectionMode && !_searchMode,
+      canPop: !_selectionMode && !_searchMode && !_showEmoji,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_selectionMode) {
           _exitSelectionMode();
         } else if (_searchMode) {
           _exitSearchMode();
+        } else if (_showEmoji) {
+          // Retour : le panneau grand se réduit d'abord, puis se ferme.
+          if (!_emojiPanel.collapse()) rebuild(() => _showEmoji = false);
         }
       },
       child: Scaffold(
@@ -1162,10 +1175,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
           : _searchMode
               ? _buildSearchAppBar()
               : _buildChatAppBar(partnerTyping),
-      body: Stack(
+      body: LayoutBuilder(
+        builder: (context, box) => Stack(
         children: [
           const Positioned.fill(child: ChatWallpaper()),
-          Column(
+          ExpandablePanelReserve(
+            controller: _emojiPanel,
+            active: _showEmoji && !_selectionMode,
+            normalHeight: _emojiPanelHeights(box.maxHeight).normal,
+            child: Column(
             children: [
               const OfflineBanner(wrapSafeArea: false),
               _buildSearchNoResultBanner(),
@@ -1416,14 +1434,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
               // Dans la Column existante et non un OverlayEntry : un vrai
               // overlay se battrait avec le clavier.
               if (!_selectionMode && !_inputBlocked) _buildMentionOverlay(),
-              if (!_selectionMode && _replyTo != null) _buildReplyBanner(),
+              if (!_selectionMode && _replyTo != null && !_emojiHidesInput) _buildReplyBanner(),
               if (!_selectionMode && _inputBlocked) _buildComposerLockBanner(),
-              if (!_selectionMode && _showFormatBar && !_inputBlocked) _buildFormatBar(),
-              if (!_selectionMode) _buildInputBar(),
-              if (!_selectionMode && _showEmoji) _buildEmojiPicker(),
+              if (!_selectionMode && _showFormatBar && !_inputBlocked && !_emojiHidesInput) _buildFormatBar(),
+              if (!_selectionMode && !_emojiHidesInput) _buildInputBar(),
             ],
           ),
+          ),
+          // Le panneau flotte au-dessus : grand, il recouvre la liste (~90 %)
+          // sans jamais déborder, quel que soit le contenu des bandeaux.
+          if (!_selectionMode && _showEmoji)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildEmojiPicker(box.maxHeight),
+            ),
         ],
+        ),
       ),
       ),
     );

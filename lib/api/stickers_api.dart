@@ -178,6 +178,47 @@ extension StickersApi on TalkyApiClient {
   static String _stickerMimeOf(String filename) =>
       filename.toLowerCase().endsWith('.webp') ? 'image/webp' : 'image/png';
 
+  /// `POST /stickers/assets/animated` (V1c, contrat §4c) — multipart `file` =
+  /// GIF ou WebP animé **tel que choisi** (≤ 3 Mo) + `shape` (`cercle` |
+  /// `carre-arrondi` | `carre`) ; le serveur recadre, applique la forme,
+  /// tronque à 3 s / 45 images et ré-encode → `201 {assetId, stickerId,
+  /// packId, reutilise, animated, bytes, frames, durationMs}`.
+  ///
+  /// La conversion peut prendre jusqu'à ~15 s (un seul encodage animé à la
+  /// fois côté serveur) : délai large. [cancel] **annule** la requête en cours
+  /// (le serveur peut avoir fini : l'appelant relit ses packs).
+  Future<StickerHttpResult> uploadAnimatedStickerAsset(
+    List<int> bytes, {
+    required String filename,
+    required String shape,
+    int? packId,
+    String? emoji,
+    String? name,
+    Future<void>? cancel,
+  }) =>
+      _stickerCall(() async {
+        final req = http.AbortableMultipartRequest(
+          'POST',
+          _stickerUri('/assets/animated'),
+          abortTrigger: cancel,
+        )
+          ..headers.addAll({
+            if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+            'Accept-Language': resolveL10n().localeName,
+          })
+          ..files.add(http.MultipartFile.fromBytes('file', bytes,
+              filename: filename,
+              contentType: MediaType.parse(_stickerAnimatedMimeOf(filename))))
+          ..fields['shape'] = shape;
+        if (packId != null) req.fields['packId'] = '$packId';
+        if (emoji != null && emoji.isNotEmpty) req.fields['emoji'] = emoji;
+        if (name != null && name.isNotEmpty) req.fields['nom'] = name;
+        return http.Response.fromStream(await _client.send(req));
+      }, timeout: const Duration(seconds: 90));
+
+  static String _stickerAnimatedMimeOf(String filename) =>
+      filename.toLowerCase().endsWith('.gif') ? 'image/gif' : 'image/webp';
+
   /// `DELETE /stickers/assets/:id` — supprime un de mes actifs.
   Future<void> deleteStickerAsset(int assetId) async {
     await _stickerCall(() => _client.delete(_stickerUri('/assets/$assetId'),

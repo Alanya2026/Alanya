@@ -242,6 +242,7 @@ class _PackTile extends StatelessWidget {
                         emoji: '',
                         size: 48,
                         showRemovedLabel: false,
+                        staticFrame: true,
                         semanticLabel: pack.name,
                       ),
                     ),

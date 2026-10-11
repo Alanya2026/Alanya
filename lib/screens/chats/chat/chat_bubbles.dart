@@ -1195,6 +1195,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
         emoji: StickerPayload.emojiOf(msg.content),
         size: size,
         showRemovedLabel: false,
+        // Une citation d'un sticker animé reste fixe (vignette).
+        staticFrame: StickerPayload.tryParse(msg.content)?.animated ?? false,
       );
     }
     if (msg.type == 4) {
@@ -1588,6 +1590,18 @@ extension _ChatBubbles on _ChatDetailScreenState {
       );
     } else if (url == null || url.isEmpty) {
       child = StickerFallback(emoji: emoji, size: size, removed: true);
+    } else if (payload.animated) {
+      // Sticker animé (`a` = 1, posé par le serveur) : lu une seule fois à
+      // l'arrivée, rejoué au tap. L'ouverture de la fiche passe par le bouton
+      // « i » ; l'appui long reste celui du menu du message.
+      return NonLoopingAnimatedSticker(
+        url: url,
+        emoji: emoji,
+        size: size,
+        playKey: msg.clientId,
+        interactive: !_selectionMode,
+        onOpenSheet: () => _openStickerSheet(msg, payload, url),
+      );
     } else {
       child = StickerImage(url: url, emoji: emoji, size: size);
     }
@@ -1604,29 +1618,38 @@ extension _ChatBubbles on _ChatDetailScreenState {
         behavior: HitTestBehavior.opaque,
         onTap: !tappable
             ? null
-            : () => showStickerSheet(
-                  context,
-                  payload: payload,
-                  mediaUrl: url,
-                  senderName: msg.senderID == _myId
-                      ? null
-                      : (msg.senderNom?.trim().isNotEmpty == true
-                          ? msg.senderNom!.trim()
-                          : (msg.senderPseudo ?? _chatTitle(context))),
-                  onForward: canForwardMessage(msg)
-                      ? () => unawaited(Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ForwardMessageScreen(
-                                message: msg,
-                                excludeConversationId: _convId,
-                              ),
-                            ),
-                          ))
-                      : null,
-                ),
+            : () => _openStickerSheet(msg, payload, url),
         child: child,
       ),
+    );
+  }
+
+  /// Fiche d'un sticker (tap sur un sticker fixe, bouton « i » d'un animé).
+  Future<void> _openStickerSheet(
+    LocalMessage msg,
+    StickerPayload payload,
+    String? url,
+  ) {
+    return showStickerSheet(
+      context,
+      payload: payload,
+      mediaUrl: url,
+      senderName: msg.senderID == _myId
+          ? null
+          : (msg.senderNom?.trim().isNotEmpty == true
+              ? msg.senderNom!.trim()
+              : (msg.senderPseudo ?? _chatTitle(context))),
+      onForward: canForwardMessage(msg)
+          ? () => unawaited(Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ForwardMessageScreen(
+                    message: msg,
+                    excludeConversationId: _convId,
+                  ),
+                ),
+              ))
+          : null,
     );
   }
 

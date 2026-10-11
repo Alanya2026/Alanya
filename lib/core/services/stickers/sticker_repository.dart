@@ -9,6 +9,7 @@ import '../../db/app_database.dart';
 import '../../utils/sticker_payload.dart';
 import 'sticker_api.dart';
 import 'sticker_cache.dart';
+import 'sticker_features.dart';
 
 /// Un sticker avec le code de son pack (pour fabriquer le payload d'envoi).
 class StickerEntry {
@@ -44,10 +45,12 @@ class StickerRepository {
     required StickerApi api,
     StickerCache? cache,
     DateTime Function()? now,
+    StickerFeatures? features,
   })  : _db = db,
         _api = api,
         _cache = cache,
-        _now = now ?? DateTime.now {
+        _now = now ?? DateTime.now,
+        features = features ?? StickerFeatures() {
     _instance = this;
   }
 
@@ -80,6 +83,11 @@ class StickerRepository {
   final StickerApi _api;
   final StickerCache? _cache;
   final DateTime Function() _now;
+
+  /// Fonctionnalités ouvertes à ce compte (`GET /me` → `features`, contrat
+  /// §4c) : l'option « Sticker animé » n'apparaît que si `animated` est vrai.
+  /// Partagé avec `StickerCreationRepository`.
+  final StickerFeatures features;
 
   /// `false` quand le serveur a fermé le module (routes en 404 sans code) :
   /// l'interface masque alors l'onglet Stickers — rien n'est révélé.
@@ -192,6 +200,7 @@ class StickerRepository {
   /// Catalogue + état de l'utilisateur + stickers des packs installés.
   /// Silencieux hors ligne (le cache local reste affiché).
   Future<void> refresh() async {
+    await features.restore();
     await syncCatalog();
     await syncMe();
     await syncInstalledPacks();
@@ -300,6 +309,8 @@ class StickerRepository {
       available.value = true;
       final body = res.body;
       if (body is! Map) return;
+      // `features` (contrat §4c) : absent = fermé. Le serveur tranche.
+      await features.apply(body['features']);
       final packs = body['packs'] is List ? body['packs'] as List : const [];
       final favs = body['favorites'] is List ? body['favorites'] as List : const [];
       final meCodes = <String>{};

@@ -250,6 +250,8 @@ class _StickerSharePreviewScreenState extends State<StickerSharePreviewScreen> {
               emoji: s.emoji,
               size: 72,
               showRemovedLabel: false,
+              // Liste : image fixe (le fichier peut être animé).
+              staticFrame: true,
             );
           },
         ),

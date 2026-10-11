@@ -30,6 +30,19 @@ abstract class StickerCreationApi {
     String? name,
   });
   Future<void> deleteAsset(int assetId);
+
+  /// V1c (contrat §4c) : GIF ou WebP animé **tel quel**, `shape` =
+  /// `cercle` | `carre-arrondi` | `carre`. [cancel] interrompt la requête.
+  Future<StickerHttpResult> uploadAnimatedAsset(
+    List<int> bytes, {
+    required String filename,
+    required String shape,
+    int? packId,
+    String? emoji,
+    String? name,
+    Future<void>? cancel,
+  });
+
   /// Sticker reçu, désigné par son `sid` (id du sticker, pas de l'actif).
   Future<StickerHttpResult> copySticker(
     int stickerId, {
@@ -94,6 +107,24 @@ class TalkyStickerCreationApi implements StickerCreationApi {
     packId: packId,
     emoji: emoji,
     name: name,
+  );
+  @override
+  Future<StickerHttpResult> uploadAnimatedAsset(
+    List<int> bytes, {
+    required String filename,
+    required String shape,
+    int? packId,
+    String? emoji,
+    String? name,
+    Future<void>? cancel,
+  }) => _client.uploadAnimatedStickerAsset(
+    bytes,
+    filename: filename,
+    shape: shape,
+    packId: packId,
+    emoji: emoji,
+    name: name,
+    cancel: cancel,
   );
   @override
   Future<void> deleteAsset(int assetId) => _client.deleteStickerAsset(assetId);

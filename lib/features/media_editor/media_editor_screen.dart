@@ -20,6 +20,7 @@ import 'widgets/editor_panels.dart';
 import 'widgets/editor_sheets.dart';
 
 export 'media_editor_source.dart' show MediaEditorSource;
+export 'editor_controller.dart' show EditorAspect;
 export 'model/editor_document.dart' show MediaEditorMode;
 export 'render/editor_exporter.dart' show MediaEditorResult;
 
@@ -50,10 +51,21 @@ class MediaEditorScreen extends StatefulWidget {
     this.mode = MediaEditorMode.photo,
     this.pickEmoji = showEditorEmojiPicker,
     this.personSegmenter,
+    this.fixedAspect,
+    this.roundFrame = false,
   });
 
   final MediaEditorSource source;
   final MediaEditorMode mode;
+
+  /// Mode photo : format de cadre imposé (`EditorAspect.square` pour une photo
+  /// de profil). Le choix du format disparaît, l'image remplit le cadre.
+  /// Ignoré en mode sticker (toujours carré).
+  final EditorAspect? fixedAspect;
+
+  /// Montre le cadre vu par un cercle (photo de profil ou de groupe) ; le
+  /// repère n'est jamais exporté.
+  final bool roundFrame;
 
   /// Sélecteur d'emoji (injectable pour les tests).
   final EditorEmojiPicker pickEmoji;
@@ -68,11 +80,18 @@ class MediaEditorScreen extends StatefulWidget {
     BuildContext context, {
     required MediaEditorSource source,
     MediaEditorMode mode = MediaEditorMode.photo,
+    EditorAspect? fixedAspect,
+    bool roundFrame = false,
   }) {
     return Navigator.of(context).push<MediaEditorResult>(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => MediaEditorScreen(source: source, mode: mode),
+        builder: (_) => MediaEditorScreen(
+          source: source,
+          mode: mode,
+          fixedAspect: fixedAspect,
+          roundFrame: roundFrame,
+        ),
       ),
     );
   }
@@ -118,7 +137,12 @@ class _MediaEditorScreenState extends State<MediaEditorScreen> {
         return;
       }
       setState(
-        () => _controller = EditorController(mode: widget.mode, image: image),
+        () => _controller = EditorController(
+          mode: widget.mode,
+          image: image,
+          fixedAspect: widget.fixedAspect,
+          roundFrame: widget.roundFrame,
+        ),
       );
     } on MediaEditorLoadException catch (e) {
       if (mounted) setState(() => _error = e.issue);

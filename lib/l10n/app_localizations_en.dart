@@ -8020,4 +8020,109 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mediaEditorCutoutFailed =>
       'Automatic cut-out failed. Use the brush to cut out.';
+
+  @override
+  String stickerAnimatedSemantics(String emoji) {
+    return 'Animated sticker $emoji';
+  }
+
+  @override
+  String get stickerReplay => 'Replay the animation';
+
+  @override
+  String get stickerOpenDetails => 'View sticker details';
+
+  @override
+  String get stickerBadgeAnimated => 'Animated';
+
+  @override
+  String get stickerAddAnimated => 'Add an animated sticker';
+
+  @override
+  String get stickerAnimatedTitle => 'Animated sticker';
+
+  @override
+  String get stickerAnimatedShape => 'Shape';
+
+  @override
+  String get stickerShapeCircle => 'Circle';
+
+  @override
+  String get stickerShapeRounded => 'Rounded square';
+
+  @override
+  String get stickerShapeSquare => 'Square';
+
+  @override
+  String get stickerAnimatedHint =>
+      'Your image will be cropped to a square and limited to about 3 seconds. In the chat the animation plays once; tap the sticker to replay it.';
+
+  @override
+  String get stickerAnimatedPreviewLabel => 'Animated sticker preview';
+
+  @override
+  String get stickerAnimatedConverting => 'Converting…';
+
+  @override
+  String get stickerAnimatedConvertingHint =>
+      'This can take about fifteen seconds.';
+
+  @override
+  String get stickerAnimatedAdded => 'Animated sticker added.';
+
+  @override
+  String get stickerAnimatedNotAnimated =>
+      'This file isn\'t animated. Choose a GIF or an animated WebP.';
+
+  @override
+  String get stickerAnimatedFormat =>
+      'Only GIF and animated WebP files are accepted.';
+
+  @override
+  String get stickerAnimatedTooBig => 'This file is larger than 3 MB.';
+
+  @override
+  String get stickerAnimatedInvalid =>
+      'This file is too heavy or isn\'t supported. Try a shorter or smaller GIF.';
+
+  @override
+  String get stickerAnimatedRateLimited =>
+      'You\'ve created a lot of animated stickers. Try again later (10 per hour at most).';
+
+  @override
+  String get stickerAnimatedBusy =>
+      'The service is busy. Try again in a moment.';
+
+  @override
+  String get stickerAnimatedClosed =>
+      'Animated stickers aren\'t available right now.';
+
+  @override
+  String get mediaEditorCropHintRound =>
+      'Drag and pinch to frame the photo: it will be shown in a circle.';
+
+  @override
+  String get mediaEditorEditFailed =>
+      'Couldn\'t prepare the edited photo. Please try again.';
+
+  @override
+  String get stickerCreateTile => 'Create';
+
+  @override
+  String get stickerCreateHint =>
+      'Make a sticker from a photo in your gallery.';
+
+  @override
+  String stickerCreatedInMyStickers(String name) {
+    return 'Added to $name';
+  }
+
+  @override
+  String get stickerView => 'View';
+
+  @override
+  String get chatPanelExpand => 'Expand panel';
+
+  @override
+  String get chatPanelCollapse => 'Collapse panel';
 }

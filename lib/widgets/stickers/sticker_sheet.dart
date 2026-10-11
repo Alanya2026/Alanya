@@ -13,6 +13,7 @@ import '../../core/utils/byte_format.dart';
 import '../../core/utils/sticker_payload.dart';
 import '../common/app_bottom_sheet.dart';
 import 'sticker_creation_flows.dart';
+import 'non_looping_animated_sticker.dart';
 import 'sticker_image.dart';
 import 'sticker_packs_screen.dart';
 
@@ -217,6 +218,8 @@ class _StickerSheetState extends State<StickerSheet> {
     final pack = entry?.pack;
     final url = widget.mediaUrl;
     final renderable = p.isRenderable && url != null && url.isNotEmpty;
+    // `a` = 1 posé par le serveur ; la ligne locale peut le savoir aussi.
+    final animated = renderable && (p.animated || (entry?.sticker.animated ?? false));
 
     final meta = <String>[
       if (pack != null) l10n.stickerSheetPack(pack.name),
@@ -245,7 +248,19 @@ class _StickerSheetState extends State<StickerSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(
-                  child: renderable
+                  child: animated
+                      // Fiche en image fixe (première image) : l'animation se
+                      // lit dans la bulle ; la fiche ne boucle jamais.
+                      ? NonLoopingAnimatedSticker(
+                          url: url,
+                          emoji: p.emoji,
+                          thumbUrl: entry?.sticker.thumbUrl,
+                          size: 200,
+                          animate: false,
+                          semanticLabel:
+                              l10n.stickerAnimatedSemantics(p.emoji),
+                        )
+                      : renderable
                       ? StickerImage(
                           url: url,
                           emoji: p.emoji,
@@ -259,22 +274,32 @@ class _StickerSheetState extends State<StickerSheet> {
                         ),
                 ),
                 AppSpacing.vGapMd,
-                if (pack != null)
+                if (pack != null || animated)
                   Center(
                     child: Wrap(
                       spacing: AppSpacing.sm,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Chip(
-                          visualDensity: VisualDensity.compact,
-                          label: Text(pack.isPremium
-                              ? l10n.stickerBadgePlus
-                              : l10n.stickerBadgeOfficial),
-                          avatar: pack.isPremium
-                              ? Icon(Icons.workspace_premium_outlined,
-                                  size: 16, color: colors.primary)
-                              : null,
-                        ),
+                        if (pack != null)
+                          Chip(
+                            visualDensity: VisualDensity.compact,
+                            label: Text(pack.isPremium
+                                ? l10n.stickerBadgePlus
+                                : l10n.stickerBadgeOfficial),
+                            avatar: pack.isPremium
+                                ? Icon(Icons.workspace_premium_outlined,
+                                    size: 16, color: colors.primary)
+                                : null,
+                          ),
+                        // Mention « Animé » : le sticker bouge dans la bulle.
+                        if (animated)
+                          Chip(
+                            key: const ValueKey('sticker-badge-animated'),
+                            visualDensity: VisualDensity.compact,
+                            label: Text(l10n.stickerBadgeAnimated),
+                            avatar: Icon(Icons.animation,
+                                size: 16, color: colors.primary),
+                          ),
                       ],
                     ),
                   ),

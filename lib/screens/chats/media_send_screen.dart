@@ -1,32 +1,45 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/services/photo_edit_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/media_album.dart';
 
-/// Résultat de l'écran de composition média (légende optionnelle).
+/// Résultat de l'écran de composition média : légende optionnelle et fichiers
+/// à envoyer (les photos retouchées y ont remplacé leur original ; les autres
+/// éléments sont ceux reçus, inchangés).
 class MediaSendResult {
-  const MediaSendResult({this.caption});
+  const MediaSendResult({this.caption, this.items});
 
   final String? caption;
+
+  /// `null` : aucun changement par rapport aux éléments passés à l'écran.
+  final List<AlbumSendItem>? items;
 }
 
 /// Aperçu plein écran avant envoi d'une photo / vidéo (ou d'un album),
-/// avec champ de légende optionnel.
+/// avec champ de légende optionnel. Chaque photo (pas les vidéos) peut être
+/// retouchée avant l'envoi : le bouton « Modifier » ouvre l'éditeur, puis on
+/// revient ici avec l'image modifiée. Envoyer sans modifier ne change rien.
 class MediaSendScreen extends StatefulWidget {
   const MediaSendScreen({
     super.key,
     required this.items,
     this.isViewOnce = false,
+    this.editPhoto = editPhotoWithFeedback,
   });
 
   final List<AlbumSendItem> items;
   final bool isViewOnce;
+
+  /// Retouche d'une photo (injectable pour les tests).
+  final PhotoEditor editPhoto;
 
   @override
   State<MediaSendScreen> createState() => _MediaSendScreenState();
@@ -37,27 +50,72 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
   final _pageCtrl = PageController();
   int _page = 0;
   bool _isSending = false;
+  bool _editing = false;
+
+  /// Éléments courants : ceux reçus, une photo retouchée prenant la place de
+  /// son original (qui n'est jamais modifié ni supprimé).
+  late final List<AlbumSendItem> _items = List.of(widget.items);
+  bool _changed = false;
 
   @override
   void dispose() {
     _captionCtrl.dispose();
     _pageCtrl.dispose();
+    // Fermé sans envoyer : les retouches ne servent plus.
+    if (!_isSending) {
+      for (final item in _items) {
+        unawaited(PhotoEditService.discard(item.file));
+      }
+    }
     super.dispose();
   }
 
   void _send() {
-    if (_isSending) return;
+    if (_isSending || _editing) return;
     _isSending = true;
     final caption = _captionCtrl.text.trim();
     Navigator.pop(
       context,
-      MediaSendResult(caption: caption.isEmpty ? null : caption),
+      MediaSendResult(
+        caption: caption.isEmpty ? null : caption,
+        items: _changed ? List.unmodifiable(_items) : null,
+      ),
     );
+  }
+
+  Future<void> _edit(int index) async {
+    if (_editing || _isSending) return;
+    final item = _items[index];
+    setState(() => _editing = true);
+    File? edited;
+    try {
+      edited = await widget.editPhoto(context, item.file);
+    } finally {
+      if (mounted) setState(() => _editing = false);
+    }
+    if (edited == null) return;
+    if (!mounted || _isSending) {
+      // Écran fermé pendant la retouche : rien à envoyer.
+      await PhotoEditService.discard(edited);
+      return;
+    }
+    final previous = item.file;
+    setState(() {
+      _items[index] = AlbumSendItem(
+        file: edited!,
+        type: item.type,
+        mediaName: item.mediaName,
+        duration: item.duration,
+      );
+      _changed = true;
+    });
+    // La retouche précédente (jamais l'original) n'a plus d'utilité.
+    unawaited(PhotoEditService.discard(previous));
   }
 
   @override
   Widget build(BuildContext context) {
-    final items = widget.items;
+    final items = _items;
     final multi = items.length > 1;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
@@ -95,8 +153,24 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
                     const Padding(
                       padding: EdgeInsets.only(right: AppSpacing.sm),
                       child: Icon(Icons.timer, color: AppColors.white, size: 20),
+                    ),
+                  if (items[multi ? _page : 0].type == 1)
+                    TextButton.icon(
+                      key: const ValueKey('media-send-edit'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.white,
+                        minimumSize: const Size(
+                          AppSizes.minTapTarget,
+                          AppSizes.minTapTarget,
+                        ),
+                      ),
+                      onPressed: _editing || _isSending
+                          ? null
+                          : () => _edit(multi ? _page : 0),
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      label: Text(context.l10n.edit),
                     )
-                  else
+                  else if (!widget.isViewOnce)
                     const SizedBox(width: 48),
                 ],
               ),
@@ -112,6 +186,7 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
                     return _LocalVideoPreview(file: item.file);
                   }
                   return InteractiveViewer(
+                    key: ValueKey(item.file.path),
                     minScale: 1,
                     maxScale: 4,
                     child: Center(

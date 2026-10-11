@@ -8,12 +8,15 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/db/app_database.dart';
 import '../../features/media_editor/media_editor_screen.dart';
+import '../../core/services/stickers/sticker_animated_check.dart';
 import '../../core/services/stickers/sticker_creation_repository.dart';
 import '../../core/services/stickers/sticker_image_adapter.dart';
 import '../../core/services/stickers/sticker_image_check.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../common/app_bottom_sheet.dart';
+import 'non_looping_animated_sticker.dart';
+import 'sticker_animated_screen.dart';
 import 'sticker_creation_flows.dart';
 import 'sticker_image.dart';
 
@@ -32,6 +35,43 @@ Future<({Uint8List bytes, String name})?> _pickFromGallery() async {
   }
   return (bytes: await x.readAsBytes(), name: x.name);
 }
+
+/// Choisit un GIF ou un WebP animé dans la galerie (V1c). Injectable pour les
+/// tests ; le fichier n'est **pas** ré-encodé : il part tel quel au serveur.
+Future<({Uint8List bytes, String name})?> _pickAnimatedFromGallery() async {
+  final x = await ImagePicker().pickImage(source: ImageSource.gallery);
+  if (x == null) return null;
+  // Taille connue avant de lire : plus de 3 Mo n'est jamais chargé.
+  if (await x.length() > StickerAnimatedCheck.maxBytes) {
+    throw const StickerAnimatedRejected(StickerAnimatedIssue.tooBig);
+  }
+  return (bytes: await x.readAsBytes(), name: x.name);
+}
+
+/// Ouvre l'écran « Sticker animé » (forme, aperçu, ajout). Injectable pour les
+/// tests ; rend le résultat du serveur, ou `null` si l'utilisateur renonce.
+typedef StickerAnimatedFlow =
+    Future<StickerAnimatedResult?> Function(
+      BuildContext context,
+      int packId,
+      Uint8List bytes,
+      String filename,
+    );
+
+Future<StickerAnimatedResult?> openStickerAnimatedScreen(
+  BuildContext context,
+  int packId,
+  Uint8List bytes,
+  String filename,
+) => Navigator.of(context).push<StickerAnimatedResult>(
+  MaterialPageRoute(
+    builder: (_) => StickerAnimatedScreen(
+      packId: packId,
+      bytes: bytes,
+      filename: filename,
+    ),
+  ),
+);
 
 /// Adapte l'image choisie en PNG 512×512 transparent. Injectable pour les
 /// tests (le décodage `dart:ui` demande un moteur réel).
@@ -66,6 +106,8 @@ class StickerCreatedPackScreen extends StatefulWidget {
     super.key,
     required this.packId,
     this.pickImage = _pickFromGallery,
+    this.pickAnimated = _pickAnimatedFromGallery,
+    this.animatedFlow = openStickerAnimatedScreen,
     this.adaptImage = StickerImageAdapter.adapt,
     this.editImage = openStickerEditor,
     this.shareText = _systemShare,
@@ -73,6 +115,8 @@ class StickerCreatedPackScreen extends StatefulWidget {
 
   final int packId;
   final StickerImagePicker pickImage;
+  final StickerImagePicker pickAnimated;
+  final StickerAnimatedFlow animatedFlow;
   final StickerImageAdaptation adaptImage;
   final StickerImageEditor editImage;
   final StickerTextSharer shareText;
@@ -107,9 +151,46 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
     }
   }
 
+  /// V1c : un GIF ou un WebP animé part vers l'écran « Sticker animé » (forme,
+  /// aperçu, envoi du fichier tel quel). Refus clair avant tout envoi : format,
+  /// plus de 3 Mo, fichier non animé ([StickerAnimatedRejected]).
+  Future<void> _animatedFrom(({Uint8List bytes, String name}) picked) async {
+    StickerAnimatedCheck.validate(picked.bytes);
+    if (!mounted) return;
+    final r = await widget.animatedFlow(
+      context,
+      widget.packId,
+      picked.bytes,
+      picked.name,
+    );
+    if (r == null || !mounted) return;
+    final l10n = context.l10n;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(
+          r.upload.reused ? l10n.stickerAlreadyOwned : l10n.stickerAnimatedAdded,
+        ),
+      ),
+    );
+  }
+
+  /// Cellule « Sticker animé » : choisit un GIF / WebP animé dans la galerie.
+  Future<void> _addAnimated() => _run(() async {
+    final picked = await widget.pickAnimated();
+    if (picked == null) return;
+    await _animatedFrom(picked);
+  });
+
   Future<void> _add() => _run(() async {
     final picked = await widget.pickImage();
     if (picked == null) return;
+    // Un GIF / WebP animé choisi par le bouton « image » : avec les animés
+    // ouverts, on le prend en charge au lieu de le refuser.
+    if (_repo.features.animated.value &&
+        StickerAnimatedCheck.isAnimated(picked.bytes)) {
+      await _animatedFrom(picked);
+      return;
+    }
     // Adaptation (contain 512×512, PNG), puis confirmation sur damier ; refus
     // clair (format, taille, animé) avant tout envoi. « Ajouter » envoie
     // l'image adaptée telle quelle ; « Modifier » ouvre l'éditeur, qui part de
@@ -247,12 +328,23 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            StickerImage(
-              url: s.url,
-              thumbUrl: s.thumbUrl,
-              emoji: s.emoji,
-              size: 160,
-            ),
+            // Un sticker animé s'aperçoit en image fixe (première image).
+            if (s.animated)
+              NonLoopingAnimatedSticker(
+                url: s.url,
+                thumbUrl: s.thumbUrl,
+                emoji: s.emoji,
+                size: 160,
+                animate: false,
+                semanticLabel: l10n.stickerAnimatedSemantics(s.emoji),
+              )
+            else
+              StickerImage(
+                url: s.url,
+                thumbUrl: s.thumbUrl,
+                emoji: s.emoji,
+                size: 160,
+              ),
             AppSpacing.vGapMd,
             ListTile(
               leading: Icon(Icons.image_outlined, color: ctx.colors.primary),
@@ -400,28 +492,41 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
                       ),
                     ),
                   Expanded(
-                    child: GridView.builder(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            mainAxisSpacing: AppSpacing.sm,
-                            crossAxisSpacing: AppSpacing.sm,
-                          ),
-                      itemCount: list.length + (canAdd ? 1 : 0),
-                      itemBuilder: (context, i) {
-                        if (i == list.length) {
-                          return _AddCell(onTap: _busy ? null : _add);
-                        }
-                        final s = list[i];
-                        return _StickerCell(
-                          key: ValueKey('created_${s.stickerId}'),
-                          sticker: s,
-                          index: i,
-                          onTap: pack == null
-                              ? null
-                              : () => _stickerActions(pack, s),
-                          onMove: (from) => _move(list, from, i),
+                    // L'option « Sticker animé » n'existe que si `GET /me`
+                    // l'ouvre (`features.animated`) : le serveur tranche.
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: _repo.features.animated,
+                      builder: (context, animatedOpen, _) {
+                        final extra = canAdd ? (animatedOpen ? 2 : 1) : 0;
+                        return GridView.builder(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                mainAxisSpacing: AppSpacing.sm,
+                                crossAxisSpacing: AppSpacing.sm,
+                              ),
+                          itemCount: list.length + extra,
+                          itemBuilder: (context, i) {
+                            if (i == list.length) {
+                              return _AddCell(onTap: _busy ? null : _add);
+                            }
+                            if (i == list.length + 1) {
+                              return _AddAnimatedCell(
+                                onTap: _busy ? null : _addAnimated,
+                              );
+                            }
+                            final s = list[i];
+                            return _StickerCell(
+                              key: ValueKey('created_${s.stickerId}'),
+                              sticker: s,
+                              index: i,
+                              onTap: pack == null
+                                  ? null
+                                  : () => _stickerActions(pack, s),
+                              onMove: (from) => _move(list, from, i),
+                            );
+                          },
                         );
                       },
                     ),
@@ -477,6 +582,8 @@ class _StickerCell extends StatelessWidget {
       emoji: sticker.emoji,
       size: 72,
       showRemovedLabel: false,
+      // Grille : image fixe (un fichier animé tournerait en boucle).
+      staticFrame: sticker.animated,
     );
     return DragTarget<int>(
       onWillAcceptWithDetails: (d) => d.data != index,
@@ -530,6 +637,35 @@ class _AddCell extends StatelessWidget {
             color: colors.primary,
             size: 28,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Cellule « Sticker animé » (V1c) : à côté de l'ajout d'une image fixe,
+/// seulement quand le serveur ouvre les animés.
+class _AddAnimatedCell extends StatelessWidget {
+  const _AddAnimatedCell({required this.onTap});
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Semantics(
+      button: true,
+      label: context.l10n.stickerAddAnimated,
+      child: InkWell(
+        key: const ValueKey('sticker-add-animated'),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.semantic.surfaceMuted,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: colors.outlineVariant),
+          ),
+          child: Icon(Icons.gif_box_outlined, color: colors.primary, size: 28),
         ),
       ),
     );

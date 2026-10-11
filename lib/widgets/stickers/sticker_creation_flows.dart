@@ -7,11 +7,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/db/app_database.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/services/stickers/sticker_animated_check.dart';
 import '../../core/services/stickers/sticker_creation_repository.dart';
 import '../../core/services/stickers/sticker_image_check.dart';
+import '../../core/services/stickers/sticker_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../../talky_api_client.dart' show TalkyException;
 import '../common/app_bottom_sheet.dart';
 import 'sticker_image.dart';
 
@@ -30,6 +33,12 @@ const int kPickNewStickerPack = -1;
 /// (`STICKER_QUOTA_EXCEEDED`, `STICKER_PACK_LIMIT`, `RATE_LIMITED`…).
 void showStickerCreationError(BuildContext context, Object error) {
   if (!context.mounted) return;
+  if (error is StickerAnimatedRejected) {
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(stickerAnimatedErrorText(context.l10n, error)!)),
+    );
+    return;
+  }
   if (error is StickerImageRejected) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(content: Text(stickerImageIssueText(context.l10n, error.issue))),
@@ -37,6 +46,48 @@ void showStickerCreationError(BuildContext context, Object error) {
     return;
   }
   afficherErreur(context, error, domaine: ErrorDomain.stickers);
+}
+
+/// Texte d'une erreur de **création animée** (V1c, contrat §4c), ou `null` si
+/// elle se présente comme les autres (`STICKER_QUOTA_EXCEEDED`,
+/// `STICKER_PACK_LIMIT`…, via `afficherErreur`).
+String? stickerAnimatedErrorText(AppLocalizations l10n, Object error) {
+  if (error is StickerAnimatedRejected) {
+    switch (error.issue) {
+      case StickerAnimatedIssue.format:
+        return l10n.stickerAnimatedFormat;
+      case StickerAnimatedIssue.tooBig:
+        return l10n.stickerAnimatedTooBig;
+      case StickerAnimatedIssue.notAnimated:
+        return l10n.stickerAnimatedNotAnimated;
+    }
+  }
+  if (error is TalkyException) {
+    // Animés fermés côté serveur : `404 NOT_FOUND` générique.
+    if (StickerRepository.isModuleClosed(error)) return l10n.stickerAnimatedClosed;
+    if (error.code == 'STICKER_ASSET_INVALID') return l10n.stickerAnimatedInvalid;
+    // 10 par heure et par compte : « dans une minute » serait faux. Le quota
+    // de 200 stickers (`STICKER_QUOTA_EXCEEDED`, aussi en 429) garde son texte.
+    if (error.code == 'RATE_LIMITED' ||
+        (error.statusCode == 429 && error.code == null)) {
+      return l10n.stickerAnimatedRateLimited;
+    }
+    if (error.code == 'SERVICE_UNAVAILABLE' || error.statusCode == 503) {
+      return l10n.stickerAnimatedBusy;
+    }
+  }
+  return null;
+}
+
+/// Présente une erreur de création animée (cf. [stickerAnimatedErrorText]).
+void showAnimatedCreationError(BuildContext context, Object error) {
+  if (!context.mounted) return;
+  final text = stickerAnimatedErrorText(context.l10n, error);
+  if (text == null) {
+    showStickerCreationError(context, error);
+    return;
+  }
+  ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
 }
 
 String stickerImageIssueText(AppLocalizations l10n, StickerImageIssue issue) {
@@ -373,6 +424,7 @@ class _PackPicker extends StatelessWidget {
                             emoji: '',
                             size: 40,
                             showRemovedLabel: false,
+                            staticFrame: true,
                             semanticLabel: p.name,
                           ),
                   ),

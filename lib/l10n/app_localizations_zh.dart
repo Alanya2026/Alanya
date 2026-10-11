@@ -7654,4 +7654,99 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mediaEditorCutoutFailed => '自动抠图失败。请使用画笔抠图。';
+
+  @override
+  String stickerAnimatedSemantics(String emoji) {
+    return '动态贴纸 $emoji';
+  }
+
+  @override
+  String get stickerReplay => '重新播放动画';
+
+  @override
+  String get stickerOpenDetails => '查看贴纸详情';
+
+  @override
+  String get stickerBadgeAnimated => '动态';
+
+  @override
+  String get stickerAddAnimated => '添加动态贴纸';
+
+  @override
+  String get stickerAnimatedTitle => '动态贴纸';
+
+  @override
+  String get stickerAnimatedShape => '形状';
+
+  @override
+  String get stickerShapeCircle => '圆形';
+
+  @override
+  String get stickerShapeRounded => '圆角方形';
+
+  @override
+  String get stickerShapeSquare => '方形';
+
+  @override
+  String get stickerAnimatedHint =>
+      '图片将被裁剪为正方形，时长限制在约 3 秒。在聊天中动画只播放一次，点按贴纸可重新播放。';
+
+  @override
+  String get stickerAnimatedPreviewLabel => '动态贴纸预览';
+
+  @override
+  String get stickerAnimatedConverting => '正在转换…';
+
+  @override
+  String get stickerAnimatedConvertingHint => '这可能需要十几秒。';
+
+  @override
+  String get stickerAnimatedAdded => '已添加动态贴纸。';
+
+  @override
+  String get stickerAnimatedNotAnimated => '该文件不是动态图。请选择 GIF 或动态 WebP。';
+
+  @override
+  String get stickerAnimatedFormat => '仅支持 GIF 和动态 WebP 文件。';
+
+  @override
+  String get stickerAnimatedTooBig => '该文件超过 3 MB。';
+
+  @override
+  String get stickerAnimatedInvalid => '该文件过大或不受支持。请尝试更短或更小的 GIF。';
+
+  @override
+  String get stickerAnimatedRateLimited => '您创建的动态贴纸过多。请稍后再试（每小时最多 10 个）。';
+
+  @override
+  String get stickerAnimatedBusy => '服务繁忙，请稍后再试。';
+
+  @override
+  String get stickerAnimatedClosed => '动态贴纸暂时不可用。';
+
+  @override
+  String get mediaEditorCropHintRound => '拖动并捏合来调整照片：它将显示在圆形框内。';
+
+  @override
+  String get mediaEditorEditFailed => '无法处理编辑后的照片，请重试。';
+
+  @override
+  String get stickerCreateTile => '创建';
+
+  @override
+  String get stickerCreateHint => '用相册中的照片制作贴纸。';
+
+  @override
+  String stickerCreatedInMyStickers(String name) {
+    return '已添加到“$name”';
+  }
+
+  @override
+  String get stickerView => '查看';
+
+  @override
+  String get chatPanelExpand => '展开面板';
+
+  @override
+  String get chatPanelCollapse => '收起面板';
 }

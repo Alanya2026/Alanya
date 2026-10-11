@@ -1386,9 +1386,12 @@ extension _ChatActions on _ChatDetailScreenState {
     if (result == null || !mounted) return;
     if (_myId == null) return;
 
-    if (items.length == 1) {
+    // Photos retouchées dans l'aperçu : elles remplacent leur original, et
+    // suivent le chemin habituel (outbox, vignette, upload).
+    final toSend = result.items ?? items;
+    if (toSend.length == 1) {
       // _sendMediaFile joue déjà le son d'envoi immédiatement (avant réseau).
-      final item = items.first;
+      final item = toSend.first;
       _sendMediaFile(
         item.file,
         type: item.type,
@@ -1404,7 +1407,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (convId == null) return;
     _chat.repository.sendMediaAlbum(
       conversationID: convId,
-      items: items,
+      items: toSend,
       content: result.caption,
     );
     _scrollToBottom();

@@ -6,12 +6,15 @@ import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/services/stickers/sticker_creation_repository.dart';
 import '../../core/services/stickers/sticker_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../billing/open_plus_offer.dart';
+import 'non_looping_animated_sticker.dart';
 import 'sticker_image.dart';
 import 'sticker_packs_screen.dart';
+import 'sticker_quick_create.dart';
 
 /// Plateau Émojis · Stickers : onglets **Émojis** et **Stickers**.
 ///
@@ -22,13 +25,20 @@ class EmojiStickerPicker extends StatefulWidget {
     super.key,
     required this.emojiPicker,
     required this.onSendSticker,
-    this.height = 280,
+    this.height,
+    this.createHooks = const StickerCreateHooks(),
   });
 
   /// Le sélecteur d'émojis existant, inchangé.
   final Widget emojiPicker;
   final void Function(StickerEntry entry) onSendSticker;
-  final double height;
+
+  /// Hauteur fixe ; `null` : le plateau remplit la place que lui donne son
+  /// parent (panneau extensible).
+  final double? height;
+
+  /// Points d'injection du bouton « Créer » (tests).
+  final StickerCreateHooks createHooks;
 
   /// Dernier onglet ouvert (mémoire de session).
   static bool _lastWasStickers = false;
@@ -66,12 +76,10 @@ class _EmojiStickerPickerState extends State<EmojiStickerPicker> {
       builder: (context, available, _) {
         if (!available) return widget.emojiPicker;
         final l10n = context.l10n;
-        return SizedBox(
-          height: widget.height,
-          child: Column(
+        final body = Column(
             children: [
               SizedBox(
-                height: 44,
+                height: AppSizes.minTapTarget,
                 child: Row(
                   children: [
                     Expanded(
@@ -94,12 +102,17 @@ class _EmojiStickerPickerState extends State<EmojiStickerPicker> {
               ),
               Expanded(
                 child: _stickers
-                    ? StickerTray(repo: repo, onSend: widget.onSendSticker)
+                    ? StickerTray(
+                        repo: repo,
+                        onSend: widget.onSendSticker,
+                        createHooks: widget.createHooks,
+                      )
                     : widget.emojiPicker,
               ),
             ],
-          ),
-        );
+          );
+        final h = widget.height;
+        return h == null ? body : SizedBox(height: h, child: body);
       },
     );
   }
@@ -108,10 +121,23 @@ class _EmojiStickerPickerState extends State<EmojiStickerPicker> {
 /// Contenu de l'onglet Stickers : récents, favoris, un onglet par pack
 /// installé. Toucher envoie ; appui long ouvre l'aperçu (★ favori).
 class StickerTray extends StatefulWidget {
-  const StickerTray({super.key, required this.repo, required this.onSend});
+  const StickerTray({
+    super.key,
+    required this.repo,
+    required this.onSend,
+    this.creation,
+    this.createHooks = const StickerCreateHooks(),
+  });
 
   final StickerRepository repo;
   final void Function(StickerEntry entry) onSend;
+
+  /// Création de stickers (bouton « Créer » des Récents). Par défaut, celle du
+  /// `Provider` ; absente (tests V1a) : pas de bouton.
+  final StickerCreationRepository? creation;
+
+  /// Points d'injection du bouton « Créer » (tests).
+  final StickerCreateHooks createHooks;
 
   @override
   State<StickerTray> createState() => _StickerTrayState();
@@ -134,7 +160,29 @@ class _Tab {
 class _StickerTrayState extends State<StickerTray> {
   int _index = 0;
 
+  /// Pack à ouvrir dès que son onglet existe (« Voir » après une création).
+  int? _wantedPackId;
+  StickerCreationRepository? _creation;
+
   StickerRepository get repo => widget.repo;
+
+  @override
+  void initState() {
+    super.initState();
+    _creation = widget.creation;
+    if (_creation == null) {
+      try {
+        _creation = context.read<StickerCreationRepository>();
+      } catch (_) {
+        _creation = null; // pas de module création (tests V1a)
+      }
+    }
+  }
+
+  void _viewPack(int packId) {
+    if (!mounted) return;
+    setState(() => _wantedPackId = packId);
+  }
 
   // Flux créés une fois : un `StreamBuilder` dont le flux change à chaque
   // build se réabonne (et relance sa requête Drift) à chaque image.
@@ -154,6 +202,14 @@ class _StickerTrayState extends State<StickerTray> {
           const _Tab.favorites(),
           for (final p in packs) _Tab.pack(p),
         ];
+        final wanted = _wantedPackId;
+        if (wanted != null) {
+          final at = tabs.indexWhere((t) => t.pack?.packId == wanted);
+          if (at >= 0) {
+            _index = at;
+            _wantedPackId = null;
+          }
+        }
         final index = _index.clamp(0, tabs.length - 1);
         return Column(
           children: [
@@ -204,16 +260,33 @@ class _StickerTrayState extends State<StickerTray> {
       stream: stream,
       builder: (context, snap) {
         final list = snap.data ?? const <StickerEntry>[];
-        return _Grid(
-          count: list.length,
-          empty: noPacks
-              ? l10n.stickerNoPacks
-              : (tab.favorites
-                  ? l10n.stickerEmptyFavorites
-                  : l10n.stickerEmptyRecents),
-          builder: (i) => list[i],
-          onSend: widget.onSend,
-          repo: repo,
+        Widget grid(bool withCreate) => _Grid(
+              count: list.length,
+              empty: noPacks
+                  ? l10n.stickerNoPacks
+                  : (tab.favorites
+                      ? l10n.stickerEmptyFavorites
+                      : l10n.stickerEmptyRecents),
+              builder: (i) => list[i],
+              onSend: widget.onSend,
+              repo: repo,
+              leading: withCreate
+                  ? StickerCreateTile(
+                      creation: _creation!,
+                      stickers: repo,
+                      onViewPack: _viewPack,
+                      hooks: widget.createHooks,
+                    )
+                  : null,
+              leadingHint: withCreate ? l10n.stickerCreateHint : null,
+            );
+        final creation = _creation;
+        // Le bouton « Créer » n'existe que dans les Récents, et seulement si
+        // le serveur ouvre la création (le serveur tranche).
+        if (tab.favorites || creation == null) return grid(false);
+        return ValueListenableBuilder<bool>(
+          valueListenable: creation.creationAvailable,
+          builder: (context, open, _) => grid(open),
         );
       },
     );
@@ -237,7 +310,7 @@ class _TabStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return SizedBox(
-      height: 44,
+      height: AppSizes.minTapTarget,
       child: Row(
         children: [
           Expanded(
@@ -262,6 +335,7 @@ class _TabStrip extends StatelessWidget {
                                 emoji: '',
                                 size: 28,
                                 showRemovedLabel: false,
+                                staticFrame: true,
                                 semanticLabel: t.pack!.name,
                               ),
                       ),
@@ -291,7 +365,7 @@ class _TabStrip extends StatelessWidget {
                   child: InkWell(
                     onTap: () => onSelect(i),
                     child: Container(
-                      width: 44,
+                      width: AppSizes.minTapTarget,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         border: Border(
@@ -381,6 +455,8 @@ class _Grid extends StatelessWidget {
     required this.builder,
     required this.onSend,
     required this.repo,
+    this.leading,
+    this.leadingHint,
   });
 
   final int count;
@@ -389,72 +465,132 @@ class _Grid extends StatelessWidget {
   final void Function(StickerEntry) onSend;
   final StickerRepository repo;
 
+  /// Première case de la grille (tuile « Créer »), avant tout sticker.
+  final Widget? leading;
+
+  /// Texte d'aide sous la tuile quand il n'y a encore aucun sticker.
+  final String? leadingHint;
+
+  /// Toujours tirable, butée franche : une grille courte, ou vide, laisse quand
+  /// même le panneau se réduire quand on la tire vers le bas.
+  static const ScrollPhysics _physics = AlwaysScrollableScrollPhysics(
+    parent: ClampingScrollPhysics(),
+  );
+
+  static const SliverGridDelegate _delegate =
+      SliverGridDelegateWithMaxCrossAxisExtent(
+    maxCrossAxisExtent: 84,
+    mainAxisSpacing: AppSpacing.xs,
+    crossAxisSpacing: AppSpacing.xs,
+  );
+
   @override
   Widget build(BuildContext context) {
-    if (count == 0) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Text(
-            empty,
-            textAlign: TextAlign.center,
-            style: context.text.bodyMedium
-                ?.copyWith(color: context.colors.onSurfaceVariant),
+    if (count == 0 && leading == null) {
+      return LayoutBuilder(
+        builder: (context, box) => SingleChildScrollView(
+          physics: _physics,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: box.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text(
+                  empty,
+                  textAlign: TextAlign.center,
+                  style: context.text.bodyMedium
+                      ?.copyWith(color: context.colors.onSurfaceVariant),
+                ),
+              ),
+            ),
           ),
         ),
       );
     }
+    final extra = leading == null ? 0 : 1;
+    Widget item(BuildContext context, int i) {
+      if (leading != null && i == 0) return leading!;
+      return _cell(context, builder(i - extra));
+    }
+
     return Semantics(
       container: true,
       label: context.l10n.stickerTrayLabel,
-      child: GridView.builder(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 84,
-          mainAxisSpacing: AppSpacing.xs,
-          crossAxisSpacing: AppSpacing.xs,
-        ),
-        itemCount: count,
-        itemBuilder: (context, i) {
-          final entry = builder(i);
-          final s = entry.sticker;
-          // Chaque vignette est un bouton « envoyer ». Un sticker verrouillé
-          // l'annonce, faute de quoi le lecteur d'écran ne dirait pas pourquoi
-          // l'appui reste sans effet. L'image interne est exclue (doublon).
-          final label = entry.locked
-              ? '${context.l10n.stickerSemantics(s.emoji)}.'
-                  ' ${context.l10n.stickerPackLockedSemantics}'
-              : context.l10n.stickerSemantics(s.emoji);
-          return Semantics(
-            button: true,
-            label: label,
-            excludeSemantics: true,
-            onTap: () => onSend(entry),
-            onLongPress: () => _preview(context, entry),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              onTap: () => onSend(entry),
-              onLongPress: () => _preview(context, entry),
-              child: Opacity(
-                opacity: entry.locked ? 0.4 : 1,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    StickerImage(
-                      url: s.thumbUrl ?? s.url,
-                      emoji: s.emoji,
-                      size: 76,
-                      showRemovedLabel: false,
-                    ),
-                    if (entry.locked)
-                      Icon(Icons.lock,
-                          size: 20, color: context.colors.onSurface),
-                  ],
+      child: count == 0
+          // Aucun récent : la tuile « Créer » seule, avec un texte d'aide.
+          ? CustomScrollView(
+              physics: _physics,
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  sliver: SliverGrid.builder(
+                    gridDelegate: _delegate,
+                    itemCount: extra,
+                    itemBuilder: item,
+                  ),
                 ),
-              ),
+                if (leadingHint != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg, AppSpacing.xs, AppSpacing.lg, AppSpacing.lg),
+                      child: Text(
+                        leadingHint!,
+                        key: const ValueKey('sticker-create-hint'),
+                        style: context.text.bodyMedium
+                            ?.copyWith(color: context.colors.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+              ],
+            )
+          : GridView.builder(
+              physics: _physics,
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              gridDelegate: _delegate,
+              itemCount: count + extra,
+              itemBuilder: item,
             ),
-          );
-        },
+    );
+  }
+
+  Widget _cell(BuildContext context, StickerEntry entry) {
+    final s = entry.sticker;
+    // Chaque vignette est un bouton « envoyer ». Un sticker verrouillé
+    // l'annonce, faute de quoi le lecteur d'écran ne dirait pas pourquoi
+    // l'appui reste sans effet. L'image interne est exclue (doublon).
+    final label = entry.locked
+        ? '${context.l10n.stickerSemantics(s.emoji)}.'
+            ' ${context.l10n.stickerPackLockedSemantics}'
+        : context.l10n.stickerSemantics(s.emoji);
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: () => onSend(entry),
+      onLongPress: () => _preview(context, entry),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        onTap: () => onSend(entry),
+        onLongPress: () => _preview(context, entry),
+        child: Opacity(
+          opacity: entry.locked ? 0.4 : 1,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              StickerImage(
+                url: s.thumbUrl ?? s.url,
+                emoji: s.emoji,
+                size: 76,
+                showRemovedLabel: false,
+                // Plateau : image fixe, jamais de boucle dans une grille.
+                staticFrame: s.animated,
+              ),
+              if (entry.locked)
+                Icon(Icons.lock, size: 20, color: context.colors.onSurface),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -470,7 +606,18 @@ class _Grid extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: Text(ctx.l10n.stickerPreviewTitle),
-          content: StickerImage(url: s.url, thumbUrl: s.thumbUrl, emoji: s.emoji, size: 200),
+          // Un sticker animé s'aperçoit en image fixe (première image).
+          content: s.animated
+              ? NonLoopingAnimatedSticker(
+                  url: s.url,
+                  thumbUrl: s.thumbUrl,
+                  emoji: s.emoji,
+                  size: 200,
+                  animate: false,
+                  semanticLabel: ctx.l10n.stickerAnimatedSemantics(s.emoji),
+                )
+              : StickerImage(
+                  url: s.url, thumbUrl: s.thumbUrl, emoji: s.emoji, size: 200),
           actions: [
             TextButton.icon(
               icon: Icon(fav ? Icons.star : Icons.star_border),

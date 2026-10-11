@@ -97,6 +97,8 @@ class _CropOptions extends StatelessWidget {
         Text(
           sticker
               ? l10n.mediaEditorCropHintSticker
+              : controller.roundFrame
+              ? l10n.mediaEditorCropHintRound
               : l10n.mediaEditorCropHintPhoto,
           style: context.text.bodySmall?.copyWith(
             color: context.colors.onSurfaceVariant,
@@ -120,7 +122,8 @@ class _CropOptions extends StatelessWidget {
             ),
           ],
         ),
-        if (!sticker) ...[
+        // Cadre imposé (photo de profil) : pas de choix de format.
+        if (!sticker && controller.fixedAspect == null) ...[
           AppSpacing.vGapXs,
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,

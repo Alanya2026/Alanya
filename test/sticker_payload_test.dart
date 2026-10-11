@@ -83,4 +83,53 @@ void main() {
     expect(StickerPayload.tryParse(null), isNull);
     expect(StickerPayload.tryParse(''), isNull);
   });
+
+  group('a : sticker animé (V1c, contrat §4c)', () {
+    String c(String a) =>
+        '{"v":1,"pack":"u_7_ab12cd34","sid":504,"emoji":"😀","w":512,"h":512$a}';
+
+    test('fixture serveur : a = 1 → animé, affichable, emoji et pack lus', () {
+      final f = _fixture('message-sticker-anime.json');
+      final p =
+          StickerPayload.tryParse(f['sortie_serveur']['content'] as String)!;
+      expect(p.animated, isTrue);
+      expect(p.isRenderable, isTrue);
+      expect((p.pack, p.sid, p.emoji), ('u_7_ab12cd34', 504, '😀'));
+    });
+
+    test('a = 0 ou absent : fixe', () {
+      expect(StickerPayload.tryParse(c(',"a":0'))!.animated, isFalse);
+      expect(StickerPayload.tryParse(c(''))!.animated, isFalse);
+    });
+
+    test('a hostile : seul 1 (ou true) vaut animé, jamais une chaîne ni 2', () {
+      for (final v in ['"1"', '2', '-1', '"true"', 'null', '[]', '{}', '1.5']) {
+        final p = StickerPayload.tryParse(c(',"a":$v'));
+        expect(p, isNotNull, reason: v);
+        expect(p!.animated, isFalse, reason: v);
+        expect(p.isRenderable, isTrue, reason: v);
+      }
+      expect(StickerPayload.tryParse(c(',"a":1.0'))!.animated, isTrue);
+    });
+
+    test('un client ne décide pas : le serveur réécrit `a` d\'après l\'actif', () {
+      // Entrée client avec a = 0 pour un actif animé : le payload relu côté
+      // client reste celui du serveur (a = 1). Ici : le parseur lit ce qu'on
+      // lui donne, et `encode` ne fait que reproduire (le serveur ignore `a`).
+      final f = _fixture('message-sticker-anime.json');
+      final client =
+          StickerPayload.tryParse(f['entree_client_a_fantaisiste']['content'] as String)!;
+      expect(client.animated, isFalse);
+      expect(client.encode(), contains('"a":0'));
+      final server =
+          StickerPayload.tryParse(f['sortie_serveur']['content'] as String)!;
+      expect(server.encode(), f['sortie_serveur']['content']);
+    });
+
+    test('version future avec a = 1 : jamais affichable, pas animé à l\'écran', () {
+      final p = StickerPayload.tryParse(
+          '{"v":2,"pack":"x","sid":9,"emoji":"😀","a":1}')!;
+      expect(p.isRenderable, isFalse);
+    });
+  });
 }

@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../db/app_database.dart';
+import 'sticker_animated_check.dart';
 import 'sticker_creation_api.dart';
+import 'sticker_features.dart';
 import 'sticker_image_check.dart';
 import 'sticker_repository.dart';
 import 'sticker_share_link.dart';
@@ -105,7 +107,37 @@ class StickerUploadResult {
   final bool copied;
 }
 
-/// Packs perso, ajout de stickers, copie, signalement et partage (V1b).
+/// Forme appliquée par le serveur à un sticker animé (contrat §4c : le
+/// serveur recadre `cover` en 512×512 puis masque chaque image). Valeur =
+/// champ `shape` envoyé.
+enum StickerAnimatedShape {
+  cercle('cercle'),
+  carreArrondi('carre-arrondi'),
+  carre('carre');
+
+  const StickerAnimatedShape(this.wire);
+  final String wire;
+}
+
+/// Réponse de `POST /assets/animated` : [StickerUploadResult] + mesures de
+/// l'encodage serveur.
+class StickerAnimatedResult {
+  const StickerAnimatedResult({
+    required this.upload,
+    required this.animated,
+    required this.bytes,
+    required this.frames,
+    required this.durationMs,
+  });
+  final StickerUploadResult upload;
+  final bool animated;
+  final int bytes;
+  final int frames;
+  final int durationMs;
+}
+
+/// Packs perso, ajout de stickers, copie, signalement et partage (V1b) ;
+/// création de stickers animés (V1c).
 ///
 /// Comme `StickerRepository`, **le serveur tranche** (propriété, quotas, URLs,
 /// jetons) : chaque action appelle d'abord le serveur, puis relit
@@ -116,8 +148,10 @@ class StickerCreationRepository {
   StickerCreationRepository({
     required AppDatabase db,
     required StickerCreationApi api,
+    StickerFeatures? features,
   }) : _db = db,
-       _api = api;
+       _api = api,
+       features = features ?? StickerFeatures();
 
   /// Mémorise que la création était ouverte : hors ligne, l'entrée « Mes
   /// créations » ne disparaît pas parce que le réseau manque.
@@ -125,6 +159,11 @@ class StickerCreationRepository {
 
   final AppDatabase _db;
   final StickerCreationApi _api;
+
+  /// Fonctionnalités ouvertes (`GET /me` → `features`) : l'option « Sticker
+  /// animé » n'apparaît que si `features.animated` est vrai. Partagé avec
+  /// `StickerRepository`.
+  final StickerFeatures features;
 
   /// `true` quand `GET /me/created` répond. Un `404 NOT_FOUND` (module ou
   /// création fermés côté serveur) le passe à `false` : l'interface masque
@@ -349,12 +388,15 @@ class StickerCreationRepository {
 
   // ── Actions : stickers ──────────────────────────────────────────────
 
-  /// Ajoute une image de la galerie au pack. Le contrat exige un PNG/WebP
+  /// Ajoute une image de la galerie au pack. [packId] nul : `POST /assets` sans
+  /// `packId`, le serveur dépose le sticker dans le pack perso par défaut
+  /// (« Mes stickers », créé au besoin ; contrat §4b) : c'est le chemin du
+  /// bouton « Créer » du plateau. Le contrat exige un PNG/WebP
   /// **512×512 avec alpha** ≤ 1 Mo : sinon [StickerImageRejected], avant tout
   /// envoi. Les photos de la galerie sont d'abord adaptées par
   /// `StickerImageAdapter` ; ce contrôle reste la dernière garde.
   Future<StickerUploadResult> addStickerFromImage(
-    int packId,
+    int? packId,
     Uint8List bytes, {
     required String filename,
     String? emoji,
@@ -378,6 +420,61 @@ class StickerCreationRepository {
       await syncCreated();
       return _uploadResult(res.body, copied: false);
     });
+  }
+
+  /// Crée un sticker animé depuis un GIF ou un WebP animé (V1c, contrat §4c).
+  ///
+  /// Le fichier part **tel quel** : le serveur recadre en 512×512, applique
+  /// [shape], tronque à 3 s / 45 images et ré-encode (jusqu'à ~15 s). Refus
+  /// local sans réseau : [StickerAnimatedRejected] (format, > 3 Mo, non animé).
+  /// Refus du serveur, à présenter : `STICKER_ASSET_INVALID` (trop lourd ou non
+  /// pris en charge), `STICKER_QUOTA_EXCEEDED`, `STICKER_ASSET_BLOCKED`,
+  /// `STICKER_PACK_LIMIT`, `RATE_LIMITED` (10/h), `503 SERVICE_UNAVAILABLE`
+  /// (réessayer plus tard). Un `404 NOT_FOUND` générique = animés fermés : le
+  /// drapeau [features] repasse à faux (l'option disparaît) ; la création
+  /// elle-même n'est pas masquée sur cette seule réponse, mais relue.
+  /// [cancel] annule la requête en cours.
+  Future<StickerAnimatedResult> addAnimatedSticker(
+    int? packId,
+    Uint8List bytes, {
+    required String filename,
+    required StickerAnimatedShape shape,
+    String? emoji,
+    String? name,
+    Future<void>? cancel,
+  }) async {
+    final info = StickerAnimatedCheck.validate(bytes);
+    final ext = info.kind == StickerAnimatedKind.gif ? '.gif' : '.webp';
+    final fixedName = filename.toLowerCase().endsWith(ext)
+        ? filename
+        : 'sticker$ext';
+    try {
+      final res = await _api.uploadAnimatedAsset(
+        bytes,
+        filename: fixedName,
+        shape: shape.wire,
+        packId: packId,
+        emoji: emoji,
+        name: name,
+        cancel: cancel,
+      );
+      await syncCreated();
+      final b = res.body is Map ? res.body as Map : const {};
+      return StickerAnimatedResult(
+        upload: _uploadResult(res.body, copied: false),
+        animated: b['animated'] == true,
+        bytes: _asInt(b['bytes']) ?? 0,
+        frames: _asInt(b['frames']) ?? 0,
+        durationMs: _asInt(b['durationMs']) ?? 0,
+      );
+    } on TalkyException catch (e) {
+      if (StickerRepository.isModuleClosed(e)) {
+        await features.animatedClosed();
+        // Création fermée aussi ? `syncCreated` le constate (404 → masquée).
+        await syncCreated();
+      }
+      rethrow;
+    }
   }
 
   Future<void> removeSticker(int packId, int stickerId) => _guard(() async {

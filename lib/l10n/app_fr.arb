@@ -4383,5 +4383,49 @@
   "mediaEditorCutoutSoft": "Bords doux",
   "mediaEditorCutoutReset": "Réinitialiser le masque",
   "mediaEditorCutoutNoPerson": "Aucune personne détectée sur cette image. Utilisez le pinceau pour détourer.",
-  "mediaEditorCutoutFailed": "Le détourage automatique a échoué. Utilisez le pinceau pour détourer."
+  "mediaEditorCutoutFailed": "Le détourage automatique a échoué. Utilisez le pinceau pour détourer.",
+  "stickerAnimatedSemantics": "Sticker animé {emoji}",
+  "@stickerAnimatedSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerReplay": "Rejouer l'animation",
+  "stickerOpenDetails": "Voir la fiche du sticker",
+  "stickerBadgeAnimated": "Animé",
+  "stickerAddAnimated": "Ajouter un sticker animé",
+  "stickerAnimatedTitle": "Sticker animé",
+  "stickerAnimatedShape": "Forme",
+  "stickerShapeCircle": "Cercle",
+  "stickerShapeRounded": "Carré arrondi",
+  "stickerShapeSquare": "Carré",
+  "stickerAnimatedHint": "Votre image sera recadrée en carré et limitée à 3 secondes environ. Dans la conversation, l'animation se joue une fois ; touchez le sticker pour la rejouer.",
+  "stickerAnimatedPreviewLabel": "Aperçu animé du sticker",
+  "stickerAnimatedConverting": "Conversion en cours…",
+  "stickerAnimatedConvertingHint": "Cela peut prendre une quinzaine de secondes.",
+  "stickerAnimatedAdded": "Sticker animé ajouté.",
+  "stickerAnimatedNotAnimated": "Ce fichier n'est pas animé. Choisissez un GIF ou un WebP animé.",
+  "stickerAnimatedFormat": "Seuls les GIF et les WebP animés sont acceptés.",
+  "stickerAnimatedTooBig": "Ce fichier dépasse 3 Mo.",
+  "stickerAnimatedInvalid": "Ce fichier est trop lourd ou n'est pas pris en charge. Essayez un GIF plus court ou plus petit.",
+  "stickerAnimatedRateLimited": "Vous avez créé beaucoup de stickers animés. Réessayez plus tard (10 par heure au plus).",
+  "stickerAnimatedBusy": "Le service est occupé. Réessayez dans un instant.",
+  "stickerAnimatedClosed": "Les stickers animés ne sont pas disponibles pour le moment.",
+  "mediaEditorCropHintRound": "Glissez et pincez pour cadrer la photo : elle s'affichera dans un cercle.",
+  "mediaEditorEditFailed": "Impossible de préparer la photo modifiée. Réessayez.",
+  "stickerCreateTile": "Créer",
+  "stickerCreateHint": "Créez un sticker à partir d'une photo de votre galerie.",
+  "stickerCreatedInMyStickers": "Ajouté à {name}",
+  "@stickerCreatedInMyStickers": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerView": "Voir",
+  "chatPanelExpand": "Agrandir le panneau",
+  "chatPanelCollapse": "Réduire le panneau"
 }

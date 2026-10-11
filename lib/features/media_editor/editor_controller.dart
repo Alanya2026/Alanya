@@ -43,24 +43,69 @@ enum EditorAspect {
 /// grande bitmap) et la libère dans [dispose] ; annuler/rétablir ne copient
 /// aucun bitmap.
 class EditorController extends ChangeNotifier {
+  /// [fixedAspect] (mode photo seulement) impose le format du cadre : le
+  /// document démarre à ce format, l'image remplit le cadre et le choix du
+  /// format disparaît (photo de profil : `EditorAspect.square`). `original` ou
+  /// `null` : cadre libre, comme avant. [roundFrame] : l'écran montre le cadre
+  /// vu par un cercle (repère, jamais exporté).
   EditorController({
     required this.mode,
     required this.image,
+    EditorAspect? fixedAspect,
+    this.roundFrame = false,
     int historyLimit = EditorHistory.defaultLimit,
-  }) : history = EditorHistory(limit: historyLimit),
-       _doc = EditorDoc.initial(
-         canvas: mode == MediaEditorMode.sticker
-             ? stickerCanvas
-             : ui.Size(image.width.toDouble(), image.height.toDouble()),
-         imageWidth: image.width,
-         imageHeight: image.height,
-       ),
+  }) : fixedAspect = mode == MediaEditorMode.photo && fixedAspect?.ratio != null
+           ? fixedAspect
+           : null,
+       history = EditorHistory(limit: historyLimit),
+       _doc = _initialDoc(mode, image, fixedAspect),
        tool = EditorTool.crop;
+
+  static EditorDoc _initialDoc(
+    MediaEditorMode mode,
+    ui.Image image,
+    EditorAspect? fixed,
+  ) {
+    final w = image.width;
+    final h = image.height;
+    if (mode == MediaEditorMode.sticker) {
+      return EditorDoc.initial(canvas: stickerCanvas, imageWidth: w, imageHeight: h);
+    }
+    final ratio = fixed?.ratio;
+    if (ratio == null) {
+      return EditorDoc.initial(
+        canvas: ui.Size(w.toDouble(), h.toDouble()),
+        imageWidth: w,
+        imageHeight: h,
+      );
+    }
+    final canvas = _canvasFor(ratio, w, h);
+    return EditorDoc(
+      canvas: canvas,
+      imageWidth: w,
+      imageHeight: h,
+      imageTransform: EditorImageTransform.cover(canvas, w, h),
+    );
+  }
+
+  /// Cadre de format [ratio] dont le grand côté est celui de l'image.
+  static ui.Size _canvasFor(double ratio, int imageW, int imageH) {
+    final longSide = math.max(imageW, imageH).toDouble();
+    return ratio >= 1
+        ? ui.Size(longSide, (longSide / ratio).roundToDouble())
+        : ui.Size((longSide * ratio).roundToDouble(), longSide);
+  }
 
   /// Cadre d'un sticker, en unités du document = pixels de l'export.
   static const ui.Size stickerCanvas = ui.Size(512, 512);
 
   final MediaEditorMode mode;
+
+  /// Format de cadre imposé (mode photo), `null` si libre.
+  final EditorAspect? fixedAspect;
+
+  /// Repère circulaire sur le cadre (photo de profil ou de groupe).
+  final bool roundFrame;
 
   /// Image de travail, possédée par le contrôleur.
   final ui.Image image;
@@ -376,13 +421,10 @@ class EditorController extends ChangeNotifier {
 
   /// Mode photo : change le format du cadre (l'image le remplit).
   void setAspect(EditorAspect a) {
-    if (mode != MediaEditorMode.photo) return;
+    if (mode != MediaEditorMode.photo || fixedAspect != null) return;
     final d = _doc;
     final ratio = a.ratio ?? d.imageWidth / d.imageHeight;
-    final longSide = math.max(d.imageWidth, d.imageHeight).toDouble();
-    final size = ratio >= 1
-        ? ui.Size(longSide, (longSide / ratio).roundToDouble())
-        : ui.Size((longSide * ratio).roundToDouble(), longSide);
+    final size = _canvasFor(ratio, d.imageWidth, d.imageHeight);
     if (size == d.canvas) return;
     execute(
       SetCanvasCommand(

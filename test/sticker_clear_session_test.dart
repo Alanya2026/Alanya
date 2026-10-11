@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/services/local_cache_repository.dart';
 import 'package:talky_flutter/core/services/stickers/sticker_cache.dart';
+import 'package:talky_flutter/core/services/stickers/sticker_features.dart';
 import 'package:talky_flutter/core/services/stickers/sticker_repository.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 
@@ -54,6 +55,9 @@ void main() {
     await prefs.setInt(StickerRepository.meVersionKey, 1);
     await prefs
         .setStringList(StickerRepository.unavailablePacksKey, ['mboa']);
+    // Fonctionnalités du compte (`/me` → features) : propres au compte aussi.
+    await prefs.setBool(StickerFeatures.animatedKey, true);
+    await prefs.setBool(StickerFeatures.creationKey, true);
 
     final repo = LocalCacheRepository(db: db, api: TalkyApiClient());
     await repo.clearSession();
@@ -67,6 +71,9 @@ void main() {
     expect(prefs.getInt(StickerRepository.meVersionKey), isNull);
     expect(prefs.getStringList(StickerRepository.unavailablePacksKey), isNull,
         reason: 'les packs archivés vus par un compte ne suivent pas le suivant');
+    expect(prefs.getBool(StickerFeatures.animatedKey), isNull,
+        reason: 'l\'option « animé » d\'un compte ne suit pas le suivant');
+    expect(prefs.getBool(StickerFeatures.creationKey), isNull);
     expect((cache.manager as _FakeManager).emptied, 1,
         reason: 'le cache disque des stickers est purgé');
   });

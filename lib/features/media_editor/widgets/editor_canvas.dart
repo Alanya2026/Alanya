@@ -262,6 +262,9 @@ class _EditorCanvasState extends State<EditorCanvas> {
                                 controller: _c,
                                 frameColor: colors.outline,
                                 guideColor: colors.primary,
+                                scrimColor: _c.roundFrame
+                                    ? colors.scrim.withValues(alpha: 0.55)
+                                    : null,
                                 repaint: _c,
                               ),
                             ),
@@ -339,12 +342,17 @@ class EditorOverlayPainter extends CustomPainter {
     required this.controller,
     required this.frameColor,
     required this.guideColor,
+    this.scrimColor,
     required Listenable repaint,
   }) : super(repaint: repaint);
 
   final EditorController controller;
   final Color frameColor;
   final Color guideColor;
+
+  /// Photo de profil ou de groupe : voile hors du cercle inscrit dans le cadre
+  /// (ce que l'on verra une fois rogné) ; `null` pour un cadre ordinaire.
+  final Color? scrimColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -355,6 +363,20 @@ class EditorOverlayPainter extends CustomPainter {
       ..strokeWidth = 1
       ..color = frameColor;
     canvas.drawRect(Offset.zero & size, line);
+
+    final scrim = scrimColor;
+    if (scrim != null) {
+      final rect = Offset.zero & size;
+      canvas.drawPath(
+        Path.combine(
+          PathOperation.difference,
+          Path()..addRect(rect),
+          Path()..addOval(rect),
+        ),
+        Paint()..color = scrim,
+      );
+      canvas.drawOval(rect, line);
+    }
 
     if (controller.tool == EditorTool.crop) {
       line.color = guideColor.withValues(alpha: 0.6);
@@ -407,5 +429,7 @@ class EditorOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(EditorOverlayPainter old) =>
-      old.frameColor != frameColor || old.guideColor != guideColor;
+      old.frameColor != frameColor ||
+      old.guideColor != guideColor ||
+      old.scrimColor != scrimColor;
 }

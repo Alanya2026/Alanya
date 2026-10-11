@@ -1,5 +1,6 @@
 // Faux clients et utilitaires partagés par les tests de la création de
 // stickers (V1b) : ils répondent avec les fixtures du contrat §4b.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -24,6 +25,26 @@ class FakeCreationApi implements StickerCreationApi {
   Map<String, dynamic> get state =>
       created ??= jsonDecode(jsonEncode(fx('created.json'))) as Map<String, dynamic>;
 
+  /// Pack perso par défaut : le premier ; sinon « Mes stickers », créé.
+  Map<String, dynamic> _defaultPack() {
+    final packs = (state['packs'] as List).cast<Map<String, dynamic>>();
+    if (packs.isNotEmpty) return packs.first;
+    final p = <String, dynamic>{
+      'id': 41,
+      'code': 'u_7_ab12cd34',
+      'name': 'Mes stickers',
+      'nameI18n': {'fr': 'Mes stickers'},
+      'version': 1,
+      'shared': false,
+      'shareToken': null,
+      'cover': null,
+      'count': 0,
+      'stickers': [],
+    };
+    packs.add(p);
+    return p;
+  }
+
   Map<String, dynamic>? _pack(int id) => (state['packs'] as List)
       .cast<Map<String, dynamic>>()
       .where((p) => p['id'] == id)
@@ -32,6 +53,9 @@ class FakeCreationApi implements StickerCreationApi {
   Map<String, dynamic> shareAdd = Map.of(fx('share-add.json') as Map).cast();
   bool reportDeja = false;
   bool copyReused = false;
+
+  /// `POST /assets` répond « réutilisé » (image déjà possédée).
+  bool uploadReused = false;
 
   void _guard() {
     if (closed) throw TalkyException('nope', 404, code: 'NOT_FOUND');
@@ -115,7 +139,9 @@ class FakeCreationApi implements StickerCreationApi {
       {required String filename, int? packId, String? emoji, String? name}) async {
     _guard();
     calls.add('upload:$packId:$filename:${bytes.length}');
-    final pack = packId == null ? null : _pack(packId);
+    // Sans `packId` : le serveur range dans le pack perso par défaut (le plus
+    // ancien), créé au besoin (contrat §4b).
+    final pack = packId == null ? _defaultPack() : _pack(packId);
     if (pack != null) {
       (pack['stickers'] as List).add({
         'id': 503,
@@ -132,11 +158,62 @@ class FakeCreationApi implements StickerCreationApi {
       });
       pack['count'] = (pack['stickers'] as List).length;
     }
-    return StickerHttpResult(201, body: fx('asset-created.json'));
+    final body = Map<String, dynamic>.from(fx('asset-created.json') as Map);
+    if (uploadReused) body['reutilise'] = true;
+    return StickerHttpResult(201, body: body);
   }
 
   @override
   Future<void> deleteAsset(int assetId) async => calls.add('deleteAsset:$assetId');
+
+  /// Création animée (V1c) : réponse de la fixture `asset-animated-created.json`.
+  /// [holdAnimated] suspend l'appel (conversion serveur en cours) jusqu'à son
+  /// achèvement ou à l'annulation.
+  Completer<void>? holdAnimated;
+  final animatedShapes = <String>[];
+
+  @override
+  Future<StickerHttpResult> uploadAnimatedAsset(List<int> bytes,
+      {required String filename,
+      required String shape,
+      int? packId,
+      String? emoji,
+      String? name,
+      Future<void>? cancel}) async {
+    _guard();
+    calls.add('animated:$packId:$filename:$shape:${bytes.length}');
+    animatedShapes.add(shape);
+    final hold = holdAnimated;
+    if (hold != null) {
+      final aborted = Completer<void>();
+      unawaited(cancel?.then((_) {
+        if (!aborted.isCompleted) aborted.complete();
+      }));
+      await Future.any([hold.future, aborted.future]);
+      if (aborted.isCompleted) {
+        calls.add('animated-aborted');
+        throw TalkyException('annulé', 0);
+      }
+    }
+    final pack = packId == null ? _defaultPack() : _pack(packId);
+    if (pack != null) {
+      (pack['stickers'] as List).add({
+        'id': 504,
+        'position': (pack['stickers'] as List).length,
+        'emoji': '😀',
+        'name': '',
+        'url': 'https://<bucket>/stickers/u/7/anim_ff.webp',
+        'thumb': 'https://<bucket>/stickers/u/7/anim_ff_t.webp',
+        'w': 512,
+        'h': 512,
+        'animated': true,
+        'bytes': 120000,
+        'assetId': 9004,
+      });
+      pack['count'] = (pack['stickers'] as List).length;
+    }
+    return StickerHttpResult(201, body: fx('asset-animated-created.json'));
+  }
 
   @override
   Future<StickerHttpResult> copySticker(int stickerId,

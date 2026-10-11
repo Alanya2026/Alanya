@@ -2455,5 +2455,42 @@
   "mediaEditorCutoutSoft": "柔和边缘",
   "mediaEditorCutoutReset": "重置蒙版",
   "mediaEditorCutoutNoPerson": "此图片中未检测到人物。请使用画笔抠图。",
-  "mediaEditorCutoutFailed": "自动抠图失败。请使用画笔抠图。"
+  "mediaEditorCutoutFailed": "自动抠图失败。请使用画笔抠图。",
+  "stickerAnimatedSemantics": "动态贴纸 {emoji}",
+  "@stickerAnimatedSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerReplay": "重新播放动画",
+  "stickerOpenDetails": "查看贴纸详情",
+  "stickerBadgeAnimated": "动态",
+  "stickerAddAnimated": "添加动态贴纸",
+  "stickerAnimatedTitle": "动态贴纸",
+  "stickerAnimatedShape": "形状",
+  "stickerShapeCircle": "圆形",
+  "stickerShapeRounded": "圆角方形",
+  "stickerShapeSquare": "方形",
+  "stickerAnimatedHint": "图片将被裁剪为正方形，时长限制在约 3 秒。在聊天中动画只播放一次，点按贴纸可重新播放。",
+  "stickerAnimatedPreviewLabel": "动态贴纸预览",
+  "stickerAnimatedConverting": "正在转换…",
+  "stickerAnimatedConvertingHint": "这可能需要十几秒。",
+  "stickerAnimatedAdded": "已添加动态贴纸。",
+  "stickerAnimatedNotAnimated": "该文件不是动态图。请选择 GIF 或动态 WebP。",
+  "stickerAnimatedFormat": "仅支持 GIF 和动态 WebP 文件。",
+  "stickerAnimatedTooBig": "该文件超过 3 MB。",
+  "stickerAnimatedInvalid": "该文件过大或不受支持。请尝试更短或更小的 GIF。",
+  "stickerAnimatedRateLimited": "您创建的动态贴纸过多。请稍后再试（每小时最多 10 个）。",
+  "stickerAnimatedBusy": "服务繁忙，请稍后再试。",
+  "stickerAnimatedClosed": "动态贴纸暂时不可用。",
+  "mediaEditorCropHintRound": "拖动并捏合来调整照片：它将显示在圆形框内。",
+  "mediaEditorEditFailed": "无法处理编辑后的照片，请重试。",
+  "stickerCreateTile": "创建",
+  "stickerCreateHint": "用相册中的照片制作贴纸。",
+  "stickerCreatedInMyStickers": "已添加到“{name}”",
+  "stickerView": "查看",
+  "chatPanelExpand": "展开面板",
+  "chatPanelCollapse": "收起面板"
 }

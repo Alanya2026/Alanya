@@ -21,6 +21,7 @@ class StickerImage extends StatelessWidget {
     this.size = 150,
     this.semanticLabel,
     this.showRemovedLabel = true,
+    this.staticFrame = false,
   });
 
   final String url;
@@ -34,13 +35,25 @@ class StickerImage extends StatelessWidget {
   /// Faux pour les petites vignettes du plateau : l'emoji suffit.
   final bool showRemovedLabel;
 
+  /// Image **fixe** : affiche la vignette 96×96 (première image) au lieu du
+  /// fichier complet. Pour tout ce qui n'est pas la bulle ou la fiche d'un
+  /// sticker animé (plateau, listes, couvertures, citations) : un WebP animé
+  /// tournerait en boucle dans une liste et coûterait CPU et batterie.
+  final bool staticFrame;
+
   @override
   Widget build(BuildContext context) {
+    // Image fixe : la vignette prend la place du fichier complet.
+    final staticThumb =
+        staticFrame ? (thumbUrl ?? stickerThumbUrlOf(url)) : null;
+    final shownUrl = staticThumb ?? url;
+    final shownThumb = staticThumb == null ? thumbUrl : null;
     // URL non fiable (hôte étranger, chemin hors stickers — cf. StickerTrust) :
     // on ne télécharge RIEN, on affiche le repli. Protection contre une
     // `mediaUrl` malveillante stockée dans un ancien message de type 10.
-    if (!StickerTrust.isTrustedStickerUrl(url) ||
-        (thumbUrl != null && !StickerTrust.isTrustedStickerUrl(thumbUrl))) {
+    if (!StickerTrust.isTrustedStickerUrl(shownUrl) ||
+        (shownThumb != null &&
+            !StickerTrust.isTrustedStickerUrl(shownThumb))) {
       return StickerFallback(
         emoji: emoji,
         size: size,
@@ -58,15 +71,15 @@ class StickerImage extends StatelessWidget {
         width: size,
         height: size,
         child: CachedNetworkImage(
-          imageUrl: url,
+          imageUrl: shownUrl,
           cacheManager: cache,
           fit: BoxFit.contain,
           fadeInDuration: reduce ? Duration.zero : const Duration(milliseconds: 120),
           fadeOutDuration: reduce ? Duration.zero : const Duration(milliseconds: 80),
-          placeholder: (_, _) => (thumbUrl == null || thumbUrl!.isEmpty)
+          placeholder: (_, _) => (shownThumb == null || shownThumb.isEmpty)
               ? Center(child: _EmojiOnly(emoji: emoji, size: size))
               : CachedNetworkImage(
-                  imageUrl: thumbUrl!,
+                  imageUrl: shownThumb,
                   cacheManager: cache,
                   fit: BoxFit.contain,
                   fadeInDuration: Duration.zero,
@@ -83,6 +96,20 @@ class StickerImage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Vignette statique (`…_t.webp`, 96×96, première image) d'un fichier sticker
+/// (contrat §8 : même clé + `_t.webp`, pour les officiels comme pour les
+/// stickers perso). `null` si [url] n'est pas un `.webp` ; l'URL d'une
+/// vignette se rend telle quelle.
+String? stickerThumbUrlOf(String url) {
+  final uri = Uri.tryParse(url.trim());
+  if (uri == null) return null;
+  final path = uri.path;
+  if (!path.toLowerCase().endsWith('.webp')) return null;
+  if (path.toLowerCase().endsWith('_t.webp')) return url;
+  final thumbPath = '${path.substring(0, path.length - '.webp'.length)}_t.webp';
+  return uri.replace(path: thumbPath).toString();
 }
 
 /// Le serveur a répondu « n'existe plus » (404/410) : fichier retiré.

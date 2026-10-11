@@ -82,6 +82,10 @@ dependencies:
   gal: ^2.3.1                         # Sauvegarde photos/vidéos vers album Alanya
   image_picker: ^1.1.2                # Galerie / caméra (photos & vidéos)
   camera: ^0.11.0+2                   # Écran caméra intégré (photo + vidéo)
+  # Encodage JPEG des photos retouchées SEULEMENT (core/services/photo_edit_service.dart,
+  # dans un isolat) ; importé nulle part ailleurs (test/photo_edit_isolate_test.dart).
+  # Verrou inchangé (4.8.0). Les stickers restent exportés en PNG par dart:ui.
+  image: ^4.8.0
   file_picker: ^8.1.2                 # Sélection de documents
   cached_network_image: ^3.4.1        # Affichage + cache disque des images
   # Déjà tiré par cached_network_image, mais déclaré : `map_tiles.dart` s'en sert

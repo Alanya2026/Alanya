@@ -3515,5 +3515,42 @@
   "mediaEditorCutoutSoft": "Soft edges",
   "mediaEditorCutoutReset": "Reset mask",
   "mediaEditorCutoutNoPerson": "No person detected in this image. Use the brush to cut out.",
-  "mediaEditorCutoutFailed": "Automatic cut-out failed. Use the brush to cut out."
+  "mediaEditorCutoutFailed": "Automatic cut-out failed. Use the brush to cut out.",
+  "stickerAnimatedSemantics": "Animated sticker {emoji}",
+  "@stickerAnimatedSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerReplay": "Replay the animation",
+  "stickerOpenDetails": "View sticker details",
+  "stickerBadgeAnimated": "Animated",
+  "stickerAddAnimated": "Add an animated sticker",
+  "stickerAnimatedTitle": "Animated sticker",
+  "stickerAnimatedShape": "Shape",
+  "stickerShapeCircle": "Circle",
+  "stickerShapeRounded": "Rounded square",
+  "stickerShapeSquare": "Square",
+  "stickerAnimatedHint": "Your image will be cropped to a square and limited to about 3 seconds. In the chat the animation plays once; tap the sticker to replay it.",
+  "stickerAnimatedPreviewLabel": "Animated sticker preview",
+  "stickerAnimatedConverting": "Converting…",
+  "stickerAnimatedConvertingHint": "This can take about fifteen seconds.",
+  "stickerAnimatedAdded": "Animated sticker added.",
+  "stickerAnimatedNotAnimated": "This file isn't animated. Choose a GIF or an animated WebP.",
+  "stickerAnimatedFormat": "Only GIF and animated WebP files are accepted.",
+  "stickerAnimatedTooBig": "This file is larger than 3 MB.",
+  "stickerAnimatedInvalid": "This file is too heavy or isn't supported. Try a shorter or smaller GIF.",
+  "stickerAnimatedRateLimited": "You've created a lot of animated stickers. Try again later (10 per hour at most).",
+  "stickerAnimatedBusy": "The service is busy. Try again in a moment.",
+  "stickerAnimatedClosed": "Animated stickers aren't available right now.",
+  "mediaEditorCropHintRound": "Drag and pinch to frame the photo: it will be shown in a circle.",
+  "mediaEditorEditFailed": "Couldn't prepare the edited photo. Please try again.",
+  "stickerCreateTile": "Create",
+  "stickerCreateHint": "Make a sticker from a photo in your gallery.",
+  "stickerCreatedInMyStickers": "Added to {name}",
+  "stickerView": "View",
+  "chatPanelExpand": "Expand panel",
+  "chatPanelCollapse": "Collapse panel"
 }

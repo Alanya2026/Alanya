@@ -13887,6 +13887,186 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Le détourage automatique a échoué. Utilisez le pinceau pour détourer.'**
   String get mediaEditorCutoutFailed;
+
+  /// No description provided for @stickerAnimatedSemantics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker animé {emoji}'**
+  String stickerAnimatedSemantics(String emoji);
+
+  /// No description provided for @stickerReplay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejouer l\'animation'**
+  String get stickerReplay;
+
+  /// No description provided for @stickerOpenDetails.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir la fiche du sticker'**
+  String get stickerOpenDetails;
+
+  /// No description provided for @stickerBadgeAnimated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Animé'**
+  String get stickerBadgeAnimated;
+
+  /// No description provided for @stickerAddAnimated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un sticker animé'**
+  String get stickerAddAnimated;
+
+  /// No description provided for @stickerAnimatedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker animé'**
+  String get stickerAnimatedTitle;
+
+  /// No description provided for @stickerAnimatedShape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Forme'**
+  String get stickerAnimatedShape;
+
+  /// No description provided for @stickerShapeCircle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cercle'**
+  String get stickerShapeCircle;
+
+  /// No description provided for @stickerShapeRounded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carré arrondi'**
+  String get stickerShapeRounded;
+
+  /// No description provided for @stickerShapeSquare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carré'**
+  String get stickerShapeSquare;
+
+  /// No description provided for @stickerAnimatedHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre image sera recadrée en carré et limitée à 3 secondes environ. Dans la conversation, l\'animation se joue une fois ; touchez le sticker pour la rejouer.'**
+  String get stickerAnimatedHint;
+
+  /// No description provided for @stickerAnimatedPreviewLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu animé du sticker'**
+  String get stickerAnimatedPreviewLabel;
+
+  /// No description provided for @stickerAnimatedConverting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conversion en cours…'**
+  String get stickerAnimatedConverting;
+
+  /// No description provided for @stickerAnimatedConvertingHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cela peut prendre une quinzaine de secondes.'**
+  String get stickerAnimatedConvertingHint;
+
+  /// No description provided for @stickerAnimatedAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker animé ajouté.'**
+  String get stickerAnimatedAdded;
+
+  /// No description provided for @stickerAnimatedNotAnimated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier n\'est pas animé. Choisissez un GIF ou un WebP animé.'**
+  String get stickerAnimatedNotAnimated;
+
+  /// No description provided for @stickerAnimatedFormat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les GIF et les WebP animés sont acceptés.'**
+  String get stickerAnimatedFormat;
+
+  /// No description provided for @stickerAnimatedTooBig.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier dépasse 3 Mo.'**
+  String get stickerAnimatedTooBig;
+
+  /// No description provided for @stickerAnimatedInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier est trop lourd ou n\'est pas pris en charge. Essayez un GIF plus court ou plus petit.'**
+  String get stickerAnimatedInvalid;
+
+  /// No description provided for @stickerAnimatedRateLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez créé beaucoup de stickers animés. Réessayez plus tard (10 par heure au plus).'**
+  String get stickerAnimatedRateLimited;
+
+  /// No description provided for @stickerAnimatedBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le service est occupé. Réessayez dans un instant.'**
+  String get stickerAnimatedBusy;
+
+  /// No description provided for @stickerAnimatedClosed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les stickers animés ne sont pas disponibles pour le moment.'**
+  String get stickerAnimatedClosed;
+
+  /// No description provided for @mediaEditorCropHintRound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Glissez et pincez pour cadrer la photo : elle s\'affichera dans un cercle.'**
+  String get mediaEditorCropHintRound;
+
+  /// No description provided for @mediaEditorEditFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de préparer la photo modifiée. Réessayez.'**
+  String get mediaEditorEditFailed;
+
+  /// No description provided for @stickerCreateTile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer'**
+  String get stickerCreateTile;
+
+  /// No description provided for @stickerCreateHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créez un sticker à partir d\'une photo de votre galerie.'**
+  String get stickerCreateHint;
+
+  /// No description provided for @stickerCreatedInMyStickers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouté à {name}'**
+  String stickerCreatedInMyStickers(String name);
+
+  /// No description provided for @stickerView.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir'**
+  String get stickerView;
+
+  /// No description provided for @chatPanelExpand.
+  ///
+  /// In fr, this message translates to:
+  /// **'Agrandir le panneau'**
+  String get chatPanelExpand;
+
+  /// No description provided for @chatPanelCollapse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réduire le panneau'**
+  String get chatPanelCollapse;
 }
 
 class _AppLocalizationsDelegate

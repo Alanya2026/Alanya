@@ -259,21 +259,71 @@ extension _ChatInput on _ChatDetailScreenState {
     );
   }
 
-  Widget _buildEmojiPicker() {
-    // Onglets Émojis · Stickers. L'onglet Stickers disparaît si le module est
-    // fermé côté serveur : le plateau redevient exactement celui d'avant.
-    return EmojiStickerPicker(
-      height: 280,
-      onSendSticker: _sendSticker,
-      emojiPicker: SizedBox(
-        height: 280,
-        child: EmojiPicker(
-          textEditingController: _messageController,
-          onEmojiSelected: (category, emoji) {
-            if (!_hasText) rebuild(() => _hasText = true);
-            _dismissUnreadSeparator();
-          },
-          config: const Config(height: 280),
+  /// Grand et posé : le panneau recouvre le champ de saisie, qu'on masque.
+  bool get _emojiHidesInput => _showEmoji && _emojiPanel.covering;
+
+  /// Le niveau ou le recouvrement du panneau a changé : le champ de saisie
+  /// apparaît ou disparaît (jamais à chaque image de l'animation).
+  void _onEmojiPanelChanged() {
+    if (mounted) rebuild(() {});
+  }
+
+  /// Hauteurs normale et grande du panneau dans [available] dp de haut.
+  ({double normal, double large}) _emojiPanelHeights(double available) =>
+      ExpandablePanel.heightsFor(
+        available: available,
+        bottomInset: MediaQuery.paddingOf(context).bottom,
+      );
+
+  /// Panneau Émojis · Stickers, extensible par sa poignée. [available] est la
+  /// hauteur du corps de l'écran : le niveau grand en prend ~90 %.
+  Widget _buildEmojiPicker(double available) {
+    final heights = _emojiPanelHeights(available);
+    final colors = context.colors;
+    return ExpandablePanel(
+      controller: _emojiPanel,
+      normalHeight: heights.normal,
+      largeHeight: heights.large,
+      bottomInset: MediaQuery.paddingOf(context).bottom,
+      expandLabel: context.l10n.chatPanelExpand,
+      collapseLabel: context.l10n.chatPanelCollapse,
+      onClose: () {
+        if (mounted && _showEmoji) rebuild(() => _showEmoji = false);
+      },
+      // Onglets Émojis · Stickers. L'onglet Stickers disparaît si le module est
+      // fermé côté serveur : le plateau redevient exactement celui d'avant.
+      child: EmojiStickerPicker(
+        onSendSticker: _sendSticker,
+        // Le sélecteur remplit la place du panneau : `height` n'est qu'un
+        // plafond que le parent resserre (contraintes serrées).
+        emojiPicker: SizedBox.expand(
+          child: EmojiPicker(
+            textEditingController: _messageController,
+            onEmojiSelected: (category, emoji) {
+              if (!_hasText) rebuild(() => _hasText = true);
+              _dismissUnreadSeparator();
+            },
+            config: Config(
+              height: 4096,
+              emojiViewConfig: EmojiViewConfig(backgroundColor: colors.surface),
+              categoryViewConfig: CategoryViewConfig(
+                backgroundColor: colors.surface,
+                indicatorColor: colors.primary,
+                iconColor: colors.onSurfaceVariant,
+                iconColorSelected: colors.primary,
+                backspaceColor: colors.primary,
+              ),
+              bottomActionBarConfig: BottomActionBarConfig(
+                backgroundColor: colors.surface,
+                buttonColor: colors.primary,
+                buttonIconColor: colors.onPrimary,
+              ),
+              searchViewConfig: SearchViewConfig(
+                backgroundColor: colors.surface,
+                buttonIconColor: colors.onSurfaceVariant,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -518,6 +568,8 @@ extension _ChatInput on _ChatDetailScreenState {
     // l'effet « flottant » WhatsApp. Le SafeArea pose la marge système.
     return SafeArea(
       top: false,
+      // Panneau ouvert : la zone sûre du bas est déjà dans le panneau.
+      bottom: !_showEmoji,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(AppSpacing.sm, 6, AppSpacing.sm, AppSpacing.sm),
         child: _isRecording ? _buildRecordingBar() : _buildComposeBar(),

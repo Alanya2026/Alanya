@@ -8115,4 +8115,109 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get mediaEditorCutoutFailed =>
       'Le détourage automatique a échoué. Utilisez le pinceau pour détourer.';
+
+  @override
+  String stickerAnimatedSemantics(String emoji) {
+    return 'Sticker animé $emoji';
+  }
+
+  @override
+  String get stickerReplay => 'Rejouer l\'animation';
+
+  @override
+  String get stickerOpenDetails => 'Voir la fiche du sticker';
+
+  @override
+  String get stickerBadgeAnimated => 'Animé';
+
+  @override
+  String get stickerAddAnimated => 'Ajouter un sticker animé';
+
+  @override
+  String get stickerAnimatedTitle => 'Sticker animé';
+
+  @override
+  String get stickerAnimatedShape => 'Forme';
+
+  @override
+  String get stickerShapeCircle => 'Cercle';
+
+  @override
+  String get stickerShapeRounded => 'Carré arrondi';
+
+  @override
+  String get stickerShapeSquare => 'Carré';
+
+  @override
+  String get stickerAnimatedHint =>
+      'Votre image sera recadrée en carré et limitée à 3 secondes environ. Dans la conversation, l\'animation se joue une fois ; touchez le sticker pour la rejouer.';
+
+  @override
+  String get stickerAnimatedPreviewLabel => 'Aperçu animé du sticker';
+
+  @override
+  String get stickerAnimatedConverting => 'Conversion en cours…';
+
+  @override
+  String get stickerAnimatedConvertingHint =>
+      'Cela peut prendre une quinzaine de secondes.';
+
+  @override
+  String get stickerAnimatedAdded => 'Sticker animé ajouté.';
+
+  @override
+  String get stickerAnimatedNotAnimated =>
+      'Ce fichier n\'est pas animé. Choisissez un GIF ou un WebP animé.';
+
+  @override
+  String get stickerAnimatedFormat =>
+      'Seuls les GIF et les WebP animés sont acceptés.';
+
+  @override
+  String get stickerAnimatedTooBig => 'Ce fichier dépasse 3 Mo.';
+
+  @override
+  String get stickerAnimatedInvalid =>
+      'Ce fichier est trop lourd ou n\'est pas pris en charge. Essayez un GIF plus court ou plus petit.';
+
+  @override
+  String get stickerAnimatedRateLimited =>
+      'Vous avez créé beaucoup de stickers animés. Réessayez plus tard (10 par heure au plus).';
+
+  @override
+  String get stickerAnimatedBusy =>
+      'Le service est occupé. Réessayez dans un instant.';
+
+  @override
+  String get stickerAnimatedClosed =>
+      'Les stickers animés ne sont pas disponibles pour le moment.';
+
+  @override
+  String get mediaEditorCropHintRound =>
+      'Glissez et pincez pour cadrer la photo : elle s\'affichera dans un cercle.';
+
+  @override
+  String get mediaEditorEditFailed =>
+      'Impossible de préparer la photo modifiée. Réessayez.';
+
+  @override
+  String get stickerCreateTile => 'Créer';
+
+  @override
+  String get stickerCreateHint =>
+      'Créez un sticker à partir d\'une photo de votre galerie.';
+
+  @override
+  String stickerCreatedInMyStickers(String name) {
+    return 'Ajouté à $name';
+  }
+
+  @override
+  String get stickerView => 'Voir';
+
+  @override
+  String get chatPanelExpand => 'Agrandir le panneau';
+
+  @override
+  String get chatPanelCollapse => 'Réduire le panneau';
 }

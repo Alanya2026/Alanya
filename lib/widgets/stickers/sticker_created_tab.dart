@@ -110,6 +110,7 @@ class _CreatedPackTile extends StatelessWidget {
                 emoji: '',
                 size: 48,
                 showRemovedLabel: false,
+                staticFrame: true,
                 semanticLabel: pack.name,
               ),
       ),
