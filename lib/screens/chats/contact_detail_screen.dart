@@ -73,6 +73,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   bool _addedViaQr = false;
   DateTime? _preferredAddedAt;
   String? _preferredNote;
+  String? _preferredName;
   bool _isBlocked = false;
   bool _blockedByThem = false;
   bool _busy = false;
@@ -219,6 +220,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           _addedViaQr = relation?.addedViaQr ?? false;
           _preferredAddedAt = relation?.preferredAddedAt;
           _preferredNote = relation?.preferredNote;
+          _preferredName = relation?.preferredName;
           _isLoading = false;
         });
       }
@@ -343,6 +345,58 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       }
       if (mounted) setState(() => _isFavorite = next);
     } catch (e) {
+      if (mounted) _snack(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat), error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Nom personnalisé — le nom sous lequel J'enregistre ce contact préféré.
+  /// Serveur puis miroir local ; vide = retour au nom du profil.
+  Future<void> _renameContact() async {
+    final contact = _contact;
+    if (contact == null || _busy) return;
+    final l10n = context.l10n;
+    final cache = context.read<LocalCacheRepository>();
+    final controller = TextEditingController(text: _preferredName ?? '');
+    final saisi = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.renameContactTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 60,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            hintText: contact.nom.isNotEmpty ? contact.nom : contact.pseudo,
+            helperText: l10n.renameContactHelper,
+            helperMaxLines: 3,
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(l10n.commonSave),
+          ),
+        ],
+      ),
+    );
+    if (saisi == null || !mounted) return;
+    final name = saisi.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (name == (_preferredName ?? '').trim()) return;
+    setState(() => _busy = true);
+    try {
+      await _api.setContactName(widget.userId, name);
+      await cache.setPreferredName(widget.userId, name);
+      if (mounted) setState(() => _preferredName = name);
+    } catch (e, st) {
+      AppLog.e('ContactDetail', 'Renommage du contact échoué', e, st);
       if (mounted) _snack(presenterErreur(context.l10n, e, domaine: ErrorDomain.chat), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -482,6 +536,9 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
             icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               switch (v) {
+                case 'rename':
+                  _renameContact();
+                  break;
                 case 'block':
                   _toggleBlock();
                   break;
@@ -497,6 +554,13 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
               }
             },
             itemBuilder: (_) => [
+              // Le nom personnalisé appartient à la relation : il n'existe
+              // que pour un contact préféré.
+              if (!_isSelf && _isFavorite)
+                PopupMenuItem(
+                  value: 'rename',
+                  child: Text(context.l10n.renameContactAction),
+                ),
               if (!_isSelf)
                 PopupMenuItem(
                   value: 'block',
@@ -548,7 +612,11 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg,
           AppSpacing.xxl),
       children: [
-        _Header(user: u, hidePhoto: !isSelf && _blockedByThem),
+        _Header(
+          user: u,
+          hidePhoto: !isSelf && _blockedByThem,
+          customName: !isSelf && _isFavorite ? _preferredName : null,
+        ),
         if (!isSelf && _isFavorite && _addedViaQr) ...[
           AppSpacing.vGapMd,
           Center(
@@ -695,11 +763,17 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
 class _Header extends StatelessWidget {
   final User user;
   final bool hidePhoto;
-  const _Header({required this.user, this.hidePhoto = false});
+
+  /// Nom personnalisé du contact préféré — prend la place du titre, le nom
+  /// du profil restant lisible juste dessous.
+  final String? customName;
+  const _Header({required this.user, this.hidePhoto = false, this.customName});
 
   @override
   Widget build(BuildContext context) {
-    final name = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final perso = (customName ?? '').trim();
+    final name =
+        perso.isNotEmpty ? perso : (user.nom.isNotEmpty ? user.nom : user.pseudo);
     return Column(
       children: [
         AppAvatar(
@@ -709,6 +783,13 @@ class _Header extends StatelessWidget {
         ),
         AppSpacing.vGapMd,
         Text(name, style: context.text.headlineSmall, textAlign: TextAlign.center),
+        if (perso.isNotEmpty && user.nom.isNotEmpty && user.nom != perso) ...[
+          AppSpacing.vGapXs,
+          Text(user.nom,
+              textAlign: TextAlign.center,
+              style: context.text.bodyMedium
+                  ?.copyWith(color: context.colors.onSurfaceVariant)),
+        ],
         if (resolveAccountBadge(user.accountType, user.verificationStatus) !=
             AccountBadge.none) ...[
           AppSpacing.vGapXs,

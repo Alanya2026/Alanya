@@ -3,6 +3,7 @@
 
 import 'core/services/call/call_history_rules.dart';
 import 'core/utils/backend_url.dart';
+import 'core/utils/contact_aliases.dart';
 import 'core/utils/contact_payload.dart';
 import 'core/utils/location_payload.dart';
 import 'core/theme/locale_controller.dart';
@@ -54,6 +55,11 @@ class User {
   /// source ne portait pas la relation ; chaîne vide = pas de note (connue).
   final String? preferredNote;
 
+  /// Nom personnalisé de la relation (`customName` du serveur) : le nom sous
+  /// lequel J'ai enregistré ce contact préféré. Même règle de nullité que
+  /// [preferredNote] : null = source muette, chaîne vide = aucun (connu).
+  final String? preferredName;
+
   /// Genre déclaré : `homme` | `femme` | `autre` | `non_precise`. Null = pas
   /// encore renseigné, ce qui est distinct de `non_precise` (« je préfère ne pas
   /// dire »), qui est une réponse. Non modifiable une fois posé.
@@ -94,6 +100,7 @@ class User {
     this.addedViaQr,
     this.preferredAddedAt,
     this.preferredNote,
+    this.preferredName,
     this.genre,
     this.age,
     this.anneeNaissance,
@@ -104,6 +111,13 @@ class User {
     this.createdAt,
     this.paysLibelle,
   });
+
+  /// Nom à afficher pour MOI : le nom personnalisé du contact préféré s'il
+  /// existe, sinon le nom du profil.
+  String get displayName {
+    final perso = preferredName?.trim() ?? '';
+    return perso.isNotEmpty ? perso : nom;
+  }
 
   factory User.fromJson(Map<String, dynamic> json) => User(
         alanyaID: json['alanyaID'] ?? 0,
@@ -127,6 +141,9 @@ class User {
             : null,
         preferredNote: json.containsKey('addedNote')
             ? (json['addedNote']?.toString() ?? '')
+            : null,
+        preferredName: json.containsKey('customName')
+            ? (json['customName']?.toString() ?? '')
             : null,
         genre: json['genre']?.toString(),
         age: _asInt(json['age']),
@@ -1149,7 +1166,8 @@ class Conversation {
       );
     }
     final other = participants.where((u) => u.alanyaID != myId).firstOrNull;
-    return other?.nom ?? l10n.unknownSender;
+    if (other == null) return l10n.unknownSender;
+    return ContactAliases.of(other.alanyaID) ?? other.nom;
   }
 
   // Avatar à afficher

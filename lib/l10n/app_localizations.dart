@@ -12945,6 +12945,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vous avez fait une capture d\'écran de cette discussion'**
   String get sysScreenshotByMe;
+
+  /// No description provided for @renameContactAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renommer'**
+  String get renameContactAction;
+
+  /// No description provided for @renameContactTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du contact'**
+  String get renameContactTitle;
+
+  /// No description provided for @renameContactHelper.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible par vous seul. Laissez vide pour revenir au nom du profil.'**
+  String get renameContactHelper;
 }
 
 class _AppLocalizationsDelegate

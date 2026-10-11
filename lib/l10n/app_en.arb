@@ -3282,5 +3282,8 @@
       }
     }
   },
-  "sysScreenshotByMe": "You took a screenshot of this chat"
+  "sysScreenshotByMe": "You took a screenshot of this chat",
+  "renameContactAction": "Rename",
+  "renameContactTitle": "Contact name",
+  "renameContactHelper": "Only you can see it. Leave empty to go back to the profile name."
 }

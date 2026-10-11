@@ -4150,5 +4150,8 @@
       }
     }
   },
-  "sysScreenshotByMe": "Vous avez fait une capture d'écran de cette discussion"
+  "sysScreenshotByMe": "Vous avez fait une capture d'écran de cette discussion",
+  "renameContactAction": "Renommer",
+  "renameContactTitle": "Nom du contact",
+  "renameContactHelper": "Visible par vous seul. Laissez vide pour revenir au nom du profil."
 }

@@ -7165,4 +7165,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sysScreenshotByMe => '您对此聊天进行了截屏';
+
+  @override
+  String get renameContactAction => '重命名';
+
+  @override
+  String get renameContactTitle => '联系人名称';
+
+  @override
+  String get renameContactHelper => '仅您可见。留空则恢复为个人资料名称。';
 }

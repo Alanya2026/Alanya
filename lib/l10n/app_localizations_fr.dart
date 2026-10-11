@@ -7599,4 +7599,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get sysScreenshotByMe =>
       'Vous avez fait une capture d\'écran de cette discussion';
+
+  @override
+  String get renameContactAction => 'Renommer';
+
+  @override
+  String get renameContactTitle => 'Nom du contact';
+
+  @override
+  String get renameContactHelper =>
+      'Visible par vous seul. Laissez vide pour revenir au nom du profil.';
 }

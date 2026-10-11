@@ -2208,5 +2208,8 @@
   "clearChatDone": "聊天记录已清空",
   "clearChatMediaDone": "媒体文件已删除",
   "sysScreenshot": "{actor} 对此聊天进行了截屏",
-  "sysScreenshotByMe": "您对此聊天进行了截屏"
+  "sysScreenshotByMe": "您对此聊天进行了截屏",
+  "renameContactAction": "重命名",
+  "renameContactTitle": "联系人名称",
+  "renameContactHelper": "仅您可见。留空则恢复为个人资料名称。"
 }

@@ -412,7 +412,8 @@ class _ContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final displayName =
+        user.displayName.isNotEmpty ? user.displayName : user.pseudo;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),

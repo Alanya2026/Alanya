@@ -7508,4 +7508,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sysScreenshotByMe => 'You took a screenshot of this chat';
+
+  @override
+  String get renameContactAction => 'Rename';
+
+  @override
+  String get renameContactTitle => 'Contact name';
+
+  @override
+  String get renameContactHelper =>
+      'Only you can see it. Leave empty to go back to the profile name.';
 }
