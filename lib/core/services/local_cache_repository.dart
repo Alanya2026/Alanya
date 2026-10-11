@@ -81,6 +81,9 @@ class LocalCacheRepository {
   /// rien casser (le cache reste utilisable).
   Future<void> syncPreferredContacts() async {
     try {
+      // Hors ligne aussi : le registre des noms personnalisés part du cache,
+      // avant l'appel réseau qui peut échouer.
+      await getPreferredContactsOnce();
       final raw = await _api.getContacts();
       final now = DateTime.now();
       // Step 1: récupérer la liste actuelle pour détecter les retraits.

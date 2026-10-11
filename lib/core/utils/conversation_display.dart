@@ -5,6 +5,7 @@ import '../db/chat_dao.dart';
 import '../services/chat/conversation_merge.dart';
 import '../theme/locale_controller.dart';
 import 'call_log_preview.dart';
+import 'contact_aliases.dart';
 import 'media_album.dart';
 import 'self_chat.dart';
 import 'system_event_payload.dart';
@@ -95,7 +96,11 @@ String conversationDisplayName(LocalConversation conv, int myId) {
     );
   }
   final other = otherParticipant(conv, myId);
-  return (other?['nom'] as String?) ?? l10n.unknownSender;
+  // Mon nom personnalisé pour ce contact préféré passe avant celui du profil.
+  final alias = other == null
+      ? null
+      : ContactAliases.of(conversationParticipantId(other['alanyaID']));
+  return alias ?? (other?['nom'] as String?) ?? l10n.unknownSender;
 }
 
 String? conversationDisplayAvatar(LocalConversation conv, int myId) {

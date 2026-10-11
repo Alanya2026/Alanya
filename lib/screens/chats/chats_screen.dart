@@ -37,6 +37,7 @@ import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 import 'select_members_screen.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/utils/contact_aliases.dart';
 import '../../core/errors/error_presenter.dart';
 
 /// Entrées du menu ⋮ de l'écran des discussions.
@@ -90,6 +91,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   void initState() {
     super.initState();
+    ContactAliases.revision.addListener(_onContactAliasesChanged);
     _chatProvider = Provider.of<ChatProvider>(context, listen: false);
     if (_chatProvider!.initialSyncComplete) {
       _awaitingInitialConversations = false;
@@ -144,8 +146,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
     setState(() => _awaitingInitialConversations = false);
   }
 
+  /// Un nom personnalisé a changé (renommage, synchronisation) : les titres
+  /// des discussions 1-à-1 se recalculent.
+  void _onContactAliasesChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    ContactAliases.revision.removeListener(_onContactAliasesChanged);
     _chatProvider?.removeListener(_onChatProviderChanged);
     _chatProvider = null;
     _qrIdsSub?.cancel();

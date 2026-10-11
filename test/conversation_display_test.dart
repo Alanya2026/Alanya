@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/theme/locale_controller.dart';
+import 'package:talky_flutter/core/utils/contact_aliases.dart';
 import 'package:talky_flutter/core/utils/conversation_display.dart';
 
 void main() {
@@ -147,6 +148,42 @@ void main() {
     test('myId inconnu (auth pas encore hydratée)', () {
       expect(isSelfConversation(selfConv, 0), isFalse);
       expect(conversationCounterpartId(selfConv, 0), isNull);
+    });
+  });
+
+  group('nom personnalisé d\'un contact préféré', () {
+    tearDown(() => ContactAliases.replaceAll({}));
+
+    test('remplace le nom du profil dans le titre 1-1, puis s\'efface', () {
+      ContactAliases.set(2, '  Tonton Bob ');
+      expect(conversationDisplayName(normalConv, me), 'Tonton Bob');
+      ContactAliases.set(2, '');
+      expect(conversationDisplayName(normalConv, me), 'Bob');
+    });
+
+    test('ne touche ni un groupe ni la conversation avec soi-même', () {
+      ContactAliases.replaceAll({me: 'Moi renommé', 2: 'Tonton Bob'});
+      final groupe = conv(
+        conversID: 9,
+        isGroup: true,
+        groupName: 'Équipe',
+        participants: [part(me, 'Chris'), part(2, 'Bob')],
+      );
+      expect(conversationDisplayName(groupe, me), 'Équipe');
+      expect(
+        conversationDisplayName(selfConv, me),
+        isNot(contains('Moi renommé')),
+      );
+    });
+
+    test('la révision ne bouge que sur un changement réel', () {
+      ContactAliases.replaceAll({2: 'Tonton Bob'});
+      final avant = ContactAliases.revision.value;
+      ContactAliases.replaceAll({2: 'Tonton Bob', 3: null});
+      ContactAliases.set(2, 'Tonton Bob');
+      expect(ContactAliases.revision.value, avant);
+      ContactAliases.set(2, 'Bobby');
+      expect(ContactAliases.revision.value, avant + 1);
     });
   });
 

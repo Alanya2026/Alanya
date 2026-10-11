@@ -11,6 +11,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/call_service.dart';
 import '../../core/utils/app_log.dart';
+import '../../core/utils/contact_aliases.dart';
 import '../../core/utils/conversation_display.dart';
 import '../../core/utils/document_file_style.dart';
 import '../../providers/auth_provider.dart';
@@ -319,7 +320,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => ChatDetailScreen(
-          userName: _contact!.nom,
+          userName: ContactAliases.of(widget.userId) ?? _contact!.nom,
           conversationId: convId,
           userId: widget.userId,
           avatarUrl: _contact!.avatarUrl,
@@ -362,6 +363,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     final saisi = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
+        // Défilable : petit écran + clavier ouvert ne doivent pas déborder.
+        scrollable: true,
         title: Text(l10n.renameContactTitle),
         content: TextField(
           controller: controller,
