@@ -220,22 +220,6 @@ extension _ChatBubbles on _ChatDetailScreenState {
           rebuild(() => _replyTo = message);
           _inputFocus.requestFocus();
         },
-        onCopy: () {
-          final text = message.content;
-          if (text == null || text.isEmpty) return;
-          Clipboard.setData(ClipboardData(text: text));
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.copied)),
-          );
-        },
-        onDelete: ({required bool forAll}) {
-          _chat.repository.deleteMessage(
-            message.msgID,
-            forAll: forAll,
-            conversationID: _convId,
-            clientId: message.msgID == 0 ? message.clientId : null,
-          );
-        },
         child: bubble,
       );
     }
@@ -667,7 +651,19 @@ extension _ChatBubbles on _ChatDetailScreenState {
   /// Avatar dénormalisé sur le message, sinon participants du groupe, sinon
   /// initiales via [AppAvatar]. Tap → fiche contact (même chemin que les mentions).
   Widget _buildGroupSenderHeader(LocalMessage msg) {
-    final name = msg.senderNom ??
+    // Le nom actuel du membre d'abord : la copie portée par le message date de
+    // sa réception, et l'auteur qui avait changé de nom apparaissait sous deux
+    // noms dans le même fil (groupe 3GI 2029, bug A14).
+    final membre = _groupParticipants
+        .where((p) => p.alanyaID == msg.senderID)
+        .firstOrNull;
+    final nomActuel = membre == null
+        ? null
+        : (membre.user.nom.trim().isNotEmpty
+            ? membre.user.nom.trim()
+            : membre.user.pseudo.trim());
+    final name = (nomActuel != null && nomActuel.isNotEmpty ? nomActuel : null) ??
+        msg.senderNom ??
         msg.senderPseudo ??
         (AppLocalizations.of(context)?.unknownSender ?? context.l10n.unknownSender);
     final avatarUrl = _resolveSenderAvatar(msg);
@@ -709,12 +705,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   /// Photo de l'expéditeur : cache message d'abord, puis membres du groupe.
   String? _resolveSenderAvatar(LocalMessage msg) {
-    if (hasValidAvatarUrl(msg.senderAvatar)) return msg.senderAvatar;
+    // Même règle que le nom : la photo actuelle du membre d'abord.
     final membre = _groupParticipants
         .where((p) => p.alanyaID == msg.senderID)
         .firstOrNull;
     final fromMember = membre?.user.avatarUrl;
     if (hasValidAvatarUrl(fromMember)) return fromMember;
+    if (hasValidAvatarUrl(msg.senderAvatar)) return msg.senderAvatar;
     return null;
   }
 

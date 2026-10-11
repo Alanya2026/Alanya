@@ -454,6 +454,7 @@
   "verifyCode": "Verify code",
   "notDeliveredYet": "Not delivered yet",
   "someoneIsTyping": "Someone is typing…",
+  "nameIsTyping": "{name} is typing…",
   "lastWeek": "Last week",
   "otherResults": "Other results",
   "changeMedia": "Change media",
@@ -3226,5 +3227,18 @@
   "errCodePhoneOrderPending": "A number payment is already waiting for your confirmation.",
   "accountSecurityPhoneSubtitle": "Switch to an easier-to-remember number · {amount}",
   "accountSecurityPhonePending": "Change to {phone} in progress",
-  "accountSecurityPhoneCredit": "Change paid: choose your number"
+  "accountSecurityPhoneCredit": "Change paid: choose your number",
+  "receiptsTitle": "Message info",
+  "receiptsReadBy": "Read by {count}",
+  "receiptsOutOf": "of {total}",
+  "receiptsDeliveredBy": "Delivered to {count}",
+  "receiptsPendingCount": "Pending {count}",
+  "receiptsReadSection": "Read",
+  "receiptsShowAllReaders": "See all {count} readers",
+  "receiptsDeliveredNotRead": "Delivered, not read yet",
+  "receiptsNotDelivered": "Not delivered yet",
+  "receiptsMemberCount": "{count, plural, =1{1 member} other{{count} members}}",
+  "receiptsNoReaders": "No one has read it yet",
+  "receiptsLoadError": "Couldn't load read receipts.",
+  "receiptsBarLabel": "{read} read, {delivered} delivered but unread, {pending} pending"
 }

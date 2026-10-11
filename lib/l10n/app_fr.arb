@@ -832,6 +832,15 @@
   "verifyCode": "Vérifier le code",
   "notDeliveredYet": "Pas encore livré",
   "someoneIsTyping": "Quelqu'un écrit…",
+  "nameIsTyping": "{name} écrit…",
+  "@nameIsTyping": {
+    "description": "Indicateur de saisie dans un groupe, avec le nom de la personne",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "lastWeek": "Dernière semaine",
   "otherResults": "Autres résultats",
   "changeMedia": "Changer le média",
@@ -4024,5 +4033,80 @@
   "@accountSecurityPhoneSubtitle": {"placeholders": {"amount": {"type": "String"}}},
   "accountSecurityPhonePending": "Changement en cours vers le {phone}",
   "@accountSecurityPhonePending": {"placeholders": {"phone": {"type": "String"}}},
-  "accountSecurityPhoneCredit": "Changement payé : choisissez votre numéro"
+  "accountSecurityPhoneCredit": "Changement payé : choisissez votre numéro",
+  "receiptsTitle": "Infos du message",
+  "receiptsReadBy": "Lu par {count}",
+  "@receiptsReadBy": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsOutOf": "sur {total}",
+  "@receiptsOutOf": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsDeliveredBy": "Reçu par {count}",
+  "@receiptsDeliveredBy": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsPendingCount": "En attente {count}",
+  "@receiptsPendingCount": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsReadSection": "Lu",
+  "receiptsShowAllReaders": "Voir les {count} lecteurs",
+  "@receiptsShowAllReaders": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsDeliveredNotRead": "Reçu, pas encore lu",
+  "receiptsNotDelivered": "Pas encore reçu",
+  "receiptsMemberCount": "{count, plural, =1{1 membre} other{{count} membres}}",
+  "@receiptsMemberCount": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsNoReaders": "Personne ne l'a encore lu",
+  "receiptsLoadError": "Impossible d'afficher les accusés de lecture.",
+  "receiptsBarLabel": "{read} lu, {delivered} reçu sans être lu, {pending} en attente",
+  "@receiptsBarLabel": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "read": {
+        "type": "int"
+      },
+      "delivered": {
+        "type": "int"
+      },
+      "pending": {
+        "type": "int"
+      }
+    }
+  }
 }

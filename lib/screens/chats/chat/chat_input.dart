@@ -554,8 +554,12 @@ extension _ChatInput on _ChatDetailScreenState {
                     onTap: () {
                       if (_showEmoji) rebuild(() => _showEmoji = false);
                     },
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
+                    // Entrée = retour à la ligne ; l'envoi reste sur le bouton.
+                    // `send` détournait la touche Entrée vers l'envoi, et le
+                    // retour à la ligne ne tenait plus qu'à un appui long que
+                    // certains claviers n'offrent pas (groupe 3GI 2029, A11).
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
                     maxLines: null,
                     minLines: 1,
                     scrollPhysics: const ClampingScrollPhysics(),

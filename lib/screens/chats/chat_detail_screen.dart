@@ -23,6 +23,7 @@ import '../../core/services/media_expiry_policy.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/music_metadata_service.dart';
 import '../../core/services/message_share_service.dart';
+import '../../core/services/chat/chat_draft_store.dart';
 import '../../core/services/chat/view_once_download_manager.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
@@ -74,6 +75,7 @@ import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'group_detail_screen.dart';
+import 'group_message_info_screen.dart';
 import 'forward_message_screen.dart';
 import 'album_media_list_screen.dart';
 import 'media_send_screen.dart';
@@ -195,6 +197,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   LocalMessage? _replyTo;
   final FocusNode _inputFocus = FocusNode();
   Timer? _typingTimer;
+
+  /// Brouillon de la saisie (voir [ChatDraftStore]) : enregistré après une
+  /// pause de frappe, en arrière-plan et à la fermeture ; restauré une fois.
+  Timer? _draftTimer;
+  bool _draftRestored = false;
   // Dernier typing:start émis — throttle côté client (un event / 2,5 s max).
   DateTime? _lastTypingSentAt;
 
@@ -406,7 +413,58 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       if (_observedRoute?.isCurrent ?? false) _setChatVisible(true);
     } else {
       _setChatVisible(false);
+      if (state == AppLifecycleState.paused) _saveDraftNow();
     }
+  }
+
+  /// « X écrit… » dans l'en-tête du groupe (groupe 3GI 2029, bug A15).
+  String _groupTypingLabel(ChatProvider chat, int? convId) {
+    final userId = convId == null ? null : chat.typingUserId(convId);
+    final membre = userId == null
+        ? null
+        : _groupParticipants.where((p) => p.alanyaID == userId).firstOrNull;
+    final nom = membre == null
+        ? ''
+        : (membre.user.nom.trim().isNotEmpty
+            ? membre.user.nom.trim()
+            : membre.user.pseudo.trim());
+    return nom.isEmpty ? context.l10n.typing2 : context.l10n.nameIsTyping(nom);
+  }
+
+  // ── Brouillon ──
+
+  Future<void> _restoreDraft(int convId) async {
+    final myId = _myId;
+    if (_draftRestored || myId == null) return;
+    _draftRestored = true;
+    final draft = await ChatDraftStore.load(myId, convId);
+    // Rien n'a été tapé entre-temps : on ne remplace pas une saisie en cours.
+    if (draft == null || !mounted || _messageController.text.isNotEmpty) return;
+    _messageController.value = TextEditingValue(
+      text: draft,
+      selection: TextSelection.collapsed(offset: draft.length),
+    );
+    setState(() => _hasText = draft.trim().isNotEmpty);
+  }
+
+  void _scheduleDraftSave() {
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 800), _saveDraftNow);
+  }
+
+  void _saveDraftNow() {
+    final myId = _myId;
+    final convId = _convId;
+    if (myId == null || convId == null || !_draftRestored) return;
+    unawaited(ChatDraftStore.save(myId, convId, _messageController.text));
+  }
+
+  void _clearDraft() {
+    _draftTimer?.cancel();
+    final myId = _myId;
+    final convId = _convId;
+    if (myId == null || convId == null) return;
+    unawaited(ChatDraftStore.clear(myId, convId));
   }
 
   /// Applique l'état visible/masqué : « conversation active » = ce chat est lu
@@ -541,6 +599,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     // par userId seul, création à la volée, déduplication d'un doublon 1-1),
     // auquel cas le premier appel avait un convId nul.
     _watchGroupState();
+    unawaited(_restoreDraft(convId));
 
     // Nouvelle conversation attachée → la pagination repart de zéro.
     _reachedStart = false;
@@ -1019,6 +1078,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     // Supprime les médias vue-unique pré-téléchargés mais jamais ouverts
     // (aucune trace persistante).
     ViewOnceDownloadManager.instance.discardAll();
+    _draftTimer?.cancel();
+    _saveDraftNow();
     _messageController.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
@@ -1385,7 +1446,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                     if (widget.isGroup) {
                       if (partnerTyping) {
                         return Text(
-                          context.l10n.typing2,
+                          _groupTypingLabel(_chat, _convId),
                           style: context.text.bodySmall?.copyWith(
                             color: context.colors.primary,
                           ),

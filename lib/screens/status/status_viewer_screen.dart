@@ -941,18 +941,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           ),
         );
       case 1:
-        return Center(
-          child: CachedNetworkImage(
-            imageUrl: s.mediaUrl ?? '',
-            fit: BoxFit.contain,
-            placeholder: (_, __) =>
-                const Center(child: CircularProgressIndicator()),
-            errorWidget: (_, __, ___) => const Icon(
-                Icons.broken_image,
-                color: Colors.white54,
-                size: 64),
-          ),
-        );
+        return Center(child: _StatusImage(url: s.mediaUrl ?? ''));
       case 2:
         if (_chewieCtrl != null) {
           return Center(
@@ -1204,6 +1193,86 @@ class _StatusRecordingDotState extends State<_StatusRecordingDot>
           shape: BoxShape.circle,
         ),
       ),
+    );
+  }
+}
+
+/// Image d'un statut, retentée après un échec.
+///
+/// Un échec de chargement laissait l'icône « image cassée » jusqu'à ce qu'on
+/// quitte le statut (groupe 3GI 2029, bug A5) : une relance automatique au bout
+/// de 2 s, puis un bouton « Réessayer ».
+class _StatusImage extends StatefulWidget {
+  const _StatusImage({required this.url});
+
+  final String url;
+
+  @override
+  State<_StatusImage> createState() => _StatusImageState();
+}
+
+class _StatusImageState extends State<_StatusImage> {
+  static const _autoRetryDelay = Duration(seconds: 2);
+
+  int _attempt = 0;
+  bool _autoRetried = false;
+  Timer? _retryTimer;
+
+  @override
+  void didUpdateWidget(covariant _StatusImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _retryTimer?.cancel();
+      _attempt = 0;
+      _autoRetried = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _retry() async {
+    _retryTimer?.cancel();
+    // L'échec n'est pas mis en cache, mais l'entrée partielle peut l'être.
+    await CachedNetworkImage.evictFromCache(widget.url);
+    if (!mounted) return;
+    setState(() => _attempt++);
+  }
+
+  void _onError() {
+    if (_autoRetried) return;
+    _autoRetried = true;
+    _retryTimer = Timer(_autoRetryDelay, () => unawaited(_retry()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CachedNetworkImage(
+      key: ValueKey('${widget.url}#$_attempt'),
+      imageUrl: widget.url,
+      fit: BoxFit.contain,
+      placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
+      errorWidget: (context, __, ___) {
+        _onError();
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.broken_image, color: Colors.white54, size: 64),
+            const SizedBox(height: AppSpacing.md),
+            TextButton.icon(
+              onPressed: () => unawaited(_retry()),
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              label: Text(
+                context.l10n.commonRetry,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -287,6 +287,7 @@ extension _ChatActions on _ChatDetailScreenState {
     );
 
     _messageController.clear();
+    _clearDraft();
     rebuild(() {
       _hasText = false;
       _replyTo = null;
@@ -721,6 +722,19 @@ extension _ChatActions on _ChatDetailScreenState {
   /// uniquement — context.l10n.sentAt retiré (redondant, peu utile pour le destinataire).
   void _showMessageInfo(LocalMessage msg) {
     final isMe = msg.senderID == _myId;
+
+    // Mon message de groupe, confirmé par le serveur : qui l'a lu, reçu, ou pas
+    // encore reçu, membre par membre.
+    final convId = _convId;
+    if (widget.isGroup && isMe && msg.msgID > 0 && convId != null) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => GroupMessageInfoScreen(
+          message: msg,
+          conversationId: convId,
+        ),
+      ));
+      return;
+    }
 
     String fmt(DateTime? d) {
       if (d == null) return '—';
@@ -1507,6 +1521,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (has != _hasText) rebuild(() => _hasText = has);
     _refreshMentionSuggestions(value);
     if (_convId == null) return;
+    _scheduleDraftSave();
     if (value.isEmpty) {
       _stopTyping();
       return;

@@ -67,6 +67,18 @@ extension ChatHttpApi on TalkyApiClient {
     return data as Map<String, dynamic>;
   }
 
+  /// Qui a lu, reçu ou pas encore reçu un de MES messages de groupe
+  /// (`GET /messages/:id/receipts`, expéditeur seul).
+  Future<Map<String, dynamic>> getMessageReceipts(int msgID) async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/$msgID/receipts'),
+        headers: _headers,
+      ),
+    );
+    return data as Map<String, dynamic>;
+  }
+
   Future<void> markConversationAsRead(int conversID) async {
     await _handleRequest(
       () => _client.post(Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/read'), headers: _headers),

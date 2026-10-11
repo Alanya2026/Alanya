@@ -440,6 +440,7 @@
   "verifyCode": "验证码校验",
   "notDeliveredYet": "尚未送达",
   "someoneIsTyping": "有人正在输入…",
+  "nameIsTyping": "{name} 正在输入…",
   "lastWeek": "上周",
   "otherResults": "其他结果",
   "changeMedia": "更换媒体",
@@ -2166,5 +2167,18 @@
   "errCodePhoneOrderPending": "已有一笔号码付款正在等待您确认。",
   "accountSecurityPhoneSubtitle": "更换为更好记的号码 · {amount}",
   "accountSecurityPhonePending": "正在更换为 {phone}",
-  "accountSecurityPhoneCredit": "更换已付款：请选择您的号码"
+  "accountSecurityPhoneCredit": "更换已付款：请选择您的号码",
+  "receiptsTitle": "消息详情",
+  "receiptsReadBy": "{count} 人已读",
+  "receiptsOutOf": "/ 共 {total} 人",
+  "receiptsDeliveredBy": "{count} 人已送达",
+  "receiptsPendingCount": "{count} 人未送达",
+  "receiptsReadSection": "已读",
+  "receiptsShowAllReaders": "查看全部 {count} 位读者",
+  "receiptsDeliveredNotRead": "已送达，未读",
+  "receiptsNotDelivered": "尚未送达",
+  "receiptsMemberCount": "{count} 位成员",
+  "receiptsNoReaders": "还没有人读过",
+  "receiptsLoadError": "无法加载已读回执。",
+  "receiptsBarLabel": "{read} 人已读，{delivered} 人已送达未读，{pending} 人未送达"
 }

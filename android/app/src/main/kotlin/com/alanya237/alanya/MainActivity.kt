@@ -36,12 +36,8 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Permet à l'écran d'appel d'apparaître par-dessus l'écran de verrouillage
-        // et de réveiller l'écran quand un appel entrant arrive (CallKit/FCM).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        }
+        // Pas d'affichage par-dessus l'écran de verrouillage par défaut : il
+        // n'est accordé que pendant un appel (voir LockScreenBridge).
         handleCallAcceptIntent(intent)
         handleNotificationIntent(intent)
     }
@@ -62,6 +58,9 @@ class MainActivity : FlutterFragmentActivity() {
     private fun handleCallAcceptIntent(intent: Intent?) {
         val callId = CallAcceptFromIntent.consommer(this, intent) ?: return
         Log.i(TAG, "décrochage lu dans l'intent callId=$callId")
+        // Décroché depuis l'écran verrouillé : l'appel doit s'afficher tout de
+        // suite, avant que Flutter ne soit prêt à le demander lui-même.
+        LockScreenBridge.apply(true, this)
     }
 
     override fun onResume() {
@@ -194,6 +193,7 @@ class MainActivity : FlutterFragmentActivity() {
         CallMediaBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         CallAudioBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         ProximityBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
+        LockScreenBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         PipBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         TripLocationBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         SecureStorageBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)

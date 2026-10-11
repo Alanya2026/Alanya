@@ -45,6 +45,7 @@ import 'core/services/playback_speed_preferences.dart';
 import 'core/services/ringtone_preferences.dart';
 import 'core/services/list_ringtone_preferences.dart';
 import 'core/services/call_service.dart';
+import 'core/services/lock_screen_policy.dart';
 import 'core/services/callkit_service.dart';
 import 'core/services/call/ended_call_registry.dart';
 import 'core/services/local_cache_repository.dart';
@@ -409,6 +410,10 @@ class _TalkyAppState extends State<TalkyApp> {
                 call.status != CallStatus.ended;
             if (busy && !wasBusy && voice.isPlaying) voice.pause();
             wasBusy = busy;
+          });
+          // Par-dessus l'écran de verrouillage pendant un appel, jamais hors appel.
+          call.addListener(() {
+            LockScreenPolicy.setCallActive(appelVisibleSurLeVerrou(call.status));
           });
           return call;
         }),

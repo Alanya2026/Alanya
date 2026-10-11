@@ -1396,6 +1396,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get someoneIsTyping => '有人正在输入…';
 
   @override
+  String nameIsTyping(String name) {
+    return '$name 正在输入…';
+  }
+
+  @override
   String get lastWeek => '上周';
 
   @override
@@ -7050,4 +7055,57 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountSecurityPhoneCredit => '更换已付款：请选择您的号码';
+
+  @override
+  String get receiptsTitle => '消息详情';
+
+  @override
+  String receiptsReadBy(int count) {
+    return '$count 人已读';
+  }
+
+  @override
+  String receiptsOutOf(int total) {
+    return '/ 共 $total 人';
+  }
+
+  @override
+  String receiptsDeliveredBy(int count) {
+    return '$count 人已送达';
+  }
+
+  @override
+  String receiptsPendingCount(int count) {
+    return '$count 人未送达';
+  }
+
+  @override
+  String get receiptsReadSection => '已读';
+
+  @override
+  String receiptsShowAllReaders(int count) {
+    return '查看全部 $count 位读者';
+  }
+
+  @override
+  String get receiptsDeliveredNotRead => '已送达，未读';
+
+  @override
+  String get receiptsNotDelivered => '尚未送达';
+
+  @override
+  String receiptsMemberCount(int count) {
+    return '$count 位成员';
+  }
+
+  @override
+  String get receiptsNoReaders => '还没有人读过';
+
+  @override
+  String get receiptsLoadError => '无法加载已读回执。';
+
+  @override
+  String receiptsBarLabel(int read, int delivered, int pending) {
+    return '$read 人已读，$delivered 人已送达未读，$pending 人未送达';
+  }
 }

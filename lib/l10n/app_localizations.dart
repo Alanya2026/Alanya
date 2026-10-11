@@ -2644,6 +2644,12 @@ abstract class AppLocalizations {
   /// **'Quelqu\'un écrit…'**
   String get someoneIsTyping;
 
+  /// Indicateur de saisie dans un groupe, avec le nom de la personne
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} écrit…'**
+  String nameIsTyping(String name);
+
   /// No description provided for @lastWeek.
   ///
   /// In fr, this message translates to:
@@ -12759,6 +12765,84 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Changement payé : choisissez votre numéro'**
   String get accountSecurityPhoneCredit;
+
+  /// No description provided for @receiptsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos du message'**
+  String get receiptsTitle;
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'Lu par {count}'**
+  String receiptsReadBy(int count);
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'sur {total}'**
+  String receiptsOutOf(int total);
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçu par {count}'**
+  String receiptsDeliveredBy(int count);
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente {count}'**
+  String receiptsPendingCount(int count);
+
+  /// No description provided for @receiptsReadSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lu'**
+  String get receiptsReadSection;
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir les {count} lecteurs'**
+  String receiptsShowAllReaders(int count);
+
+  /// No description provided for @receiptsDeliveredNotRead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçu, pas encore lu'**
+  String get receiptsDeliveredNotRead;
+
+  /// No description provided for @receiptsNotDelivered.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore reçu'**
+  String get receiptsNotDelivered;
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 membre} other{{count} membres}}'**
+  String receiptsMemberCount(int count);
+
+  /// No description provided for @receiptsNoReaders.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne ne l\'a encore lu'**
+  String get receiptsNoReaders;
+
+  /// No description provided for @receiptsLoadError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'afficher les accusés de lecture.'**
+  String get receiptsLoadError;
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'{read} lu, {delivered} reçu sans être lu, {pending} en attente'**
+  String receiptsBarLabel(int read, int delivered, int pending);
 }
 
 class _AppLocalizationsDelegate
