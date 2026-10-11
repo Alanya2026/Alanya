@@ -166,9 +166,60 @@ class PaymentProviderInfo {
       );
 }
 
+/// L'adresse du site de paiement, avec la langue de l'application. Nulle si
+/// l'administration n'en a pas réglé, ou si elle n'est pas en https.
+///
+/// Seule la langue est ajoutée : aucune donnée personnelle ne part dans
+/// l'adresse. Le site n'a pas besoin de savoir qui paie — le code qu'il remet
+/// vaut pour n'importe quel compte.
+Uri? plusPayUri(String? base, String languageCode) {
+  if (base == null || base.trim().isEmpty) return null;
+  final uri = Uri.tryParse(base.trim());
+  if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return null;
+  const known = {'fr', 'en', 'zh'};
+  return uri.replace(queryParameters: {
+    ...uri.queryParameters,
+    'lang': known.contains(languageCode) ? languageCode : 'fr',
+  });
+}
+
+/// Ce que rend l'activation d'un code (`POST /billing/redeem`).
+class RedeemResult {
+  const RedeemResult({
+    this.startsAt,
+    this.endsAt,
+    this.alreadyApplied = false,
+    this.entitlements,
+  });
+
+  /// Début de la période : maintenant, ou la fin de l'essai si le code a été
+  /// activé pendant l'essai.
+  final DateTime? startsAt;
+  final DateTime? endsAt;
+
+  /// Le même compte avait déjà activé ce code : rien n'a été ajouté.
+  final bool alreadyApplied;
+
+  /// Les droits à jour, tels que le serveur les calcule.
+  final Object? entitlements;
+
+  /// La période ne commence pas tout de suite (essai en cours).
+  bool startsLater(DateTime now) =>
+      startsAt != null && startsAt!.isAfter(now.add(const Duration(minutes: 1)));
+
+  factory RedeemResult.fromJson(Map<String, dynamic> json) => RedeemResult(
+        startsAt: _date(json['startsAt']),
+        endsAt: _date(json['endsAt']),
+        alreadyApplied: json['alreadyApplied'] == true,
+        entitlements: json['entitlements'],
+      );
+}
+
 /// Tout ce que l'écran d'offre affiche, en un appel.
 class PlusOffer {
   const PlusOffer({
+    this.model = PlusModel.plus,
+    this.payUrl,
     this.phase = PlusPhase.free,
     this.graceUntil,
     this.purchasable = false,
@@ -178,6 +229,12 @@ class PlusOffer {
     this.entitlements = Entitlements.unrestricted,
   });
 
+  /// Le régime en vigueur. Sans mention (serveur antérieur) : Alanya Plus.
+  final PlusModel model;
+
+  /// Régime essai : le site où l'on paie, puis d'où l'on rapporte un code. Nul
+  /// tant que l'administration n'en a pas réglé : le bouton est alors grisé.
+  final String? payUrl;
   final PlusPhase phase;
   final DateTime? graceUntil;
 
@@ -225,6 +282,8 @@ class PlusOffer {
     final entitlements = json['entitlements'];
     final provider = json['provider'];
     return PlusOffer(
+      model: json['model'] == 2 ? PlusModel.trial : PlusModel.plus,
+      payUrl: _nonEmpty(json['payUrl'] as String?),
       phase: Entitlements.fromJson({'phase': json['phase']}).phase,
       graceUntil: _date(json['graceUntil']),
       purchasable: json['purchasable'] == true,

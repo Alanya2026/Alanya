@@ -25,6 +25,15 @@ void main() {
       );
 
   group('refusAlanyaPlus', () {
+    test('le refus d\'émettre (envoyer, appeler) se distingue d\'une fonctionnalité', () {
+      final r = refusAlanyaPlus(refus('outgoing'))!;
+      expect(r.outgoing, isTrue);
+      // « outgoing » n'est pas au catalogue : aucune fonctionnalité visée.
+      expect(r.feature, isNull);
+      expect(refusAlanyaPlus(refus('backup'))!.outgoing, isFalse);
+      expect(refusAlanyaPlus(refus(null))!.outgoing, isFalse);
+    });
+
     test('reconnaît le refus et la fonctionnalité visée', () {
       expect(refusAlanyaPlus(refus('backup'))?.feature, PlusFeature.backup);
       expect(refusAlanyaPlus(refus('trusted_trips'))?.feature,
@@ -108,6 +117,49 @@ void main() {
       expect(dire('PLAN_NOT_FOUND'), l10n.errCodePlanNotFound);
       expect(dire('PAYMENT_PROVIDER_ERROR'), l10n.errCodePaymentProviderError);
       expect(dire('SUBSCRIPTION_REQUIRED'), l10n.errCodeSubscriptionRequired);
+    });
+
+    test('codes d\'activation : chaque code a sa phrase, dans chaque langue', () {
+      const codes = {
+        'INVALID_CODE': 'errCodeInvalidCode',
+        'INVALID_CODE_FORMAT': 'errCodeInvalidCodeFormat',
+        'CODE_ALREADY_USED': 'errCodeCodeAlreadyUsed',
+        'CODE_EXPIRED': 'errCodeCodeExpired',
+        'CODE_REVOKED': 'errCodeCodeRevoked',
+        'CODE_LOCKED': 'errCodeCodeLocked',
+      };
+      expect(dire('INVALID_CODE'), l10n.errCodeInvalidCode);
+      expect(dire('INVALID_CODE_FORMAT'), l10n.errCodeInvalidCodeFormat);
+      expect(dire('CODE_ALREADY_USED'), l10n.errCodeCodeAlreadyUsed);
+      expect(dire('CODE_EXPIRED'), l10n.errCodeCodeExpired);
+      expect(dire('CODE_REVOKED'), l10n.errCodeCodeRevoked);
+      expect(dire('CODE_LOCKED'), l10n.errCodeCodeLocked);
+      // Aucune de ces phrases n'est la phrase générique du domaine : chaque
+      // code parle pour lui, et chaque langue a la sienne.
+      final repli = presenterErreur(
+        l10n,
+        TalkyException('x', 500),
+        domaine: ErrorDomain.abonnement,
+        journaliser: false,
+        avecDiagnostic: false,
+      );
+      for (final code in codes.keys) {
+        expect(dire(code), isNot(repli), reason: code);
+      }
+      for (final locale in const ['en', 'zh']) {
+        final other = lookupAppLocalizations(Locale(locale));
+        String autre(String code) => presenterErreur(
+              other,
+              TalkyException('x', 400, code: code),
+              domaine: ErrorDomain.abonnement,
+              journaliser: false,
+              avecDiagnostic: false,
+            );
+        expect(autre('CODE_ALREADY_USED'), other.errCodeCodeAlreadyUsed);
+        expect(autre('CODE_ALREADY_USED'), isNot(l10n.errCodeCodeAlreadyUsed),
+            reason: 'traduit en $locale');
+        expect(autre('INVALID_CODE'), other.errCodeInvalidCode);
+      }
     });
 
     test('vérification d\'identité : chaque code a sa phrase', () {

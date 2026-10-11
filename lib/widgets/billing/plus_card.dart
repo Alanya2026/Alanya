@@ -9,9 +9,9 @@ import '../../core/services/billing/entitlements.dart';
 import '../../core/services/billing/plus_status.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
-import '../../screens/billing/plus_offer_screen.dart';
 import '../../screens/billing/subscription_screen.dart';
 import '../common/account_badge.dart' show VerifiedSeal;
+import 'open_plus_offer.dart';
 import 'plus_visuals.dart';
 
 /// La carte Alanya Plus du profil, juste sous l'en-tête.
@@ -40,10 +40,7 @@ class _PlusCardState extends State<PlusCard> {
     unawaited(context.read<EntitlementService>().ensureOffer());
   }
 
-  void _openOffer() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PlusOfferScreen()),
-      );
+  void _openOffer() => unawaited(openPlusOffer(context));
 
   void _openSubscription() => Navigator.push(
         context,
@@ -73,6 +70,8 @@ class _PlusCardState extends State<PlusCard> {
         PlusStatus.active => _active(context, e, service.offer, verified),
         PlusStatus.scheduled => _scheduled(context, e, service.offer),
         PlusStatus.lapsed => _lapsed(context, e),
+        PlusStatus.trial => _trial(context, e),
+        PlusStatus.restricted => _restricted(context),
         PlusStatus.hidden => const SizedBox.shrink(),
       },
     );
@@ -218,9 +217,13 @@ class _PlusCardState extends State<PlusCard> {
           : l10n.plusCardActiveUntil(date),
       body: soon
           ? l10n.plusCardEndsSoonBody(plusDaysLeft(end, DateTime.now()))
-          : (period.autoRenew
-              ? l10n.plusCardAutoRenewOn
-              : l10n.plusCardAutoRenewOff),
+          : (e.isTrialModel
+              // Régime essai : pas de renouvellement automatique, un nouveau
+              // code chaque année.
+              ? l10n.plusCardRenewByCode
+              : (period.autoRenew
+                  ? l10n.plusCardAutoRenewOn
+                  : l10n.plusCardAutoRenewOff)),
       extra: [
         // Abonné : on cesse de vendre ; la coche suit l'abonnement.
         _BadgeRow(verified: verified),
@@ -241,7 +244,9 @@ class _PlusCardState extends State<PlusCard> {
       kicker: '${l10n.plusBrand} · $plan',
       chevron: true,
       title: l10n.plusCardStartsOn(formatPlusDate(context, start)),
-      body: l10n.plusCardScheduledBody,
+      body: e.isTrialModel
+          ? l10n.plusCardScheduledTrialBody
+          : l10n.plusCardScheduledBody,
     );
   }
 
@@ -254,9 +259,62 @@ class _PlusCardState extends State<PlusCard> {
       kicker: l10n.plusCardLapsedKicker(formatPlusDate(context, ended)),
       kickerIcon: Icons.error_outline_rounded,
       kickerColor: context.colors.error,
-      title: l10n.plusCardLapsedTitle,
+      title: e.isTrialModel
+          ? l10n.plusCardRestrictedTitle
+          : l10n.plusCardLapsedTitle,
       body: lapsedBody(context, e),
       action: l10n.plusResubscribe,
+      onAction: _openOffer,
+    );
+  }
+
+  /// Régime essai : l'essai court, tout est ouvert.
+  Widget _trial(BuildContext context, Entitlements e) {
+    final l10n = context.l10n;
+    final end = e.trial!.endsAt;
+    final days = plusDaysLeft(end, DateTime.now());
+    final palette = PlusPalette.of(context);
+    return _Frame(
+      tone: _Tone.promo,
+      kicker: l10n.plusCardTrialKicker,
+      title: l10n.plusCardTrialTitle(formatPlusDate(context, end)),
+      body: l10n.plusCardTrialBody,
+      extra: [
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: 3,
+          ),
+          decoration: BoxDecoration(
+            color: palette.chip,
+            borderRadius: AppRadius.brPill,
+          ),
+          child: Text(
+            l10n.plusCardTrialDaysLeft(days),
+            style: context.text.labelSmall?.copyWith(
+              color: palette.ink,
+              fontFeatures: kTabularFigures,
+            ),
+          ),
+        ),
+      ],
+      action: l10n.plusCardSubscribe,
+      onAction: _openOffer,
+    );
+  }
+
+  /// Régime essai : l'essai est fini, aucun abonnement n'a pris le relais. Le
+  /// compte reçoit, il ne peut ni envoyer ni appeler.
+  Widget _restricted(BuildContext context) {
+    final l10n = context.l10n;
+    return _Frame(
+      tone: _Tone.alert,
+      kicker: l10n.plusCardRestrictedKicker,
+      kickerIcon: Icons.error_outline_rounded,
+      kickerColor: context.colors.error,
+      title: l10n.plusCardRestrictedTitle,
+      body: l10n.plusCardRestrictedBody,
+      action: l10n.plusCardSubscribe,
       onAction: _openOffer,
     );
   }
@@ -312,6 +370,8 @@ class _BadgeRow extends StatelessWidget {
 /// effacé. Partagé avec « Mon abonnement ».
 String lapsedBody(BuildContext context, Entitlements e) {
   final l10n = context.l10n;
+  // Régime essai : ce qui compte est que le compte ne fait plus que recevoir.
+  if (e.isTrialModel) return l10n.plusCardLapsedTrialBody;
   if (e.purgedAt != null) return l10n.plusCardPurgedBody;
   final until = e.purgeAfter;
   if (until != null) return l10n.plusCardLapsedBodyUntil(formatPlusDate(context, until));

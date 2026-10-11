@@ -22,6 +22,7 @@ import '../utils/backend_url.dart';
 import 'connectivity_service.dart';
 import 'meeting_service.dart';
 import '../theme/locale_controller.dart';
+import 'billing/entitlement_service.dart';
 import 'chat/message_sound_service.dart';
 import 'call/call_permissions_helper.dart';
 import 'call/ended_call_registry.dart';

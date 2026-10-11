@@ -13,9 +13,9 @@ import '../../core/services/billing/plus_status.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../talky_api_client.dart';
+import '../../widgets/billing/open_plus_offer.dart';
 import '../../widgets/billing/plus_card.dart' show lapsedBody;
 import '../../widgets/billing/plus_visuals.dart';
-import 'plus_offer_screen.dart';
 
 /// « Mon abonnement » : l'état, le renouvellement, l'historique.
 class SubscriptionScreen extends StatefulWidget {
@@ -58,13 +58,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   Future<void> _openOffer({String? planCode}) async {
-    final paid = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PlusOfferScreen(initialPlanCode: planCode),
-      ),
-    );
-    if (paid == true && mounted) unawaited(_loadHistory());
+    final paid = await openPlusOffer(context, planCode: planCode);
+    if (paid && mounted) unawaited(_loadHistory());
   }
 
   Future<void> _setAutoRenew(bool value) async {
@@ -106,7 +101,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           children: [
             _StatusCard(entitlements: e, offer: offer),
             ..._actions(context, status, period, offer),
-            if (status == PlusStatus.active && period != null) ...[
+            // Régime essai : pas de renouvellement automatique, un nouveau code
+            // chaque année.
+            if (status == PlusStatus.active && period != null && !e.isTrialModel) ...[
               AppSpacing.vGapXl,
               Material(
                 color: context.colors.surface,
@@ -122,9 +119,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 ),
               ),
             ],
-            AppSpacing.vGapXl,
-            PlusSectionLabel(l10n.subscriptionPayments),
-            _payments(context),
+            // Régime essai : on ne paie pas dans l'application, la liste des
+            // paiements n'aurait rien à dire.
+            if (!e.isTrialModel) ...[
+              AppSpacing.vGapXl,
+              PlusSectionLabel(l10n.subscriptionPayments),
+              _payments(context),
+            ],
             if ((_history?.periods ?? const []).isNotEmpty) ...[
               AppSpacing.vGapXl,
               PlusSectionLabel(l10n.subscriptionPeriods),
@@ -143,18 +144,28 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     PlusOffer? offer,
   ) {
     final l10n = context.l10n;
-    final (String? label, String? plan) = switch (status) {
-      PlusStatus.active => (
-          offer?.planByCode(period?.plan) != null
-              ? l10n.subscriptionRenewAmount(formatPlusAmount(
-                  context, offer!.planByCode(period?.plan)!.price))
-              : l10n.plusRenew,
-          period?.plan,
-        ),
-      PlusStatus.lapsed => (l10n.plusResubscribe, null),
-      PlusStatus.upgrade || PlusStatus.grace => (l10n.plusCardDiscover, null),
-      _ => (null, null),
-    };
+    final trialModel = EntitlementService.maybeInstance?.current.isTrialModel ?? false;
+    final (String? label, String? plan) = trialModel
+        ? switch (status) {
+            PlusStatus.trial || PlusStatus.restricted => (l10n.plusCardSubscribe, null),
+            PlusStatus.lapsed => (l10n.plusResubscribe, null),
+            PlusStatus.active
+                when period != null && plusEndsSoon(period, DateTime.now()) =>
+              (l10n.plusRenew, null),
+            _ => (null, null),
+          }
+        : switch (status) {
+            PlusStatus.active => (
+                offer?.planByCode(period?.plan) != null
+                    ? l10n.subscriptionRenewAmount(formatPlusAmount(
+                        context, offer!.planByCode(period?.plan)!.price))
+                    : l10n.plusRenew,
+                period?.plan,
+              ),
+            PlusStatus.lapsed => (l10n.plusResubscribe, null),
+            PlusStatus.upgrade || PlusStatus.grace => (l10n.plusCardDiscover, null),
+            _ => (null, null),
+          };
     if (label == null) return const [];
     return [
       AppSpacing.vGapMd,
@@ -260,6 +271,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   1 => l10n.subscriptionSourceTrial,
                   2 => l10n.subscriptionSourceGift,
                   3 => l10n.subscriptionSourceCompensation,
+                  4 => l10n.subscriptionSourceCode,
                   _ => l10n.subscriptionSourcePaid,
                 },
                 style: context.text.labelMedium?.copyWith(
@@ -327,25 +339,40 @@ class _StatusCard extends StatelessWidget {
           body = l10n.subscriptionEndsIn(plusDaysLeft(end, now));
         } else {
           title = l10n.plusCardActiveUntil(formatPlusDate(context, end));
-          body = p.autoRenew
-              ? l10n.plusCardAutoRenewOn
-              : l10n.plusCardAutoRenewOff;
+          body = e.isTrialModel
+              ? l10n.plusCardRenewByCode
+              : (p.autoRenew
+                  ? l10n.plusCardAutoRenewOn
+                  : l10n.plusCardAutoRenewOff);
         }
       case PlusStatus.scheduled:
         final p = e.upcoming!;
         kicker = plusPlanName(context, p.plan, offer: offer);
         title = l10n.plusCardStartsOn(formatPlusDate(context, p.startsAt ?? now));
-        body = l10n.plusCardScheduledBody;
+        body = e.isTrialModel
+            ? l10n.plusCardScheduledTrialBody
+            : l10n.plusCardScheduledBody;
       case PlusStatus.lapsed:
         strip = accent = context.colors.error;
         kicker = l10n.plusCardLapsedKicker(
             formatPlusDate(context, e.lapsedAt ?? now));
-        title = l10n.plusCardLapsedTitle;
+        title = e.isTrialModel
+            ? l10n.plusCardRestrictedTitle
+            : l10n.plusCardLapsedTitle;
         body = lapsedBody(context, e);
       case PlusStatus.grace:
         final date = formatPlusDate(context, e.graceUntil ?? now);
         title = l10n.plusCardGraceTitle(date);
         body = l10n.plusCardGraceBody(date);
+      case PlusStatus.trial:
+        kicker = l10n.plusCardTrialKicker;
+        title = l10n.plusCardTrialTitle(formatPlusDate(context, e.trial!.endsAt));
+        body = l10n.plusCardTrialBody;
+      case PlusStatus.restricted:
+        strip = accent = context.colors.error;
+        kicker = l10n.plusCardRestrictedKicker;
+        title = l10n.plusCardRestrictedTitle;
+        body = l10n.plusCardRestrictedBody;
       case PlusStatus.upgrade:
         title = l10n.subscriptionNoneTitle;
         body = l10n.subscriptionNoneBody;

@@ -55,9 +55,12 @@ class EntitlementService extends ChangeNotifier {
   final TalkyApiClient _api;
   final StreamController<PaymentUpdate> _payments =
       StreamController<PaymentUpdate>.broadcast();
+  final StreamController<void> _outgoingBlocked =
+      StreamController<void>.broadcast();
   Entitlements _current = Entitlements.unrestricted;
   PlusOffer? _offer;
   bool _refreshing = false;
+  DateTime? _lastOutgoingBlock;
 
   Entitlements get current => _current;
 
@@ -66,6 +69,38 @@ class EntitlementService extends ChangeNotifier {
   PlusOffer? get offer => _offer;
 
   bool has(PlusFeature feature) => _current.has(feature);
+
+  /// Le compte peut-il envoyer un message ou lancer un appel ?
+  bool get canSend => _current.canSend;
+
+  /// Lecture synchrone du droit d'émettre, pour les services sans contexte.
+  /// Sans service (tests, démarrage), rien n'est fermé.
+  static bool get allowsOutgoing => _instance?.canSend ?? true;
+
+  /// Un envoi ou un appel vient d'être refusé — par le téléphone, qui savait
+  /// déjà, ou par le serveur, qui vient de le dire. Un seul abonné s'en sert :
+  /// l'écoute racine qui ouvre le panneau de l'abonnement.
+  ///
+  /// Plusieurs refus coup sur coup (cinq messages en file qui échouent
+  /// ensemble) ne font qu'un seul signal : le panneau ne s'ouvre pas cinq fois.
+  Stream<void> get outgoingBlocked => _outgoingBlocked.stream;
+
+  /// Fenêtre où des refus rapprochés ne font qu'un signal. Assez longue pour une
+  /// rafale (des messages en file qui échouent ensemble arrivent à quelques
+  /// millisecondes), assez courte pour qu'un appui volontaire — « réessayer »,
+  /// un bouton d'appel — rouvre le panneau juste après qu'on l'a fermé.
+  static const _outgoingCoalesce = Duration(seconds: 2);
+
+  /// Signale un refus d'émettre, et relit les droits : le compte a peut-être
+  /// été abonné depuis un autre appareil, que le cache ne sait pas encore.
+  void reportOutgoingBlocked() {
+    final now = DateTime.now();
+    final last = _lastOutgoingBlock;
+    if (last != null && now.difference(last) < _outgoingCoalesce) return;
+    _lastOutgoingBlock = now;
+    if (!_outgoingBlocked.isClosed) _outgoingBlocked.add(null);
+    unawaited(refresh());
+  }
 
   /// Les changements d'état des paiements, tels que le serveur les annonce.
   /// L'écran d'attente s'y abonne ; rien n'est rejoué à un abonné tardif.
@@ -219,6 +254,7 @@ class EntitlementService extends ChangeNotifier {
         SocketEvents.entitlementsUpdated, _onEntitlementsUpdated);
     _api.removeSocketListener(SocketEvents.paymentUpdated, _onPaymentUpdated);
     unawaited(_payments.close());
+    unawaited(_outgoingBlocked.close());
     if (identical(_instance, this)) _instance = null;
     super.dispose();
   }
