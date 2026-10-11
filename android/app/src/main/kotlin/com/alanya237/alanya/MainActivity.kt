@@ -28,6 +28,8 @@ class MainActivity : FlutterFragmentActivity() {
     private val mediaExportChannel = "com.alanya/media_export"
     private val callPermissionsChannel = "com.alanya/call_permissions"
     private val deviceIdentityChannel = "com.alanya/device_identity"
+    private val screenshotChannel = "com.alanya/screenshot"
+    private var screenshotDetector: ScreenshotDetector? = null
 
     private var notificationOpenChannel: MethodChannel? = null
     private var pendingNotificationOpen: Map<String, String>? = null
@@ -137,6 +139,19 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
 
+        // Capture d'écran d'une discussion : Dart démarre/arrête l'écoute selon
+        // l'écran ouvert, Android répond par `onScreenshot`.
+        val shotChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, screenshotChannel)
+        val detector = ScreenshotDetector(this, shotChannel)
+        screenshotDetector = detector
+        shotChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start" -> { detector.start(); result.success(true) }
+                "stop" -> { detector.stop(); result.success(true) }
+                else -> result.notImplemented()
+            }
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, callPermissionsChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -222,6 +237,7 @@ class MainActivity : FlutterFragmentActivity() {
      * disparaît sans que Flutter ait pu jouer sa clôture.
      */
     override fun onDestroy() {
+        screenshotDetector?.stop()
         ProximityBridge.disable()
         PipBridge.detach()
         super.onDestroy()

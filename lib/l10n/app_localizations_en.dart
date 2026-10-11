@@ -7469,4 +7469,43 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errCodeDeleteWindowExpired =>
       'Delete for everyone is only possible within 72 hours of sending.';
+
+  @override
+  String get clearChatTitle => 'Clear chat';
+
+  @override
+  String get clearChatAllMessages => 'All messages';
+
+  @override
+  String get clearChatMediaOnly => 'Media files only';
+
+  @override
+  String get clearChatAllHint =>
+      'The chat stays in your list. Other participants see no change.';
+
+  @override
+  String get clearChatMediaHint =>
+      'Messages stay, without the files downloaded on this device.';
+
+  @override
+  String clearChatButton(String size) {
+    return 'Clear chat ($size)';
+  }
+
+  @override
+  String get clearChatButtonNoSize => 'Clear chat';
+
+  @override
+  String get clearChatDone => 'Chat cleared';
+
+  @override
+  String get clearChatMediaDone => 'Media files deleted';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor took a screenshot of this chat';
+  }
+
+  @override
+  String get sysScreenshotByMe => 'You took a screenshot of this chat';
 }

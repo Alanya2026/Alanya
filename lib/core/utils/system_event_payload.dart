@@ -29,6 +29,9 @@ abstract final class SystemEvent {
   /// raison simple — c'est le seul message du fil que rien ne réécrit. La carte
   /// de trajet, elle, finira par dire « arrêté » ou « bien arrivé·e », et la
   /// trace GPS sera purgée. **L'incident, on ne l'efface pas.**
+  /// Capture d'écran d'une discussion à deux (POST /conversations/:id/screenshot).
+  static const screenshot = 'screenshot';
+
   static const tripAlert = 'trip_alert';
   static const tripSos = 'trip_sos';
 
@@ -42,6 +45,7 @@ abstract final class SystemEvent {
     groupDescriptionChanged,
     roleChanged,
     settingsChanged,
+    screenshot,
     tripAlert,
     tripSos,
   };
@@ -166,6 +170,9 @@ class SystemEventPayload {
       // la personne suivie relit « Vous n'avez pas confirmé ». Elle voit la
       // ligne aussi — c'est ce qui lui permet de savoir exactement ce que son
       // cercle a reçu, et quand.
+      case SystemEvent.screenshot:
+        return byMe ? l10n.sysScreenshotByMe : l10n.sysScreenshot(actor);
+
       case SystemEvent.tripAlert:
         return byMe ? l10n.sysTripAlertByMe : l10n.sysTripAlert(actor);
 
@@ -294,6 +301,8 @@ class SystemEventPayload {
       // exactement le fait. Sans ces deux cas, l'aperçu tomberait sur le repli
       // générique — « Le groupe a été mis à jour » pour une alerte reçue d'un
       // proche en pleine nuit.
+      case SystemEvent.screenshot:
+        return l10n.sysScreenshot(actor);
       case SystemEvent.tripAlert:
         return l10n.tripsCardAlert(actor);
       case SystemEvent.tripSos:

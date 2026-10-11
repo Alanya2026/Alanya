@@ -27,6 +27,7 @@ import '../../widgets/video_message_preview.dart';
 import 'chat_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
+import '../../widgets/clear_chat_sheet.dart';
 import '../../widgets/conversation_mute_sheet.dart';
 import '../../widgets/conversation_translate_sheet.dart';
 import '../../widgets/report/report_sheet.dart';
@@ -386,19 +387,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       _snack(context.l10n.noConversationToClear);
       return;
     }
-    final confirmed = await _confirm(
-      title: context.l10n.clearMessages,
-      message:
-          context.l10n.localMessagesInThisChatWill,
-      confirmLabel: context.l10n.clearAction,
-      destructive: true,
-    );
-    if (confirmed != true || !mounted) return;
-    final dao = context.read<ChatProvider>().repository.dao;
-    await (dao.db.delete(dao.db.localMessages)
-          ..where((m) => m.conversationID.equals(convId)))
-        .go();
-    if (mounted) _snack(context.l10n.messagesCleared);
+    await showClearChatSheet(context, conversationId: convId);
   }
 
   Future<void> _deleteConversation() async {
@@ -528,7 +517,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                 ),
               if (_effectiveConvId != null) ...[
                 PopupMenuItem(
-                    value: 'clear', child: Text(context.l10n.clearMessages2)),
+                    value: 'clear', child: Text(context.l10n.clearChatTitle)),
                 PopupMenuItem(
                     value: 'delete',
                     child: Text(context.l10n.deleteConversation2)),

@@ -7128,4 +7128,41 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errCodeDeleteWindowExpired => '仅可在发送后 72 小时内为所有人删除。';
+
+  @override
+  String get clearChatTitle => '清空聊天记录';
+
+  @override
+  String get clearChatAllMessages => '所有消息';
+
+  @override
+  String get clearChatMediaOnly => '仅媒体文件';
+
+  @override
+  String get clearChatAllHint => '聊天仍保留在您的列表中，其他参与者不会看到任何变化。';
+
+  @override
+  String get clearChatMediaHint => '消息保留，但会删除此设备上已下载的文件。';
+
+  @override
+  String clearChatButton(String size) {
+    return '清空聊天记录（$size）';
+  }
+
+  @override
+  String get clearChatButtonNoSize => '清空聊天记录';
+
+  @override
+  String get clearChatDone => '聊天记录已清空';
+
+  @override
+  String get clearChatMediaDone => '媒体文件已删除';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor 对此聊天进行了截屏';
+  }
+
+  @override
+  String get sysScreenshotByMe => '您对此聊天进行了截屏';
 }

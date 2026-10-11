@@ -2176,6 +2176,11 @@ class SocketEvents {
   /// avec une trame tardive ferait réapparaître un badge fantôme.
   static const conversationUpdated = 'conversation:updated';
 
+  /// « Effacer la discussion » fait depuis un autre appareil du même compte :
+  /// { conversationID, historyCutoffAt }. Émis vers MA room personnelle
+  /// seulement — les autres membres ne voient rien.
+  static const conversationCleared = 'conversation:cleared';
+
   /// Un membre a quitté ou a été retiré. Indispensable en plus de
   /// `conversation:updated` : l'exclu n'est plus dans la liste de diffusion de
   /// ce dernier et n'apprendrait jamais son exclusion.

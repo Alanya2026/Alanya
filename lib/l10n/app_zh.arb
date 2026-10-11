@@ -2197,5 +2197,16 @@
   "receiptsNoReaders": "还没有人读过",
   "receiptsLoadError": "无法加载已读回执。",
   "receiptsBarLabel": "{read} 人已读，{delivered} 人已送达未读，{pending} 人未送达",
-  "errCodeDeleteWindowExpired": "仅可在发送后 72 小时内为所有人删除。"
+  "errCodeDeleteWindowExpired": "仅可在发送后 72 小时内为所有人删除。",
+  "clearChatTitle": "清空聊天记录",
+  "clearChatAllMessages": "所有消息",
+  "clearChatMediaOnly": "仅媒体文件",
+  "clearChatAllHint": "聊天仍保留在您的列表中，其他参与者不会看到任何变化。",
+  "clearChatMediaHint": "消息保留，但会删除此设备上已下载的文件。",
+  "clearChatButton": "清空聊天记录（{size}）",
+  "clearChatButtonNoSize": "清空聊天记录",
+  "clearChatDone": "聊天记录已清空",
+  "clearChatMediaDone": "媒体文件已删除",
+  "sysScreenshot": "{actor} 对此聊天进行了截屏",
+  "sysScreenshotByMe": "您对此聊天进行了截屏"
 }

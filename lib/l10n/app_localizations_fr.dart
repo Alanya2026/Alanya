@@ -7559,4 +7559,44 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errCodeDeleteWindowExpired =>
       'La suppression pour tous n\'est possible que dans les 72 heures suivant l\'envoi.';
+
+  @override
+  String get clearChatTitle => 'Effacer la discussion';
+
+  @override
+  String get clearChatAllMessages => 'Tous les messages';
+
+  @override
+  String get clearChatMediaOnly => 'Fichiers médias uniquement';
+
+  @override
+  String get clearChatAllHint =>
+      'La discussion reste dans votre liste. Les autres participants ne voient aucun changement.';
+
+  @override
+  String get clearChatMediaHint =>
+      'Les messages restent, sans les fichiers téléchargés sur cet appareil.';
+
+  @override
+  String clearChatButton(String size) {
+    return 'Effacer la discussion ($size)';
+  }
+
+  @override
+  String get clearChatButtonNoSize => 'Effacer la discussion';
+
+  @override
+  String get clearChatDone => 'Discussion effacée';
+
+  @override
+  String get clearChatMediaDone => 'Fichiers médias supprimés';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor a fait une capture d\'écran de cette discussion';
+  }
+
+  @override
+  String get sysScreenshotByMe =>
+      'Vous avez fait une capture d\'écran de cette discussion';
 }

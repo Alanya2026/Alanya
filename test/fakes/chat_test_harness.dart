@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/db/chat_dao.dart';
 import 'package:talky_flutter/core/services/chat/chat_repository.dart';
+import 'package:talky_flutter/core/services/chat/conversation_clear_service.dart' show AppRoots;
 
 import 'fake_chat_api.dart';
 
@@ -19,6 +20,12 @@ class ChatTestHarness {
   static const int otherId = 2;
   static const int convId = 10;
 
+  /// Racines où l'app possède ses fichiers (par défaut : documents et cache du
+  /// téléphone, indisponibles en test) — voir `ConversationClearService`.
+  final AppRoots? appRoots;
+
+  ChatTestHarness({this.appRoots});
+
   Future<void> setUp({
     bool socketReady = true,
     bool autoAckSend = true,
@@ -29,7 +36,7 @@ class ChatTestHarness {
     this.api = api ?? (FakeChatApi(socketReady: socketReady)..autoAckSend = autoAckSend);
     db = AppDatabase.forTesting(NativeDatabase.memory());
     dao = ChatDao(db);
-    repo = ChatRepository.forTesting(api: this.api, database: db);
+    repo = ChatRepository.forTesting(api: this.api, database: db, appRoots: appRoots ?? () async => const []);
     await repo.bind(myId);
     await _seedConversation();
   }

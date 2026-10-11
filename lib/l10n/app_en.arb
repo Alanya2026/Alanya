@@ -3257,5 +3257,30 @@
   "receiptsNoReaders": "No one has read it yet",
   "receiptsLoadError": "Couldn't load read receipts.",
   "receiptsBarLabel": "{read} read, {delivered} delivered but unread, {pending} pending",
-  "errCodeDeleteWindowExpired": "Delete for everyone is only possible within 72 hours of sending."
+  "errCodeDeleteWindowExpired": "Delete for everyone is only possible within 72 hours of sending.",
+  "clearChatTitle": "Clear chat",
+  "clearChatAllMessages": "All messages",
+  "clearChatMediaOnly": "Media files only",
+  "clearChatAllHint": "The chat stays in your list. Other participants see no change.",
+  "clearChatMediaHint": "Messages stay, without the files downloaded on this device.",
+  "clearChatButton": "Clear chat ({size})",
+  "@clearChatButton": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearChatButtonNoSize": "Clear chat",
+  "clearChatDone": "Chat cleared",
+  "clearChatMediaDone": "Media files deleted",
+  "sysScreenshot": "{actor} took a screenshot of this chat",
+  "@sysScreenshot": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysScreenshotByMe": "You took a screenshot of this chat"
 }

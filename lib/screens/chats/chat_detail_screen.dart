@@ -56,6 +56,7 @@ import '../../core/utils/rich_text_parser.dart';
 import '../../core/utils/search_highlight.dart';
 import '../../l10n/app_localizations.dart';
 import 'package:screen_protector/screen_protector.dart';
+import '../../core/services/screenshot_watcher.dart';
 import 'view_once_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
 import 'chat/link_preview_card.dart';
@@ -67,6 +68,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/clear_chat_sheet.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/typing_indicator.dart';
@@ -396,6 +398,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// extensions de cette librairie puissent déclencher un rebuild.
   void rebuild(VoidCallback fn) => setState(fn);
 
+  final ScreenshotWatcher _screenshotWatcher = ScreenshotWatcher();
+  final ScreenshotAlertGate _screenshotGate = ScreenshotAlertGate();
+
+  /// Capture de la discussion : prévient l'autre personne (discussion à deux
+  /// seulement ; ni groupe, ni conversation avec soi-même). Ignorée si un autre
+  /// écran est passé par-dessus la discussion.
+  void _onScreenshotDetected() {
+    final convId = _convId;
+    if (!mounted || convId == null) return;
+    if (widget.isGroup || widget.userId == null || _isSelfChat) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    if (!_screenshotGate.allow()) return;
+    unawaited(_chat.repository.signalScreenshot(convId));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -408,6 +425,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         ? null
         : (me.nom.isNotEmpty ? me.nom : me.pseudo);
     _scrollController.addListener(_onScroll);
+    _screenshotWatcher.start(_onScreenshotDetected);
     WidgetsBinding.instance.addObserver(this);
     _init();
   }
@@ -1098,6 +1116,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   @override
   void dispose() {
+    _screenshotWatcher.stop();
     WidgetsBinding.instance.removeObserver(this);
     if (_observedRoute is PageRoute) appRouteObserver.unsubscribe(this);
     _typingTimer?.cancel();
@@ -1611,6 +1630,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                       ),
                     );
                   }
+                case 'clear':
+                  if (_convId != null) {
+                    unawaited(showClearChatSheet(
+                      context,
+                      conversationId: _convId!,
+                    ));
+                  }
                 case 'translation':
                   Navigator.push(
                     context,
@@ -1657,6 +1683,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                   title: Text(context.l10n.settingsMessageTranslation),
                 ),
               ),
+              if (_convId != null)
+                PopupMenuItem(
+                  value: 'clear',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.cleaning_services_outlined),
+                    title: Text(context.l10n.clearChatTitle),
+                  ),
+                ),
             ],
           ),
           AppSpacing.hGapSm,

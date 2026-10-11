@@ -238,6 +238,45 @@ extension ChatHttpApi on TalkyApiClient {
     );
   }
 
+  /// « Effacer la discussion » : vide la discussion pour MOI seul, sans la
+  /// quitter. Réponse : `{conversationID, historyCutoffAt}` (ISO 8601, UTC).
+  Future<Map<String, dynamic>> clearConversation(int conversID) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/clear'),
+        headers: _headers,
+      ),
+    );
+    return data is Map ? Map<String, dynamic>.from(data) : const {};
+  }
+
+  /// Signale une capture d'écran de la discussion à deux. Le serveur écrit la
+  /// ligne système et répond `{posted, reason?}` ; rien à faire de la réponse.
+  Future<void> signalScreenshot(int conversID) async {
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/screenshot'),
+        headers: _headers,
+      ),
+    );
+  }
+
+  /// Suppressions pour tous manquées hors ligne. Sans [after], le serveur ne
+  /// rejoue rien et renvoie seulement le curseur à mémoriser.
+  Future<Map<String, dynamic>> getDeletionsSince({int? after, int limit = 200}) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/messages/deletions'),
+        headers: _headers,
+        body: jsonEncode({
+          if (after != null) 'after': after,
+          'limit': limit,
+        }),
+      ),
+    );
+    return data is Map ? Map<String, dynamic>.from(data) : const {};
+  }
+
   Future<void> deleteConversations(List<int> conversationIDs) async {
     if (conversationIDs.isEmpty) return;
     if (conversationIDs.length == 1) {

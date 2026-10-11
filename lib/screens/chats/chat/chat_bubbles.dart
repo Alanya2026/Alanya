@@ -933,6 +933,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final incident = payload!.event == SystemEvent.tripAlert ||
         payload.event == SystemEvent.tripSos;
 
+    final capture = payload.event == SystemEvent.screenshot;
+
     return Align(
       alignment: Alignment.center,
       child: Container(
@@ -957,6 +959,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
             if (incident) ...[
               Icon(Icons.warning_amber_rounded,
                   size: 14, color: context.colors.error),
+              const SizedBox(width: 5),
+            ],
+            if (capture) ...[
+              Icon(Icons.screenshot_outlined,
+                  size: 14, color: context.colors.onSurfaceVariant),
               const SizedBox(width: 5),
             ],
             Flexible(

@@ -12879,6 +12879,72 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La suppression pour tous n\'est possible que dans les 72 heures suivant l\'envoi.'**
   String get errCodeDeleteWindowExpired;
+
+  /// No description provided for @clearChatTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion'**
+  String get clearChatTitle;
+
+  /// No description provided for @clearChatAllMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les messages'**
+  String get clearChatAllMessages;
+
+  /// No description provided for @clearChatMediaOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers médias uniquement'**
+  String get clearChatMediaOnly;
+
+  /// No description provided for @clearChatAllHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La discussion reste dans votre liste. Les autres participants ne voient aucun changement.'**
+  String get clearChatAllHint;
+
+  /// No description provided for @clearChatMediaHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les messages restent, sans les fichiers téléchargés sur cet appareil.'**
+  String get clearChatMediaHint;
+
+  /// No description provided for @clearChatButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion ({size})'**
+  String clearChatButton(String size);
+
+  /// No description provided for @clearChatButtonNoSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion'**
+  String get clearChatButtonNoSize;
+
+  /// No description provided for @clearChatDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discussion effacée'**
+  String get clearChatDone;
+
+  /// No description provided for @clearChatMediaDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers médias supprimés'**
+  String get clearChatMediaDone;
+
+  /// No description provided for @sysScreenshot.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a fait une capture d\'écran de cette discussion'**
+  String sysScreenshot(String actor);
+
+  /// No description provided for @sysScreenshotByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez fait une capture d\'écran de cette discussion'**
+  String get sysScreenshotByMe;
 }
 
 class _AppLocalizationsDelegate
