@@ -52,6 +52,8 @@ void main() {
     await prefs.setString(StickerRepository.catalogEtagKey, '"v3"');
     await prefs.setInt(StickerRepository.catalogVersionKey, 3);
     await prefs.setInt(StickerRepository.meVersionKey, 1);
+    await prefs
+        .setStringList(StickerRepository.unavailablePacksKey, ['mboa']);
 
     final repo = LocalCacheRepository(db: db, api: TalkyApiClient());
     await repo.clearSession();
@@ -63,6 +65,8 @@ void main() {
     expect(prefs.getString(StickerRepository.catalogEtagKey), isNull);
     expect(prefs.getInt(StickerRepository.catalogVersionKey), isNull);
     expect(prefs.getInt(StickerRepository.meVersionKey), isNull);
+    expect(prefs.getStringList(StickerRepository.unavailablePacksKey), isNull,
+        reason: 'les packs archivés vus par un compte ne suivent pas le suivant');
     expect((cache.manager as _FakeManager).emptied, 1,
         reason: 'le cache disque des stickers est purgé');
   });

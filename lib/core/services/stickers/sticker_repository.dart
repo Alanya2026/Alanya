@@ -47,7 +47,15 @@ class StickerRepository {
   })  : _db = db,
         _api = api,
         _cache = cache,
-        _now = now ?? DateTime.now;
+        _now = now ?? DateTime.now {
+    _instance = this;
+  }
+
+  static StickerRepository? _instance;
+
+  /// Dépôt courant de l'application, pour les services sans contexte (refus
+  /// d'envoi reçu par socket). Nul hors application (tests sans module).
+  static StickerRepository? get maybeInstance => _instance;
 
   /// Plafond des récents conservés.
   static const int maxRecents = 30;
@@ -59,6 +67,15 @@ class StickerRepository {
   static const String catalogVersionKey = 'stickers_catalog_version';
   static const String meVersionKey = 'stickers_me_version';
 
+  /// Codes des packs officiels vus **disparaître** (archivés, A14) ou refusés
+  /// par le serveur : la fiche d'un sticker de ces packs masque « Ajouter à un
+  /// pack », « Signaler » et « Voir le pack ». Un pack republié en sort dès
+  /// qu'il revient au catalogue ou dans `/me`.
+  static const String unavailablePacksKey = 'stickers_unavailable_packs';
+
+  /// Code serveur d'un pack officiel archivé ou jamais publié (contrat §4).
+  static const String packUnavailableCode = 'STICKER_PACK_UNAVAILABLE';
+
   final AppDatabase _db;
   final StickerApi _api;
   final StickerCache? _cache;
@@ -68,17 +85,35 @@ class StickerRepository {
   /// l'interface masque alors l'onglet Stickers — rien n'est révélé.
   final ValueNotifier<bool> available = ValueNotifier<bool>(true);
 
+  /// Branché par l'application sur la synchro de mes packs créés (V1b,
+  /// `StickerCreationRepository.syncCreated`) : appelé à la fin de [refresh] et
+  /// sur `stickers:sync` « packs ». Nul tant que la création n'est pas câblée.
+  Future<void> Function()? afterSync;
+
   // ── Lecture réactive ────────────────────────────────────────────────
 
   /// Catalogue officiel, dans l'ordre du serveur.
   Stream<List<LocalStickerPack>> watchCatalog() => (_db.select(_db.localStickerPacks)
+        ..where((p) => p.owned.equals(false))
         ..orderBy([(p) => OrderingTerm(expression: p.catalogPosition)]))
       .watch();
 
-  /// « Mes packs », dans l'ordre choisi par l'utilisateur.
+  /// Packs **installés** (catalogue officiel), dans l'ordre choisi par
+  /// l'utilisateur. Mes packs créés (V1b) ont leur propre liste
+  /// ([StickerCreationRepository.watchCreated]) : le réordonnancement d'ici ne
+  /// les touche pas.
   Stream<List<LocalStickerPack>> watchInstalled() => (_db.select(_db.localStickerPacks)
-        ..where((p) => p.installed.equals(true))
+        ..where((p) => p.installed.equals(true) & p.owned.equals(false))
         ..orderBy([(p) => OrderingTerm(expression: p.position)]))
+      .watch();
+
+  /// Les packs d'où l'on peut **envoyer** : installés, puis mes packs créés.
+  Stream<List<LocalStickerPack>> watchTray() => (_db.select(_db.localStickerPacks)
+        ..where((p) => p.installed.equals(true) | p.owned.equals(true))
+        ..orderBy([
+          (p) => OrderingTerm(expression: p.owned),
+          (p) => OrderingTerm(expression: p.position),
+        ]))
       .watch();
 
   Stream<List<LocalSticker>> watchStickers(int packId) => (_db.select(_db.localStickers)
@@ -160,10 +195,25 @@ class StickerRepository {
     await syncCatalog();
     await syncMe();
     await syncInstalledPacks();
+    await _afterSync();
+  }
+
+  Future<void> _afterSync() async {
+    try {
+      await afterSync?.call();
+    } catch (e) {
+      debugPrint('[StickerRepository] synchro des créations échouée : $e');
+    }
   }
 
   /// `GET /catalog` avec ETag. 304 : rien à faire.
-  Future<void> syncCatalog() async {
+  ///
+  /// Un pack officiel que le catalogue ne renvoie plus est **indisponible**
+  /// (archivé, A14) : il quitte Drift, installé ou non, avec ses stickers, ses
+  /// favoris et ses récents. Les messages déjà reçus ne dépendent pas de ces
+  /// tables (`mediaUrl` recopiée) et restent affichés. [ignoreEtag] force la
+  /// relecture complète (événement `stickers:sync` « catalog »).
+  Future<void> syncCatalog({bool ignoreEtag = false}) async {
     final prefs = await SharedPreferences.getInstance();
     try {
       // Pas d'ETag si le cache local est vide (base restaurée ou purgée) : un
@@ -171,13 +221,15 @@ class StickerRepository {
       final hasLocal = (await (_db.select(_db.localStickerPacks)..limit(1)).get())
           .isNotEmpty;
       final res = await _api.getCatalog(
-          etag: hasLocal ? prefs.getString(catalogEtagKey) : null);
+          etag: hasLocal && !ignoreEtag ? prefs.getString(catalogEtagKey) : null);
       available.value = true;
       if (res.notModified) return;
       final body = res.body;
       if (body is! Map) return;
       final packs = body['packs'];
       if (packs is! List) return;
+      final seenCodes = <String>{};
+      List<LocalStickerPack> gone = const [];
       await _db.transaction(() async {
         var i = 0;
         final seen = <int>{};
@@ -187,6 +239,7 @@ class StickerRepository {
           final code = raw['code'];
           if (id == null || id <= 0 || code is! String || code.isEmpty) continue;
           seen.add(id);
+          seenCodes.add(code);
           // `insertOnConflictUpdate` sur les seules colonnes du catalogue :
           // `installed` et `position` (état utilisateur) ne sont pas touchés.
           await _db.into(_db.localStickerPacks).insert(
@@ -220,12 +273,17 @@ class StickerRepository {
                 ),
               );
         }
-        // Un pack absent du catalogue (archivé) mais installé reste visible :
-        // on ne supprime que ceux que l'utilisateur n'a pas installés.
-        await (_db.delete(_db.localStickerPacks)
-              ..where((p) => p.installed.equals(false) & p.packId.isNotIn(seen)))
-            .go();
+        // Un pack absent du catalogue est archivé (A14) : indisponible, même
+        // installé. Garde-fou : une liste non vide dont aucune ligne n'est
+        // lisible ne vide pas le plateau.
+        if (packs.isNotEmpty && seen.isEmpty) return;
+        gone = await (_db.select(_db.localStickerPacks)
+              ..where((p) => p.owned.equals(false) & p.packId.isNotIn(seen)))
+            .get();
+        await _purgePacks(gone);
       });
+      await _updateUnavailable(
+          add: gone.map((p) => p.code), remove: seenCodes);
       if (res.etag != null) await prefs.setString(catalogEtagKey, res.etag!);
       final v = _asInt(body['version']);
       if (v != null) await prefs.setInt(catalogVersionKey, v);
@@ -244,6 +302,7 @@ class StickerRepository {
       if (body is! Map) return;
       final packs = body['packs'] is List ? body['packs'] as List : const [];
       final favs = body['favorites'] is List ? body['favorites'] as List : const [];
+      final meCodes = <String>{};
       await _db.transaction(() async {
         await _db.update(_db.localStickerPacks).write(
             const LocalStickerPacksCompanion(installed: Value(false)));
@@ -253,11 +312,15 @@ class StickerRepository {
           final code = raw['code'];
           if (id == null || id <= 0 || code is! String) continue;
           final pos = _asInt(raw['position']) ?? 0;
+          meCodes.add(code);
           final exists = await (_db.select(_db.localStickerPacks)
                 ..where((p) => p.packId.equals(id)))
               .getSingleOrNull();
           if (exists == null) {
-            // Pack installé mais absent du catalogue (archivé) : ligne minimale.
+            // Pack installé que le catalogue local ne connaît pas encore
+            // (catalogue en retard) : ligne minimale. Un pack archivé n'est
+            // jamais renvoyé par `/me` ; si le serveur le refuse ensuite
+            // (`fetchPack`), la ligne est retirée.
             await _db.into(_db.localStickerPacks).insert(
                 LocalStickerPacksCompanion.insert(
                     packId: Value(id), code: code, name: Value(code)));
@@ -277,6 +340,7 @@ class StickerRepository {
                   stickerId: Value(sid), position: Value(i++)));
         }
       });
+      await _updateUnavailable(remove: meCodes);
       final v = _asInt(body['version']);
       if (v != null) await prefs.setInt(meVersionKey, v);
     } on TalkyException catch (e) {
@@ -288,7 +352,7 @@ class StickerRepository {
   /// précharge leurs vignettes (Wi-Fi seulement, via [StickerCache]).
   Future<void> syncInstalledPacks({bool force = false}) async {
     final installed = await (_db.select(_db.localStickerPacks)
-          ..where((p) => p.installed.equals(true)))
+          ..where((p) => p.installed.equals(true) & p.owned.equals(false)))
         .get();
     for (final pack in installed) {
       final have = await (_db.selectOnly(_db.localStickers)
@@ -340,21 +404,35 @@ class StickerRepository {
                   height: Value(_asInt(raw['h']) ?? 512),
                   animated: Value(raw['animated'] == true),
                   bytes: Value(_asInt(raw['bytes'])),
+                  // Champ facultatif : absent des packs officiels, ignoré d'un
+                  // ancien serveur.
+                  assetId: Value(_asInt(raw['assetId'])),
                 ),
               );
         }
       });
     } on TalkyException catch (e) {
+      // Pack archivé entre deux synchros : il n'existe plus pour nous.
+      if (e.code == packUnavailableCode) {
+        await packUnavailable(code);
+        return;
+      }
       _noteFailure(e, module: false);
     }
   }
 
   /// Événement `stickers:sync` (autre appareil, back-office) : relit l'état.
+  ///
+  /// `catalog` (publication ou archivage d'un pack officiel, diffusé à tous les
+  /// appareils) relit catalogue **sans ETag**, `/me` et les stickers des packs
+  /// installés : un pack archivé disparaît du plateau sans toucher à
+  /// l'historique des conversations.
   Future<void> onSyncEvent(Object? payload) async {
     final reason = payload is Map ? payload['reason']?.toString() : null;
-    if (reason == 'catalog') await syncCatalog();
+    if (reason == 'catalog') await syncCatalog(ignoreEtag: true);
     await syncMe();
     if (reason == 'packs' || reason == 'catalog') await syncInstalledPacks();
+    if (reason == 'packs' || reason == null) await _afterSync();
   }
 
   // ── Actions de l'utilisateur ────────────────────────────────────────
@@ -362,7 +440,14 @@ class StickerRepository {
   // remonte à l'appelant, qui le présente via `afficherErreur`.
 
   Future<void> installPack(LocalStickerPack pack) async {
-    await _api.installPack(pack.packId);
+    try {
+      await _api.installPack(pack.packId);
+    } on TalkyException catch (e) {
+      // Pack archivé depuis la dernière synchro (catalogue en retard) : on le
+      // retire du catalogue local, l'appelant présente le refus.
+      if (e.code == packUnavailableCode) await packUnavailable(pack.code);
+      rethrow;
+    }
     final last = await (_db.selectOnly(_db.localStickerPacks)
           ..addColumns([_db.localStickerPacks.position.max()])
           ..where(_db.localStickerPacks.installed.equals(true)))
@@ -436,17 +521,87 @@ class StickerRepository {
     }
   }
 
+  // ── Pack indisponible (archivé, A14) ────────────────────────────────
+
+  /// Le serveur a dit `STICKER_PACK_UNAVAILABLE` pour le pack [code] (envoi,
+  /// transfert, installation, lecture) : il quitte le plateau, « Mes packs » et
+  /// le catalogue local, sans erreur et sans toucher aux messages. Un pack à
+  /// moi (V1b) n'est pas retiré d'ici : ses listes suivent `syncCreated`.
+  Future<void> packUnavailable(String code) async {
+    if (code.isEmpty) return;
+    final pack = await packByCode(code);
+    if (pack != null && !pack.owned) {
+      await _db.transaction(() => _purgePacks([pack]));
+    }
+    await _updateUnavailable(add: [code]);
+    if (pack != null && pack.owned) await _afterSync();
+  }
+
+  /// Vrai si l'application sait ce pack archivé ou refusé par le serveur : la
+  /// fiche d'un de ses stickers n'offre alors ni copie, ni signalement.
+  Future<bool> isPackUnavailable(String code) async {
+    if (code.isEmpty) return false;
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(unavailablePacksKey) ?? const []).contains(code);
+  }
+
+  /// Retire de Drift [packs] (officiels) avec leurs stickers, les favoris et
+  /// les récents de ces stickers. À appeler dans une transaction. Les messages
+  /// ne sont jamais lus ni modifiés : leur `mediaUrl` suffit à les afficher.
+  Future<void> _purgePacks(List<LocalStickerPack> packs) async {
+    final ids = [for (final p in packs) if (!p.owned) p.packId];
+    if (ids.isEmpty) return;
+    final sids = await (_db.selectOnly(_db.localStickers)
+          ..addColumns([_db.localStickers.stickerId])
+          ..where(_db.localStickers.packId.isIn(ids)))
+        .map((r) => r.read(_db.localStickers.stickerId)!)
+        .get();
+    if (sids.isNotEmpty) {
+      await (_db.delete(_db.localStickerFavorites)
+            ..where((f) => f.stickerId.isIn(sids)))
+          .go();
+      await (_db.delete(_db.localStickerRecents)
+            ..where((r) => r.stickerId.isIn(sids)))
+          .go();
+    }
+    await (_db.delete(_db.localStickers)..where((s) => s.packId.isIn(ids))).go();
+    await (_db.delete(_db.localStickerPacks)..where((p) => p.packId.isIn(ids)))
+        .go();
+  }
+
+  /// Tient à jour la liste des codes indisponibles ([unavailablePacksKey]).
+  Future<void> _updateUnavailable({
+    Iterable<String> add = const [],
+    Iterable<String> remove = const [],
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = (prefs.getStringList(unavailablePacksKey) ?? const <String>[])
+        .toSet();
+    final next = {...current, ...add}..removeAll(remove);
+    // `add` l'emporte sur `remove` pour un même code : refus du serveur.
+    next.addAll(add);
+    if (next.length == current.length && next.containsAll(current)) return;
+    await prefs.setStringList(unavailablePacksKey, next.toList()..sort());
+  }
+
   // ── Utilitaires ─────────────────────────────────────────────────────
 
   /// 404 sans code sur les routes de lecture = module fermé côté serveur.
   void _noteFailure(TalkyException e, {bool module = true}) {
-    if (module && e.statusCode == 404 && e.code == null) {
+    // Fermé = `404 NOT_FOUND` générique (contrat §4) ; un 404 qui porte un
+    // code de sticker (`STICKER_PACK_UNAVAILABLE`…) est une réponse normale.
+    if (module && isModuleClosed(e)) {
       available.value = false;
       return;
     }
     // Hors ligne ou erreur serveur : le cache local reste affiché.
     debugPrint('[StickerRepository] synchro échouée (${e.statusCode} ${e.code})');
   }
+
+  /// `404` sans code ou avec le code générique `NOT_FOUND` : la fonctionnalité
+  /// est fermée côté serveur et ne doit rien révéler.
+  static bool isModuleClosed(TalkyException e) =>
+      e.statusCode == 404 && (e.code == null || e.code == 'NOT_FOUND');
 
   static int? _asInt(Object? v) {
     if (v is int) return v;

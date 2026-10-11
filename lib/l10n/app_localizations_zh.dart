@@ -7264,10 +7264,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errCodeStickerAssetBlocked => '此图片已被屏蔽，无法使用。';
 
   @override
-  String get errCodeStickerQuotaExceeded => '您已达到贴纸数量上限。';
+  String get errCodeStickerQuotaExceeded => '您已达到 200 张贴纸的上限。';
 
   @override
-  String get errCodeStickerPackLimit => '您已达到贴纸包数量上限。';
+  String get errCodeStickerPackLimit => '您已达到贴纸包数量或每包贴纸数量的上限。';
 
   @override
   String get plusFeatureStickers => 'Royal 贴纸';
@@ -7309,4 +7309,349 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get stickerOfficialPackName => '官方贴纸包';
+
+  @override
+  String get stickerTabInstalled => '已安装';
+
+  @override
+  String get stickerMyCreations => '我的创作';
+
+  @override
+  String get stickerCreatedEmpty => '您还没有创建贴纸包。点按 ＋ 开始。';
+
+  @override
+  String get stickerNewPack => '新建贴纸包';
+
+  @override
+  String get stickerPackNameLabel => '贴纸包名称';
+
+  @override
+  String get stickerDefaultPackName => '我的贴纸';
+
+  @override
+  String get stickerPrivacyTitle => '创建之前';
+
+  @override
+  String get stickerPrivacyBody => '发送的贴纸，收件人可以看到。';
+
+  @override
+  String get stickerPrivacyDetail => '您的贴纸包保持私密，但收到某张图片的任何人都可以查看它。';
+
+  @override
+  String get stickerPrivacyConfirm => '我知道了';
+
+  @override
+  String get stickerRename => '重命名';
+
+  @override
+  String get stickerDeletePack => '删除贴纸包';
+
+  @override
+  String get stickerDeletePackBody => '贴纸包将被删除，其分享链接将被撤销。已发送的贴纸可能显示为“贴纸已移除”。';
+
+  @override
+  String get stickerPackDeleted => '贴纸包已删除。';
+
+  @override
+  String get stickerAddFromGallery => '从相册添加';
+
+  @override
+  String get stickerAddedSticker => '贴纸已添加到贴纸包。';
+
+  @override
+  String get stickerAlreadyOwned => '这张图片已在您的贴纸中。';
+
+  @override
+  String get stickerRemoveFromPack => '从贴纸包中移除';
+
+  @override
+  String get stickerPackEmpty => '此贴纸包为空。请从相册添加图片。';
+
+  @override
+  String get stickerImageFormat => '无法读取该图片。请选择 JPEG、PNG 或 WebP 照片。';
+
+  @override
+  String get stickerImageTooBig => '图片超过 1 MB。';
+
+  @override
+  String get stickerImageSize => '图片必须正好是 512 × 512 像素。';
+
+  @override
+  String get stickerImageNoAlpha => '图片需要透明背景（带透明度的 PNG 或 WebP）。';
+
+  @override
+  String get stickerImageAnimated => '暂不支持动态图片（GIF、动态 WebP）。';
+
+  @override
+  String get stickerImageInputTooBig => '图片太大（最大 20 MB 或 5000 万像素）。';
+
+  @override
+  String get stickerPreviewHint => '图片会适配到 512 × 512 像素的方形中。棋盘格表示透明区域。';
+
+  @override
+  String get stickerPreviewAdd => '添加';
+
+  @override
+  String get stickerAddToPack => '添加到贴纸包';
+
+  @override
+  String get stickerChoosePack => '选择贴纸包';
+
+  @override
+  String get stickerCopiedToPack => '贴纸已添加到您的贴纸包。';
+
+  @override
+  String get stickerReport => '举报';
+
+  @override
+  String get stickerReportTitle => '为什么举报此贴纸？';
+
+  @override
+  String get stickerReportInappropriate => '不当内容';
+
+  @override
+  String get stickerReportSpam => '垃圾信息';
+
+  @override
+  String get stickerReportRights => '侵犯权利';
+
+  @override
+  String get stickerReportOther => '其他';
+
+  @override
+  String get stickerReported => '谢谢，您的举报已提交。';
+
+  @override
+  String get stickerReportedAlready => '您已举报过此贴纸。';
+
+  @override
+  String get stickerShareByLink => '通过链接分享';
+
+  @override
+  String get stickerShareRevoke => '撤销链接';
+
+  @override
+  String get stickerShareRevoked => '链接已撤销。';
+
+  @override
+  String get stickerShareRevokeBody => '链接将失效。已添加此贴纸包的人会保留各自的副本。';
+
+  @override
+  String get stickerShareEmpty => '分享前请至少添加一张贴纸。';
+
+  @override
+  String get stickerShared => '已分享';
+
+  @override
+  String stickerShareMessage(String name, String link, String code) {
+    return '我在 Alanya 上的贴纸包“$name”：$link\n代码：$code';
+  }
+
+  @override
+  String get stickerOpenLink => '打开贴纸包链接';
+
+  @override
+  String get stickerOpenLinkHint => '粘贴链接或代码';
+
+  @override
+  String get stickerOpenLinkInvalid => '此链接或代码不是贴纸包。';
+
+  @override
+  String get stickerSharedPackTitle => '分享的贴纸包';
+
+  @override
+  String get stickerShareInstall => '添加到我的贴纸包';
+
+  @override
+  String get stickerShareCopyInfo => '您将获得自己的副本：即使链接被撤销，它仍属于您。';
+
+  @override
+  String get stickerShareAlreadyAdded => '已添加';
+
+  @override
+  String get stickerShareMine => '这是您自己的贴纸包。';
+
+  @override
+  String get stickerShareDone => '贴纸包已添加到您的创作。';
+
+  @override
+  String stickerShareIgnored(int count) {
+    return '已跳过 $count 张图片（被屏蔽或已移除）。';
+  }
+
+  @override
+  String stickerCreatedCount(int count, int max) {
+    return '$count/$max';
+  }
+
+  @override
+  String get errCodeRateLimited => '请求过多。请一分钟后重试。';
+
+  @override
+  String get stickerSetCover => '设为封面';
+
+  @override
+  String get stickerPaste => '粘贴';
+
+  @override
+  String get stickerPreviewEdit => '编辑';
+
+  @override
+  String get mediaEditorTitleSticker => '编辑贴纸';
+
+  @override
+  String get mediaEditorTitlePhoto => '编辑图片';
+
+  @override
+  String get mediaEditorDone => '完成';
+
+  @override
+  String get mediaEditorUndo => '撤销';
+
+  @override
+  String get mediaEditorRedo => '重做';
+
+  @override
+  String get mediaEditorTools => '编辑工具';
+
+  @override
+  String get mediaEditorToolCrop => '裁剪';
+
+  @override
+  String get mediaEditorToolDraw => '画笔';
+
+  @override
+  String get mediaEditorToolText => '文字';
+
+  @override
+  String get mediaEditorToolEmoji => '表情';
+
+  @override
+  String get mediaEditorPen => '画笔';
+
+  @override
+  String get mediaEditorEraser => '橡皮擦';
+
+  @override
+  String get mediaEditorColor => '颜色';
+
+  @override
+  String get mediaEditorColorBlack => '黑色';
+
+  @override
+  String get mediaEditorColorWhite => '白色';
+
+  @override
+  String get mediaEditorColorRed => '红色';
+
+  @override
+  String get mediaEditorColorOrange => '橙色';
+
+  @override
+  String get mediaEditorColorGreen => '绿色';
+
+  @override
+  String get mediaEditorColorBlue => '蓝色';
+
+  @override
+  String get mediaEditorColorIndigo => '靛蓝';
+
+  @override
+  String get mediaEditorThickness => '笔画粗细';
+
+  @override
+  String get mediaEditorCropHintSticker => '双指缩放，拖动以在方框内移动图片。';
+
+  @override
+  String get mediaEditorCropHintPhoto => '双指缩放，拖动以在画框内移动图片。';
+
+  @override
+  String get mediaEditorFitContain => '适应';
+
+  @override
+  String get mediaEditorFitCover => '填满';
+
+  @override
+  String get mediaEditorAspectOriginal => '原始';
+
+  @override
+  String get mediaEditorAddText => '添加文字';
+
+  @override
+  String get mediaEditorEditText => '编辑文字';
+
+  @override
+  String get mediaEditorTextHint => '输入文字';
+
+  @override
+  String get mediaEditorFontStandard => '标准';
+
+  @override
+  String get mediaEditorFontBold => '粗体';
+
+  @override
+  String get mediaEditorFontHandwriting => '手写';
+
+  @override
+  String get mediaEditorAddEmoji => '添加表情';
+
+  @override
+  String get mediaEditorSize => '大小';
+
+  @override
+  String get mediaEditorRotation => '旋转';
+
+  @override
+  String get mediaEditorDeleteItem => '删除元素';
+
+  @override
+  String get mediaEditorCanvas => '图片编辑区域';
+
+  @override
+  String get mediaEditorDiscardTitle => '放弃修改？';
+
+  @override
+  String get mediaEditorDiscardBody => '您的修改将丢失。';
+
+  @override
+  String get mediaEditorKeepEditing => '继续编辑';
+
+  @override
+  String get mediaEditorDiscard => '放弃';
+
+  @override
+  String get mediaEditorExporting => '正在处理图片…';
+
+  @override
+  String get mediaEditorToolCutout => '抠图';
+
+  @override
+  String get mediaEditorCutoutHint => '自动抠图：仅限人物。其他内容请使用画笔。';
+
+  @override
+  String get mediaEditorCutoutAuto => '抠出人物';
+
+  @override
+  String get mediaEditorCutoutBusy => '正在抠图…';
+
+  @override
+  String get mediaEditorCutoutKeep => '保留';
+
+  @override
+  String get mediaEditorCutoutErase => '擦除';
+
+  @override
+  String get mediaEditorCutoutSize => '画笔大小';
+
+  @override
+  String get mediaEditorCutoutSoft => '柔和边缘';
+
+  @override
+  String get mediaEditorCutoutReset => '重置蒙版';
+
+  @override
+  String get mediaEditorCutoutNoPerson => '此图片中未检测到人物。请使用画笔抠图。';
+
+  @override
+  String get mediaEditorCutoutFailed => '自动抠图失败。请使用画笔抠图。';
 }

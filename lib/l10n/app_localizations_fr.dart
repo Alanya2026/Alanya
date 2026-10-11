@@ -7701,11 +7701,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errCodeStickerQuotaExceeded =>
-      'Vous avez atteint votre limite de stickers.';
+      'Vous avez atteint votre limite de 200 stickers.';
 
   @override
   String get errCodeStickerPackLimit =>
-      'Vous avez atteint le nombre maximal de packs.';
+      'Vous avez atteint la limite de packs ou de stickers par pack.';
 
   @override
   String get plusFeatureStickers => 'Stickers Royal';
@@ -7749,4 +7749,370 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get stickerOfficialPackName => 'Pack officiel';
+
+  @override
+  String get stickerTabInstalled => 'Installés';
+
+  @override
+  String get stickerMyCreations => 'Mes créations';
+
+  @override
+  String get stickerCreatedEmpty =>
+      'Vous n\'avez encore créé aucun pack. Touchez ＋ pour commencer.';
+
+  @override
+  String get stickerNewPack => 'Nouveau pack';
+
+  @override
+  String get stickerPackNameLabel => 'Nom du pack';
+
+  @override
+  String get stickerDefaultPackName => 'Mes stickers';
+
+  @override
+  String get stickerPrivacyTitle => 'Avant de créer';
+
+  @override
+  String get stickerPrivacyBody =>
+      'Un sticker envoyé peut être vu par ses destinataires.';
+
+  @override
+  String get stickerPrivacyDetail =>
+      'Votre pack reste privé, mais chaque image est accessible à toute personne qui la reçoit dans une conversation.';
+
+  @override
+  String get stickerPrivacyConfirm => 'J\'ai compris';
+
+  @override
+  String get stickerRename => 'Renommer';
+
+  @override
+  String get stickerDeletePack => 'Supprimer le pack';
+
+  @override
+  String get stickerDeletePackBody =>
+      'Le pack sera supprimé et son lien de partage révoqué. Les stickers déjà envoyés peuvent s\'afficher « Sticker retiré ».';
+
+  @override
+  String get stickerPackDeleted => 'Pack supprimé.';
+
+  @override
+  String get stickerAddFromGallery => 'Ajouter depuis la galerie';
+
+  @override
+  String get stickerAddedSticker => 'Sticker ajouté au pack.';
+
+  @override
+  String get stickerAlreadyOwned => 'Cette image est déjà dans vos stickers.';
+
+  @override
+  String get stickerRemoveFromPack => 'Retirer du pack';
+
+  @override
+  String get stickerPackEmpty =>
+      'Ce pack est vide. Ajoutez une image depuis la galerie.';
+
+  @override
+  String get stickerImageFormat =>
+      'Image illisible. Choisissez une photo JPEG, PNG ou WebP.';
+
+  @override
+  String get stickerImageTooBig => 'L\'image dépasse 1 Mo.';
+
+  @override
+  String get stickerImageSize =>
+      'L\'image doit mesurer exactement 512 × 512 px.';
+
+  @override
+  String get stickerImageNoAlpha =>
+      'L\'image doit avoir un fond transparent (PNG ou WebP avec transparence).';
+
+  @override
+  String get stickerImageAnimated =>
+      'Les images animées (GIF, WebP animé) ne sont pas encore prises en charge.';
+
+  @override
+  String get stickerImageInputTooBig =>
+      'Cette image est trop grande (20 Mo ou 50 mégapixels au plus).';
+
+  @override
+  String get stickerPreviewHint =>
+      'L\'image est ajustée dans un carré de 512 × 512 px. Le damier montre les zones transparentes.';
+
+  @override
+  String get stickerPreviewAdd => 'Ajouter';
+
+  @override
+  String get stickerAddToPack => 'Ajouter à un pack';
+
+  @override
+  String get stickerChoosePack => 'Choisir un pack';
+
+  @override
+  String get stickerCopiedToPack => 'Sticker ajouté à votre pack.';
+
+  @override
+  String get stickerReport => 'Signaler';
+
+  @override
+  String get stickerReportTitle => 'Pourquoi signaler ce sticker ?';
+
+  @override
+  String get stickerReportInappropriate => 'Contenu inapproprié';
+
+  @override
+  String get stickerReportSpam => 'Spam';
+
+  @override
+  String get stickerReportRights => 'Atteinte à des droits';
+
+  @override
+  String get stickerReportOther => 'Autre';
+
+  @override
+  String get stickerReported => 'Merci, votre signalement a été envoyé.';
+
+  @override
+  String get stickerReportedAlready => 'Vous avez déjà signalé ce sticker.';
+
+  @override
+  String get stickerShareByLink => 'Partager par lien';
+
+  @override
+  String get stickerShareRevoke => 'Révoquer le lien';
+
+  @override
+  String get stickerShareRevoked => 'Lien révoqué.';
+
+  @override
+  String get stickerShareRevokeBody =>
+      'Le lien ne fonctionnera plus. Les personnes qui ont déjà ajouté le pack en gardent leur copie.';
+
+  @override
+  String get stickerShareEmpty =>
+      'Ajoutez au moins un sticker avant de partager.';
+
+  @override
+  String get stickerShared => 'Partagé';
+
+  @override
+  String stickerShareMessage(String name, String link, String code) {
+    return 'Mon pack de stickers « $name » sur Alanya : $link\nCode : $code';
+  }
+
+  @override
+  String get stickerOpenLink => 'Ouvrir un lien de pack';
+
+  @override
+  String get stickerOpenLinkHint => 'Collez un lien ou un code';
+
+  @override
+  String get stickerOpenLinkInvalid =>
+      'Ce lien ou ce code n\'est pas celui d\'un pack de stickers.';
+
+  @override
+  String get stickerSharedPackTitle => 'Pack partagé';
+
+  @override
+  String get stickerShareInstall => 'Ajouter à mes packs';
+
+  @override
+  String get stickerShareCopyInfo =>
+      'Vous recevez votre propre copie : elle reste à vous même si le lien est révoqué.';
+
+  @override
+  String get stickerShareAlreadyAdded => 'Déjà ajouté';
+
+  @override
+  String get stickerShareMine => 'C\'est votre propre pack.';
+
+  @override
+  String get stickerShareDone => 'Pack ajouté à vos créations.';
+
+  @override
+  String stickerShareIgnored(int count) {
+    return '$count image(s) ignorée(s) (bloquées ou retirées).';
+  }
+
+  @override
+  String stickerCreatedCount(int count, int max) {
+    return '$count/$max';
+  }
+
+  @override
+  String get errCodeRateLimited =>
+      'Trop de demandes. Réessayez dans une minute.';
+
+  @override
+  String get stickerSetCover => 'Définir comme couverture';
+
+  @override
+  String get stickerPaste => 'Coller';
+
+  @override
+  String get stickerPreviewEdit => 'Modifier';
+
+  @override
+  String get mediaEditorTitleSticker => 'Modifier le sticker';
+
+  @override
+  String get mediaEditorTitlePhoto => 'Retoucher l\'image';
+
+  @override
+  String get mediaEditorDone => 'Terminer';
+
+  @override
+  String get mediaEditorUndo => 'Annuler';
+
+  @override
+  String get mediaEditorRedo => 'Rétablir';
+
+  @override
+  String get mediaEditorTools => 'Outils de retouche';
+
+  @override
+  String get mediaEditorToolCrop => 'Rogner';
+
+  @override
+  String get mediaEditorToolDraw => 'Crayon';
+
+  @override
+  String get mediaEditorToolText => 'Texte';
+
+  @override
+  String get mediaEditorToolEmoji => 'Emoji';
+
+  @override
+  String get mediaEditorPen => 'Crayon';
+
+  @override
+  String get mediaEditorEraser => 'Gomme';
+
+  @override
+  String get mediaEditorColor => 'Couleur';
+
+  @override
+  String get mediaEditorColorBlack => 'Noir';
+
+  @override
+  String get mediaEditorColorWhite => 'Blanc';
+
+  @override
+  String get mediaEditorColorRed => 'Rouge';
+
+  @override
+  String get mediaEditorColorOrange => 'Orange';
+
+  @override
+  String get mediaEditorColorGreen => 'Vert';
+
+  @override
+  String get mediaEditorColorBlue => 'Bleu';
+
+  @override
+  String get mediaEditorColorIndigo => 'Indigo';
+
+  @override
+  String get mediaEditorThickness => 'Épaisseur du trait';
+
+  @override
+  String get mediaEditorCropHintSticker =>
+      'Pincez pour zoomer, glissez pour déplacer l\'image dans le carré.';
+
+  @override
+  String get mediaEditorCropHintPhoto =>
+      'Pincez pour zoomer, glissez pour déplacer l\'image dans le cadre.';
+
+  @override
+  String get mediaEditorFitContain => 'Ajuster';
+
+  @override
+  String get mediaEditorFitCover => 'Remplir';
+
+  @override
+  String get mediaEditorAspectOriginal => 'Original';
+
+  @override
+  String get mediaEditorAddText => 'Ajouter un texte';
+
+  @override
+  String get mediaEditorEditText => 'Modifier le texte';
+
+  @override
+  String get mediaEditorTextHint => 'Votre texte';
+
+  @override
+  String get mediaEditorFontStandard => 'Standard';
+
+  @override
+  String get mediaEditorFontBold => 'Gras';
+
+  @override
+  String get mediaEditorFontHandwriting => 'Manuscrite';
+
+  @override
+  String get mediaEditorAddEmoji => 'Ajouter un emoji';
+
+  @override
+  String get mediaEditorSize => 'Taille';
+
+  @override
+  String get mediaEditorRotation => 'Rotation';
+
+  @override
+  String get mediaEditorDeleteItem => 'Supprimer l\'élément';
+
+  @override
+  String get mediaEditorCanvas => 'Zone de retouche de l\'image';
+
+  @override
+  String get mediaEditorDiscardTitle => 'Abandonner les modifications ?';
+
+  @override
+  String get mediaEditorDiscardBody => 'Vos retouches seront perdues.';
+
+  @override
+  String get mediaEditorKeepEditing => 'Continuer';
+
+  @override
+  String get mediaEditorDiscard => 'Abandonner';
+
+  @override
+  String get mediaEditorExporting => 'Préparation de l\'image…';
+
+  @override
+  String get mediaEditorToolCutout => 'Détourer';
+
+  @override
+  String get mediaEditorCutoutHint =>
+      'Détourage automatique : personnes. Pour le reste, utilisez le pinceau.';
+
+  @override
+  String get mediaEditorCutoutAuto => 'Détourer les personnes';
+
+  @override
+  String get mediaEditorCutoutBusy => 'Détourage en cours…';
+
+  @override
+  String get mediaEditorCutoutKeep => 'Garder';
+
+  @override
+  String get mediaEditorCutoutErase => 'Effacer';
+
+  @override
+  String get mediaEditorCutoutSize => 'Taille du pinceau';
+
+  @override
+  String get mediaEditorCutoutSoft => 'Bords doux';
+
+  @override
+  String get mediaEditorCutoutReset => 'Réinitialiser le masque';
+
+  @override
+  String get mediaEditorCutoutNoPerson =>
+      'Aucune personne détectée sur cette image. Utilisez le pinceau pour détourer.';
+
+  @override
+  String get mediaEditorCutoutFailed =>
+      'Le détourage automatique a échoué. Utilisez le pinceau pour détourer.';
 }

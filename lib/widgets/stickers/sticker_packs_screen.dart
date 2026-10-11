@@ -6,15 +6,22 @@ import 'package:provider/provider.dart';
 import '../../core/db/app_database.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/services/stickers/sticker_creation_repository.dart';
 import '../../core/services/stickers/sticker_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../billing/open_plus_offer.dart';
+import 'sticker_created_tab.dart';
 import 'sticker_image.dart';
+import 'sticker_share_screens.dart';
 
 /// Gestion des stickers : « Mes packs » (réordonner, retirer) et catalogue
 /// (ajouter). Le serveur tranche : un pack Royal sans droit renvoie
 /// `SUBSCRIPTION_REQUIRED`, qui ouvre le panneau Plus.
+///
+/// V1b : quand la création est ouverte côté serveur, un second onglet « Mes
+/// créations » apparaît (packs perso, partage). Fermée (`404 NOT_FOUND`),
+/// l'écran reste exactement celui de la V1a.
 class StickerPacksScreen extends StatefulWidget {
   const StickerPacksScreen({super.key, this.focusPackCode});
 
@@ -29,11 +36,18 @@ class _StickerPacksScreenState extends State<StickerPacksScreen> {
   late final StickerRepository _repo = context.read<StickerRepository>();
   late final Stream<List<LocalStickerPack>> _installed = _repo.watchInstalled();
   late final Stream<List<LocalStickerPack>> _catalog = _repo.watchCatalog();
+  StickerCreationRepository? _creation;
 
   @override
   void initState() {
     super.initState();
+    try {
+      _creation = context.read<StickerCreationRepository>();
+    } catch (_) {
+      _creation = null; // pas de module création (tests) : écran V1a
+    }
     unawaited(_repo.ensureFresh(every: Duration.zero));
+    unawaited(_creation?.syncCreated());
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -46,10 +60,50 @@ class _StickerPacksScreenState extends State<StickerPacksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final creation = _creation;
+    if (creation == null) return _scaffold(context, null);
+    return ValueListenableBuilder<bool>(
+      valueListenable: creation.creationAvailable,
+      builder: (context, open, _) => _scaffold(context, open ? creation : null),
+    );
+  }
+
+  Widget _scaffold(BuildContext context, StickerCreationRepository? creation) {
     final l10n = context.l10n;
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.stickerManage)),
-      body: StreamBuilder<List<LocalStickerPack>>(
+    if (creation == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.stickerManage)),
+        body: _installedBody(context),
+      );
+    }
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.stickerManage),
+          actions: [
+            IconButton(
+              tooltip: l10n.stickerOpenLink,
+              icon: const Icon(Icons.link),
+              onPressed: () => showOpenStickerLinkDialog(context),
+            ),
+          ],
+          bottom: TabBar(tabs: [
+            Tab(text: l10n.stickerTabInstalled),
+            Tab(text: l10n.stickerMyCreations),
+          ]),
+        ),
+        body: TabBarView(children: [
+          _installedBody(context),
+          StickerCreatedTab(repo: creation),
+        ]),
+      ),
+    );
+  }
+
+  Widget _installedBody(BuildContext context) {
+    final l10n = context.l10n;
+    return StreamBuilder<List<LocalStickerPack>>(
         stream: _installed,
         builder: (context, installedSnap) {
           final installed = installedSnap.data ?? const <LocalStickerPack>[];
@@ -138,7 +192,6 @@ class _StickerPacksScreenState extends State<StickerPacksScreen> {
             },
           );
         },
-      ),
     );
   }
 }

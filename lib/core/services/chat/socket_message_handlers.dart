@@ -3,8 +3,13 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../talky_api_client.dart' show TalkyException;
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../../errors/afficher_erreur.dart';
+import '../../errors/app_error.dart';
+import '../../utils/sticker_payload.dart';
+import '../stickers/sticker_repository.dart';
 import '../alanya_media_export_service.dart';
 import '../media_cache_service.dart';
 import '../media_download_preferences.dart';
@@ -41,6 +46,14 @@ const Set<String> kTerminalSendFailures = {
   'STICKER_INVALID_PAYLOAD',
 };
 
+/// Refus d'un sticker à l'envoi : à la fois terminaux (ci-dessus) et dits à
+/// l'utilisateur (`STICKER_PACK_UNAVAILABLE` : pack officiel archivé, A14).
+const Set<String> kStickerSendRefusals = {
+  'STICKER_NOT_FOUND',
+  'STICKER_PACK_UNAVAILABLE',
+  'STICKER_INVALID_PAYLOAD',
+};
+
 /// Code du refus d'envoi faute d'abonnement. Absent de [kTerminalSendFailures] à
 /// dessein : il se lève dès qu'un code est activé.
 const String kSubscriptionRequired = 'SUBSCRIPTION_REQUIRED';
@@ -59,6 +72,7 @@ class SocketMessageHandlers {
     required MediaCacheService mediaCache,
     required void Function() scheduleListCatchUp,
     MessageAckWatchdog? ackWatchdog,
+    Future<void> Function(String packCode)? onStickerPackUnavailable,
   })  : _api = api,
         _dao = dao,
         _db = db,
@@ -70,7 +84,8 @@ class SocketMessageHandlers {
         _receipts = receipts,
         _mediaCache = mediaCache,
         _scheduleListCatchUp = scheduleListCatchUp,
-        _ackWatchdog = ackWatchdog;
+        _ackWatchdog = ackWatchdog,
+        _onStickerPackUnavailable = onStickerPackUnavailable;
 
   final ChatApi _api;
   final ChatDao _dao;
@@ -95,6 +110,10 @@ class SocketMessageHandlers {
   final MediaCacheService _mediaCache;
   final void Function() _scheduleListCatchUp;
   final MessageAckWatchdog? _ackWatchdog;
+
+  /// Retire un pack refusé (`STICKER_PACK_UNAVAILABLE`) du plateau. Par défaut,
+  /// le dépôt de stickers de l'application ; injectable pour les tests.
+  final Future<void> Function(String packCode)? _onStickerPackUnavailable;
 
   static int _toInt(dynamic v, {int fallback = 0}) {
     if (v is int) return v;
@@ -318,6 +337,9 @@ class SocketMessageHandlers {
       clientId,
       failureCode: kTerminalSendFailures.contains(code) ? code : null,
     );
+    if (code != null && kStickerSendRefusals.contains(code)) {
+      await _onStickerRefused(clientId, code);
+    }
     // Essai fini, aucun abonnement : pas un refus définitif — un code activé
     // rouvrirait tout, et « réessayer » doit alors marcher (le message n'est
     // donc PAS marqué terminal). Mais on le dit, une fois : le panneau.
@@ -330,6 +352,33 @@ class SocketMessageHandlers {
       } else {
         EntitlementService.maybeInstance?.reportOutgoingBlocked();
       }
+    }
+  }
+
+  /// Refus serveur d'un sticker (envoi, transfert, remise en file) : la bulle
+  /// est déjà en échec définitif ; on le dit en une phrase (« Ce pack n'est plus
+  /// disponible ») et, pour un pack archivé, on le retire du plateau. Même
+  /// traitement quel que soit le chemin (message émis par socket, transfert,
+  /// message remis en file). Jamais bloquant : une erreur ici n'interrompt pas
+  /// le traitement de l'échec.
+  Future<void> _onStickerRefused(String clientId, String code) async {
+    try {
+      final msg = await _dao.messageByClientId(clientId);
+      if (msg == null || msg.type != kStickerMessageType) return;
+      if (code == StickerRepository.packUnavailableCode) {
+        final pack = StickerPayload.tryParse(msg.content)?.pack ?? '';
+        if (pack.isNotEmpty) {
+          final retire = _onStickerPackUnavailable ??
+              StickerRepository.maybeInstance?.packUnavailable;
+          await retire?.call(pack);
+        }
+      }
+      afficherErreurGlobale(
+        TalkyException('Sticker refusé', 404, code: code),
+        domaine: ErrorDomain.stickers,
+      );
+    } catch (e) {
+      debugPrint('[SocketHandlers] refus de sticker non traité: $e');
     }
   }
 

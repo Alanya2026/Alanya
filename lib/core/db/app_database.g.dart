@@ -10711,6 +10711,30 @@ class $LocalStickerPacksTable extends LocalStickerPacks
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _ownedMeta = const VerificationMeta('owned');
+  @override
+  late final GeneratedColumn<bool> owned = GeneratedColumn<bool>(
+    'owned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("owned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _shareTokenMeta = const VerificationMeta(
+    'shareToken',
+  );
+  @override
+  late final GeneratedColumn<String> shareToken = GeneratedColumn<String>(
+    'share_token',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     packId,
@@ -10726,6 +10750,8 @@ class $LocalStickerPacksTable extends LocalStickerPacks
     installed,
     position,
     catalogPosition,
+    owned,
+    shareToken,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -10831,6 +10857,18 @@ class $LocalStickerPacksTable extends LocalStickerPacks
         ),
       );
     }
+    if (data.containsKey('owned')) {
+      context.handle(
+        _ownedMeta,
+        owned.isAcceptableOrUnknown(data['owned']!, _ownedMeta),
+      );
+    }
+    if (data.containsKey('share_token')) {
+      context.handle(
+        _shareTokenMeta,
+        shareToken.isAcceptableOrUnknown(data['share_token']!, _shareTokenMeta),
+      );
+    }
     return context;
   }
 
@@ -10892,6 +10930,14 @@ class $LocalStickerPacksTable extends LocalStickerPacks
         DriftSqlType.int,
         data['${effectivePrefix}catalog_position'],
       )!,
+      owned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}owned'],
+      )!,
+      shareToken: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}share_token'],
+      ),
     );
   }
 
@@ -10926,6 +10972,15 @@ class LocalStickerPack extends DataClass
 
   /// Rang dans le catalogue (ordre du serveur).
   final int catalogPosition;
+
+  /// Pack **que j'ai créé** (V1b : `GET /stickers/me/created`, y compris la
+  /// copie d'un lien de partage, qui m'appartient). Ces packs n'entrent ni dans
+  /// le catalogue ni dans « installés » : ils ont leur propre liste.
+  final bool owned;
+
+  /// Jeton du lien de partage d'un pack à moi, ou nul (pack privé). Le serveur
+  /// ne le rend qu'à son propriétaire.
+  final String? shareToken;
   const LocalStickerPack({
     required this.packId,
     required this.code,
@@ -10940,6 +10995,8 @@ class LocalStickerPack extends DataClass
     required this.installed,
     required this.position,
     required this.catalogPosition,
+    required this.owned,
+    this.shareToken,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -10961,6 +11018,10 @@ class LocalStickerPack extends DataClass
     map['installed'] = Variable<bool>(installed);
     map['position'] = Variable<int>(position);
     map['catalog_position'] = Variable<int>(catalogPosition);
+    map['owned'] = Variable<bool>(owned);
+    if (!nullToAbsent || shareToken != null) {
+      map['share_token'] = Variable<String>(shareToken);
+    }
     return map;
   }
 
@@ -10983,6 +11044,10 @@ class LocalStickerPack extends DataClass
       installed: Value(installed),
       position: Value(position),
       catalogPosition: Value(catalogPosition),
+      owned: Value(owned),
+      shareToken: shareToken == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shareToken),
     );
   }
 
@@ -11005,6 +11070,8 @@ class LocalStickerPack extends DataClass
       installed: serializer.fromJson<bool>(json['installed']),
       position: serializer.fromJson<int>(json['position']),
       catalogPosition: serializer.fromJson<int>(json['catalogPosition']),
+      owned: serializer.fromJson<bool>(json['owned']),
+      shareToken: serializer.fromJson<String?>(json['shareToken']),
     );
   }
   @override
@@ -11024,6 +11091,8 @@ class LocalStickerPack extends DataClass
       'installed': serializer.toJson<bool>(installed),
       'position': serializer.toJson<int>(position),
       'catalogPosition': serializer.toJson<int>(catalogPosition),
+      'owned': serializer.toJson<bool>(owned),
+      'shareToken': serializer.toJson<String?>(shareToken),
     };
   }
 
@@ -11041,6 +11110,8 @@ class LocalStickerPack extends DataClass
     bool? installed,
     int? position,
     int? catalogPosition,
+    bool? owned,
+    Value<String?> shareToken = const Value.absent(),
   }) => LocalStickerPack(
     packId: packId ?? this.packId,
     code: code ?? this.code,
@@ -11055,6 +11126,8 @@ class LocalStickerPack extends DataClass
     installed: installed ?? this.installed,
     position: position ?? this.position,
     catalogPosition: catalogPosition ?? this.catalogPosition,
+    owned: owned ?? this.owned,
+    shareToken: shareToken.present ? shareToken.value : this.shareToken,
   );
   LocalStickerPack copyWithCompanion(LocalStickerPacksCompanion data) {
     return LocalStickerPack(
@@ -11079,6 +11152,10 @@ class LocalStickerPack extends DataClass
       catalogPosition: data.catalogPosition.present
           ? data.catalogPosition.value
           : this.catalogPosition,
+      owned: data.owned.present ? data.owned.value : this.owned,
+      shareToken: data.shareToken.present
+          ? data.shareToken.value
+          : this.shareToken,
     );
   }
 
@@ -11097,7 +11174,9 @@ class LocalStickerPack extends DataClass
           ..write('installedByDefault: $installedByDefault, ')
           ..write('installed: $installed, ')
           ..write('position: $position, ')
-          ..write('catalogPosition: $catalogPosition')
+          ..write('catalogPosition: $catalogPosition, ')
+          ..write('owned: $owned, ')
+          ..write('shareToken: $shareToken')
           ..write(')'))
         .toString();
   }
@@ -11117,6 +11196,8 @@ class LocalStickerPack extends DataClass
     installed,
     position,
     catalogPosition,
+    owned,
+    shareToken,
   );
   @override
   bool operator ==(Object other) =>
@@ -11134,7 +11215,9 @@ class LocalStickerPack extends DataClass
           other.installedByDefault == this.installedByDefault &&
           other.installed == this.installed &&
           other.position == this.position &&
-          other.catalogPosition == this.catalogPosition);
+          other.catalogPosition == this.catalogPosition &&
+          other.owned == this.owned &&
+          other.shareToken == this.shareToken);
 }
 
 class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
@@ -11151,6 +11234,8 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
   final Value<bool> installed;
   final Value<int> position;
   final Value<int> catalogPosition;
+  final Value<bool> owned;
+  final Value<String?> shareToken;
   const LocalStickerPacksCompanion({
     this.packId = const Value.absent(),
     this.code = const Value.absent(),
@@ -11165,6 +11250,8 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
     this.installed = const Value.absent(),
     this.position = const Value.absent(),
     this.catalogPosition = const Value.absent(),
+    this.owned = const Value.absent(),
+    this.shareToken = const Value.absent(),
   });
   LocalStickerPacksCompanion.insert({
     this.packId = const Value.absent(),
@@ -11180,6 +11267,8 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
     this.installed = const Value.absent(),
     this.position = const Value.absent(),
     this.catalogPosition = const Value.absent(),
+    this.owned = const Value.absent(),
+    this.shareToken = const Value.absent(),
   }) : code = Value(code);
   static Insertable<LocalStickerPack> custom({
     Expression<int>? packId,
@@ -11195,6 +11284,8 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
     Expression<bool>? installed,
     Expression<int>? position,
     Expression<int>? catalogPosition,
+    Expression<bool>? owned,
+    Expression<String>? shareToken,
   }) {
     return RawValuesInsertable({
       if (packId != null) 'pack_id': packId,
@@ -11211,6 +11302,8 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
       if (installed != null) 'installed': installed,
       if (position != null) 'position': position,
       if (catalogPosition != null) 'catalog_position': catalogPosition,
+      if (owned != null) 'owned': owned,
+      if (shareToken != null) 'share_token': shareToken,
     });
   }
 
@@ -11228,6 +11321,8 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
     Value<bool>? installed,
     Value<int>? position,
     Value<int>? catalogPosition,
+    Value<bool>? owned,
+    Value<String?>? shareToken,
   }) {
     return LocalStickerPacksCompanion(
       packId: packId ?? this.packId,
@@ -11243,6 +11338,8 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
       installed: installed ?? this.installed,
       position: position ?? this.position,
       catalogPosition: catalogPosition ?? this.catalogPosition,
+      owned: owned ?? this.owned,
+      shareToken: shareToken ?? this.shareToken,
     );
   }
 
@@ -11288,6 +11385,12 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
     if (catalogPosition.present) {
       map['catalog_position'] = Variable<int>(catalogPosition.value);
     }
+    if (owned.present) {
+      map['owned'] = Variable<bool>(owned.value);
+    }
+    if (shareToken.present) {
+      map['share_token'] = Variable<String>(shareToken.value);
+    }
     return map;
   }
 
@@ -11306,7 +11409,9 @@ class LocalStickerPacksCompanion extends UpdateCompanion<LocalStickerPack> {
           ..write('installedByDefault: $installedByDefault, ')
           ..write('installed: $installed, ')
           ..write('position: $position, ')
-          ..write('catalogPosition: $catalogPosition')
+          ..write('catalogPosition: $catalogPosition, ')
+          ..write('owned: $owned, ')
+          ..write('shareToken: $shareToken')
           ..write(')'))
         .toString();
   }
@@ -11433,6 +11538,17 @@ class $LocalStickersTable extends LocalStickers
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<int> assetId = GeneratedColumn<int>(
+    'asset_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     stickerId,
@@ -11446,6 +11562,7 @@ class $LocalStickersTable extends LocalStickers
     height,
     animated,
     bytes,
+    assetId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -11529,6 +11646,12 @@ class $LocalStickersTable extends LocalStickers
         bytes.isAcceptableOrUnknown(data['bytes']!, _bytesMeta),
       );
     }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    }
     return context;
   }
 
@@ -11582,6 +11705,10 @@ class $LocalStickersTable extends LocalStickers
         DriftSqlType.int,
         data['${effectivePrefix}bytes'],
       ),
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}asset_id'],
+      ),
     );
   }
 
@@ -11603,6 +11730,10 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
   final int height;
   final bool animated;
   final int? bytes;
+
+  /// Identifiant de l'actif (fichier) : connu seulement pour mes propres
+  /// stickers (`/me/created`). Nécessaire pour signaler ou copier.
+  final int? assetId;
   const LocalSticker({
     required this.stickerId,
     required this.packId,
@@ -11615,6 +11746,7 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
     required this.height,
     required this.animated,
     this.bytes,
+    this.assetId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -11636,6 +11768,9 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
     if (!nullToAbsent || bytes != null) {
       map['bytes'] = Variable<int>(bytes);
     }
+    if (!nullToAbsent || assetId != null) {
+      map['asset_id'] = Variable<int>(assetId);
+    }
     return map;
   }
 
@@ -11656,6 +11791,9 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
       bytes: bytes == null && nullToAbsent
           ? const Value.absent()
           : Value(bytes),
+      assetId: assetId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(assetId),
     );
   }
 
@@ -11676,6 +11814,7 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
       height: serializer.fromJson<int>(json['height']),
       animated: serializer.fromJson<bool>(json['animated']),
       bytes: serializer.fromJson<int?>(json['bytes']),
+      assetId: serializer.fromJson<int?>(json['assetId']),
     );
   }
   @override
@@ -11693,6 +11832,7 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
       'height': serializer.toJson<int>(height),
       'animated': serializer.toJson<bool>(animated),
       'bytes': serializer.toJson<int?>(bytes),
+      'assetId': serializer.toJson<int?>(assetId),
     };
   }
 
@@ -11708,6 +11848,7 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
     int? height,
     bool? animated,
     Value<int?> bytes = const Value.absent(),
+    Value<int?> assetId = const Value.absent(),
   }) => LocalSticker(
     stickerId: stickerId ?? this.stickerId,
     packId: packId ?? this.packId,
@@ -11720,6 +11861,7 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
     height: height ?? this.height,
     animated: animated ?? this.animated,
     bytes: bytes.present ? bytes.value : this.bytes,
+    assetId: assetId.present ? assetId.value : this.assetId,
   );
   LocalSticker copyWithCompanion(LocalStickersCompanion data) {
     return LocalSticker(
@@ -11734,6 +11876,7 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
       height: data.height.present ? data.height.value : this.height,
       animated: data.animated.present ? data.animated.value : this.animated,
       bytes: data.bytes.present ? data.bytes.value : this.bytes,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
     );
   }
 
@@ -11750,7 +11893,8 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
           ..write('width: $width, ')
           ..write('height: $height, ')
           ..write('animated: $animated, ')
-          ..write('bytes: $bytes')
+          ..write('bytes: $bytes, ')
+          ..write('assetId: $assetId')
           ..write(')'))
         .toString();
   }
@@ -11768,6 +11912,7 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
     height,
     animated,
     bytes,
+    assetId,
   );
   @override
   bool operator ==(Object other) =>
@@ -11783,7 +11928,8 @@ class LocalSticker extends DataClass implements Insertable<LocalSticker> {
           other.width == this.width &&
           other.height == this.height &&
           other.animated == this.animated &&
-          other.bytes == this.bytes);
+          other.bytes == this.bytes &&
+          other.assetId == this.assetId);
 }
 
 class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
@@ -11798,6 +11944,7 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
   final Value<int> height;
   final Value<bool> animated;
   final Value<int?> bytes;
+  final Value<int?> assetId;
   const LocalStickersCompanion({
     this.stickerId = const Value.absent(),
     this.packId = const Value.absent(),
@@ -11810,6 +11957,7 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
     this.height = const Value.absent(),
     this.animated = const Value.absent(),
     this.bytes = const Value.absent(),
+    this.assetId = const Value.absent(),
   });
   LocalStickersCompanion.insert({
     this.stickerId = const Value.absent(),
@@ -11823,6 +11971,7 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
     this.height = const Value.absent(),
     this.animated = const Value.absent(),
     this.bytes = const Value.absent(),
+    this.assetId = const Value.absent(),
   }) : packId = Value(packId),
        url = Value(url);
   static Insertable<LocalSticker> custom({
@@ -11837,6 +11986,7 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
     Expression<int>? height,
     Expression<bool>? animated,
     Expression<int>? bytes,
+    Expression<int>? assetId,
   }) {
     return RawValuesInsertable({
       if (stickerId != null) 'sticker_id': stickerId,
@@ -11850,6 +12000,7 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
       if (height != null) 'height': height,
       if (animated != null) 'animated': animated,
       if (bytes != null) 'bytes': bytes,
+      if (assetId != null) 'asset_id': assetId,
     });
   }
 
@@ -11865,6 +12016,7 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
     Value<int>? height,
     Value<bool>? animated,
     Value<int?>? bytes,
+    Value<int?>? assetId,
   }) {
     return LocalStickersCompanion(
       stickerId: stickerId ?? this.stickerId,
@@ -11878,6 +12030,7 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
       height: height ?? this.height,
       animated: animated ?? this.animated,
       bytes: bytes ?? this.bytes,
+      assetId: assetId ?? this.assetId,
     );
   }
 
@@ -11917,6 +12070,9 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
     if (bytes.present) {
       map['bytes'] = Variable<int>(bytes.value);
     }
+    if (assetId.present) {
+      map['asset_id'] = Variable<int>(assetId.value);
+    }
     return map;
   }
 
@@ -11933,7 +12089,8 @@ class LocalStickersCompanion extends UpdateCompanion<LocalSticker> {
           ..write('width: $width, ')
           ..write('height: $height, ')
           ..write('animated: $animated, ')
-          ..write('bytes: $bytes')
+          ..write('bytes: $bytes, ')
+          ..write('assetId: $assetId')
           ..write(')'))
         .toString();
   }
@@ -17220,6 +17377,8 @@ typedef $$LocalStickerPacksTableCreateCompanionBuilder =
       Value<bool> installed,
       Value<int> position,
       Value<int> catalogPosition,
+      Value<bool> owned,
+      Value<String?> shareToken,
     });
 typedef $$LocalStickerPacksTableUpdateCompanionBuilder =
     LocalStickerPacksCompanion Function({
@@ -17236,6 +17395,8 @@ typedef $$LocalStickerPacksTableUpdateCompanionBuilder =
       Value<bool> installed,
       Value<int> position,
       Value<int> catalogPosition,
+      Value<bool> owned,
+      Value<String?> shareToken,
     });
 
 class $$LocalStickerPacksTableFilterComposer
@@ -17309,6 +17470,16 @@ class $$LocalStickerPacksTableFilterComposer
 
   ColumnFilters<int> get catalogPosition => $composableBuilder(
     column: $table.catalogPosition,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get owned => $composableBuilder(
+    column: $table.owned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shareToken => $composableBuilder(
+    column: $table.shareToken,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -17386,6 +17557,16 @@ class $$LocalStickerPacksTableOrderingComposer
     column: $table.catalogPosition,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get owned => $composableBuilder(
+    column: $table.owned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get shareToken => $composableBuilder(
+    column: $table.shareToken,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalStickerPacksTableAnnotationComposer
@@ -17443,6 +17624,14 @@ class $$LocalStickerPacksTableAnnotationComposer
     column: $table.catalogPosition,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get owned =>
+      $composableBuilder(column: $table.owned, builder: (column) => column);
+
+  GeneratedColumn<String> get shareToken => $composableBuilder(
+    column: $table.shareToken,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalStickerPacksTableTableManager
@@ -17498,6 +17687,8 @@ class $$LocalStickerPacksTableTableManager
                 Value<bool> installed = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<int> catalogPosition = const Value.absent(),
+                Value<bool> owned = const Value.absent(),
+                Value<String?> shareToken = const Value.absent(),
               }) => LocalStickerPacksCompanion(
                 packId: packId,
                 code: code,
@@ -17512,6 +17703,8 @@ class $$LocalStickerPacksTableTableManager
                 installed: installed,
                 position: position,
                 catalogPosition: catalogPosition,
+                owned: owned,
+                shareToken: shareToken,
               ),
           createCompanionCallback:
               ({
@@ -17528,6 +17721,8 @@ class $$LocalStickerPacksTableTableManager
                 Value<bool> installed = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<int> catalogPosition = const Value.absent(),
+                Value<bool> owned = const Value.absent(),
+                Value<String?> shareToken = const Value.absent(),
               }) => LocalStickerPacksCompanion.insert(
                 packId: packId,
                 code: code,
@@ -17542,6 +17737,8 @@ class $$LocalStickerPacksTableTableManager
                 installed: installed,
                 position: position,
                 catalogPosition: catalogPosition,
+                owned: owned,
+                shareToken: shareToken,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -17585,6 +17782,7 @@ typedef $$LocalStickersTableCreateCompanionBuilder =
       Value<int> height,
       Value<bool> animated,
       Value<int?> bytes,
+      Value<int?> assetId,
     });
 typedef $$LocalStickersTableUpdateCompanionBuilder =
     LocalStickersCompanion Function({
@@ -17599,6 +17797,7 @@ typedef $$LocalStickersTableUpdateCompanionBuilder =
       Value<int> height,
       Value<bool> animated,
       Value<int?> bytes,
+      Value<int?> assetId,
     });
 
 class $$LocalStickersTableFilterComposer
@@ -17662,6 +17861,11 @@ class $$LocalStickersTableFilterComposer
 
   ColumnFilters<int> get bytes => $composableBuilder(
     column: $table.bytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get assetId => $composableBuilder(
+    column: $table.assetId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -17729,6 +17933,11 @@ class $$LocalStickersTableOrderingComposer
     column: $table.bytes,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get assetId => $composableBuilder(
+    column: $table.assetId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalStickersTableAnnotationComposer
@@ -17772,6 +17981,9 @@ class $$LocalStickersTableAnnotationComposer
 
   GeneratedColumn<int> get bytes =>
       $composableBuilder(column: $table.bytes, builder: (column) => column);
+
+  GeneratedColumn<int> get assetId =>
+      $composableBuilder(column: $table.assetId, builder: (column) => column);
 }
 
 class $$LocalStickersTableTableManager
@@ -17816,6 +18028,7 @@ class $$LocalStickersTableTableManager
                 Value<int> height = const Value.absent(),
                 Value<bool> animated = const Value.absent(),
                 Value<int?> bytes = const Value.absent(),
+                Value<int?> assetId = const Value.absent(),
               }) => LocalStickersCompanion(
                 stickerId: stickerId,
                 packId: packId,
@@ -17828,6 +18041,7 @@ class $$LocalStickersTableTableManager
                 height: height,
                 animated: animated,
                 bytes: bytes,
+                assetId: assetId,
               ),
           createCompanionCallback:
               ({
@@ -17842,6 +18056,7 @@ class $$LocalStickersTableTableManager
                 Value<int> height = const Value.absent(),
                 Value<bool> animated = const Value.absent(),
                 Value<int?> bytes = const Value.absent(),
+                Value<int?> assetId = const Value.absent(),
               }) => LocalStickersCompanion.insert(
                 stickerId: stickerId,
                 packId: packId,
@@ -17854,6 +18069,7 @@ class $$LocalStickersTableTableManager
                 height: height,
                 animated: animated,
                 bytes: bytes,
+                assetId: assetId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

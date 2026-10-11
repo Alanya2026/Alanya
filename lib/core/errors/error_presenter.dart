@@ -235,6 +235,10 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeStickerQuotaExceeded;
     case 'STICKER_PACK_LIMIT':
       return l10n.errCodeStickerPackLimit;
+    // Limite de débit par compte (partage de stickers, contrat §4b) : la
+    // même phrase vaut pour toute route qui répondrait `RATE_LIMITED`.
+    case 'RATE_LIMITED':
+      return l10n.errCodeRateLimited;
 
     // Droits
     case 'INSUFFICIENT_ROLE':

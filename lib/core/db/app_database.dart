@@ -534,6 +534,15 @@ class LocalStickerPacks extends Table {
   /// Rang dans le catalogue (ordre du serveur).
   IntColumn get catalogPosition => integer().withDefault(const Constant(0))();
 
+  /// Pack **que j'ai créé** (V1b : `GET /stickers/me/created`, y compris la
+  /// copie d'un lien de partage, qui m'appartient). Ces packs n'entrent ni dans
+  /// le catalogue ni dans « installés » : ils ont leur propre liste.
+  BoolColumn get owned => boolean().withDefault(const Constant(false))();
+
+  /// Jeton du lien de partage d'un pack à moi, ou nul (pack privé). Le serveur
+  /// ne le rend qu'à son propriétaire.
+  TextColumn get shareToken => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {packId};
 }
@@ -551,6 +560,10 @@ class LocalStickers extends Table {
   IntColumn get height => integer().withDefault(const Constant(512))();
   BoolColumn get animated => boolean().withDefault(const Constant(false))();
   IntColumn get bytes => integer().nullable()();
+
+  /// Identifiant de l'actif (fichier) : connu seulement pour mes propres
+  /// stickers (`/me/created`). Nécessaire pour signaler ou copier.
+  IntColumn get assetId => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {stickerId};
@@ -600,7 +613,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -851,6 +864,16 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(localStickers);
             await m.createTable(localStickerFavorites);
             await m.createTable(localStickerRecents);
+          }
+          if (from < 28) {
+            // Stickers V1b : mes packs créés (`owned`, jeton de partage) et
+            // l'identifiant d'actif de mes stickers. Trois colonnes à défaut
+            // ou nulles ; sur une base déjà en v27 fraîche, `from < 27` a
+            // créé les tables avec ces colonnes, d'où le test avant ALTER.
+            await _addColumnIfMissing(m, localStickerPacks, localStickerPacks.owned);
+            await _addColumnIfMissing(
+                m, localStickerPacks, localStickerPacks.shareToken);
+            await _addColumnIfMissing(m, localStickers, localStickers.assetId);
           }
         },
       );

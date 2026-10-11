@@ -1,0 +1,8 @@
+{"NOT_FOUND":{"status":404,"note":"module ou création fermés : code générique, rien de spécifique aux stickers"},
+ "STICKER_PACK_UNAVAILABLE":{"status":404},
+ "STICKER_NOT_FOUND":{"status":404},
+ "STICKER_ASSET_INVALID":{"status":422},
+ "STICKER_ASSET_BLOCKED":{"status":422},
+ "STICKER_PACK_LIMIT":{"status":409,"note":"20 packs perso, 40 stickers par pack"},
+ "STICKER_QUOTA_EXCEEDED":{"status":429,"note":"200 stickers perso par compte"},
+ "RATE_LIMITED":{"status":429,"note":"par compte, routes de partage"}}

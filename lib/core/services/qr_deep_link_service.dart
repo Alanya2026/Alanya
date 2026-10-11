@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 
 import '../utils/app_log.dart';
+import 'stickers/sticker_share_link.dart';
 
 /// Réception des liens `…/q/u/<jeton>` — partagés par lien ou ouverts depuis
 /// la page d'accueil web d'un code QR.
@@ -26,6 +27,27 @@ class QrDeepLinkService {
   /// `u` permanent). Diffusion sans mémoire tampon : un abonné arrivé trop
   /// tard rate l'événement, d'où [consumePendingToken].
   Stream<({String kind, String token})> get identityTokens => _tokens.stream;
+
+  final StreamController<String> _stickerTokens =
+      StreamController<String>.broadcast();
+
+  /// Jetons de packs de stickers partagés (`alanya://sticker/<jeton>` ou
+  /// `https://www.alanya237.com/s/<jeton>`, V1b), envoyés à l'aperçu du pack.
+  /// Même régime que [identityTokens] : rien n'est résolu ici, c'est l'app
+  /// connectée qui appelle `GET /stickers/share/:token`.
+  Stream<String> get stickerShareTokens => _stickerTokens.stream;
+
+  String? _pendingSticker;
+
+  /// Met un jeton de pack de côté faute de session ouverte.
+  void stashStickerShareToken(String token) => _pendingSticker = token;
+
+  /// Récupère et efface le jeton de pack en attente.
+  String? consumePendingStickerShareToken() {
+    final t = _pendingSticker;
+    _pendingSticker = null;
+    return t;
+  }
 
   /// Jeton reçu avant qu'un abonné soit prêt (démarrage à froid, ou session
   /// pas encore ouverte). Se lit une seule fois.
@@ -71,6 +93,15 @@ class QrDeepLinkService {
   }
 
   void _handle(Uri uri) {
+    final sticker = StickerShareLink.fromUri(uri);
+    if (sticker != null) {
+      if (_stickerTokens.hasListener) {
+        _stickerTokens.add(sticker);
+      } else {
+        _pendingSticker = sticker;
+      }
+      return;
+    }
     final token = extractIdentityToken(uri);
     if (token == null) {
       AppLog.w('QrDeepLink', 'Lien ignoré (forme inattendue) : $uri');

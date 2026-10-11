@@ -17,6 +17,7 @@ import 'list_ringtone_preferences.dart';
 import '../theme/locale_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'stickers/sticker_cache.dart';
+import 'stickers/sticker_creation_repository.dart';
 import 'stickers/sticker_repository.dart';
 
 /// Cache lecture-seule pour les modules secondaires (contacts préférés,
@@ -709,6 +710,8 @@ class LocalCacheRepository {
       prefs.remove(StickerRepository.catalogEtagKey),
       prefs.remove(StickerRepository.catalogVersionKey),
       prefs.remove(StickerRepository.meVersionKey),
+      prefs.remove(StickerRepository.unavailablePacksKey),
+      prefs.remove(StickerCreationRepository.availableKey),
     ]);
     // Fichiers stickers téléchargés pour l'ancien compte (vignettes, images) :
     // le cache disque dédié est vidé aussi.

@@ -138,7 +138,7 @@ class _StickerTrayState extends State<StickerTray> {
 
   // Flux créés une fois : un `StreamBuilder` dont le flux change à chaque
   // build se réabonne (et relance sa requête Drift) à chaque image.
-  late final Stream<List<LocalStickerPack>> _installed = repo.watchInstalled();
+  late final Stream<List<LocalStickerPack>> _installed = repo.watchTray();
   late final Stream<List<StickerEntry>> _favorites = repo.watchFavorites();
   late final Stream<List<StickerEntry>> _recents = repo.watchRecents();
   final Map<int, Stream<List<LocalSticker>>> _packStreams = {};
@@ -188,7 +188,7 @@ class _StickerTrayState extends State<StickerTray> {
               Expanded(
                 child: _Grid(
                   count: list.length,
-                  empty: l10n.stickerLoadError,
+                  empty: pack.owned ? l10n.stickerPackEmpty : l10n.stickerLoadError,
                   builder: (i) => StickerEntry(list[i], pack),
                   onSend: widget.onSend,
                   repo: repo,
