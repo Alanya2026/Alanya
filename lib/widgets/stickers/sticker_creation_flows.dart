@@ -123,7 +123,11 @@ Future<StickerPreviewChoice> confirmStickerPreview(
     context: context,
     builder: (ctx) {
       final l10n = ctx.l10n;
+      // Petit écran : aperçu plus petit, pour que les trois boutons restent
+      // visibles sans défiler (le contenu défile en dernier recours).
+      final apercu = MediaQuery.sizeOf(ctx).height < 700 ? 170.0 : 220.0;
       return AlertDialog(
+        scrollable: true,
         title: Text(l10n.stickerPreviewTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -131,8 +135,8 @@ Future<StickerPreviewChoice> confirmStickerPreview(
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: SizedBox(
-                width: 220,
-                height: 220,
+                width: apercu,
+                height: apercu,
                 child: CustomPaint(
                   key: const ValueKey('sticker-checkerboard'),
                   painter: _CheckerPainter(
@@ -160,30 +164,40 @@ Future<StickerPreviewChoice> confirmStickerPreview(
                 color: ctx.colors.onSurfaceVariant,
               ),
             ),
+            AppSpacing.vGapMd,
+            // Trois actions empilées en pleine largeur : côte à côte dans une
+            // boîte de dialogue étroite, « Annuler » et « Modifier » se collaient.
+            // L'action principale d'abord, la sortie en dernier.
+            FilledButton(
+              key: const ValueKey('sticker-preview-add'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+              ),
+              onPressed: () => Navigator.pop(ctx, StickerPreviewChoice.add),
+              child: Text(l10n.stickerPreviewAdd),
+            ),
+            if (canEdit) ...[
+              AppSpacing.vGapSm,
+              OutlinedButton(
+                key: const ValueKey('sticker-preview-edit'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+                ),
+                onPressed: () => Navigator.pop(ctx, StickerPreviewChoice.edit),
+                child: Text(l10n.stickerPreviewEdit),
+              ),
+            ],
+            AppSpacing.vGapSm,
+            TextButton(
+              key: const ValueKey('sticker-preview-cancel'),
+              style: TextButton.styleFrom(
+                minimumSize: const Size.fromHeight(AppSizes.buttonHeight),
+              ),
+              onPressed: () => Navigator.pop(ctx, StickerPreviewChoice.cancel),
+              child: Text(l10n.commonCancel),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, StickerPreviewChoice.cancel),
-            child: Text(l10n.commonCancel),
-          ),
-          if (canEdit)
-            OutlinedButton(
-              key: const ValueKey('sticker-preview-edit'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(AppSizes.minTapTarget, AppSizes.buttonHeight),
-              ),
-              onPressed: () => Navigator.pop(ctx, StickerPreviewChoice.edit),
-              child: Text(l10n.stickerPreviewEdit),
-            ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(AppSizes.minTapTarget, AppSizes.buttonHeight),
-            ),
-            onPressed: () => Navigator.pop(ctx, StickerPreviewChoice.add),
-            child: Text(l10n.stickerPreviewAdd),
-          ),
-        ],
       );
     },
   );
