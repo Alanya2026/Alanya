@@ -7125,4 +7125,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String receiptsBarLabel(int read, int delivered, int pending) {
     return '$read 人已读，$delivered 人已送达未读，$pending 人未送达';
   }
+
+  @override
+  String get errCodeDeleteWindowExpired => '仅可在发送后 72 小时内为所有人删除。';
 }

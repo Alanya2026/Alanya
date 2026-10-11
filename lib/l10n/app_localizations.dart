@@ -12873,6 +12873,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{read} lu, {delivered} reçu sans être lu, {pending} en attente'**
   String receiptsBarLabel(int read, int delivered, int pending);
+
+  /// No description provided for @errCodeDeleteWindowExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'La suppression pour tous n\'est possible que dans les 72 heures suivant l\'envoi.'**
+  String get errCodeDeleteWindowExpired;
 }
 
 class _AppLocalizationsDelegate

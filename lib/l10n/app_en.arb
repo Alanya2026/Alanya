@@ -3256,5 +3256,6 @@
   "receiptsMemberCount": "{count, plural, =1{1 member} other{{count} members}}",
   "receiptsNoReaders": "No one has read it yet",
   "receiptsLoadError": "Couldn't load read receipts.",
-  "receiptsBarLabel": "{read} read, {delivered} delivered but unread, {pending} pending"
+  "receiptsBarLabel": "{read} read, {delivered} delivered but unread, {pending} pending",
+  "errCodeDeleteWindowExpired": "Delete for everyone is only possible within 72 hours of sending."
 }

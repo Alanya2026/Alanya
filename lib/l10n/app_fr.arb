@@ -4124,5 +4124,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "errCodeDeleteWindowExpired": "La suppression pour tous n'est possible que dans les 72 heures suivant l'envoi."
 }

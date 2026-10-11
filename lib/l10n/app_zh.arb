@@ -2196,5 +2196,6 @@
   "receiptsMemberCount": "{count} 位成员",
   "receiptsNoReaders": "还没有人读过",
   "receiptsLoadError": "无法加载已读回执。",
-  "receiptsBarLabel": "{read} 人已读，{delivered} 人已送达未读，{pending} 人未送达"
+  "receiptsBarLabel": "{read} 人已读，{delivered} 人已送达未读，{pending} 人未送达",
+  "errCodeDeleteWindowExpired": "仅可在发送后 72 小时内为所有人删除。"
 }

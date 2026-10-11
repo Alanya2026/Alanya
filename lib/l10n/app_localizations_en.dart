@@ -7465,4 +7465,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String receiptsBarLabel(int read, int delivered, int pending) {
     return '$read read, $delivered delivered but unread, $pending pending';
   }
+
+  @override
+  String get errCodeDeleteWindowExpired =>
+      'Delete for everyone is only possible within 72 hours of sending.';
 }

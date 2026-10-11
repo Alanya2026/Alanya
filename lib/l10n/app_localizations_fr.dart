@@ -7555,4 +7555,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String receiptsBarLabel(int read, int delivered, int pending) {
     return '$read lu, $delivered reçu sans être lu, $pending en attente';
   }
+
+  @override
+  String get errCodeDeleteWindowExpired =>
+      'La suppression pour tous n\'est possible que dans les 72 heures suivant l\'envoi.';
 }

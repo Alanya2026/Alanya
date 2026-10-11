@@ -1021,13 +1021,18 @@ class ChatRepository {
     // 1. Messages confirmés (msgID > 0)
     final serverIds = msgIDs.where((id) => id > 0).toSet().toList();
     if (serverIds.isNotEmpty) {
-      // Récupère les conversationID avant suppression.
+      // Récupère les conversationID avant suppression, et ce qui n'était pas
+      // déjà supprimé (c'est ce que l'on rendrait si le serveur refusait).
+      final wasVisible = <int>[];
       for (final id in serverIds) {
         final msg = await (_db.select(_db.localMessages)
               ..where((m) => m.msgID.equals(id))
               ..limit(1))
             .getSingleOrNull();
-        if (msg != null) affectedConvIDs.add(msg.conversationID);
+        if (msg != null) {
+          affectedConvIDs.add(msg.conversationID);
+          if (!msg.isDeleted) wasVisible.add(id);
+        }
       }
       if (forAll) {
         await _dao.softDeleteManyByServerId(serverIds);
@@ -1038,6 +1043,18 @@ class ChatRepository {
         await _api.deleteMessages(serverIds, forAll: forAll);
       } catch (e) {
         debugPrint('[ChatRepo] deleteMessages échouée: $e');
+        // « Pour tous » : le serveur décide (72 h, droits). S'il refuse, le message
+        // reste visible chez tous les autres : on le rend aussi ici, au lieu de
+        // laisser l'expéditeur croire qu'il a disparu pour tout le monde, et on
+        // remonte l'erreur pour que l'écran la dise. « Pour moi » ne change pas :
+        // c'est une préférence locale, sans conséquence pour les autres.
+        if (forAll && _isDeletionRefusal(e)) {
+          await _dao.restoreManyByServerId(wasVisible);
+          for (final convId in affectedConvIDs) {
+            await _recomputeSummary(convId);
+          }
+          rethrow;
+        }
       }
     }
 
@@ -1067,6 +1084,15 @@ class ChatRepository {
     for (final convId in affectedConvIDs) {
       await _recomputeSummary(convId);
     }
+  }
+
+  /// Un refus DÉFINITIF du serveur (72 h dépassées, droits, message inconnu) : on
+  /// annule la suppression locale. Une panne réseau ou un 5xx n'en est pas un —
+  /// la suppression locale reste et sera visible à la prochaine synchronisation.
+  bool _isDeletionRefusal(Object e) {
+    if (e is! TalkyException) return false;
+    final s = e.statusCode;
+    return s >= 400 && s < 500 && s != 408 && s != 429;
   }
 
   Future<void> retryMessage(String clientId) => _outbox.retryMessage(clientId);

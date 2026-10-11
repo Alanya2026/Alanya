@@ -113,6 +113,8 @@ import '../../widgets/chat/translation_model_prompt.dart';
 import '../../widgets/report/report_sheet.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/utils/message_deletion_policy.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels
