@@ -7167,11 +7167,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sysScreenshotByMe => '您对此聊天进行了截屏';
 
   @override
-  String get renameContactAction => '重命名';
-
-  @override
   String get renameContactTitle => '联系人名称';
 
   @override
   String get renameContactHelper => '仅您可见。留空则恢复为个人资料名称。';
+
+  @override
+  String get contactProfileSection => '个人资料';
+
+  @override
+  String get contactProfileName => '姓名';
+
+  @override
+  String get contactProfilePseudo => '用户名';
+
+  @override
+  String get contactProfileNumber => 'Alanya 号码';
+
+  @override
+  String get contactYourNameSection => '您为此联系人设置的名称';
+
+  @override
+  String get contactYourNameNone => '无';
+
+  @override
+  String get contactYourNameAdd => '添加名称';
+
+  @override
+  String get contactYourNameEdit => '修改';
+
+  @override
+  String get contactYourNameClear => '清除名称';
+
+  @override
+  String get contactYourNameHelpSet => '仅您可见。它会在您的聊天、通话和通知中替换个人资料名称。';
+
+  @override
+  String get contactYourNameHelpEmpty => '用您选择的名称保存此联系人。对方永远看不到。';
 }

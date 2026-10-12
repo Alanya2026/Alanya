@@ -835,8 +835,7 @@ class _ParticipantsSheet extends StatelessWidget {
                             final p = participants[i];
                             final isConnected = connectedIds
                                 .contains(p.participantID.toString());
-                            final name = p.nom ??
-                                p.pseudo ??
+                            final name = p.displayNom ??
                                 context.l10n.participantFallback;
                             final isMe = p.participantID == myId;
                             final isHost =

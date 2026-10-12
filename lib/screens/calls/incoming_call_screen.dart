@@ -183,7 +183,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         final caller = cs.currentCall?.caller;
         final isVideo = cs.isVideo;
         final isGroup = cs.groupRoomId != null;
-        final name = caller?.nom.trim().isNotEmpty == true ? caller!.nom : context.l10n.unknownSender;
+        final name = caller?.displayName.trim().isNotEmpty == true
+            ? caller!.displayName
+            : context.l10n.unknownSender;
         // Invitation à rejoindre un appel : le motif prime sur le type d'appel.
         // L'invité doit savoir qui l'ajoute, et à quelle conversation.
         final otherPeers = cs.isConference

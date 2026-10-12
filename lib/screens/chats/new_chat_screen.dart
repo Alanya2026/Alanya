@@ -281,9 +281,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                                       .isNotEmpty
                                                   ? user.avatarUrl
                                                   : null,
-                                              name: user.nom.isNotEmpty
-                                                  ? user.nom
-                                                  : user.pseudo,
+                                              name: user.displayName,
                                               size: AppSizes.avatarMd,
                                               qrBadge: user.addedViaQr == true,
                                             ),
@@ -313,9 +311,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               AccountBadgeLabel(
-                                                name: user.nom.isNotEmpty
-                                                    ? user.nom
-                                                    : user.pseudo,
+                                                name: user.displayName,
                                                 accountType: user.accountType,
                                                 verificationStatus:
                                                     user.verificationStatus,

@@ -694,6 +694,7 @@ class LocalCacheRepository {
 
   /// Vide les caches secondaires (contacts, listes, appels, meetings, statuts).
   Future<void> clearSession() async {
+    ContactAliases.replaceAll({});
     await _db.delete(_db.localStatuses).go();
     await _db.delete(_db.localMeetings).go();
     await _db.delete(_db.localCalls).go();

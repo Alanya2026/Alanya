@@ -7510,12 +7510,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sysScreenshotByMe => 'You took a screenshot of this chat';
 
   @override
-  String get renameContactAction => 'Rename';
-
-  @override
   String get renameContactTitle => 'Contact name';
 
   @override
   String get renameContactHelper =>
       'Only you can see it. Leave empty to go back to the profile name.';
+
+  @override
+  String get contactProfileSection => 'Profile';
+
+  @override
+  String get contactProfileName => 'Name';
+
+  @override
+  String get contactProfilePseudo => 'Username';
+
+  @override
+  String get contactProfileNumber => 'Alanya number';
+
+  @override
+  String get contactYourNameSection => 'Your name for this contact';
+
+  @override
+  String get contactYourNameNone => 'None';
+
+  @override
+  String get contactYourNameAdd => 'Add a name';
+
+  @override
+  String get contactYourNameEdit => 'Edit';
+
+  @override
+  String get contactYourNameClear => 'Clear the name';
+
+  @override
+  String get contactYourNameHelpSet =>
+      'Only you can see it. It replaces the profile name in your chats, calls and notifications.';
+
+  @override
+  String get contactYourNameHelpEmpty =>
+      'Save this contact under the name you choose. They will never see it.';
 }

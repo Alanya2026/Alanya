@@ -413,7 +413,7 @@ class _SelectedChips extends StatelessWidget {
                       color: context.colors.onPrimary, fontSize: 11)),
             ),
             label: Text(
-              user.nom.isNotEmpty ? user.nom : user.pseudo,
+              user.displayName,
               style: context.text.labelMedium,
             ),
             deleteIcon: const Icon(Icons.close, size: 16),
@@ -462,7 +462,7 @@ class _UserTile extends StatelessWidget {
                     imageUrl: user.avatarUrl.isNotEmpty
                         ? user.avatarUrl
                         : null,
-                    name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+                    name: user.displayName,
                     size: AppSizes.avatarMd,
                     qrBadge: user.addedViaQr == true,
                   ),
@@ -489,7 +489,7 @@ class _UserTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user.nom.isNotEmpty ? user.nom : user.pseudo,
+                      user.displayName,
                       style: context.text.titleSmall,
                     ),
                     if (user.pseudo.isNotEmpty)

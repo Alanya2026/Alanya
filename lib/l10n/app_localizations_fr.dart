@@ -7601,12 +7601,44 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vous avez fait une capture d\'écran de cette discussion';
 
   @override
-  String get renameContactAction => 'Renommer';
-
-  @override
   String get renameContactTitle => 'Nom du contact';
 
   @override
   String get renameContactHelper =>
       'Visible par vous seul. Laissez vide pour revenir au nom du profil.';
+
+  @override
+  String get contactProfileSection => 'Profil';
+
+  @override
+  String get contactProfileName => 'Nom';
+
+  @override
+  String get contactProfilePseudo => 'Pseudo';
+
+  @override
+  String get contactProfileNumber => 'Numéro Alanya';
+
+  @override
+  String get contactYourNameSection => 'Votre nom pour ce contact';
+
+  @override
+  String get contactYourNameNone => 'Aucun';
+
+  @override
+  String get contactYourNameAdd => 'Ajouter un nom';
+
+  @override
+  String get contactYourNameEdit => 'Modifier';
+
+  @override
+  String get contactYourNameClear => 'Effacer le nom';
+
+  @override
+  String get contactYourNameHelpSet =>
+      'Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.';
+
+  @override
+  String get contactYourNameHelpEmpty =>
+      'Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais.';
 }

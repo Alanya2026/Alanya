@@ -393,6 +393,8 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
     final cache = context.read<LocalCacheRepository>();
     final u = await cache.getKnownUser(ownerId);
     if (u == null) return '';
+    final alias = (u.preferredName ?? '').trim();
+    if (alias.isNotEmpty) return alias;
     final nom = u.nom.trim();
     if (nom.isNotEmpty) return nom;
     return u.pseudo.trim();
@@ -1181,7 +1183,7 @@ class _TripLiveScreenState extends State<TripLiveScreen> {
               myId: me.alanyaID,
               myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
               myPhoto: me.avatarUrl,
-              targetUserName: proprietaire?.nom ?? '',
+              targetUserName: proprietaire?.displayName ?? '',
               targetUserPhoto: proprietaire?.avatarUrl ?? '',
               isVideo: false,
             );

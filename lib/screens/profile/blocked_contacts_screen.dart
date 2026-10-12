@@ -76,7 +76,7 @@ class _BlockedContactsScreenState extends State<BlockedContactsScreen> {
   }
 
   Future<bool> _confirmUnblock(User user) async {
-    final name = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final name = user.displayName;
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -210,7 +210,7 @@ class _BlockedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final displayName = user.displayName;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),

@@ -318,7 +318,7 @@ class _MemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final displayName = user.displayName;
     final subtitle =
         isMember ? _presenceLabel(context) : context.l10n.notInThisList;
 

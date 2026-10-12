@@ -932,7 +932,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => ChatDetailScreen(
-          userName: user.nom.isNotEmpty ? user.nom : user.pseudo,
+          userName: user.displayName,
           userId: user.alanyaID,
           isGroup: false,
           avatarUrl: user.avatarUrl,

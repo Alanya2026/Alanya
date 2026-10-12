@@ -12946,12 +12946,6 @@ abstract class AppLocalizations {
   /// **'Vous avez fait une capture d\'écran de cette discussion'**
   String get sysScreenshotByMe;
 
-  /// No description provided for @renameContactAction.
-  ///
-  /// In fr, this message translates to:
-  /// **'Renommer'**
-  String get renameContactAction;
-
   /// No description provided for @renameContactTitle.
   ///
   /// In fr, this message translates to:
@@ -12963,6 +12957,72 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Visible par vous seul. Laissez vide pour revenir au nom du profil.'**
   String get renameContactHelper;
+
+  /// No description provided for @contactProfileSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Profil'**
+  String get contactProfileSection;
+
+  /// No description provided for @contactProfileName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get contactProfileName;
+
+  /// No description provided for @contactProfilePseudo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pseudo'**
+  String get contactProfilePseudo;
+
+  /// No description provided for @contactProfileNumber.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro Alanya'**
+  String get contactProfileNumber;
+
+  /// No description provided for @contactYourNameSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre nom pour ce contact'**
+  String get contactYourNameSection;
+
+  /// No description provided for @contactYourNameNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun'**
+  String get contactYourNameNone;
+
+  /// No description provided for @contactYourNameAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un nom'**
+  String get contactYourNameAdd;
+
+  /// No description provided for @contactYourNameEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get contactYourNameEdit;
+
+  /// No description provided for @contactYourNameClear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer le nom'**
+  String get contactYourNameClear;
+
+  /// No description provided for @contactYourNameHelpSet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.'**
+  String get contactYourNameHelpSet;
+
+  /// No description provided for @contactYourNameHelpEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais.'**
+  String get contactYourNameHelpEmpty;
 }
 
 class _AppLocalizationsDelegate

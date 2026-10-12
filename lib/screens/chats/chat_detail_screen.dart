@@ -117,6 +117,7 @@ import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/utils/message_deletion_policy.dart';
+import '../../core/utils/contact_aliases.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels
@@ -477,9 +478,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         : _groupParticipants.where((p) => p.alanyaID == userId).firstOrNull;
     final nom = membre == null
         ? ''
-        : (membre.user.nom.trim().isNotEmpty
-            ? membre.user.nom.trim()
-            : membre.user.pseudo.trim());
+        : membre.displayName.trim();
     return nom.isEmpty ? context.l10n.typing2 : context.l10n.nameIsTyping(nom);
   }
 

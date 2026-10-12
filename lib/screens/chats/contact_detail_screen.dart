@@ -366,17 +366,70 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         // Défilable : petit écran + clavier ouvert ne doivent pas déborder.
         scrollable: true,
         title: Text(l10n.renameContactTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 60,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(
-            hintText: contact.nom.isNotEmpty ? contact.nom : contact.pseudo,
-            helperText: l10n.renameContactHelper,
-            helperMaxLines: 3,
-          ),
-          onSubmitted: (v) => Navigator.pop(ctx, v),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Le profil reste sous les yeux pendant qu'on choisit son nom.
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: ctx.semantic.surfaceMuted,
+                borderRadius: AppRadius.brMd,
+              ),
+              child: Row(
+                children: [
+                  AppAvatar(
+                    imageUrl:
+                        contact.avatarUrl.isEmpty ? null : contact.avatarUrl,
+                    name: contact.nom.isNotEmpty ? contact.nom : contact.pseudo,
+                    size: AppSizes.avatarSm,
+                  ),
+                  AppSpacing.hGapMd,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          contact.nom.isNotEmpty ? contact.nom : contact.pseudo,
+                          style: ctx.text.titleSmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (contact.pseudo.isNotEmpty)
+                          Text(
+                            '@${contact.pseudo}',
+                            style: ctx.text.bodySmall?.copyWith(
+                              color: ctx.colors.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AppSpacing.vGapLg,
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLength: 60,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: l10n.contactYourNameSection,
+                helperText: l10n.renameContactHelper,
+                helperMaxLines: 3,
+                suffixIcon: IconButton(
+                  tooltip: l10n.contactYourNameClear,
+                  icon: const Icon(Icons.cancel_outlined),
+                  onPressed: controller.clear,
+                ),
+              ),
+              onSubmitted: (v) => Navigator.pop(ctx, v),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -539,9 +592,6 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
             icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               switch (v) {
-                case 'rename':
-                  _renameContact();
-                  break;
                 case 'block':
                   _toggleBlock();
                   break;
@@ -557,13 +607,6 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
               }
             },
             itemBuilder: (_) => [
-              // Le nom personnalisé appartient à la relation : il n'existe
-              // que pour un contact préféré.
-              if (!_isSelf && _isFavorite)
-                PopupMenuItem(
-                  value: 'rename',
-                  child: Text(context.l10n.renameContactAction),
-                ),
               if (!_isSelf)
                 PopupMenuItem(
                   value: 'block',
@@ -619,6 +662,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           user: u,
           hidePhoto: !isSelf && _blockedByThem,
           customName: !isSelf && _isFavorite ? _preferredName : null,
+          // Le numéro vit dans la carte « Profil » quand elle est affichée.
+          showPhone: isSelf || isOfficial,
         ),
         if (!isSelf && _isFavorite && _addedViaQr) ...[
           AppSpacing.vGapMd,
@@ -721,6 +766,18 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
           onClear: _clearMessages,
         ),
         AppSpacing.vGapLg,
+        // Le nom du profil, le pseudo et le numéro restent TOUJOURS lisibles
+        // ici, qu'un nom personnalisé coiffe la fiche ou non.
+        if (!isSelf && !isOfficial) ...[
+          _ProfileCard(user: u),
+          AppSpacing.vGapLg,
+        ],
+        // Le nom personnalisé appartient à la relation : il n'existe que
+        // pour un contact préféré.
+        if (!isSelf && !isOfficial && _isFavorite) ...[
+          _YourNameCard(name: _preferredName, onEdit: _renameContact),
+          AppSpacing.vGapLg,
+        ],
         if (!isSelf && _effectiveConvId != null) ...[
           _Card(
             padding: EdgeInsets.zero,
@@ -728,7 +785,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
               children: [
                 ConversationMuteListTile(
                   conversationId: _effectiveConvId!,
-                  conversationName: u.nom.isNotEmpty ? u.nom : u.pseudo,
+                  conversationName: u.displayName,
                 ),
                 ConversationTranslateListTile(
                   conversationId: _effectiveConvId!,
@@ -741,7 +798,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
         _MediaCard(
           key: ValueKey('media-${_effectiveConvId ?? 'none'}'),
           conversationId: _effectiveConvId,
-          conversationName: u.nom,
+          conversationName: u.displayName,
         ),
         AppSpacing.vGapLg,
         _DangerActionsCard(
@@ -770,13 +827,23 @@ class _Header extends StatelessWidget {
   /// Nom personnalisé du contact préféré — prend la place du titre, le nom
   /// du profil restant lisible juste dessous.
   final String? customName;
-  const _Header({required this.user, this.hidePhoto = false, this.customName});
+  final bool showPhone;
+  const _Header({
+    required this.user,
+    this.hidePhoto = false,
+    this.customName,
+    this.showPhone = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     final perso = (customName ?? '').trim();
     final name =
         perso.isNotEmpty ? perso : (user.nom.isNotEmpty ? user.nom : user.pseudo);
+    final sousTitre = [
+      if (perso.isNotEmpty && user.nom.isNotEmpty && user.nom != perso) user.nom,
+      if (user.pseudo.isNotEmpty) '@${user.pseudo}',
+    ].join(' · ');
     return Column(
       children: [
         AppAvatar(
@@ -786,13 +853,6 @@ class _Header extends StatelessWidget {
         ),
         AppSpacing.vGapMd,
         Text(name, style: context.text.headlineSmall, textAlign: TextAlign.center),
-        if (perso.isNotEmpty && user.nom.isNotEmpty && user.nom != perso) ...[
-          AppSpacing.vGapXs,
-          Text(user.nom,
-              textAlign: TextAlign.center,
-              style: context.text.bodyMedium
-                  ?.copyWith(color: context.colors.onSurfaceVariant)),
-        ],
         if (resolveAccountBadge(user.accountType, user.verificationStatus) !=
             AccountBadge.none) ...[
           AppSpacing.vGapXs,
@@ -802,13 +862,16 @@ class _Header extends StatelessWidget {
             size: 18,
           ),
         ],
-        if (user.pseudo.isNotEmpty) ...[
+        // Sous un nom personnalisé : « Nom du profil · @pseudo ». Sinon le
+        // pseudo seul, le nom du profil étant déjà le titre.
+        if (sousTitre.isNotEmpty) ...[
           AppSpacing.vGapXs,
-          Text('@${user.pseudo}',
+          Text(sousTitre,
+              textAlign: TextAlign.center,
               style: context.text.bodyLarge
                   ?.copyWith(color: context.colors.onSurfaceVariant)),
         ],
-        if (user.alanyaPhone.isNotEmpty) ...[
+        if (showPhone && user.alanyaPhone.isNotEmpty) ...[
           AppSpacing.vGapSm,
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -833,6 +896,138 @@ class _Header extends StatelessWidget {
       ],
     );
   }
+}
+
+// ── PROFIL & NOM PERSONNALISÉ ──────────────────────────────────────────
+
+/// Identité publique du contact : nom du profil, pseudo, numéro Alanya.
+class _ProfileCard extends StatelessWidget {
+  final User user;
+  const _ProfileCard({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final lignes = <(String, Widget)>[
+      if (user.nom.isNotEmpty)
+        (l10n.contactProfileName, _valeur(context, user.nom)),
+      if (user.pseudo.isNotEmpty)
+        (l10n.contactProfilePseudo, _valeur(context, '@${user.pseudo}')),
+      if (user.alanyaPhone.isNotEmpty)
+        (
+          l10n.contactProfileNumber,
+          AlanyaPhoneText(
+            user.alanyaPhone,
+            style: context.text.bodyLarge?.copyWith(
+              color: context.colors.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+    ];
+    if (lignes.isEmpty) return const SizedBox.shrink();
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionLabel(l10n.contactProfileSection),
+          for (var i = 0; i < lignes.length; i++) ...[
+            if (i > 0) Divider(height: 1, color: context.colors.outlineVariant),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    lignes[i].$1,
+                    style: context.text.bodyLarge
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
+                  ),
+                  AppSpacing.hGapLg,
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: lignes[i].$2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _valeur(BuildContext context, String texte) => Text(
+        texte,
+        textAlign: TextAlign.end,
+        style: context.text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+      );
+}
+
+/// Le nom sous lequel J'ai enregistré ce contact préféré, et de quoi le
+/// poser, le changer ou l'effacer.
+class _YourNameCard extends StatelessWidget {
+  final String? name;
+  final VoidCallback onEdit;
+  const _YourNameCard({required this.name, required this.onEdit});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final perso = (name ?? '').trim();
+    final aUnNom = perso.isNotEmpty;
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionLabel(l10n.contactYourNameSection),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  aUnNom ? perso : l10n.contactYourNameNone,
+                  style: context.text.bodyLarge?.copyWith(
+                    fontWeight: aUnNom ? FontWeight.w600 : null,
+                    color: aUnNom ? null : context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: onEdit,
+                child: Text(
+                  aUnNom ? l10n.contactYourNameEdit : l10n.contactYourNameAdd,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            aUnNom ? l10n.contactYourNameHelpSet : l10n.contactYourNameHelpEmpty,
+            style: context.text.bodySmall
+                ?.copyWith(color: context.colors.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+        child: Text(
+          text.toUpperCase(),
+          style: context.text.labelMedium?.copyWith(
+            color: context.colors.onSurfaceVariant,
+            letterSpacing: 0.8,
+          ),
+        ),
+      );
 }
 
 // ── PRIMARY ACTIONS ────────────────────────────────────────────────────

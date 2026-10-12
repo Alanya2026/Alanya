@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../l10n/app_localizations.dart';
+import 'contact_aliases.dart';
 
 /// Type de message réservé aux événements de groupe (« X a ajouté Y »).
 ///
@@ -142,7 +143,22 @@ class SystemEventPayload {
   /// Repli sur `targetIds` quand `names` manque (payload d'une version
   /// antérieure) : mieux vaut « a retiré 2 membres » qu'une phrase tronquée.
   String targetLabel({required String separator}) =>
-      targetNames.where((n) => n.trim().isNotEmpty).join(separator);
+      _shownTargetNames.where((n) => n.trim().isNotEmpty).join(separator);
+
+  /// Nom affiché de l'auteur : mon nom personnalisé passe avant le nom
+  /// dénormalisé par le serveur. Vide si aucun des deux n'existe.
+  String get _shownActorName =>
+      ContactAliases.nameFor(actorId == 0 ? null : actorId, actorName).trim();
+
+  /// Idem pour les cibles. Les identifiants ne sont appariés aux noms que si
+  /// les deux listes ont la même longueur : sinon on ne sait pas qui est qui.
+  List<String> get _shownTargetNames {
+    if (targetIds.length != targetNames.length) return targetNames;
+    return [
+      for (var i = 0; i < targetNames.length; i++)
+        ContactAliases.nameFor(targetIds[i], targetNames[i]),
+    ];
+  }
 
   bool get hasTargetNames =>
       targetNames.any((n) => n.trim().isNotEmpty);
@@ -156,9 +172,8 @@ class SystemEventPayload {
   /// un événement qui en exige) : l'appelant n'affiche alors aucune bulle.
   String? label(int myId, AppLocalizations l10n) {
     final byMe = actorId != 0 && actorId == myId;
-    final actor = actorName.trim().isNotEmpty
-        ? actorName.trim()
-        : l10n.unknownSender;
+    final actor =
+        _shownActorName.isNotEmpty ? _shownActorName : l10n.unknownSender;
     final targets = targetLabel(separator: ', ');
     final v = value ?? '';
 
@@ -269,9 +284,8 @@ class SystemEventPayload {
   /// `systemPreviewFromContent()` côté serveur. Volontairement sans noms de
   /// cibles : une ligne d'aperçu est tronquée, le fil porte la phrase complète.
   String previewLabel(AppLocalizations l10n) {
-    final actor = actorName.trim().isNotEmpty
-        ? actorName.trim()
-        : l10n.unknownSender;
+    final actor =
+        _shownActorName.isNotEmpty ? _shownActorName : l10n.unknownSender;
     final v = value?.trim() ?? '';
 
     switch (event) {

@@ -997,7 +997,9 @@ class ChatDao {
           final user = row.readTableOrNull(db.localUsers);
           final name = user == null
               ? null
-              : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+              : ((user.preferredName ?? '').trim().isNotEmpty
+                  ? user.preferredName!.trim()
+                  : (user.pseudo.isNotEmpty ? user.pseudo : user.nom));
           return LocalMediaRow(
               msg, (name == null || name.isEmpty) ? null : name);
         }).toList());
@@ -1052,7 +1054,9 @@ class ChatDao {
       final user = row.readTableOrNull(db.localUsers);
       final name = user == null
           ? null
-          : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+          : ((user.preferredName ?? '').trim().isNotEmpty
+                  ? user.preferredName!.trim()
+                  : (user.pseudo.isNotEmpty ? user.pseudo : user.nom));
       return LocalMediaRow(msg, (name == null || name.isEmpty) ? null : name);
     }).toList();
   }

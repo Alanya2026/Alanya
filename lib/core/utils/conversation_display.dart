@@ -76,6 +76,8 @@ bool isSelfConversation(LocalConversation conv, int myId) {
 /// Nom d'un participant de [conv] (nom, sinon pseudo), ou `null` s'il n'y
 /// figure pas.
 String? participantDisplayName(LocalConversation conv, int userId) {
+  final alias = ContactAliases.of(userId);
+  if (alias != null) return alias;
   for (final p in decodeParticipants(conv.participantsJson)) {
     if (conversationParticipantId(p['alanyaID']) != userId) continue;
     final nom = (p['nom'] as String?)?.trim() ?? '';
@@ -258,6 +260,8 @@ String _participantName(
   AppLocalizations l10n,
 ) {
   if (senderId == null || senderId == 0) return l10n.unknownSender;
+  final alias = ContactAliases.of(senderId);
+  if (alias != null) return alias;
   for (final p in decodeParticipants(conv.participantsJson)) {
     if (conversationParticipantId(p['alanyaID']) != senderId) continue;
     final nom = (p['nom'] as String?)?.trim() ?? '';

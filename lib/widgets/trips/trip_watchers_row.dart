@@ -100,7 +100,7 @@ class _TripWatchersRowState extends State<TripWatchersRow> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: Text(l10n.tripsRevokeTitle(w.nom)),
+        title: Text(l10n.tripsRevokeTitle(w.displayName)),
         content: Text(l10n.tripsRevokeBody),
         actions: [
           TextButton(
@@ -178,7 +178,9 @@ class _TripWatchersRowState extends State<TripWatchersRow> {
     final sem = context.semantic;
 
     return Semantics(
-      label: vu ? '${w.nom} — ${context.l10n.tripsWatcherSeen}' : w.nom,
+      label: vu
+            ? '${w.displayName} — ${context.l10n.tripsWatcherSeen}'
+            : w.displayName,
       child: GestureDetector(
         // Appui long, pas un bouton : révoquer doit être atteignable sans être
         // à portée de pouce distrait pendant un trajet.
@@ -199,7 +201,7 @@ class _TripWatchersRowState extends State<TripWatchersRow> {
                     opacity: vu ? 1 : 0.45,
                     child: AppAvatar(
                       imageUrl: w.avatarUrl,
-                      name: w.nom,
+                      name: w.displayName,
                       size: 34,
                     ),
                   ),
@@ -223,7 +225,7 @@ class _TripWatchersRowState extends State<TripWatchersRow> {
               ),
               const SizedBox(height: 3),
               Text(
-                _prenom(w.nom),
+                _prenom(w.displayName),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.text.labelSmall?.copyWith(

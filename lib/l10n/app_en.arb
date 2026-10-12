@@ -3283,7 +3283,17 @@
     }
   },
   "sysScreenshotByMe": "You took a screenshot of this chat",
-  "renameContactAction": "Rename",
   "renameContactTitle": "Contact name",
-  "renameContactHelper": "Only you can see it. Leave empty to go back to the profile name."
+  "renameContactHelper": "Only you can see it. Leave empty to go back to the profile name.",
+  "contactProfileSection": "Profile",
+  "contactProfileName": "Name",
+  "contactProfilePseudo": "Username",
+  "contactProfileNumber": "Alanya number",
+  "contactYourNameSection": "Your name for this contact",
+  "contactYourNameNone": "None",
+  "contactYourNameAdd": "Add a name",
+  "contactYourNameEdit": "Edit",
+  "contactYourNameClear": "Clear the name",
+  "contactYourNameHelpSet": "Only you can see it. It replaces the profile name in your chats, calls and notifications.",
+  "contactYourNameHelpEmpty": "Save this contact under the name you choose. They will never see it."
 }

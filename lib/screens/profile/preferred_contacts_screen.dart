@@ -106,7 +106,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                 color: context.colors.error,
               ),
               title: Text(
-                context.l10n.removePreferredContact(user.nom.isNotEmpty ? user.nom : user.pseudo),
+                context.l10n.removePreferredContact(user.displayName),
                 style: TextStyle(color: context.colors.error),
               ),
               onTap: () {

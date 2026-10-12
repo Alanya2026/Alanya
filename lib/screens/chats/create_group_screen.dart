@@ -436,7 +436,7 @@ class _MembersCard extends StatelessWidget {
                 child: Row(
                   children: [
                     AppAvatar(
-                      name: member.nom,
+                      name: member.displayName,
                       imageUrl: member.avatarUrl.isNotEmpty
                           ? member.avatarUrl
                           : null,
@@ -447,7 +447,7 @@ class _MembersCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(member.nom, style: context.text.titleSmall),
+                          Text(member.displayName, style: context.text.titleSmall),
                           Text(
                             AlanyaPhoneFormatter.formatDisplay(
                               member.alanyaPhone,

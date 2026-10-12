@@ -382,7 +382,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               color: context.colors.onPrimary, fontSize: 11)),
                     ),
                     label: Text(
-                      user.nom.isNotEmpty ? user.nom : user.pseudo,
+                      user.displayName,
                       style: context.text.labelMedium,
                     ),
                     deleteIcon: const Icon(Icons.close, size: 16),

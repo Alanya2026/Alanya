@@ -45,8 +45,9 @@ class _StatusesScreenState extends State<StatusesScreen> {
   bool _matchesSearch(List<Statut> statuses) {
     if (_search.isEmpty) return true;
     if (statuses.isEmpty) return false;
-    final name = (statuses.last.nom ?? '').toLowerCase();
-    return name.contains(_search);
+    final last = statuses.last;
+    return (last.displayNom ?? '').toLowerCase().contains(_search) ||
+        (last.nom ?? '').toLowerCase().contains(_search);
   }
 
   @override
@@ -324,7 +325,7 @@ class _ContactStatusTile extends StatelessWidget {
           children: [
             StatusRingAvatar(
               avatarUrl: last.avatarUrl,
-              fallbackText: last.nom ?? '?',
+              fallbackText: last.displayNom ?? '?',
               totalCount: totalCount,
               unseenCount: unseenCount,
               previewUrl: last.type == 1 ? last.mediaUrl : null,
@@ -336,7 +337,7 @@ class _ContactStatusTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AccountBadgeLabel(
-                    name: last.nom ?? context.l10n.contact2,
+                    name: last.displayNom ?? context.l10n.contact2,
                     accountType: last.accountType ?? 0,
                     verificationStatus: last.verificationStatus ?? 0,
                     style: context.text.titleSmall,

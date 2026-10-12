@@ -112,11 +112,16 @@ class User {
     this.paysLibelle,
   });
 
-  /// Nom à afficher pour MOI : le nom personnalisé du contact préféré s'il
-  /// existe, sinon le nom du profil.
+  /// Nom à afficher PARTOUT SAUF SUR LA FICHE : mon nom personnalisé pour ce
+  /// contact préféré s'il existe, sinon le nom du profil, sinon le pseudo.
+  /// La fiche, les données envoyées au serveur et le partage de contact
+  /// lisent [nom] et [pseudo] directement.
   String get displayName {
+    final alias = ContactAliases.of(alanyaID);
+    if (alias != null) return alias;
     final perso = preferredName?.trim() ?? '';
-    return perso.isNotEmpty ? perso : nom;
+    if (perso.isNotEmpty) return perso;
+    return nom.trim().isNotEmpty ? nom : pseudo;
   }
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -1028,6 +1033,9 @@ class Participant {
 
   int get alanyaID => user.alanyaID;
   String get nom => user.nom;
+
+  /// Nom à afficher (cf. [User.displayName]).
+  String get displayName => user.displayName;
   int get accountType => user.accountType;
   int get verificationStatus => user.verificationStatus;
   String? get verifiedUntil => user.verifiedUntil;
@@ -1373,6 +1381,11 @@ class MeetingParticipant {
   final int duree;
   // Jointure users
   final String? nom;
+
+  /// Nom à afficher (cf. [User.displayName]) ; null comme [nom] et [pseudo]
+  /// quand le serveur n'a fourni ni l'un ni l'autre.
+  String? get displayNom =>
+      ContactAliases.of(participantID) ?? nom ?? pseudo;
   final String? pseudo;
   final String? avatarUrl;
   final bool? isOnline;
@@ -1408,6 +1421,10 @@ class MeetingParticipant {
 class Statut {
   final int id;
   final int alanyaID;
+
+  /// Nom à afficher de l'auteur (cf. [User.displayName]) ; null comme [nom]
+  /// quand le serveur ne l'a pas fourni.
+  String? get displayNom => ContactAliases.of(alanyaID) ?? nom;
   final int type; // 0=texte, 1=image, 2=vidéo, 3=audio
   final String? text;
   final String? textEn;
@@ -1522,6 +1539,9 @@ class Statut {
 class StatutView {
   final int statutID;
   final int alanyaID;
+
+  /// Nom à afficher du spectateur (cf. [User.displayName]).
+  String get displayName => ContactAliases.nameFor(alanyaID, nom);
   final String nom;
   final String pseudo;
   final String? avatarUrl;
@@ -1962,6 +1982,9 @@ class Trip {
 class TripWatcher {
   final int alanyaID;
   final String nom;
+
+  /// Nom à afficher (cf. [User.displayName]).
+  String get displayName => ContactAliases.nameFor(alanyaID, nom);
   final String? avatarUrl;
 
   /// « Maman a vu » — le seul retour qu'un destinataire puisse donner.

@@ -433,7 +433,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             myId: me.alanyaID,
             myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
             myPhoto: me.avatarUrl,
-            targetUserName: proprietaire?.nom ?? '',
+            targetUserName: proprietaire?.displayName ?? '',
             targetUserPhoto: proprietaire?.avatarUrl ?? '',
             isVideo: false,
           );

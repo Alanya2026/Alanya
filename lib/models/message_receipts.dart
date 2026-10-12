@@ -2,6 +2,9 @@
 /// l'a pas encore reçu (`GET /messages/:id/receipts`, migration serveur 096).
 library;
 
+import '../core/utils/contact_aliases.dart';
+
+
 class ReceiptMember {
   const ReceiptMember({
     required this.alanyaID,
@@ -21,6 +24,8 @@ class ReceiptMember {
   final DateTime? at;
 
   String get displayName {
+    final alias = ContactAliases.of(alanyaID);
+    if (alias != null) return alias;
     if (nom.trim().isNotEmpty) return nom.trim();
     if (pseudo.trim().isNotEmpty) return pseudo.trim();
     return '#$alanyaID';

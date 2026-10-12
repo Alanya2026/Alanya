@@ -671,10 +671,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
         .where((p) => p.alanyaID == msg.senderID)
         .firstOrNull;
     final nomActuel = membre == null
-        ? null
-        : (membre.user.nom.trim().isNotEmpty
-            ? membre.user.nom.trim()
-            : membre.user.pseudo.trim());
+        ? ContactAliases.of(msg.senderID)
+        : membre.displayName.trim();
     final name = (nomActuel != null && nomActuel.isNotEmpty ? nomActuel : null) ??
         msg.senderNom ??
         msg.senderPseudo ??
@@ -737,6 +735,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
     if (membres.isEmpty) return null;
 
     return MentionSpec(
+      label: (userId) {
+        final alias = ContactAliases.of(userId);
+        return alias == null ? null : '@$alias';
+      },
       resolve: (segment) => resolveMentions(
         segment,
         membres,
@@ -1147,9 +1149,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final thumb = target != null ? _buildReplyMediaThumb(target, size: 40) : null;
     final title = target == null
         ? null
-        : (target.senderNom?.trim().isNotEmpty == true
-            ? target.senderNom!.trim()
-            : target.senderPseudo?.trim());
+        : (ContactAliases.of(target.senderID) ??
+            (target.senderNom?.trim().isNotEmpty == true
+                ? target.senderNom!.trim()
+                : target.senderPseudo?.trim()));
     return ReplyQuoteBar(
       accent: accent,
       title: title,

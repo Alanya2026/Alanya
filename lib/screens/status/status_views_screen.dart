@@ -47,10 +47,10 @@ class _StatusViewsScreenState extends State<StatusViewsScreen> {
               return ListTile(
                 leading: AppAvatar(
                   imageUrl: v.avatarUrl,
-                  name: v.nom,
+                  name: v.displayName,
                   size: AppSizes.avatarMd,
                 ),
-                title: Text(v.nom, style: context.text.titleSmall),
+                title: Text(v.displayName, style: context.text.titleSmall),
                 subtitle: Text(
                   v.pseudo,
                   style: context.text.bodySmall

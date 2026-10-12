@@ -1618,7 +1618,10 @@ extension _ChatActions on _ChatDetailScreenState {
     final q = foldForMention(query);
     final membres = _groupParticipants
         .where((p) => p.alanyaID != _myId)
-        .where((p) => q.isEmpty || foldForMention(p.nom).startsWith(q))
+        .where((p) =>
+            q.isEmpty ||
+            foldForMention(p.nom).startsWith(q) ||
+            foldForMention(p.displayName).startsWith(q))
         .take(6)
         .toList();
 
@@ -2128,7 +2131,7 @@ extension _ChatActions on _ChatDetailScreenState {
     final roster = targets
         .map((user) => GroupParticipantInfo(
               id: user.alanyaID.toString(),
-              name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+              name: user.displayName,
               photo: user.avatarUrl,
             ))
         .toList();
@@ -2221,6 +2224,8 @@ extension _ChatActions on _ChatDetailScreenState {
   /// l'appelant bascule alors sur la formule qui s'adresse à l'utilisateur.
   String? _expiredMediaSenderName(LocalMessage msg) {
     if (msg.senderID == _myId) return null;
+    final alias = ContactAliases.of(msg.senderID);
+    if (alias != null) return alias;
     final nom = msg.senderNom?.trim();
     if (nom != null && nom.isNotEmpty) return nom;
     final pseudo = msg.senderPseudo?.trim();

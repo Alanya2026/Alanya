@@ -4151,7 +4151,17 @@
     }
   },
   "sysScreenshotByMe": "Vous avez fait une capture d'écran de cette discussion",
-  "renameContactAction": "Renommer",
   "renameContactTitle": "Nom du contact",
-  "renameContactHelper": "Visible par vous seul. Laissez vide pour revenir au nom du profil."
+  "renameContactHelper": "Visible par vous seul. Laissez vide pour revenir au nom du profil.",
+  "contactProfileSection": "Profil",
+  "contactProfileName": "Nom",
+  "contactProfilePseudo": "Pseudo",
+  "contactProfileNumber": "Numéro Alanya",
+  "contactYourNameSection": "Votre nom pour ce contact",
+  "contactYourNameNone": "Aucun",
+  "contactYourNameAdd": "Ajouter un nom",
+  "contactYourNameEdit": "Modifier",
+  "contactYourNameClear": "Effacer le nom",
+  "contactYourNameHelpSet": "Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.",
+  "contactYourNameHelpEmpty": "Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais."
 }

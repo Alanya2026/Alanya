@@ -138,7 +138,7 @@ class MeetingService extends ChangeNotifier {
     final participant = _currentMeeting?.participants
         .where((p) => p.participantID.toString() == userId)
         .firstOrNull;
-    final fromList = participant?.nom ?? participant?.pseudo;
+    final fromList = participant?.displayNom;
     if (fromList != null && fromList.isNotEmpty) return fromList;
     final fromRoster = _participantRoster[userId];
     if (fromRoster != null && fromRoster.isNotEmpty) return fromRoster;
@@ -613,7 +613,7 @@ class MeetingService extends ChangeNotifier {
     }
 
     for (final p in meeting.participants) {
-      final name = p.nom ?? p.pseudo;
+      final name = p.displayNom;
       if (name != null && name.isNotEmpty) {
         _participantRoster[p.participantID.toString()] = name;
       }

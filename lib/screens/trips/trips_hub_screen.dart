@@ -334,7 +334,7 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
                           ),
                           child: AppAvatar(
                             imageUrl: gens[i].avatarUrl,
-                            name: gens[i].nom,
+                            name: gens[i].displayName,
                             size: 32,
                           ),
                         ),
@@ -344,7 +344,7 @@ class _TripsHubScreenState extends State<TripsHubScreen> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                gens.map((u) => _prenom(u.nom)).join(' · '),
+                gens.map((u) => _prenom(u.displayName)).join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.text.bodySmall?.copyWith(

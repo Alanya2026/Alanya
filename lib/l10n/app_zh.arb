@@ -2209,7 +2209,17 @@
   "clearChatMediaDone": "媒体文件已删除",
   "sysScreenshot": "{actor} 对此聊天进行了截屏",
   "sysScreenshotByMe": "您对此聊天进行了截屏",
-  "renameContactAction": "重命名",
   "renameContactTitle": "联系人名称",
-  "renameContactHelper": "仅您可见。留空则恢复为个人资料名称。"
+  "renameContactHelper": "仅您可见。留空则恢复为个人资料名称。",
+  "contactProfileSection": "个人资料",
+  "contactProfileName": "姓名",
+  "contactProfilePseudo": "用户名",
+  "contactProfileNumber": "Alanya 号码",
+  "contactYourNameSection": "您为此联系人设置的名称",
+  "contactYourNameNone": "无",
+  "contactYourNameAdd": "添加名称",
+  "contactYourNameEdit": "修改",
+  "contactYourNameClear": "清除名称",
+  "contactYourNameHelpSet": "仅您可见。它会在您的聊天、通话和通知中替换个人资料名称。",
+  "contactYourNameHelpEmpty": "用您选择的名称保存此联系人。对方永远看不到。"
 }

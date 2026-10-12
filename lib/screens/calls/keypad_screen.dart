@@ -289,7 +289,7 @@ class _KeypadScreenState extends State<KeypadScreen> {
       myId: me.alanyaID,
       myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
       myPhoto: me.avatarUrl,
-      targetUserName: _foundUser!.nom,
+      targetUserName: _foundUser!.displayName,
       targetUserPhoto: _foundUser!.avatarUrl,
       isVideo: isVideo,
     );
@@ -475,12 +475,12 @@ class _KeypadScreenState extends State<KeypadScreen> {
           horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
       leading: AppAvatar(
         imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
-        name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+        name: user.displayName,
         size: AppSizes.avatarMd,
         qrBadge: user.addedViaQr == true,
       ),
       title: Text(
-        user.nom.isNotEmpty ? user.nom : user.pseudo,
+        user.displayName,
         style: context.text.titleSmall,
       ),
       subtitle: Text(
