@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/utils/forward_message.dart';
 import 'package:talky_flutter/core/utils/media_album.dart';
+import 'support/french_locale.dart';
 
 LocalMessage _mediaMsg({
   required String clientId,
@@ -33,6 +34,8 @@ LocalMessage _mediaMsg({
 }
 
 void main() {
+  useFrenchLocale();
+
   group('encodeAlbumMarker / parseAlbumMarker', () {
     test('round-trip', () {
       const id = 'alb_test_123';

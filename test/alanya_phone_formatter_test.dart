@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/utils/alanya_phone_formatter.dart';
+import 'support/french_locale.dart';
 
 void main() {
+  useFrenchLocale();
+
   group('AlanyaPhoneFormatter', () {
     test('normalize strips non-digits', () {
       expect(AlanyaPhoneFormatter.normalize('12 34'), '1234');

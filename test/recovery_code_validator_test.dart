@@ -1,11 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/utils/validators.dart';
+import 'support/french_locale.dart';
 
 /// Le code de récupération est recopié à la main depuis un papier, souvent des
 /// mois après l'inscription. Le validateur doit donc accepter tout ce qu'une
 /// recopie humaine produit — minuscules, tirets absents, espaces du
 /// presse-papiers — et ne refuser que ce qui ne peut pas être un code.
 void main() {
+  useFrenchLocale();
+
   group('Validators.recoveryCode', () {
     test('accepts the canonical form', () {
       expect(Validators.recoveryCode('TQMP-KX3C-P6P5'), isNull);

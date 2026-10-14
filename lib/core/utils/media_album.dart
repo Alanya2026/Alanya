@@ -124,18 +124,22 @@ String? albumCaptionFromMessages(List<LocalMessage> messages) {
 /// Libellé d'aperçu pour la liste des conversations.
 ///
 /// Ex. `📷 5 photos`, `🎥 3 vidéos`, `📷 5 photos, 🎥 Vidéo`.
+///
+/// Passe par [resolveL10n] : le corps d'une notification d'album est calculé
+/// ici, y compris dans l'isolate FCM où aucun [LocaleController] n'existe.
 String albumPreviewLabel({
   required int photoCount,
   required int videoCount,
 }) {
+  final l10n = resolveL10n();
   final parts = <String>[];
   if (photoCount > 0) {
-    parts.add(photoCount == 1 ? LocaleController.instance.l10n.photo : LocaleController.instance.l10n.photosCount(photoCount));
+    parts.add(photoCount == 1 ? l10n.photo : l10n.photosCount(photoCount));
   }
   if (videoCount > 0) {
-    parts.add(videoCount == 1 ? LocaleController.instance.l10n.video : LocaleController.instance.l10n.videosCount(videoCount));
+    parts.add(videoCount == 1 ? l10n.video : l10n.videosCount(videoCount));
   }
-  if (parts.isEmpty) return LocaleController.instance.l10n.album;
+  if (parts.isEmpty) return l10n.album;
   return parts.join(', ');
 }
 
@@ -147,7 +151,8 @@ String previewLabelForAlbumMarker(AlbumMarker marker) {
     return albumPreviewLabel(photoCount: photos, videoCount: videos);
   }
   // Legacy sans comptes : total affiché comme photos.
-  return marker.total == 1 ? LocaleController.instance.l10n.photo : LocaleController.instance.l10n.photosCount(marker.total);
+  final l10n = resolveL10n();
+  return marker.total == 1 ? l10n.photo : l10n.photosCount(marker.total);
 }
 
 /// Normalise un aperçu de conversation : marqueur album → décompte photos/vidéos.

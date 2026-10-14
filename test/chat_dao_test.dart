@@ -199,8 +199,9 @@ void main() {
       expect(conv.unreadCount, 0);
     });
 
-    test('bumpMyMessagesStatus sets readAt when status becomes read', () async {
+    test('bumpMyMessagesStatus sets readAt (and deliveredAt) from the server time', () async {
       final now = DateTime.now().toUtc();
+      final readAt = DateTime.utc(2026, 7, 13, 10, 30);
       const convId = 32;
       const myId = 7;
 
@@ -213,13 +214,16 @@ void main() {
         status: const Value(1),
       ));
 
-      await dao.bumpMyMessagesStatus(convId, myId, 3);
+      await dao.bumpMyMessagesStatus(convId, myId, 3, at: readAt);
 
       final msg = await (db.select(db.localMessages)
             ..where((m) => m.clientId.equals('srv_600')))
           .getSingle();
       expect(msg.status, 3);
-      expect(msg.readAt, isNot(isNull));
+      expect(msg.readAt?.toUtc(), readAt);
+      // « Lu » implique « livré » : sans accusé de remise séparé, deliveredAt
+      // prend la même heure.
+      expect(msg.deliveredAt?.toUtc(), readAt);
     });
 
     test('conversationIdsWithPendingNewerThan batch', () async {

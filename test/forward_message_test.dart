@@ -4,6 +4,7 @@ import 'package:talky_flutter/core/utils/forward_message.dart';
 import 'package:talky_flutter/core/services/media_expiry_policy.dart';
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import 'support/french_locale.dart';
 
 LocalMessage _msg({
   int type = 0,
@@ -40,6 +41,8 @@ LocalMessage _msg({
 }
 
 void main() {
+  useFrenchLocale();
+
   group('canForwardMessage', () {
     test('texte valide', () {
       expect(canForwardMessage(_msg(content: 'Bonjour')), isTrue);

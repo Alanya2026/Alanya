@@ -1,8 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/services/local_notification_helper.dart';
+import 'support/french_locale.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  // Pas de LocaleController : `bodyFromPayload` sert aussi dans l'isolate
+  // FCM, où il n'existe pas.
+  useFrenchLocale(withController: false);
 
   group('LocalNotificationHelper.bodyFromPayload', () {
     test('normalizes album marker in body', () {
