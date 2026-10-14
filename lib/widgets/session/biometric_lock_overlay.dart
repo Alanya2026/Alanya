@@ -7,6 +7,27 @@ import '../../core/services/biometric_lock_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 
+/// Absence en arrière-plan au-delà de laquelle l'empreinte est redemandée.
+const kBiometricRelockGrace = Duration(seconds: 30);
+
+/// Faut-il redemander l'empreinte au retour au premier plan ?
+///
+/// [quitteeA] est l'heure du passage en arrière-plan (`paused` / `hidden`),
+/// `null` si l'app n'y est pas passée. `inactive` n'en fait pas partie : Android
+/// l'envoie dès que la fenêtre perd le focus — volet des notifications baissé,
+/// boîte de dialogue système — et l'empreinte était alors redemandée « pour
+/// chaque action », au point que des utilisateurs désactivaient le verrou
+/// (signalement du groupe 3GI 2029, bug A4). Ouvrir la galerie ou l'appareil
+/// photo met l'app en pause quelques secondes : le délai de grâce les couvre.
+bool biometrieExigeeAuRetour({
+  required DateTime? quitteeA,
+  required DateTime maintenant,
+  Duration grace = kBiometricRelockGrace,
+}) {
+  if (quitteeA == null) return false;
+  return maintenant.difference(quitteeA) >= grace;
+}
+
 /// Masque l'app tant que la biométrie n'a pas validé l'accès (cold start / resume).
 class BiometricLockOverlay extends StatefulWidget {
   const BiometricLockOverlay({
@@ -26,8 +47,12 @@ class _BiometricLockOverlayState extends State<BiometricLockOverlay>
     with WidgetsBindingObserver {
   bool _locked = false;
   bool _promptScheduled = false;
-  /// Faux après un déverrouillage réussi ; repasse à vrai quand l'app passe en arrière-plan.
+  /// Faux après un déverrouillage réussi ; repasse à vrai après une absence
+  /// plus longue que [kBiometricRelockGrace] (voir [biometrieExigeeAuRetour]).
   bool _requireUnlock = true;
+
+  /// Heure du passage en arrière-plan depuis le dernier retour, sinon `null`.
+  DateTime? _backgroundSince;
 
   @override
   void initState() {
@@ -63,13 +88,20 @@ class _BiometricLockOverlayState extends State<BiometricLockOverlay>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
-        _requireUnlock = true;
+        _backgroundSince ??= DateTime.now();
         break;
       case AppLifecycleState.resumed:
+        if (biometrieExigeeAuRetour(
+          quitteeA: _backgroundSince,
+          maintenant: DateTime.now(),
+        )) {
+          _requireUnlock = true;
+        }
+        _backgroundSince = null;
         unawaited(_maybeLock());
         break;
+      case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
         break;
     }

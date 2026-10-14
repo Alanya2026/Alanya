@@ -2494,11 +2494,41 @@ abstract class AppLocalizations {
   /// **'Caméra désactivée'**
   String get cameraDisabled;
 
-  /// No description provided for @searchComingSoon.
+  /// No description provided for @searchInConversationHint.
   ///
   /// In fr, this message translates to:
-  /// **'Recherche à venir'**
-  String get searchComingSoon;
+  /// **'Rechercher dans la discussion'**
+  String get searchInConversationHint;
+
+  /// No description provided for @searchNoResult.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun message trouvé'**
+  String get searchNoResult;
+
+  /// Compteur de résultats de la recherche dans une discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'{index}/{total}'**
+  String searchResultCounter(int index, int total);
+
+  /// No description provided for @searchPrevious.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résultat précédent'**
+  String get searchPrevious;
+
+  /// No description provided for @searchNext.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résultat suivant'**
+  String get searchNext;
+
+  /// No description provided for @searchExit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer la recherche'**
+  String get searchExit;
 
   /// No description provided for @takeAPhoto.
   ///
@@ -2643,6 +2673,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Quelqu\'un écrit…'**
   String get someoneIsTyping;
+
+  /// Indicateur de saisie dans un groupe, avec le nom de la personne
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} écrit…'**
+  String nameIsTyping(String name);
 
   /// No description provided for @lastWeek.
   ///
@@ -12010,6 +12046,246 @@ abstract class AppLocalizations {
   /// **'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.'**
   String get plusCardPurgedBody;
 
+  /// No description provided for @plusCardTrialKicker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essai gratuit'**
+  String get plusCardTrialKicker;
+
+  /// No description provided for @plusCardTrialTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gratuit jusqu\'au {date}'**
+  String plusCardTrialTitle(String date);
+
+  /// No description provided for @plusCardTrialBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout est ouvert. Ensuite, vous recevrez toujours vos messages et vos appels, mais il faudra un abonnement pour envoyer et appeler.'**
+  String get plusCardTrialBody;
+
+  /// No description provided for @plusCardTrialDaysLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{dernier jour d\'essai} =1{encore 1 jour d\'essai} other{encore {count} jours d\'essai}}'**
+  String plusCardTrialDaysLeft(int count);
+
+  /// No description provided for @plusCardSubscribe.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'abonner'**
+  String get plusCardSubscribe;
+
+  /// No description provided for @plusCardRestrictedKicker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essai terminé'**
+  String get plusCardRestrictedKicker;
+
+  /// No description provided for @plusCardRestrictedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne pouvez plus envoyer ni appeler'**
+  String get plusCardRestrictedTitle;
+
+  /// No description provided for @plusCardRestrictedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous recevez toujours vos messages et vos appels. Abonnez-vous pour envoyer des messages et appeler de nouveau.'**
+  String get plusCardRestrictedBody;
+
+  /// No description provided for @plusCardLapsedTrialBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous recevez toujours vos messages et vos appels. Entrez un nouveau code pour reprendre.'**
+  String get plusCardLapsedTrialBody;
+
+  /// No description provided for @plusCardRenewByCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour renouveler, il vous faudra un nouveau code.'**
+  String get plusCardRenewByCode;
+
+  /// No description provided for @plusCardScheduledTrialBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre essai gratuit continue jusque-là, puis l\'abonnement prend le relais.'**
+  String get plusCardScheduledTrialBody;
+
+  /// No description provided for @subscriptionSourceCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d\'activation'**
+  String get subscriptionSourceCode;
+
+  /// No description provided for @redeemTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai un code'**
+  String get redeemTitle;
+
+  /// No description provided for @redeemIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Après votre paiement sur le site, vous avez reçu un code. Entrez-le ici : il débloque tout pendant un an.'**
+  String get redeemIntro;
+
+  /// No description provided for @redeemFieldLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d\'activation'**
+  String get redeemFieldLabel;
+
+  /// No description provided for @redeemFieldHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'XXXXX-XXXXX-XXXXX'**
+  String get redeemFieldHint;
+
+  /// No description provided for @redeemSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activer'**
+  String get redeemSubmit;
+
+  /// No description provided for @redeemChecksumError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code ne semble pas correct. Vérifiez chaque caractère.'**
+  String get redeemChecksumError;
+
+  /// No description provided for @redeemSuccessTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Abonnement activé'**
+  String get redeemSuccessTitle;
+
+  /// No description provided for @redeemSuccessActive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre abonnement est actif jusqu\'au {date}.'**
+  String redeemSuccessActive(String date);
+
+  /// No description provided for @redeemSuccessScheduled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre essai gratuit continue. L\'abonnement commencera le {start} et durera jusqu\'au {end}.'**
+  String redeemSuccessScheduled(String start, String end);
+
+  /// No description provided for @redeemDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminé'**
+  String get redeemDone;
+
+  /// No description provided for @redeemPaste.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coller le code'**
+  String get redeemPaste;
+
+  /// No description provided for @composerSubscriptionRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre essai est terminé : vous recevez vos messages, mais il faut un abonnement pour en envoyer.'**
+  String get composerSubscriptionRequired;
+
+  /// No description provided for @redeemLocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop d\'essais. Réessayez dans {minutes, plural, =1{1 minute} other{{minutes} minutes}}.'**
+  String redeemLocked(int minutes);
+
+  /// No description provided for @paywallOutgoingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Abonnez-vous pour continuer'**
+  String get paywallOutgoingTitle;
+
+  /// No description provided for @paywallOutgoingBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre essai gratuit est terminé. Vous recevez toujours vos messages et vos appels, mais il faut un abonnement pour envoyer des messages et appeler.'**
+  String get paywallOutgoingBody;
+
+  /// No description provided for @paywallTrialTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Abonnez-vous à Alanya'**
+  String get paywallTrialTitle;
+
+  /// No description provided for @paywallTrialBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un abonnement d\'un an débloque tout : envoyer des messages, appeler, traduire, sauvegarder et vos trajets de confiance. Pendant l\'essai gratuit, vous pouvez le prendre dès maintenant : il commencera à la fin de l\'essai.'**
+  String get paywallTrialBody;
+
+  /// No description provided for @paywallPayOnline.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payer en ligne'**
+  String get paywallPayOnline;
+
+  /// No description provided for @paywallHaveCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai un code'**
+  String get paywallHaveCode;
+
+  /// No description provided for @paywallPayHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous paierez sur notre site, puis vous recevrez un code à entrer ici.'**
+  String get paywallPayHint;
+
+  /// No description provided for @paywallPayUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le paiement en ligne n\'est pas encore disponible. Si vous avez un code, entrez-le.'**
+  String get paywallPayUnavailable;
+
+  /// No description provided for @paywallPayOpenFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir le site de paiement.'**
+  String get paywallPayOpenFailed;
+
+  /// No description provided for @errCodeInvalidCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code n\'existe pas. Vérifiez-le.'**
+  String get errCodeInvalidCode;
+
+  /// No description provided for @errCodeInvalidCodeFormat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code est mal saisi. Il comporte 15 caractères.'**
+  String get errCodeInvalidCodeFormat;
+
+  /// No description provided for @errCodeCodeAlreadyUsed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a déjà été utilisé.'**
+  String get errCodeCodeAlreadyUsed;
+
+  /// No description provided for @errCodeCodeExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a expiré.'**
+  String get errCodeCodeExpired;
+
+  /// No description provided for @errCodeCodeRevoked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a été annulé.'**
+  String get errCodeCodeRevoked;
+
+  /// No description provided for @errCodeCodeLocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop d\'essais. Réessayez dans quelques minutes.'**
+  String get errCodeCodeLocked;
+
   /// No description provided for @verificationTitle.
   ///
   /// In fr, this message translates to:
@@ -12549,6 +12825,234 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Changement payé : choisissez votre numéro'**
   String get accountSecurityPhoneCredit;
+
+  /// No description provided for @receiptsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos du message'**
+  String get receiptsTitle;
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'Lu par {count}'**
+  String receiptsReadBy(int count);
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'sur {total}'**
+  String receiptsOutOf(int total);
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçu par {count}'**
+  String receiptsDeliveredBy(int count);
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente {count}'**
+  String receiptsPendingCount(int count);
+
+  /// No description provided for @receiptsReadSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lu'**
+  String get receiptsReadSection;
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir les {count} lecteurs'**
+  String receiptsShowAllReaders(int count);
+
+  /// No description provided for @receiptsDeliveredNotRead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçu, pas encore lu'**
+  String get receiptsDeliveredNotRead;
+
+  /// No description provided for @receiptsNotDelivered.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore reçu'**
+  String get receiptsNotDelivered;
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 membre} other{{count} membres}}'**
+  String receiptsMemberCount(int count);
+
+  /// No description provided for @receiptsNoReaders.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne ne l\'a encore lu'**
+  String get receiptsNoReaders;
+
+  /// No description provided for @receiptsLoadError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'afficher les accusés de lecture.'**
+  String get receiptsLoadError;
+
+  /// Infos du message de groupe (accusés par membre)
+  ///
+  /// In fr, this message translates to:
+  /// **'{read} lu, {delivered} reçu sans être lu, {pending} en attente'**
+  String receiptsBarLabel(int read, int delivered, int pending);
+
+  /// No description provided for @errCodeDeleteWindowExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'La suppression pour tous n\'est possible que dans les 72 heures suivant l\'envoi.'**
+  String get errCodeDeleteWindowExpired;
+
+  /// No description provided for @clearChatTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion'**
+  String get clearChatTitle;
+
+  /// No description provided for @clearChatAllMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les messages'**
+  String get clearChatAllMessages;
+
+  /// No description provided for @clearChatMediaOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers médias uniquement'**
+  String get clearChatMediaOnly;
+
+  /// No description provided for @clearChatAllHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La discussion reste dans votre liste. Les autres participants ne voient aucun changement.'**
+  String get clearChatAllHint;
+
+  /// No description provided for @clearChatMediaHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les messages restent, sans les fichiers téléchargés sur cet appareil.'**
+  String get clearChatMediaHint;
+
+  /// No description provided for @clearChatButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion ({size})'**
+  String clearChatButton(String size);
+
+  /// No description provided for @clearChatButtonNoSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion'**
+  String get clearChatButtonNoSize;
+
+  /// No description provided for @clearChatDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discussion effacée'**
+  String get clearChatDone;
+
+  /// No description provided for @clearChatMediaDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers médias supprimés'**
+  String get clearChatMediaDone;
+
+  /// No description provided for @sysScreenshot.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a fait une capture d\'écran de cette discussion'**
+  String sysScreenshot(String actor);
+
+  /// No description provided for @sysScreenshotByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez fait une capture d\'écran de cette discussion'**
+  String get sysScreenshotByMe;
+
+  /// No description provided for @renameContactTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du contact'**
+  String get renameContactTitle;
+
+  /// No description provided for @renameContactHelper.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible par vous seul. Laissez vide pour revenir au nom du profil.'**
+  String get renameContactHelper;
+
+  /// No description provided for @contactProfileSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Profil'**
+  String get contactProfileSection;
+
+  /// No description provided for @contactProfileName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get contactProfileName;
+
+  /// No description provided for @contactProfilePseudo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pseudo'**
+  String get contactProfilePseudo;
+
+  /// No description provided for @contactProfileNumber.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro Alanya'**
+  String get contactProfileNumber;
+
+  /// No description provided for @contactYourNameSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre nom pour ce contact'**
+  String get contactYourNameSection;
+
+  /// No description provided for @contactYourNameNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun'**
+  String get contactYourNameNone;
+
+  /// No description provided for @contactYourNameAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un nom'**
+  String get contactYourNameAdd;
+
+  /// No description provided for @contactYourNameEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get contactYourNameEdit;
+
+  /// No description provided for @contactYourNameClear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer le nom'**
+  String get contactYourNameClear;
+
+  /// No description provided for @contactYourNameHelpSet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.'**
+  String get contactYourNameHelpSet;
+
+  /// No description provided for @contactYourNameHelpEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais.'**
+  String get contactYourNameHelpEmpty;
 }
 
 class _AppLocalizationsDelegate

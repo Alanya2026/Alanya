@@ -96,7 +96,7 @@ class _GroupParticipantsPickerScreenState
               children: [
                 AppAvatar(
                   imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
-                  name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+                  name: user.displayName,
                   size: AppSizes.avatarSm,
                 ),
                 if (user.isOnline)
@@ -117,7 +117,7 @@ class _GroupParticipantsPickerScreenState
               ],
             ),
             title: Text(
-              user.nom.isNotEmpty ? user.nom : user.pseudo,
+              user.displayName,
               style: context.text.titleSmall,
             ),
             subtitle: user.alanyaPhone.isNotEmpty

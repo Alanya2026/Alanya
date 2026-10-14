@@ -807,7 +807,23 @@
   "noCountryFound": "Aucun pays trouvé",
   "addAPhoto": "Ajouter une photo",
   "cameraDisabled": "Caméra désactivée",
-  "searchComingSoon": "Recherche à venir",
+  "searchInConversationHint": "Rechercher dans la discussion",
+  "searchNoResult": "Aucun message trouvé",
+  "searchResultCounter": "{index}/{total}",
+  "@searchResultCounter": {
+    "description": "Compteur de résultats de la recherche dans une discussion",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "searchPrevious": "Résultat précédent",
+  "searchNext": "Résultat suivant",
+  "searchExit": "Fermer la recherche",
   "takeAPhoto": "Prendre une photo",
   "enableCamera": "Activer la caméra",
   "switchCamera": "Changer de caméra",
@@ -832,6 +848,15 @@
   "verifyCode": "Vérifier le code",
   "notDeliveredYet": "Pas encore livré",
   "someoneIsTyping": "Quelqu'un écrit…",
+  "nameIsTyping": "{name} écrit…",
+  "@nameIsTyping": {
+    "description": "Indicateur de saisie dans un groupe, avec le nom de la personne",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "lastWeek": "Dernière semaine",
   "otherResults": "Autres résultats",
   "changeMedia": "Changer le média",
@@ -3898,6 +3923,51 @@
   "plusCardLapsedBodyUntil": "Vos réglages et votre historique sont conservés jusqu'au {date}. Réabonnez-vous d'ici là pour tout retrouver, coche comprise.",
   "@plusCardLapsedBodyUntil": {"placeholders": {"date": {"type": "String"}}},
   "plusCardPurgedBody": "Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.",
+  "plusCardTrialKicker": "Essai gratuit",
+  "plusCardTrialTitle": "Gratuit jusqu'au {date}",
+  "@plusCardTrialTitle": {"placeholders": {"date": {"type": "String"}}},
+  "plusCardTrialBody": "Tout est ouvert. Ensuite, vous recevrez toujours vos messages et vos appels, mais il faudra un abonnement pour envoyer et appeler.",
+  "plusCardTrialDaysLeft": "{count, plural, =0{dernier jour d'essai} =1{encore 1 jour d'essai} other{encore {count} jours d'essai}}",
+  "@plusCardTrialDaysLeft": {"placeholders": {"count": {"type": "int"}}},
+  "plusCardSubscribe": "S'abonner",
+  "plusCardRestrictedKicker": "Essai terminé",
+  "plusCardRestrictedTitle": "Vous ne pouvez plus envoyer ni appeler",
+  "plusCardRestrictedBody": "Vous recevez toujours vos messages et vos appels. Abonnez-vous pour envoyer des messages et appeler de nouveau.",
+  "plusCardLapsedTrialBody": "Vous recevez toujours vos messages et vos appels. Entrez un nouveau code pour reprendre.",
+  "plusCardRenewByCode": "Pour renouveler, il vous faudra un nouveau code.",
+  "plusCardScheduledTrialBody": "Votre essai gratuit continue jusque-là, puis l'abonnement prend le relais.",
+  "subscriptionSourceCode": "Code d'activation",
+  "redeemTitle": "J'ai un code",
+  "redeemIntro": "Après votre paiement sur le site, vous avez reçu un code. Entrez-le ici : il débloque tout pendant un an.",
+  "redeemFieldLabel": "Code d'activation",
+  "redeemFieldHint": "XXXXX-XXXXX-XXXXX",
+  "redeemSubmit": "Activer",
+  "redeemChecksumError": "Ce code ne semble pas correct. Vérifiez chaque caractère.",
+  "redeemSuccessTitle": "Abonnement activé",
+  "redeemSuccessActive": "Votre abonnement est actif jusqu'au {date}.",
+  "@redeemSuccessActive": {"placeholders": {"date": {"type": "String"}}},
+  "redeemSuccessScheduled": "Votre essai gratuit continue. L'abonnement commencera le {start} et durera jusqu'au {end}.",
+  "@redeemSuccessScheduled": {"placeholders": {"start": {"type": "String"}, "end": {"type": "String"}}},
+  "redeemDone": "Terminé",
+  "redeemPaste": "Coller le code",
+  "composerSubscriptionRequired": "Votre essai est terminé : vous recevez vos messages, mais il faut un abonnement pour en envoyer.",
+  "redeemLocked": "Trop d'essais. Réessayez dans {minutes, plural, =1{1 minute} other{{minutes} minutes}}.",
+  "@redeemLocked": {"placeholders": {"minutes": {"type": "int"}}},
+  "paywallOutgoingTitle": "Abonnez-vous pour continuer",
+  "paywallOutgoingBody": "Votre essai gratuit est terminé. Vous recevez toujours vos messages et vos appels, mais il faut un abonnement pour envoyer des messages et appeler.",
+  "paywallTrialTitle": "Abonnez-vous à Alanya",
+  "paywallTrialBody": "Un abonnement d'un an débloque tout : envoyer des messages, appeler, traduire, sauvegarder et vos trajets de confiance. Pendant l'essai gratuit, vous pouvez le prendre dès maintenant : il commencera à la fin de l'essai.",
+  "paywallPayOnline": "Payer en ligne",
+  "paywallHaveCode": "J'ai un code",
+  "paywallPayHint": "Vous paierez sur notre site, puis vous recevrez un code à entrer ici.",
+  "paywallPayUnavailable": "Le paiement en ligne n'est pas encore disponible. Si vous avez un code, entrez-le.",
+  "paywallPayOpenFailed": "Impossible d'ouvrir le site de paiement.",
+  "errCodeInvalidCode": "Ce code n'existe pas. Vérifiez-le.",
+  "errCodeInvalidCodeFormat": "Ce code est mal saisi. Il comporte 15 caractères.",
+  "errCodeCodeAlreadyUsed": "Ce code a déjà été utilisé.",
+  "errCodeCodeExpired": "Ce code a expiré.",
+  "errCodeCodeRevoked": "Ce code a été annulé.",
+  "errCodeCodeLocked": "Trop d'essais. Réessayez dans quelques minutes.",
   "verificationTitle": "Obtenir la coche",
   "verificationStatusTitle": "Ma vérification",
   "verificationIntro": "La coche dit à vos contacts que vous êtes bien la personne dont ce compte porte le nom.",
@@ -3998,5 +4068,119 @@
   "@accountSecurityPhoneSubtitle": {"placeholders": {"amount": {"type": "String"}}},
   "accountSecurityPhonePending": "Changement en cours vers le {phone}",
   "@accountSecurityPhonePending": {"placeholders": {"phone": {"type": "String"}}},
-  "accountSecurityPhoneCredit": "Changement payé : choisissez votre numéro"
+  "accountSecurityPhoneCredit": "Changement payé : choisissez votre numéro",
+  "receiptsTitle": "Infos du message",
+  "receiptsReadBy": "Lu par {count}",
+  "@receiptsReadBy": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsOutOf": "sur {total}",
+  "@receiptsOutOf": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsDeliveredBy": "Reçu par {count}",
+  "@receiptsDeliveredBy": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsPendingCount": "En attente {count}",
+  "@receiptsPendingCount": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsReadSection": "Lu",
+  "receiptsShowAllReaders": "Voir les {count} lecteurs",
+  "@receiptsShowAllReaders": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsDeliveredNotRead": "Reçu, pas encore lu",
+  "receiptsNotDelivered": "Pas encore reçu",
+  "receiptsMemberCount": "{count, plural, =1{1 membre} other{{count} membres}}",
+  "@receiptsMemberCount": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsNoReaders": "Personne ne l'a encore lu",
+  "receiptsLoadError": "Impossible d'afficher les accusés de lecture.",
+  "receiptsBarLabel": "{read} lu, {delivered} reçu sans être lu, {pending} en attente",
+  "@receiptsBarLabel": {
+    "description": "Infos du message de groupe (accusés par membre)",
+    "placeholders": {
+      "read": {
+        "type": "int"
+      },
+      "delivered": {
+        "type": "int"
+      },
+      "pending": {
+        "type": "int"
+      }
+    }
+  },
+  "errCodeDeleteWindowExpired": "La suppression pour tous n'est possible que dans les 72 heures suivant l'envoi.",
+  "clearChatTitle": "Effacer la discussion",
+  "clearChatAllMessages": "Tous les messages",
+  "clearChatMediaOnly": "Fichiers médias uniquement",
+  "clearChatAllHint": "La discussion reste dans votre liste. Les autres participants ne voient aucun changement.",
+  "clearChatMediaHint": "Les messages restent, sans les fichiers téléchargés sur cet appareil.",
+  "clearChatButton": "Effacer la discussion ({size})",
+  "@clearChatButton": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearChatButtonNoSize": "Effacer la discussion",
+  "clearChatDone": "Discussion effacée",
+  "clearChatMediaDone": "Fichiers médias supprimés",
+  "sysScreenshot": "{actor} a fait une capture d'écran de cette discussion",
+  "@sysScreenshot": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysScreenshotByMe": "Vous avez fait une capture d'écran de cette discussion",
+  "renameContactTitle": "Nom du contact",
+  "renameContactHelper": "Visible par vous seul. Laissez vide pour revenir au nom du profil.",
+  "contactProfileSection": "Profil",
+  "contactProfileName": "Nom",
+  "contactProfilePseudo": "Pseudo",
+  "contactProfileNumber": "Numéro Alanya",
+  "contactYourNameSection": "Votre nom pour ce contact",
+  "contactYourNameNone": "Aucun",
+  "contactYourNameAdd": "Ajouter un nom",
+  "contactYourNameEdit": "Modifier",
+  "contactYourNameClear": "Effacer le nom",
+  "contactYourNameHelpSet": "Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.",
+  "contactYourNameHelpEmpty": "Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais."
 }

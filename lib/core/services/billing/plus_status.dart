@@ -23,6 +23,13 @@ enum PlusStatus {
 
   /// Abonnement terminé, rien n'a pris le relais.
   lapsed,
+
+  /// Régime essai : l'essai gratuit court, tout est ouvert.
+  trial,
+
+  /// Régime essai : l'essai est fini et aucun abonnement n'a pris le relais.
+  /// Le compte reçoit messages et appels, il ne peut ni envoyer ni appeler.
+  restricted,
 }
 
 PlusStatus plusStatusOf(Entitlements e) {
@@ -32,6 +39,12 @@ PlusStatus plusStatusOf(Entitlements e) {
   if (e.phase == PlusPhase.free) return PlusStatus.hidden;
   if (e.period != null) return PlusStatus.active;
   if (e.upcoming != null) return PlusStatus.scheduled;
+  // Régime essai : l'essai court, ou il est fini. Un abonnement qui a pris fin
+  // reste « terminé » — c'est une autre histoire que « jamais abonné ».
+  if (e.isTrialModel) {
+    if (e.trial?.active == true) return PlusStatus.trial;
+    return e.lapsedAt != null ? PlusStatus.lapsed : PlusStatus.restricted;
+  }
   return switch (e.phase) {
     PlusPhase.grace => PlusStatus.grace,
     PlusPhase.paid =>
@@ -61,14 +74,16 @@ bool plusEndsSoon(PlusPeriod period, DateTime now) {
 /// Début de la période qu'un paiement fait maintenant ouvrirait.
 ///
 /// Même règle que le serveur : à la suite de l'abonnement en cours ou à
-/// venir (renouveler en avance ne fait rien perdre), et jamais avant la fin
-/// de la grâce (les jours gratuits annoncés sont préservés).
+/// venir (renouveler en avance ne fait rien perdre), jamais avant la fin de
+/// la grâce (les jours gratuits annoncés sont préservés), et jamais avant la
+/// fin de l'essai du compte (payer pendant l'essai ne le consomme pas).
 DateTime plusNextPeriodStart(Entitlements e, DateTime now) {
   var start = now;
   for (final d in [
     e.period?.endsAt,
     e.upcoming?.endsAt,
     if (e.phase == PlusPhase.grace) e.graceUntil,
+    if (e.isTrialModel && e.trial?.active == true) e.trial!.endsAt,
   ]) {
     if (d != null && d.isAfter(start)) start = d;
   }

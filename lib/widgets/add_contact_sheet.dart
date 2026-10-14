@@ -138,7 +138,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              context.l10n.addedToPreferredContacts(user.nom.isNotEmpty ? user.nom : user.pseudo)),
+              context.l10n.addedToPreferredContacts(user.displayName)),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.success,
           duration: const Duration(seconds: 2),
@@ -323,12 +323,12 @@ class AddContactItem extends StatelessWidget {
           horizontal: AppSpacing.xl, vertical: AppSpacing.xs),
       leading: AppAvatar(
         imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
-        name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+        name: user.displayName,
         size: AppSizes.avatarMd,
         qrBadge: user.addedViaQr == true,
       ),
       title: AccountBadgeLabel(
-        name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+        name: user.displayName,
         accountType: user.accountType,
         verificationStatus: user.verificationStatus,
         style: context.text.titleSmall,

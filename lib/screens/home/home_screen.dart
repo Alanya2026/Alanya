@@ -20,6 +20,7 @@ import '../../core/services/local_notification_helper.dart';
 import '../../core/services/notification_navigation.dart';
 import '../../core/services/push_service.dart';
 import '../../core/services/welcome_delivery_service.dart';
+import '../../core/utils/unread_badge.dart';
 import '../chats/chats_screen.dart';
 import '../calls/calls_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
@@ -432,7 +433,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             myId: me.alanyaID,
             myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
             myPhoto: me.avatarUrl,
-            targetUserName: proprietaire?.nom ?? '',
+            targetUserName: proprietaire?.displayName ?? '',
             targetUserPhoto: proprietaire?.avatarUrl ?? '',
             isVideo: false,
           );
@@ -628,8 +629,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _callsLastVisit = now);
   }
 
-  int _sumUnread(List<LocalConversation> convs) =>
-      convs.fold<int>(0, (sum, c) => sum + c.unreadCount);
+  int _sumUnread(List<LocalConversation> convs) => compterDiscussionsNonLues(
+        convs,
+        nonLus: (c) => c.unreadCount,
+        archivee: (c) => c.isArchived,
+      );
 
   int _missedCallsSinceVisit(List<LocalCall> calls) {
     final since = _callsLastVisit ?? DateTime.fromMillisecondsSinceEpoch(0);

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
 import '../../utils/forward_message.dart';
@@ -23,7 +24,9 @@ import '../media_download_preferences.dart';
 import '../voice_asset_resolver.dart';
 import '../../../talky_api_client.dart' hide ChatHttpApi;
 import '../../../talky_models.dart';
+import '../billing/entitlement_service.dart';
 import 'chat_api.dart';
+import 'conversation_clear_service.dart';
 import 'conversation_summary_reducer.dart';
 import 'conversation_sync.dart';
 import 'debounced_recompute.dart';
@@ -47,6 +50,7 @@ class ChatRepository {
   final VideoUploadCompressor? _videoCompressor;
   final ImageUploadCompressor? _imageCompressor;
   late final ConversationSummaryReducer _reducer;
+  late final ConversationClearService _clearer;
   late final DebouncedRecompute _debouncedRecompute;
   late final MessageAckWatchdog _ackWatchdog;
   late final ConversationSync _sync;
@@ -150,6 +154,7 @@ class ChatRepository {
   ChatRepository._(
     this._api,
     this._db, {
+    AppRoots? appRoots,
     VideoUploadCompressor? videoCompressor,
     ImageUploadCompressor? imageCompressor,
     Future<bool> Function(int conversationID)? hevcAllowed,
@@ -161,6 +166,7 @@ class ChatRepository {
         _isHevc = isHevc ??
             (videoCompressor ?? VideoUploadCompressor.instance).isHevc {
     _reducer = ConversationSummaryReducer(_db, _dao);
+    _clearer = ConversationClearService(_db, appRoots: appRoots);
     _debouncedRecompute = DebouncedRecompute(
       (convId) async {
         await _reducer.recompute(convId, _myId);
@@ -186,6 +192,11 @@ class ChatRepository {
       upsertIncomingBatch: _upsertIncomingServerMessagesBatch,
       convToCompanion: _convToCompanion,
       parseDate: _parseDate,
+      purgeBeforeCutoff: (convId, cutoff) async {
+        if (await _clearer.purgeIfStale(convId, cutoff) > 0) {
+          await _reducer.recompute(convId, _myId);
+        }
+      },
       recompute: (convId) => _reducer.recompute(convId, _myId),
       recomputeMany: (ids) => _reducer.recomputeMany(ids, _myId),
     );
@@ -258,6 +269,7 @@ class ChatRepository {
   factory ChatRepository.forTesting({
     required ChatApi api,
     required AppDatabase database,
+    AppRoots? appRoots,
     VideoUploadCompressor? videoCompressor,
     ImageUploadCompressor? imageCompressor,
     Future<bool> Function(int conversationID)? hevcAllowed,
@@ -266,6 +278,7 @@ class ChatRepository {
     return ChatRepository._(
       api,
       database,
+      appRoots: appRoots,
       videoCompressor: videoCompressor,
       imageCompressor: imageCompressor,
       hevcAllowed: hevcAllowed,
@@ -328,6 +341,7 @@ class ChatRepository {
       _api.onSocketEvent(SocketEvents.inboxSync, _handlers.onInboxSync);
       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
       _api.onSocketEvent(SocketEvents.conversationUpdated, _onConversationUpdated);
+      _api.onSocketEvent(SocketEvents.conversationCleared, _onConversationCleared);
       _api.onSocketEvent(
           SocketEvents.groupParticipantRemoved, _onGroupParticipantRemoved);
       _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
@@ -376,6 +390,8 @@ class ChatRepository {
     _api.removeSocketListener(SocketEvents.conversationCreated, _onConversationCreated);
     _api.removeSocketListener(
         SocketEvents.conversationUpdated, _onConversationUpdated);
+    _api.removeSocketListener(
+        SocketEvents.conversationCleared, _onConversationCleared);
     _api.removeSocketListener(
         SocketEvents.groupParticipantRemoved, _onGroupParticipantRemoved);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
@@ -497,7 +513,111 @@ class ChatRepository {
 
   Future<void> _runSyncConversations() async {
     await _sync.syncConversations();
+    await catchUpDeletions();
     _lastSyncCompletedAt = DateTime.now();
+  }
+
+  // ── Suppressions pour tous manquées hors ligne ──────────────────────
+
+  static String _deletionsCursorKey(int myId) => 'deletions_cursor_$myId';
+
+  /// Rejoue les suppressions « pour tous » survenues pendant que cet appareil
+  /// était éteint ou hors ligne : `POST /messages/sync` ne renvoie jamais un
+  /// message supprimé, donc sans cela il resterait affiché pour toujours.
+  ///
+  /// Le curseur est mémorisé par compte. Au premier appel (aucun curseur) le
+  /// serveur ne rejoue rien et donne seulement sa position : on ne remonte pas
+  /// l'histoire d'avant la fonctionnalité. Best-effort : une erreur réseau se
+  /// rattrape à la synchronisation suivante.
+  Future<void> catchUpDeletions() async {
+    final me = _myId;
+    if (me == 0) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _deletionsCursorKey(me);
+      var after = prefs.getInt(key);
+      for (var page = 0; page < 20; page++) {
+        final res = await _api.getDeletionsSince(after: after);
+        final deletions = res['deletions'];
+        final ids = <int>[
+          if (deletions is List)
+            for (final d in deletions)
+              if (d is Map && _toInt(d['msgID']) > 0) _toInt(d['msgID']),
+        ];
+        if (ids.isNotEmpty) {
+          await _handlers.onMessagesDeleted({'msgIDs': ids, 'all': true});
+        }
+        final cursor = _toInt(res['cursor']);
+        if (after == null || cursor > after) {
+          after = cursor;
+          await prefs.setInt(key, cursor);
+        }
+        if (res['hasMore'] != true) break;
+      }
+    } catch (e) {
+      debugPrint('[ChatRepo] catchUpDeletions: $e');
+    }
+  }
+
+  // ── Capture d'écran ─────────────────────────────────────────────────
+
+  /// Dit au serveur que j'ai fait une capture d'écran de cette discussion à deux
+  /// (il écrit la ligne système que les deux participants voient). Best-effort :
+  /// hors ligne ou refus, rien à afficher — l'utilisateur n'a rien demandé.
+  Future<void> signalScreenshot(int conversID) async {
+    if (conversID <= 0) return;
+    try {
+      await _api.signalScreenshot(conversID);
+    } catch (e) {
+      debugPrint('[ChatRepo] signalScreenshot: $e');
+    }
+  }
+
+  // ── Effacer la discussion ───────────────────────────────────────────
+
+  /// Poids de ce qu'« Effacer la discussion » libérerait sur cet appareil.
+  Future<ClearEstimate> estimateClear(int conversID) =>
+      _clearer.estimate(conversID);
+
+  /// « Effacer la discussion » : la discussion reste dans la liste et ne quitte
+  /// rien — c'est ce qui la distingue de [deleteConversations]. Les autres
+  /// participants ne voient aucun changement.
+  ///
+  /// [ClearMode.all] passe d'abord par le serveur (curseur d'historique propre à
+  /// moi, valable sur tous mes appareils et après réinstallation) : sans
+  /// réseau, l'erreur remonte et RIEN n'est effacé — vider seulement la copie
+  /// locale ferait croire à un effacement que le serveur ne connaît pas.
+  /// [ClearMode.mediaOnly] est purement local : les messages restent.
+  Future<void> clearConversation(
+    int conversID, {
+    required ClearMode mode,
+  }) async {
+    if (conversID <= 0) return;
+    if (mode == ClearMode.mediaOnly) {
+      await _clearer.clearMediaOnly(conversID);
+      return;
+    }
+    final res = await _api.clearConversation(conversID);
+    final cutoff =
+        _parseDate(res['historyCutoffAt']) ?? DateTime.now().toUtc();
+    await _applyClear(conversID, cutoff);
+  }
+
+  Future<void> _applyClear(int conversID, DateTime cutoff) async {
+    await _clearer.clearBefore(conversID, cutoff);
+    // Sans message restant, `recompute` ne touche à rien (l'aperçu vient d'être
+    // vidé) ; s'il en reste (reçus après le curseur), il redérive aperçu et non-lus.
+    await _recomputeSummary(conversID);
+    unawaited(BadgeSyncService.syncFromDao(_dao));
+  }
+
+  /// `conversation:cleared` : j'ai effacé la discussion depuis un autre appareil.
+  Future<void> _onConversationCleared(dynamic data) async {
+    if (data is! Map) return;
+    final conversID = _toInt(data['conversationID']);
+    final cutoff = _parseDate(data['historyCutoffAt']);
+    if (conversID <= 0 || cutoff == null) return;
+    await _applyClear(conversID, cutoff);
   }
 
   /// True si le dernier sync liste est plus vieux que [fullListSyncInterval]
@@ -565,6 +685,14 @@ class ChatRepository {
   /// Nombre maximal de médias d'un album pour CE compte : annoncé par le
   /// serveur avec ses droits (30, ou 100 pour un abonné).
   static int get maxAlbumItems => MediaUploadLimits.maxAlbumItems;
+
+  /// Le compte peut-il émettre ? Sinon le panneau de l'abonnement s'ouvre.
+  /// Voir `MessageSender._outgoingAllowed` : sans droits connus, tout passe.
+  bool _outgoingAllowed() {
+    if (EntitlementService.allowsOutgoing) return true;
+    EntitlementService.maybeInstance?.reportOutgoingBlocked();
+    return false;
+  }
 
   Future<void> sendText({
     required int conversationID,
@@ -706,6 +834,9 @@ class ChatRepository {
         succeeded: 0,
         failed: 0,
       );
+    }
+    if (!_outgoingAllowed()) {
+      return const ForwardResult(succeeded: 0, failed: 1);
     }
     if (!canForwardAlbum(sourceItems)) {
       return ForwardResult(
@@ -895,6 +1026,9 @@ class ChatRepository {
         failed: 0,
       );
     }
+    if (!_outgoingAllowed()) {
+      return const ForwardResult(succeeded: 0, failed: 1);
+    }
     if (sources.isEmpty || targetConversationIDs.isEmpty) {
       return const ForwardResult(succeeded: 0, failed: 0);
     }
@@ -1053,6 +1187,9 @@ class ChatRepository {
   Future<bool> hasSyncPending() => _dao.hasSyncPending();
 
   Future<void> editMessage(int msgID, String content) async {
+    // Modifier un message est émettre : refusé sans abonnement, AVANT la mise à
+    // jour locale — sinon l'écran montrerait un texte que le serveur a refusé.
+    if (!_outgoingAllowed()) return;
     await _dao.updateContentByServerId(msgID, content);
     // Aperçu à jour si c'était le dernier message.
     final convID = await _conversationIdForMsg(msgID);
@@ -1103,13 +1240,18 @@ class ChatRepository {
     // 1. Messages confirmés (msgID > 0)
     final serverIds = msgIDs.where((id) => id > 0).toSet().toList();
     if (serverIds.isNotEmpty) {
-      // Récupère les conversationID avant suppression.
+      // Récupère les conversationID avant suppression, et ce qui n'était pas
+      // déjà supprimé (c'est ce que l'on rendrait si le serveur refusait).
+      final wasVisible = <int>[];
       for (final id in serverIds) {
         final msg = await (_db.select(_db.localMessages)
               ..where((m) => m.msgID.equals(id))
               ..limit(1))
             .getSingleOrNull();
-        if (msg != null) affectedConvIDs.add(msg.conversationID);
+        if (msg != null) {
+          affectedConvIDs.add(msg.conversationID);
+          if (!msg.isDeleted) wasVisible.add(id);
+        }
       }
       if (forAll) {
         await _dao.softDeleteManyByServerId(serverIds);
@@ -1120,6 +1262,18 @@ class ChatRepository {
         await _api.deleteMessages(serverIds, forAll: forAll);
       } catch (e) {
         debugPrint('[ChatRepo] deleteMessages échouée: $e');
+        // « Pour tous » : le serveur décide (72 h, droits). S'il refuse, le message
+        // reste visible chez tous les autres : on le rend aussi ici, au lieu de
+        // laisser l'expéditeur croire qu'il a disparu pour tout le monde, et on
+        // remonte l'erreur pour que l'écran la dise. « Pour moi » ne change pas :
+        // c'est une préférence locale, sans conséquence pour les autres.
+        if (forAll && _isDeletionRefusal(e)) {
+          await _dao.restoreManyByServerId(wasVisible);
+          for (final convId in affectedConvIDs) {
+            await _recomputeSummary(convId);
+          }
+          rethrow;
+        }
       }
     }
 
@@ -1149,6 +1303,15 @@ class ChatRepository {
     for (final convId in affectedConvIDs) {
       await _recomputeSummary(convId);
     }
+  }
+
+  /// Un refus DÉFINITIF du serveur (72 h dépassées, droits, message inconnu) : on
+  /// annule la suppression locale. Une panne réseau ou un 5xx n'en est pas un —
+  /// la suppression locale reste et sera visible à la prochaine synchronisation.
+  bool _isDeletionRefusal(Object e) {
+    if (e is! TalkyException) return false;
+    final s = e.statusCode;
+    return s >= 400 && s < 500 && s != 408 && s != 429;
   }
 
   Future<void> retryMessage(String clientId) => _outbox.retryMessage(clientId);

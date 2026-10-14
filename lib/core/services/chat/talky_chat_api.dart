@@ -114,6 +114,18 @@ class TalkyChatApi implements ChatApi {
       _client.deleteConversations(conversationIDs);
 
   @override
+  Future<Map<String, dynamic>> clearConversation(int conversID) =>
+      _client.clearConversation(conversID);
+
+  @override
+  Future<void> signalScreenshot(int conversID) =>
+      _client.signalScreenshot(conversID);
+
+  @override
+  Future<Map<String, dynamic>> getDeletionsSince({int? after, int limit = 200}) =>
+      _client.getDeletionsSince(after: after, limit: limit);
+
+  @override
   Future<void> updateConversation(
     int conversID, {
     bool? isPinned,

@@ -43,7 +43,7 @@ extension _ChatInput on _ChatDetailScreenState {
               Divider(height: 1, indent: AppSpacing.lg, color: colors.outlineVariant),
           ],
           ..._mentionCandidates.map((p) {
-            final nom = p.nom.isNotEmpty ? p.nom : p.user.pseudo;
+            final nom = p.displayName;
             return ListTile(
               dense: true,
               leading: AppAvatar(
@@ -68,8 +68,51 @@ extension _ChatInput on _ChatDetailScreenState {
   Widget _buildComposerLockBanner() => switch (_composerLock) {
         ComposerLock.adminsOnly => _buildAnnouncementBanner(),
         ComposerLock.official => _buildOfficialBanner(),
+        ComposerLock.subscription => _buildSubscriptionBanner(),
         _ => _buildBlockedBanner(),
       };
+
+  /// Essai fini, aucun abonnement : on reçoit, on n'écrit pas. Le bandeau est
+  /// une porte, pas un cul-de-sac : il ouvre le panneau où payer et saisir le code.
+  Widget _buildSubscriptionBanner() {
+    final colors = context.colors;
+    return Material(
+      color: context.semantic.brandContainer,
+      child: InkWell(
+        onTap: () => unawaited(showPaywall(context, null, outgoing: true)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.lock_outline_rounded, size: 18, color: colors.primary),
+              AppSpacing.hGapSm,
+              Expanded(
+                child: Text(
+                  context.l10n.composerSubscriptionRequired,
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.semantic.onBrandContainer,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              AppSpacing.hGapSm,
+              Text(
+                context.l10n.plusCardSubscribe,
+                style: context.text.labelLarge?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 18, color: colors.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Compte officiel : diffusion en lecture seule, pas de réponse possible.
   Widget _buildOfficialBanner() {
@@ -447,8 +490,11 @@ extension _ChatInput on _ChatDetailScreenState {
           final id = p['alanyaID'];
           // Exclure soi-même (qu'il soit stocké en int ou en string).
           if (_myId != null && id.toString() == _myId.toString()) continue;
-          final nom = (p['nom'] as String?)?.trim();
-          if (nom != null && nom.isNotEmpty) names.add(nom);
+          final nom = ContactAliases.nameFor(
+            int.tryParse(id.toString()),
+            (p['nom'] as String?)?.trim(),
+          );
+          if (nom.isNotEmpty) names.add(nom);
         }
         if (names.isEmpty) return const SizedBox.shrink();
         return Text(
@@ -511,8 +557,12 @@ extension _ChatInput on _ChatDetailScreenState {
                     onTap: () {
                       if (_showEmoji) rebuild(() => _showEmoji = false);
                     },
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
+                    // Entrée = retour à la ligne ; l'envoi reste sur le bouton.
+                    // `send` détournait la touche Entrée vers l'envoi, et le
+                    // retour à la ligne ne tenait plus qu'à un appui long que
+                    // certains claviers n'offrent pas (groupe 3GI 2029, A11).
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
                     maxLines: null,
                     minLines: 1,
                     scrollPhysics: const ClampingScrollPhysics(),

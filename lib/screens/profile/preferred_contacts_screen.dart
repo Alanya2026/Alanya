@@ -106,7 +106,7 @@ class _PreferredContactsScreenState extends State<PreferredContactsScreen> {
                 color: context.colors.error,
               ),
               title: Text(
-                context.l10n.removePreferredContact(user.nom.isNotEmpty ? user.nom : user.pseudo),
+                context.l10n.removePreferredContact(user.displayName),
                 style: TextStyle(color: context.colors.error),
               ),
               onTap: () {
@@ -412,7 +412,8 @@ class _ContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final displayName =
+        user.displayName.isNotEmpty ? user.displayName : user.pseudo;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),

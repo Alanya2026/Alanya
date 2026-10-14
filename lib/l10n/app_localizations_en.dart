@@ -1382,7 +1382,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cameraDisabled => 'Camera disabled';
 
   @override
-  String get searchComingSoon => 'Search coming soon';
+  String get searchInConversationHint => 'Search this chat';
+
+  @override
+  String get searchNoResult => 'No messages found';
+
+  @override
+  String searchResultCounter(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get searchPrevious => 'Previous result';
+
+  @override
+  String get searchNext => 'Next result';
+
+  @override
+  String get searchExit => 'Close search';
 
   @override
   String get takeAPhoto => 'Take a photo';
@@ -1456,6 +1473,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get someoneIsTyping => 'Someone is typing…';
+
+  @override
+  String nameIsTyping(String name) {
+    return '$name is typing…';
+  }
 
   @override
   String get lastWeek => 'Last week';
@@ -6921,6 +6943,162 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your Plus settings and history have been deleted. Subscribe again to get your features back.';
 
   @override
+  String get plusCardTrialKicker => 'Free trial';
+
+  @override
+  String plusCardTrialTitle(String date) {
+    return 'Free until $date';
+  }
+
+  @override
+  String get plusCardTrialBody =>
+      'Everything is open. After that, you will still receive your messages and calls, but you will need a subscription to send and call.';
+
+  @override
+  String plusCardTrialDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trial days left',
+      one: '1 trial day left',
+      zero: 'last trial day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardSubscribe => 'Subscribe';
+
+  @override
+  String get plusCardRestrictedKicker => 'Trial ended';
+
+  @override
+  String get plusCardRestrictedTitle => 'You can no longer send or call';
+
+  @override
+  String get plusCardRestrictedBody =>
+      'You still receive your messages and calls. Subscribe to send messages and call again.';
+
+  @override
+  String get plusCardLapsedTrialBody =>
+      'You still receive your messages and calls. Enter a new code to resume.';
+
+  @override
+  String get plusCardRenewByCode => 'To renew, you will need a new code.';
+
+  @override
+  String get plusCardScheduledTrialBody =>
+      'Your free trial continues until then, then the subscription takes over.';
+
+  @override
+  String get subscriptionSourceCode => 'Activation code';
+
+  @override
+  String get redeemTitle => 'I have a code';
+
+  @override
+  String get redeemIntro =>
+      'After paying on the website, you received a code. Enter it here: it unlocks everything for one year.';
+
+  @override
+  String get redeemFieldLabel => 'Activation code';
+
+  @override
+  String get redeemFieldHint => 'XXXXX-XXXXX-XXXXX';
+
+  @override
+  String get redeemSubmit => 'Activate';
+
+  @override
+  String get redeemChecksumError =>
+      'This code doesn\'t look right. Check each character.';
+
+  @override
+  String get redeemSuccessTitle => 'Subscription activated';
+
+  @override
+  String redeemSuccessActive(String date) {
+    return 'Your subscription is active until $date.';
+  }
+
+  @override
+  String redeemSuccessScheduled(String start, String end) {
+    return 'Your free trial continues. The subscription will start on $start and run until $end.';
+  }
+
+  @override
+  String get redeemDone => 'Done';
+
+  @override
+  String get redeemPaste => 'Paste the code';
+
+  @override
+  String get composerSubscriptionRequired =>
+      'Your trial has ended: you still receive your messages, but you need a subscription to send them.';
+
+  @override
+  String redeemLocked(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutes',
+      one: '1 minute',
+    );
+    return 'Too many attempts. Try again in $_temp0.';
+  }
+
+  @override
+  String get paywallOutgoingTitle => 'Subscribe to continue';
+
+  @override
+  String get paywallOutgoingBody =>
+      'Your free trial has ended. You still receive your messages and calls, but you need a subscription to send messages and make calls.';
+
+  @override
+  String get paywallTrialTitle => 'Subscribe to Alanya';
+
+  @override
+  String get paywallTrialBody =>
+      'A one-year subscription unlocks everything: sending messages, calling, translating, backing up and trusted trips. During the free trial you can take it now: it will start when the trial ends.';
+
+  @override
+  String get paywallPayOnline => 'Pay online';
+
+  @override
+  String get paywallHaveCode => 'I have a code';
+
+  @override
+  String get paywallPayHint =>
+      'You will pay on our website, then receive a code to enter here.';
+
+  @override
+  String get paywallPayUnavailable =>
+      'Online payment is not available yet. If you have a code, enter it.';
+
+  @override
+  String get paywallPayOpenFailed => 'Couldn\'t open the payment website.';
+
+  @override
+  String get errCodeInvalidCode => 'This code doesn\'t exist. Check it.';
+
+  @override
+  String get errCodeInvalidCodeFormat =>
+      'This code is mistyped. It has 15 characters.';
+
+  @override
+  String get errCodeCodeAlreadyUsed => 'This code has already been used.';
+
+  @override
+  String get errCodeCodeExpired => 'This code has expired.';
+
+  @override
+  String get errCodeCodeRevoked => 'This code has been cancelled.';
+
+  @override
+  String get errCodeCodeLocked =>
+      'Too many attempts. Try again in a few minutes.';
+
+  @override
   String get verificationTitle => 'Get the badge';
 
   @override
@@ -7249,4 +7427,148 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountSecurityPhoneCredit => 'Change paid: choose your number';
+
+  @override
+  String get receiptsTitle => 'Message info';
+
+  @override
+  String receiptsReadBy(int count) {
+    return 'Read by $count';
+  }
+
+  @override
+  String receiptsOutOf(int total) {
+    return 'of $total';
+  }
+
+  @override
+  String receiptsDeliveredBy(int count) {
+    return 'Delivered to $count';
+  }
+
+  @override
+  String receiptsPendingCount(int count) {
+    return 'Pending $count';
+  }
+
+  @override
+  String get receiptsReadSection => 'Read';
+
+  @override
+  String receiptsShowAllReaders(int count) {
+    return 'See all $count readers';
+  }
+
+  @override
+  String get receiptsDeliveredNotRead => 'Delivered, not read yet';
+
+  @override
+  String get receiptsNotDelivered => 'Not delivered yet';
+
+  @override
+  String receiptsMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get receiptsNoReaders => 'No one has read it yet';
+
+  @override
+  String get receiptsLoadError => 'Couldn\'t load read receipts.';
+
+  @override
+  String receiptsBarLabel(int read, int delivered, int pending) {
+    return '$read read, $delivered delivered but unread, $pending pending';
+  }
+
+  @override
+  String get errCodeDeleteWindowExpired =>
+      'Delete for everyone is only possible within 72 hours of sending.';
+
+  @override
+  String get clearChatTitle => 'Clear chat';
+
+  @override
+  String get clearChatAllMessages => 'All messages';
+
+  @override
+  String get clearChatMediaOnly => 'Media files only';
+
+  @override
+  String get clearChatAllHint =>
+      'The chat stays in your list. Other participants see no change.';
+
+  @override
+  String get clearChatMediaHint =>
+      'Messages stay, without the files downloaded on this device.';
+
+  @override
+  String clearChatButton(String size) {
+    return 'Clear chat ($size)';
+  }
+
+  @override
+  String get clearChatButtonNoSize => 'Clear chat';
+
+  @override
+  String get clearChatDone => 'Chat cleared';
+
+  @override
+  String get clearChatMediaDone => 'Media files deleted';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor took a screenshot of this chat';
+  }
+
+  @override
+  String get sysScreenshotByMe => 'You took a screenshot of this chat';
+
+  @override
+  String get renameContactTitle => 'Contact name';
+
+  @override
+  String get renameContactHelper =>
+      'Only you can see it. Leave empty to go back to the profile name.';
+
+  @override
+  String get contactProfileSection => 'Profile';
+
+  @override
+  String get contactProfileName => 'Name';
+
+  @override
+  String get contactProfilePseudo => 'Username';
+
+  @override
+  String get contactProfileNumber => 'Alanya number';
+
+  @override
+  String get contactYourNameSection => 'Your name for this contact';
+
+  @override
+  String get contactYourNameNone => 'None';
+
+  @override
+  String get contactYourNameAdd => 'Add a name';
+
+  @override
+  String get contactYourNameEdit => 'Edit';
+
+  @override
+  String get contactYourNameClear => 'Clear the name';
+
+  @override
+  String get contactYourNameHelpSet =>
+      'Only you can see it. It replaces the profile name in your chats, calls and notifications.';
+
+  @override
+  String get contactYourNameHelpEmpty =>
+      'Save this contact under the name you choose. They will never see it.';
 }

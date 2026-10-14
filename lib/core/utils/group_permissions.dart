@@ -172,7 +172,7 @@ List<Participant> sortParticipantsForDisplay(Iterable<Participant> members) =>
     sortMembersForDisplay<Participant>(
       members,
       roleOf: (p) => p.role,
-      nameOf: (p) => p.nom,
+      nameOf: (p) => p.displayName,
       idOf: (p) => p.alanyaID,
     );
 

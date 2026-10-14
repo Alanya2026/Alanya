@@ -1321,7 +1321,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cameraDisabled => '摄像头已关闭';
 
   @override
-  String get searchComingSoon => '搜索功能即将推出';
+  String get searchInConversationHint => '在聊天中搜索';
+
+  @override
+  String get searchNoResult => '未找到消息';
+
+  @override
+  String searchResultCounter(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get searchPrevious => '上一个结果';
+
+  @override
+  String get searchNext => '下一个结果';
+
+  @override
+  String get searchExit => '关闭搜索';
 
   @override
   String get takeAPhoto => '拍照';
@@ -1394,6 +1411,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get someoneIsTyping => '有人正在输入…';
+
+  @override
+  String nameIsTyping(String name) {
+    return '$name 正在输入…';
+  }
 
   @override
   String get lastWeek => '上周';
@@ -6641,6 +6663,143 @@ class AppLocalizationsZh extends AppLocalizations {
   String get plusCardPurgedBody => '您的 Plus 设置和历史记录已被删除。重新订阅即可恢复您的功能。';
 
   @override
+  String get plusCardTrialKicker => '免费试用';
+
+  @override
+  String plusCardTrialTitle(String date) {
+    return '免费至 $date';
+  }
+
+  @override
+  String get plusCardTrialBody => '所有功能均已开放。之后您仍可接收消息和来电，但发送消息和拨打电话需要订阅。';
+
+  @override
+  String plusCardTrialDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '试用还剩 $count 天',
+      zero: '试用最后一天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardSubscribe => '订阅';
+
+  @override
+  String get plusCardRestrictedKicker => '试用已结束';
+
+  @override
+  String get plusCardRestrictedTitle => '您无法再发送消息或拨打电话';
+
+  @override
+  String get plusCardRestrictedBody => '您仍可接收消息和来电。订阅后即可再次发送消息和拨打电话。';
+
+  @override
+  String get plusCardLapsedTrialBody => '您仍可接收消息和来电。输入新的代码即可恢复。';
+
+  @override
+  String get plusCardRenewByCode => '续订需要一个新的代码。';
+
+  @override
+  String get plusCardScheduledTrialBody => '免费试用持续到那时，之后由订阅接替。';
+
+  @override
+  String get subscriptionSourceCode => '激活码';
+
+  @override
+  String get redeemTitle => '我有激活码';
+
+  @override
+  String get redeemIntro => '在网站付款后，您会收到一个代码。在此输入即可解锁全部功能一年。';
+
+  @override
+  String get redeemFieldLabel => '激活码';
+
+  @override
+  String get redeemFieldHint => 'XXXXX-XXXXX-XXXXX';
+
+  @override
+  String get redeemSubmit => '激活';
+
+  @override
+  String get redeemChecksumError => '这个代码似乎不正确，请检查每个字符。';
+
+  @override
+  String get redeemSuccessTitle => '订阅已激活';
+
+  @override
+  String redeemSuccessActive(String date) {
+    return '您的订阅有效期至 $date。';
+  }
+
+  @override
+  String redeemSuccessScheduled(String start, String end) {
+    return '您的免费试用继续。订阅将于 $start 开始，持续至 $end。';
+  }
+
+  @override
+  String get redeemDone => '完成';
+
+  @override
+  String get redeemPaste => '粘贴代码';
+
+  @override
+  String get composerSubscriptionRequired => '您的试用已结束：您仍可接收消息，但发送消息需要订阅。';
+
+  @override
+  String redeemLocked(int minutes) {
+    return '尝试次数过多。请在 $minutes 分钟后重试。';
+  }
+
+  @override
+  String get paywallOutgoingTitle => '订阅后继续使用';
+
+  @override
+  String get paywallOutgoingBody => '您的免费试用已结束。您仍可接收消息和来电，但发送消息和拨打电话需要订阅。';
+
+  @override
+  String get paywallTrialTitle => '订阅 Alanya';
+
+  @override
+  String get paywallTrialBody =>
+      '一年的订阅将解锁全部功能：发送消息、拨打电话、翻译、备份和可信行程。在免费试用期内即可订阅：订阅将从试用结束时开始。';
+
+  @override
+  String get paywallPayOnline => '在线付款';
+
+  @override
+  String get paywallHaveCode => '我有激活码';
+
+  @override
+  String get paywallPayHint => '您将在我们的网站付款，然后收到一个代码，在此输入。';
+
+  @override
+  String get paywallPayUnavailable => '在线付款暂未开通。如果您有激活码，请输入。';
+
+  @override
+  String get paywallPayOpenFailed => '无法打开付款网站。';
+
+  @override
+  String get errCodeInvalidCode => '此代码不存在，请检查。';
+
+  @override
+  String get errCodeInvalidCodeFormat => '此代码输入有误，应为 15 个字符。';
+
+  @override
+  String get errCodeCodeAlreadyUsed => '此代码已被使用。';
+
+  @override
+  String get errCodeCodeExpired => '此代码已过期。';
+
+  @override
+  String get errCodeCodeRevoked => '此代码已被取消。';
+
+  @override
+  String get errCodeCodeLocked => '尝试次数过多，请几分钟后重试。';
+
+  @override
   String get verificationTitle => '获取认证标记';
 
   @override
@@ -6932,4 +7091,136 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountSecurityPhoneCredit => '更换已付款：请选择您的号码';
+
+  @override
+  String get receiptsTitle => '消息详情';
+
+  @override
+  String receiptsReadBy(int count) {
+    return '$count 人已读';
+  }
+
+  @override
+  String receiptsOutOf(int total) {
+    return '/ 共 $total 人';
+  }
+
+  @override
+  String receiptsDeliveredBy(int count) {
+    return '$count 人已送达';
+  }
+
+  @override
+  String receiptsPendingCount(int count) {
+    return '$count 人未送达';
+  }
+
+  @override
+  String get receiptsReadSection => '已读';
+
+  @override
+  String receiptsShowAllReaders(int count) {
+    return '查看全部 $count 位读者';
+  }
+
+  @override
+  String get receiptsDeliveredNotRead => '已送达，未读';
+
+  @override
+  String get receiptsNotDelivered => '尚未送达';
+
+  @override
+  String receiptsMemberCount(int count) {
+    return '$count 位成员';
+  }
+
+  @override
+  String get receiptsNoReaders => '还没有人读过';
+
+  @override
+  String get receiptsLoadError => '无法加载已读回执。';
+
+  @override
+  String receiptsBarLabel(int read, int delivered, int pending) {
+    return '$read 人已读，$delivered 人已送达未读，$pending 人未送达';
+  }
+
+  @override
+  String get errCodeDeleteWindowExpired => '仅可在发送后 72 小时内为所有人删除。';
+
+  @override
+  String get clearChatTitle => '清空聊天记录';
+
+  @override
+  String get clearChatAllMessages => '所有消息';
+
+  @override
+  String get clearChatMediaOnly => '仅媒体文件';
+
+  @override
+  String get clearChatAllHint => '聊天仍保留在您的列表中，其他参与者不会看到任何变化。';
+
+  @override
+  String get clearChatMediaHint => '消息保留，但会删除此设备上已下载的文件。';
+
+  @override
+  String clearChatButton(String size) {
+    return '清空聊天记录（$size）';
+  }
+
+  @override
+  String get clearChatButtonNoSize => '清空聊天记录';
+
+  @override
+  String get clearChatDone => '聊天记录已清空';
+
+  @override
+  String get clearChatMediaDone => '媒体文件已删除';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor 对此聊天进行了截屏';
+  }
+
+  @override
+  String get sysScreenshotByMe => '您对此聊天进行了截屏';
+
+  @override
+  String get renameContactTitle => '联系人名称';
+
+  @override
+  String get renameContactHelper => '仅您可见。留空则恢复为个人资料名称。';
+
+  @override
+  String get contactProfileSection => '个人资料';
+
+  @override
+  String get contactProfileName => '姓名';
+
+  @override
+  String get contactProfilePseudo => '用户名';
+
+  @override
+  String get contactProfileNumber => 'Alanya 号码';
+
+  @override
+  String get contactYourNameSection => '您为此联系人设置的名称';
+
+  @override
+  String get contactYourNameNone => '无';
+
+  @override
+  String get contactYourNameAdd => '添加名称';
+
+  @override
+  String get contactYourNameEdit => '修改';
+
+  @override
+  String get contactYourNameClear => '清除名称';
+
+  @override
+  String get contactYourNameHelpSet => '仅您可见。它会在您的聊天、通话和通知中替换个人资料名称。';
+
+  @override
+  String get contactYourNameHelpEmpty => '用您选择的名称保存此联系人。对方永远看不到。';
 }

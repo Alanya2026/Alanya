@@ -5,6 +5,7 @@ import '../db/chat_dao.dart';
 import '../services/chat/conversation_merge.dart';
 import '../theme/locale_controller.dart';
 import 'call_log_preview.dart';
+import 'contact_aliases.dart';
 import 'media_album.dart';
 import 'self_chat.dart';
 import 'system_event_payload.dart';
@@ -72,6 +73,21 @@ bool isSelfConversation(LocalConversation conv, int myId) {
   return parts.any((p) => conversationParticipantId(p['alanyaID']) == myId);
 }
 
+/// Nom d'un participant de [conv] (nom, sinon pseudo), ou `null` s'il n'y
+/// figure pas.
+String? participantDisplayName(LocalConversation conv, int userId) {
+  final alias = ContactAliases.of(userId);
+  if (alias != null) return alias;
+  for (final p in decodeParticipants(conv.participantsJson)) {
+    if (conversationParticipantId(p['alanyaID']) != userId) continue;
+    final nom = (p['nom'] as String?)?.trim() ?? '';
+    if (nom.isNotEmpty) return nom;
+    final pseudo = (p['pseudo'] as String?)?.trim() ?? '';
+    return pseudo.isNotEmpty ? pseudo : null;
+  }
+  return null;
+}
+
 String conversationDisplayName(LocalConversation conv, int myId) {
   final l10n = resolveL10n();
   if (conv.isGroup) return conv.groupName ?? l10n.groupFallback;
@@ -82,7 +98,11 @@ String conversationDisplayName(LocalConversation conv, int myId) {
     );
   }
   final other = otherParticipant(conv, myId);
-  return (other?['nom'] as String?) ?? l10n.unknownSender;
+  // Mon nom personnalisé pour ce contact préféré passe avant celui du profil.
+  final alias = other == null
+      ? null
+      : ContactAliases.of(conversationParticipantId(other['alanyaID']));
+  return alias ?? (other?['nom'] as String?) ?? l10n.unknownSender;
 }
 
 String? conversationDisplayAvatar(LocalConversation conv, int myId) {
@@ -240,6 +260,8 @@ String _participantName(
   AppLocalizations l10n,
 ) {
   if (senderId == null || senderId == 0) return l10n.unknownSender;
+  final alias = ContactAliases.of(senderId);
+  if (alias != null) return alias;
   for (final p in decodeParticipants(conv.participantsJson)) {
     if (conversationParticipantId(p['alanyaID']) != senderId) continue;
     final nom = (p['nom'] as String?)?.trim() ?? '';

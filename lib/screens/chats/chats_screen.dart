@@ -37,6 +37,7 @@ import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 import 'select_members_screen.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/utils/contact_aliases.dart';
 import '../../core/errors/error_presenter.dart';
 
 /// Entrées du menu ⋮ de l'écran des discussions.
@@ -90,6 +91,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   void initState() {
     super.initState();
+    ContactAliases.revision.addListener(_onContactAliasesChanged);
     _chatProvider = Provider.of<ChatProvider>(context, listen: false);
     if (_chatProvider!.initialSyncComplete) {
       _awaitingInitialConversations = false;
@@ -144,8 +146,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
     setState(() => _awaitingInitialConversations = false);
   }
 
+  /// Un nom personnalisé a changé (renommage, synchronisation) : les titres
+  /// des discussions 1-à-1 se recalculent.
+  void _onContactAliasesChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    ContactAliases.revision.removeListener(_onContactAliasesChanged);
     _chatProvider?.removeListener(_onChatProviderChanged);
     _chatProvider = null;
     _qrIdsSub?.cancel();
@@ -765,7 +774,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   AppSpacing.hGapSm,
                   Expanded(
                     child: Text(
-                      conv.isGroup ? context.l10n.someoneIsTyping : context.l10n.typing2,
+                      conv.isGroup
+                          ? _groupTypingLabel(context, chat, conv)
+                          : context.l10n.typing2,
                       style: context.text.bodyMedium?.copyWith(
                         color: colors.primary,
                         fontWeight: FontWeight.w500,
@@ -921,7 +932,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => ChatDetailScreen(
-          userName: user.nom.isNotEmpty ? user.nom : user.pseudo,
+          userName: user.displayName,
           userId: user.alanyaID,
           isGroup: false,
           avatarUrl: user.avatarUrl,
@@ -1233,3 +1244,19 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 }
 
+/// « X écrit… » dans un groupe ; « Quelqu'un écrit… » si le nom est inconnu.
+///
+/// L'interface n'affichait jamais le nom, que l'application connaît pourtant
+/// (groupe 3GI 2029, bug A15).
+String _groupTypingLabel(
+  BuildContext context,
+  ChatProvider chat,
+  LocalConversation conv,
+) {
+  final userId = chat.typingUserId(conv.conversID);
+  final name =
+      userId == null ? null : participantDisplayName(conv, userId);
+  return name == null
+      ? context.l10n.someoneIsTyping
+      : context.l10n.nameIsTyping(name);
+}

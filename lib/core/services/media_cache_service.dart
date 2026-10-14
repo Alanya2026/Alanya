@@ -9,6 +9,34 @@ import '../utils/app_log.dart';
 import '../utils/backend_url.dart';
 import 'media_expiry_policy.dart';
 
+/// Nombre de nouvelles tentatives après un échec passager.
+const kMediaDownloadRetries = 2;
+
+/// Délai avant la tentative n° [tentative] (1, 2…) d'un téléchargement qui a
+/// échoué, ou `null` s'il ne faut pas réessayer.
+///
+/// Le 9 octobre 2026, une panne de plusieurs heures du stockage a fait
+/// échouer tous les téléchargements, et l'application traitait chaque échec
+/// comme définitif : « Échec du téléchargement », sans nouvel essai (groupe
+/// 3GI 2029, bug A3). On réessaie donc après une réponse passagère — 429 trop
+/// de requêtes, 5xx — ou une erreur réseau ([status] `null`). Jamais après un
+/// 4xx ordinaire : 403, 404 ou 410 ne changeront pas en attendant.
+/// `Retry-After` (en secondes) est respecté, plafonné à 30 s.
+Duration? delaiAvantNouvelEssai({
+  required int tentative,
+  required int? status,
+  String? retryAfter,
+}) {
+  if (tentative > kMediaDownloadRetries) return null;
+  final passager = status == null || status == 429 || status >= 500;
+  if (!passager) return null;
+  final demande = int.tryParse(retryAfter?.trim() ?? '');
+  if (demande != null && demande >= 0) {
+    return Duration(seconds: demande.clamp(0, 30));
+  }
+  return Duration(seconds: tentative == 1 ? 2 : 5);
+}
+
 //  Télécharge et conserve les médias reçus dans le dossier de l'app pour
 //  une consultation hors-ligne.
 //
@@ -182,10 +210,13 @@ class MediaCacheService {
   }
 
   /// Télécharge le média avec progression (0.0–1.0) ou `null` si taille inconnue.
+  ///
+  /// [knownSize] : voir [ensureCached].
   Future<String?> downloadWithProgress(
     String url, {
     void Function(double? progress)? onProgress,
     int? maxBytes,
+    int? knownSize,
   }) async {
     final resolved = _resolvedUrl(url);
     try {
@@ -202,7 +233,12 @@ class MediaCacheService {
       }
 
       final uri = Uri.parse(resolved);
-      if (maxBytes != null) {
+      if (maxBytes != null && knownSize != null && knownSize > 0) {
+        if (knownSize > maxBytes) {
+          debugPrint('[MediaCache] skip $resolved : taille $knownSize > $maxBytes');
+          return null;
+        }
+      } else if (maxBytes != null) {
         try {
           final head =
               await _http.head(uri).timeout(const Duration(seconds: 5));
@@ -214,12 +250,39 @@ class MediaCacheService {
         } catch (_) {}
       }
 
-      final request = http.Request('GET', uri);
-      final streamed = await _http
-          .send(request)
-          .timeout(const Duration(seconds: 60));
-      if (MediaExpiryPolicy.noteResponse(streamed.statusCode)) return null;
-      if (streamed.statusCode != 200) return null;
+      late http.StreamedResponse streamed;
+      for (var tentative = 1;; tentative++) {
+        http.StreamedResponse? res;
+        try {
+          res = await _http
+              .send(http.Request('GET', uri))
+              .timeout(const Duration(seconds: 60));
+        } on TimeoutException {
+          res = null;
+        } on SocketException {
+          res = null;
+        } on http.ClientException {
+          res = null;
+        }
+        if (res != null) {
+          if (MediaExpiryPolicy.noteResponse(res.statusCode)) return null;
+          if (res.statusCode == 200) {
+            streamed = res;
+            break;
+          }
+          // Corps d'une réponse d'erreur : à vider pour libérer la connexion.
+          unawaited(res.stream.drain<void>().catchError((_) {}));
+        }
+        final delai = delaiAvantNouvelEssai(
+          tentative: tentative,
+          status: res?.statusCode,
+          retryAfter: res?.headers['retry-after'],
+        );
+        if (delai == null) return null;
+        debugPrint('[MediaCache] nouvel essai dans ${delai.inSeconds}s '
+            '(${res?.statusCode ?? 'réseau'}) $resolved');
+        await Future<void>.delayed(delai);
+      }
 
       final int? total = streamed.contentLength;
       final hasKnownSize = total != null && total > 0;
@@ -260,7 +323,10 @@ class MediaCacheService {
   /// Télécharge le média s'il n'est pas déjà en cache et renvoie le chemin local.
   /// Si [maxBytes] est fourni, vérifie d'abord la taille via HEAD et abandonne
   /// si trop gros (utile pour ne pas auto-cacher des fichiers énormes).
-  Future<String?> ensureCached(String url, {int? maxBytes}) async {
+  ///
+  /// [knownSize] : taille déjà connue (`message.mediaSize`). Elle évite le HEAD,
+  /// une requête de plus vers le serveur et le stockage pour chaque média reçu.
+  Future<String?> ensureCached(String url, {int? maxBytes, int? knownSize}) async {
     final resolved = _resolvedUrl(url);
     try {
       final dir = await _cacheDir();
@@ -282,7 +348,12 @@ class MediaCacheService {
       // l'espace du serveur, jamais celui de l'utilisateur.
       if (MediaExpiryPolicy.isExpired(resolved)) return null;
 
-      if (maxBytes != null) {
+      if (maxBytes != null && knownSize != null && knownSize > 0) {
+        if (knownSize > maxBytes) {
+          debugPrint('[MediaCache] skip $resolved : taille $knownSize > $maxBytes');
+          return null;
+        }
+      } else if (maxBytes != null) {
         try {
           final head = await _http.head(Uri.parse(resolved)).timeout(const Duration(seconds: 5));
           final len = int.tryParse(head.headers['content-length'] ?? '');
@@ -295,11 +366,34 @@ class MediaCacheService {
         }
       }
 
-      final res = await _http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
-      if (MediaExpiryPolicy.noteResponse(res.statusCode, body: res.body)) return null;
-      if (res.statusCode != 200) return null;
-      await file.writeAsBytes(res.bodyBytes);
-      return file.path;
+      for (var tentative = 1;; tentative++) {
+        http.Response? res;
+        try {
+          res = await _http.get(Uri.parse(resolved)).timeout(const Duration(seconds: 30));
+        } on TimeoutException {
+          res = null;
+        } on SocketException {
+          res = null;
+        } on http.ClientException {
+          res = null;
+        }
+        if (res != null) {
+          if (MediaExpiryPolicy.noteResponse(res.statusCode, body: res.body)) return null;
+          if (res.statusCode == 200) {
+            await file.writeAsBytes(res.bodyBytes);
+            return file.path;
+          }
+        }
+        final delai = delaiAvantNouvelEssai(
+          tentative: tentative,
+          status: res?.statusCode,
+          retryAfter: res?.headers['retry-after'],
+        );
+        if (delai == null) return null;
+        debugPrint('[MediaCache] nouvel essai dans ${delai.inSeconds}s '
+            '(${res?.statusCode ?? 'réseau'}) $resolved');
+        await Future<void>.delayed(delai);
+      }
     } catch (e) {
       debugPrint('[MediaCache] échec cache $resolved: $e');
       return null;

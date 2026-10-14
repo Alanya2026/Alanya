@@ -255,6 +255,10 @@ class LocalUsers extends Table {
   /// Douala ») — affichée sur la fiche du contact.
   TextColumn get preferredNote => text().nullable()();
 
+  /// Nom personnalisé sous lequel J'ai enregistré ce contact préféré
+  /// (`customName` du serveur). Null = aucun, on affiche [nom].
+  TextColumn get preferredName => text().nullable()();
+
   IntColumn get typeCompte => integer().withDefault(const Constant(0))();
   IntColumn get accountType => integer().withDefault(const Constant(0))();
   IntColumn get verificationStatus => integer().withDefault(const Constant(0))();
@@ -519,7 +523,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -762,6 +766,11 @@ class AppDatabase extends _$AppDatabase {
                 m, localConversations, localConversations.translateMode);
             await _addColumnIfMissing(m, localConversations,
                 localConversations.lastMessageTranslated);
+          }
+          if (from < 27) {
+            // Nom personnalisé des contacts préférés (migration serveur 100).
+            // Une colonne nullable : le cache existant n'est pas vidé.
+            await _addColumnIfMissing(m, localUsers, localUsers.preferredName);
           }
         },
       );

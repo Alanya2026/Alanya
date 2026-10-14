@@ -64,6 +64,11 @@ class ChatProvider extends ChangeNotifier {
     if (partnerUserId != null && info.userID != partnerUserId) return false;
     return true;
   }
+
+  /// Qui écrit dans [conversationID], ou `null` si personne (voir
+  /// [isPartnerTyping]). En groupe, sert à afficher « X écrit… ».
+  int? typingUserId(int conversationID) =>
+      isPartnerTyping(conversationID) ? _typing[conversationID]?.userID : null;
  
   String presenceLabel(int userID) {
     final p = _presence[userID];

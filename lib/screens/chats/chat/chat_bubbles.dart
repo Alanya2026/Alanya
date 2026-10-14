@@ -220,22 +220,6 @@ extension _ChatBubbles on _ChatDetailScreenState {
           rebuild(() => _replyTo = message);
           _inputFocus.requestFocus();
         },
-        onCopy: () {
-          final text = message.content;
-          if (text == null || text.isEmpty) return;
-          Clipboard.setData(ClipboardData(text: text));
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.copied)),
-          );
-        },
-        onDelete: ({required bool forAll}) {
-          _chat.repository.deleteMessage(
-            message.msgID,
-            forAll: forAll,
-            conversationID: _convId,
-            clientId: message.msgID == 0 ? message.clientId : null,
-          );
-        },
         child: bubble,
       );
     }
@@ -468,7 +452,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     Widget? inlineMeta,
     double reservedWidth = 0,
   }) {
-    final spans = parseRichSpans(
+    final rawSpans = parseRichSpans(
       caption,
       (context.text.bodyLarge ?? const TextStyle())
           .copyWith(color: _bubbleText(isMe)),
@@ -480,6 +464,19 @@ extension _ChatBubbles on _ChatDetailScreenState {
       // dans une liste qui défile.
       recognizerSink: _mentionRecognizers,
     );
+    // Toutes les bulles visibles sont surlignées, pas seulement le résultat
+    // courant : celui-ci a déjà l'encadré de `_scrollToReply`.
+    final spans = _searchHighlightQuery == null
+        ? rawSpans
+        : surlignerSpans(
+            rawSpans,
+            _searchController.text,
+            (s) => s.copyWith(
+              backgroundColor: context.colors.primaryContainer,
+              color: context.colors.onPrimaryContainer,
+              fontWeight: FontWeight.w700,
+            ),
+          );
     if (inlineMeta == null) return Text.rich(TextSpan(children: spans));
 
     return Stack(
@@ -667,7 +664,17 @@ extension _ChatBubbles on _ChatDetailScreenState {
   /// Avatar dénormalisé sur le message, sinon participants du groupe, sinon
   /// initiales via [AppAvatar]. Tap → fiche contact (même chemin que les mentions).
   Widget _buildGroupSenderHeader(LocalMessage msg) {
-    final name = msg.senderNom ??
+    // Le nom actuel du membre d'abord : la copie portée par le message date de
+    // sa réception, et l'auteur qui avait changé de nom apparaissait sous deux
+    // noms dans le même fil (groupe 3GI 2029, bug A14).
+    final membre = _groupParticipants
+        .where((p) => p.alanyaID == msg.senderID)
+        .firstOrNull;
+    final nomActuel = membre == null
+        ? ContactAliases.of(msg.senderID)
+        : membre.displayName.trim();
+    final name = (nomActuel != null && nomActuel.isNotEmpty ? nomActuel : null) ??
+        msg.senderNom ??
         msg.senderPseudo ??
         (AppLocalizations.of(context)?.unknownSender ?? context.l10n.unknownSender);
     final avatarUrl = _resolveSenderAvatar(msg);
@@ -709,12 +716,13 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   /// Photo de l'expéditeur : cache message d'abord, puis membres du groupe.
   String? _resolveSenderAvatar(LocalMessage msg) {
-    if (hasValidAvatarUrl(msg.senderAvatar)) return msg.senderAvatar;
+    // Même règle que le nom : la photo actuelle du membre d'abord.
     final membre = _groupParticipants
         .where((p) => p.alanyaID == msg.senderID)
         .firstOrNull;
     final fromMember = membre?.user.avatarUrl;
     if (hasValidAvatarUrl(fromMember)) return fromMember;
+    if (hasValidAvatarUrl(msg.senderAvatar)) return msg.senderAvatar;
     return null;
   }
 
@@ -727,6 +735,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
     if (membres.isEmpty) return null;
 
     return MentionSpec(
+      label: (userId) {
+        final alias = ContactAliases.of(userId);
+        return alias == null ? null : '@$alias';
+      },
       resolve: (segment) => resolveMentions(
         segment,
         membres,
@@ -923,6 +935,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final incident = payload!.event == SystemEvent.tripAlert ||
         payload.event == SystemEvent.tripSos;
 
+    final capture = payload.event == SystemEvent.screenshot;
+
     return Align(
       alignment: Alignment.center,
       child: Container(
@@ -947,6 +961,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
             if (incident) ...[
               Icon(Icons.warning_amber_rounded,
                   size: 14, color: context.colors.error),
+              const SizedBox(width: 5),
+            ],
+            if (capture) ...[
+              Icon(Icons.screenshot_outlined,
+                  size: 14, color: context.colors.onSurfaceVariant),
               const SizedBox(width: 5),
             ],
             Flexible(
@@ -1130,9 +1149,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final thumb = target != null ? _buildReplyMediaThumb(target, size: 40) : null;
     final title = target == null
         ? null
-        : (target.senderNom?.trim().isNotEmpty == true
-            ? target.senderNom!.trim()
-            : target.senderPseudo?.trim());
+        : (ContactAliases.of(target.senderID) ??
+            (target.senderNom?.trim().isNotEmpty == true
+                ? target.senderNom!.trim()
+                : target.senderPseudo?.trim()));
     return ReplyQuoteBar(
       accent: accent,
       title: title,

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../db/app_database.dart';
 import '../theme/locale_controller.dart';
+import 'contact_aliases.dart';
 
 /// Payload JSON d'un message contact partagé (`type = 7`).
 /// Instantané figé au moment de l'envoi (nom / tel / avatar).
@@ -27,6 +28,11 @@ class ContactPayload {
     if (p != null && p.isNotEmpty) return p;
     return LocaleController.instance.l10n.contact2;
   }
+
+  /// Libellé de la carte reçue DANS l'app : mon nom personnalisé pour ce
+  /// contact s'il existe. [displayLabel] reste le nom du profil — c'est lui
+  /// qui part quand le contact est partagé ou exporté.
+  String get shownLabel => ContactAliases.of(alanyaID) ?? displayLabel;
 
   String get previewLabel => '👤 $displayLabel';
 

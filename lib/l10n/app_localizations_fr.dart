@@ -1401,7 +1401,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String get cameraDisabled => 'Caméra désactivée';
 
   @override
-  String get searchComingSoon => 'Recherche à venir';
+  String get searchInConversationHint => 'Rechercher dans la discussion';
+
+  @override
+  String get searchNoResult => 'Aucun message trouvé';
+
+  @override
+  String searchResultCounter(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get searchPrevious => 'Résultat précédent';
+
+  @override
+  String get searchNext => 'Résultat suivant';
+
+  @override
+  String get searchExit => 'Fermer la recherche';
 
   @override
   String get takeAPhoto => 'Prendre une photo';
@@ -1475,6 +1492,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get someoneIsTyping => 'Quelqu\'un écrit…';
+
+  @override
+  String nameIsTyping(String name) {
+    return '$name écrit…';
+  }
 
   @override
   String get lastWeek => 'Dernière semaine';
@@ -7003,6 +7025,165 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vos réglages et votre historique Plus ont été effacés. Réabonnez-vous pour retrouver vos fonctionnalités.';
 
   @override
+  String get plusCardTrialKicker => 'Essai gratuit';
+
+  @override
+  String plusCardTrialTitle(String date) {
+    return 'Gratuit jusqu\'au $date';
+  }
+
+  @override
+  String get plusCardTrialBody =>
+      'Tout est ouvert. Ensuite, vous recevrez toujours vos messages et vos appels, mais il faudra un abonnement pour envoyer et appeler.';
+
+  @override
+  String plusCardTrialDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'encore $count jours d\'essai',
+      one: 'encore 1 jour d\'essai',
+      zero: 'dernier jour d\'essai',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plusCardSubscribe => 'S\'abonner';
+
+  @override
+  String get plusCardRestrictedKicker => 'Essai terminé';
+
+  @override
+  String get plusCardRestrictedTitle =>
+      'Vous ne pouvez plus envoyer ni appeler';
+
+  @override
+  String get plusCardRestrictedBody =>
+      'Vous recevez toujours vos messages et vos appels. Abonnez-vous pour envoyer des messages et appeler de nouveau.';
+
+  @override
+  String get plusCardLapsedTrialBody =>
+      'Vous recevez toujours vos messages et vos appels. Entrez un nouveau code pour reprendre.';
+
+  @override
+  String get plusCardRenewByCode =>
+      'Pour renouveler, il vous faudra un nouveau code.';
+
+  @override
+  String get plusCardScheduledTrialBody =>
+      'Votre essai gratuit continue jusque-là, puis l\'abonnement prend le relais.';
+
+  @override
+  String get subscriptionSourceCode => 'Code d\'activation';
+
+  @override
+  String get redeemTitle => 'J\'ai un code';
+
+  @override
+  String get redeemIntro =>
+      'Après votre paiement sur le site, vous avez reçu un code. Entrez-le ici : il débloque tout pendant un an.';
+
+  @override
+  String get redeemFieldLabel => 'Code d\'activation';
+
+  @override
+  String get redeemFieldHint => 'XXXXX-XXXXX-XXXXX';
+
+  @override
+  String get redeemSubmit => 'Activer';
+
+  @override
+  String get redeemChecksumError =>
+      'Ce code ne semble pas correct. Vérifiez chaque caractère.';
+
+  @override
+  String get redeemSuccessTitle => 'Abonnement activé';
+
+  @override
+  String redeemSuccessActive(String date) {
+    return 'Votre abonnement est actif jusqu\'au $date.';
+  }
+
+  @override
+  String redeemSuccessScheduled(String start, String end) {
+    return 'Votre essai gratuit continue. L\'abonnement commencera le $start et durera jusqu\'au $end.';
+  }
+
+  @override
+  String get redeemDone => 'Terminé';
+
+  @override
+  String get redeemPaste => 'Coller le code';
+
+  @override
+  String get composerSubscriptionRequired =>
+      'Votre essai est terminé : vous recevez vos messages, mais il faut un abonnement pour en envoyer.';
+
+  @override
+  String redeemLocked(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutes',
+      one: '1 minute',
+    );
+    return 'Trop d\'essais. Réessayez dans $_temp0.';
+  }
+
+  @override
+  String get paywallOutgoingTitle => 'Abonnez-vous pour continuer';
+
+  @override
+  String get paywallOutgoingBody =>
+      'Votre essai gratuit est terminé. Vous recevez toujours vos messages et vos appels, mais il faut un abonnement pour envoyer des messages et appeler.';
+
+  @override
+  String get paywallTrialTitle => 'Abonnez-vous à Alanya';
+
+  @override
+  String get paywallTrialBody =>
+      'Un abonnement d\'un an débloque tout : envoyer des messages, appeler, traduire, sauvegarder et vos trajets de confiance. Pendant l\'essai gratuit, vous pouvez le prendre dès maintenant : il commencera à la fin de l\'essai.';
+
+  @override
+  String get paywallPayOnline => 'Payer en ligne';
+
+  @override
+  String get paywallHaveCode => 'J\'ai un code';
+
+  @override
+  String get paywallPayHint =>
+      'Vous paierez sur notre site, puis vous recevrez un code à entrer ici.';
+
+  @override
+  String get paywallPayUnavailable =>
+      'Le paiement en ligne n\'est pas encore disponible. Si vous avez un code, entrez-le.';
+
+  @override
+  String get paywallPayOpenFailed =>
+      'Impossible d\'ouvrir le site de paiement.';
+
+  @override
+  String get errCodeInvalidCode => 'Ce code n\'existe pas. Vérifiez-le.';
+
+  @override
+  String get errCodeInvalidCodeFormat =>
+      'Ce code est mal saisi. Il comporte 15 caractères.';
+
+  @override
+  String get errCodeCodeAlreadyUsed => 'Ce code a déjà été utilisé.';
+
+  @override
+  String get errCodeCodeExpired => 'Ce code a expiré.';
+
+  @override
+  String get errCodeCodeRevoked => 'Ce code a été annulé.';
+
+  @override
+  String get errCodeCodeLocked =>
+      'Trop d\'essais. Réessayez dans quelques minutes.';
+
+  @override
   String get verificationTitle => 'Obtenir la coche';
 
   @override
@@ -7335,4 +7516,150 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get accountSecurityPhoneCredit =>
       'Changement payé : choisissez votre numéro';
+
+  @override
+  String get receiptsTitle => 'Infos du message';
+
+  @override
+  String receiptsReadBy(int count) {
+    return 'Lu par $count';
+  }
+
+  @override
+  String receiptsOutOf(int total) {
+    return 'sur $total';
+  }
+
+  @override
+  String receiptsDeliveredBy(int count) {
+    return 'Reçu par $count';
+  }
+
+  @override
+  String receiptsPendingCount(int count) {
+    return 'En attente $count';
+  }
+
+  @override
+  String get receiptsReadSection => 'Lu';
+
+  @override
+  String receiptsShowAllReaders(int count) {
+    return 'Voir les $count lecteurs';
+  }
+
+  @override
+  String get receiptsDeliveredNotRead => 'Reçu, pas encore lu';
+
+  @override
+  String get receiptsNotDelivered => 'Pas encore reçu';
+
+  @override
+  String receiptsMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '1 membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get receiptsNoReaders => 'Personne ne l\'a encore lu';
+
+  @override
+  String get receiptsLoadError =>
+      'Impossible d\'afficher les accusés de lecture.';
+
+  @override
+  String receiptsBarLabel(int read, int delivered, int pending) {
+    return '$read lu, $delivered reçu sans être lu, $pending en attente';
+  }
+
+  @override
+  String get errCodeDeleteWindowExpired =>
+      'La suppression pour tous n\'est possible que dans les 72 heures suivant l\'envoi.';
+
+  @override
+  String get clearChatTitle => 'Effacer la discussion';
+
+  @override
+  String get clearChatAllMessages => 'Tous les messages';
+
+  @override
+  String get clearChatMediaOnly => 'Fichiers médias uniquement';
+
+  @override
+  String get clearChatAllHint =>
+      'La discussion reste dans votre liste. Les autres participants ne voient aucun changement.';
+
+  @override
+  String get clearChatMediaHint =>
+      'Les messages restent, sans les fichiers téléchargés sur cet appareil.';
+
+  @override
+  String clearChatButton(String size) {
+    return 'Effacer la discussion ($size)';
+  }
+
+  @override
+  String get clearChatButtonNoSize => 'Effacer la discussion';
+
+  @override
+  String get clearChatDone => 'Discussion effacée';
+
+  @override
+  String get clearChatMediaDone => 'Fichiers médias supprimés';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor a fait une capture d\'écran de cette discussion';
+  }
+
+  @override
+  String get sysScreenshotByMe =>
+      'Vous avez fait une capture d\'écran de cette discussion';
+
+  @override
+  String get renameContactTitle => 'Nom du contact';
+
+  @override
+  String get renameContactHelper =>
+      'Visible par vous seul. Laissez vide pour revenir au nom du profil.';
+
+  @override
+  String get contactProfileSection => 'Profil';
+
+  @override
+  String get contactProfileName => 'Nom';
+
+  @override
+  String get contactProfilePseudo => 'Pseudo';
+
+  @override
+  String get contactProfileNumber => 'Numéro Alanya';
+
+  @override
+  String get contactYourNameSection => 'Votre nom pour ce contact';
+
+  @override
+  String get contactYourNameNone => 'Aucun';
+
+  @override
+  String get contactYourNameAdd => 'Ajouter un nom';
+
+  @override
+  String get contactYourNameEdit => 'Modifier';
+
+  @override
+  String get contactYourNameClear => 'Effacer le nom';
+
+  @override
+  String get contactYourNameHelpSet =>
+      'Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.';
+
+  @override
+  String get contactYourNameHelpEmpty =>
+      'Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais.';
 }

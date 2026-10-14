@@ -599,7 +599,7 @@ class _ParticipantTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name =
-        participant.nom ?? participant.pseudo ?? context.l10n.participantFallback;
+        participant.displayNom ?? context.l10n.participantFallback;
     final aRejoint = badgeParticipant(
           status: participant.status,
           estOrganisateur: isHost,

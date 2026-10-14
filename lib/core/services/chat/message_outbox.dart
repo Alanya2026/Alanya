@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
 import '../../../talky_models.dart';
+import '../billing/entitlement_service.dart';
 import 'chat_api.dart';
 import 'message_sender.dart';
 import '../call_session_guard.dart';
@@ -152,10 +153,24 @@ class MessageOutbox {
       _pendingReads.clear();
     }
 
-    // Retry des messages marqués failed (status==4) avec retryCount < 3
-    final failed = await (_db.select(_db.localMessages)
-          ..where((m) => m.status.equals(4) & m.retryCount.isSmallerThanValue(3)))
-        .get();
+    // Retry des messages marqués failed (status==4) avec retryCount < 3.
+    //
+    //  - Un refus serveur DÉFINITIF (`failureCode` posé : groupe réservé aux
+    //    admins, membre sorti, blocage…) n'est jamais rejoué : il échouerait à
+    //    l'identique, et le compteur ne le retenait pas — chaque code terminal
+    //    était réémis trois fois pour rien.
+    //  - Tant que les droits disent « pas d'envoi » (essai fini, aucun
+    //    abonnement), on ne réémet pas non plus : chaque tentative recevrait le
+    //    même refus. Les messages restent en échec, le bouton « réessayer »
+    //    marche dès qu'un code est activé.
+    final failed = EntitlementService.allowsOutgoing
+        ? await (_db.select(_db.localMessages)
+              ..where((m) =>
+                  m.status.equals(4) &
+                  m.retryCount.isSmallerThanValue(3) &
+                  m.failureCode.isNull()))
+            .get()
+        : const <LocalMessage>[];
     for (final m in failed) {
       await _dao.incrementRetryCount(m.clientId);
       final needsUpload = m.pendingUploadPath != null &&
@@ -196,6 +211,12 @@ class MessageOutbox {
   }
 
   Future<void> retryMessage(String clientId) async {
+    // Sans droit d'envoi, rejouer ne ferait que recevoir le même refus : le
+    // message reste en échec, et le panneau de l'abonnement s'ouvre.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
     await _dao.retryFailed(clientId);
     if (_api.isSocketReady) {
       await flushOutbox();

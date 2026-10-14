@@ -505,15 +505,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           Positioned(
             bottom: 0,
             right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: context.colors.primary,
-                shape: BoxShape.circle,
-                border: Border.all(color: context.colors.surface, width: 3),
+            // Le badge a sa propre action : changer la photo. Il faisait
+            // partie du même geste que l'avatar, dont l'appui simple ouvre la
+            // visionneuse ; seul un appui long, que personne ne trouvait,
+            // permettait d'en changer (groupe 3GI 2029, bug A12).
+            child: Semantics(
+              button: true,
+              label: context.l10n.changeGroupPhoto,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _uploadingAvatar ? null : _openAvatarSheet,
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: context.colors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: context.colors.surface, width: 3),
+                  ),
+                  child: Icon(Icons.camera_alt, color: context.colors.onPrimary,
+                      size: AppIconSize.sm),
+                ),
               ),
-              child: Icon(Icons.camera_alt, color: context.colors.onPrimary,
-                  size: AppIconSize.sm),
             ),
           ),
         ],

@@ -28,6 +28,8 @@ class MainActivity : FlutterFragmentActivity() {
     private val mediaExportChannel = "com.alanya/media_export"
     private val callPermissionsChannel = "com.alanya/call_permissions"
     private val deviceIdentityChannel = "com.alanya/device_identity"
+    private val screenshotChannel = "com.alanya/screenshot"
+    private var screenshotDetector: ScreenshotDetector? = null
 
     private var notificationOpenChannel: MethodChannel? = null
     private var pendingNotificationOpen: Map<String, String>? = null
@@ -36,12 +38,8 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Permet à l'écran d'appel d'apparaître par-dessus l'écran de verrouillage
-        // et de réveiller l'écran quand un appel entrant arrive (CallKit/FCM).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        }
+        // Pas d'affichage par-dessus l'écran de verrouillage par défaut : il
+        // n'est accordé que pendant un appel (voir LockScreenBridge).
         handleCallAcceptIntent(intent)
         handleNotificationIntent(intent)
     }
@@ -62,6 +60,9 @@ class MainActivity : FlutterFragmentActivity() {
     private fun handleCallAcceptIntent(intent: Intent?) {
         val callId = CallAcceptFromIntent.consommer(this, intent) ?: return
         Log.i(TAG, "décrochage lu dans l'intent callId=$callId")
+        // Décroché depuis l'écran verrouillé : l'appel doit s'afficher tout de
+        // suite, avant que Flutter ne soit prêt à le demander lui-même.
+        LockScreenBridge.apply(true, this)
     }
 
     override fun onResume() {
@@ -138,6 +139,19 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
 
+        // Capture d'écran d'une discussion : Dart démarre/arrête l'écoute selon
+        // l'écran ouvert, Android répond par `onScreenshot`.
+        val shotChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, screenshotChannel)
+        val detector = ScreenshotDetector(this, shotChannel)
+        screenshotDetector = detector
+        shotChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start" -> { detector.start(); result.success(true) }
+                "stop" -> { detector.stop(); result.success(true) }
+                else -> result.notImplemented()
+            }
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, callPermissionsChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -194,6 +208,7 @@ class MainActivity : FlutterFragmentActivity() {
         CallMediaBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         CallAudioBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         ProximityBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
+        LockScreenBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         PipBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         TripLocationBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
         SecureStorageBridge.attach(flutterEngine.dartExecutor.binaryMessenger, this)
@@ -223,6 +238,7 @@ class MainActivity : FlutterFragmentActivity() {
      * disparaît sans que Flutter ait pu jouer sa clôture.
      */
     override fun onDestroy() {
+        screenshotDetector?.stop()
         ProximityBridge.disable()
         PipBridge.detach()
         super.onDestroy()

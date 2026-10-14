@@ -23,6 +23,8 @@ import '../../core/services/media_expiry_policy.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/music_metadata_service.dart';
 import '../../core/services/message_share_service.dart';
+import '../../core/services/chat/chat_draft_store.dart';
+import '../../core/services/chat/message_search.dart';
 import '../../core/services/chat/view_once_download_manager.dart';
 import '../../core/services/chat_repository.dart';
 import '../../core/services/voice_chat_context.dart';
@@ -31,8 +33,9 @@ import '../../core/services/translation/message_translation_service.dart';
 import '../../core/services/image_upload_compressor.dart';
 import '../../core/services/video_upload_compressor.dart';
 import '../../core/services/voice_record_config.dart';
+import '../../core/services/billing/entitlement_service.dart';
 import '../../core/services/billing/entitlements.dart' show PlusFeature;
-import '../../widgets/billing/paywall_sheet.dart' show guardPlus;
+import '../../widgets/billing/paywall_sheet.dart' show guardPlus, showPaywall;
 import '../../core/services/translation/translatable_content.dart';
 import '../../core/services/translation/translation_languages.dart';
 import '../../core/services/translation/translation_state.dart';
@@ -54,8 +57,10 @@ import '../../core/services/alanya_media_export_service.dart';
 import '../../core/utils/media_save_feedback.dart';
 import '../../core/utils/media_viewer_items.dart';
 import '../../core/utils/rich_text_parser.dart';
+import '../../core/utils/search_highlight.dart';
 import '../../l10n/app_localizations.dart';
 import 'package:screen_protector/screen_protector.dart';
+import '../../core/services/screenshot_watcher.dart';
 import 'view_once_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
 import 'chat/link_preview_card.dart';
@@ -67,6 +72,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/clear_chat_sheet.dart';
 import '../../widgets/common/common.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/typing_indicator.dart';
@@ -77,6 +83,7 @@ import '../calls/group_participants_picker_screen.dart';
 import 'contact_detail_screen.dart';
 import 'conversation_media_screen.dart';
 import 'group_detail_screen.dart';
+import 'group_message_info_screen.dart';
 import 'forward_message_screen.dart';
 import 'album_media_list_screen.dart';
 import 'media_send_screen.dart';
@@ -112,11 +119,15 @@ import '../../widgets/chat/translation_model_prompt.dart';
 import '../../widgets/report/report_sheet.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/utils/message_deletion_policy.dart';
+import '../../core/utils/contact_aliases.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels
 part 'chat/chat_bubbles.dart';  // rendu des bulles & médias
 part 'chat/chat_input.dart';    // barre de saisie, emoji, bandeau réponse
+part 'chat/chat_search.dart';   // recherche de messages dans la conversation
 
 const Duration _messageEditWindow = Duration(minutes: 30);
 const int _maxSelectionCount = 50;
@@ -126,7 +137,12 @@ const int _maxSelectionCount = 50;
 /// Deux causes qui ne doivent pas être confondues : `blocked` est définitif
 /// tant que l'utilisateur ne débloque pas, `adminsOnly` peut être levé en
 /// direct par un administrateur. Elles n'affichent pas le même bandeau.
-enum ComposerLock { none, blocked, adminsOnly, official }
+///
+/// `subscription` : régime essai, essai fini et aucun abonnement — le compte
+/// reçoit, il n'écrit pas. Contrairement aux autres, il se lève en direct
+/// (un code activé, ici ou sur un autre appareil) et mène à une action : le
+/// panneau de l'abonnement.
+enum ComposerLock { none, blocked, adminsOnly, official, subscription }
 
 /// Plafond au-delà duquel on renonce à sauter au premier non-lu.
 ///
@@ -147,6 +163,11 @@ class ChatDetailScreen extends StatefulWidget {
   /// pour ramener jusqu'à la bulle qui joue, pas seulement à la conversation.
   final int? focusMessageId;
 
+  /// Entre en mode recherche dès que la conversation est connue (bouton
+  /// « Rechercher » de la fiche contact, quand elle n'a pas été ouverte depuis
+  /// cette discussion).
+  final bool openSearch;
+
   const ChatDetailScreen({
     super.key,
     required this.userName,
@@ -155,6 +176,7 @@ class ChatDetailScreen extends StatefulWidget {
     this.isGroup = false,
     this.avatarUrl,
     this.focusMessageId,
+    this.openSearch = false,
   });
 
   @override
@@ -190,6 +212,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   LocalMessage? _replyTo;
   final FocusNode _inputFocus = FocusNode();
   Timer? _typingTimer;
+
+  /// Brouillon de la saisie (voir [ChatDraftStore]) : enregistré après une
+  /// pause de frappe, en arrière-plan et à la fermeture ; restauré une fois.
+  Timer? _draftTimer;
+  bool _draftRestored = false;
   // Dernier typing:start émis — throttle côté client (un event / 2,5 s max).
   DateTime? _lastTypingSentAt;
 
@@ -286,6 +313,29 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   int _peerVerificationStatus = 0;
 
   bool _selectionMode = false;
+
+  // Recherche de messages (voir chat/chat_search.dart).
+  bool _searchMode = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+
+  /// `msgID` trouvés, du plus récent (index 0) au plus ancien.
+  List<int> _searchResults = const [];
+  int _searchIndex = 0;
+  Timer? _searchDebounce;
+
+  /// Numéro de la dernière recherche lancée : un résultat qui arrive avec un
+  /// autre numéro est celui d'une requête dépassée.
+  int _searchToken = 0;
+  bool _searchJumpInFlight = false;
+
+  /// Vrai quand [_searchResults] est la réponse à la saisie actuelle : sans
+  /// cela, « Aucun message trouvé » clignoterait à chaque frappe.
+  bool _searchSettled = false;
+
+  /// `openSearch` ne s'applique qu'une fois : `_attachToConversation` peut
+  /// être rappelée, et ne doit pas rouvrir la recherche que l'on a fermée.
+  bool _openSearchHandled = false;
   final Set<int> _selectedMsgIDs = {};
   /// msgID en cours de téléchargement manuel (overlay WhatsApp).
   final Set<int> _mediaDownloadingIds = {};
@@ -350,6 +400,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// extensions de cette librairie puissent déclencher un rebuild.
   void rebuild(VoidCallback fn) => setState(fn);
 
+  final ScreenshotWatcher _screenshotWatcher = ScreenshotWatcher();
+  final ScreenshotAlertGate _screenshotGate = ScreenshotAlertGate();
+
+  /// Capture de la discussion : prévient l'autre personne (discussion à deux
+  /// seulement ; ni groupe, ni conversation avec soi-même). Ignorée si un autre
+  /// écran est passé par-dessus la discussion.
+  void _onScreenshotDetected() {
+    final convId = _convId;
+    if (!mounted || convId == null) return;
+    if (widget.isGroup || widget.userId == null || _isSelfChat) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    if (!_screenshotGate.allow()) return;
+    unawaited(_chat.repository.signalScreenshot(convId));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -362,6 +427,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         ? null
         : (me.nom.isNotEmpty ? me.nom : me.pseudo);
     _scrollController.addListener(_onScroll);
+    _screenshotWatcher.start(_onScreenshotDetected);
     WidgetsBinding.instance.addObserver(this);
     _init();
   }
@@ -401,7 +467,56 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       if (_observedRoute?.isCurrent ?? false) _setChatVisible(true);
     } else {
       _setChatVisible(false);
+      if (state == AppLifecycleState.paused) _saveDraftNow();
     }
+  }
+
+  /// « X écrit… » dans l'en-tête du groupe (groupe 3GI 2029, bug A15).
+  String _groupTypingLabel(ChatProvider chat, int? convId) {
+    final userId = convId == null ? null : chat.typingUserId(convId);
+    final membre = userId == null
+        ? null
+        : _groupParticipants.where((p) => p.alanyaID == userId).firstOrNull;
+    final nom = membre == null
+        ? ''
+        : membre.displayName.trim();
+    return nom.isEmpty ? context.l10n.typing2 : context.l10n.nameIsTyping(nom);
+  }
+
+  // ── Brouillon ──
+
+  Future<void> _restoreDraft(int convId) async {
+    final myId = _myId;
+    if (_draftRestored || myId == null) return;
+    _draftRestored = true;
+    final draft = await ChatDraftStore.load(myId, convId);
+    // Rien n'a été tapé entre-temps : on ne remplace pas une saisie en cours.
+    if (draft == null || !mounted || _messageController.text.isNotEmpty) return;
+    _messageController.value = TextEditingValue(
+      text: draft,
+      selection: TextSelection.collapsed(offset: draft.length),
+    );
+    setState(() => _hasText = draft.trim().isNotEmpty);
+  }
+
+  void _scheduleDraftSave() {
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 800), _saveDraftNow);
+  }
+
+  void _saveDraftNow() {
+    final myId = _myId;
+    final convId = _convId;
+    if (myId == null || convId == null || !_draftRestored) return;
+    unawaited(ChatDraftStore.save(myId, convId, _messageController.text));
+  }
+
+  void _clearDraft() {
+    _draftTimer?.cancel();
+    final myId = _myId;
+    final convId = _convId;
+    if (myId == null || convId == null) return;
+    unawaited(ChatDraftStore.clear(myId, convId));
   }
 
   /// Applique l'état visible/masqué : « conversation active » = ce chat est lu
@@ -536,6 +651,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     // par userId seul, création à la volée, déduplication d'un doublon 1-1),
     // auquel cas le premier appel avait un convId nul.
     _watchGroupState();
+    unawaited(_restoreDraft(convId));
+
+    if (widget.openSearch && !_openSearchHandled && mounted) {
+      _openSearchHandled = true;
+      _enterSearchMode();
+    }
 
     // Nouvelle conversation attachée → la pagination repart de zéro.
     _reachedStart = false;
@@ -802,6 +923,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         !canSend(_myGroupRole, _groupOnlyAdminsCanSend)) {
       return ComposerLock.adminsOnly;
     }
+    if (!EntitlementService.allowsOutgoing) return ComposerLock.subscription;
     return ComposerLock.none;
   }
 
@@ -994,11 +1116,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   @override
   void dispose() {
+    _screenshotWatcher.stop();
     WidgetsBinding.instance.removeObserver(this);
     if (_observedRoute is PageRoute) appRouteObserver.unsubscribe(this);
     _typingTimer?.cancel();
     _recordTimer?.cancel();
     _highlightTimer?.cancel();
+    _searchDebounce?.cancel();
     _reactionsSub?.cancel();
     _groupWatch?.cancel();
     for (final r in _mentionRecognizers) {
@@ -1013,9 +1137,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     // Supprime les médias vue-unique pré-téléchargés mais jamais ouverts
     // (aucune trace persistante).
     ViewOnceDownloadManager.instance.discardAll();
+    _draftTimer?.cancel();
+    _saveDraftNow();
     _messageController.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
+    _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -1023,6 +1151,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   Widget build(BuildContext context) {
     // Rebuild sur changement de présence / typing (header + bulle).
     final chat = Provider.of<ChatProvider>(context);
+    // Le droit d'écrire se lève (ou se ferme) en direct : un code activé ici ou
+    // sur un autre appareil rouvre la saisie sans quitter la conversation.
+    context.watch<EntitlementService>();
     final convId = _convId;
     final partnerTyping = convId != null &&
         chat.isPartnerTyping(
@@ -1030,19 +1161,29 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
           partnerUserId: widget.isGroup ? null : widget.userId,
         );
     return PopScope(
-      canPop: !_selectionMode,
+      canPop: !_selectionMode && !_searchMode,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _selectionMode) _exitSelectionMode();
+        if (didPop) return;
+        if (_selectionMode) {
+          _exitSelectionMode();
+        } else if (_searchMode) {
+          _exitSearchMode();
+        }
       },
       child: Scaffold(
       backgroundColor: context.semantic.surfaceMuted,
-      appBar: _selectionMode ? _buildSelectionAppBar() : _buildChatAppBar(partnerTyping),
+      appBar: _selectionMode
+          ? _buildSelectionAppBar()
+          : _searchMode
+              ? _buildSearchAppBar()
+              : _buildChatAppBar(partnerTyping),
       body: Stack(
         children: [
           const Positioned.fill(child: ChatWallpaper()),
           Column(
             children: [
               const OfflineBanner(wrapSafeArea: false),
+              _buildSearchNoResultBanner(),
               _buildPinnedBanner(),
               if (widget.isGroup && _myPendingJoinMsgID != null)
                 GroupJoinBanner(
@@ -1304,6 +1445,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   }
 
 
+  /// Fiche du contact ouverte depuis le menu : comme le tap sur l'en-tête, elle
+  /// peut rendre `'search'` pour passer la discussion en mode recherche.
+  Future<void> _openContactFromMenu() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ContactDetailScreen(
+          userId: widget.userId!,
+          conversationId: _convId,
+          initialName: _chatTitle(context),
+          initialAvatar: widget.avatarUrl ?? '',
+          openedFromConversation: true,
+        ),
+      ),
+    );
+    if (mounted && result == 'search') _enterSearchMode();
+  }
+
   PreferredSizeWidget _buildChatAppBar(bool partnerTyping) {
     return AppBar(
       titleSpacing: 0,
@@ -1327,7 +1486,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                 : null)
             : (widget.userId != null
                 ? () async {
-                    await Navigator.push(
+                    final result = await Navigator.push<String>(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ContactDetailScreen(
@@ -1335,10 +1494,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                           conversationId: _convId,
                           initialName: _chatTitle(context),
                           initialAvatar: widget.avatarUrl ?? '',
+                          openedFromConversation: true,
                         ),
                       ),
                     );
-                    if (mounted && !_isSelfChat) _loadBlockStatus();
+                    if (!mounted) return;
+                    if (!_isSelfChat) _loadBlockStatus();
+                    if (result == 'search') _enterSearchMode();
                   }
                 : null),
         child: Row(
@@ -1376,7 +1538,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                     if (widget.isGroup) {
                       if (partnerTyping) {
                         return Text(
-                          context.l10n.typing2,
+                          _groupTypingLabel(_chat, _convId),
                           style: context.text.bodySmall?.copyWith(
                             color: context.colors.primary,
                           ),
@@ -1450,19 +1612,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
             offset: const Offset(0, 48),
             onSelected: (value) {
               switch (value) {
+                case 'search':
+                  _enterSearchMode();
                 case 'contact':
                   if (widget.userId != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ContactDetailScreen(
-                          userId: widget.userId!,
-                          conversationId: _convId,
-                          initialName: _chatTitle(context),
-                          initialAvatar: widget.avatarUrl ?? '',
-                        ),
-                      ),
-                    );
+                    unawaited(_openContactFromMenu());
                   }
                 case 'media':
                   if (_convId != null) {
@@ -1476,6 +1630,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                       ),
                     );
                   }
+                case 'clear':
+                  if (_convId != null) {
+                    unawaited(showClearChatSheet(
+                      context,
+                      conversationId: _convId!,
+                    ));
+                  }
                 case 'translation':
                   Navigator.push(
                     context,
@@ -1486,6 +1647,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
               }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'search',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.search),
+                  title: Text(context.l10n.commonSearch),
+                ),
+              ),
               PopupMenuItem(
                 value: 'contact',
                 child: ListTile(
@@ -1513,6 +1683,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                   title: Text(context.l10n.settingsMessageTranslation),
                 ),
               ),
+              if (_convId != null)
+                PopupMenuItem(
+                  value: 'clear',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.cleaning_services_outlined),
+                    title: Text(context.l10n.clearChatTitle),
+                  ),
+                ),
             ],
           ),
           AppSpacing.hGapSm,

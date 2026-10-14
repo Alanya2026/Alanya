@@ -147,7 +147,7 @@ class _AddListMembersSheetState extends State<_AddListMembersSheet> {
                     itemBuilder: (context, index) {
                       final user = shown[index];
                       final name =
-                          user.nom.isNotEmpty ? user.nom : user.pseudo;
+                          user.displayName;
                       final selected = _selectedIds.contains(user.alanyaID);
                       return CheckboxListTile(
                         value: selected,

@@ -12,6 +12,7 @@ import '../list_ringtone_preferences.dart';
 import '../notifications/badge_sync_service.dart';
 import 'chat_api.dart';
 import 'message_ack_watchdog.dart';
+import '../billing/entitlement_service.dart';
 import 'message_sound_service.dart';
 import 'message_path_tracer.dart';
 import 'receipt_service.dart';
@@ -33,6 +34,10 @@ const Set<String> kTerminalSendFailures = {
   'CONVERSATION_NOT_FOUND',
   'OFFICIAL_READONLY',
 };
+
+/// Code du refus d'envoi faute d'abonnement. Absent de [kTerminalSendFailures] à
+/// dessein : il se lève dès qu'un code est activé.
+const String kSubscriptionRequired = 'SUBSCRIPTION_REQUIRED';
 
 class SocketMessageHandlers {
   SocketMessageHandlers({
@@ -163,12 +168,21 @@ class SocketMessageHandlers {
         !isViewOnce &&
         MediaDownloadPreferences.isAutoDownloadEnabled) {
       final mediaName = json['mediaName']?.toString();
+      final mediaSize = _toInt(json['mediaSize']);
+      final knownSize = mediaSize > 0 ? mediaSize : null;
       if (mtype == 1 || mtype == 2) {
         _cacheMedia(
           msgID,
           mediaUrl,
           type: mtype,
           mediaName: mediaName,
+          knownSize: knownSize,
+          // Vidéos de groupe : à la demande. Chaque membre connecté
+          // téléchargeait chaque vidéo à sa réception : une seule vidéo dans
+          // un groupe de 50 coûtait 50 téléchargements complets d'un coup
+          // (groupe 3GI 2029, bug A3).
+          skipIfGroup: mtype == 2,
+          convID: convID,
         );
       } else if (mtype == 4) {
         // Fichiers : auto-cache si < 5 MB (sinon ouverture manuelle).
@@ -178,6 +192,7 @@ class SocketMessageHandlers {
           maxBytes: 5 * 1024 * 1024,
           type: 4,
           mediaName: mediaName,
+          knownSize: knownSize,
         );
       }
     }
@@ -189,13 +204,24 @@ class SocketMessageHandlers {
     int? maxBytes,
     required int type,
     String? mediaName,
+    int? knownSize,
+    bool skipIfGroup = false,
+    int convID = 0,
   }) async {
     // Dernier verrou avant le téléchargement : la préférence a pu être coupée
     // entre le test et l'appel, et c'est ici qu'on consulte le RÉSEAU. Le
     // réglage « Wi-Fi uniquement » ne devient effectif que par cet appel — il
     // s'affichait dans les réglages sans être lu nulle part.
     if (!await MediaDownloadPreferences.shouldAutoDownloadNow()) return;
-    final path = await _mediaCache.ensureCached(url, maxBytes: maxBytes);
+    if (skipIfGroup && convID != 0) {
+      final conv = await _dao.getConversation(convID);
+      if (conv?.isGroup ?? false) return;
+    }
+    final path = await _mediaCache.ensureCached(
+      url,
+      maxBytes: maxBytes,
+      knownSize: knownSize,
+    );
     if (path == null) return;
     await _dao.setLocalMediaPath(msgID, path);
     await AlanyaMediaExportService.instance.exportIfNeeded(
@@ -286,6 +312,12 @@ class SocketMessageHandlers {
       clientId,
       failureCode: kTerminalSendFailures.contains(code) ? code : null,
     );
+    // Essai fini, aucun abonnement : pas un refus définitif — un code activé
+    // rouvrirait tout, et « réessayer » doit alors marcher (le message n'est
+    // donc PAS marqué terminal). Mais on le dit, une fois : le panneau.
+    if (code == kSubscriptionRequired) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+    }
   }
 
   /// (Dés)épingle un message. Optimistic : on écrit localement d'abord pour un
@@ -319,6 +351,12 @@ class SocketMessageHandlers {
     int? conversationID,
   }) async {
     if (msgID == 0 || emoji.isEmpty) return;
+    // Réagir est émettre : refusé sans abonnement, avant l'écriture optimiste
+    // (il n'y aurait rien à défaire). Retirer SA réaction reste permis.
+    if (!EntitlementService.allowsOutgoing) {
+      EntitlementService.maybeInstance?.reportOutgoingBlocked();
+      return;
+    }
     final myId = _myId();
     final convID = conversationID ?? await _conversationIdForMsg(msgID);
     if (convID == null) return;

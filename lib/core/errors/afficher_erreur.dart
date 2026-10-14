@@ -28,7 +28,7 @@ void afficherErreur(
   if (!context.mounted) return;
   final refus = refusAlanyaPlus(erreur);
   if (refus != null) {
-    unawaited(showPaywall(context, refus.feature));
+    unawaited(showPaywall(context, refus.feature, outgoing: refus.outgoing));
     // Les droits en cache disaient oui, le serveur vient de dire non.
     final droits = EntitlementService.maybeInstance;
     if (droits != null) unawaited(droits.refresh());
@@ -47,14 +47,19 @@ void afficherErreurGlobale(Object? erreur, {required ErrorDomain domaine}) {
   _montrer(appMessengerKey.currentState, texte, null);
 }
 
-/// Le refus « réservé à Alanya Plus », et la fonctionnalité qu'il vise.
+/// Le refus « réservé aux abonnés », la fonctionnalité qu'il vise, et s'il vise
+/// l'émission (`feature: "outgoing"` : envoyer, appeler — hors catalogue).
 /// Nul pour toute autre erreur.
-({PlusFeature? feature})? refusAlanyaPlus(Object? erreur) {
+({PlusFeature? feature, bool outgoing})? refusAlanyaPlus(Object? erreur) {
   final cause = erreur is AppError ? erreur.cause : erreur;
   if (cause is! TalkyException || cause.code != 'SUBSCRIPTION_REQUIRED') {
     return null;
   }
-  return (feature: PlusFeature.fromCode(cause.details?['feature']));
+  final feature = cause.details?['feature'];
+  return (
+    feature: PlusFeature.fromCode(feature),
+    outgoing: feature == 'outgoing',
+  );
 }
 
 void _montrer(ScaffoldMessengerState? messenger, String texte, Color? fond) {

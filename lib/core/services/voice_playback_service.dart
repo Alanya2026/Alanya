@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:audio_session/audio_session.dart'
+    show AndroidAudioAttributes, AndroidAudioContentType, AndroidAudioUsage;
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -11,7 +13,18 @@ import '../utils/audio_message_kind.dart';
 /// Lecteur audio singleton pour les messages vocaux du chat.
 /// Un seul vocal peut jouer à la fois ; le changement de message arrête le précédent.
 class VoicePlaybackService extends ChangeNotifier {
-  final AudioPlayer _player = AudioPlayer();
+  // `androidApplyAudioAttributes: false` : par défaut, just_audio applique au
+  // lecteur les attributs de la session audio partagée. Or la sonnerie et les
+  // appels la configurent en « communication », et rien ne la remet ensuite en
+  // « média » : après un appel, les audios ne sortaient plus que par l'écouteur
+  // du haut (signalement du groupe 3GI 2029, bug A7). Le lecteur porte donc ses
+  // propres attributs, posés dans le constructeur.
+  final AudioPlayer _player = AudioPlayer(androidApplyAudioAttributes: false);
+
+  static const _mediaAttributes = AndroidAudioAttributes(
+    contentType: AndroidAudioContentType.music,
+    usage: AndroidAudioUsage.media,
+  );
 
   String? _activeMessageId;
   String? _loadedMessageId;
@@ -55,6 +68,9 @@ class VoicePlaybackService extends ChangeNotifier {
   bool isActive(String messageId) => _activeMessageId == messageId;
 
   VoicePlaybackService() {
+    unawaited(_player.setAndroidAudioAttributes(_mediaAttributes).catchError(
+      (Object e) => debugPrint('[VoicePlayback] attributs média: $e'),
+    ));
     _stateSub = _player.playerStateStream.listen((state) {
       _playing = state.playing;
       if (state.processingState == ProcessingState.completed) {

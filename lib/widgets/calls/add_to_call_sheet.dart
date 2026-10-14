@@ -224,7 +224,7 @@ class _ContactRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final name = user.displayName;
     return Opacity(
       opacity: onTap == null ? 0.4 : 1,
       child: ListTile(

@@ -203,7 +203,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       myId: me.alanyaID,
       myName: me.nom.isNotEmpty ? me.nom : me.pseudo,
       myPhoto: me.avatarUrl,
-      targetUserName: user.nom,
+      targetUserName: user.displayName,
       targetUserPhoto: user.avatarUrl,
       isVideo: isVideo,
     );
@@ -265,7 +265,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     final roster = targets
         .map((u) => GroupParticipantInfo(
               id: u.alanyaID.toString(),
-              name: u.nom.isNotEmpty ? u.nom : u.pseudo,
+              name: u.displayName,
               photo: u.avatarUrl,
             ))
         .toList();
@@ -383,7 +383,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
         children: [
           AppAvatar(
             imageUrl: user.avatarUrl.isNotEmpty ? user.avatarUrl : null,
-            name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+            name: user.displayName,
             size: AppSizes.avatarMd,
             qrBadge: user.addedViaQr == true,
           ),
@@ -405,7 +405,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
         ],
       ),
       title: AccountBadgeLabel(
-        name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+        name: user.displayName,
         accountType: user.accountType,
         verificationStatus: user.verificationStatus,
         style: context.text.titleSmall,

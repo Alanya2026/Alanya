@@ -22,6 +22,7 @@ import '../utils/backend_url.dart';
 import 'connectivity_service.dart';
 import 'meeting_service.dart';
 import '../theme/locale_controller.dart';
+import 'billing/entitlement_service.dart';
 import 'chat/message_sound_service.dart';
 import 'call/call_permissions_helper.dart';
 import 'call/ended_call_registry.dart';
@@ -40,6 +41,7 @@ import 'call/call_ice_constraints.dart';
 import 'call/incoming_presentation.dart';
 import 'call/voicemail_greeting_player.dart';
 import '../../widgets/calls/voicemail_recorder_sheet.dart';
+import '../utils/contact_aliases.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
 part 'call/call_incoming.dart';   // entrées push / CallKit
@@ -75,17 +77,21 @@ enum CallTransferStatus {
 /// Infos minimales d'un participant d'appel de groupe (pour l'UI grille).
 class GroupParticipantInfo {
   final String id;
-  final String name;
+  final String _profileName;
+
+  /// Nom affiché : mon nom personnalisé pour ce participant, sinon celui
+  /// porté par la signalisation.
+  String get name => ContactAliases.nameFor(int.tryParse(id), _profileName);
   final String? photo;
   bool isMuted;
   bool isVideoOn;
   GroupParticipantInfo({
     required this.id,
-    required this.name,
+    required String name,
     this.photo,
     this.isMuted = false,
     this.isVideoOn = true,
-  });
+  }) : _profileName = name;
 }
 
 class CallService extends ChangeNotifier {
@@ -103,7 +109,18 @@ class CallService extends ChangeNotifier {
 
   CallStatus _status = CallStatus.idle;
   int? _remoteUserId;
-  String? _remoteUserName;
+  String? _remoteProfileName;
+
+  /// Nom affiché de l'interlocuteur. La signalisation, le push et l'API
+  /// écrivent le nom du PROFIL ; la lecture fait passer mon nom personnalisé
+  /// devant (cf. [ContactAliases]) — un seul endroit pour tout l'appel.
+  String? get _remoteUserName {
+    final id = _remoteUserId;
+    final alias = id == null ? null : ContactAliases.of(id);
+    return alias ?? _remoteProfileName;
+  }
+
+  set _remoteUserName(String? value) => _remoteProfileName = value;
   String? _remoteUserPhoto;
   int _remoteTypeCompte = 0;
   int _remoteAccountType = 0;

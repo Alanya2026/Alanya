@@ -277,7 +277,7 @@ class _CallsScreenState extends State<CallsScreen> {
       myId: _myId,
       myName: myName,
       myPhoto: myPhoto,
-      targetUserName: otherUser.nom,
+      targetUserName: otherUser.displayName,
       targetUserPhoto: otherUser.avatarUrl,
       isVideo: isVideo,
     );
@@ -366,7 +366,8 @@ class _CallsScreenState extends State<CallsScreen> {
         ? visible.toList()
         : visible.where((call) {
             final otherUser = call.idCaller != _myId ? call.caller : call.receiver;
-            return (otherUser?.nom ?? '').toLowerCase().contains(_search);
+            return (otherUser?.displayName ?? '').toLowerCase().contains(_search) ||
+          (otherUser?.nom ?? '').toLowerCase().contains(_search);
           }).toList();
     if (filtered.isEmpty) {
       // Écran vide ne veut pas dire historique épuisé : masquer localement la
@@ -459,17 +460,17 @@ class _CallsScreenState extends State<CallsScreen> {
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.sm,
             ),
-            onLongPress: () => _showCallActions(call, otherUser?.nom ?? context.l10n.unknownSender),
+            onLongPress: () => _showCallActions(call, otherUser?.displayName ?? context.l10n.unknownSender),
             leading: ProfileAvatar(
               imageUrl: otherUser?.avatarUrl,
-              name: otherUser?.nom ?? context.l10n.unknownSender,
+              name: otherUser?.displayName ?? context.l10n.unknownSender,
               userId: otherUser?.alanyaID ?? 0,
               isGroup: false,
               size: AppSizes.avatarLg,
               borderRadius: AppSizes.avatarLg / 2,
             ),
             title: Text(
-              otherUser?.nom ?? context.l10n.unknownSender,
+              otherUser?.displayName ?? context.l10n.unknownSender,
               style: context.text.titleMedium?.copyWith(
                 color: isVoicemail
                     ? colors.onSurface

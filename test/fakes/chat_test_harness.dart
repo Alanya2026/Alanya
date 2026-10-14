@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/db/chat_dao.dart';
 import 'package:talky_flutter/core/services/chat/chat_repository.dart';
+import 'package:talky_flutter/core/services/chat/conversation_clear_service.dart' show AppRoots;
 import 'package:talky_flutter/core/services/image_upload_compressor.dart';
 import 'package:talky_flutter/core/services/video_upload_compressor.dart';
 
@@ -20,6 +21,12 @@ class ChatTestHarness {
   static const int myId = 1;
   static const int otherId = 2;
   static const int convId = 10;
+
+  /// Racines où l'app possède ses fichiers (par défaut : documents et cache du
+  /// téléphone, indisponibles en test) — voir `ConversationClearService`.
+  final AppRoots? appRoots;
+
+  ChatTestHarness({this.appRoots});
 
   Future<void> setUp({
     bool socketReady = true,
@@ -37,6 +44,7 @@ class ChatTestHarness {
     repo = ChatRepository.forTesting(
       api: this.api,
       database: db,
+      appRoots: appRoots ?? () async => const [],
       videoCompressor: videoCompressor,
       imageCompressor: imageCompressor,
       hevcAllowed: hevcAllowed,

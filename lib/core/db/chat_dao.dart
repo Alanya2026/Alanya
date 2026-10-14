@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../services/chat/conversation_merge.dart';
+import '../services/chat/message_search.dart';
 import '../services/translation/translation_state.dart';
 import '../utils/call_log_preview.dart';
 import '../utils/media_album.dart';
@@ -224,6 +225,44 @@ class ChatDao {
               (m.deletedForID.isNull() | m.deletedForID.equals(myId).not()))
           ..orderBy([(m) => OrderingTerm(expression: m.sendAt)]))
         .watch();
+  }
+
+  /// Messages d'une conversation que la recherche peut lire, en une requête
+  /// ponctuelle (`get`, pas le flux de [watchMessages]).
+  ///
+  /// Ne lit que les colonnes utiles : pas de vignettes ni de réactions à
+  /// charger pour comparer du texte.
+  Future<List<CandidatRecherche>> searchCandidates(
+      int conversationID, int myId) async {
+    final q = db.selectOnly(db.localMessages)
+      ..addColumns([
+        db.localMessages.msgID,
+        db.localMessages.content,
+        db.localMessages.sendAt,
+      ])
+      ..where(db.localMessages.conversationID.equals(conversationID) &
+          // msgID 0 : pas encore confirmé par le serveur, le saut vers un
+          // résultat l'ignorerait.
+          db.localMessages.msgID.isBiggerThanValue(0) &
+          db.localMessages.isDeleted.equals(false) &
+          (db.localMessages.deletedForID.isNull() |
+              db.localMessages.deletedForID.equals(myId).not()) &
+          db.localMessages.type.isIn(kSearchableMessageTypes) &
+          // Vue unique non consultée : même règle que `translatableTextOf`.
+          (db.localMessages.isViewOnce.equals(false) |
+              db.localMessages.viewedAt.isNotNull()) &
+          db.localMessages.content.isNotNull());
+    final rows = await q.get();
+    return [
+      for (final r in rows)
+        // Marqueur d'album : sentinelle technique, pas de la prose.
+        if (!r.read(db.localMessages.content)!.startsWith(albumMarkerPrefix))
+          CandidatRecherche(
+            msgID: r.read(db.localMessages.msgID)!,
+            content: r.read(db.localMessages.content)!,
+            sendAt: r.read(db.localMessages.sendAt)!,
+          ),
+    ];
   }
 
   Future<void> upsertMessage(LocalMessagesCompanion msg) {
@@ -721,6 +760,15 @@ class ChatDao {
     });
   }
 
+  /// Annule une suppression locale « pour tous » que le serveur a refusée
+  /// (fenêtre de 72 h dépassée, droits insuffisants) : le message redevient
+  /// visible, comme chez tous les autres.
+  Future<void> restoreManyByServerId(List<int> msgIDs) {
+    if (msgIDs.isEmpty) return Future.value();
+    return (db.update(db.localMessages)..where((m) => m.msgID.isIn(msgIDs)))
+        .write(const LocalMessagesCompanion(isDeleted: Value(false)));
+  }
+
   Future<void> softDeleteManyForUser(List<int> msgIDs, int userId) {
     if (msgIDs.isEmpty) return Future.value();
     if (msgIDs.length == 1) {
@@ -949,7 +997,9 @@ class ChatDao {
           final user = row.readTableOrNull(db.localUsers);
           final name = user == null
               ? null
-              : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+              : ((user.preferredName ?? '').trim().isNotEmpty
+                  ? user.preferredName!.trim()
+                  : (user.pseudo.isNotEmpty ? user.pseudo : user.nom));
           return LocalMediaRow(
               msg, (name == null || name.isEmpty) ? null : name);
         }).toList());
@@ -1004,7 +1054,9 @@ class ChatDao {
       final user = row.readTableOrNull(db.localUsers);
       final name = user == null
           ? null
-          : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+          : ((user.preferredName ?? '').trim().isNotEmpty
+                  ? user.preferredName!.trim()
+                  : (user.pseudo.isNotEmpty ? user.pseudo : user.nom));
       return LocalMediaRow(msg, (name == null || name.isEmpty) ? null : name);
     }).toList();
   }

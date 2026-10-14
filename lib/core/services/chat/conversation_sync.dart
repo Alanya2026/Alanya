@@ -38,6 +38,7 @@ class ConversationSync {
     required ParseDate parseDate,
     required Future<void> Function(int convId) recompute,
     required Future<void> Function(Set<int> convIds) recomputeMany,
+    Future<void> Function(int convId, DateTime cutoff)? purgeBeforeCutoff,
   })  : _api = api,
         _dao = dao,
         _myId = myId,
@@ -46,7 +47,8 @@ class ConversationSync {
         _convToCompanion = convToCompanion,
         _parseDate = parseDate,
         _recompute = recompute,
-        _recomputeMany = recomputeMany;
+        _recomputeMany = recomputeMany,
+        _purgeBeforeCutoff = purgeBeforeCutoff;
 
   final ChatApi _api;
   final ChatDao _dao;
@@ -57,6 +59,11 @@ class ConversationSync {
   final ParseDate _parseDate;
   final Future<void> Function(int convId) _recompute;
   final Future<void> Function(Set<int> convIds) _recomputeMany;
+
+  /// Applique à la copie locale le curseur d'historique du serveur (« Effacer la
+  /// discussion » fait depuis un autre appareil pendant que celui-ci était
+  /// éteint). Facultatif : absent, rien n'est purgé.
+  final Future<void> Function(int convId, DateTime cutoff)? _purgeBeforeCutoff;
 
   Future<void> syncConversations() async {
     try {
@@ -113,6 +120,14 @@ class ConversationSync {
       final serverIds = companions.map((c) => c.conversID.value).toSet();
       await _dao.upsertConversations(companions);
       await _dao.deleteConversationsNotIn(serverIds);
+
+      final purge = _purgeBeforeCutoff;
+      if (purge != null) {
+        for (final e in entries) {
+          final cutoff = _parseDate(e.conv.myHistoryCutoffAt);
+          if (cutoff != null) await purge(e.conv.conversID, cutoff);
+        }
+      }
 
       // Pré-delta : recompute ciblé (pas recomputeAll) — convs modifiées
       // par le merge, hors celles où le serveur est en avance sur le local.
@@ -179,6 +194,7 @@ class ConversationSync {
     final convs = await _dao.getAllConversations();
     for (final c in convs) {
       if (c.lastMessageAt == null) continue;
+      if (_clearedByMe(c)) continue;
       if (await _dao.maxServerMsgId(c.conversID) > 0) continue;
       await syncMessages(c.conversID);
       ingested = true;
@@ -193,11 +209,18 @@ class ConversationSync {
     if (ingested) await syncGlobalDelta();
   }
 
+  /// Discussion effacée par moi et sans rien reçu depuis : aperçu vide malgré un
+  /// `lastMessageAt`. Il n'y a rien à précharger — le redemander à chaque
+  /// synchronisation de la liste serait une requête pour rien.
+  static bool _clearedByMe(LocalConversation c) =>
+      c.lastMessage == null && c.myHistoryCutoffAt != null;
+
   Future<Map<int, int>> _emptyConversationBootstrapCursors() async {
     final out = <int, int>{};
     final convs = await _dao.getAllConversations();
     for (final c in convs) {
       if (c.lastMessageAt == null) continue;
+      if (_clearedByMe(c)) continue;
       if (await _dao.maxServerMsgId(c.conversID) > 0) continue;
       out[c.conversID] = 0;
     }

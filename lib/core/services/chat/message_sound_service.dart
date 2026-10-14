@@ -48,21 +48,30 @@ class MessageSoundService {
       // média ne jouait pas car on arrivait d'un contexte média.
       // handleAudioSessionActivation:false → on ne touche pas à la session
       // audio globale (partagée avec les appels).
+      // androidApplyAudioAttributes:false → la session ne nous impose pas SES
+      // attributs. Sans lui, la première sonnerie ou le premier appel
+      // remplaçait nos attributs « notification » par « communication », que
+      // le mode silencieux ne coupe pas : les sons d'envoi et de réception
+      // jouaient téléphone en silencieux (groupe 3GI 2029, bug A8).
       _sentPlayer = AudioPlayer(
         handleInterruptions: false,
         handleAudioSessionActivation: false,
+        androidApplyAudioAttributes: false,
       );
       _receivedPlayer = AudioPlayer(
         handleInterruptions: false,
         handleAudioSessionActivation: false,
+        androidApplyAudioAttributes: false,
       );
       _qrScanSuccessPlayer = AudioPlayer(
         handleInterruptions: false,
         handleAudioSessionActivation: false,
+        androidApplyAudioAttributes: false,
       );
       _callEndPlayer = AudioPlayer(
         handleInterruptions: false,
         handleAudioSessionActivation: false,
+        androidApplyAudioAttributes: false,
       );
       await _sentPlayer!.setAndroidAudioAttributes(_uiAttributes);
       await _receivedPlayer!.setAndroidAudioAttributes(_uiAttributes);

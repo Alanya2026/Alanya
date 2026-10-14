@@ -218,9 +218,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                                         imageUrl: user.avatarUrl.isNotEmpty
                                             ? user.avatarUrl
                                             : null,
-                                        name: user.nom.isNotEmpty
-                                            ? user.nom
-                                            : user.pseudo,
+                                        name: user.displayName,
                                         size: AppSizes.avatarMd,
                                         qrBadge: user.addedViaQr == true,
                                       ),
@@ -249,9 +247,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          user.nom.isNotEmpty
-                                              ? user.nom
-                                              : user.pseudo,
+                                          user.displayName,
                                           style: context.text.titleSmall,
                                         ),
                                         if (user.pseudo.isNotEmpty)
