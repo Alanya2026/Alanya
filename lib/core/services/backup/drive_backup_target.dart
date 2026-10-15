@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 
@@ -119,16 +120,25 @@ class DriveBackupTarget implements BackupTarget {
       // rouvrir un sélecteur de compte à chaque sauvegarde automatique.
       final account =
           await (silent ? signIn.signInSilently() : signIn.signIn());
-      if (account == null) return null;
+      if (account == null) {
+        debugPrint('[DriveBackup] connexion (silent=$silent) : aucun compte '
+            'rendu — annulée par l\'inscrit ou fermée par Google');
+        return null;
+      }
 
       final client = await signIn.authenticatedClient();
-      if (client == null) return null;
+      if (client == null) {
+        debugPrint('[DriveBackup] ${account.email} : connecté mais aucun '
+            'jeton d\'accès Drive');
+        return null;
+      }
       return DriveBackupTarget(drive.DriveApi(client),
           accountEmail: account.email);
-    } catch (_) {
+    } catch (e) {
       // Rendu `null` plutôt que propagé : l'appelant traite déjà « pas de
-      // Drive » comme un cas normal, et distinguer ici la panne du refus ne
-      // changerait rien à ce qu'il en fait.
+      // Drive » comme un cas normal. Mais l'erreur est tracée : sans elle, un
+      // blocage côté Google se confond avec un simple « annuler ».
+      debugPrint('[DriveBackup] connexion (silent=$silent) échouée : $e');
       return null;
     }
   }

@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,6 +9,32 @@ plugins {
     id("com.google.firebase.crashlytics")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Clé de signature commune à toute l'équipe : `android/key.properties` et
+// `android/app/alanya-release.jks`, jamais commités (voir android/.gitignore),
+// transmis de la main à la main.
+//
+// Une seule clé, quelle que soit la machine qui compile. Avec la clé debug de
+// chaque PC, Google refusait la connexion Drive sur les APK compilés ailleurs
+// (« This android application is not registered to use OAuth2.0 ») et Android
+// refusait d'installer une mise à jour signée par un autre poste.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) load(FileInputStream(keystorePropertiesFile))
+}
+val hasSharedKey = keystorePropertiesFile.exists()
+
+// Une release sans la clé commune serait signée par une clé que Google ne
+// connaît pas : mieux vaut s'arrêter net que livrer un APK où Drive échoue.
+gradle.taskGraph.whenReady {
+    if (!hasSharedKey && allTasks.any { it.name.contains("Release") }) {
+        throw GradleException(
+            "android/key.properties introuvable : la version release doit être " +
+                "signée avec la clé commune d'Alanya. Demandez key.properties et " +
+                "alanya-release.jks à l'équipe."
+        )
+    }
 }
 
 android {
@@ -46,11 +75,27 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    signingConfigs {
+        if (hasSharedKey) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            // La clé commune aussi en debug : Drive fonctionne pendant le
+            // développement sur tous les postes, et passer d'une version debug
+            // à une release n'oblige pas à désinstaller. Sans la clé, la clé
+            // debug du poste reprend la main.
+            if (hasSharedKey) signingConfig = signingConfigs.getByName("release")
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (hasSharedKey) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
