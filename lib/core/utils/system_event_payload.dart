@@ -33,6 +33,10 @@ abstract final class SystemEvent {
   /// Capture d'écran d'une discussion à deux (POST /conversations/:id/screenshot).
   static const screenshot = 'screenshot';
 
+  /// Enregistrement vidéo de l'écran d'une discussion à deux
+  /// (POST /conversations/:id/screen-recording).
+  static const screenRecording = 'screen_recording';
+
   static const tripAlert = 'trip_alert';
   static const tripSos = 'trip_sos';
 
@@ -47,6 +51,7 @@ abstract final class SystemEvent {
     roleChanged,
     settingsChanged,
     screenshot,
+    screenRecording,
     tripAlert,
     tripSos,
   };
@@ -188,6 +193,11 @@ class SystemEventPayload {
       case SystemEvent.screenshot:
         return byMe ? l10n.sysScreenshotByMe : l10n.sysScreenshot(actor);
 
+      case SystemEvent.screenRecording:
+        return byMe
+            ? l10n.sysScreenRecordingByMe
+            : l10n.sysScreenRecording(actor);
+
       case SystemEvent.tripAlert:
         return byMe ? l10n.sysTripAlertByMe : l10n.sysTripAlert(actor);
 
@@ -317,6 +327,8 @@ class SystemEventPayload {
       // proche en pleine nuit.
       case SystemEvent.screenshot:
         return l10n.sysScreenshot(actor);
+      case SystemEvent.screenRecording:
+        return l10n.sysScreenRecording(actor);
       case SystemEvent.tripAlert:
         return l10n.tripsCardAlert(actor);
       case SystemEvent.tripSos:

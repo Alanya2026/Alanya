@@ -936,6 +936,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
         payload.event == SystemEvent.tripSos;
 
     final capture = payload.event == SystemEvent.screenshot;
+    final enregistrement = payload.event == SystemEvent.screenRecording;
 
     return Align(
       alignment: Alignment.center,
@@ -965,6 +966,11 @@ extension _ChatBubbles on _ChatDetailScreenState {
             ],
             if (capture) ...[
               Icon(Icons.screenshot_outlined,
+                  size: 14, color: context.colors.onSurfaceVariant),
+              const SizedBox(width: 5),
+            ],
+            if (enregistrement) ...[
+              Icon(Icons.videocam_outlined,
                   size: 14, color: context.colors.onSurfaceVariant),
               const SizedBox(width: 5),
             ],

@@ -2209,6 +2209,8 @@
   "clearChatMediaDone": "媒体文件已删除",
   "sysScreenshot": "{actor} 对此聊天进行了截屏",
   "sysScreenshotByMe": "您对此聊天进行了截屏",
+  "sysScreenRecording": "{actor} 对此聊天进行了录屏",
+  "sysScreenRecordingByMe": "您对此聊天进行了录屏",
   "renameContactTitle": "联系人名称",
   "renameContactHelper": "仅您可见。留空则恢复为个人资料名称。",
   "contactProfileSection": "个人资料",

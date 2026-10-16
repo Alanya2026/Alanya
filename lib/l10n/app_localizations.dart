@@ -12946,6 +12946,18 @@ abstract class AppLocalizations {
   /// **'Vous avez fait une capture d\'écran de cette discussion'**
   String get sysScreenshotByMe;
 
+  /// No description provided for @sysScreenRecording.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a enregistré l\'écran de cette discussion'**
+  String sysScreenRecording(String actor);
+
+  /// No description provided for @sysScreenRecordingByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez enregistré l\'écran de cette discussion'**
+  String get sysScreenRecordingByMe;
+
   /// No description provided for @renameContactTitle.
   ///
   /// In fr, this message translates to:

@@ -122,6 +122,10 @@ class TalkyChatApi implements ChatApi {
       _client.signalScreenshot(conversID);
 
   @override
+  Future<void> signalScreenRecording(int conversID) =>
+      _client.signalScreenRecording(conversID);
+
+  @override
   Future<Map<String, dynamic>> getDeletionsSince({int? after, int limit = 200}) =>
       _client.getDeletionsSince(after: after, limit: limit);
 

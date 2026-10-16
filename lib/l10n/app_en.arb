@@ -3283,6 +3283,15 @@
     }
   },
   "sysScreenshotByMe": "You took a screenshot of this chat",
+  "sysScreenRecording": "{actor} recorded the screen of this chat",
+  "@sysScreenRecording": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysScreenRecordingByMe": "You recorded the screen of this chat",
   "renameContactTitle": "Contact name",
   "renameContactHelper": "Only you can see it. Leave empty to go back to the profile name.",
   "contactProfileSection": "Profile",

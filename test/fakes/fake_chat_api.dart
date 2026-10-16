@@ -32,6 +32,10 @@ class FakeChatApi implements ChatApi {
   final List<int> screenshotSignals = [];
   Object? screenshotError;
 
+  /// Enregistrement d'écran : conversations signalées, erreur éventuelle.
+  final List<int> screenRecordingSignals = [];
+  Object? screenRecordingError;
+
   /// Rattrapage des suppressions : pages servies tour à tour, erreur éventuelle.
   final List<Map<String, dynamic>> deletionPages = [];
   final List<int?> deletionAfterArgs = [];
@@ -239,6 +243,13 @@ class FakeChatApi implements ChatApi {
     httpLog.add('signalScreenshot:$conversID');
     if (screenshotError != null) throw screenshotError!;
     screenshotSignals.add(conversID);
+  }
+
+  @override
+  Future<void> signalScreenRecording(int conversID) async {
+    httpLog.add('signalScreenRecording:$conversID');
+    if (screenRecordingError != null) throw screenRecordingError!;
+    screenRecordingSignals.add(conversID);
   }
 
   @override

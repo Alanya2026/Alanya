@@ -401,17 +401,29 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
 
   final ScreenshotWatcher _screenshotWatcher = ScreenshotWatcher();
   final ScreenshotAlertGate _screenshotGate = ScreenshotAlertGate();
+  final ScreenshotAlertGate _screenRecordingGate = ScreenshotAlertGate();
 
-  /// Capture de la discussion : prévient l'autre personne (discussion à deux
-  /// seulement ; ni groupe, ni conversation avec soi-même). Ignorée si un autre
-  /// écran est passé par-dessus la discussion.
-  void _onScreenshotDetected() {
+  /// Capture ou enregistrement de la discussion : prévient l'autre personne
+  /// (discussion à deux seulement ; ni groupe, ni conversation avec soi-même).
+  /// Ignoré si un autre écran est passé par-dessus la discussion.
+  int? _screenCaptureTarget() {
     final convId = _convId;
-    if (!mounted || convId == null) return;
-    if (widget.isGroup || widget.userId == null || _isSelfChat) return;
-    if (ModalRoute.of(context)?.isCurrent != true) return;
-    if (!_screenshotGate.allow()) return;
+    if (!mounted || convId == null) return null;
+    if (widget.isGroup || widget.userId == null || _isSelfChat) return null;
+    if (ModalRoute.of(context)?.isCurrent != true) return null;
+    return convId;
+  }
+
+  void _onScreenshotDetected() {
+    final convId = _screenCaptureTarget();
+    if (convId == null || !_screenshotGate.allow()) return;
     unawaited(_chat.repository.signalScreenshot(convId));
+  }
+
+  void _onScreenRecordingDetected() {
+    final convId = _screenCaptureTarget();
+    if (convId == null || !_screenRecordingGate.allow()) return;
+    unawaited(_chat.repository.signalScreenRecording(convId));
   }
 
   @override
@@ -426,7 +438,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         ? null
         : (me.nom.isNotEmpty ? me.nom : me.pseudo);
     _scrollController.addListener(_onScroll);
-    _screenshotWatcher.start(_onScreenshotDetected);
+    _screenshotWatcher.start(_onScreenshotDetected,
+        onScreenRecording: _onScreenRecordingDetected);
     WidgetsBinding.instance.addObserver(this);
     _init();
   }
