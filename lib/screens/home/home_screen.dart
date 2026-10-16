@@ -37,6 +37,9 @@ import '../../core/services/trip_repository.dart';
 import '../trips/trip_live_screen.dart';
 import '../../core/services/billing/entitlement_service.dart';
 import '../billing/subscription_screen.dart';
+import '../../core/services/safebox/safebox_controller.dart';
+import '../../providers/connectivity_provider.dart';
+import '../safebox/safebox_free_up_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.initialTab = 0});
@@ -129,8 +132,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       // Rattrapage idempotent si la livraison a été manquée (app tuée, etc.)
       unawaited(WelcomeDeliveryService.deliverAndOpenChat(context));
+
+      // Coffre-fort : les envois laissés en plan (application fermée, réseau
+      // perdu) reprennent dès l'ouverture, sans attendre qu'on ouvre le coffre,
+      // et à chaque retour du réseau.
+      _safebox = context.read<SafeboxController>()..ensureStarted();
+      _connectivity = context.read<ConnectivityProvider>()
+        ..addBackOnlineListener(_onSafeboxNetworkBack);
     });
   }
+
+  SafeboxController? _safebox;
+  ConnectivityProvider? _connectivity;
+
+  void _onSafeboxNetworkBack() => _safebox?.onNetworkBack();
 
   @override
   void dispose() {
@@ -139,6 +154,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _pageController.dispose();
     _callService.removeListener(_onCallStatusChanged);
     _notifActionSub?.cancel();
+    _connectivity?.removeBackOnlineListener(_onSafeboxNetworkBack);
     HomeScreen.tabRequest.removeListener(_onTabRequested);
     super.dispose();
   }
@@ -340,6 +356,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (action.fromTap) _switchToTab(_tabStatuses);
     } else if (type.startsWith('trip_')) {
       unawaited(_handleTripNotification(action));
+    } else if (type == 'safebox_quota') {
+      // Alerte d'espace du coffre-fort (safebox_controller.dart).
+      if (action.fromTap) {
+        unawaited(Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SafeboxFreeUpScreen()),
+        ));
+      }
     } else if (type == 'verification_update') {
       // La coche a changé (abonnement ou révocation admin) : relire les droits.
       // Plus d'écran de dossier — un appui mène à « Mon abonnement ».

@@ -226,6 +226,28 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeInsufficientRole;
     case 'FIELD_IMMUTABLE':
       return l10n.errCodeFieldImmutable;
+
+    // Coffre-fort (backend : docs/error-codes.md, section Coffre-fort). Les
+    // codes SAFEBOX_SOURCE_* viennent du gestionnaire d'envoi, pas du serveur.
+    case 'SAFEBOX_UNAVAILABLE':
+      return l10n.safeboxUnavailable;
+    case 'SAFEBOX_QUOTA_EXCEEDED':
+      return l10n.safeboxQuotaExceeded;
+    case 'SAFEBOX_NAME_TAKEN':
+      return l10n.safeboxNameTaken;
+    case 'SAFEBOX_TOO_DEEP':
+      return l10n.safeboxTooDeep;
+    case 'SAFEBOX_FOLDER_LIMIT':
+      return l10n.safeboxFolderLimit;
+    case 'SAFEBOX_INVALID_NAME':
+      return l10n.safeboxInvalidName;
+    case 'SAFEBOX_ROOT_LOCKED':
+      return l10n.safeboxRootLocked;
+    case 'SAFEBOX_INVALID_MOVE':
+      return l10n.safeboxInvalidMove;
+    case 'SAFEBOX_SOURCE_CHANGED':
+    case 'SAFEBOX_SOURCE_MISSING':
+      return l10n.safeboxSourceChanged;
   }
   return null;
 }

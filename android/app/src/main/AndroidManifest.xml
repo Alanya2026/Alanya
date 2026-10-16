@@ -189,6 +189,12 @@
             android:name=".ExportForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <!-- Envois vers le coffre-fort : garde l'application vivante quand
+             l'inscrit passe à autre chose (SafeboxTransferService.kt). -->
+        <service
+            android:name=".SafeboxTransferService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <receiver
             android:name=".NotificationActionReceiver"
             android:exported="false" />

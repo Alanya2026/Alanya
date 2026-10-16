@@ -117,6 +117,22 @@ class MainActivity : FlutterFragmentActivity() {
                         ExportForegroundService.stop(applicationContext)
                         result.success(true)
                     }
+                    // Envois vers le coffre-fort : même raison, voir
+                    // SafeboxTransferService.kt.
+                    "safeboxServiceUpdate" -> {
+                        SafeboxTransferService.startOrUpdate(
+                            applicationContext,
+                            call.argument<String>("channelName") ?: "",
+                            call.argument<String>("title") ?: "",
+                            call.argument<String>("text") ?: "",
+                            call.argument<Int>("percent") ?: -1,
+                        )
+                        result.success(true)
+                    }
+                    "safeboxServiceStop" -> {
+                        SafeboxTransferService.stop(applicationContext)
+                        result.success(true)
+                    }
                     "saveToDownloads" -> {
                         try {
                             val path = call.argument<String>("path")

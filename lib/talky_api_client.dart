@@ -25,6 +25,7 @@ import 'core/services/storage_service.dart';
 import 'core/utils/app_log.dart';
 import 'core/utils/media_upload_limits.dart';
 import 'core/utils/upload_stall_guard.dart';
+import 'core/services/safebox/safebox_models.dart';
 import 'api/socket_auth_recovery.dart';
 
 part 'api/auth_api.dart';
@@ -46,6 +47,7 @@ part 'api/reports_api.dart';
 part 'api/backup_api.dart';
 part 'api/billing_api.dart';
 part 'api/alanya_phone_api.dart';
+part 'api/safebox_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production

@@ -25,6 +25,7 @@ import '../home/glass_nav_bar.dart' show kGlassNavBarSpace;
 import 'settings_screen.dart';
 import 'account_hub_screen.dart';
 import 'edit_profile_screen.dart';
+import '../safebox/safebox_home_screen.dart';
 import 'my_media_screen.dart';
 import 'contact_lists_screen.dart';
 import '../trips/trips_hub_screen.dart';
@@ -333,6 +334,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       context,
                       MaterialPageRoute(
                           builder: (_) => const MyMediaScreen()),
+                    );
+                  }),
+                  const Divider(height: 1),
+                  // À côté de « Mes médias », dont il est le pendant durable :
+                  // les médias de discussion expirent, le coffre garde.
+                  _buildMenuItem(Icons.lock_outline, context.l10n.safeboxTitle, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const SafeboxHomeScreen()),
                     );
                   }),
                   const Divider(height: 1),

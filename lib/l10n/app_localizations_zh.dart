@@ -7223,4 +7223,292 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contactYourNameHelpEmpty => '用您选择的名称保存此联系人。对方永远看不到。';
+
+  @override
+  String get safeboxTitle => '保险箱';
+
+  @override
+  String get safeboxSubtitle => '您的重要文件，已加密并无限期保存';
+
+  @override
+  String get safeboxRootAlbums => '相册';
+
+  @override
+  String get safeboxRootVideos => '视频';
+
+  @override
+  String get safeboxRootAudios => '音频';
+
+  @override
+  String get safeboxRootDocuments => '文档';
+
+  @override
+  String safeboxQuotaUsed(String used, String total) {
+    return '已使用 $used，共 $total';
+  }
+
+  @override
+  String safeboxQuotaTrash(String size) {
+    return '其中回收站占用 $size';
+  }
+
+  @override
+  String safeboxRootSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个文件 · $size',
+      zero: '没有文件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxTrash => '回收站';
+
+  @override
+  String get safeboxTrashEmpty => '回收站是空的';
+
+  @override
+  String safeboxTrashExplain(int days) {
+    return '已删除的项目会在这里保留 $days 天，之后将被永久删除。它们会占用您的空间。';
+  }
+
+  @override
+  String safeboxTrashPurgeOn(String date) {
+    return '将于 $date 永久删除';
+  }
+
+  @override
+  String get safeboxEmptyTrash => '清空回收站';
+
+  @override
+  String get safeboxEmptyTrashConfirm => '回收站中的所有内容将被永久删除，且无法恢复。';
+
+  @override
+  String get safeboxRestore => '恢复';
+
+  @override
+  String get safeboxRestored => '已恢复';
+
+  @override
+  String get safeboxDeleteForever => '永久删除';
+
+  @override
+  String safeboxDeleteForeverConfirm(String name) {
+    return '“$name”将被永久删除。';
+  }
+
+  @override
+  String get safeboxFolderEmpty => '此文件夹为空';
+
+  @override
+  String get safeboxFolderEmptyHint => '点击 + 按钮添加文件或创建子文件夹。';
+
+  @override
+  String get safeboxAddFiles => '添加文件';
+
+  @override
+  String get safeboxNewFolder => '新建文件夹';
+
+  @override
+  String get safeboxFolderName => '文件夹名称';
+
+  @override
+  String get safeboxFileName => '文件名';
+
+  @override
+  String get safeboxCreate => '创建';
+
+  @override
+  String get safeboxRename => '重命名';
+
+  @override
+  String get safeboxMove => '移动';
+
+  @override
+  String get safeboxMoveHere => '移到此处';
+
+  @override
+  String get safeboxDelete => '删除';
+
+  @override
+  String get safeboxMovedToTrash => '已移至回收站';
+
+  @override
+  String get safeboxOpen => '打开';
+
+  @override
+  String get safeboxExport => '保存或分享';
+
+  @override
+  String safeboxDownloading(int percent) {
+    return '正在下载… $percent%';
+  }
+
+  @override
+  String get safeboxCompressTitle => '如何上传这些文件？';
+
+  @override
+  String safeboxCompressOriginal(String size) {
+    return '原始质量 · $size';
+  }
+
+  @override
+  String get safeboxCompressOriginalHint => '文件将按原样上传。';
+
+  @override
+  String safeboxCompressReduced(String size) {
+    return '压缩 · 约 $size';
+  }
+
+  @override
+  String safeboxCompressReducedHint(String saved) {
+    return '约节省 $saved。照片、视频或音频的质量依然良好。';
+  }
+
+  @override
+  String get safeboxCompressRemember => '记住我的选择';
+
+  @override
+  String get safeboxSend => '上传';
+
+  @override
+  String get safeboxPreparing => '正在准备…';
+
+  @override
+  String get safeboxTransfers => '上传任务';
+
+  @override
+  String safeboxTransfersCount(int count) {
+    return '$count 个上传任务进行中';
+  }
+
+  @override
+  String get safeboxUploadQueued => '排队中';
+
+  @override
+  String safeboxUploadRunning(int percent) {
+    return '已上传 $percent%';
+  }
+
+  @override
+  String get safeboxUploadWaitingNetwork => '等待网络';
+
+  @override
+  String get safeboxUploadFailed => '上传失败';
+
+  @override
+  String get safeboxUploadDone => '已添加到保险箱';
+
+  @override
+  String get safeboxRetry => '重试';
+
+  @override
+  String get safeboxCancelUpload => '取消上传';
+
+  @override
+  String get safeboxClearFinished => '清除列表';
+
+  @override
+  String get safeboxNoTransfers => '没有正在进行的上传';
+
+  @override
+  String safeboxWrongFamily(String folder) {
+    return '此文件应放入“$folder”。';
+  }
+
+  @override
+  String safeboxFileTooLarge(String max) {
+    return '文件过大（最多 $max）。';
+  }
+
+  @override
+  String get safeboxEmptyFile => '空文件：没有可上传的内容。';
+
+  @override
+  String get safeboxQuotaExceeded => '您的保险箱已满。请释放空间或升级到 Alanya Plus。';
+
+  @override
+  String get safeboxSourceChanged => '文件在上传过程中被修改或删除。请重新添加。';
+
+  @override
+  String get safeboxUnavailable => '保险箱暂时不可用，请稍后再试。';
+
+  @override
+  String get safeboxNameTaken => '此文件夹中已有同名项目。';
+
+  @override
+  String get safeboxTooDeep => '子文件夹层级过多。';
+
+  @override
+  String get safeboxFolderLimit => '您已达到文件夹数量上限。';
+
+  @override
+  String get safeboxInvalidName => '名称无效。';
+
+  @override
+  String get safeboxRootLocked => '四个主文件夹无法重命名、移动或删除。';
+
+  @override
+  String get safeboxInvalidMove => '文件夹不能移动到其自身内部。';
+
+  @override
+  String get safeboxOpenFailed => '无法在此手机上打开此文件。';
+
+  @override
+  String get safeboxGoPlus => '查看 Alanya Plus';
+
+  @override
+  String safeboxFreeSpace(String size) {
+    return '剩余 $size';
+  }
+
+  @override
+  String get safeboxNotifChannel => '上传到保险箱';
+
+  @override
+  String get safeboxAlertChannel => '保险箱空间';
+
+  @override
+  String get safeboxAlert80Title => '您的保险箱已使用 80%';
+
+  @override
+  String get safeboxAlert95Title => '您的保险箱即将用满（95%）';
+
+  @override
+  String get safeboxAlert100Title => '您的保险箱已满';
+
+  @override
+  String get safeboxAlertBody => '请释放空间或升级到 Alanya Plus 以继续添加文件。';
+
+  @override
+  String get safeboxFreeUpTitle => '释放空间';
+
+  @override
+  String get safeboxFreeUpLargest => '最大的文件';
+
+  @override
+  String safeboxFreeUpTrash(String size) {
+    return '清空回收站 · $size';
+  }
+
+  @override
+  String safeboxFreeUpSelected(int count, String size) {
+    return '已选择 $count 个文件 · $size';
+  }
+
+  @override
+  String get safeboxFreeUpDelete => '移至回收站';
+
+  @override
+  String get safeboxFreeUpHint => '在清空回收站之前，回收站中的文件仍会占用您的空间。';
+
+  @override
+  String get safeboxFreeUpNothing => '您的保险箱中没有文件。';
+
+  @override
+  String safeboxInFolder(String folder) {
+    return '位于 $folder';
+  }
 }

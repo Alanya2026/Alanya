@@ -1,0 +1,395 @@
+//  Modèles du coffre-fort, tels que les rend l'API `/api/safebox`
+//  (backend : src/services/safebox/service.js).
+
+import 'dart:convert';
+import 'dart:typed_data';
+
+/// Les quatre dossiers racines, dans l'ordre d'affichage.
+enum SafeboxRoot {
+  albums,
+  videos,
+  audios,
+  documents;
+
+  static SafeboxRoot? fromName(String? name) {
+    for (final r in values) {
+      if (r.name == name) return r;
+    }
+    return null;
+  }
+}
+
+int _int(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
+int? _intOrNull(dynamic v) => v == null ? null : _int(v);
+DateTime? _date(dynamic v) => v == null ? null : DateTime.tryParse('$v')?.toLocal();
+Map<String, dynamic> _map(dynamic v) => v is Map ? Map<String, dynamic>.from(v) : const {};
+List<Map<String, dynamic>> _list(dynamic v) =>
+    v is List ? v.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : const [];
+
+class SafeboxRootUsage {
+  const SafeboxRootUsage({required this.bytes, required this.files});
+  final int bytes;
+  final int files;
+}
+
+class SafeboxQuota {
+  const SafeboxQuota({
+    required this.quotaBytes,
+    required this.usedBytes,
+    required this.pendingBytes,
+    required this.trashBytes,
+    required this.byRoot,
+  });
+
+  factory SafeboxQuota.fromJson(Map<String, dynamic> j) {
+    final par = _map(j['byRoot']);
+    return SafeboxQuota(
+      quotaBytes: _int(j['quotaBytes']),
+      usedBytes: _int(j['usedBytes']),
+      pendingBytes: _int(j['pendingBytes']),
+      trashBytes: _int(j['trashBytes']),
+      byRoot: {
+        for (final r in SafeboxRoot.values)
+          r: SafeboxRootUsage(
+            bytes: _int(_map(par[r.name])['bytes']),
+            files: _int(_map(par[r.name])['files']),
+          ),
+      },
+    );
+  }
+
+  final int quotaBytes;
+
+  /// Tout ce qui compte : fichiers, corbeille et envois en cours.
+  final int usedBytes;
+  final int pendingBytes;
+  final int trashBytes;
+  final Map<SafeboxRoot, SafeboxRootUsage> byRoot;
+
+  int get freeBytes => quotaBytes > usedBytes ? quotaBytes - usedBytes : 0;
+
+  /// Part utilisée, entre 0 et 1.
+  double get ratio => quotaBytes <= 0 ? 1 : (usedBytes / quotaBytes).clamp(0.0, 1.0);
+}
+
+class SafeboxLimits {
+  const SafeboxLimits({
+    required this.maxFileBytes,
+    required this.blockBytes,
+    required this.maxPreviewBytes,
+    required this.maxDepth,
+    required this.maxFolders,
+    required this.folderNameMax,
+    required this.fileNameMax,
+    required this.extensions,
+  });
+
+  factory SafeboxLimits.fromJson(Map<String, dynamic> j) {
+    final ext = _map(j['extensions']);
+    return SafeboxLimits(
+      maxFileBytes: _int(j['maxFileBytes']),
+      blockBytes: _int(j['blockBytes']),
+      maxPreviewBytes: _int(j['maxPreviewBytes']),
+      maxDepth: _int(j['maxDepth']),
+      maxFolders: _int(j['maxFolders']),
+      folderNameMax: _int(j['folderNameMax']),
+      fileNameMax: _int(j['fileNameMax']),
+      extensions: {
+        for (final r in SafeboxRoot.values)
+          r: (ext[r.name] is List ? (ext[r.name] as List).map((e) => '$e'.toLowerCase()).toList() : <String>[]),
+      },
+    );
+  }
+
+  final int maxFileBytes;
+  final int blockBytes;
+  final int maxPreviewBytes;
+  final int maxDepth;
+  final int maxFolders;
+  final int folderNameMax;
+  final int fileNameMax;
+  final Map<SafeboxRoot, List<String>> extensions;
+
+  /// Même règle que le serveur : la première famille qui connaît l'extension,
+  /// sinon « documents ».
+  SafeboxRoot familyOf(String fileName) {
+    final ext = safeboxExtensionOf(fileName);
+    for (final r in const [SafeboxRoot.albums, SafeboxRoot.videos, SafeboxRoot.audios]) {
+      if (ext.isNotEmpty && (extensions[r] ?? const []).contains(ext)) return r;
+    }
+    return SafeboxRoot.documents;
+  }
+}
+
+/// Extension en minuscules, sans le point (même règle que le serveur).
+String safeboxExtensionOf(String name) {
+  final point = name.lastIndexOf('.');
+  if (point <= 0 || point == name.length - 1) return '';
+  final ext = name.substring(point + 1).toLowerCase();
+  return RegExp(r'^[a-z0-9]{1,10}$').hasMatch(ext) ? ext : '';
+}
+
+class SafeboxOverview {
+  const SafeboxOverview({required this.quota, required this.rootIds, required this.limits});
+
+  factory SafeboxOverview.fromJson(Map<String, dynamic> j) => SafeboxOverview(
+        quota: SafeboxQuota.fromJson(_map(j['quota'])),
+        rootIds: {
+          for (final r in _list(j['roots']))
+            if (SafeboxRoot.fromName(r['root'] as String?) != null)
+              SafeboxRoot.fromName(r['root'] as String?)!: _int(r['id']),
+        },
+        limits: SafeboxLimits.fromJson(_map(j['limits'])),
+      );
+
+  final SafeboxQuota quota;
+  final Map<SafeboxRoot, int> rootIds;
+  final SafeboxLimits limits;
+}
+
+class SafeboxFolder {
+  const SafeboxFolder({
+    required this.id,
+    required this.parentId,
+    required this.root,
+    required this.name,
+    required this.depth,
+    this.createdAt,
+    this.updatedAt,
+    this.trashedAt,
+    this.purgeAt,
+    this.storedBytes,
+    this.fileCount,
+  });
+
+  factory SafeboxFolder.fromJson(Map<String, dynamic> j) => SafeboxFolder(
+        id: _int(j['id']),
+        parentId: _intOrNull(j['parentId']),
+        root: SafeboxRoot.fromName(j['root'] as String?) ?? SafeboxRoot.documents,
+        name: j['name'] as String?,
+        depth: _int(j['depth']),
+        createdAt: _date(j['createdAt']),
+        updatedAt: _date(j['updatedAt']),
+        trashedAt: _date(j['trashedAt']),
+        purgeAt: _date(j['purgeAt']),
+        storedBytes: _intOrNull(j['storedBytes']),
+        fileCount: _intOrNull(j['files']),
+      );
+
+  final int id;
+  final int? parentId;
+  final SafeboxRoot root;
+
+  /// Nul pour un dossier racine : l'application affiche son nom traduit.
+  final String? name;
+  final int depth;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? trashedAt;
+  final DateTime? purgeAt;
+  final int? storedBytes;
+  final int? fileCount;
+
+  bool get isRoot => parentId == null;
+}
+
+class SafeboxFile {
+  const SafeboxFile({
+    required this.id,
+    required this.folderId,
+    required this.name,
+    required this.ext,
+    required this.mime,
+    required this.family,
+    required this.plainBytes,
+    required this.storedBytes,
+    required this.originalBytes,
+    required this.compressed,
+    required this.cipherFormat,
+    required this.key,
+    required this.previewUrl,
+    this.createdAt,
+    this.updatedAt,
+    this.trashedAt,
+    this.purgeAt,
+    this.folderName,
+  });
+
+  factory SafeboxFile.fromJson(Map<String, dynamic> j) => SafeboxFile(
+        id: _int(j['id']),
+        folderId: _int(j['folderId']),
+        name: '${j['name'] ?? ''}',
+        ext: '${j['ext'] ?? ''}',
+        mime: j['mime'] as String?,
+        family: SafeboxRoot.fromName(j['family'] as String?) ?? SafeboxRoot.documents,
+        plainBytes: _int(j['plainBytes']),
+        storedBytes: _int(j['storedBytes']),
+        originalBytes: _intOrNull(j['originalBytes']),
+        compressed: j['compressed'] == true,
+        cipherFormat: '${j['cipherFormat'] ?? ''}',
+        key: j['key'] is String ? base64Decode(j['key'] as String) : null,
+        previewUrl: j['previewUrl'] as String?,
+        createdAt: _date(j['createdAt']),
+        updatedAt: _date(j['updatedAt']),
+        trashedAt: _date(j['trashedAt']),
+        purgeAt: _date(j['purgeAt']),
+        folderName: j['folderName'] as String?,
+      );
+
+  final int id;
+  final int folderId;
+  final String name;
+  final String ext;
+  final String? mime;
+  final SafeboxRoot family;
+
+  /// Taille en clair : celle que l'inscrit retrouvera.
+  final int plainBytes;
+
+  /// Ce qui compte dans l'espace (chiffré, aperçu compris).
+  final int storedBytes;
+  final int? originalBytes;
+  final bool compressed;
+  final String cipherFormat;
+
+  /// Clé du fichier ; le serveur ne la rend qu'à son propriétaire.
+  final Uint8List? key;
+
+  /// Adresse signée de l'aperçu chiffré, valable une heure.
+  final String? previewUrl;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? trashedAt;
+  final DateTime? purgeAt;
+
+  /// Nom de son dossier, rendu par « Libérer de l'espace » ; nul pour un
+  /// dossier racine (nom traduit par l'application).
+  final String? folderName;
+}
+
+class SafeboxFolderPage {
+  const SafeboxFolderPage({
+    required this.folder,
+    required this.breadcrumbs,
+    required this.folders,
+    required this.files,
+    required this.nextCursor,
+  });
+
+  factory SafeboxFolderPage.fromJson(Map<String, dynamic> j) => SafeboxFolderPage(
+        folder: SafeboxFolder.fromJson(_map(j['folder'])),
+        breadcrumbs: _list(j['breadcrumbs']).map(SafeboxFolder.fromJson).toList(),
+        folders: _list(j['folders']).map(SafeboxFolder.fromJson).toList(),
+        files: _list(j['files']).map(SafeboxFile.fromJson).toList(),
+        nextCursor: _intOrNull(j['nextCursor']),
+      );
+
+  final SafeboxFolder folder;
+  final List<SafeboxFolder> breadcrumbs;
+  final List<SafeboxFolder> folders;
+  final List<SafeboxFile> files;
+  final int? nextCursor;
+}
+
+/// Adresse signée d'un bloc (ou de l'aperçu, `n == 0`).
+class SafeboxSignedBlock {
+  const SafeboxSignedBlock({required this.n, required this.size, required this.url});
+
+  factory SafeboxSignedBlock.fromJson(Map<String, dynamic> j) =>
+      SafeboxSignedBlock(n: _int(j['n']), size: _int(j['size']), url: '${j['url']}');
+
+  final int n;
+  final int size;
+  final String url;
+}
+
+class SafeboxUploadTicket {
+  const SafeboxUploadTicket({
+    required this.fileId,
+    required this.blockSize,
+    required this.blockCount,
+    required this.size,
+    required this.blocks,
+    required this.preview,
+    required this.urlTtlSeconds,
+  });
+
+  factory SafeboxUploadTicket.fromJson(Map<String, dynamic> j) => SafeboxUploadTicket(
+        fileId: _int(j['fileId']),
+        blockSize: _int(j['blockSize']),
+        blockCount: _int(j['blockCount']),
+        size: _int(j['size']),
+        blocks: _list(j['blocks']).map(SafeboxSignedBlock.fromJson).toList(),
+        preview: j['preview'] is Map ? SafeboxSignedBlock.fromJson(_map(j['preview'])) : null,
+        urlTtlSeconds: _int(j['urlTtlSeconds']),
+      );
+
+  final int fileId;
+  final int blockSize;
+  final int blockCount;
+  final int size;
+  final List<SafeboxSignedBlock> blocks;
+  final SafeboxSignedBlock? preview;
+  final int urlTtlSeconds;
+}
+
+class SafeboxUploadStatus {
+  const SafeboxUploadStatus({
+    required this.blockCount,
+    required this.received,
+    required this.missing,
+    required this.previewMissing,
+  });
+
+  factory SafeboxUploadStatus.fromJson(Map<String, dynamic> j) => SafeboxUploadStatus(
+        blockCount: _int(j['blockCount']),
+        received: (j['received'] as List? ?? const []).map(_int).toList(),
+        missing: (j['missing'] as List? ?? const []).map(_int).toList(),
+        previewMissing: j['previewMissing'] == true,
+      );
+
+  final int blockCount;
+  final List<int> received;
+  final List<int> missing;
+  final bool previewMissing;
+}
+
+class SafeboxDownloadPlan {
+  const SafeboxDownloadPlan({
+    required this.file,
+    required this.key,
+    required this.blockSize,
+    required this.blockCount,
+    required this.blocks,
+  });
+
+  factory SafeboxDownloadPlan.fromJson(Map<String, dynamic> j) => SafeboxDownloadPlan(
+        file: SafeboxFile.fromJson(_map(j['file'])),
+        key: base64Decode('${j['key']}'),
+        blockSize: _int(j['blockSize']),
+        blockCount: _int(j['blockCount']),
+        blocks: _list(j['blocks']).map(SafeboxSignedBlock.fromJson).toList(),
+      );
+
+  final SafeboxFile file;
+  final Uint8List key;
+  final int blockSize;
+  final int blockCount;
+  final List<SafeboxSignedBlock> blocks;
+}
+
+class SafeboxTrash {
+  const SafeboxTrash({required this.trashDays, required this.folders, required this.files});
+
+  factory SafeboxTrash.fromJson(Map<String, dynamic> j) => SafeboxTrash(
+        trashDays: _int(j['trashDays']),
+        folders: _list(j['folders']).map(SafeboxFolder.fromJson).toList(),
+        files: _list(j['files']).map(SafeboxFile.fromJson).toList(),
+      );
+
+  final int trashDays;
+  final List<SafeboxFolder> folders;
+  final List<SafeboxFile> files;
+
+  bool get isEmpty => folders.isEmpty && files.isEmpty;
+}

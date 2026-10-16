@@ -7662,4 +7662,317 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get contactYourNameHelpEmpty =>
       'Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais.';
+
+  @override
+  String get safeboxTitle => 'Coffre-fort';
+
+  @override
+  String get safeboxSubtitle =>
+      'Vos fichiers importants, chiffrés et gardés sans limite de durée';
+
+  @override
+  String get safeboxRootAlbums => 'Albums';
+
+  @override
+  String get safeboxRootVideos => 'Vidéos';
+
+  @override
+  String get safeboxRootAudios => 'Audios';
+
+  @override
+  String get safeboxRootDocuments => 'Documents';
+
+  @override
+  String safeboxQuotaUsed(String used, String total) {
+    return '$used utilisés sur $total';
+  }
+
+  @override
+  String safeboxQuotaTrash(String size) {
+    return 'dont $size dans la corbeille';
+  }
+
+  @override
+  String safeboxRootSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers · $size',
+      one: '1 fichier · $size',
+      zero: 'Aucun fichier',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxTrash => 'Corbeille';
+
+  @override
+  String get safeboxTrashEmpty => 'La corbeille est vide';
+
+  @override
+  String safeboxTrashExplain(int days) {
+    return 'Les éléments supprimés restent ici $days jours, puis partent définitivement. Ils comptent dans votre espace.';
+  }
+
+  @override
+  String safeboxTrashPurgeOn(String date) {
+    return 'Supprimé définitivement le $date';
+  }
+
+  @override
+  String get safeboxEmptyTrash => 'Vider la corbeille';
+
+  @override
+  String get safeboxEmptyTrashConfirm =>
+      'Tout le contenu de la corbeille sera supprimé définitivement. Impossible de revenir en arrière.';
+
+  @override
+  String get safeboxRestore => 'Restaurer';
+
+  @override
+  String get safeboxRestored => 'Restauré';
+
+  @override
+  String get safeboxDeleteForever => 'Supprimer définitivement';
+
+  @override
+  String safeboxDeleteForeverConfirm(String name) {
+    return '« $name » sera supprimé définitivement.';
+  }
+
+  @override
+  String get safeboxFolderEmpty => 'Ce dossier est vide';
+
+  @override
+  String get safeboxFolderEmptyHint =>
+      'Ajoutez des fichiers ou créez un sous-dossier avec le bouton +.';
+
+  @override
+  String get safeboxAddFiles => 'Ajouter des fichiers';
+
+  @override
+  String get safeboxNewFolder => 'Nouveau dossier';
+
+  @override
+  String get safeboxFolderName => 'Nom du dossier';
+
+  @override
+  String get safeboxFileName => 'Nom du fichier';
+
+  @override
+  String get safeboxCreate => 'Créer';
+
+  @override
+  String get safeboxRename => 'Renommer';
+
+  @override
+  String get safeboxMove => 'Déplacer';
+
+  @override
+  String get safeboxMoveHere => 'Déplacer ici';
+
+  @override
+  String get safeboxDelete => 'Supprimer';
+
+  @override
+  String get safeboxMovedToTrash => 'Déplacé dans la corbeille';
+
+  @override
+  String get safeboxOpen => 'Ouvrir';
+
+  @override
+  String get safeboxExport => 'Enregistrer ou partager';
+
+  @override
+  String safeboxDownloading(int percent) {
+    return 'Téléchargement… $percent %';
+  }
+
+  @override
+  String get safeboxCompressTitle => 'Comment envoyer ces fichiers ?';
+
+  @override
+  String safeboxCompressOriginal(String size) {
+    return 'Qualité d\'origine · $size';
+  }
+
+  @override
+  String get safeboxCompressOriginalHint => 'Le fichier part tel quel.';
+
+  @override
+  String safeboxCompressReduced(String size) {
+    return 'Compressé · environ $size';
+  }
+
+  @override
+  String safeboxCompressReducedHint(String saved) {
+    return 'Environ $saved économisés. La qualité reste bonne pour une photo, une vidéo ou un son.';
+  }
+
+  @override
+  String get safeboxCompressRemember => 'Retenir mon choix';
+
+  @override
+  String get safeboxSend => 'Envoyer';
+
+  @override
+  String get safeboxPreparing => 'Préparation…';
+
+  @override
+  String get safeboxTransfers => 'Envois en cours';
+
+  @override
+  String safeboxTransfersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count envois en cours',
+      one: '1 envoi en cours',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxUploadQueued => 'En attente';
+
+  @override
+  String safeboxUploadRunning(int percent) {
+    return '$percent % envoyés';
+  }
+
+  @override
+  String get safeboxUploadWaitingNetwork => 'En attente du réseau';
+
+  @override
+  String get safeboxUploadFailed => 'Échec de l\'envoi';
+
+  @override
+  String get safeboxUploadDone => 'Ajouté au coffre';
+
+  @override
+  String get safeboxRetry => 'Réessayer';
+
+  @override
+  String get safeboxCancelUpload => 'Annuler l\'envoi';
+
+  @override
+  String get safeboxClearFinished => 'Effacer la liste';
+
+  @override
+  String get safeboxNoTransfers => 'Aucun envoi en cours';
+
+  @override
+  String safeboxWrongFamily(String folder) {
+    return 'Ce fichier va dans « $folder ».';
+  }
+
+  @override
+  String safeboxFileTooLarge(String max) {
+    return 'Fichier trop volumineux ($max au plus).';
+  }
+
+  @override
+  String get safeboxEmptyFile => 'Fichier vide : rien à envoyer.';
+
+  @override
+  String get safeboxQuotaExceeded =>
+      'Votre coffre est plein. Libérez de l\'espace ou passez à Alanya Plus.';
+
+  @override
+  String get safeboxSourceChanged =>
+      'Le fichier a été modifié ou supprimé pendant l\'envoi. Ajoutez-le à nouveau.';
+
+  @override
+  String get safeboxUnavailable =>
+      'Le coffre-fort est momentanément indisponible. Réessayez plus tard.';
+
+  @override
+  String get safeboxNameTaken => 'Ce nom est déjà pris dans ce dossier.';
+
+  @override
+  String get safeboxTooDeep => 'Trop de niveaux de sous-dossiers.';
+
+  @override
+  String get safeboxFolderLimit =>
+      'Vous avez atteint le nombre maximal de dossiers.';
+
+  @override
+  String get safeboxInvalidName => 'Nom invalide.';
+
+  @override
+  String get safeboxRootLocked =>
+      'Les quatre dossiers principaux ne peuvent être ni renommés, ni déplacés, ni supprimés.';
+
+  @override
+  String get safeboxInvalidMove =>
+      'Un dossier ne peut pas être rangé dans lui-même.';
+
+  @override
+  String get safeboxOpenFailed =>
+      'Impossible d\'ouvrir ce fichier sur ce téléphone.';
+
+  @override
+  String get safeboxGoPlus => 'Voir Alanya Plus';
+
+  @override
+  String safeboxFreeSpace(String size) {
+    return '$size libres';
+  }
+
+  @override
+  String get safeboxNotifChannel => 'Envois vers le coffre-fort';
+
+  @override
+  String get safeboxAlertChannel => 'Espace du coffre-fort';
+
+  @override
+  String get safeboxAlert80Title => 'Votre coffre est rempli à 80 %';
+
+  @override
+  String get safeboxAlert95Title => 'Votre coffre est presque plein (95 %)';
+
+  @override
+  String get safeboxAlert100Title => 'Votre coffre est plein';
+
+  @override
+  String get safeboxAlertBody =>
+      'Libérez de l\'espace ou passez à Alanya Plus pour continuer à déposer vos fichiers.';
+
+  @override
+  String get safeboxFreeUpTitle => 'Libérer de l\'espace';
+
+  @override
+  String get safeboxFreeUpLargest => 'Les plus gros fichiers';
+
+  @override
+  String safeboxFreeUpTrash(String size) {
+    return 'Vider la corbeille · $size';
+  }
+
+  @override
+  String safeboxFreeUpSelected(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers sélectionnés · $size',
+      one: '1 fichier sélectionné · $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxFreeUpDelete => 'Mettre à la corbeille';
+
+  @override
+  String get safeboxFreeUpHint =>
+      'Les fichiers mis à la corbeille comptent encore dans votre espace jusqu\'à ce que la corbeille soit vidée.';
+
+  @override
+  String get safeboxFreeUpNothing => 'Aucun fichier dans votre coffre.';
+
+  @override
+  String safeboxInFolder(String folder) {
+    return 'dans $folder';
+  }
 }

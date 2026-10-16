@@ -7571,4 +7571,315 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get contactYourNameHelpEmpty =>
       'Save this contact under the name you choose. They will never see it.';
+
+  @override
+  String get safeboxTitle => 'Safe';
+
+  @override
+  String get safeboxSubtitle =>
+      'Your important files, encrypted and kept with no time limit';
+
+  @override
+  String get safeboxRootAlbums => 'Albums';
+
+  @override
+  String get safeboxRootVideos => 'Videos';
+
+  @override
+  String get safeboxRootAudios => 'Audio';
+
+  @override
+  String get safeboxRootDocuments => 'Documents';
+
+  @override
+  String safeboxQuotaUsed(String used, String total) {
+    return '$used used of $total';
+  }
+
+  @override
+  String safeboxQuotaTrash(String size) {
+    return 'including $size in the trash';
+  }
+
+  @override
+  String safeboxRootSummary(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files · $size',
+      one: '1 file · $size',
+      zero: 'No files',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxTrash => 'Trash';
+
+  @override
+  String get safeboxTrashEmpty => 'The trash is empty';
+
+  @override
+  String safeboxTrashExplain(int days) {
+    return 'Deleted items stay here for $days days, then are removed for good. They count towards your space.';
+  }
+
+  @override
+  String safeboxTrashPurgeOn(String date) {
+    return 'Deleted for good on $date';
+  }
+
+  @override
+  String get safeboxEmptyTrash => 'Empty trash';
+
+  @override
+  String get safeboxEmptyTrashConfirm =>
+      'Everything in the trash will be deleted for good. This cannot be undone.';
+
+  @override
+  String get safeboxRestore => 'Restore';
+
+  @override
+  String get safeboxRestored => 'Restored';
+
+  @override
+  String get safeboxDeleteForever => 'Delete for good';
+
+  @override
+  String safeboxDeleteForeverConfirm(String name) {
+    return '\"$name\" will be deleted for good.';
+  }
+
+  @override
+  String get safeboxFolderEmpty => 'This folder is empty';
+
+  @override
+  String get safeboxFolderEmptyHint =>
+      'Add files or create a subfolder with the + button.';
+
+  @override
+  String get safeboxAddFiles => 'Add files';
+
+  @override
+  String get safeboxNewFolder => 'New folder';
+
+  @override
+  String get safeboxFolderName => 'Folder name';
+
+  @override
+  String get safeboxFileName => 'File name';
+
+  @override
+  String get safeboxCreate => 'Create';
+
+  @override
+  String get safeboxRename => 'Rename';
+
+  @override
+  String get safeboxMove => 'Move';
+
+  @override
+  String get safeboxMoveHere => 'Move here';
+
+  @override
+  String get safeboxDelete => 'Delete';
+
+  @override
+  String get safeboxMovedToTrash => 'Moved to the trash';
+
+  @override
+  String get safeboxOpen => 'Open';
+
+  @override
+  String get safeboxExport => 'Save or share';
+
+  @override
+  String safeboxDownloading(int percent) {
+    return 'Downloading… $percent%';
+  }
+
+  @override
+  String get safeboxCompressTitle => 'How should these files be sent?';
+
+  @override
+  String safeboxCompressOriginal(String size) {
+    return 'Original quality · $size';
+  }
+
+  @override
+  String get safeboxCompressOriginalHint => 'The file is sent as is.';
+
+  @override
+  String safeboxCompressReduced(String size) {
+    return 'Compressed · about $size';
+  }
+
+  @override
+  String safeboxCompressReducedHint(String saved) {
+    return 'About $saved saved. Quality stays good for a photo, video or sound.';
+  }
+
+  @override
+  String get safeboxCompressRemember => 'Remember my choice';
+
+  @override
+  String get safeboxSend => 'Upload';
+
+  @override
+  String get safeboxPreparing => 'Preparing…';
+
+  @override
+  String get safeboxTransfers => 'Uploads';
+
+  @override
+  String safeboxTransfersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count uploads in progress',
+      one: '1 upload in progress',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxUploadQueued => 'Queued';
+
+  @override
+  String safeboxUploadRunning(int percent) {
+    return '$percent% uploaded';
+  }
+
+  @override
+  String get safeboxUploadWaitingNetwork => 'Waiting for network';
+
+  @override
+  String get safeboxUploadFailed => 'Upload failed';
+
+  @override
+  String get safeboxUploadDone => 'Added to the safe';
+
+  @override
+  String get safeboxRetry => 'Retry';
+
+  @override
+  String get safeboxCancelUpload => 'Cancel upload';
+
+  @override
+  String get safeboxClearFinished => 'Clear list';
+
+  @override
+  String get safeboxNoTransfers => 'No uploads in progress';
+
+  @override
+  String safeboxWrongFamily(String folder) {
+    return 'This file belongs in \"$folder\".';
+  }
+
+  @override
+  String safeboxFileTooLarge(String max) {
+    return 'File too large ($max max).';
+  }
+
+  @override
+  String get safeboxEmptyFile => 'Empty file: nothing to upload.';
+
+  @override
+  String get safeboxQuotaExceeded =>
+      'Your safe is full. Free up space or upgrade to Alanya Plus.';
+
+  @override
+  String get safeboxSourceChanged =>
+      'The file was changed or deleted during the upload. Add it again.';
+
+  @override
+  String get safeboxUnavailable =>
+      'The safe is temporarily unavailable. Try again later.';
+
+  @override
+  String get safeboxNameTaken => 'This name is already used in this folder.';
+
+  @override
+  String get safeboxTooDeep => 'Too many levels of subfolders.';
+
+  @override
+  String get safeboxFolderLimit =>
+      'You have reached the maximum number of folders.';
+
+  @override
+  String get safeboxInvalidName => 'Invalid name.';
+
+  @override
+  String get safeboxRootLocked =>
+      'The four main folders cannot be renamed, moved or deleted.';
+
+  @override
+  String get safeboxInvalidMove => 'A folder cannot be moved into itself.';
+
+  @override
+  String get safeboxOpenFailed => 'This file cannot be opened on this phone.';
+
+  @override
+  String get safeboxGoPlus => 'See Alanya Plus';
+
+  @override
+  String safeboxFreeSpace(String size) {
+    return '$size free';
+  }
+
+  @override
+  String get safeboxNotifChannel => 'Uploads to the safe';
+
+  @override
+  String get safeboxAlertChannel => 'Safe storage';
+
+  @override
+  String get safeboxAlert80Title => 'Your safe is 80% full';
+
+  @override
+  String get safeboxAlert95Title => 'Your safe is almost full (95%)';
+
+  @override
+  String get safeboxAlert100Title => 'Your safe is full';
+
+  @override
+  String get safeboxAlertBody =>
+      'Free up space or upgrade to Alanya Plus to keep adding files.';
+
+  @override
+  String get safeboxFreeUpTitle => 'Free up space';
+
+  @override
+  String get safeboxFreeUpLargest => 'Largest files';
+
+  @override
+  String safeboxFreeUpTrash(String size) {
+    return 'Empty the trash · $size';
+  }
+
+  @override
+  String safeboxFreeUpSelected(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files selected · $size',
+      one: '1 file selected · $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxFreeUpDelete => 'Move to the trash';
+
+  @override
+  String get safeboxFreeUpHint =>
+      'Files in the trash still count towards your space until the trash is emptied.';
+
+  @override
+  String get safeboxFreeUpNothing => 'No files in your safe.';
+
+  @override
+  String safeboxInFolder(String folder) {
+    return 'in $folder';
+  }
 }

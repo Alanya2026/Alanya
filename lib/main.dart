@@ -16,6 +16,7 @@ import 'providers/chat_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/admin_provider.dart';
+import 'core/services/safebox/safebox_controller.dart';
 import 'core/services/billing/entitlement_service.dart';
 import 'core/services/billing/entitlements.dart';
 import 'widgets/billing/paywall_sheet.dart' show showPaywall;
@@ -342,6 +343,9 @@ class _TalkyAppState extends State<TalkyApp> {
             create: (_) => MediaDownloadPreferences()..load()),
         Provider<TalkyApiClient>.value(value: _apiClient),
         ChangeNotifierProvider<EntitlementService>.value(value: _entitlements),
+        // Au niveau de l'application : un envoi vers le coffre-fort continue
+        // quand l'inscrit quitte l'écran du coffre.
+        ChangeNotifierProvider(create: (_) => SafeboxController(api: _apiClient)),
         Provider<AppDatabase>.value(value: _database),
         Provider<LocalCacheRepository>.value(value: _localCache),
         Provider<TripRepository>.value(value: _trips),

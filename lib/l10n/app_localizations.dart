@@ -13053,6 +13053,498 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais.'**
   String get contactYourNameHelpEmpty;
+
+  /// Titre de l'écran du coffre-fort et entrée du menu du profil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coffre-fort'**
+  String get safeboxTitle;
+
+  /// No description provided for @safeboxSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos fichiers importants, chiffrés et gardés sans limite de durée'**
+  String get safeboxSubtitle;
+
+  /// No description provided for @safeboxRootAlbums.
+  ///
+  /// In fr, this message translates to:
+  /// **'Albums'**
+  String get safeboxRootAlbums;
+
+  /// No description provided for @safeboxRootVideos.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vidéos'**
+  String get safeboxRootVideos;
+
+  /// No description provided for @safeboxRootAudios.
+  ///
+  /// In fr, this message translates to:
+  /// **'Audios'**
+  String get safeboxRootAudios;
+
+  /// No description provided for @safeboxRootDocuments.
+  ///
+  /// In fr, this message translates to:
+  /// **'Documents'**
+  String get safeboxRootDocuments;
+
+  /// No description provided for @safeboxQuotaUsed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{used} utilisés sur {total}'**
+  String safeboxQuotaUsed(String used, String total);
+
+  /// No description provided for @safeboxQuotaTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'dont {size} dans la corbeille'**
+  String safeboxQuotaTrash(String size);
+
+  /// No description provided for @safeboxRootSummary.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun fichier} =1{1 fichier · {size}} other{{count} fichiers · {size}}}'**
+  String safeboxRootSummary(int count, String size);
+
+  /// No description provided for @safeboxTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Corbeille'**
+  String get safeboxTrash;
+
+  /// No description provided for @safeboxTrashEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'La corbeille est vide'**
+  String get safeboxTrashEmpty;
+
+  /// No description provided for @safeboxTrashExplain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les éléments supprimés restent ici {days} jours, puis partent définitivement. Ils comptent dans votre espace.'**
+  String safeboxTrashExplain(int days);
+
+  /// No description provided for @safeboxTrashPurgeOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimé définitivement le {date}'**
+  String safeboxTrashPurgeOn(String date);
+
+  /// No description provided for @safeboxEmptyTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vider la corbeille'**
+  String get safeboxEmptyTrash;
+
+  /// No description provided for @safeboxEmptyTrashConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout le contenu de la corbeille sera supprimé définitivement. Impossible de revenir en arrière.'**
+  String get safeboxEmptyTrashConfirm;
+
+  /// No description provided for @safeboxRestore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restaurer'**
+  String get safeboxRestore;
+
+  /// No description provided for @safeboxRestored.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restauré'**
+  String get safeboxRestored;
+
+  /// No description provided for @safeboxDeleteForever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer définitivement'**
+  String get safeboxDeleteForever;
+
+  /// No description provided for @safeboxDeleteForeverConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'« {name} » sera supprimé définitivement.'**
+  String safeboxDeleteForeverConfirm(String name);
+
+  /// No description provided for @safeboxFolderEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce dossier est vide'**
+  String get safeboxFolderEmpty;
+
+  /// No description provided for @safeboxFolderEmptyHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez des fichiers ou créez un sous-dossier avec le bouton +.'**
+  String get safeboxFolderEmptyHint;
+
+  /// No description provided for @safeboxAddFiles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des fichiers'**
+  String get safeboxAddFiles;
+
+  /// No description provided for @safeboxNewFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau dossier'**
+  String get safeboxNewFolder;
+
+  /// No description provided for @safeboxFolderName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du dossier'**
+  String get safeboxFolderName;
+
+  /// No description provided for @safeboxFileName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du fichier'**
+  String get safeboxFileName;
+
+  /// No description provided for @safeboxCreate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer'**
+  String get safeboxCreate;
+
+  /// No description provided for @safeboxRename.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renommer'**
+  String get safeboxRename;
+
+  /// No description provided for @safeboxMove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déplacer'**
+  String get safeboxMove;
+
+  /// No description provided for @safeboxMoveHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déplacer ici'**
+  String get safeboxMoveHere;
+
+  /// No description provided for @safeboxDelete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get safeboxDelete;
+
+  /// No description provided for @safeboxMovedToTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déplacé dans la corbeille'**
+  String get safeboxMovedToTrash;
+
+  /// No description provided for @safeboxOpen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir'**
+  String get safeboxOpen;
+
+  /// No description provided for @safeboxExport.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer ou partager'**
+  String get safeboxExport;
+
+  /// No description provided for @safeboxDownloading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement… {percent} %'**
+  String safeboxDownloading(int percent);
+
+  /// No description provided for @safeboxCompressTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment envoyer ces fichiers ?'**
+  String get safeboxCompressTitle;
+
+  /// No description provided for @safeboxCompressOriginal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qualité d\'origine · {size}'**
+  String safeboxCompressOriginal(String size);
+
+  /// No description provided for @safeboxCompressOriginalHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le fichier part tel quel.'**
+  String get safeboxCompressOriginalHint;
+
+  /// No description provided for @safeboxCompressReduced.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compressé · environ {size}'**
+  String safeboxCompressReduced(String size);
+
+  /// No description provided for @safeboxCompressReducedHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Environ {saved} économisés. La qualité reste bonne pour une photo, une vidéo ou un son.'**
+  String safeboxCompressReducedHint(String saved);
+
+  /// No description provided for @safeboxCompressRemember.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retenir mon choix'**
+  String get safeboxCompressRemember;
+
+  /// No description provided for @safeboxSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer'**
+  String get safeboxSend;
+
+  /// No description provided for @safeboxPreparing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparation…'**
+  String get safeboxPreparing;
+
+  /// No description provided for @safeboxTransfers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envois en cours'**
+  String get safeboxTransfers;
+
+  /// No description provided for @safeboxTransfersCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 envoi en cours} other{{count} envois en cours}}'**
+  String safeboxTransfersCount(int count);
+
+  /// No description provided for @safeboxUploadQueued.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get safeboxUploadQueued;
+
+  /// No description provided for @safeboxUploadRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'{percent} % envoyés'**
+  String safeboxUploadRunning(int percent);
+
+  /// No description provided for @safeboxUploadWaitingNetwork.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente du réseau'**
+  String get safeboxUploadWaitingNetwork;
+
+  /// No description provided for @safeboxUploadFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échec de l\'envoi'**
+  String get safeboxUploadFailed;
+
+  /// No description provided for @safeboxUploadDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouté au coffre'**
+  String get safeboxUploadDone;
+
+  /// No description provided for @safeboxRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get safeboxRetry;
+
+  /// No description provided for @safeboxCancelUpload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler l\'envoi'**
+  String get safeboxCancelUpload;
+
+  /// No description provided for @safeboxClearFinished.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la liste'**
+  String get safeboxClearFinished;
+
+  /// No description provided for @safeboxNoTransfers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun envoi en cours'**
+  String get safeboxNoTransfers;
+
+  /// No description provided for @safeboxWrongFamily.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier va dans « {folder} ».'**
+  String safeboxWrongFamily(String folder);
+
+  /// No description provided for @safeboxFileTooLarge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier trop volumineux ({max} au plus).'**
+  String safeboxFileTooLarge(String max);
+
+  /// No description provided for @safeboxEmptyFile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier vide : rien à envoyer.'**
+  String get safeboxEmptyFile;
+
+  /// No description provided for @safeboxQuotaExceeded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre coffre est plein. Libérez de l\'espace ou passez à Alanya Plus.'**
+  String get safeboxQuotaExceeded;
+
+  /// No description provided for @safeboxSourceChanged.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le fichier a été modifié ou supprimé pendant l\'envoi. Ajoutez-le à nouveau.'**
+  String get safeboxSourceChanged;
+
+  /// No description provided for @safeboxUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le coffre-fort est momentanément indisponible. Réessayez plus tard.'**
+  String get safeboxUnavailable;
+
+  /// No description provided for @safeboxNameTaken.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce nom est déjà pris dans ce dossier.'**
+  String get safeboxNameTaken;
+
+  /// No description provided for @safeboxTooDeep.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de niveaux de sous-dossiers.'**
+  String get safeboxTooDeep;
+
+  /// No description provided for @safeboxFolderLimit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez atteint le nombre maximal de dossiers.'**
+  String get safeboxFolderLimit;
+
+  /// No description provided for @safeboxInvalidName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom invalide.'**
+  String get safeboxInvalidName;
+
+  /// No description provided for @safeboxRootLocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les quatre dossiers principaux ne peuvent être ni renommés, ni déplacés, ni supprimés.'**
+  String get safeboxRootLocked;
+
+  /// No description provided for @safeboxInvalidMove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un dossier ne peut pas être rangé dans lui-même.'**
+  String get safeboxInvalidMove;
+
+  /// No description provided for @safeboxOpenFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir ce fichier sur ce téléphone.'**
+  String get safeboxOpenFailed;
+
+  /// No description provided for @safeboxGoPlus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir Alanya Plus'**
+  String get safeboxGoPlus;
+
+  /// No description provided for @safeboxFreeSpace.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} libres'**
+  String safeboxFreeSpace(String size);
+
+  /// Nom du canal Android de la notification d'envoi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envois vers le coffre-fort'**
+  String get safeboxNotifChannel;
+
+  /// No description provided for @safeboxAlertChannel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Espace du coffre-fort'**
+  String get safeboxAlertChannel;
+
+  /// No description provided for @safeboxAlert80Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre coffre est rempli à 80 %'**
+  String get safeboxAlert80Title;
+
+  /// No description provided for @safeboxAlert95Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre coffre est presque plein (95 %)'**
+  String get safeboxAlert95Title;
+
+  /// No description provided for @safeboxAlert100Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre coffre est plein'**
+  String get safeboxAlert100Title;
+
+  /// No description provided for @safeboxAlertBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérez de l\'espace ou passez à Alanya Plus pour continuer à déposer vos fichiers.'**
+  String get safeboxAlertBody;
+
+  /// No description provided for @safeboxFreeUpTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérer de l\'espace'**
+  String get safeboxFreeUpTitle;
+
+  /// No description provided for @safeboxFreeUpLargest.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les plus gros fichiers'**
+  String get safeboxFreeUpLargest;
+
+  /// No description provided for @safeboxFreeUpTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vider la corbeille · {size}'**
+  String safeboxFreeUpTrash(String size);
+
+  /// No description provided for @safeboxFreeUpSelected.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier sélectionné · {size}} other{{count} fichiers sélectionnés · {size}}}'**
+  String safeboxFreeUpSelected(int count, String size);
+
+  /// No description provided for @safeboxFreeUpDelete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à la corbeille'**
+  String get safeboxFreeUpDelete;
+
+  /// No description provided for @safeboxFreeUpHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fichiers mis à la corbeille comptent encore dans votre espace jusqu\'à ce que la corbeille soit vidée.'**
+  String get safeboxFreeUpHint;
+
+  /// No description provided for @safeboxFreeUpNothing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun fichier dans votre coffre.'**
+  String get safeboxFreeUpNothing;
+
+  /// No description provided for @safeboxInFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'dans {folder}'**
+  String safeboxInFolder(String folder);
 }
 
 class _AppLocalizationsDelegate
