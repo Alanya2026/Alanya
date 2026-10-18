@@ -8062,4 +8062,59 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get safeboxShareRemovedByModeration =>
       'File removed by Alanya moderation';
+
+  @override
+  String get safeboxNoteTitle => 'Comment';
+
+  @override
+  String get safeboxNoteAdd => 'Add a comment';
+
+  @override
+  String get safeboxNoteEdit => 'Edit comment';
+
+  @override
+  String get safeboxNoteHint => 'Write a comment (optional)';
+
+  @override
+  String get safeboxNotePrivate =>
+      'Only visible in your safe: it is not sent with the photo when you share it.';
+
+  @override
+  String get safeboxNoteRecord => 'Record audio (5 min max)';
+
+  @override
+  String get safeboxNoteStop => 'Stop';
+
+  @override
+  String get safeboxNoteRedo => 'Redo';
+
+  @override
+  String get safeboxNoteDeleteAudio => 'Delete audio';
+
+  @override
+  String safeboxNoteAudio(String duration) {
+    return 'Audio comment · $duration';
+  }
+
+  @override
+  String safeboxNoteRecording(String elapsed) {
+    return 'Recording · $elapsed / 5:00';
+  }
+
+  @override
+  String get safeboxNoteSaved => 'Comment saved';
+
+  @override
+  String get safeboxNoteTooLong =>
+      'Comment too long: 200 characters and 5 minutes of audio at most.';
+
+  @override
+  String get safeboxNoteUnavailable =>
+      'Comments are only available for photos.';
+
+  @override
+  String get safeboxNoteAudioFailed => 'Could not play the audio.';
+
+  @override
+  String get safeboxOpenWith => 'Open with…';
 }

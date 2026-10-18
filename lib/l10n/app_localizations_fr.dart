@@ -8158,4 +8158,59 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get safeboxShareRemovedByModeration =>
       'Fichier retiré par la modération d\'Alanya';
+
+  @override
+  String get safeboxNoteTitle => 'Commentaire';
+
+  @override
+  String get safeboxNoteAdd => 'Ajouter un commentaire';
+
+  @override
+  String get safeboxNoteEdit => 'Modifier le commentaire';
+
+  @override
+  String get safeboxNoteHint => 'Écrire un commentaire (facultatif)';
+
+  @override
+  String get safeboxNotePrivate =>
+      'Visible seulement dans votre coffre : il ne part pas avec la photo quand vous l\'envoyez.';
+
+  @override
+  String get safeboxNoteRecord => 'Enregistrer un audio (5 min au plus)';
+
+  @override
+  String get safeboxNoteStop => 'Arrêter';
+
+  @override
+  String get safeboxNoteRedo => 'Refaire';
+
+  @override
+  String get safeboxNoteDeleteAudio => 'Supprimer l\'audio';
+
+  @override
+  String safeboxNoteAudio(String duration) {
+    return 'Commentaire audio · $duration';
+  }
+
+  @override
+  String safeboxNoteRecording(String elapsed) {
+    return 'Enregistrement · $elapsed / 5:00';
+  }
+
+  @override
+  String get safeboxNoteSaved => 'Commentaire enregistré';
+
+  @override
+  String get safeboxNoteTooLong =>
+      'Commentaire trop long : 200 caractères et 5 minutes d\'audio au plus.';
+
+  @override
+  String get safeboxNoteUnavailable =>
+      'Les commentaires sont réservés aux photos.';
+
+  @override
+  String get safeboxNoteAudioFailed => 'Impossible de lire l\'audio.';
+
+  @override
+  String get safeboxOpenWith => 'Ouvrir avec…';
 }

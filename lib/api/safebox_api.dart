@@ -63,6 +63,37 @@ extension SafeboxApi on TalkyApiClient {
   Future<void> trashSafeboxFile(int fileId) =>
       _safeboxJson(() => _client.delete(_safebox('/files/$fileId'), headers: _headers));
 
+  // ── Commentaire d'une photo (privé) ──────────────────────────────────────
+
+  /// Texte du commentaire ; null ou vide l'efface. Rend le commentaire, ou null.
+  Future<SafeboxNote?> setSafeboxNoteText(int fileId, String? text) async => SafeboxNote.fromJson(
+        (await _safeboxJson(() => _client.put(
+              _safebox('/files/$fileId/note'),
+              headers: _headers,
+              body: jsonEncode({'text': text}),
+            )))['note'],
+      );
+
+  /// Réserve la place de l'audio (5 minutes au plus) : adresse d'envoi à taille exacte.
+  Future<String> reserveSafeboxNoteAudio(int fileId, {required int size, required int plainSize, required int durationMs}) async =>
+      '${(await _safeboxJson(() => _client.post(
+            _safebox('/files/$fileId/note/audio'),
+            headers: _headers,
+            body: jsonEncode({'size': size, 'plainSize': plainSize, 'durationMs': durationMs}),
+          )))['url']}';
+
+  Future<SafeboxNote?> completeSafeboxNoteAudio(int fileId, Uint8List key) async => SafeboxNote.fromJson(
+        (await _safeboxJson(() => _client.post(
+              _safebox('/files/$fileId/note/audio/complete'),
+              headers: _headers,
+              body: jsonEncode({'key': base64Encode(key)}),
+            )))['note'],
+      );
+
+  Future<SafeboxNote?> deleteSafeboxNoteAudio(int fileId) async => SafeboxNote.fromJson(
+        (await _safeboxJson(() => _client.delete(_safebox('/files/$fileId/note/audio'), headers: _headers)))['note'],
+      );
+
   Future<SafeboxFile> restoreSafeboxFile(int fileId) async => SafeboxFile.fromJson(
         await _safeboxJson(() => _client.post(_safebox('/files/$fileId/restore'), headers: _headers)),
       );

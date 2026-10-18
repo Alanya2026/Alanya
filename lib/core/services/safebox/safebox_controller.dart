@@ -5,8 +5,10 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -401,6 +403,51 @@ class SafeboxController extends ChangeNotifier {
   Future<File> downloadShare(SafeboxShareInfo info) async {
     final f = await downloads.fetchShare(info);
     unawaited(shareInfo(info.id, refresh: true));
+    return f;
+  }
+
+  // ── Commentaire d'une photo (privé) ──────────────────────────────────────
+
+  /// Bloc de stockage de l'audio : un seul, l'audio fait au plus 6 Mio.
+  static const int _blocAudio = 8 << 20;
+
+  Future<SafeboxNote?> saveNoteText(SafeboxFile file, String? text) => _api.setSafeboxNoteText(file.id, text);
+
+  /// Chiffre l'audio sur le téléphone (clé neuve, format SBX1), l'envoie
+  /// directement chez MEGA, puis le fait vérifier par le serveur.
+  Future<SafeboxNote?> saveNoteAudio(SafeboxFile file, File audio, int durationMs) async {
+    final clair = await audio.readAsBytes();
+    final cle = safeboxNewFileKey();
+    final plan = safeboxPlanBlock(1, plainSize: clair.length, blockSize: _blocAudio);
+    final chiffre = await safeboxEncryptBlock(cle, clair, plan);
+    final url = await _api.reserveSafeboxNoteAudio(
+      file.id,
+      size: chiffre.length,
+      plainSize: clair.length,
+      durationMs: durationMs,
+    );
+    await _api.putSafeboxBlock(url, chiffre);
+    final note = await _api.completeSafeboxNoteAudio(file.id, cle);
+    unawaited(refreshOverview());
+    return note;
+  }
+
+  Future<SafeboxNote?> deleteNoteAudio(SafeboxFile file) async {
+    final note = await _api.deleteSafeboxNoteAudio(file.id);
+    unawaited(refreshOverview());
+    return note;
+  }
+
+  /// L'audio déchiffré dans un fichier temporaire, pour l'écouter. Le
+  /// lecteur le supprime en se fermant.
+  Future<File> noteAudioFile(int fileId, SafeboxNoteAudio audio) async {
+    final recu = BytesBuilder(copy: false);
+    await _api.getSafeboxBlock(audio.url, onBytes: recu.add);
+    final plan = safeboxPlanBlock(1, plainSize: audio.plainBytes, blockSize: _blocAudio);
+    final clair = await safeboxDecryptBlock(audio.key, recu.takeBytes(), plan);
+    final dir = await getTemporaryDirectory();
+    final f = File('${dir.path}/coffre_commentaire_${fileId}_${DateTime.now().millisecondsSinceEpoch}.m4a');
+    await f.writeAsBytes(clair, flush: true);
     return f;
   }
 

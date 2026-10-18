@@ -269,3 +269,32 @@ class SafeboxLostBadge extends StatelessWidget {
         ],
       );
 }
+
+/// Une ligne qui rappelle le commentaire d'une photo dans la liste : le début
+/// du texte, et la durée de l'audio s'il y en a un.
+class SafeboxNoteLine extends StatelessWidget {
+  const SafeboxNoteLine({super.key, required this.note});
+  final SafeboxNote note;
+
+  @override
+  Widget build(BuildContext context) {
+    final couleur = context.colors.onSurfaceVariant;
+    final texte = note.text?.replaceAll('\n', ' ');
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(note.audio != null && texte == null ? Icons.mic_none : Icons.chat_bubble_outline, size: 14, color: couleur),
+        AppSpacing.hGapXs,
+        if (texte != null)
+          Flexible(
+            child: Text(texte, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: context.text.bodySmall?.copyWith(color: couleur, fontStyle: FontStyle.italic)),
+          ),
+        if (note.audio != null) ...[
+          if (texte != null) ...[AppSpacing.hGapXs, Icon(Icons.mic_none, size: 14, color: couleur)],
+          Text(' ${note.audio!.durationLabel}', style: context.text.bodySmall?.copyWith(color: couleur)),
+        ],
+      ],
+    );
+  }
+}

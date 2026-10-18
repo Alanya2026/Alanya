@@ -250,6 +250,10 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.safeboxSourceChanged;
     case 'SAFEBOX_FILE_LOST':
       return l10n.safeboxFileLostBody;
+    case 'SAFEBOX_NOTE_TOO_LONG':
+      return l10n.safeboxNoteTooLong;
+    case 'SAFEBOX_NOTE_UNAVAILABLE':
+      return l10n.safeboxNoteUnavailable;
   }
   return null;
 }

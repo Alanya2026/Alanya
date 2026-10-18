@@ -13797,6 +13797,102 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fichier retiré par la modération d\'Alanya'**
   String get safeboxShareRemovedByModeration;
+
+  /// No description provided for @safeboxNoteTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commentaire'**
+  String get safeboxNoteTitle;
+
+  /// No description provided for @safeboxNoteAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un commentaire'**
+  String get safeboxNoteAdd;
+
+  /// No description provided for @safeboxNoteEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le commentaire'**
+  String get safeboxNoteEdit;
+
+  /// No description provided for @safeboxNoteHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écrire un commentaire (facultatif)'**
+  String get safeboxNoteHint;
+
+  /// No description provided for @safeboxNotePrivate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible seulement dans votre coffre : il ne part pas avec la photo quand vous l\'envoyez.'**
+  String get safeboxNotePrivate;
+
+  /// No description provided for @safeboxNoteRecord.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer un audio (5 min au plus)'**
+  String get safeboxNoteRecord;
+
+  /// No description provided for @safeboxNoteStop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrêter'**
+  String get safeboxNoteStop;
+
+  /// No description provided for @safeboxNoteRedo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Refaire'**
+  String get safeboxNoteRedo;
+
+  /// No description provided for @safeboxNoteDeleteAudio.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer l\'audio'**
+  String get safeboxNoteDeleteAudio;
+
+  /// No description provided for @safeboxNoteAudio.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commentaire audio · {duration}'**
+  String safeboxNoteAudio(String duration);
+
+  /// No description provided for @safeboxNoteRecording.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrement · {elapsed} / 5:00'**
+  String safeboxNoteRecording(String elapsed);
+
+  /// No description provided for @safeboxNoteSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commentaire enregistré'**
+  String get safeboxNoteSaved;
+
+  /// No description provided for @safeboxNoteTooLong.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commentaire trop long : 200 caractères et 5 minutes d\'audio au plus.'**
+  String get safeboxNoteTooLong;
+
+  /// No description provided for @safeboxNoteUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les commentaires sont réservés aux photos.'**
+  String get safeboxNoteUnavailable;
+
+  /// No description provided for @safeboxNoteAudioFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire l\'audio.'**
+  String get safeboxNoteAudioFailed;
+
+  /// No description provided for @safeboxOpenWith.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir avec…'**
+  String get safeboxOpenWith;
 }
 
 class _AppLocalizationsDelegate

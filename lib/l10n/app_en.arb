@@ -3424,5 +3424,21 @@
   "safeboxFileLost": "Damaged file",
   "safeboxFileLostBody": "This file is damaged: its content was lost by our storage provider and cannot be recovered. Delete it to free up its space.",
   "safeboxShareLost": "Damaged file, cannot be recovered",
-  "safeboxShareRemovedByModeration": "File removed by Alanya moderation"
+  "safeboxShareRemovedByModeration": "File removed by Alanya moderation",
+  "safeboxNoteTitle": "Comment",
+  "safeboxNoteAdd": "Add a comment",
+  "safeboxNoteEdit": "Edit comment",
+  "safeboxNoteHint": "Write a comment (optional)",
+  "safeboxNotePrivate": "Only visible in your safe: it is not sent with the photo when you share it.",
+  "safeboxNoteRecord": "Record audio (5 min max)",
+  "safeboxNoteStop": "Stop",
+  "safeboxNoteRedo": "Redo",
+  "safeboxNoteDeleteAudio": "Delete audio",
+  "safeboxNoteAudio": "Audio comment · {duration}",
+  "safeboxNoteRecording": "Recording · {elapsed} / 5:00",
+  "safeboxNoteSaved": "Comment saved",
+  "safeboxNoteTooLong": "Comment too long: 200 characters and 5 minutes of audio at most.",
+  "safeboxNoteUnavailable": "Comments are only available for photos.",
+  "safeboxNoteAudioFailed": "Could not play the audio.",
+  "safeboxOpenWith": "Open with…"
 }

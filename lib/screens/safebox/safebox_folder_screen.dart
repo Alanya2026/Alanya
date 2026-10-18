@@ -20,6 +20,8 @@ import '../../l10n/app_localizations.dart';
 import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_chat_picker.dart';
+import 'safebox_note_widgets.dart';
+import 'safebox_photo_screen.dart';
 import 'safebox_compression_sheet.dart';
 import 'safebox_move_picker.dart';
 import 'safebox_transfers_sheet.dart';
@@ -243,6 +245,19 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     if (r.type != ResultType.done && mounted) safeboxSnack(context, context.l10n.safeboxOpenFailed, error: true);
   }
 
+  /// Une photo s'ouvre dans l'application, avec son commentaire ; les autres
+  /// fichiers, dans l'application du téléphone qui sait les lire.
+  Future<void> _ouvrirFichier(SafeboxFile f) async {
+    if (f.family != SafeboxRoot.albums) return _ouvrir(f);
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => SafeboxPhotoScreen(file: f)));
+    if (mounted) await _charger(); // le commentaire a pu changer
+  }
+
+  Future<void> _commenter(SafeboxFile f) async {
+    final r = await showSafeboxNoteEditor(context, f);
+    if (r != null && mounted) await _charger();
+  }
+
   Future<void> _exporter(SafeboxFile f) async {
     final fichier = await _telecharger(f);
     if (fichier == null) return;
@@ -318,6 +333,12 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
             ListTile(title: Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: ctx.text.titleSmall)),
             const Divider(height: 1),
             ListTile(leading: const Icon(Icons.open_in_new), title: Text(l10n.safeboxOpen), onTap: () => Navigator.pop(ctx, 'ouvrir')),
+            if (f.family == SafeboxRoot.albums)
+              ListTile(
+                leading: const Icon(Icons.add_comment_outlined),
+                title: Text(f.note == null ? l10n.safeboxNoteAdd : l10n.safeboxNoteEdit),
+                onTap: () => Navigator.pop(ctx, 'commentaire'),
+              ),
             ListTile(leading: const Icon(Icons.send_outlined), title: Text(l10n.safeboxSendToChat), onTap: () => Navigator.pop(ctx, 'envoyer')),
             ListTile(leading: const Icon(Icons.ios_share), title: Text(l10n.safeboxExport), onTap: () => Navigator.pop(ctx, 'exporter')),
             ListTile(leading: const Icon(Icons.edit_outlined), title: Text(l10n.safeboxRename), onTap: () => Navigator.pop(ctx, 'renommer')),
@@ -334,7 +355,9 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     if (!mounted) return;
     switch (action) {
       case 'ouvrir':
-        await _ouvrir(f);
+        await _ouvrirFichier(f);
+      case 'commentaire':
+        await _commenter(f);
       case 'envoyer':
         await _envoyerDansDiscussion(f);
       case 'exporter':
@@ -477,9 +500,26 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
                             ),
                             itemCount: _fichiers.length,
                             itemBuilder: (_, i) => GestureDetector(
-                              onTap: () => _ouvrir(_fichiers[i]),
+                              onTap: () => _ouvrirFichier(_fichiers[i]),
                               onLongPress: () => _menuFichier(_fichiers[i]),
-                              child: SafeboxFileThumb(file: _fichiers[i], fill: true),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  SafeboxFileThumb(file: _fichiers[i], fill: true),
+                                  if (_fichiers[i].note != null)
+                                    const Positioned(
+                                      right: 4,
+                                      bottom: 4,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                        child: Padding(
+                                          padding: EdgeInsets.all(4),
+                                          child: Icon(Icons.chat_bubble, size: 12, color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         )
@@ -497,11 +537,12 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
                                 children: [
                                   Text('${formatBytes(f.plainBytes, l10n)} · ${safeboxDate(context, f.createdAt)}'),
                                   if (f.lost) const SafeboxLostBadge(),
+                                  if (f.note != null) SafeboxNoteLine(note: f.note!),
                                   if (f.sent != null) SafeboxSentBadge(sent: f.sent!),
                                 ],
                               ),
                               trailing: IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuFichier(f)),
-                              onTap: () => _ouvrir(f),
+                              onTap: () => _ouvrirFichier(f),
                             );
                           },
                         ),

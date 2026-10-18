@@ -7661,4 +7661,56 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxShareRemovedByModeration => '该文件已被 Alanya 审核移除';
+
+  @override
+  String get safeboxNoteTitle => '评论';
+
+  @override
+  String get safeboxNoteAdd => '添加评论';
+
+  @override
+  String get safeboxNoteEdit => '编辑评论';
+
+  @override
+  String get safeboxNoteHint => '写评论（可选）';
+
+  @override
+  String get safeboxNotePrivate => '仅在您的保险箱中可见：分享照片时不会一起发送。';
+
+  @override
+  String get safeboxNoteRecord => '录制音频（最长 5 分钟）';
+
+  @override
+  String get safeboxNoteStop => '停止';
+
+  @override
+  String get safeboxNoteRedo => '重新录制';
+
+  @override
+  String get safeboxNoteDeleteAudio => '删除音频';
+
+  @override
+  String safeboxNoteAudio(String duration) {
+    return '音频评论 · $duration';
+  }
+
+  @override
+  String safeboxNoteRecording(String elapsed) {
+    return '录音中 · $elapsed / 5:00';
+  }
+
+  @override
+  String get safeboxNoteSaved => '评论已保存';
+
+  @override
+  String get safeboxNoteTooLong => '评论过长：文字最多 200 个字符，音频最长 5 分钟。';
+
+  @override
+  String get safeboxNoteUnavailable => '仅照片可以添加评论。';
+
+  @override
+  String get safeboxNoteAudioFailed => '无法播放音频。';
+
+  @override
+  String get safeboxOpenWith => '用其他应用打开…';
 }

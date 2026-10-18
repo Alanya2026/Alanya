@@ -294,6 +294,64 @@ class SafeboxSent {
   bool get receivedByAll => received != null && recipients > 0 && received! >= recipients;
 }
 
+/// Commentaire d'une photo (décision du 18/10/2026) : un texte de 200
+/// caractères au plus, un audio de 5 minutes au plus, ou les deux. Privé : il
+/// ne part pas avec la photo quand on l'envoie dans une discussion.
+class SafeboxNote {
+  const SafeboxNote({this.text, this.audio});
+
+  static const int textMax = 200;
+  static const int audioMaxSeconds = 5 * 60;
+
+  /// Null quand il n'y a ni texte ni audio.
+  static SafeboxNote? fromJson(dynamic j) {
+    if (j is! Map) return null;
+    final texte = j['text'] is String && (j['text'] as String).trim().isNotEmpty ? j['text'] as String : null;
+    final audio = SafeboxNoteAudio.fromJson(j['audio']);
+    if (texte == null && audio == null) return null;
+    return SafeboxNote(text: texte, audio: audio);
+  }
+
+  final String? text;
+  final SafeboxNoteAudio? audio;
+}
+
+/// L'audio d'un commentaire : un petit objet chiffré avec sa propre clé.
+class SafeboxNoteAudio {
+  const SafeboxNoteAudio({
+    required this.durationMs,
+    required this.plainBytes,
+    required this.storedBytes,
+    required this.url,
+    required this.key,
+  });
+
+  static SafeboxNoteAudio? fromJson(dynamic j) {
+    if (j is! Map || j['url'] is! String || j['key'] is! String) return null;
+    return SafeboxNoteAudio(
+      durationMs: _int(j['durationMs']),
+      plainBytes: _int(j['plainBytes']),
+      storedBytes: _int(j['storedBytes']),
+      url: j['url'] as String,
+      key: base64Decode(j['key'] as String),
+    );
+  }
+
+  final int durationMs;
+  final int plainBytes;
+  final int storedBytes;
+
+  /// Adresse signée de lecture, valable une heure.
+  final String url;
+  final Uint8List key;
+
+  /// « 1:23 ».
+  String get durationLabel {
+    final t = Duration(milliseconds: durationMs);
+    return '${t.inMinutes}:${(t.inSeconds % 60).toString().padLeft(2, '0')}';
+  }
+}
+
 class SafeboxFile {
   const SafeboxFile({
     required this.id,
@@ -317,6 +375,7 @@ class SafeboxFile {
     this.meta,
     this.sent,
     this.lost = false,
+    this.note,
   });
 
   factory SafeboxFile.fromJson(Map<String, dynamic> j) => SafeboxFile(
@@ -341,6 +400,7 @@ class SafeboxFile {
         meta: SafeboxMeta.fromJson(j['meta']),
         sent: SafeboxSent.fromJson(j['sent']),
         lost: j['lost'] == true,
+        note: SafeboxNote.fromJson(j['note']),
       );
 
   final int id;
@@ -381,6 +441,9 @@ class SafeboxFile {
   /// Contenu introuvable chez l'hébergeur au dernier contrôle : ne se
   /// télécharge plus, ne se récupère pas.
   final bool lost;
+
+  /// Commentaire privé d'une photo ; null s'il n'y en a pas.
+  final SafeboxNote? note;
 }
 
 class SafeboxFolderPage {
