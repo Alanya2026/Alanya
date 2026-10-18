@@ -5186,5 +5186,11 @@
   "@safeboxVideoPlay": {"placeholders": {"size": {"type": "String"}}},
   "safeboxVideoUnreadable": "Cette vidéo ne se lit pas ici. Essayez « Ouvrir avec… ».",
   "safeboxCompressNothingToGain": "Déjà léger : la compression n'y gagnerait presque rien.",
-  "@safeboxCompressNothingToGain": {"description": "Feuille de compression : le fichier est déjà sous les réglages des discussions (vidéo reçue par WhatsApp, image réduite…)."}
+  "@safeboxCompressNothingToGain": {"description": "Feuille de compression : le fichier est déjà sous les réglages des discussions (vidéo reçue par WhatsApp, image réduite…)."},
+  "e2eeMessageEnAttente": "🔒 En attente de ce message…",
+  "@e2eeMessageEnAttente": {"description": "Message chiffré que cet appareil n'a pas (encore) pu déchiffrer."},
+  "e2eeApercuChiffre": "🔒 Message chiffré",
+  "@e2eeApercuChiffre": {"description": "Aperçu d'un message chiffré dans la liste, tant qu'il n'est pas déchiffré."},
+  "e2eeMediaNonChiffre": "Dans cette conversation, les textes sont chiffrés de bout en bout ; les photos et fichiers ne le sont pas encore.",
+  "@e2eeMediaNonChiffre": {"description": "Avertissement au choix d'un fichier dans une conversation chiffrée (étape 2)."}
 }

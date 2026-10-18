@@ -10438,4 +10438,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get safeboxCompressNothingToGain =>
       'Already light: compressing would save almost nothing.';
+
+  @override
+  String get e2eeMessageEnAttente => '🔒 Waiting for this message…';
+
+  @override
+  String get e2eeApercuChiffre => '🔒 Encrypted message';
+
+  @override
+  String get e2eeMediaNonChiffre =>
+      'In this conversation, texts are end-to-end encrypted; photos and files are not yet.';
 }

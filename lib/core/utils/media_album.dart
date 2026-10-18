@@ -6,6 +6,7 @@ import '../db/app_database.dart';
 import '../theme/locale_controller.dart';
 import 'system_event_payload.dart';
 import 'trip_payload.dart';
+import '../e2ee/e2ee_affichage.dart';
 
 /// Préfixe du marqueur album stocké dans [LocalMessage.content].
 const albumMarkerPrefix = '__talky_album__';
@@ -165,6 +166,10 @@ String previewLabelForAlbumMarker(AlbumMarker marker) {
 /// [displayConversationPreview].
 String normalizeConversationPreview(String? text) {
   if (text == null || text.isEmpty) return text ?? '';
+  // Aperçu générique d'un message chiffré, écrit en français par le serveur
+  // (qui n'en lit pas le texte) : localisé ici, en attendant que l'appareil
+  // calcule le vrai aperçu à partir du message déchiffré.
+  if (text == kE2eeApercuServeur) return resolveL10n().e2eeApercuChiffre;
   final marker = parseAlbumMarker(text);
   if (marker != null) return previewLabelForAlbumMarker(marker);
   // Legacy : aperçu recalculé avant le support type 6 → JSON brut en base.

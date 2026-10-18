@@ -22,6 +22,7 @@ import '../billing/entitlements.dart';
 import 'message_sound_service.dart';
 import 'message_path_tracer.dart';
 import 'receipt_service.dart';
+import '../../e2ee/e2ee_service.dart';
 
 typedef UpsertServerMsgFn = Future<bool> Function(
   Map<String, dynamic> json, {
@@ -338,6 +339,34 @@ class SocketMessageHandlers {
       'code=${json['code']} msg=${json['message']}',
     );
     final code = json['code']?.toString();
+    // Le serveur sait le fil chiffré alors que ce téléphone l'ignorait encore
+    // (première question au serveur en échec, ou passage en chiffré pendant
+    // l'envoi). Rien n'est parti : on retient le fil comme chiffré, et la
+    // ligne reste en file — le veilleur la relancera, chiffrée cette fois.
+    // Un appareil destinataire a disparu entre la liste et l'envoi : on
+    // redemandera la liste, et la ligne reste en file pour repartir.
+    if (code == 'E2EE_ENVELOPPE_APPAREIL_INCONNU') {
+      final ligne = await (_db.select(_db.localMessages)
+            ..where((m) => m.clientId.equals(clientId)))
+          .getSingleOrNull();
+      if (ligne != null) {
+        E2eeService.maybeInstance?.oublierAppareils(ligne.conversationID);
+        return;
+      }
+    }
+    if (code == 'CONVERSATION_CHIFFREE') {
+      // Le refus ne porte que le `clientId` : la conversation se retrouve
+      // par la ligne locale.
+      final ligne = await (_db.select(_db.localMessages)
+            ..where((m) => m.clientId.equals(clientId)))
+          .getSingleOrNull();
+      final convID = ligne?.conversationID ?? _toInt(json['conversationID']);
+      final e2ee = E2eeService.maybeInstance;
+      if (e2ee != null && convID != 0) {
+        await e2ee.noterConversationChiffree(convID, DateTime.now());
+        return;
+      }
+    }
     await _dao.markFailed(
       clientId,
       failureCode: kTerminalSendFailures.contains(code) ? code : null,

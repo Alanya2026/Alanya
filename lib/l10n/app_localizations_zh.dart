@@ -9835,4 +9835,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxCompressNothingToGain => '文件已经很小：压缩几乎没有效果。';
+
+  @override
+  String get e2eeMessageEnAttente => '🔒 正在等待此消息…';
+
+  @override
+  String get e2eeApercuChiffre => '🔒 加密消息';
+
+  @override
+  String get e2eeMediaNonChiffre => '在此对话中，文字已端到端加密；照片和文件暂未加密。';
 }

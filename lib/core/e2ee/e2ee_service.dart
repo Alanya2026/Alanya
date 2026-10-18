@@ -31,6 +31,12 @@ const int kE2eeStockCible = 100;
 /// Âge au-delà duquel la pré-clé signée tourne.
 const Duration kE2eeRotationSignedPreKey = Duration(days: 30);
 
+/// Durée pendant laquelle la liste des appareils d'une conversation est
+/// réutilisée sans être redemandée. Un appareil apparu entre-temps chez le
+/// correspondant ne reçoit pas les messages de cette minute ; le renvoi
+/// automatique de l'étape 3 rattrapera.
+const Duration kE2eeCacheAppareils = Duration(seconds: 60);
+
 /// Après un `E2EE_INACTIF`, délai avant de redemander. Le chiffrement s'ouvre
 /// par paliers, pas à la minute : redemander à chaque ouverture de session
 /// coûterait une requête par démarrage pour tous les comptes hors cohorte.
@@ -184,12 +190,22 @@ class E2eeService {
   /// L'instance de l'application, ou `null` tant qu'elle n'est pas installée.
   static E2eeService? get maybeInstance => _instance;
 
+  /// Remplace l'instance de l'application — tests seulement.
+  @visibleForTesting
+  static set instancePourTest(E2eeService? service) => _instance = service;
+
   /// Installe l'instance de l'application (une fois, au démarrage).
-  static E2eeService installer(TalkyApiClient api) => _instance ??= E2eeService(
-        db: E2eeDatabase.appareil(),
-        cleDuCoffre: CleDuCoffreSecureStorage(),
-        api: E2eeApiClient(api),
-      );
+  static E2eeService installer(TalkyApiClient api) {
+    final existant = _instance;
+    if (existant != null) return existant;
+    final service = E2eeService(
+      db: E2eeDatabase.appareil(),
+      cleDuCoffre: CleDuCoffreSecureStorage(),
+      api: E2eeApiClient(api),
+    );
+    unawaited(service.prechargerEtat());
+    return _instance = service;
+  }
 
   final E2eeDatabase _db;
   final CoffreE2ee _coffre;
@@ -198,6 +214,10 @@ class E2eeService {
   late final AlanyaSignalStore _store;
   final VerrouSequentiel _verrou = VerrouSequentiel();
   Future<SynchroE2ee>? _synchroEnCours;
+
+  /// Réponses de `/api/e2ee/devices`, par conversation, pour
+  /// [kE2eeCacheAppareils] : on ne redemande pas la liste à chaque message.
+  final Map<int, ({DateTime le, Map<String, dynamic> reponse})> _appareilsEnCache = {};
 
   static const String _metaProprietaire = 'proprietaire';
   static const String _metaInactifJusqua = 'inactif_jusqua';
@@ -246,6 +266,8 @@ class E2eeService {
         }
         await _db.toutEffacer();
         await _coffre.detruire();
+        _inscritEnMemoire = false;
+        _chiffreesEnMemoire.clear();
       });
 
   // ── Conversations chiffrées ────────────────────────────────────────────
@@ -253,11 +275,55 @@ class E2eeService {
   /// Note qu'une conversation est chiffrée. À sens unique : rien ne la
   /// ramène en clair, et un « non » du serveur après un « oui » est ignoré
   /// (docs/e2ee, chapitre 21).
-  Future<void> noterConversationChiffree(int conversationID, DateTime depuis) =>
-      _verrou.executer(() => _db.customStatement(
-            'INSERT OR IGNORE INTO e2ee_conversations (conv, depuis) VALUES (?, ?)',
-            [conversationID, depuis.millisecondsSinceEpoch],
-          ));
+  Future<void> noterConversationChiffree(int conversationID, DateTime depuis) {
+    _chiffreesEnMemoire.add(conversationID);
+    return _verrou.executer(() => _db.customStatement(
+          'INSERT OR IGNORE INTO e2ee_conversations (conv, depuis) VALUES (?, ?)',
+          [conversationID, depuis.millisecondsSinceEpoch],
+        ));
+  }
+
+  /// Cet appareil est-il inscrit au chiffrement (identité publiée pour un
+  /// compte) ? Lecture locale seule : c'est ce qui évite tout appel réseau
+  /// pour les comptes hors cohorte.
+  Future<bool> estInscrit() async {
+    final inscrit = await _db.lireMeta(_metaProprietaire) != null;
+    _inscritEnMemoire = inscrit;
+    return inscrit;
+  }
+
+  // ── État en mémoire, pour l'envoi ──────────────────────────────────────
+  //
+  // L'envoi d'un message est un chemin critique : son émission ne doit pas
+  // attendre une lecture de base quand le chiffrement ne le concerne pas. Ces
+  // deux valeurs, chargées au démarrage et tenues à jour, permettent à
+  // l'envoi de décider SANS attendre : compte non inscrit, ou conversation
+  // non chiffrée → émission immédiate, comme avant le chiffrement.
+
+  bool _inscritEnMemoire = false;
+  final Set<int> _chiffreesEnMemoire = {};
+
+  /// Inscrit, d'après la dernière lecture ou synchronisation.
+  bool get inscritEnMemoire => _inscritEnMemoire;
+
+  /// Conversation connue chiffrée, sans lecture de base.
+  bool estChiffreeEnMemoire(int conversationID) => _chiffreesEnMemoire.contains(conversationID);
+
+  /// Charge l'état en mémoire. À appeler au démarrage ; sans effet si rien
+  /// n'existe encore.
+  Future<void> prechargerEtat() async {
+    try {
+      await estInscrit();
+      final rows = await _db.customSelect('SELECT conv FROM e2ee_conversations').get();
+      _chiffreesEnMemoire.addAll(rows.map((r) => r.read<int>('conv')));
+    } catch (e) {
+      debugPrint('[E2EE] préchargement de l\'état impossible : $e');
+    }
+  }
+
+  /// Oublie la liste d'appareils d'une conversation : la prochaine écriture
+  /// la redemande. À appeler quand le serveur signale un appareil disparu.
+  void oublierAppareils(int conversationID) => _appareilsEnCache.remove(conversationID);
 
   /// La conversation est-elle chiffrée, d'après ce que CET appareil a vu ?
   Future<bool> estChiffree(int conversationID) async {
@@ -289,7 +355,14 @@ class E2eeService {
     required int moi,
     required ChargeE2ee charge,
   }) async {
-    final reponse = await _api.appareils(conversationID);
+    final enCache = _appareilsEnCache[conversationID];
+    final Map<String, dynamic> reponse;
+    if (enCache != null && _horloge().difference(enCache.le) < kE2eeCacheAppareils) {
+      reponse = enCache.reponse;
+    } else {
+      reponse = await _api.appareils(conversationID);
+      _appareilsEnCache[conversationID] = (le: _horloge(), reponse: reponse);
+    }
     final depuis = _date(reponse['e2eeSince']);
     if (depuis == null && !await estChiffree(conversationID)) return null;
     if (depuis != null) await noterConversationChiffree(conversationID, depuis);
@@ -574,9 +647,11 @@ class E2eeService {
       debugPrint('[E2EE] coffre écrit pour $actuel, session $attendu : remis à zéro');
       await _db.toutEffacer();
     }
+    if (actuel != null && actuel != attendu) _chiffreesEnMemoire.clear();
     if (actuel != attendu) {
       await _db.ecrireMeta(_metaProprietaire, attendu);
     }
+    _inscritEnMemoire = true;
   }
 
   Future<void> _assurerIdentite() async {

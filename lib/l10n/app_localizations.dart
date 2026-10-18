@@ -17457,6 +17457,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Déjà léger : la compression n\'y gagnerait presque rien.'**
   String get safeboxCompressNothingToGain;
+
+  /// Message chiffré que cet appareil n'a pas (encore) pu déchiffrer.
+  ///
+  /// In fr, this message translates to:
+  /// **'🔒 En attente de ce message…'**
+  String get e2eeMessageEnAttente;
+
+  /// Aperçu d'un message chiffré dans la liste, tant qu'il n'est pas déchiffré.
+  ///
+  /// In fr, this message translates to:
+  /// **'🔒 Message chiffré'**
+  String get e2eeApercuChiffre;
+
+  /// Avertissement au choix d'un fichier dans une conversation chiffrée (étape 2).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans cette conversation, les textes sont chiffrés de bout en bout ; les photos et fichiers ne le sont pas encore.'**
+  String get e2eeMediaNonChiffre;
 }
 
 class _AppLocalizationsDelegate

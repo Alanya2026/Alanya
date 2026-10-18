@@ -10553,4 +10553,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get safeboxCompressNothingToGain =>
       'Déjà léger : la compression n\'y gagnerait presque rien.';
+
+  @override
+  String get e2eeMessageEnAttente => '🔒 En attente de ce message…';
+
+  @override
+  String get e2eeApercuChiffre => '🔒 Message chiffré';
+
+  @override
+  String get e2eeMediaNonChiffre =>
+      'Dans cette conversation, les textes sont chiffrés de bout en bout ; les photos et fichiers ne le sont pas encore.';
 }

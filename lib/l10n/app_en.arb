@@ -4152,5 +4152,8 @@
   "safeboxOpenWith": "Open with…",
   "safeboxVideoPlay": "Play · {size}",
   "safeboxVideoUnreadable": "This video can't be played here. Try “Open with…”.",
-  "safeboxCompressNothingToGain": "Already light: compressing would save almost nothing."
+  "safeboxCompressNothingToGain": "Already light: compressing would save almost nothing.",
+  "e2eeMessageEnAttente": "🔒 Waiting for this message…",
+  "e2eeApercuChiffre": "🔒 Encrypted message",
+  "e2eeMediaNonChiffre": "In this conversation, texts are end-to-end encrypted; photos and files are not yet."
 }

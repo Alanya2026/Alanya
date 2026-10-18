@@ -44,6 +44,8 @@ import '../../theme/locale_controller.dart';
 import '../image_upload_compressor.dart';
 import '../video_codec_policy.dart';
 import '../video_upload_compressor.dart';
+import '../../e2ee/e2ee_affichage.dart';
+import '../../e2ee/e2ee_service.dart';
 
 /// Facade messaging : sync, envoi, outbox, accusés, handlers socket.
 class ChatRepository {
@@ -1690,7 +1692,14 @@ class ChatRepository {
       }
     }
 
-    for (final json in jsons) {
+    final aAcquitter = <int>[];
+    for (final brut in jsons) {
+      // Un message chiffré est déchiffré — ou son texte déjà connu repris —
+      // AVANT d'être écrit : écrire le JSON du serveur tel quel effacerait un
+      // texte qui n'existe que sur cet appareil (docs/e2ee, chapitre 17).
+      final prepare = await _preparerChiffre(brut);
+      final json = prepare.json;
+      if (prepare.acquitter) aAcquitter.add(_toInt(json['msgID']));
       final msgID = _toInt(json['msgID']);
       final convID = _toInt(json['conversationID']);
       if (convID != 0) affected.add(convID);
@@ -1712,6 +1721,8 @@ class ChatRepository {
 
     if (companions.isNotEmpty) {
       await _dao.upsertMessages(companions);
+      // Rangés : l'accusé peut partir (jamais avant — chapitre 11).
+      _acquitterChiffres(aAcquitter);
       // Traduction sur l'appareil : le service relit lui-même ce qui reste à
       // traiter. Appelé après l'upsert, jamais avant, et sans `await` — rien
       // dans la synchronisation ne doit attendre une traduction.
@@ -1770,10 +1781,101 @@ class ChatRepository {
   }
 
   /// Upsert un message serveur et renvoie `true` s'il était nouveau en local.
+  /// Prépare une ligne de message chiffré pour l'écriture locale.
+  ///
+  /// - Le texte est déjà connu ici (l'expéditeur vient de l'écrire, ou il a
+  ///   déjà été déchiffré) : il est repris tel quel. On ne redéchiffre pas —
+  ///   une clé de message ne sert qu'une fois, un second essai échouerait.
+  /// - Sinon, le message est déchiffré par `E2eeService`.
+  /// - Échec : le libellé « en attente » est rangé à la place du texte. Il
+  ///   sera remplacé si une enveloppe lisible arrive plus tard.
+  ///
+  /// `acquitter` : le message est (ou était déjà) rangé lisible ici —
+  /// l'accusé `e2ee:ack` peut partir après l'écriture.
+  Future<({Map<String, dynamic> json, bool acquitter})> _preparerChiffre(
+    Map<String, dynamic> json,
+  ) async {
+    if (!e2eeEstChiffre(json)) return (json: json, acquitter: false);
+    final e2ee = E2eeService.maybeInstance;
+    final convID = _toInt(json['conversationID']);
+    final msgID = _toInt(json['msgID']);
+    final aUneEnveloppe = json['body'] is Map && json['envelope'] is Map;
+
+    // Un message chiffré prouve que la conversation l'est : à retenir, à
+    // sens unique (docs/e2ee, chapitre 21).
+    if (e2ee != null && convID != 0) {
+      final depuis = _parseDate(json['sendAt']) ?? DateTime.now();
+      unawaited(e2ee.noterConversationChiffree(convID, depuis).catchError((Object _) {}));
+    }
+
+    final connu = await _texteLocalConnu(msgID, _clientIdFromJson(json));
+    if (connu != null) {
+      return (json: {...json, 'content': connu}, acquitter: aUneEnveloppe);
+    }
+    if (e2ee == null || !aUneEnveloppe) {
+      return (json: {...json, 'content': e2eeLibelleAttente(resolveL10n())}, acquitter: false);
+    }
+
+    try {
+      final charge = await e2ee.dechiffrer(json).timeout(const Duration(seconds: 15));
+      final citation = charge.reponseA == null
+          ? null
+          : await _texteLocalConnu(int.tryParse(charge.reponseA!) ?? 0, null);
+      return (
+        json: {
+          ...json,
+          'content': charge.texte,
+          if (citation != null) 'replyToContent': citation,
+        },
+        acquitter: true,
+      );
+    } on E2eeIndechiffrable catch (e) {
+      debugPrint('[ChatRepo] message chiffré $msgID illisible : $e');
+      // Déjà lu mais introuvable ici : rien de plus à attendre de cette
+      // enveloppe, on la laisse partir.
+      return (
+        json: {...json, 'content': e2eeLibelleAttente(resolveL10n())},
+        acquitter: e.dejaLu,
+      );
+    } catch (e) {
+      debugPrint('[ChatRepo] déchiffrement $msgID impossible : $e');
+      return (json: {...json, 'content': e2eeLibelleAttente(resolveL10n())}, acquitter: false);
+    }
+  }
+
+  /// Le vrai texte de ce message s'il est déjà rangé ici, ou `null`.
+  Future<String?> _texteLocalConnu(int msgID, String? clientId) async {
+    if (msgID == 0 && (clientId == null || clientId.isEmpty)) return null;
+    final lignes = await (_db.select(_db.localMessages)
+          ..where((m) {
+            Expression<bool> e = const Constant(false);
+            if (msgID != 0) e = e | m.msgID.equals(msgID);
+            if (clientId != null && clientId.isNotEmpty) e = e | m.clientId.equals(clientId);
+            return e;
+          }))
+        .get();
+    for (final l in lignes) {
+      if (e2eeEstTexteReel(l.content)) return l.content;
+    }
+    return null;
+  }
+
+  /// `e2ee:ack` : ces messages sont rangés lisibles ici. Seul geste qui pose
+  /// `delivered_at` côté serveur ; il n'alimente que la purge des enveloppes.
+  void _acquitterChiffres(List<int> msgIDs) {
+    final ids = msgIDs.where((id) => id > 0).toList();
+    if (ids.isEmpty || !_api.isSocketReady) return;
+    _api.sendSocketEvent('e2ee:ack', {'msgIDs': ids});
+  }
+
   Future<bool> _upsertServerMsg(
-    Map<String, dynamic> json, {
+    Map<String, dynamic> brut, {
     bool prefetchMedia = false,
   }) async {
+    // Déchiffré (ou texte déjà connu repris) AVANT l'écriture : voir
+    // `_preparerChiffre`.
+    final prepare = await _preparerChiffre(brut);
+    final json = prepare.json;
     final msgID = _toInt(json['msgID']);
     final convID = _toInt(json['conversationID']);
     if (msgID == 0) {
@@ -1852,7 +1954,9 @@ class ChatRepository {
       int? carriedMediaSize;
       int? carriedMediaPageCount;
       String? carriedMentions;
+      String? carriedTexte;
       for (final m in candidates) {
+        if (e2eeEstTexteReel(m.content)) carriedTexte ??= m.content;
         carriedLocalPath ??= m.localMediaPath;
         carriedClickSentAt ??= m.clickSentAt;
         carriedMediaThumb ??= m.mediaThumb;
@@ -1889,11 +1993,21 @@ class ChatRepository {
       if (carriedMentions != null && companion.mentionsJson.value == null) {
         companion = companion.copyWith(mentionsJson: Value(carriedMentions));
       }
+      // Message chiffré : le serveur ne renvoie jamais son texte. Celui de la
+      // ligne locale — l'expéditeur vient de l'écrire, ou il a déjà été
+      // déchiffré — est la SEULE copie : on la garde (docs/e2ee, chapitre 17).
+      if (e2eeEstChiffre(json) &&
+          carriedTexte != null &&
+          !e2eeEstTexteReel(companion.content.value)) {
+        companion = companion.copyWith(content: Value(carriedTexte));
+      }
 
       debugPrint(
           '[ChatRepo] _upsertServerMsg msgID=$msgID conv=$convID candidates=${candidates.length} wasNew=$wasNew');
       await _dao.upsertMessage(companion);
     });
+    // Rangé : l'accusé peut partir (jamais avant — chapitre 11).
+    if (prepare.acquitter) _acquitterChiffres([msgID]);
 
     // Traduction sur l'appareil, hors transaction et sans attente : la bulle
     // s'affiche d'abord en version originale, la traduction la remplace quand

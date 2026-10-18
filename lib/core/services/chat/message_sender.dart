@@ -26,6 +26,8 @@ import '../video_codec_policy.dart';
 import '../video_upload_compressor.dart';
 import '../../utils/audio_message_kind.dart';
 import '../billing/entitlement_service.dart';
+import '../../e2ee/e2ee_charge.dart';
+import '../../e2ee/e2ee_service.dart';
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../../talky_models.dart';
 import 'chat_api.dart';
@@ -1089,7 +1091,7 @@ class MessageSender {
       return;
     }
     MessagePathTracer.mark(clientId, 'socket_emit');
-    _api.sendSocketEvent(SocketEvents.messageSend, {
+    final payload = <String, dynamic>{
       'clientId': clientId,
       'conversationID': conversationID,
       if (content != null) 'content': content,
@@ -1114,7 +1116,30 @@ class MessageSender {
       // intention, pas une autorisation.
       if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
       if (mentionsAll) 'mentionsAll': true,
-    });
+    };
+    // Chemin d'avant le chiffrement, synchrone : compte non inscrit ou fil
+    // non chiffré, et aucune émission chiffrée en attente devant. Rien n'est
+    // attendu — l'émission reste le premier geste du chemin critique.
+    final e2ee = E2eeService.maybeInstance;
+    final peutEtreChiffre = e2ee != null &&
+        type != 10 &&
+        type != 11 &&
+        (e2ee.inscritEnMemoire || e2ee.estChiffreeEnMemoire(conversationID));
+    if (!peutEtreChiffre && _emissionsEnAttente == 0) {
+      _api.sendSocketEvent(SocketEvents.messageSend, payload);
+    } else {
+      // Émission en file : un message plus long à chiffrer ne doit pas passer
+      // derrière le suivant. Le corps ne renvoie rien — un `=>` renverrait le
+      // Future attendu (docs/e2ee, chapitre 26).
+      _emissionsEnAttente += 1;
+      _fileEmission = _fileEmission.then((_) async {
+        try {
+          await _emettre(payload, type: type);
+        } finally {
+          _emissionsEnAttente -= 1;
+        }
+      });
+    }
     // Marque la ligne comme « tout juste émise » → backoff outbox.
     _dao.touchEmitted(clientId);
     _ackWatchdog?.arm(clientId, conversationID);
@@ -1128,6 +1153,78 @@ class MessageSender {
           isSensitive: m.isSensitive,
           mediaProtection: m.mediaProtection,
         );
+
+  /// Émissions en cours, une par une.
+  Future<void> _fileEmission = Future<void>.value();
+  int _emissionsEnAttente = 0;
+
+  /// Émet `message:send`, chiffré quand la conversation l'est.
+  ///
+  /// Conversation chiffrée et chiffrement impossible (réseau, aucun appareil
+  /// du correspondant atteint) : RIEN ne part. La ligne reste en file, le
+  /// veilleur d'accusé la relancera — un message ne part jamais en clair dans
+  /// un fil chiffré.
+  Future<void> _emettre(Map<String, dynamic> payload, {required int type}) async {
+    try {
+      final chiffre = await _chiffrerSiBesoin(payload, type: type);
+      if (chiffre != null) {
+        payload
+          ..remove('content')
+          ..remove('replyToContent')
+          ..addAll(chiffre.versJson());
+      }
+      _api.sendSocketEvent(SocketEvents.messageSend, payload);
+    } on _EnvoiRetenu catch (e) {
+      debugPrint('[MessageSender] message ${payload['clientId']} retenu : ${e.raison}');
+    } catch (e) {
+      debugPrint('[MessageSender] émission ${payload['clientId']} : $e');
+    }
+  }
+
+  /// Le corps chiffré de ce message, ou `null` s'il part en clair.
+  ///
+  /// Aucun appel réseau pour un compte que le chiffrement n'a pas inscrit,
+  /// ni pour un groupe (les groupes viennent plus tard). Autocollant et
+  /// partage du coffre partent en clair : leur contenu est réécrit par le
+  /// serveur à partir de sa propre base.
+  Future<EnvoiChiffre?> _chiffrerSiBesoin(
+    Map<String, dynamic> payload, {
+    required int type,
+  }) async {
+    final e2ee = E2eeService.maybeInstance;
+    if (e2ee == null || type == 10 || type == 11) return null;
+    final conversationID = payload['conversationID'] as int;
+    final dejaChiffree = await e2ee.estChiffree(conversationID);
+    if (!dejaChiffree) {
+      if (!await e2ee.estInscrit()) return null;
+      final conv = await _dao.getConversation(conversationID);
+      if (conv == null || conv.isGroup) return null;
+    }
+    final replyToID = payload['replyToID'];
+    try {
+      return await e2ee
+          .chiffrer(
+            conversationID: conversationID,
+            moi: _myId(),
+            charge: ChargeE2ee(
+              id: payload['clientId'] as String,
+              conv: conversationID,
+              texte: payload['content'] as String?,
+              reponseA: replyToID?.toString(),
+            ),
+          )
+          .timeout(const Duration(seconds: 30));
+    } catch (e) {
+      // Fil connu chiffré : on retient. Inconnu (première question au
+      // serveur en échec) : on part en clair ; si le fil l'était en fait, le
+      // serveur refuse (CONVERSATION_CHIFFREE) et le renvoi repartira
+      // chiffré.
+      if (dejaChiffree || await e2ee.estChiffree(conversationID)) {
+        throw _EnvoiRetenu('$e');
+      }
+      return null;
+    }
+  }
 
   String _newClientId() =>
       'c_${_myId()}_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(99999)}';
@@ -1155,4 +1252,10 @@ class _PendingMediaUpload {
   final int? mediaDuration;
   final bool isForwarded;
   final DateTime clickSentAt;
+}
+
+/// Un message à chiffrer qui n'a pas pu l'être : il reste en file.
+class _EnvoiRetenu implements Exception {
+  const _EnvoiRetenu(this.raison);
+  final String raison;
 }
