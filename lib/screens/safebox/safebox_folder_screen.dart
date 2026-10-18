@@ -496,6 +496,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text('${formatBytes(f.plainBytes, l10n)} · ${safeboxDate(context, f.createdAt)}'),
+                                  if (f.lost) const SafeboxLostBadge(),
                                   if (f.sent != null) SafeboxSentBadge(sent: f.sent!),
                                 ],
                               ),

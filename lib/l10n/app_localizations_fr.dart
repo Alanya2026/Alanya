@@ -8120,4 +8120,42 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get safeboxStoreInTitle => 'Ranger dans votre coffre';
+
+  @override
+  String safeboxStoreInHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Les $count fichiers restent dans ce dossier de votre coffre après l\'envoi.',
+      one: 'Le fichier reste dans ce dossier de votre coffre après l\'envoi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxStoreChange => 'Modifier';
+
+  @override
+  String get safeboxStoreContinue => 'Continuer';
+
+  @override
+  String get safeboxStoreHere => 'Ranger ici';
+
+  @override
+  String get safeboxFileLost => 'Fichier endommagé';
+
+  @override
+  String get safeboxFileLostBody =>
+      'Ce fichier est endommagé : son contenu a été perdu chez notre hébergeur et ne peut pas être récupéré. Supprimez-le pour libérer sa place.';
+
+  @override
+  String get safeboxShareLost => 'Fichier endommagé, impossible à récupérer';
+
+  @override
+  String get safeboxShareRemovedByModeration =>
+      'Fichier retiré par la modération d\'Alanya';
 }

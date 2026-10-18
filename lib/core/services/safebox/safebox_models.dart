@@ -316,6 +316,7 @@ class SafeboxFile {
     this.folderName,
     this.meta,
     this.sent,
+    this.lost = false,
   });
 
   factory SafeboxFile.fromJson(Map<String, dynamic> j) => SafeboxFile(
@@ -339,6 +340,7 @@ class SafeboxFile {
         folderName: j['folderName'] as String?,
         meta: SafeboxMeta.fromJson(j['meta']),
         sent: SafeboxSent.fromJson(j['sent']),
+        lost: j['lost'] == true,
       );
 
   final int id;
@@ -375,6 +377,10 @@ class SafeboxFile {
 
   /// Ses partages dans des discussions ; null s'il n'a jamais été envoyé.
   final SafeboxSent? sent;
+
+  /// Contenu introuvable chez l'hébergeur au dernier contrôle : ne se
+  /// télécharge plus, ne se récupère pas.
+  final bool lost;
 }
 
 class SafeboxFolderPage {
@@ -550,6 +556,8 @@ class SafeboxShareInfo {
     this.downloadsLeft,
     this.savedFileId,
     this.meta,
+    this.lost = false,
+    this.removedByModeration = false,
   });
 
   factory SafeboxShareInfo.fromJson(Map<String, dynamic> j) => SafeboxShareInfo(
@@ -568,6 +576,8 @@ class SafeboxShareInfo {
         downloadsLeft: _intOrNull(j['downloadsLeft']),
         savedFileId: _intOrNull(j['savedFileId']),
         meta: SafeboxMeta.fromJson(j['meta']),
+        lost: j['lost'] == true,
+        removedByModeration: j['removedByModeration'] == true,
       );
 
   final int id;
@@ -592,6 +602,12 @@ class SafeboxShareInfo {
   final int? savedFileId;
 
   final SafeboxMeta? meta;
+
+  /// Contenu perdu chez l'hébergeur : la carte le dit, rien ne se télécharge.
+  final bool lost;
+
+  /// Retiré par la modération d'Alanya (et non par l'expéditeur).
+  final bool removedByModeration;
 
   /// Identifiant local d'un fichier reçu : négatif, pour ne jamais croiser
   /// celui d'un fichier de mon coffre dans les caches.

@@ -11,12 +11,15 @@ import '../../talky_api_client.dart';
 import '../../core/theme/app_theme.dart';
 import 'safebox_widgets.dart';
 
-/// Rend l'identifiant du dossier choisi, ou null.
+/// Rend l'identifiant du dossier choisi, ou null. `currentParentId` est le
+/// dossier actuel (non proposé) ; -1 quand tout dossier convient (choix du
+/// rangement d'un fichier envoyé depuis une discussion).
 Future<int?> pickSafeboxDestination(
   BuildContext context, {
   required int startFolderId,
   required int currentParentId,
   int? movingFolderId,
+  String? actionLabel,
 }) =>
     Navigator.push<int>(
       context,
@@ -25,15 +28,17 @@ Future<int?> pickSafeboxDestination(
           folderId: startFolderId,
           currentParentId: currentParentId,
           movingFolderId: movingFolderId,
+          actionLabel: actionLabel,
         ),
       ),
     );
 
 class _ChoixDossier extends StatefulWidget {
-  const _ChoixDossier({required this.folderId, required this.currentParentId, this.movingFolderId});
+  const _ChoixDossier({required this.folderId, required this.currentParentId, this.movingFolderId, this.actionLabel});
   final int folderId;
   final int currentParentId;
   final int? movingFolderId;
+  final String? actionLabel;
 
   @override
   State<_ChoixDossier> createState() => _ChoixDossierState();
@@ -77,6 +82,7 @@ class _ChoixDossierState extends State<_ChoixDossier> {
                           startFolderId: d.id,
                           currentParentId: widget.currentParentId,
                           movingFolderId: widget.movingFolderId,
+                          actionLabel: widget.actionLabel,
                         );
                         if (choisi != null && context.mounted) Navigator.pop(context, choisi);
                       },
@@ -89,7 +95,7 @@ class _ChoixDossierState extends State<_ChoixDossier> {
           child: FilledButton.icon(
             onPressed: page != null && ici ? () => Navigator.pop(context, widget.folderId) : null,
             icon: const Icon(Icons.drive_file_move_outlined),
-            label: Text(l10n.safeboxMoveHere),
+            label: Text(widget.actionLabel ?? l10n.safeboxMoveHere),
           ),
         ),
       ),

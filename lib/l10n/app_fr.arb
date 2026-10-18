@@ -4330,5 +4330,16 @@
   "safeboxSavedToDownloads": "Enregistré dans Téléchargements/Alanya",
   "safeboxSaveToDownloadsFailed": "Impossible de l'enregistrer dans Téléchargements : il reste dans l'application.",
   "safeboxMetaPages": "{count, plural, =1{1 page} other{{count} pages}}",
-  "@safeboxMetaPages": {"placeholders": {"count": {"type": "int"}}}
+  "@safeboxMetaPages": {"placeholders": {"count": {"type": "int"}}},
+  "safeboxStoreInTitle": "Ranger dans votre coffre",
+  "safeboxStoreInHint": "{count, plural, =1{Le fichier reste dans ce dossier de votre coffre après l'envoi.} other{Les {count} fichiers restent dans ce dossier de votre coffre après l'envoi.}}",
+  "@safeboxStoreInHint": {"description": "Envoi d'un fichier du téléphone dans une discussion : choix du sous-dossier.", "placeholders": {"count": {"type": "int"}}},
+  "safeboxStoreChange": "Modifier",
+  "safeboxStoreContinue": "Continuer",
+  "safeboxStoreHere": "Ranger ici",
+  "safeboxFileLost": "Fichier endommagé",
+  "@safeboxFileLost": {"description": "Badge d'un fichier dont le contenu a disparu chez l'hébergeur (MEGA)."},
+  "safeboxFileLostBody": "Ce fichier est endommagé : son contenu a été perdu chez notre hébergeur et ne peut pas être récupéré. Supprimez-le pour libérer sa place.",
+  "safeboxShareLost": "Fichier endommagé, impossible à récupérer",
+  "safeboxShareRemovedByModeration": "Fichier retiré par la modération d'Alanya"
 }

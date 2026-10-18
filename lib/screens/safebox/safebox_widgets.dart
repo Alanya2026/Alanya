@@ -254,3 +254,18 @@ class SafeboxSentBadge extends StatelessWidget {
     );
   }
 }
+
+/// « Fichier endommagé » : son contenu a disparu chez l'hébergeur.
+class SafeboxLostBadge extends StatelessWidget {
+  const SafeboxLostBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.broken_image_outlined, size: 14, color: context.colors.error),
+          AppSpacing.hGapXs,
+          Text(context.l10n.safeboxFileLost, style: context.text.bodySmall?.copyWith(color: context.colors.error)),
+        ],
+      );
+}

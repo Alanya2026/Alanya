@@ -2,14 +2,19 @@ import 'dart:convert';
 
 import 'dart:io';
 
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:talky_flutter/core/errors/app_error.dart';
+import 'package:talky_flutter/core/errors/error_presenter.dart';
 import 'package:talky_flutter/core/services/chat/conversation_merge.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_received_files.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_upload_manager.dart';
 import 'package:talky_flutter/core/theme/locale_controller.dart';
 import 'package:talky_flutter/core/utils/safebox_share_payload.dart';
+import 'package:talky_flutter/l10n/app_localizations.dart';
+import 'package:talky_flutter/talky_api_client.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -159,6 +164,28 @@ void main() {
       expect(SafeboxReceivedFiles.subdirFor(SafeboxRoot.audios), 'Alanya/Alanya Audio');
       expect(SafeboxReceivedFiles.mimeFor('acte.pdf', null), 'application/pdf');
       expect(SafeboxReceivedFiles.mimeFor('donnees.inconnu', null), 'application/octet-stream');
+    });
+  });
+
+  group('fichier perdu chez l\'hébergeur, fichier retiré par la modération', () {
+    test('lus depuis le serveur', () {
+      expect(SafeboxFile.fromJson({'id': 1, 'lost': true}).lost, isTrue);
+      expect(SafeboxFile.fromJson({'id': 1}).lost, isFalse, reason: 'serveur sans la migration 106');
+      final carte = SafeboxShareInfo.fromJson({'id': 3, 'available': false, 'removedByModeration': true});
+      expect(carte.removedByModeration, isTrue);
+      expect(SafeboxShareInfo.fromJson({'id': 3, 'available': true, 'lost': true}).lost, isTrue);
+    });
+
+    test('le refus de téléchargement se lit en clair', () {
+      final fr = lookupAppLocalizations(const Locale('fr'));
+      final texte = presenterErreur(
+        fr,
+        TalkyException('Fichier endommagé', 410, code: 'SAFEBOX_FILE_LOST'),
+        domaine: ErrorDomain.generique,
+        journaliser: false,
+        avecDiagnostic: false,
+      );
+      expect(texte, fr.safeboxFileLostBody);
     });
   });
 }

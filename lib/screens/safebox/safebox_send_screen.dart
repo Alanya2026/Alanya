@@ -14,7 +14,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../core/utils/safebox_share_payload.dart';
 import '../../talky_api_client.dart';
+import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_compression_sheet.dart';
+import 'safebox_move_picker.dart';
 import 'safebox_widgets.dart';
 
 /// Ouvre l'écran d'envoi. Rend le contenu du message à envoyer (fichier pris
@@ -59,6 +61,12 @@ Future<bool> sendPhoneFilesViaSafebox(
       );
     }
     if (tri.ok.isEmpty) continue;
+    if (!context.mounted) return parti;
+    final range = await _rangerDans(context, c, famille, racine, tri.ok.length);
+    if (range == null) continue; // renoncement
+    final cible = range == racine
+        ? dossier
+        : SafeboxFolder(id: range, parentId: null, root: famille, name: null, depth: 1);
     var compresser = false;
     final estimation = await c.estimate(tri.ok, famille);
     if (estimation != null && context.mounted) {
@@ -84,11 +92,82 @@ Future<bool> sendPhoneFilesViaSafebox(
       if (context.mounted) safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
       continue;
     }
-    await c.addFiles(tri.ok, dossier, compress: compresser, shareConversationId: conversationId);
+    await c.addFiles(tri.ok, cible, compress: compresser, shareConversationId: conversationId);
     parti = true;
   }
   if (parti && context.mounted) safeboxSnack(context, l10n.safeboxShareQueued);
   return parti;
+}
+
+/// Où ranger les fichiers dans le coffre (conception, section 07). Sans
+/// sous-dossier dans cette famille, rien n'est demandé : la racine. Sinon une
+/// feuille « Ranger dans : Documents · Modifier · Continuer ». Rend le dossier
+/// choisi, ou null si l'inscrit renonce.
+Future<int?> _rangerDans(BuildContext context, SafeboxController c, SafeboxRoot famille, int racine, int nombre) async {
+  SafeboxFolderPage page;
+  try {
+    page = await c.api.fetchSafeboxFolder(racine);
+  } catch (_) {
+    return racine; // hors ligne : la racine, comme avant
+  }
+  if (page.folders.isEmpty || !context.mounted) return racine;
+  var choisi = racine;
+  var libelle = SafeboxController.rootLabel(famille, context.l10n);
+  return showAppBottomSheet<int>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) {
+        final l10n = ctx.l10n;
+        return SafeArea(
+          child: Padding(
+            padding: AppSpacing.card,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(l10n.safeboxStoreInTitle, style: ctx.text.titleMedium),
+                AppSpacing.vGapXs,
+                Text(l10n.safeboxStoreInHint(nombre),
+                    style: ctx.text.bodySmall?.copyWith(color: ctx.colors.onSurfaceVariant)),
+                AppSpacing.vGapSm,
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(choisi == racine ? safeboxRootIcon(famille) : Icons.folder_outlined,
+                      color: ctx.colors.primary),
+                  title: Text(libelle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      final id = await pickSafeboxDestination(
+                        ctx,
+                        startFolderId: racine,
+                        currentParentId: -1,
+                        actionLabel: l10n.safeboxStoreHere,
+                      );
+                      if (id == null || !ctx.mounted) return;
+                      var nom = libelle;
+                      try {
+                        nom = SafeboxController.folderLabel((await c.api.fetchSafeboxFolder(id)).folder, l10n);
+                      } catch (_) {}
+                      setState(() {
+                        choisi = id;
+                        libelle = nom;
+                      });
+                    },
+                    child: Text(l10n.safeboxStoreChange),
+                  ),
+                ),
+                AppSpacing.vGapSm,
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, choisi),
+                  child: Text(l10n.safeboxStoreContinue),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class SafeboxSendScreen extends StatefulWidget {

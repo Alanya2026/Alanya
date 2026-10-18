@@ -3415,5 +3415,14 @@
   "safeboxFreeUpSent": "Already sent",
   "safeboxSavedToDownloads": "Saved to Downloads/Alanya",
   "safeboxSaveToDownloadsFailed": "Could not save it to Downloads: it stays in the app.",
-  "safeboxMetaPages": "{count, plural, =1{1 page} other{{count} pages}}"
+  "safeboxMetaPages": "{count, plural, =1{1 page} other{{count} pages}}",
+  "safeboxStoreInTitle": "Store in your safe",
+  "safeboxStoreInHint": "{count, plural, =1{The file stays in this folder of your safe after sending.} other{The {count} files stay in this folder of your safe after sending.}}",
+  "safeboxStoreChange": "Change",
+  "safeboxStoreContinue": "Continue",
+  "safeboxStoreHere": "Store here",
+  "safeboxFileLost": "Damaged file",
+  "safeboxFileLostBody": "This file is damaged: its content was lost by our storage provider and cannot be recovered. Delete it to free up its space.",
+  "safeboxShareLost": "Damaged file, cannot be recovered",
+  "safeboxShareRemovedByModeration": "File removed by Alanya moderation"
 }

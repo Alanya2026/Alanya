@@ -2341,5 +2341,14 @@
   "safeboxFreeUpSent": "已发送",
   "safeboxSavedToDownloads": "已保存到“下载/Alanya”",
   "safeboxSaveToDownloadsFailed": "无法保存到“下载”：文件仍保留在应用中。",
-  "safeboxMetaPages": "{count} 页"
+  "safeboxMetaPages": "{count} 页",
+  "safeboxStoreInTitle": "存放到您的保险箱",
+  "safeboxStoreInHint": "{count} 个文件发送后会保留在您保险箱的此文件夹中。",
+  "safeboxStoreChange": "更改",
+  "safeboxStoreContinue": "继续",
+  "safeboxStoreHere": "存放在这里",
+  "safeboxFileLost": "文件已损坏",
+  "safeboxFileLostBody": "此文件已损坏：其内容已在我们的存储服务商处丢失，无法恢复。请将其删除以释放空间。",
+  "safeboxShareLost": "文件已损坏，无法恢复",
+  "safeboxShareRemovedByModeration": "该文件已被 Alanya 审核移除"
 }

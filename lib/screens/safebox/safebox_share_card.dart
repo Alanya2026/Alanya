@@ -239,13 +239,24 @@ class _SafeboxShareCardState extends State<SafeboxShareCard> {
           AppSpacing.vGapSm,
           if (_introuvable)
             Text(l10n.safeboxShareUnavailableHere, style: context.text.bodySmall?.copyWith(color: widget.mutedColor))
+          else if (info != null && info.available && info.lost)
+            Row(
+              children: [
+                Icon(Icons.broken_image_outlined, size: 16, color: context.colors.error),
+                AppSpacing.hGapXs,
+                Flexible(
+                  child: Text(l10n.safeboxShareLost,
+                      style: context.text.bodySmall?.copyWith(color: context.colors.error)),
+                ),
+              ],
+            )
           else if (retire)
             Row(
               children: [
                 Icon(Icons.block, size: 16, color: widget.mutedColor),
                 AppSpacing.hGapXs,
                 Flexible(
-                  child: Text(l10n.safeboxShareRevoked,
+                  child: Text(info.removedByModeration ? l10n.safeboxShareRemovedByModeration : l10n.safeboxShareRevoked,
                       style: context.text.bodySmall?.copyWith(color: widget.mutedColor, fontStyle: FontStyle.italic)),
                 ),
               ],

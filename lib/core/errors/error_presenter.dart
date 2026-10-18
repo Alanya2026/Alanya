@@ -248,6 +248,8 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
     case 'SAFEBOX_SOURCE_CHANGED':
     case 'SAFEBOX_SOURCE_MISSING':
       return l10n.safeboxSourceChanged;
+    case 'SAFEBOX_FILE_LOST':
+      return l10n.safeboxFileLostBody;
   }
   return null;
 }

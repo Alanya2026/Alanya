@@ -13743,6 +13743,60 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{count, plural, =1{1 page} other{{count} pages}}'**
   String safeboxMetaPages(int count);
+
+  /// No description provided for @safeboxStoreInTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ranger dans votre coffre'**
+  String get safeboxStoreInTitle;
+
+  /// Envoi d'un fichier du téléphone dans une discussion : choix du sous-dossier.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Le fichier reste dans ce dossier de votre coffre après l\'envoi.} other{Les {count} fichiers restent dans ce dossier de votre coffre après l\'envoi.}}'**
+  String safeboxStoreInHint(int count);
+
+  /// No description provided for @safeboxStoreChange.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get safeboxStoreChange;
+
+  /// No description provided for @safeboxStoreContinue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get safeboxStoreContinue;
+
+  /// No description provided for @safeboxStoreHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ranger ici'**
+  String get safeboxStoreHere;
+
+  /// Badge d'un fichier dont le contenu a disparu chez l'hébergeur (MEGA).
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier endommagé'**
+  String get safeboxFileLost;
+
+  /// No description provided for @safeboxFileLostBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier est endommagé : son contenu a été perdu chez notre hébergeur et ne peut pas être récupéré. Supprimez-le pour libérer sa place.'**
+  String get safeboxFileLostBody;
+
+  /// No description provided for @safeboxShareLost.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier endommagé, impossible à récupérer'**
+  String get safeboxShareLost;
+
+  /// No description provided for @safeboxShareRemovedByModeration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier retiré par la modération d\'Alanya'**
+  String get safeboxShareRemovedByModeration;
 }
 
 class _AppLocalizationsDelegate

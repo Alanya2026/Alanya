@@ -194,6 +194,7 @@ class _SafeboxFreeUpScreenState extends State<SafeboxFreeUpScreen> {
                             formatBytes(f.storedBytes, l10n),
                             l10n.safeboxInFolder(f.folderName ?? SafeboxController.rootLabel(f.family, l10n)),
                           ].join(' · ')),
+                          if (f.lost) const SafeboxLostBadge(),
                           if (f.sent != null) SafeboxSentBadge(sent: f.sent!),
                         ],
                       ),

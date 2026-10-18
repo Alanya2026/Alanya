@@ -7632,4 +7632,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String safeboxMetaPages(int count) {
     return '$count 页';
   }
+
+  @override
+  String get safeboxStoreInTitle => '存放到您的保险箱';
+
+  @override
+  String safeboxStoreInHint(int count) {
+    return '$count 个文件发送后会保留在您保险箱的此文件夹中。';
+  }
+
+  @override
+  String get safeboxStoreChange => '更改';
+
+  @override
+  String get safeboxStoreContinue => '继续';
+
+  @override
+  String get safeboxStoreHere => '存放在这里';
+
+  @override
+  String get safeboxFileLost => '文件已损坏';
+
+  @override
+  String get safeboxFileLostBody => '此文件已损坏：其内容已在我们的存储服务商处丢失，无法恢复。请将其删除以释放空间。';
+
+  @override
+  String get safeboxShareLost => '文件已损坏，无法恢复';
+
+  @override
+  String get safeboxShareRemovedByModeration => '该文件已被 Alanya 审核移除';
 }

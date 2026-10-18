@@ -8025,4 +8025,41 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get safeboxStoreInTitle => 'Store in your safe';
+
+  @override
+  String safeboxStoreInHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The $count files stay in this folder of your safe after sending.',
+      one: 'The file stays in this folder of your safe after sending.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxStoreChange => 'Change';
+
+  @override
+  String get safeboxStoreContinue => 'Continue';
+
+  @override
+  String get safeboxStoreHere => 'Store here';
+
+  @override
+  String get safeboxFileLost => 'Damaged file';
+
+  @override
+  String get safeboxFileLostBody =>
+      'This file is damaged: its content was lost by our storage provider and cannot be recovered. Delete it to free up its space.';
+
+  @override
+  String get safeboxShareLost => 'Damaged file, cannot be recovered';
+
+  @override
+  String get safeboxShareRemovedByModeration =>
+      'File removed by Alanya moderation';
 }
