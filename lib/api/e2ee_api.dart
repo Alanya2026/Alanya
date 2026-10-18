@@ -56,6 +56,34 @@ extension E2eeApi on TalkyApiClient {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  /// Pour qui chiffrer dans cette conversation : les appareils de chaque
+  /// participant, leur clé d'identité et leur capacité, sans rien consommer.
+  /// Fait passer la conversation en chiffré quand elle le peut, et rend
+  /// `e2eeSince` (nul : on écrit en clair).
+  Future<Map<String, dynamic>> fetchE2eeDevices(int conversationID) async {
+    final data = await _handleRequest(
+      () => _client.get(
+        Uri.parse('${TalkyApiClient.baseUrl}/e2ee/devices?conversationID=$conversationID'),
+        headers: _headers,
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Paquets des appareils demandés — chacun CONSOMME une clé à usage unique.
+  /// À ne demander que pour les appareils sans session, ou dont l'identité a
+  /// changé (docs/e2ee, chapitre 13).
+  Future<Map<String, dynamic>> fetchE2eeBundles(List<int> appareilIds) async {
+    final data = await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/e2ee/bundles'),
+        headers: _headers,
+        body: jsonEncode({'appareilIds': appareilIds}),
+      ),
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   /// Retire l'identité de cet appareil (déconnexion). Toujours permis.
   Future<void> deleteE2eeKeys() async {
     await _handleRequest(

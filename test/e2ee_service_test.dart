@@ -96,6 +96,14 @@ class FauxAnnuaire implements E2eeApiPort {
     stock.clear();
   }
 
+  @override
+  Future<Map<String, dynamic>> appareils(int conversationID) async =>
+      throw UnimplementedError('voir e2ee_messages_test.dart');
+
+  @override
+  Future<Map<String, dynamic>> bundles(List<int> appareilIds) async =>
+      throw UnimplementedError('voir e2ee_messages_test.dart');
+
   /// Sert un bundle, en consommant une clé à usage unique.
   PreKeyBundle servir() {
     final otpk = stock.removeAt(0);
@@ -156,7 +164,7 @@ void main() {
       expect(cle.first, 0x05);
       expect(a.annuaire.registrationId, inInclusiveRange(0, 16383));
       expect(a.annuaire.capacite, kE2eeCapacite);
-      expect(kE2eeCapacite, 0, reason: 'cette version ne déchiffre encore rien');
+      expect(kE2eeCapacite, 1, reason: 'cette version déchiffre le texte');
       final spk = a.annuaire.signedPreKey!;
       expect(base64Decode(spk['publicKey'] as String).length, 33);
       expect(base64Decode(spk['publicKey'] as String).first, 0x05);

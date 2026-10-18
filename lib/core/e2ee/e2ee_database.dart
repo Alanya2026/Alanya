@@ -46,11 +46,18 @@ class E2eeDatabase extends GeneratedDatabase {
   Iterable<TableInfo<Table, dynamic>> get allTables => const [];
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
+          for (final sql in _schema) {
+            await customStatement(sql);
+          }
+        },
+        onUpgrade: (m, from, to) async {
+          // Toutes les créations sont en `IF NOT EXISTS` : rejouer le schéma
+          // entier ajoute ce qui manque sans toucher à l'existant.
           for (final sql in _schema) {
             await customStatement(sql);
           }
@@ -95,6 +102,11 @@ class E2eeDatabase extends GeneratedDatabase {
         ' identity_key BLOB NOT NULL,'
         ' vu_le INTEGER NOT NULL,'
         ' PRIMARY KEY (nom, appareil))',
+    // Conversations passées en chiffré (v2). À sens unique : on n'y efface
+    // jamais une ligne sur la parole du serveur (docs/e2ee, chapitre 21).
+    'CREATE TABLE IF NOT EXISTS e2ee_conversations ('
+        ' conv INTEGER NOT NULL PRIMARY KEY,'
+        ' depuis INTEGER NOT NULL)',
   ];
 
   // ── Accès élémentaires ─────────────────────────────────────────────────
@@ -129,6 +141,7 @@ class E2eeDatabase extends GeneratedDatabase {
   /// ouverte survit sur Linux comme sur Android jusqu'à sa fermeture.
   Future<void> toutEffacer() => transaction(() async {
         for (final table in const [
+          'e2ee_conversations',
           'e2ee_sessions',
           'e2ee_identites_distantes',
           'e2ee_prekeys',
