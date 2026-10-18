@@ -24,10 +24,12 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path/path.dart' as p;
+import 'package:pdfx/pdfx.dart';
 import 'package:video_compress/video_compress.dart';
 
 import '../music_metadata_service.dart';
@@ -237,6 +239,58 @@ class SafeboxMediaPrep {
       }
     } catch (e) {
       debugPrint('[Coffre] aperçu impossible : $e');
+      return null;
+    }
+  }
+
+  /// Détails affichés par la carte d'un fichier partagé (durée et définition
+  /// d'une vidéo, pages d'un PDF, titre, artiste et durée d'un audio), lus sur
+  /// le fichier qui part — la copie compressée s'il y en a une. Null si rien
+  /// n'est lisible : ils décorent, ils ne bloquent jamais un envoi.
+  Future<SafeboxMeta?> meta(String path, SafeboxRoot family, String name) async {
+    try {
+      switch (family) {
+        case SafeboxRoot.videos:
+          if (Platform.isAndroid) {
+            final raw = await _video.invokeMethod<Map<dynamic, dynamic>>('probe', {'path': path});
+            if (raw == null) return null;
+            final rotation = (raw['rotation'] as num?)?.toInt() ?? 0;
+            final w = (raw['width'] as num?)?.toInt();
+            final h = (raw['height'] as num?)?.toInt();
+            final tourne = rotation == 90 || rotation == 270;
+            return SafeboxMeta.fromJson({
+              'durationMs': raw['durationMs'],
+              'width': tourne ? h : w,
+              'height': tourne ? w : h,
+            });
+          }
+          final info = await VideoCompress.getMediaInfo(path);
+          return SafeboxMeta.fromJson({
+            'durationMs': info.duration?.round(),
+            'width': info.width,
+            'height': info.height,
+          });
+        case SafeboxRoot.audios:
+          final tags = readMetadata(File(path), getImage: false);
+          var ms = tags.duration?.inMilliseconds;
+          if (ms == null || ms <= 0) {
+            final s = await MusicMetadataService.durationSeconds(path);
+            ms = s == null ? null : s * 1000;
+          }
+          return SafeboxMeta.fromJson({'durationMs': ms, 'title': tags.title, 'artist': tags.artist});
+        case SafeboxRoot.documents:
+          if (safeboxExtensionOf(name) != 'pdf') return null;
+          final doc = await PdfDocument.openFile(path);
+          try {
+            return SafeboxMeta.fromJson({'pages': doc.pagesCount});
+          } finally {
+            await doc.close();
+          }
+        case SafeboxRoot.albums:
+          return null;
+      }
+    } catch (e) {
+      debugPrint('[Coffre] détails illisibles : $e');
       return null;
     }
   }

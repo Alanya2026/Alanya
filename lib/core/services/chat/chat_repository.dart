@@ -12,6 +12,7 @@ import '../../utils/backend_url.dart';
 import '../../utils/media_upload_limits.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
+import '../../utils/safebox_share_payload.dart';
 import '../../utils/media_album.dart';
 import '../../utils/trip_payload.dart';
 import '../alanya_media_export_service.dart';
@@ -744,6 +745,13 @@ class ChatRepository {
         replyToContent: replyToContent,
         isForwarded: isForwarded,
       );
+
+  /// Fichier du coffre-fort (type 11) : voir [MessageSender.sendSafeboxShare].
+  Future<void> sendSafeboxShare({
+    required int conversationID,
+    required SafeboxSharePayload payload,
+  }) =>
+      _sender.sendSafeboxShare(conversationID: conversationID, payload: payload);
 
   Future<void> sendMedia({
     required int conversationID,

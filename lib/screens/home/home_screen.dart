@@ -137,6 +137,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // perdu) reprennent dès l'ouverture, sans attendre qu'on ouvre le coffre,
       // et à chaque retour du réseau.
       _safebox = context.read<SafeboxController>()..ensureStarted();
+      // Un fichier déposé depuis une discussion part dans celle-ci à la fin
+      // de son dépôt, même si l'inscrit a quitté la discussion entre-temps.
+      final discussions = context.read<ChatProvider>().repository;
+      _safebox!.shareSender = (conv, payload) =>
+          discussions.sendSafeboxShare(conversationID: conv, payload: payload);
       _connectivity = context.read<ConnectivityProvider>()
         ..addBackOnlineListener(_onSafeboxNetworkBack);
     });
@@ -155,6 +160,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _callService.removeListener(_onCallStatusChanged);
     _notifActionSub?.cancel();
     _connectivity?.removeBackOnlineListener(_onSafeboxNetworkBack);
+    _safebox?.shareSender = null;
     HomeScreen.tabRequest.removeListener(_onTabRequested);
     super.dispose();
   }

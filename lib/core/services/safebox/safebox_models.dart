@@ -39,6 +39,8 @@ class SafeboxQuota {
     required this.pendingBytes,
     required this.trashBytes,
     required this.byRoot,
+    this.plus = false,
+    this.baseQuotaBytes,
   });
 
   factory SafeboxQuota.fromJson(Map<String, dynamic> j) {
@@ -48,6 +50,8 @@ class SafeboxQuota {
       usedBytes: _int(j['usedBytes']),
       pendingBytes: _int(j['pendingBytes']),
       trashBytes: _int(j['trashBytes']),
+      plus: j['plus'] == true,
+      baseQuotaBytes: _intOrNull(j['baseQuotaBytes']),
       byRoot: {
         for (final r in SafeboxRoot.values)
           r: SafeboxRootUsage(
@@ -65,6 +69,15 @@ class SafeboxQuota {
   final int pendingBytes;
   final int trashBytes;
   final Map<SafeboxRoot, SafeboxRootUsage> byRoot;
+
+  /// L'espace vient d'Alanya Plus (lot 4).
+  final bool plus;
+
+  /// L'espace offert à tous ; null avec un ancien serveur.
+  final int? baseQuotaBytes;
+
+  /// Au-delà de l'espace : plus de dépôt possible (fin d'Alanya Plus).
+  bool get overQuota => usedBytes > quotaBytes;
 
   int get freeBytes => quotaBytes > usedBytes ? quotaBytes - usedBytes : 0;
 
@@ -193,6 +206,94 @@ class SafeboxFolder {
   bool get isRoot => parentId == null;
 }
 
+/// Détails d'un fichier relevés par le téléphone au dépôt (migration 104) :
+/// durée et définition d'une vidéo, pages d'un PDF, titre, artiste et durée
+/// d'un audio. Ils décorent la carte d'un fichier partagé, rien de plus.
+class SafeboxMeta {
+  const SafeboxMeta({this.durationMs, this.width, this.height, this.pages, this.title, this.artist});
+
+  /// Null quand il n'y a rien d'utile.
+  static SafeboxMeta? fromJson(dynamic j) {
+    if (j is! Map) return null;
+    int? entier(dynamic v) => v is num && v > 0 ? v.toInt() : null;
+    String? texte(dynamic v) => v is String && v.trim().isNotEmpty ? v.trim() : null;
+    final m = SafeboxMeta(
+      durationMs: entier(j['durationMs']),
+      width: entier(j['width']),
+      height: entier(j['height']),
+      pages: entier(j['pages']),
+      title: texte(j['title']),
+      artist: texte(j['artist']),
+    );
+    return m.isEmpty ? null : m;
+  }
+
+  final int? durationMs;
+  final int? width;
+  final int? height;
+  final int? pages;
+  final String? title;
+  final String? artist;
+
+  bool get isEmpty =>
+      durationMs == null && (width == null || height == null) && pages == null && title == null && artist == null;
+
+  Map<String, dynamic> toJson() => {
+        if (durationMs != null) 'durationMs': durationMs,
+        if (width != null && height != null) ...{'width': width, 'height': height},
+        if (pages != null) 'pages': pages,
+        if (title != null) 'title': title,
+        if (artist != null) 'artist': artist,
+      };
+
+  /// « 12:47 », « 1:02:03 ».
+  String? get durationLabel {
+    final ms = durationMs;
+    if (ms == null) return null;
+    final t = Duration(milliseconds: ms);
+    final s = (t.inSeconds % 60).toString().padLeft(2, '0');
+    if (t.inHours > 0) return '${t.inHours}:${(t.inMinutes % 60).toString().padLeft(2, '0')}:$s';
+    return '${t.inMinutes}:$s';
+  }
+
+  /// « 1080p », « 4K », d'après le petit côté (une vidéo verticale reste 1080p).
+  String? get definitionLabel {
+    final w = width, h = height;
+    if (w == null || h == null) return null;
+    final c = w < h ? w : h;
+    if (c >= 2160) return '4K';
+    for (final p in const [1440, 1080, 720, 480, 360]) {
+      if (c >= p * 0.95) return '${p}p';
+    }
+    return '${c}p';
+  }
+}
+
+/// Ce que sont devenus les partages d'un fichier de mon coffre : le badge
+/// « reçu par 3 destinataires sur 4 ».
+class SafeboxSent {
+  const SafeboxSent({required this.shares, required this.recipients, this.received});
+
+  static SafeboxSent? fromJson(dynamic j) {
+    if (j is! Map) return null;
+    final shares = _int(j['shares']);
+    if (shares <= 0) return null;
+    return SafeboxSent(shares: shares, recipients: _int(j['recipients']), received: _intOrNull(j['received']));
+  }
+
+  /// Partages actifs (une discussion chacun).
+  final int shares;
+
+  /// Membres actuels de ces discussions, moi exclu.
+  final int recipients;
+
+  /// Ceux d'entre eux qui l'ont reçu ; null si le serveur ne le sait pas.
+  final int? received;
+
+  /// Tout le monde l'a : on peut le supprimer sans priver personne.
+  bool get receivedByAll => received != null && recipients > 0 && received! >= recipients;
+}
+
 class SafeboxFile {
   const SafeboxFile({
     required this.id,
@@ -213,6 +314,8 @@ class SafeboxFile {
     this.trashedAt,
     this.purgeAt,
     this.folderName,
+    this.meta,
+    this.sent,
   });
 
   factory SafeboxFile.fromJson(Map<String, dynamic> j) => SafeboxFile(
@@ -234,6 +337,8 @@ class SafeboxFile {
         trashedAt: _date(j['trashedAt']),
         purgeAt: _date(j['purgeAt']),
         folderName: j['folderName'] as String?,
+        meta: SafeboxMeta.fromJson(j['meta']),
+        sent: SafeboxSent.fromJson(j['sent']),
       );
 
   final int id;
@@ -265,6 +370,11 @@ class SafeboxFile {
   /// Nom de son dossier, rendu par « Libérer de l'espace » ; nul pour un
   /// dossier racine (nom traduit par l'application).
   final String? folderName;
+
+  final SafeboxMeta? meta;
+
+  /// Ses partages dans des discussions ; null s'il n'a jamais été envoyé.
+  final SafeboxSent? sent;
 }
 
 class SafeboxFolderPage {
@@ -392,4 +502,116 @@ class SafeboxTrash {
   final List<SafeboxFile> files;
 
   bool get isEmpty => folders.isEmpty && files.isEmpty;
+}
+
+/// Partage créé (`POST /api/safebox/shares`).
+class SafeboxShareCreated {
+  const SafeboxShareCreated({
+    required this.shareId,
+    required this.name,
+    required this.mime,
+    required this.family,
+    required this.plainBytes,
+    this.meta,
+  });
+
+  factory SafeboxShareCreated.fromJson(Map<String, dynamic> j) => SafeboxShareCreated(
+        shareId: _int(j['shareId']),
+        name: '${j['name'] ?? ''}',
+        mime: j['mime'] as String?,
+        family: SafeboxRoot.fromName(j['family'] as String?) ?? SafeboxRoot.documents,
+        plainBytes: _int(j['plainBytes']),
+        meta: SafeboxMeta.fromJson(j['meta']),
+      );
+
+  final int shareId;
+  final String name;
+  final String? mime;
+  final SafeboxRoot family;
+  final int plainBytes;
+  final SafeboxMeta? meta;
+}
+
+/// La carte d'un fichier partagé (`GET /api/safebox/shares/:id`).
+class SafeboxShareInfo {
+  const SafeboxShareInfo({
+    required this.id,
+    required this.conversationId,
+    required this.senderId,
+    required this.name,
+    required this.mime,
+    required this.family,
+    required this.plainBytes,
+    required this.available,
+    required this.isSender,
+    this.storedBytes,
+    this.key,
+    this.previewUrl,
+    this.downloadsLeft,
+    this.savedFileId,
+    this.meta,
+  });
+
+  factory SafeboxShareInfo.fromJson(Map<String, dynamic> j) => SafeboxShareInfo(
+        id: _int(j['id']),
+        conversationId: _int(j['conversationId']),
+        senderId: _int(j['senderId']),
+        name: '${j['name'] ?? ''}',
+        mime: j['mime'] as String?,
+        family: SafeboxRoot.fromName(j['family'] as String?) ?? SafeboxRoot.documents,
+        plainBytes: _int(j['plainBytes']),
+        available: j['available'] == true,
+        isSender: j['isSender'] == true,
+        storedBytes: _intOrNull(j['storedBytes']),
+        key: j['key'] is String ? base64Decode(j['key'] as String) : null,
+        previewUrl: j['previewUrl'] as String?,
+        downloadsLeft: _intOrNull(j['downloadsLeft']),
+        savedFileId: _intOrNull(j['savedFileId']),
+        meta: SafeboxMeta.fromJson(j['meta']),
+      );
+
+  final int id;
+  final int conversationId;
+  final int senderId;
+  final String name;
+  final String? mime;
+  final SafeboxRoot family;
+  final int plainBytes;
+
+  /// Faux quand l'expéditeur a retiré le fichier de son coffre.
+  final bool available;
+  final bool isSender;
+  final int? storedBytes;
+  final Uint8List? key;
+  final String? previewUrl;
+
+  /// Téléchargements restants aujourd'hui ; nul pour l'expéditeur.
+  final int? downloadsLeft;
+
+  /// Le même fichier, déjà dans mon coffre.
+  final int? savedFileId;
+
+  final SafeboxMeta? meta;
+
+  /// Identifiant local d'un fichier reçu : négatif, pour ne jamais croiser
+  /// celui d'un fichier de mon coffre dans les caches.
+  int get localId => -id;
+
+  /// Vu comme un fichier, pour l'aperçu et le téléchargement.
+  SafeboxFile asFile() => SafeboxFile(
+        id: localId,
+        folderId: 0,
+        name: name,
+        ext: safeboxExtensionOf(name),
+        mime: mime,
+        family: family,
+        plainBytes: plainBytes,
+        storedBytes: storedBytes ?? 0,
+        originalBytes: null,
+        compressed: false,
+        cipherFormat: '',
+        key: key,
+        previewUrl: previewUrl,
+        meta: meta,
+      );
 }

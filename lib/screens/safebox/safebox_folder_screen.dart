@@ -19,6 +19,7 @@ import '../../core/utils/byte_format.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
+import 'safebox_chat_picker.dart';
 import 'safebox_compression_sheet.dart';
 import 'safebox_move_picker.dart';
 import 'safebox_transfers_sheet.dart';
@@ -248,6 +249,20 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     await SharePlus.instance.share(ShareParams(files: [XFile(fichier.path)]));
   }
 
+  /// Le fichier part dans les discussions choisies, sans quitter le coffre.
+  Future<void> _envoyerDansDiscussion(SafeboxFile f) async {
+    final ids = await pickSafeboxConversations(context, file: f);
+    if (ids == null || ids.isEmpty || !mounted) return;
+    try {
+      final n = await _c.sendToConversations(f, ids);
+      if (!mounted) return;
+      safeboxSnack(context, context.l10n.safeboxSendDone(n));
+      await _charger(); // le badge « envoyé » apparaît
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+    }
+  }
+
   Future<void> _renommerFichier(SafeboxFile f) async {
     final l10n = context.l10n;
     final nom = await safeboxAskName(
@@ -303,6 +318,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
             ListTile(title: Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: ctx.text.titleSmall)),
             const Divider(height: 1),
             ListTile(leading: const Icon(Icons.open_in_new), title: Text(l10n.safeboxOpen), onTap: () => Navigator.pop(ctx, 'ouvrir')),
+            ListTile(leading: const Icon(Icons.send_outlined), title: Text(l10n.safeboxSendToChat), onTap: () => Navigator.pop(ctx, 'envoyer')),
             ListTile(leading: const Icon(Icons.ios_share), title: Text(l10n.safeboxExport), onTap: () => Navigator.pop(ctx, 'exporter')),
             ListTile(leading: const Icon(Icons.edit_outlined), title: Text(l10n.safeboxRename), onTap: () => Navigator.pop(ctx, 'renommer')),
             ListTile(leading: const Icon(Icons.drive_file_move_outlined), title: Text(l10n.safeboxMove), onTap: () => Navigator.pop(ctx, 'deplacer')),
@@ -319,6 +335,8 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     switch (action) {
       case 'ouvrir':
         await _ouvrir(f);
+      case 'envoyer':
+        await _envoyerDansDiscussion(f);
       case 'exporter':
         await _exporter(f);
       case 'renommer':
@@ -473,7 +491,14 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
                             return ListTile(
                               leading: SafeboxFileThumb(file: f),
                               title: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                              subtitle: Text('${formatBytes(f.plainBytes, l10n)} · ${safeboxDate(context, f.createdAt)}'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('${formatBytes(f.plainBytes, l10n)} · ${safeboxDate(context, f.createdAt)}'),
+                                  if (f.sent != null) SafeboxSentBadge(sent: f.sent!),
+                                ],
+                              ),
                               trailing: IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuFichier(f)),
                               onTap: () => _ouvrir(f),
                             );

@@ -371,6 +371,11 @@ extension _ChatActions on _ChatDetailScreenState {
       if (trajet != null) return trajet.previewLabel(context.l10n);
       return context.l10n.tripsCardFallback;
     }
+    // Fichier du coffre : JSON — le nom, jamais le payload.
+    if (m.type == kSafeboxShareMessageType) {
+      return SafeboxSharePayload.tryParse(m.content)?.previewLabel(context.l10n) ??
+          context.l10n.safeboxShareFallback;
+    }
     // Item d'album : aperçu du média seul (pas du groupe).
     if (isAlbumMarkerContent(m.content)) {
       return _mediaLabel(m.type, mediaName: m.mediaName);
@@ -433,6 +438,66 @@ extension _ChatActions on _ChatDetailScreenState {
     );
     _scrollToBottom();
   }
+
+  /// Envoi d'un fichier du coffre-fort (type 11). Un fichier pris dans le
+  /// coffre part tout de suite ; un fichier du téléphone partira de lui-même
+  /// à la fin de son dépôt (SafeboxController, envoyeur posé par l'accueil).
+  Future<void> _pickSafebox() async {
+    final convId = await _ensureConversation();
+    if (convId == null || !mounted) return;
+    final payload = await showSafeboxSend(context, conversationId: convId);
+    if (payload == null || !mounted) return;
+    await _chat.repository.sendSafeboxShare(conversationID: convId, payload: payload);
+    _scrollToBottom();
+  }
+
+  /// Fichiers trop lourds pour une discussion : le coffre-fort les envoie
+  /// jusqu'à 1 Go (conception du coffre, section 07). Ils entrent dans le
+  /// coffre de l'expéditeur puis partent ici. Sans coffre joignable, ou si
+  /// aucun ne tient même dans le coffre, le refus habituel ([sinon]).
+  Future<void> _proposerCoffre(List<SafeboxPick> fichiers, {required VoidCallback sinon}) async {
+    if (fichiers.isEmpty || !mounted) return;
+    final coffre = context.read<SafeboxController>();
+    var vue = coffre.overview;
+    if (vue == null) {
+      try {
+        vue = await coffre.refreshOverview();
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    final max = vue?.limits.maxFileBytes ?? 0;
+    final eligibles = fichiers.where((f) => f.size > 0 && f.size <= max).toList();
+    if (eligibles.isEmpty) {
+      sinon();
+      return;
+    }
+    final l10n = context.l10n;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.lock_outline),
+        title: Text(l10n.safeboxOfferTitle),
+        content: Text(eligibles.length == 1
+            ? l10n.safeboxOfferBody(
+                formatBytes(eligibles.first.size, l10n), MediaUploadLimits.maxMegabytes, formatBytes(max, l10n))
+            : l10n.safeboxOfferBodyMany(eligibles.length, MediaUploadLimits.maxMegabytes, formatBytes(max, l10n))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.commonCancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.safeboxOfferAction)),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final convId = await _ensureConversation();
+    if (convId == null || !mounted) return;
+    await sendPhoneFilesViaSafebox(context, conversationId: convId, picks: eligibles);
+  }
+
+  static SafeboxPick _pickDe(File f, {String? nom}) => SafeboxPick(
+        path: f.path,
+        name: (nom != null && nom.trim().isNotEmpty) ? nom : f.path.split('/').last,
+        size: f.existsSync() ? f.lengthSync() : 0,
+      );
 
   bool _canEditMessage(LocalMessage msg) {
     final sent = msg.sendAt.toUtc();
@@ -1209,6 +1274,29 @@ extension _ChatActions on _ChatDetailScreenState {
                   ),
                 ],
               ),
+              AppSpacing.vGapMd,
+              // Coffre-fort : les fichiers trop gros pour une discussion (jusqu'à
+              // 1 Go), qui passent par le coffre et non par les médias. Trois
+              // places vides gardent l'alignement de la grille au-dessus.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _attachOption(
+                    Icons.lock_outline,
+                    context.l10n.safeboxShareAttach,
+                    context.colors.primary,
+                    _pickSafebox,
+                  ),
+                  for (var i = 0; i < 3; i += 1)
+                    Visibility(
+                      visible: false,
+                      maintainSize: true,
+                      maintainAnimation: true,
+                      maintainState: true,
+                      child: _attachOption(Icons.lock_outline, context.l10n.safeboxShareAttach, context.colors.primary, () {}),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -1348,29 +1436,31 @@ extension _ChatActions on _ChatDetailScreenState {
 
     final limited = picked.take(ChatRepository.maxAlbumItems).toList();
     final items = <AlbumSendItem>[];
+    final tropLourdes = <({File file, String? name, int estime})>[];
     for (final x in limited) {
       final file = File(x.path);
       // C'est la vidéo compressée qui partira : on juge sur son poids estimé,
       // pas sur celui du fichier filmé.
       final size = await estimateMediaUploadBytes(file, type: 2);
       if (size > MediaUploadLimits.maxBytes) {
-        if (mounted) {
-          final mb = (size / (1024 * 1024)).toStringAsFixed(1);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-              context.l10n.videoTooLarge(mb, MediaUploadLimits.maxMegabytes),
-            ),
-            backgroundColor: AppColors.error,
-          ));
-        }
+        tropLourdes.add((file: file, name: x.name, estime: size));
         continue;
       }
       final durSec = await _readVideoDuration(file);
       items.add(AlbumSendItem(file: file, type: 2, duration: durSec));
     }
-    if (items.isEmpty) return;
-
-    await _composeAndSendMedia(items);
+    if (items.isNotEmpty) await _composeAndSendMedia(items);
+    await _proposerCoffre(
+      [for (final v in tropLourdes) _pickDe(v.file, nom: v.name)],
+      sinon: () {
+        if (!mounted) return;
+        final mb = (tropLourdes.first.estime / (1024 * 1024)).toStringAsFixed(1);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.videoTooLarge(mb, MediaUploadLimits.maxMegabytes)),
+          backgroundColor: AppColors.error,
+        ));
+      },
+    );
   }
 
   /// Ouvre l'aperçu avec légende, puis envoie le(s) média(s).
@@ -1454,7 +1544,7 @@ extension _ChatActions on _ChatDetailScreenState {
     }
 
     final items = <AlbumSendItem>[];
-    var skipped = 0;
+    final tropLourds = <SafeboxPick>[];
     for (final file in picked.take(max)) {
       final path = file.path;
       if (path == null) continue;
@@ -1462,7 +1552,7 @@ extension _ChatActions on _ChatDetailScreenState {
       final local = File(path);
       final size = local.existsSync() ? local.lengthSync() : 0;
       if (size > MediaUploadLimits.maxBytes) {
-        skipped++;
+        tropLourds.add(_pickDe(local, nom: file.name));
         continue;
       }
 
@@ -1478,24 +1568,25 @@ extension _ChatActions on _ChatDetailScreenState {
     }
 
     if (!mounted) return;
-    if (skipped > 0) {
+    if (items.isNotEmpty) {
+      final convId = await _ensureConversation();
+      if (convId == null) return;
+
+      await _chat.repository.sendMediaFiles(
+        conversationID: convId,
+        items: items,
+      );
+      _scrollToBottom();
+    }
+    await _proposerCoffre(tropLourds, sinon: () {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
-          context.l10n.filesSkippedTooLarge(skipped, MediaUploadLimits.maxMegabytes),
+          context.l10n.filesSkippedTooLarge(tropLourds.length, MediaUploadLimits.maxMegabytes),
         ),
         backgroundColor: AppColors.error,
       ));
-    }
-    if (items.isEmpty) return;
-
-    final convId = await _ensureConversation();
-    if (convId == null) return;
-
-    await _chat.repository.sendMediaFiles(
-      conversationID: convId,
-      items: items,
-    );
-    _scrollToBottom();
+    });
   }
 
   Future<void> _sendMediaFile(
@@ -1513,13 +1604,17 @@ extension _ChatActions on _ChatDetailScreenState {
     final size = await estimateMediaUploadBytes(file, type: type);
     if (size > MediaUploadLimits.maxBytes) {
       if (!mounted) return;
-      final mb = (size / (1024 * 1024)).toStringAsFixed(1);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(type == 2
-            ? context.l10n.videoTooLarge(mb, MediaUploadLimits.maxMegabytes)
-            : context.l10n.fileTooLarge(mb, MediaUploadLimits.maxMegabytes)),
-        backgroundColor: AppColors.error,
-      ));
+      // Un vocal ne dépasse jamais la limite ; une vidéo filmée, si.
+      await _proposerCoffre([_pickDe(file, nom: name)], sinon: () {
+        if (!mounted) return;
+        final mb = (size / (1024 * 1024)).toStringAsFixed(1);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(type == 2
+              ? context.l10n.videoTooLarge(mb, MediaUploadLimits.maxMegabytes)
+              : context.l10n.fileTooLarge(mb, MediaUploadLimits.maxMegabytes)),
+          backgroundColor: AppColors.error,
+        ));
+      });
       return;
     }
 
@@ -2638,6 +2733,8 @@ extension _ChatActions on _ChatDetailScreenState {
         return context.l10n.location;
       case 7:
         return context.l10n.contact;
+      case kSafeboxShareMessageType:
+        return context.l10n.safeboxShareFallback;
       default:
         // Type inconnu (client plus ancien) : sans ça la bulle est vide.
         return context.l10n.mediaFallback;

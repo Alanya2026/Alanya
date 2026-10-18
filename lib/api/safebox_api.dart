@@ -96,6 +96,7 @@ extension SafeboxApi on TalkyApiClient {
     int? originalSize,
     bool compressed = false,
     int previewSize = 0,
+    Map<String, dynamic>? meta,
   }) async =>
       SafeboxUploadTicket.fromJson(await _safeboxJson(() => _client.post(
             _safebox('/uploads'),
@@ -110,6 +111,7 @@ extension SafeboxApi on TalkyApiClient {
               if (originalSize != null) 'originalSize': originalSize,
               'compressed': compressed,
               'previewSize': previewSize,
+              if (meta != null && meta.isNotEmpty) 'meta': meta,
             }),
           )));
 
@@ -162,6 +164,35 @@ extension SafeboxApi on TalkyApiClient {
 
   Future<void> deleteTrashedSafeboxFolder(int folderId) =>
       _safeboxJson(() => _client.delete(_safebox('/trash/folders/$folderId'), headers: _headers));
+
+  // ── Partage entre inscrits ───────────────────────────────────────────────
+
+  /// Partage un fichier de mon coffre dans une discussion dont je suis membre.
+  Future<SafeboxShareCreated> createSafeboxShare({required int fileId, required int conversationId}) async =>
+      SafeboxShareCreated.fromJson(await _safeboxJson(() => _client.post(
+            _safebox('/shares'),
+            headers: _headers,
+            body: jsonEncode({'fileId': fileId, 'conversationId': conversationId}),
+          )));
+
+  /// La carte : disponible ou retiré, aperçu, clé, téléchargements restants.
+  Future<SafeboxShareInfo> fetchSafeboxShare(int shareId) async => SafeboxShareInfo.fromJson(
+        await _safeboxJson(() => _client.get(_safebox('/shares/$shareId'), headers: _headers)),
+      );
+
+  /// Clé et adresses des blocs d'un fichier reçu. Compte un téléchargement
+  /// (une fois par fenêtre de deux heures, 3 par 24 h).
+  Future<SafeboxDownloadPlan> fetchSafeboxShareDownload(int shareId) async => SafeboxDownloadPlan.fromJson(
+        await _safeboxJson(() => _client.get(_safebox('/shares/$shareId/download'), headers: _headers)),
+      );
+
+  /// Enregistre un fichier reçu dans mon coffre (aucune copie chez MEGA).
+  Future<SafeboxFile> saveSafeboxShare(int shareId, {int? folderId}) async =>
+      SafeboxFile.fromJson(await _safeboxJson(() => _client.post(
+            _safebox('/shares/$shareId/save'),
+            headers: _headers,
+            body: jsonEncode({if (folderId != null) 'folderId': folderId}),
+          )));
 
   // ── Transferts directs chez MEGA ─────────────────────────────────────────
   //

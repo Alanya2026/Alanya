@@ -10,6 +10,7 @@ import '../../db/chat_dao.dart';
 import '../../theme/locale_controller.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
+import '../../utils/safebox_share_payload.dart';
 import '../../utils/media_album.dart';
 import '../../utils/file_metadata.dart';
 import '../../utils/media_staging.dart';
@@ -261,6 +262,46 @@ class MessageSender {
       replyToID: replyToID,
       replyToContent: replyToContent,
       isForwarded: isForwarded,
+      clickSentAt: now,
+    );
+    unawaited(_recompute(conversationID));
+  }
+
+  /// Envoi d'un fichier du coffre-fort (`type = 11`) : seul le numéro du
+  /// partage part, le fichier reste chez MEGA. Le serveur vérifie que le
+  /// partage est à moi et à cette discussion, puis réécrit le contenu.
+  Future<void> sendSafeboxShare({
+    required int conversationID,
+    required SafeboxSharePayload payload,
+  }) async {
+    if (_myId() == 0) {
+      debugPrint('[MessageSender] sendSafeboxShare ignoré : utilisateur non lié (myId=0)');
+      return;
+    }
+    if (!_outgoingAllowed()) return;
+    final clientId = _newClientId();
+    final now = DateTime.now().toUtc();
+    final content = payload.encode();
+
+    MessagePathTracer.start(clientId);
+    await _dao.upsertMessage(LocalMessagesCompanion.insert(
+      clientId: clientId,
+      conversationID: conversationID,
+      senderID: _myId(),
+      sendAt: now,
+      clickSentAt: Value(now),
+      content: Value(content),
+      type: const Value(kSafeboxShareMessageType),
+      status: const Value(0),
+      syncPending: const Value(true),
+    ));
+    MessagePathTracer.mark(clientId, 'local_insert');
+
+    emitSend(
+      clientId: clientId,
+      conversationID: conversationID,
+      content: content,
+      type: kSafeboxShareMessageType,
       clickSentAt: now,
     );
     unawaited(_recompute(conversationID));

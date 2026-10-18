@@ -1,5 +1,6 @@
-//  « Libérer de l'espace » : les plus gros fichiers du coffre d'abord, et la
-//  corbeille, qui compte dans l'espace tant qu'elle n'est pas vidée.
+//  « Libérer de l'espace » : les plus gros fichiers du coffre d'abord, les
+//  fichiers déjà envoyés à d'autres (ceux que tout le monde a reçus en tête),
+//  et la corbeille, qui compte dans l'espace tant qu'elle n'est pas vidée.
 
 import 'dart:async';
 
@@ -27,6 +28,9 @@ class _SafeboxFreeUpScreenState extends State<SafeboxFreeUpScreen> {
   Object? _erreur;
   final Set<int> _choisis = {};
   bool _occupe = false;
+
+  /// Seulement les fichiers déjà envoyés dans une discussion.
+  bool _envoyesSeulement = false;
 
   SafeboxController get _c => context.read<SafeboxController>();
 
@@ -92,9 +96,21 @@ class _SafeboxFreeUpScreenState extends State<SafeboxFreeUpScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final fichiers = _fichiers;
+    final tous = _fichiers;
+    // Filtre « Déjà envoyés » : ceux que tout le monde a reçus d'abord, ce
+    // sont eux qu'on supprime sans priver personne ; puis par poids.
+    final fichiers = tous == null || !_envoyesSeulement
+        ? tous
+        : (tous.where((f) => f.sent != null).toList()
+          ..sort((a, b) {
+            final ta = a.sent!.receivedByAll ? 0 : 1;
+            final tb = b.sent!.receivedByAll ? 0 : 1;
+            return ta != tb ? ta - tb : b.storedBytes - a.storedBytes;
+          }));
+    final avecEnvois = tous?.any((f) => f.sent != null) ?? false;
     final vue = context.watch<SafeboxController>().overview;
-    final poidsChoisi = (fichiers ?? const <SafeboxFile>[])
+    // Sur tous les fichiers : une sélection cachée par le filtre part aussi.
+    final poidsChoisi = (tous ?? const <SafeboxFile>[])
         .where((f) => _choisis.contains(f.id))
         .fold<int>(0, (s, f) => s + f.storedBytes);
 
@@ -144,6 +160,19 @@ class _SafeboxFreeUpScreenState extends State<SafeboxFreeUpScreen> {
                     child: Text(l10n.safeboxFreeUpHint,
                         style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant)),
                   ),
+                  if (avecEnvois || _envoyesSeulement)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FilterChip(
+                          avatar: const Icon(Icons.send_outlined, size: 16),
+                          label: Text(l10n.safeboxFreeUpSent),
+                          selected: _envoyesSeulement,
+                          onSelected: (v) => setState(() => _envoyesSeulement = v),
+                        ),
+                      ),
+                    ),
                   if (fichiers.isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(AppSpacing.xxxl),
@@ -157,10 +186,17 @@ class _SafeboxFreeUpScreenState extends State<SafeboxFreeUpScreen> {
                           : (v) => setState(() => v == true ? _choisis.add(f.id) : _choisis.remove(f.id)),
                       secondary: SafeboxFileThumb(file: f, size: 44),
                       title: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text([
-                        formatBytes(f.storedBytes, l10n),
-                        l10n.safeboxInFolder(f.folderName ?? SafeboxController.rootLabel(f.family, l10n)),
-                      ].join(' · ')),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text([
+                            formatBytes(f.storedBytes, l10n),
+                            l10n.safeboxInFolder(f.folderName ?? SafeboxController.rootLabel(f.family, l10n)),
+                          ].join(' · ')),
+                          if (f.sent != null) SafeboxSentBadge(sent: f.sent!),
+                        ],
+                      ),
                     ),
                   const SizedBox(height: 96),
                 ],

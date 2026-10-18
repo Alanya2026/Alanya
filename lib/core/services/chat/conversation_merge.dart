@@ -1,3 +1,4 @@
+import '../../utils/safebox_share_payload.dart';
 import 'package:drift/drift.dart';
 
 import '../../db/app_database.dart';
@@ -160,6 +161,11 @@ class ConversationMerge {
       final trajet = TripCardPayload.tryParse(content);
       if (trajet != null) return trajet.previewLabel(resolveL10n());
       return resolveL10n().tripsCardFallback;
+    }
+    // type=11 : fichier du coffre-fort, JSON — le nom, jamais le payload.
+    if (type == kSafeboxShareMessageType) {
+      return SafeboxSharePayload.tryParse(content)?.previewLabel(resolveL10n()) ??
+          resolveL10n().safeboxShareFallback;
     }
     if (type == kWelcomeCtaMessageType) {
       final cta = WelcomeCtaPayload.tryParse(content);

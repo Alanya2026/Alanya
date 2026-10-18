@@ -7511,4 +7511,125 @@ class AppLocalizationsZh extends AppLocalizations {
   String safeboxInFolder(String folder) {
     return '位于 $folder';
   }
+
+  @override
+  String get safeboxShareAttach => '保险箱';
+
+  @override
+  String get safeboxSharePickTitle => '从保险箱发送';
+
+  @override
+  String safeboxSharePickHint(String max) {
+    return '最多 $max。文件会保留在您的保险箱中并占用您的空间，直到您将其删除。';
+  }
+
+  @override
+  String get safeboxSharePickFromPhone => '从手机中选择';
+
+  @override
+  String get safeboxShareQueued => '文件进入您的保险箱后将立即发送到聊天中。';
+
+  @override
+  String get safeboxShareFromVault => '来自您的保险箱';
+
+  @override
+  String safeboxShareDownload(String size) {
+    return '下载 · $size';
+  }
+
+  @override
+  String get safeboxShareSave => '保存到我的保险箱';
+
+  @override
+  String get safeboxShareSaved => '已在您的保险箱中';
+
+  @override
+  String get safeboxShareSavedToast => '已保存到您的保险箱';
+
+  @override
+  String get safeboxShareRevoked => '发送者已移除该文件';
+
+  @override
+  String safeboxShareDownloadLimit(int limit) {
+    return '您今天已下载此文件 $limit 次。请明天再试，或将其保存到您的保险箱。';
+  }
+
+  @override
+  String safeboxShareDownloadsLeft(int count) {
+    return '今天还可下载 $count 次';
+  }
+
+  @override
+  String get safeboxShareFallback => '保险箱文件';
+
+  @override
+  String safeboxSharePreview(String name) {
+    return '📦 $name';
+  }
+
+  @override
+  String get safeboxShareUnavailableHere => '此文件无法在此处打开。';
+
+  @override
+  String get safeboxPlusBadge => 'Alanya Plus';
+
+  @override
+  String get safeboxOverQuotaTitle => '您的保险箱超出了空间';
+
+  @override
+  String get safeboxOverQuotaBody => '您仍可以查看、下载和删除文件，但无法再添加新文件。';
+
+  @override
+  String safeboxOverQuotaPurge(String date) {
+    return '超出部分将于 $date 被删除，从最新的文件开始。请在此之前续订 Alanya Plus 或释放空间。';
+  }
+
+  @override
+  String get safeboxOfferTitle => '文件太大，无法在聊天中发送';
+
+  @override
+  String safeboxOfferBody(String size, int limit, String vaultMax) {
+    return '此文件大小为 $size，超过了聊天中允许的 $limit MB。保险箱最多可发送 $vaultMax：文件将存放在您的保险箱中，并占用您的空间。';
+  }
+
+  @override
+  String safeboxOfferBodyMany(int count, int limit, String vaultMax) {
+    return '有 $count 个文件超过了聊天中允许的 $limit MB。保险箱可发送每个最多 $vaultMax 的文件：它们将存放在您的保险箱中，并占用您的空间。';
+  }
+
+  @override
+  String get safeboxOfferAction => '通过保险箱发送';
+
+  @override
+  String get safeboxSendToChat => '发送到聊天';
+
+  @override
+  String get safeboxSendPickTitle => '发送给…';
+
+  @override
+  String safeboxSendDone(int count) {
+    return '已发送到 $count 个聊天';
+  }
+
+  @override
+  String safeboxSentReceived(int received, int recipients) {
+    return '$recipients 人中有 $received 人已接收';
+  }
+
+  @override
+  String get safeboxSentAll => '所有人均已接收';
+
+  @override
+  String get safeboxFreeUpSent => '已发送';
+
+  @override
+  String get safeboxSavedToDownloads => '已保存到“下载/Alanya”';
+
+  @override
+  String get safeboxSaveToDownloadsFailed => '无法保存到“下载”：文件仍保留在应用中。';
+
+  @override
+  String safeboxMetaPages(int count) {
+    return '$count 页';
+  }
 }

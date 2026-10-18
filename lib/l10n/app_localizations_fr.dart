@@ -7975,4 +7975,149 @@ class AppLocalizationsFr extends AppLocalizations {
   String safeboxInFolder(String folder) {
     return 'dans $folder';
   }
+
+  @override
+  String get safeboxShareAttach => 'Coffre-fort';
+
+  @override
+  String get safeboxSharePickTitle => 'Envoyer depuis le coffre';
+
+  @override
+  String safeboxSharePickHint(String max) {
+    return 'Jusqu\'à $max. Le fichier reste dans votre coffre, sur votre espace, jusqu\'à ce que vous le supprimiez.';
+  }
+
+  @override
+  String get safeboxSharePickFromPhone => 'Choisir sur le téléphone';
+
+  @override
+  String get safeboxShareQueued =>
+      'Le fichier partira dans la discussion dès qu\'il sera dans votre coffre.';
+
+  @override
+  String get safeboxShareFromVault => 'Depuis votre coffre';
+
+  @override
+  String safeboxShareDownload(String size) {
+    return 'Télécharger · $size';
+  }
+
+  @override
+  String get safeboxShareSave => 'Enregistrer dans mon coffre';
+
+  @override
+  String get safeboxShareSaved => 'Dans votre coffre';
+
+  @override
+  String get safeboxShareSavedToast => 'Enregistré dans votre coffre';
+
+  @override
+  String get safeboxShareRevoked => 'Fichier retiré par l\'expéditeur';
+
+  @override
+  String safeboxShareDownloadLimit(int limit) {
+    return 'Vous avez déjà téléchargé ce fichier $limit fois aujourd\'hui. Réessayez demain, ou enregistrez-le dans votre coffre.';
+  }
+
+  @override
+  String safeboxShareDownloadsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count téléchargements restants aujourd\'hui',
+      one: '1 téléchargement restant aujourd\'hui',
+      zero: 'Plus de téléchargement aujourd\'hui',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxShareFallback => 'Fichier du coffre-fort';
+
+  @override
+  String safeboxSharePreview(String name) {
+    return '📦 $name';
+  }
+
+  @override
+  String get safeboxShareUnavailableHere =>
+      'Ce fichier ne peut pas être ouvert ici.';
+
+  @override
+  String get safeboxPlusBadge => 'Alanya Plus';
+
+  @override
+  String get safeboxOverQuotaTitle => 'Votre coffre dépasse votre espace';
+
+  @override
+  String get safeboxOverQuotaBody =>
+      'Vous pouvez encore lire, télécharger et supprimer vos fichiers, mais plus en ajouter.';
+
+  @override
+  String safeboxOverQuotaPurge(String date) {
+    return 'Ce qui dépasse sera supprimé le $date, en commençant par les fichiers les plus récents. Reprenez Alanya Plus ou libérez de l\'espace d\'ici là.';
+  }
+
+  @override
+  String get safeboxOfferTitle => 'Trop lourd pour une discussion';
+
+  @override
+  String safeboxOfferBody(String size, int limit, String vaultMax) {
+    return 'Ce fichier fait $size, au-delà des $limit Mo permis dans une discussion. Le coffre-fort l\'envoie jusqu\'à $vaultMax : il sera rangé dans votre coffre et comptera dans votre espace.';
+  }
+
+  @override
+  String safeboxOfferBodyMany(int count, int limit, String vaultMax) {
+    return '$count fichiers dépassent les $limit Mo permis dans une discussion. Le coffre-fort les envoie jusqu\'à $vaultMax chacun : ils seront rangés dans votre coffre et compteront dans votre espace.';
+  }
+
+  @override
+  String get safeboxOfferAction => 'Envoyer par le coffre-fort';
+
+  @override
+  String get safeboxSendToChat => 'Envoyer dans une discussion';
+
+  @override
+  String get safeboxSendPickTitle => 'Envoyer à…';
+
+  @override
+  String safeboxSendDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Envoyé dans $count discussions',
+      one: 'Envoyé dans 1 discussion',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxSentReceived(int received, int recipients) {
+    return 'Reçu par $received sur $recipients';
+  }
+
+  @override
+  String get safeboxSentAll => 'Reçu par tous';
+
+  @override
+  String get safeboxFreeUpSent => 'Déjà envoyés';
+
+  @override
+  String get safeboxSavedToDownloads =>
+      'Enregistré dans Téléchargements/Alanya';
+
+  @override
+  String get safeboxSaveToDownloadsFailed =>
+      'Impossible de l\'enregistrer dans Téléchargements : il reste dans l\'application.';
+
+  @override
+  String safeboxMetaPages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pages',
+      one: '1 page',
+    );
+    return '$_temp0';
+  }
 }

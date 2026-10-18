@@ -144,11 +144,39 @@ class MainActivity : FlutterFragmentActivity() {
                                 result.error("bad_args", "path/fileName requis", null)
                                 return@setMethodCallHandler
                             }
+                            // Rend l'emplacement : une adresse content:// (Android 10 et
+                            // plus) ou un chemin, pour rouvrir le fichier ensuite.
                             val saved = saveToDownloads(path, fileName, mimeType, subdir)
-                            if (saved) result.success(true)
+                            if (saved != null) result.success(saved)
                             else result.error("save_failed", "Échec copie Downloads", null)
                         } catch (e: Exception) {
                             result.error("save_failed", e.message, null)
+                        }
+                    }
+                    // Fichier du coffre reçu, enregistré dans Téléchargements :
+                    // existe-t-il encore (l'inscrit a pu le supprimer), et
+                    // l'ouvrir dans l'application de son choix.
+                    "downloadedExists" -> {
+                        val location = call.argument<String>("location")
+                        result.success(location != null && downloadedExists(location))
+                    }
+                    "openDownloaded" -> {
+                        val location = call.argument<String>("location")
+                        val mimeType = call.argument<String>("mimeType") ?: "*/*"
+                        if (location == null || !location.startsWith("content://")) {
+                            result.success(false)
+                        } else {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(location), mimeType)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                startActivity(intent)
+                                result.success(true)
+                            } catch (e: Exception) {
+                                Log.w("MainActivity", "openDownloaded impossible: ${e.message}")
+                                result.success(false)
+                            }
                         }
                     }
                     else -> result.notImplemented()
@@ -336,14 +364,24 @@ class MainActivity : FlutterFragmentActivity() {
         return stat.availableBlocksLong * stat.blockSizeLong
     }
 
+    private fun downloadedExists(location: String): Boolean {
+        if (!location.startsWith("content://")) return File(location).exists()
+        return try {
+            contentResolver.query(Uri.parse(location), arrayOf(MediaStore.MediaColumns._ID), null, null, null)
+                ?.use { it.count > 0 } ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun saveToDownloads(
         srcPath: String,
         fileName: String,
         mimeType: String,
         subdir: String,
-    ): Boolean {
+    ): String? {
         val src = File(srcPath)
-        if (!src.exists() || !src.isFile) return false
+        if (!src.exists() || !src.isFile) return null
 
         // subdir peut être imbriqué : "Alanya/Alanya Images"
         val relative = Environment.DIRECTORY_DOWNLOADS + "/" +
@@ -358,14 +396,24 @@ class MainActivity : FlutterFragmentActivity() {
             }
             val resolver = applicationContext.contentResolver
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                ?: return false
-            resolver.openOutputStream(uri)?.use { out ->
-                FileInputStream(src).use { input -> input.copyTo(out) }
-            } ?: return false
+                ?: return null
+            val copie = try {
+                resolver.openOutputStream(uri)?.use { out ->
+                    FileInputStream(src).use { input -> input.copyTo(out) }
+                }
+            } catch (e: Exception) {
+                Log.w("MainActivity", "copie vers Téléchargements interrompue: ${e.message}")
+                null
+            }
+            if (copie == null) {
+                // Copie impossible (place, accès) : ne pas laisser d'entrée vide.
+                try { resolver.delete(uri, null, null) } catch (_: Exception) {}
+                return null
+            }
             values.clear()
             values.put(MediaStore.Downloads.IS_PENDING, 0)
             resolver.update(uri, values, null, null)
-            return true
+            return uri.toString()
         }
 
         @Suppress("DEPRECATION")
@@ -373,9 +421,9 @@ class MainActivity : FlutterFragmentActivity() {
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             subdir.trim('/').replace('\\', '/'),
         )
-        if (!dir.exists() && !dir.mkdirs()) return false
+        if (!dir.exists() && !dir.mkdirs()) return null
         val dest = File(dir, fileName)
         src.copyTo(dest, overwrite = true)
-        return true
+        return dest.absolutePath
     }
 }

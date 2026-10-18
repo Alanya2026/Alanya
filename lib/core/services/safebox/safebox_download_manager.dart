@@ -19,6 +19,9 @@ import 'safebox_models.dart';
 
 abstract class SafeboxDownloadTransport {
   Future<SafeboxDownloadPlan> plan(int fileId);
+
+  /// Plan d'un fichier reçu par partage (compte un téléchargement).
+  Future<SafeboxDownloadPlan> sharePlan(int shareId);
   Future<void> getBlock(String url, {int from, required void Function(List<int> bytes) onBytes});
   Future<Uint8List> getPreview(String url);
 }
@@ -29,6 +32,9 @@ class ApiSafeboxDownloadTransport implements SafeboxDownloadTransport {
 
   @override
   Future<SafeboxDownloadPlan> plan(int fileId) => api.fetchSafeboxDownload(fileId);
+
+  @override
+  Future<SafeboxDownloadPlan> sharePlan(int shareId) => api.fetchSafeboxShareDownload(shareId);
 
   @override
   Future<void> getBlock(String url, {int from = 0, required void Function(List<int> bytes) onBytes}) =>
@@ -74,9 +80,12 @@ class SafeboxDownloadManager extends ChangeNotifier {
   /// Avancement d'un téléchargement en cours (0 à 1), ou null.
   double? progressOf(int fileId) => _progres[fileId];
 
+  /// Un fichier de mon coffre sous `files/<id>/`, un fichier reçu sous
+  /// `shares/<partage>/` (son identifiant local est négatif).
   Future<File> _cible(SafeboxFile file) async {
     final base = await _baseDir();
-    return File('${base.path}/files/${file.id}/${safeboxLocalName(file.name)}');
+    final dossier = file.id < 0 ? 'shares/${-file.id}' : 'files/${file.id}';
+    return File('${base.path}/$dossier/${safeboxLocalName(file.name)}');
   }
 
   /// Le fichier en clair s'il est déjà sur le téléphone.
@@ -87,10 +96,16 @@ class SafeboxDownloadManager extends ChangeNotifier {
 
   /// Le fichier en clair, téléchargé au besoin. Deux appels simultanés pour le
   /// même fichier partagent le même téléchargement.
-  Future<File> fetch(SafeboxFile file) {
+  Future<File> fetch(SafeboxFile file) => _demarrer(file, () => _transport.plan(file.id));
+
+  /// Un fichier reçu dans une discussion ([SafeboxShareInfo.asFile]).
+  Future<File> fetchShare(SafeboxShareInfo share) =>
+      _demarrer(share.asFile(), () => _transport.sharePlan(share.id));
+
+  Future<File> _demarrer(SafeboxFile file, Future<SafeboxDownloadPlan> Function() planifier) {
     return _enCours.putIfAbsent(file.id, () async {
       try {
-        return await _telecharger(file);
+        return await _telecharger(file, planifier);
       } finally {
         _enCours.remove(file.id);
         _progres.remove(file.id);
@@ -102,7 +117,7 @@ class SafeboxDownloadManager extends ChangeNotifier {
   /// Supprime la copie en clair du téléphone (le fichier reste dans le coffre).
   Future<void> evict(int fileId) async {
     final base = await _baseDir();
-    final d = Directory('${base.path}/files/$fileId');
+    final d = Directory(fileId < 0 ? '${base.path}/shares/${-fileId}' : '${base.path}/files/$fileId');
     if (await d.exists()) await d.delete(recursive: true);
   }
 
@@ -117,13 +132,13 @@ class SafeboxDownloadManager extends ChangeNotifier {
     }
   }
 
-  Future<File> _telecharger(SafeboxFile file) async {
+  Future<File> _telecharger(SafeboxFile file, Future<SafeboxDownloadPlan> Function() planifier) async {
     final cible = await _cible(file);
     if (await cible.exists() && await cible.length() == file.plainBytes) return cible;
     await cible.parent.create(recursive: true);
     final partiel = File('${cible.path}.part');
 
-    var plan = await _avecReprise(() => _transport.plan(file.id));
+    var plan = await _avecReprise(planifier);
     final parBloc = safeboxChunksPerBlock(plan.blockSize) * kSafeboxChunkPlainBytes;
 
     // Reprise : on garde les blocs entiers déjà déchiffrés.
@@ -150,7 +165,7 @@ class SafeboxDownloadManager extends ChangeNotifier {
             // Adresses de 15 minutes : un gros fichier sur une ligne lente les use.
             if (e.statusCode != 403 || adresseRenouvelee) rethrow;
             adresseRenouvelee = true;
-            plan = await _avecReprise(() => _transport.plan(file.id));
+            plan = await _avecReprise(planifier);
           }
         }
         final chiffre = recu.takeBytes();

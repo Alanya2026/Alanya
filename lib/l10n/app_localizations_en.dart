@@ -7882,4 +7882,147 @@ class AppLocalizationsEn extends AppLocalizations {
   String safeboxInFolder(String folder) {
     return 'in $folder';
   }
+
+  @override
+  String get safeboxShareAttach => 'Safe';
+
+  @override
+  String get safeboxSharePickTitle => 'Send from the safe';
+
+  @override
+  String safeboxSharePickHint(String max) {
+    return 'Up to $max. The file stays in your safe, on your space, until you delete it.';
+  }
+
+  @override
+  String get safeboxSharePickFromPhone => 'Choose from phone';
+
+  @override
+  String get safeboxShareQueued =>
+      'The file will be sent to the chat as soon as it is in your safe.';
+
+  @override
+  String get safeboxShareFromVault => 'From your safe';
+
+  @override
+  String safeboxShareDownload(String size) {
+    return 'Download · $size';
+  }
+
+  @override
+  String get safeboxShareSave => 'Save to my safe';
+
+  @override
+  String get safeboxShareSaved => 'In your safe';
+
+  @override
+  String get safeboxShareSavedToast => 'Saved to your safe';
+
+  @override
+  String get safeboxShareRevoked => 'File removed by the sender';
+
+  @override
+  String safeboxShareDownloadLimit(int limit) {
+    return 'You have already downloaded this file $limit times today. Try again tomorrow, or save it to your safe.';
+  }
+
+  @override
+  String safeboxShareDownloadsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count downloads left today',
+      one: '1 download left today',
+      zero: 'No downloads left today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxShareFallback => 'File from the safe';
+
+  @override
+  String safeboxSharePreview(String name) {
+    return '📦 $name';
+  }
+
+  @override
+  String get safeboxShareUnavailableHere => 'This file cannot be opened here.';
+
+  @override
+  String get safeboxPlusBadge => 'Alanya Plus';
+
+  @override
+  String get safeboxOverQuotaTitle => 'Your safe is over its space';
+
+  @override
+  String get safeboxOverQuotaBody =>
+      'You can still read, download and delete your files, but not add new ones.';
+
+  @override
+  String safeboxOverQuotaPurge(String date) {
+    return 'What is over will be deleted on $date, newest files first. Renew Alanya Plus or free up space before then.';
+  }
+
+  @override
+  String get safeboxOfferTitle => 'Too large for a chat';
+
+  @override
+  String safeboxOfferBody(String size, int limit, String vaultMax) {
+    return 'This file is $size, over the $limit MB allowed in a chat. The safe can send it up to $vaultMax: it will be stored in your safe and count towards your space.';
+  }
+
+  @override
+  String safeboxOfferBodyMany(int count, int limit, String vaultMax) {
+    return '$count files are over the $limit MB allowed in a chat. The safe can send them up to $vaultMax each: they will be stored in your safe and count towards your space.';
+  }
+
+  @override
+  String get safeboxOfferAction => 'Send via the safe';
+
+  @override
+  String get safeboxSendToChat => 'Send to a chat';
+
+  @override
+  String get safeboxSendPickTitle => 'Send to…';
+
+  @override
+  String safeboxSendDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Sent to $count chats',
+      one: 'Sent to 1 chat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxSentReceived(int received, int recipients) {
+    return 'Received by $received of $recipients';
+  }
+
+  @override
+  String get safeboxSentAll => 'Received by everyone';
+
+  @override
+  String get safeboxFreeUpSent => 'Already sent';
+
+  @override
+  String get safeboxSavedToDownloads => 'Saved to Downloads/Alanya';
+
+  @override
+  String get safeboxSaveToDownloadsFailed =>
+      'Could not save it to Downloads: it stays in the app.';
+
+  @override
+  String safeboxMetaPages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pages',
+      one: '1 page',
+    );
+    return '$_temp0';
+  }
 }

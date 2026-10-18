@@ -223,3 +223,34 @@ void safeboxSnack(BuildContext context, String message, {bool error = false}) {
 
 void safeboxShowError(BuildContext context, Object e) =>
     safeboxSnack(context, presenterErreur(context.l10n, e, domaine: ErrorDomain.media), error: true);
+
+/// Ce que sont devenus les envois d'un fichier : « Reçu par 3 sur 4 »,
+/// « Reçu par tous » (on peut le supprimer sans priver personne), ou
+/// « Envoyé dans 2 discussions » quand le serveur ne sait pas qui l'a reçu.
+class SafeboxSentBadge extends StatelessWidget {
+  const SafeboxSentBadge({super.key, required this.sent});
+  final SafeboxSent sent;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final tous = sent.receivedByAll;
+    final texte = sent.received == null
+        ? l10n.safeboxSendDone(sent.shares)
+        : tous
+            ? l10n.safeboxSentAll
+            : l10n.safeboxSentReceived(sent.received!, sent.recipients);
+    final couleur = tous ? context.semantic.success : context.colors.primary;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(tous ? Icons.done_all : Icons.send_outlined, size: 14, color: couleur),
+        AppSpacing.hGapXs,
+        Flexible(
+          child: Text(texte, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: context.text.bodySmall?.copyWith(color: couleur)),
+        ),
+      ],
+    );
+  }
+}

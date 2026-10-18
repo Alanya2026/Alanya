@@ -43,6 +43,7 @@ abstract class SafeboxTransport {
     int? originalSize,
     bool compressed,
     int previewSize,
+    Map<String, dynamic>? meta,
   });
 
   Future<SafeboxUploadStatus> status(int fileId);
@@ -76,6 +77,7 @@ class ApiSafeboxTransport implements SafeboxTransport {
     int? originalSize,
     bool compressed = false,
     int previewSize = 0,
+    Map<String, dynamic>? meta,
   }) =>
       api.reserveSafeboxUpload(
         folderId: folderId,
@@ -87,6 +89,7 @@ class ApiSafeboxTransport implements SafeboxTransport {
         originalSize: originalSize,
         compressed: compressed,
         previewSize: previewSize,
+        meta: meta,
       );
 
   @override
@@ -137,6 +140,8 @@ class SafeboxUploadJob {
     this.previewDone = false,
     this.state = SafeboxUploadState.queued,
     this.errorCode,
+    this.shareConversationId,
+    this.meta,
     DateTime? createdAt,
   })  : done = done ?? <int>{},
         createdAt = createdAt ?? DateTime.now();
@@ -165,6 +170,8 @@ class SafeboxUploadJob {
           orElse: () => SafeboxUploadState.queued,
         ),
         errorCode: j['errorCode'] as String?,
+        shareConversationId: j['shareConversationId'] as int?,
+        meta: j['meta'] is Map ? Map<String, dynamic>.from(j['meta'] as Map) : null,
         createdAt: DateTime.tryParse('${j['createdAt']}'),
       );
 
@@ -195,6 +202,13 @@ class SafeboxUploadJob {
   bool previewDone;
   SafeboxUploadState state;
   String? errorCode;
+
+  /// Discussion où partager le fichier dès qu'il est dans le coffre (envoi
+  /// d'un gros fichier depuis une discussion), ou null.
+  final int? shareConversationId;
+
+  /// Durée, définition, pages… relevés avant l'envoi ([SafeboxMeta.toJson]).
+  final Map<String, dynamic>? meta;
   final DateTime createdAt;
 
   /// Octets envoyés pendant le bloc en cours (non gardé).
@@ -234,6 +248,8 @@ class SafeboxUploadJob {
         'previewDone': previewDone,
         'state': state.name,
         'errorCode': errorCode,
+        'shareConversationId': shareConversationId,
+        if (meta != null) 'meta': meta,
         'createdAt': createdAt.toIso8601String(),
       };
 }
@@ -328,6 +344,8 @@ class SafeboxUploadManager extends ChangeNotifier {
 
   final List<SafeboxUploadJob> _jobs = [];
   final StreamController<SafeboxFile> _termines = StreamController<SafeboxFile>.broadcast();
+  final StreamController<({SafeboxUploadJob job, SafeboxFile file})> _terminesAvecEnvoi =
+      StreamController<({SafeboxUploadJob job, SafeboxFile file})>.broadcast();
   bool _charge = false;
   bool _enCours = false;
   final Set<String> _annules = {};
@@ -337,6 +355,9 @@ class SafeboxUploadManager extends ChangeNotifier {
 
   /// Un fichier vient d'apparaître dans le coffre : l'écran du dossier se rafraîchit.
   Stream<SafeboxFile> get completed => _termines.stream;
+
+  /// Même événement, avec l'envoi qui l'a produit (sa discussion de partage).
+  Stream<({SafeboxUploadJob job, SafeboxFile file})> get completedJobs => _terminesAvecEnvoi.stream;
 
   bool get busy => _jobs.any((j) => j.state == SafeboxUploadState.running || j.state == SafeboxUploadState.queued);
 
@@ -444,6 +465,7 @@ class SafeboxUploadManager extends ChangeNotifier {
       await _sauver();
       notifyListeners();
       _termines.add(fichier);
+      _terminesAvecEnvoi.add((job: job, file: fichier));
     } on SafeboxUploadFailure catch (e) {
       if (_annules.contains(job.id)) return;
       job
@@ -500,6 +522,7 @@ class SafeboxUploadManager extends ChangeNotifier {
             originalSize: job.originalSize,
             compressed: job.compressed,
             previewSize: job.previewSize,
+            meta: job.meta,
           ));
       if (ticket.size != job.storedSize
           || ticket.blockCount != safeboxBlockCount(job.plainSize, ticket.blockSize)) {
@@ -654,6 +677,7 @@ class SafeboxUploadManager extends ChangeNotifier {
   @override
   void dispose() {
     _termines.close();
+    _terminesAvecEnvoi.close();
     super.dispose();
   }
 }

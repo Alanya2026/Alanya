@@ -12,6 +12,7 @@ import '../../core/utils/byte_format.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 import '../../widgets/billing/paywall_sheet.dart';
+import '../../core/services/billing/entitlement_service.dart';
 import 'safebox_folder_screen.dart';
 import 'safebox_free_up_screen.dart';
 import 'safebox_transfers_sheet.dart';
@@ -77,7 +78,20 @@ class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (vue.quota.plus)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: Chip(
+                          avatar: const Icon(Icons.workspace_premium_outlined, size: 18),
+                          label: Text(l10n.safeboxPlusBadge),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
                     SafeboxQuotaBar(quota: vue.quota),
+                    if (vue.quota.overQuota) ...[
+                      AppSpacing.vGapMd,
+                      _Depassement(purgeAfter: context.watch<EntitlementService>().current.purgeAfter),
+                    ],
                     AppSpacing.vGapSm,
                     Wrap(
                       spacing: AppSpacing.sm,
@@ -158,6 +172,38 @@ class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Fin d'Alanya Plus avec un coffre plus gros que l'espace offert : lecture
+/// seule, puis suppression de l'excédent à la date de purge de l'abonnement
+/// (30 jours après l'échéance, décision du 15/10/2026).
+class _Depassement extends StatelessWidget {
+  const _Depassement({required this.purgeAfter});
+  final DateTime? purgeAfter;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      padding: AppSpacing.card,
+      decoration: BoxDecoration(color: context.colors.errorContainer, borderRadius: AppRadius.brSm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.safeboxOverQuotaTitle,
+              style: context.text.titleSmall?.copyWith(color: context.colors.onErrorContainer)),
+          AppSpacing.vGapXs,
+          Text(
+            [
+              l10n.safeboxOverQuotaBody,
+              if (purgeAfter != null) l10n.safeboxOverQuotaPurge(safeboxDate(context, purgeAfter)),
+            ].join(' '),
+            style: context.text.bodySmall?.copyWith(color: context.colors.onErrorContainer),
+          ),
+        ],
       ),
     );
   }

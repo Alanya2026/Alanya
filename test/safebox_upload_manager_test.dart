@@ -24,6 +24,7 @@ class _FauxServeur implements SafeboxTransport {
   bool statusIntrouvable = false;
   int incompletUneFois = 0;
   bool annule = false;
+  Map<String, dynamic>? derniereMeta;
 
   @override
   Future<SafeboxUploadTicket> reserve({
@@ -36,8 +37,10 @@ class _FauxServeur implements SafeboxTransport {
     int? originalSize,
     bool compressed = false,
     int previewSize = 0,
+    Map<String, dynamic>? meta,
   }) async {
     appels.add('reserve');
+    derniereMeta = meta;
     if (erreurReserve != null) throw erreurReserve!;
     final id = prochainId++;
     final n = safeboxBlockCount(plainSize, blockSize);

@@ -12,12 +12,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../theme/locale_controller.dart';
 import '../local_notification_helper.dart';
+import '../image_thumbnail_service.dart';
+import '../../utils/safebox_share_payload.dart';
 import '../../../talky_api_client.dart';
 import 'safebox_cipher.dart';
 import 'safebox_download_manager.dart';
 import 'safebox_foreground.dart';
 import 'safebox_media_prep.dart';
 import 'safebox_models.dart';
+import 'safebox_received_files.dart';
 import 'safebox_upload_manager.dart';
 
 /// Un fichier choisi par l'inscrit, pas encore préparé.
@@ -56,7 +59,13 @@ class SafeboxController extends ChangeNotifier {
     uploads.addListener(_suivrePremierPlan);
     downloads.addListener(notifyListeners);
     _abonnement = uploads.completed.listen((_) => unawaited(refreshOverview()));
+    _abonnementPartages = uploads.completedJobs.listen((e) {
+      final conv = e.job.shareConversationId;
+      if (conv != null) unawaited(_partagerApresEnvoi(e.file, conv));
+    });
   }
+
+  late final StreamSubscription<({SafeboxUploadJob job, SafeboxFile file})> _abonnementPartages;
 
   final SafeboxForeground _premierPlan;
 
@@ -86,6 +95,9 @@ class SafeboxController extends ChangeNotifier {
   final SafeboxUploadManager uploads;
   final SafeboxDownloadManager downloads;
   final SafeboxPreviewCache previews;
+
+  /// Fichiers reçus, enregistrés dans Téléchargements/Alanya.
+  final SafeboxReceivedFiles received = SafeboxReceivedFiles();
   late final StreamSubscription<SafeboxFile> _abonnement;
 
   SafeboxOverview? _overview;
@@ -216,7 +228,12 @@ class SafeboxController extends ChangeNotifier {
 
   /// Prépare chaque fichier (compression au besoin, aperçu chiffré) et le
   /// confie au gestionnaire d'envoi. Les fichiers partent un par un.
-  Future<void> addFiles(List<SafeboxPick> picks, SafeboxFolder folder, {required bool compress}) async {
+  Future<void> addFiles(
+    List<SafeboxPick> picks,
+    SafeboxFolder folder, {
+    required bool compress,
+    int? shareConversationId,
+  }) async {
     final prep = await _prep();
     await prep.workDir.create(recursive: true);
     final maxApercu = (_overview?.limits.maxPreviewBytes ?? 256 * 1024) - kSafeboxTagBytes;
@@ -245,6 +262,7 @@ class SafeboxController extends ChangeNotifier {
           await File(cheminApercu).writeAsBytes(chiffre, flush: true);
           tailleApercu = chiffre.length;
         }
+        final details = await prep.meta(source, folder.root, nom);
         await uploads.enqueue(
           SafeboxUploadJob(
             id: '${DateTime.now().microsecondsSinceEpoch}_${pick.name.hashCode}',
@@ -260,6 +278,8 @@ class SafeboxController extends ChangeNotifier {
             compressed: possede,
             previewPath: cheminApercu,
             previewSize: tailleApercu,
+            shareConversationId: shareConversationId,
+            meta: details?.toJson(),
           ),
           cle,
         );
@@ -269,8 +289,151 @@ class SafeboxController extends ChangeNotifier {
     }
   }
 
+  // ── Partage dans une discussion (lot 3) ──────────────────────────────────
+
+  /// Publie un message dans une discussion. Posé par l'écran d'accueil, qui a
+  /// accès aux discussions ; un partage prêt avant lui attend dans
+  /// [_partagesEnAttente].
+  Future<void> Function(int conversationId, SafeboxSharePayload payload)? _envoyeur;
+  final List<(int, SafeboxSharePayload)> _partagesEnAttente = [];
+
+  set shareSender(Future<void> Function(int conversationId, SafeboxSharePayload payload)? f) {
+    _envoyeur = f;
+    if (f == null) return;
+    final attente = List.of(_partagesEnAttente);
+    _partagesEnAttente.clear();
+    for (final (conv, payload) in attente) {
+      unawaited(f(conv, payload));
+    }
+  }
+
+  /// Partage un fichier de mon coffre dans une discussion et rend le contenu
+  /// du message, mini-image floue comprise (tirée de l'aperçu).
+  Future<SafeboxSharePayload> shareFile(SafeboxFile file, int conversationId) async {
+    final cree = await _api.createSafeboxShare(fileId: file.id, conversationId: conversationId);
+    String? flou;
+    try {
+      final apercu = await previews.load(file);
+      if (apercu != null) {
+        final b64 = await ImageThumbnailService.base64ForBytes(apercu, maxWidth: 24);
+        if (b64 != null && b64.length <= 6000) flou = b64;
+      }
+    } catch (e) {
+      debugPrint('[Coffre] mini-image du partage : $e');
+    }
+    return SafeboxSharePayload(
+      share: cree.shareId,
+      name: cree.name,
+      size: cree.plainBytes,
+      mime: cree.mime,
+      family: cree.family,
+      blur: flou,
+      meta: cree.meta ?? file.meta,
+    );
+  }
+
+  /// Envoie un fichier de mon coffre dans plusieurs discussions (bouton
+  /// « Envoyer dans une discussion » du coffre). Rend le nombre de
+  /// discussions où il est parti.
+  Future<int> sendToConversations(SafeboxFile file, List<int> conversationIds) async {
+    var reussis = 0;
+    Object? premiereErreur;
+    for (final conv in conversationIds) {
+      try {
+        final payload = await shareFile(file, conv);
+        final envoyer = _envoyeur;
+        if (envoyer != null) {
+          await envoyer(conv, payload);
+        } else {
+          _partagesEnAttente.add((conv, payload));
+        }
+        reussis += 1;
+      } catch (e) {
+        premiereErreur ??= e;
+        debugPrint('[Coffre] envoi dans la discussion $conv impossible : $e');
+      }
+    }
+    if (reussis == 0 && premiereErreur != null) throw premiereErreur;
+    return reussis;
+  }
+
+  /// Fichier déposé depuis une discussion : une fois dans le coffre, il part.
+  Future<void> _partagerApresEnvoi(SafeboxFile file, int conversationId) async {
+    try {
+      final payload = await shareFile(file, conversationId);
+      final envoyer = _envoyeur;
+      if (envoyer != null) {
+        await envoyer(conversationId, payload);
+      } else {
+        _partagesEnAttente.add((conversationId, payload));
+      }
+    } catch (e) {
+      debugPrint('[Coffre] partage après envoi impossible : $e');
+    }
+  }
+
+  final Map<int, SafeboxShareInfo> _cartes = {};
+  final Map<int, Future<SafeboxShareInfo?>> _cartesEnCours = {};
+
+  /// État connu d'une carte, sans réseau.
+  SafeboxShareInfo? shareInfoCached(int shareId) => _cartes[shareId];
+
+  /// État d'une carte (disponible, aperçu, clé…). Null si le partage n'est pas
+  /// visible (plus membre de la discussion, partage inconnu).
+  Future<SafeboxShareInfo?> shareInfo(int shareId, {bool refresh = false}) {
+    if (!refresh && _cartes.containsKey(shareId)) return Future.value(_cartes[shareId]);
+    return _cartesEnCours.putIfAbsent(shareId, () async {
+      try {
+        final info = await _api.fetchSafeboxShare(shareId);
+        _cartes[shareId] = info;
+        notifyListeners();
+        return info;
+      } on TalkyException catch (e) {
+        if (e.statusCode == 404) return null;
+        rethrow;
+      } finally {
+        _cartesEnCours.remove(shareId);
+      }
+    });
+  }
+
+  /// Télécharge un fichier reçu (compte un téléchargement), puis relit la carte.
+  Future<File> downloadShare(SafeboxShareInfo info) async {
+    final f = await downloads.fetchShare(info);
+    unawaited(shareInfo(info.id, refresh: true));
+    return f;
+  }
+
+  /// Le fichier reçu sur le téléphone : déjà dans Téléchargements, sinon
+  /// téléchargé puis copié dans Téléchargements/Alanya (la copie privée est
+  /// alors supprimée). `published` dit si la copie vient d'être faite ; si
+  /// elle échoue, le fichier reste dans l'application (`saveFailed`).
+  Future<({String location, bool published, bool saveFailed})> fetchReceived(SafeboxShareInfo info) async {
+    final deja = await received.location(info.id);
+    if (deja != null) return (location: deja, published: false, saveFailed: false);
+    final f = await downloadShare(info);
+    final loc = await received.publish(f, shareId: info.id, name: info.name, mime: info.mime, family: info.family);
+    if (loc == null) return (location: f.path, published: false, saveFailed: true);
+    await downloads.evict(info.localId);
+    return (location: loc, published: true, saveFailed: false);
+  }
+
+  /// Le fichier reçu est-il déjà sur le téléphone (Téléchargements, ou
+  /// dossier de l'application si la copie avait échoué) ?
+  Future<bool> hasReceived(SafeboxShareInfo info) async =>
+      await received.location(info.id) != null || await downloads.cached(info.asFile()) != null;
+
+  /// Enregistre un fichier reçu dans mon coffre.
+  Future<SafeboxFile> saveShare(int shareId) async {
+    final f = await _api.saveSafeboxShare(shareId);
+    await shareInfo(shareId, refresh: true);
+    unawaited(refreshOverview());
+    return f;
+  }
+
   @override
   void dispose() {
+    _abonnementPartages.cancel();
     _abonnement.cancel();
     uploads.removeListener(notifyListeners);
     uploads.removeListener(_suivrePremierPlan);

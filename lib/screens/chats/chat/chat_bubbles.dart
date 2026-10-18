@@ -1470,7 +1470,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
     if (msg.type == 5 ||
         msg.type == 7 ||
         msg.type == kTripMessageType ||
-        msg.type == kWelcomeCtaMessageType) {
+        msg.type == kWelcomeCtaMessageType ||
+        msg.type == kSafeboxShareMessageType) {
       return null;
     }
     final content = msg.content;
@@ -1544,6 +1545,18 @@ extension _ChatBubbles on _ChatDetailScreenState {
         return _buildTripMedia(msg, isMe);
       case kWelcomeCtaMessageType:
         return _buildWelcomeCtaMedia(msg, isMe);
+      case kSafeboxShareMessageType:
+        final partage = SafeboxSharePayload.tryParse(msg.content);
+        if (partage == null) {
+          return Text(context.l10n.safeboxShareFallback,
+              style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));
+        }
+        return SafeboxShareCard(
+          payload: partage,
+          isMe: isMe,
+          textColor: _bubbleText(isMe),
+          mutedColor: _bubbleMuted(isMe),
+        );
       default:
         return Text(_mediaLabel(msg.type, mediaName: msg.mediaName),
             style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));

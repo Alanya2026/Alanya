@@ -13545,6 +13545,204 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'dans {folder}'**
   String safeboxInFolder(String folder);
+
+  /// Entrée du menu des pièces jointes : envoyer un fichier du coffre (jusqu'à 1 Go).
+  ///
+  /// In fr, this message translates to:
+  /// **'Coffre-fort'**
+  String get safeboxShareAttach;
+
+  /// No description provided for @safeboxSharePickTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer depuis le coffre'**
+  String get safeboxSharePickTitle;
+
+  /// No description provided for @safeboxSharePickHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'à {max}. Le fichier reste dans votre coffre, sur votre espace, jusqu\'à ce que vous le supprimiez.'**
+  String safeboxSharePickHint(String max);
+
+  /// No description provided for @safeboxSharePickFromPhone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir sur le téléphone'**
+  String get safeboxSharePickFromPhone;
+
+  /// No description provided for @safeboxShareQueued.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le fichier partira dans la discussion dès qu\'il sera dans votre coffre.'**
+  String get safeboxShareQueued;
+
+  /// No description provided for @safeboxShareFromVault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Depuis votre coffre'**
+  String get safeboxShareFromVault;
+
+  /// No description provided for @safeboxShareDownload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger · {size}'**
+  String safeboxShareDownload(String size);
+
+  /// No description provided for @safeboxShareSave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer dans mon coffre'**
+  String get safeboxShareSave;
+
+  /// No description provided for @safeboxShareSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans votre coffre'**
+  String get safeboxShareSaved;
+
+  /// No description provided for @safeboxShareSavedToast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistré dans votre coffre'**
+  String get safeboxShareSavedToast;
+
+  /// No description provided for @safeboxShareRevoked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier retiré par l\'expéditeur'**
+  String get safeboxShareRevoked;
+
+  /// No description provided for @safeboxShareDownloadLimit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez déjà téléchargé ce fichier {limit} fois aujourd\'hui. Réessayez demain, ou enregistrez-le dans votre coffre.'**
+  String safeboxShareDownloadLimit(int limit);
+
+  /// No description provided for @safeboxShareDownloadsLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Plus de téléchargement aujourd\'hui} =1{1 téléchargement restant aujourd\'hui} other{{count} téléchargements restants aujourd\'hui}}'**
+  String safeboxShareDownloadsLeft(int count);
+
+  /// No description provided for @safeboxShareFallback.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier du coffre-fort'**
+  String get safeboxShareFallback;
+
+  /// No description provided for @safeboxSharePreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'📦 {name}'**
+  String safeboxSharePreview(String name);
+
+  /// No description provided for @safeboxShareUnavailableHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier ne peut pas être ouvert ici.'**
+  String get safeboxShareUnavailableHere;
+
+  /// No description provided for @safeboxPlusBadge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus'**
+  String get safeboxPlusBadge;
+
+  /// No description provided for @safeboxOverQuotaTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre coffre dépasse votre espace'**
+  String get safeboxOverQuotaTitle;
+
+  /// No description provided for @safeboxOverQuotaBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous pouvez encore lire, télécharger et supprimer vos fichiers, mais plus en ajouter.'**
+  String get safeboxOverQuotaBody;
+
+  /// No description provided for @safeboxOverQuotaPurge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce qui dépasse sera supprimé le {date}, en commençant par les fichiers les plus récents. Reprenez Alanya Plus ou libérez de l\'espace d\'ici là.'**
+  String safeboxOverQuotaPurge(String date);
+
+  /// No description provided for @safeboxOfferTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop lourd pour une discussion'**
+  String get safeboxOfferTitle;
+
+  /// Proposé quand un fichier dépasse la limite des médias de discussion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier fait {size}, au-delà des {limit} Mo permis dans une discussion. Le coffre-fort l\'envoie jusqu\'à {vaultMax} : il sera rangé dans votre coffre et comptera dans votre espace.'**
+  String safeboxOfferBody(String size, int limit, String vaultMax);
+
+  /// No description provided for @safeboxOfferBodyMany.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} fichiers dépassent les {limit} Mo permis dans une discussion. Le coffre-fort les envoie jusqu\'à {vaultMax} chacun : ils seront rangés dans votre coffre et compteront dans votre espace.'**
+  String safeboxOfferBodyMany(int count, int limit, String vaultMax);
+
+  /// No description provided for @safeboxOfferAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer par le coffre-fort'**
+  String get safeboxOfferAction;
+
+  /// No description provided for @safeboxSendToChat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer dans une discussion'**
+  String get safeboxSendToChat;
+
+  /// No description provided for @safeboxSendPickTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer à…'**
+  String get safeboxSendPickTitle;
+
+  /// Après un envoi depuis le coffre, et badge d'un fichier envoyé quand le serveur ne sait pas qui l'a reçu.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Envoyé dans 1 discussion} other{Envoyé dans {count} discussions}}'**
+  String safeboxSendDone(int count);
+
+  /// Badge d'un fichier envoyé : destinataires qui l'ont téléchargé ou enregistré.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçu par {received} sur {recipients}'**
+  String safeboxSentReceived(int received, int recipients);
+
+  /// No description provided for @safeboxSentAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçu par tous'**
+  String get safeboxSentAll;
+
+  /// Filtre de « Libérer de l'espace » : fichiers envoyés dans une discussion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà envoyés'**
+  String get safeboxFreeUpSent;
+
+  /// No description provided for @safeboxSavedToDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistré dans Téléchargements/Alanya'**
+  String get safeboxSavedToDownloads;
+
+  /// No description provided for @safeboxSaveToDownloadsFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de l\'enregistrer dans Téléchargements : il reste dans l\'application.'**
+  String get safeboxSaveToDownloadsFailed;
+
+  /// No description provided for @safeboxMetaPages.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 page} other{{count} pages}}'**
+  String safeboxMetaPages(int count);
 }
 
 class _AppLocalizationsDelegate
