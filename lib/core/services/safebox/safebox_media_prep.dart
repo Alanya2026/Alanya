@@ -1,15 +1,20 @@
 //  Préparation d'un fichier avant son dépôt au coffre-fort : compression au
 //  choix de l'inscrit, et aperçu.
 //
-//  Conception : backend/docs/conception/coffre-fort.html, section 04. Le coffre
-//  garde des fichiers qu'on veut conserver : sa compression est plus douce que
-//  celle des discussions.
+//  Conception : backend/docs/conception/coffre-fort.html, section 04. Depuis le
+//  19/10/2026, la compression du coffre est celle des discussions (décision de
+//  l'utilisateur : la version « plus douce » ne réduisait pas les fichiers
+//  déjà légers, ceux reçus par WhatsApp par exemple) :
 //
-//  - photo : grand côté 3 000 px, JPEG qualité 85 (discussions : 1 600 px, WebP 75) ;
-//  - vidéo : 1080p, H.264 environ 5 Mbit/s, son AAC 128 kbit/s (discussions :
-//    720p). Android : pont Media3 des discussions ; iOS : `video_compress`
-//    en 1920×1080. La vidéo reste en H.264 : un fichier transmis à un autre
-//    inscrit doit se lire sur son téléphone, quel qu'il soit ;
+//  - photo : grand côté 1 600 px, qualité 75 comme les discussions, mais en
+//    JPEG et non en WebP : date et appareil de prise de vue gardés, et une
+//    photo exportée du coffre s'ouvre partout ;
+//  - vidéo : la règle des discussions (`shouldCompressVideo`) : 720p, H.264 à
+//    2 Mbit/s, son AAC 64 kbit/s, 30 images/s ; une vidéo déjà en 720p et
+//    sous la cible n'est pas recompressée. Android : pont Media3 des
+//    discussions ; iOS : `video_compress` en 1280×720. Toujours H.264, jamais
+//    HEVC : un fichier transmis à un autre inscrit doit se lire sur son
+//    téléphone, quel qu'il soit ;
 //  - audio : seulement WAV et FLAC, ramenés en AAC 128 kbit/s (.m4a), sur
 //    Android par le même pont (il déduit les pistes du fichier : un son seul
 //    passe). Recompresser un MP3 ou un M4A dégraderait le son pour presque
@@ -32,15 +37,30 @@ import 'package:path/path.dart' as p;
 import 'package:pdfx/pdfx.dart';
 import 'package:video_compress/video_compress.dart';
 
+import '../image_upload_compressor.dart'
+    show kCompressedImageLongSide, kCompressedImageQuality;
 import '../music_metadata_service.dart';
 import '../pdf_thumbnail_service.dart';
+import '../video_upload_compressor.dart'
+    show
+        VideoCodec,
+        VideoFacts,
+        estimateUploadBytesFor,
+        kAvcVideoBitrate,
+        kCompressedAudioBitrate,
+        kCompressedVideoShortSide,
+        shouldCompressVideo,
+        targetBitsPerSecond;
 import '../video_thumbnail_service.dart';
 import 'safebox_models.dart';
 
-const int kSafeboxPhotoLongSide = 3000;
-const int kSafeboxPhotoQuality = 85;
-const int kSafeboxVideoShortSide = 1080;
-const int kSafeboxVideoBitrate = 5000000;
+const int kSafeboxPhotoLongSide = kCompressedImageLongSide; // 1 600 px, comme les discussions
+const int kSafeboxPhotoQuality = kCompressedImageQuality; // 75
+const int kSafeboxVideoShortSide = kCompressedVideoShortSide; // 720p
+const int kSafeboxVideoBitrate = kAvcVideoBitrate; // 2 Mbit/s, H.264
+const int kSafeboxVideoAudioBitrate = kCompressedAudioBitrate; // 64 kbit/s
+/// Musique WAV ou FLAC ramenée en AAC : les discussions n'en compressent pas,
+/// 128 kbit/s garde un son fidèle.
 const int kSafeboxAudioBitrate = 128000;
 const int kSafeboxPreviewSide = 480;
 
@@ -93,15 +113,66 @@ class SafeboxMediaPrep {
   }
 
   /// Poids estimé après compression, pour la feuille de choix.
+  /// Poids estimé après compression, pour la feuille de choix. Égal à
+  /// l'original quand il n'y a rien à gagner (fichier déjà léger) : la feuille
+  /// le dit au lieu de proposer une compression vaine.
   Future<int> estimate(String path, SafeboxRoot family, int size) async {
-    if (family == SafeboxRoot.albums) return math.min(size, (size * 0.35).round());
-    if (family == SafeboxRoot.videos || family == SafeboxRoot.audios) {
-      final debit = family == SafeboxRoot.videos ? kSafeboxVideoBitrate + kSafeboxAudioBitrate : kSafeboxAudioBitrate;
-      final ms = await _duree(path);
-      if (ms != null && ms > 0) return math.min(size, (ms / 1000 * debit / 8).round());
-      return (size * (family == SafeboxRoot.videos ? 0.5 : 0.3)).round();
+    switch (family) {
+      case SafeboxRoot.albums:
+        try {
+          final d = await _dimensions(path);
+          if (d == null || d.width <= 0 || d.height <= 0) return (size * 0.3).round();
+          final long = math.max(d.width, d.height);
+          final echelle = long > kSafeboxPhotoLongSide ? kSafeboxPhotoLongSide / long : 1.0;
+          final pixels = d.width * d.height * echelle * echelle;
+          return math.min(size, (pixels * _octetsParPixelJpeg).round());
+        } catch (_) {
+          return (size * 0.3).round();
+        }
+      case SafeboxRoot.videos:
+        final faits = await _faitsVideo(path);
+        if (faits == null) return (size * 0.5).round();
+        // La règle et le débit des discussions, en H.264.
+        return estimateUploadBytesFor(path, faits, maxOutputBitsPerSecond: targetBitsPerSecond(VideoCodec.avc));
+      case SafeboxRoot.audios:
+        final ms = await _duree(path);
+        if (ms != null && ms > 0) return math.min(size, (ms / 1000 * kSafeboxAudioBitrate / 8).round());
+        return (size * 0.3).round();
+      case SafeboxRoot.documents:
+        return size;
     }
-    return size;
+  }
+
+  /// Poids moyen d'un pixel en JPEG qualité 75 (photo d'appareil) : une photo
+  /// de 1 600 × 1 200 pèse environ 300 Ko.
+  static const double _octetsParPixelJpeg = 0.16;
+
+  /// Ce qu'on sait d'une vidéo, pour lui appliquer la règle des discussions.
+  Future<VideoFacts?> _faitsVideo(String path) async {
+    try {
+      if (Platform.isAndroid) {
+        final raw = await _video.invokeMethod<Map<dynamic, dynamic>>('probe', {'path': path});
+        if (raw == null) return null;
+        return VideoFacts(
+          sizeBytes: (raw['sizeBytes'] as num?)?.toInt() ?? await File(path).length(),
+          width: (raw['width'] as num?)?.toInt(),
+          height: (raw['height'] as num?)?.toInt(),
+          durationMs: (raw['durationMs'] as num?)?.toDouble(),
+          codec: VideoCodec.fromMime(raw['videoMime'] as String?),
+          frameRate: (raw['frameRate'] as num?)?.toDouble(),
+        );
+      }
+      final info = await VideoCompress.getMediaInfo(path);
+      return VideoFacts(
+        sizeBytes: info.filesize ?? await File(path).length(),
+        width: info.width,
+        height: info.height,
+        durationMs: info.duration,
+      );
+    } catch (e) {
+      debugPrint('[Coffre] vidéo illisible : $e');
+      return null;
+    }
   }
 
   /// Compresse, ou rend null pour garder l'original.
@@ -109,6 +180,15 @@ class SafeboxMediaPrep {
     if (!canCompress(family, name)) return null;
     await workDir.create(recursive: true);
     try {
+      if (family == SafeboxRoot.videos) {
+        // Comme les discussions : une vidéo déjà en 720p et sous la cible ne
+        // gagnerait rien, on ne la convertit pas (temps et batterie épargnés).
+        final faits = await _faitsVideo(path);
+        if (faits != null && !shouldCompressVideo(path, faits)) {
+          debugPrint('[Coffre] vidéo déjà légère, gardée telle quelle : $name');
+          return null;
+        }
+      }
       final c = switch (family) {
         SafeboxRoot.albums => await _photo(path, name),
         SafeboxRoot.videos => Platform.isAndroid ? await _videoTranscode(path, name) : await _videoIos(path, name),
@@ -116,10 +196,14 @@ class SafeboxMediaPrep {
         SafeboxRoot.documents => null,
       };
       if (c == null) return null;
-      if (await File(c.path).length() >= await File(path).length()) {
+      final avant = await File(path).length();
+      final apres = await File(c.path).length();
+      if (apres >= avant) {
+        debugPrint('[Coffre] compression sans gain ($apres ≥ $avant octets), original gardé : $name');
         await File(c.path).delete();
         return null;
       }
+      debugPrint('[Coffre] compressé : $avant → $apres octets ($name)');
       return c;
     } catch (e) {
       debugPrint('[Coffre] compression abandonnée, original gardé : $e');
@@ -171,7 +255,7 @@ class SafeboxMediaPrep {
       'output': sortie,
       'videoMime': 'video/avc',
       'videoBitrate': kSafeboxVideoBitrate,
-      'audioBitrate': kSafeboxAudioBitrate,
+      'audioBitrate': kSafeboxVideoAudioBitrate,
       'maxShortSide': kSafeboxVideoShortSide,
       'maxFrameRate': 30,
       'iFrameIntervalSeconds': 3.0,
@@ -181,12 +265,12 @@ class SafeboxMediaPrep {
     return SafeboxCompressed(path: produit, name: '${p.basenameWithoutExtension(name)}.mp4');
   }
 
-  /// iOS : `video_compress`, H.264 en 1920×1080, recopié dans le dossier de
-  /// travail (le greffon écrit dans son propre cache).
+  /// iOS : `video_compress`, H.264 en 1280×720 comme les discussions, recopié
+  /// dans le dossier de travail (le greffon écrit dans son propre cache).
   Future<SafeboxCompressed?> _videoIos(String path, String name) async {
     final info = await VideoCompress.compressVideo(
       path,
-      quality: VideoQuality.Res1920x1080Quality,
+      quality: VideoQuality.Res1280x720Quality,
       includeAudio: true,
     );
     final produit = info?.path;

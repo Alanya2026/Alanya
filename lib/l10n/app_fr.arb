@@ -4359,5 +4359,7 @@
   "safeboxNoteTooLong": "Commentaire trop long : 200 caractères et 5 minutes d'audio au plus.",
   "safeboxNoteUnavailable": "Les commentaires sont réservés aux photos.",
   "safeboxNoteAudioFailed": "Impossible de lire l'audio.",
-  "safeboxOpenWith": "Ouvrir avec…"
+  "safeboxOpenWith": "Ouvrir avec…",
+  "safeboxCompressNothingToGain": "Déjà léger : la compression n'y gagnerait presque rien.",
+  "@safeboxCompressNothingToGain": {"description": "Feuille de compression : le fichier est déjà sous les réglages des discussions (vidéo reçue par WhatsApp, image réduite…)."}
 }

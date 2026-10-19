@@ -3440,5 +3440,6 @@
   "safeboxNoteTooLong": "Comment too long: 200 characters and 5 minutes of audio at most.",
   "safeboxNoteUnavailable": "Comments are only available for photos.",
   "safeboxNoteAudioFailed": "Could not play the audio.",
-  "safeboxOpenWith": "Open with…"
+  "safeboxOpenWith": "Open with…",
+  "safeboxCompressNothingToGain": "Already light: compressing would save almost nothing."
 }

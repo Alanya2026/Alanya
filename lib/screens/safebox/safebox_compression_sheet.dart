@@ -1,6 +1,8 @@
 //  La question posée à chaque dépôt de photos ou de vidéos (conception,
 //  section 04) : qualité d'origine, cochée par défaut, ou compressé. Les deux
-//  tailles sont affichées avant de choisir.
+//  tailles sont affichées avant de choisir. Un fichier déjà léger (vidéo
+//  reçue par WhatsApp, image déjà réduite) n'y gagnerait rien : la feuille le
+//  dit et ne propose pas la compression.
 
 import 'package:flutter/material.dart';
 
@@ -37,6 +39,8 @@ class _FeuilleCompressionState extends State<_FeuilleCompression> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final gain = widget.original - widget.compresse;
+    // Moins de 5 % de gain : rien qui vaille une perte de qualité.
+    final rienAGagner = widget.compresse >= widget.original * 0.95;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.md),
@@ -59,8 +63,11 @@ class _FeuilleCompressionState extends State<_FeuilleCompression> {
                   ),
                   RadioListTile<bool>(
                     value: true,
+                    enabled: !rienAGagner,
                     title: Text(l10n.safeboxCompressReduced(formatBytes(widget.compresse, l10n))),
-                    subtitle: Text(l10n.safeboxCompressReducedHint(formatBytes(gain > 0 ? gain : 0, l10n))),
+                    subtitle: Text(rienAGagner
+                        ? l10n.safeboxCompressNothingToGain
+                        : l10n.safeboxCompressReducedHint(formatBytes(gain > 0 ? gain : 0, l10n))),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ],

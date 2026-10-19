@@ -7713,4 +7713,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxOpenWith => '用其他应用打开…';
+
+  @override
+  String get safeboxCompressNothingToGain => '文件已经很小：压缩几乎没有效果。';
 }

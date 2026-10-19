@@ -8213,4 +8213,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxOpenWith => 'Ouvrir avec…';
+
+  @override
+  String get safeboxCompressNothingToGain =>
+      'Déjà léger : la compression n\'y gagnerait presque rien.';
 }

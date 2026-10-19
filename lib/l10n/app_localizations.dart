@@ -13893,6 +13893,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ouvrir avec…'**
   String get safeboxOpenWith;
+
+  /// Feuille de compression : le fichier est déjà sous les réglages des discussions (vidéo reçue par WhatsApp, image réduite…).
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà léger : la compression n\'y gagnerait presque rien.'**
+  String get safeboxCompressNothingToGain;
 }
 
 class _AppLocalizationsDelegate

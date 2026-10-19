@@ -8117,4 +8117,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxOpenWith => 'Open with…';
+
+  @override
+  String get safeboxCompressNothingToGain =>
+      'Already light: compressing would save almost nothing.';
 }

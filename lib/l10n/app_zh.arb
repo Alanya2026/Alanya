@@ -2366,5 +2366,6 @@
   "safeboxNoteTooLong": "评论过长：文字最多 200 个字符，音频最长 5 分钟。",
   "safeboxNoteUnavailable": "仅照片可以添加评论。",
   "safeboxNoteAudioFailed": "无法播放音频。",
-  "safeboxOpenWith": "用其他应用打开…"
+  "safeboxOpenWith": "用其他应用打开…",
+  "safeboxCompressNothingToGain": "文件已经很小：压缩几乎没有效果。"
 }
