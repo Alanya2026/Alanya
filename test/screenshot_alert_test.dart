@@ -1,5 +1,5 @@
-// Capture d'écran d'une discussion à deux : la ligne système que les deux
-// participants lisent, et l'anti-rafale côté client.
+// Capture et enregistrement d'écran d'une discussion à deux : la ligne système
+// que les deux participants lisent, et l'anti-rafale côté client.
 import 'dart:convert';
 import 'dart:ui';
 
@@ -42,6 +42,38 @@ void main() {
       final apercu = p.previewLabel(fr);
       expect(apercu, contains('Awa'));
       expect(apercu, isNot(contains('{')));
+      expect(apercu, isNot(fr.sysGroupEventFallback));
+    });
+  });
+
+  group('ligne système « screen_recording »', () {
+    final fr = lookupAppLocalizations(const Locale('fr'));
+    final en = lookupAppLocalizations(const Locale('en'));
+    final zh = lookupAppLocalizations(const Locale('zh'));
+    String rec({int by = 7, String name = 'Awa'}) =>
+        jsonEncode({'e': 'screen_recording', 'by': by, 'byName': name});
+
+    test('événement connu', () {
+      expect(SystemEvent.isKnown('screen_recording'), isTrue);
+      expect(SystemEventPayload.tryParse(rec()), isNotNull);
+    });
+
+    test('lue par l\'autre : nomme l\'auteur, dans la langue du lecteur', () {
+      final p = SystemEventPayload.tryParse(rec())!;
+      expect(p.label(8, fr), "Awa a enregistré l'écran de cette discussion");
+      expect(p.label(8, en), 'Awa recorded the screen of this chat');
+      expect(p.label(8, zh), contains('Awa'));
+    });
+
+    test('lue par l\'auteur : « Vous »', () {
+      final p = SystemEventPayload.tryParse(rec())!;
+      expect(p.label(7, fr), "Vous avez enregistré l'écran de cette discussion");
+      expect(p.label(7, en), 'You recorded the screen of this chat');
+    });
+
+    test('aperçu de la liste : nomme l\'auteur, pas le repli de groupe', () {
+      final apercu = SystemEventPayload.tryParse(rec())!.previewLabel(fr);
+      expect(apercu, "Awa a enregistré l'écran de cette discussion");
       expect(apercu, isNot(fr.sysGroupEventFallback));
     });
   });
@@ -92,6 +124,23 @@ void main() {
     test('identifiant invalide : aucun appel', () async {
       await h.repo.signalScreenshot(0);
       expect(h.api.httpLog.where((l) => l.startsWith('signalScreenshot')), isEmpty);
+    });
+
+    test('enregistrement : sa propre route, pas celle de la capture', () async {
+      await h.repo.signalScreenRecording(ChatTestHarness.convId);
+      expect(h.api.screenRecordingSignals, [ChatTestHarness.convId]);
+      expect(h.api.screenshotSignals, isEmpty);
+    });
+
+    test('enregistrement hors ligne ou refusé : silencieux', () async {
+      h.api.screenRecordingError = Exception('hors ligne');
+      await h.repo.signalScreenRecording(ChatTestHarness.convId);
+      expect(h.api.screenRecordingSignals, isEmpty);
+    });
+
+    test('enregistrement, identifiant invalide : aucun appel', () async {
+      await h.repo.signalScreenRecording(0);
+      expect(h.api.httpLog.where((l) => l.startsWith('signalScreenRecording')), isEmpty);
     });
   });
 }

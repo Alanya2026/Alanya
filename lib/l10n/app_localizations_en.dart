@@ -7531,6 +7531,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sysScreenshotByMe => 'You took a screenshot of this chat';
 
   @override
+  String sysScreenRecording(String actor) {
+    return '$actor recorded the screen of this chat';
+  }
+
+  @override
+  String get sysScreenRecordingByMe => 'You recorded the screen of this chat';
+
+  @override
   String get renameContactTitle => 'Contact name';
 
   @override
