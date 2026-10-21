@@ -3007,6 +3007,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileArchive => 'Archive';
 
   @override
+  String get fileCalendar => 'Calendar';
+
+  @override
   String get reservationLimitedTo3Or4OrXxyyzztt =>
       'Reservation limited to 3 or 4 digit numbers, or 8 digits in XXYYZZTT format (e.g. 11 22 33 44)';
 

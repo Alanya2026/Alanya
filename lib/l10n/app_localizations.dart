@@ -5452,6 +5452,12 @@ abstract class AppLocalizations {
   /// **'Archive'**
   String get fileArchive;
 
+  /// No description provided for @fileCalendar.
+  ///
+  /// In fr, this message translates to:
+  /// **'Agenda'**
+  String get fileCalendar;
+
   /// No description provided for @reservationLimitedTo3Or4OrXxyyzztt.
   ///
   /// In fr, this message translates to:

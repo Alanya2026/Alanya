@@ -568,6 +568,9 @@ class TalkyApiClient {
         return 'application/x-7z-compressed';
       case 'rar':
         return 'application/vnd.rar';
+      case 'gz':
+      case 'tgz':
+        return 'application/gzip';
       case 'apk':
         return 'application/vnd.android.package-archive';
       case 'txt':

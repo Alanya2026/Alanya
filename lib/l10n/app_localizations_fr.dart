@@ -3029,6 +3029,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get fileArchive => 'Archive';
 
   @override
+  String get fileCalendar => 'Agenda';
+
+  @override
   String get reservationLimitedTo3Or4OrXxyyzztt =>
       'Réservation limitée aux numéros 3 ou 4 chiffres, ou 8 chiffres au format XXYYZZTT (ex. 11 22 33 44)';
 

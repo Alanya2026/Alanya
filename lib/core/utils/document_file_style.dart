@@ -53,6 +53,9 @@ class DocumentFileStyle {
         );
       case 'doc':
       case 'docx':
+      case 'docm':
+      case 'dotx':
+      case 'dotm':
         return DocumentFileStyle(
           extension: e.toUpperCase(),
           family: 'word',
@@ -62,6 +65,10 @@ class DocumentFileStyle {
         );
       case 'xls':
       case 'xlsx':
+      case 'xlsm':
+      case 'xlsb':
+      case 'xltx':
+      case 'xltm':
         return DocumentFileStyle(
           extension: e.toUpperCase(),
           family: 'excel',
@@ -79,6 +86,12 @@ class DocumentFileStyle {
         );
       case 'ppt':
       case 'pptx':
+      case 'pptm':
+      case 'pps':
+      case 'ppsx':
+      case 'ppsm':
+      case 'potx':
+      case 'potm':
         return DocumentFileStyle(
           extension: e.toUpperCase(),
           family: 'powerpoint',
@@ -89,6 +102,7 @@ class DocumentFileStyle {
       case 'odt':
       case 'ods':
       case 'odp':
+      case 'odg':
         return DocumentFileStyle(
           extension: e.toUpperCase(),
           family: 'opendocument',
@@ -96,9 +110,92 @@ class DocumentFileStyle {
           icon: Icons.article_outlined,
           label: 'OpenDocument',
         );
+      case 'epub':
+        return DocumentFileStyle(
+          extension: 'EPUB',
+          family: 'ebook',
+          color: Colors.brown.shade400,
+          icon: Icons.menu_book,
+          label: 'EPUB',
+        );
+      case 'xps':
+        return DocumentFileStyle(
+          extension: 'XPS',
+          family: 'xps',
+          color: Colors.indigo.shade400,
+          icon: Icons.description_outlined,
+          label: 'XPS',
+        );
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+      case 'webp':
+      case 'heic':
+      case 'heif':
+      case 'bmp':
+      case 'tif':
+      case 'tiff':
+        return DocumentFileStyle(
+          extension: e.toUpperCase(),
+          family: 'image',
+          color: Colors.pink.shade300,
+          icon: Icons.image_outlined,
+          label: LocaleController.instance.l10n.photo2,
+        );
+      case 'mp4':
+      case 'm4v':
+      case 'mov':
+      case 'webm':
+      case '3gp':
+      case 'mkv':
+      case 'avi':
+        return DocumentFileStyle(
+          extension: e.toUpperCase(),
+          family: 'video',
+          color: Colors.deepPurple.shade300,
+          icon: Icons.movie_outlined,
+          label: LocaleController.instance.l10n.video2,
+        );
+      case 'mp3':
+      case 'm4a':
+      case 'aac':
+      case 'wav':
+      case 'flac':
+      case 'ogg':
+      case 'opus':
+      case 'amr':
+      case 'aif':
+      case 'aiff':
+        return DocumentFileStyle(
+          extension: e.toUpperCase(),
+          family: 'audio',
+          color: Colors.cyan.shade600,
+          icon: Icons.audiotrack,
+          label: LocaleController.instance.l10n.audio2,
+        );
+      case 'vcf':
+        return DocumentFileStyle(
+          extension: 'VCF',
+          family: 'contact',
+          color: Colors.lightBlue.shade400,
+          icon: Icons.contact_page_outlined,
+          label: LocaleController.instance.l10n.contact2,
+        );
+      case 'ics':
+        return DocumentFileStyle(
+          extension: 'ICS',
+          family: 'calendar',
+          color: Colors.amber.shade700,
+          icon: Icons.event,
+          label: LocaleController.instance.l10n.fileCalendar,
+        );
       case 'zip':
       case 'rar':
       case '7z':
+      case 'tar':
+      case 'gz':
+      case 'tgz':
         return DocumentFileStyle(
           extension: e.toUpperCase(),
           family: 'archive',
@@ -116,6 +213,8 @@ class DocumentFileStyle {
         );
       case 'txt':
       case 'rtf':
+      case 'md':
+      case 'json':
         return DocumentFileStyle(
           extension: e.toUpperCase(),
           family: 'text',

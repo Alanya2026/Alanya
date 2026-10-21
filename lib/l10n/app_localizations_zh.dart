@@ -2927,6 +2927,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileArchive => '压缩包';
 
   @override
+  String get fileCalendar => '日历';
+
+  @override
   String get reservationLimitedTo3Or4OrXxyyzztt =>
       '仅可保留 3 位或 4 位号码，或 8 位 XXYYZZTT 格式（例如 11 22 33 44）';
 

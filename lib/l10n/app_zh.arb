@@ -919,6 +919,7 @@
   "viewAction": "查看",
   "invitationFrom": "来自 {name} 的邀请",
   "fileArchive": "压缩包",
+  "fileCalendar": "日历",
   "reservationLimitedTo3Or4OrXxyyzztt": "仅可保留 3 位或 4 位号码，或 8 位 XXYYZZTT 格式（例如 11 22 33 44）",
   "discussionFallback": "聊天",
   "overviewSection": "概览",
