@@ -1,0 +1,99 @@
+name: APK Android
+
+# Un tag vX.Y.Z publie une release avec l'APK signée ; un lancement manuel
+# produit la même APK en artefact, sans release, pour l'essayer avant de taguer.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # Le nom de version vient du tag ; le versionCode du numéro d'exécution,
+      # seul compteur qui ne recule jamais d'une release à l'autre — Android
+      # refuse une mise à jour dont le versionCode n'augmente pas.
+      - name: Version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Tag « $GITHUB_REF_NAME » invalide, attendu vX.Y.Z"
+              exit 1
+            fi
+            name="${GITHUB_REF_NAME#v}"
+          else
+            name="$(grep -E '^version:' pubspec.yaml | sed -E 's/version: *([^+]+).*/\1/')-dev"
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: stable
+          cache: true
+
+      # Le build release signe avec ~/.android/debug.keystore. Celui du runner
+      # serait généré à neuf : les APK déjà installées refuseraient la mise à
+      # jour. On y dépose donc la clé du poste qui a produit les versions
+      # actuelles — et on échoue plutôt que de signer avec une clé jetable.
+      - name: Clé de signature
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          [[ -n "$DEBUG_KEYSTORE_BASE64" ]] || { echo "::error::Secret ANDROID_DEBUG_KEYSTORE_BASE64 manquant"; exit 1; }
+          mkdir -p ~/.android
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+
+      # Pas de `flutter test` ici tant que la suite n'est pas au vert sur main :
+      # elle bloquerait toutes les releases.
+      - run: flutter pub get
+
+      - name: Build APK
+        run: |
+          flutter build apk --release \
+            --build-name=${{ steps.version.outputs.name }} \
+            --build-number=${{ steps.version.outputs.code }}
+          # Nom fixe : le lien releases/latest/download/alanya.apk reste
+          # valable d'une version à l'autre.
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk dist/alanya.apk
+          (cd dist && sha256sum alanya.apk > alanya.apk.sha256)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alanya-${{ steps.version.outputs.name }}
+          path: dist/
+          retention-days: 14
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Alanya ${{ steps.version.outputs.name }}
+          generate_release_notes: true
+          files: |
+            dist/alanya.apk
+            dist/alanya.apk.sha256
+
+      - name: Nettoyage de la clé
+        if: always()
+        run: rm -f ~/.android/debug.keystore
