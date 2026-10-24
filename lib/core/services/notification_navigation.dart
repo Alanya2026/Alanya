@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../db/app_database.dart';
 import '../theme/app_theme.dart';
 import '../utils/conversation_display.dart';
+import '../utils/contact_aliases.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/status_provider.dart';
@@ -149,7 +150,12 @@ class NotificationNavigation {
     }
     // Le serveur envoie `nom` (et non `username`) : cette clé-là ne matchait
     // jamais, le repli s'appliquait donc systématiquement.
-    final name = otherParticipant(conv, myId)?['nom']?.toString();
+    final other = otherParticipant(conv, myId);
+    final alias = other == null
+        ? null
+        : ContactAliases.of(conversationParticipantId(other['alanyaID']));
+    if (alias != null) return alias;
+    final name = other?['nom']?.toString();
     if (name != null && name.isNotEmpty) return name;
     return fallback;
   }

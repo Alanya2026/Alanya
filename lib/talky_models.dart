@@ -3,6 +3,7 @@
 
 import 'core/services/call/call_history_rules.dart';
 import 'core/utils/backend_url.dart';
+import 'core/utils/contact_aliases.dart';
 import 'core/utils/contact_payload.dart';
 import 'core/utils/location_payload.dart';
 import 'core/utils/sticker_payload.dart';
@@ -55,6 +56,11 @@ class User {
   /// source ne portait pas la relation ; chaîne vide = pas de note (connue).
   final String? preferredNote;
 
+  /// Nom personnalisé de la relation (`customName` du serveur) : le nom sous
+  /// lequel J'ai enregistré ce contact préféré. Même règle de nullité que
+  /// [preferredNote] : null = source muette, chaîne vide = aucun (connu).
+  final String? preferredName;
+
   /// Genre déclaré : `homme` | `femme` | `autre` | `non_precise`. Null = pas
   /// encore renseigné, ce qui est distinct de `non_precise` (« je préfère ne pas
   /// dire »), qui est une réponse. Non modifiable une fois posé.
@@ -95,6 +101,7 @@ class User {
     this.addedViaQr,
     this.preferredAddedAt,
     this.preferredNote,
+    this.preferredName,
     this.genre,
     this.age,
     this.anneeNaissance,
@@ -105,6 +112,18 @@ class User {
     this.createdAt,
     this.paysLibelle,
   });
+
+  /// Nom à afficher PARTOUT SAUF SUR LA FICHE : mon nom personnalisé pour ce
+  /// contact préféré s'il existe, sinon le nom du profil, sinon le pseudo.
+  /// La fiche, les données envoyées au serveur et le partage de contact
+  /// lisent [nom] et [pseudo] directement.
+  String get displayName {
+    final alias = ContactAliases.of(alanyaID);
+    if (alias != null) return alias;
+    final perso = preferredName?.trim() ?? '';
+    if (perso.isNotEmpty) return perso;
+    return nom.trim().isNotEmpty ? nom : pseudo;
+  }
 
   factory User.fromJson(Map<String, dynamic> json) => User(
         alanyaID: json['alanyaID'] ?? 0,
@@ -128,6 +147,9 @@ class User {
             : null,
         preferredNote: json.containsKey('addedNote')
             ? (json['addedNote']?.toString() ?? '')
+            : null,
+        preferredName: json.containsKey('customName')
+            ? (json['customName']?.toString() ?? '')
             : null,
         genre: json['genre']?.toString(),
         age: _asInt(json['age']),
@@ -1013,6 +1035,9 @@ class Participant {
 
   int get alanyaID => user.alanyaID;
   String get nom => user.nom;
+
+  /// Nom à afficher (cf. [User.displayName]).
+  String get displayName => user.displayName;
   int get accountType => user.accountType;
   int get verificationStatus => user.verificationStatus;
   String? get verifiedUntil => user.verifiedUntil;
@@ -1151,7 +1176,8 @@ class Conversation {
       );
     }
     final other = participants.where((u) => u.alanyaID != myId).firstOrNull;
-    return other?.nom ?? l10n.unknownSender;
+    if (other == null) return l10n.unknownSender;
+    return ContactAliases.of(other.alanyaID) ?? other.nom;
   }
 
   // Avatar à afficher
@@ -1357,6 +1383,11 @@ class MeetingParticipant {
   final int duree;
   // Jointure users
   final String? nom;
+
+  /// Nom à afficher (cf. [User.displayName]) ; null comme [nom] et [pseudo]
+  /// quand le serveur n'a fourni ni l'un ni l'autre.
+  String? get displayNom =>
+      ContactAliases.of(participantID) ?? nom ?? pseudo;
   final String? pseudo;
   final String? avatarUrl;
   final bool? isOnline;
@@ -1392,6 +1423,10 @@ class MeetingParticipant {
 class Statut {
   final int id;
   final int alanyaID;
+
+  /// Nom à afficher de l'auteur (cf. [User.displayName]) ; null comme [nom]
+  /// quand le serveur ne l'a pas fourni.
+  String? get displayNom => ContactAliases.of(alanyaID) ?? nom;
   final int type; // 0=texte, 1=image, 2=vidéo, 3=audio
   final String? text;
   final String? textEn;
@@ -1506,6 +1541,9 @@ class Statut {
 class StatutView {
   final int statutID;
   final int alanyaID;
+
+  /// Nom à afficher du spectateur (cf. [User.displayName]).
+  String get displayName => ContactAliases.nameFor(alanyaID, nom);
   final String nom;
   final String pseudo;
   final String? avatarUrl;
@@ -1946,6 +1984,9 @@ class Trip {
 class TripWatcher {
   final int alanyaID;
   final String nom;
+
+  /// Nom à afficher (cf. [User.displayName]).
+  String get displayName => ContactAliases.nameFor(alanyaID, nom);
   final String? avatarUrl;
 
   /// « Maman a vu » — le seul retour qu'un destinataire puisse donner.
@@ -2177,6 +2218,11 @@ class SocketEvents {
   /// (`unreadCount`, `isPinned`, `isArchived`, `lastMessage*`) : les écraser
   /// avec une trame tardive ferait réapparaître un badge fantôme.
   static const conversationUpdated = 'conversation:updated';
+
+  /// « Effacer la discussion » fait depuis un autre appareil du même compte :
+  /// { conversationID, historyCutoffAt }. Émis vers MA room personnelle
+  /// seulement — les autres membres ne voient rien.
+  static const conversationCleared = 'conversation:cleared';
 
   /// Un membre a quitté ou a été retiré. Indispensable en plus de
   /// `conversation:updated` : l'exclu n'est plus dans la liste de diffusion de

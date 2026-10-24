@@ -130,23 +130,58 @@ extension _ChatActions on _ChatDetailScreenState {
     _exitSelectionMode();
   }
 
+  /// Faut-il proposer « Supprimer pour tous » pour ce message ? Même règle que le
+  /// serveur (`message_deletion_policy.dart`) : 72 h, expéditeur ou administrateur
+  /// de groupe. Le serveur tranche ; ceci évite seulement une option qui échouerait.
+  bool _canDeleteForAllMsg(LocalMessage m) {
+    if (m.isDeleted) return false;
+    final myId = _myId;
+    if (myId == null) return false;
+    // En attente d'envoi : le message n'est jamais parti, aucune règle serveur.
+    if (m.msgID == 0) return m.senderID == myId;
+    final senderRole = widget.isGroup
+        ? _groupParticipants.where((p) => p.alanyaID == m.senderID).firstOrNull?.role
+        : null;
+    return canDeleteForAll(
+      senderID: m.senderID,
+      sendAt: m.sendAt,
+      type: m.type,
+      isDeleted: m.isDeleted,
+      myId: myId,
+      isGroup: widget.isGroup,
+      myRole: _myGroupRole,
+      senderRole: senderRole,
+    );
+  }
+
+  /// Exécute une suppression : un refus du serveur (72 h dépassées, droits) est
+  /// dit à l'utilisateur, et le message est déjà revenu à l'écran.
+  Future<bool> _runDelete(Future<void> Function() action) async {
+    try {
+      await action();
+      return true;
+    } catch (e) {
+      if (mounted) afficherErreur(context, e, domaine: ErrorDomain.chat);
+      return false;
+    }
+  }
+
   Future<void> _deleteSelected({required bool forAll}) async {
     final ids = _selectedMsgIDs.toList();
     if (ids.isEmpty) return;
-    await _chat.repository.deleteMessages(
-      ids,
-      forAll: forAll,
-      conversationID: _convId,
-    );
+    final ok = await _runDelete(() => _chat.repository.deleteMessages(
+          ids,
+          forAll: forAll,
+          conversationID: _convId,
+        ));
     if (!mounted) return;
-    _exitSelectionMode();
+    if (ok) _exitSelectionMode();
   }
 
   void _showDeleteSelectedMenu() {
     final selected = _resolveSelectedMessages();
     if (selected.isEmpty) return;
-    final canDeleteForAll =
-        selected.every((m) => m.senderID == _myId);
+    final canDeleteForAll = selected.every(_canDeleteForAllMsg);
     final muted = context.colors.onSurfaceVariant;
     final error = context.colors.error;
 
@@ -606,18 +641,18 @@ extension _ChatActions on _ChatDetailScreenState {
                   _showEditDialog(msg);
                 },
               ),
-            if (isMe && !msg.isDeleted)
+            if (_canDeleteForAllMsg(msg))
               ListTile(
                 leading: Icon(Icons.delete_forever, color: error),
                 title: Text(context.l10n.deleteForEveryone),
                 onTap: () {
                   Navigator.pop(context);
-                  _chat.repository.deleteMessage(
-                    msg.msgID,
-                    forAll: true,
-                    conversationID: _convId,
-                    clientId: msg.msgID == 0 ? msg.clientId : null,
-                  );
+                  unawaited(_runDelete(() => _chat.repository.deleteMessage(
+                        msg.msgID,
+                        forAll: true,
+                        conversationID: _convId,
+                        clientId: msg.msgID == 0 ? msg.clientId : null,
+                      )));
                 },
               ),
             ListTile(
@@ -1073,7 +1108,7 @@ extension _ChatActions on _ChatDetailScreenState {
                 }
               },
             ),
-            if (isMe)
+            if (items.every(_canDeleteForAllMsg))
               ListTile(
                 leading: Icon(Icons.delete_forever, color: error),
                 title: Text(context.l10n.deleteForEveryone),
@@ -1084,11 +1119,11 @@ extension _ChatActions on _ChatDetailScreenState {
                       .where((id) => id > 0)
                       .toList();
                   if (ids.isNotEmpty) {
-                    _chat.repository.deleteMessages(
-                      ids,
-                      forAll: true,
-                      conversationID: _convId,
-                    );
+                    unawaited(_runDelete(() => _chat.repository.deleteMessages(
+                          ids,
+                          forAll: true,
+                          conversationID: _convId,
+                        )));
                   }
                 },
               ),
@@ -1613,7 +1648,10 @@ extension _ChatActions on _ChatDetailScreenState {
     final q = foldForMention(query);
     final membres = _groupParticipants
         .where((p) => p.alanyaID != _myId)
-        .where((p) => q.isEmpty || foldForMention(p.nom).startsWith(q))
+        .where((p) =>
+            q.isEmpty ||
+            foldForMention(p.nom).startsWith(q) ||
+            foldForMention(p.displayName).startsWith(q))
         .take(6)
         .toList();
 
@@ -2123,7 +2161,7 @@ extension _ChatActions on _ChatDetailScreenState {
     final roster = targets
         .map((user) => GroupParticipantInfo(
               id: user.alanyaID.toString(),
-              name: user.nom.isNotEmpty ? user.nom : user.pseudo,
+              name: user.displayName,
               photo: user.avatarUrl,
             ))
         .toList();
@@ -2216,6 +2254,8 @@ extension _ChatActions on _ChatDetailScreenState {
   /// l'appelant bascule alors sur la formule qui s'adresse à l'utilisateur.
   String? _expiredMediaSenderName(LocalMessage msg) {
     if (msg.senderID == _myId) return null;
+    final alias = ContactAliases.of(msg.senderID);
+    if (alias != null) return alias;
     final nom = msg.senderNom?.trim();
     if (nom != null && nom.isNotEmpty) return nom;
     final pseudo = msg.senderPseudo?.trim();
@@ -2430,6 +2470,7 @@ extension _ChatActions on _ChatDetailScreenState {
             _inputFocus.requestFocus();
           },
           onShowInfo: _showMessageInfo,
+          canDeleteForAll: _canDeleteForAllMsg,
         ),
       ),
     ).then((returnedSelection) {

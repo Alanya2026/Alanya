@@ -119,6 +119,8 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeNotAMember;
     case 'GROUP_ADMINS_ONLY':
       return l10n.errCodeGroupAdminsOnly;
+    case 'DELETE_WINDOW_EXPIRED':
+      return l10n.errCodeDeleteWindowExpired;
     case 'GROUP_OWNER_REQUIRED':
       return l10n.errCodeGroupOwnerRequired;
     case 'CONVERSATION_NOT_FOUND':

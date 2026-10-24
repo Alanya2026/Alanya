@@ -3633,5 +3633,53 @@
   "videoRendering": "Preparing the video…",
   "videoRenderFailed": "Couldn't prepare the video. Please try again.",
   "videoFrameFailed": "This video can't be read for editing.",
-  "videoTrimSummary": "{range} · {length} of {total}"
+  "videoTrimSummary": "{range} · {length} of {total}",
+  "errCodeDeleteWindowExpired": "Delete for everyone is only possible within 72 hours of sending.",
+  "clearChatTitle": "Clear chat",
+  "clearChatAllMessages": "All messages",
+  "clearChatMediaOnly": "Media files only",
+  "clearChatAllHint": "The chat stays in your list. Other participants see no change.",
+  "clearChatMediaHint": "Messages stay, without the files downloaded on this device.",
+  "clearChatButton": "Clear chat ({size})",
+  "@clearChatButton": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearChatButtonNoSize": "Clear chat",
+  "clearChatDone": "Chat cleared",
+  "clearChatMediaDone": "Media files deleted",
+  "sysScreenshot": "{actor} took a screenshot of this chat",
+  "@sysScreenshot": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysScreenshotByMe": "You took a screenshot of this chat",
+  "sysScreenRecording": "{actor} recorded the screen of this chat",
+  "@sysScreenRecording": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysScreenRecordingByMe": "You recorded the screen of this chat",
+  "renameContactTitle": "Contact name",
+  "renameContactHelper": "Only you can see it. Leave empty to go back to the profile name.",
+  "contactProfileSection": "Profile",
+  "contactProfileName": "Name",
+  "contactProfilePseudo": "Username",
+  "contactProfileNumber": "Alanya number",
+  "contactYourNameSection": "Your name for this contact",
+  "contactYourNameNone": "None",
+  "contactYourNameAdd": "Add a name",
+  "contactYourNameEdit": "Edit",
+  "contactYourNameClear": "Clear the name",
+  "contactYourNameHelpSet": "Only you can see it. It replaces the profile name in your chats, calls and notifications.",
+  "contactYourNameHelpEmpty": "Save this contact under the name you choose. They will never see it."
 }

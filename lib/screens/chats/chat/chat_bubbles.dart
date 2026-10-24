@@ -681,10 +681,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
         .where((p) => p.alanyaID == msg.senderID)
         .firstOrNull;
     final nomActuel = membre == null
-        ? null
-        : (membre.user.nom.trim().isNotEmpty
-            ? membre.user.nom.trim()
-            : membre.user.pseudo.trim());
+        ? ContactAliases.of(msg.senderID)
+        : membre.displayName.trim();
     final name = (nomActuel != null && nomActuel.isNotEmpty ? nomActuel : null) ??
         msg.senderNom ??
         msg.senderPseudo ??
@@ -747,6 +745,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
     if (membres.isEmpty) return null;
 
     return MentionSpec(
+      label: (userId) {
+        final alias = ContactAliases.of(userId);
+        return alias == null ? null : '@$alias';
+      },
       resolve: (segment) => resolveMentions(
         segment,
         membres,
@@ -943,6 +945,9 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final incident = payload!.event == SystemEvent.tripAlert ||
         payload.event == SystemEvent.tripSos;
 
+    final capture = payload.event == SystemEvent.screenshot;
+    final enregistrement = payload.event == SystemEvent.screenRecording;
+
     return Align(
       alignment: Alignment.center,
       child: Container(
@@ -967,6 +972,16 @@ extension _ChatBubbles on _ChatDetailScreenState {
             if (incident) ...[
               Icon(Icons.warning_amber_rounded,
                   size: 14, color: context.colors.error),
+              const SizedBox(width: 5),
+            ],
+            if (capture) ...[
+              Icon(Icons.screenshot_outlined,
+                  size: 14, color: context.colors.onSurfaceVariant),
+              const SizedBox(width: 5),
+            ],
+            if (enregistrement) ...[
+              Icon(Icons.videocam_outlined,
+                  size: 14, color: context.colors.onSurfaceVariant),
               const SizedBox(width: 5),
             ],
             Flexible(
@@ -1150,9 +1165,10 @@ extension _ChatBubbles on _ChatDetailScreenState {
     final thumb = target != null ? _buildReplyMediaThumb(target, size: 40) : null;
     final title = target == null
         ? null
-        : (target.senderNom?.trim().isNotEmpty == true
-            ? target.senderNom!.trim()
-            : target.senderPseudo?.trim());
+        : (ContactAliases.of(target.senderID) ??
+            (target.senderNom?.trim().isNotEmpty == true
+                ? target.senderNom!.trim()
+                : target.senderPseudo?.trim()));
     return ReplyQuoteBar(
       accent: accent,
       title: title,

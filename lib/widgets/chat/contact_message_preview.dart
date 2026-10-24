@@ -149,7 +149,7 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
                               contact.avatarUrl!.isNotEmpty)
                           ? contact.avatarUrl
                           : null,
-                      name: contact.displayLabel,
+                      name: contact.shownLabel,
                       size: AppSizes.avatarLg,
                     ),
                     AppSpacing.hGapMd,
@@ -158,7 +158,7 @@ class _ContactMessagePreviewState extends State<ContactMessagePreview> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            contact.displayLabel,
+                            contact.shownLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: context.text.titleSmall?.copyWith(

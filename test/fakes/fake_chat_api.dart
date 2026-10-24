@@ -24,6 +24,23 @@ class FakeChatApi implements ChatApi {
   Object? editError;
   Object? deleteError;
 
+  /// « Effacer la discussion » : erreur à lever, ou curseur que le serveur pose.
+  Object? clearError;
+  String clearCutoffIso = '2026-10-11T08:00:00.000Z';
+
+  /// Capture d'écran : conversations signalées, erreur éventuelle.
+  final List<int> screenshotSignals = [];
+  Object? screenshotError;
+
+  /// Enregistrement d'écran : conversations signalées, erreur éventuelle.
+  final List<int> screenRecordingSignals = [];
+  Object? screenRecordingError;
+
+  /// Rattrapage des suppressions : pages servies tour à tour, erreur éventuelle.
+  final List<Map<String, dynamic>> deletionPages = [];
+  final List<int?> deletionAfterArgs = [];
+  Object? deletionsError;
+
   /// Incrémente à chaque `message:send` pour fabriquer des msgID uniques.
   int nextMsgId = 1000;
 
@@ -212,6 +229,38 @@ class FakeChatApi implements ChatApi {
   @override
   Future<void> deleteConversations(List<int> conversationIDs) async {
     httpLog.add('deleteConversations');
+  }
+
+  @override
+  Future<Map<String, dynamic>> clearConversation(int conversID) async {
+    httpLog.add('clearConversation:$conversID');
+    if (clearError != null) throw clearError!;
+    return {'conversationID': conversID, 'historyCutoffAt': clearCutoffIso};
+  }
+
+  @override
+  Future<void> signalScreenshot(int conversID) async {
+    httpLog.add('signalScreenshot:$conversID');
+    if (screenshotError != null) throw screenshotError!;
+    screenshotSignals.add(conversID);
+  }
+
+  @override
+  Future<void> signalScreenRecording(int conversID) async {
+    httpLog.add('signalScreenRecording:$conversID');
+    if (screenRecordingError != null) throw screenRecordingError!;
+    screenRecordingSignals.add(conversID);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getDeletionsSince({int? after, int limit = 200}) async {
+    httpLog.add('getDeletionsSince:$after');
+    deletionAfterArgs.add(after);
+    if (deletionsError != null) throw deletionsError!;
+    if (deletionPages.isEmpty) {
+      return {'deletions': <dynamic>[], 'cursor': after ?? 0, 'hasMore': false};
+    }
+    return deletionPages.removeAt(0);
   }
 
   @override

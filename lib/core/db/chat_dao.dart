@@ -773,6 +773,15 @@ class ChatDao {
     });
   }
 
+  /// Annule une suppression locale « pour tous » que le serveur a refusée
+  /// (fenêtre de 72 h dépassée, droits insuffisants) : le message redevient
+  /// visible, comme chez tous les autres.
+  Future<void> restoreManyByServerId(List<int> msgIDs) {
+    if (msgIDs.isEmpty) return Future.value();
+    return (db.update(db.localMessages)..where((m) => m.msgID.isIn(msgIDs)))
+        .write(const LocalMessagesCompanion(isDeleted: Value(false)));
+  }
+
   Future<void> softDeleteManyForUser(List<int> msgIDs, int userId) {
     if (msgIDs.isEmpty) return Future.value();
     if (msgIDs.length == 1) {
@@ -1001,7 +1010,9 @@ class ChatDao {
           final user = row.readTableOrNull(db.localUsers);
           final name = user == null
               ? null
-              : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+              : ((user.preferredName ?? '').trim().isNotEmpty
+                  ? user.preferredName!.trim()
+                  : (user.pseudo.isNotEmpty ? user.pseudo : user.nom));
           return LocalMediaRow(
               msg, (name == null || name.isEmpty) ? null : name);
         }).toList());
@@ -1056,7 +1067,9 @@ class ChatDao {
       final user = row.readTableOrNull(db.localUsers);
       final name = user == null
           ? null
-          : (user.pseudo.isNotEmpty ? user.pseudo : user.nom);
+          : ((user.preferredName ?? '').trim().isNotEmpty
+                  ? user.preferredName!.trim()
+                  : (user.pseudo.isNotEmpty ? user.pseudo : user.nom));
       return LocalMediaRow(msg, (name == null || name.isEmpty) ? null : name);
     }).toList();
   }

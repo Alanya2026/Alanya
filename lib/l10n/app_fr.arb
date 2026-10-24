@@ -4525,5 +4525,53 @@
       "length": { "type": "String" },
       "total": { "type": "String" }
     }
-  }
+  },
+  "errCodeDeleteWindowExpired": "La suppression pour tous n'est possible que dans les 72 heures suivant l'envoi.",
+  "clearChatTitle": "Effacer la discussion",
+  "clearChatAllMessages": "Tous les messages",
+  "clearChatMediaOnly": "Fichiers médias uniquement",
+  "clearChatAllHint": "La discussion reste dans votre liste. Les autres participants ne voient aucun changement.",
+  "clearChatMediaHint": "Les messages restent, sans les fichiers téléchargés sur cet appareil.",
+  "clearChatButton": "Effacer la discussion ({size})",
+  "@clearChatButton": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearChatButtonNoSize": "Effacer la discussion",
+  "clearChatDone": "Discussion effacée",
+  "clearChatMediaDone": "Fichiers médias supprimés",
+  "sysScreenshot": "{actor} a fait une capture d'écran de cette discussion",
+  "@sysScreenshot": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysScreenshotByMe": "Vous avez fait une capture d'écran de cette discussion",
+  "sysScreenRecording": "{actor} a enregistré l'écran de cette discussion",
+  "@sysScreenRecording": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysScreenRecordingByMe": "Vous avez enregistré l'écran de cette discussion",
+  "renameContactTitle": "Nom du contact",
+  "renameContactHelper": "Visible par vous seul. Laissez vide pour revenir au nom du profil.",
+  "contactProfileSection": "Profil",
+  "contactProfileName": "Nom",
+  "contactProfilePseudo": "Pseudo",
+  "contactProfileNumber": "Numéro Alanya",
+  "contactYourNameSection": "Votre nom pour ce contact",
+  "contactYourNameNone": "Aucun",
+  "contactYourNameAdd": "Ajouter un nom",
+  "contactYourNameEdit": "Modifier",
+  "contactYourNameClear": "Effacer le nom",
+  "contactYourNameHelpSet": "Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.",
+  "contactYourNameHelpEmpty": "Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais."
 }

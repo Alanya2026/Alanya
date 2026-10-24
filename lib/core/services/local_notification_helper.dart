@@ -16,6 +16,7 @@ import 'notifications/notification_body.dart';
 import 'notifications/notification_buffer_store.dart';
 import 'notifications/notification_prefs_cache.dart';
 import '../theme/locale_controller.dart';
+import '../utils/contact_aliases.dart';
 
 // IDs suffixés `_v2` : introduisent le son de notification par défaut. Un canal
 // Android étant immuable une fois créé, on change d'ID (et on supprime l'ancien
@@ -273,7 +274,7 @@ class LocalNotificationHelper {
 
     final isGroup = data['isGroup'] == '1' || data['isGroup'] == true;
     final groupName = data['groupName']?.toString() ?? '';
-    final senderName = NotificationBody.resolveSenderName(
+    final profileSenderName = NotificationBody.resolveSenderName(
       data: data,
       title: title,
       isGroup: isGroup,
@@ -281,11 +282,21 @@ class LocalNotificationHelper {
     );
     var messageBody = body ?? bodyFromPayload(data);
     if (isGroup) {
+      // Le serveur préfixe le corps avec le nom du PROFIL : c'est lui qu'on
+      // retire, avant de présenter l'expéditeur sous mon nom personnalisé.
       messageBody = NotificationBody.stripLeadingSenderPrefix(
-        senderName,
+        profileSenderName,
         messageBody,
       );
     }
+    await ContactAliases.preload();
+    final senderName = ContactAliases.nameFor(
+      int.tryParse(
+        (data['senderId'] ?? data['senderID'] ?? data['callerId'] ?? '')
+            .toString(),
+      ),
+      profileSenderName,
+    );
     if (messageBody.isEmpty && senderName.isEmpty) return;
 
     final displayTitle = isGroup && groupName.isNotEmpty

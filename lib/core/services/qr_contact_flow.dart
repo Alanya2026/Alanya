@@ -58,7 +58,7 @@ class QrContactFlow {
     required User user,
     required bool alreadyContact,
   }) {
-    final name = user.nom.trim().isNotEmpty ? user.nom.trim() : user.pseudo;
+    final name = user.displayName;
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -112,7 +112,7 @@ class QrContactFlow {
     required User user,
   }) =>
       _undo(messenger, apiClient, cache, l10n, user,
-          user.nom.trim().isNotEmpty ? user.nom.trim() : user.pseudo);
+          user.displayName);
 
   static Future<void> _undo(
     ScaffoldMessengerState messenger,

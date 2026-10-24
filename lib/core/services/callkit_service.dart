@@ -10,6 +10,7 @@ import '../theme/locale_controller.dart';
 import 'call/call_terminal_guards.dart';
 import 'call/ended_call_registry.dart';
 import 'ringtone_preferences.dart';
+import '../utils/contact_aliases.dart';
 
 class IncomingCallAction {
   final String callId;
@@ -301,6 +302,10 @@ class CallKitService {
     bool silent = false,
   }) async {
     if (kIsWeb) return;
+    // L'écran d'appel du système affiche mon nom personnalisé. Hors de
+    // l'isolate principal (push reçu app fermée), le registre se relit du disque.
+    await ContactAliases.preload();
+    callerName = ContactAliases.nameFor(int.tryParse(callerId), callerName);
 
     if (_isAppForeground()) {
       debugPrint('[CallKit] showIncoming ignoré (app au premier plan)');

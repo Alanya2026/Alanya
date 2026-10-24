@@ -7946,4 +7946,111 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cameraOpenGallery => '打开相册';
+
+  @override
+  String get videoTrimStart => '视频开始';
+
+  @override
+  String get videoTrimEnd => '视频结束';
+
+  @override
+  String get videoRendering => '正在处理视频…';
+
+  @override
+  String get videoRenderFailed => '无法处理视频，请重试。';
+
+  @override
+  String get videoFrameFailed => '无法读取此视频进行编辑。';
+
+  @override
+  String videoTrimSummary(String range, String length, String total) {
+    return '$range · $length（共 $total）';
+  }
+
+  @override
+  String get errCodeDeleteWindowExpired => '仅可在发送后 72 小时内为所有人删除。';
+
+  @override
+  String get clearChatTitle => '清空聊天记录';
+
+  @override
+  String get clearChatAllMessages => '所有消息';
+
+  @override
+  String get clearChatMediaOnly => '仅媒体文件';
+
+  @override
+  String get clearChatAllHint => '聊天仍保留在您的列表中，其他参与者不会看到任何变化。';
+
+  @override
+  String get clearChatMediaHint => '消息保留，但会删除此设备上已下载的文件。';
+
+  @override
+  String clearChatButton(String size) {
+    return '清空聊天记录（$size）';
+  }
+
+  @override
+  String get clearChatButtonNoSize => '清空聊天记录';
+
+  @override
+  String get clearChatDone => '聊天记录已清空';
+
+  @override
+  String get clearChatMediaDone => '媒体文件已删除';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor 对此聊天进行了截屏';
+  }
+
+  @override
+  String get sysScreenshotByMe => '您对此聊天进行了截屏';
+
+  @override
+  String sysScreenRecording(String actor) {
+    return '$actor 对此聊天进行了录屏';
+  }
+
+  @override
+  String get sysScreenRecordingByMe => '您对此聊天进行了录屏';
+
+  @override
+  String get renameContactTitle => '联系人名称';
+
+  @override
+  String get renameContactHelper => '仅您可见。留空则恢复为个人资料名称。';
+
+  @override
+  String get contactProfileSection => '个人资料';
+
+  @override
+  String get contactProfileName => '姓名';
+
+  @override
+  String get contactProfilePseudo => '用户名';
+
+  @override
+  String get contactProfileNumber => 'Alanya 号码';
+
+  @override
+  String get contactYourNameSection => '您为此联系人设置的名称';
+
+  @override
+  String get contactYourNameNone => '无';
+
+  @override
+  String get contactYourNameAdd => '添加名称';
+
+  @override
+  String get contactYourNameEdit => '修改';
+
+  @override
+  String get contactYourNameClear => '清除名称';
+
+  @override
+  String get contactYourNameHelpSet => '仅您可见。它会在您的聊天、通话和通知中替换个人资料名称。';
+
+  @override
+  String get contactYourNameHelpEmpty => '用您选择的名称保存此联系人。对方永远看不到。';
 }

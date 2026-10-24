@@ -8,6 +8,7 @@ import '../db/app_database.dart';
 import '../constants/default_contact_lists.dart';
 import '../theme/contact_list_colors.dart';
 import '../utils/call_log_preview.dart';
+import '../utils/contact_aliases.dart';
 import '../utils/media_album.dart';
 import '../utils/user_search.dart';
 import '../../talky_api_client.dart';
@@ -50,11 +51,16 @@ class LocalCacheRepository {
         .watch();
   }
 
-  Future<List<LocalUser>> getPreferredContactsOnce() {
-    return (_db.select(_db.localUsers)
+  Future<List<LocalUser>> getPreferredContactsOnce() async {
+    final contacts = await (_db.select(_db.localUsers)
           ..where((u) => u.isPreferredContact.equals(true))
           ..orderBy([(u) => OrderingTerm(expression: u.nom)]))
         .get();
+    // Chaque lecture complète remet d'aplomb le registre des noms
+    // personnalisés (titre des discussions, cf. ContactAliases).
+    ContactAliases.replaceAll(
+        {for (final u in contacts) u.alanyaID: u.preferredName});
+    return contacts;
   }
 
   /// Retourne le cache immédiatement. Si [syncInBackground] est vrai,
@@ -80,6 +86,9 @@ class LocalCacheRepository {
   /// rien casser (le cache reste utilisable).
   Future<void> syncPreferredContacts() async {
     try {
+      // Hors ligne aussi : le registre des noms personnalisés part du cache,
+      // avant l'appel réseau qui peut échouer.
+      await getPreferredContactsOnce();
       final raw = await _api.getContacts();
       final now = DateTime.now();
       // Step 1: récupérer la liste actuelle pour détecter les retraits.
@@ -114,6 +123,8 @@ class LocalCacheRepository {
               ..where((u) => u.alanyaID.isIn(removed)))
             .write(const LocalUsersCompanion(isPreferredContact: Value(false)));
       }
+      // Relecture : les noms personnalisés reçus alimentent ContactAliases.
+      await getPreferredContactsOnce();
     } catch (e) {
       debugPrint('[LocalCacheRepo] syncPreferredContacts échouée: $e');
     }
@@ -212,6 +223,7 @@ class LocalCacheRepository {
       addedViaQr: u.addedViaQr,
       preferredAddedAt: u.preferredAddedAt,
       preferredNote: u.preferredNote,
+      preferredName: u.preferredName,
     );
   }
 
@@ -221,6 +233,7 @@ class LocalCacheRepository {
     bool addedViaQr,
     DateTime? preferredAddedAt,
     String? preferredNote,
+    String? preferredName,
   })?> getKnownUserRelation(int alanyaID) async {
     final u = await getKnownUser(alanyaID);
     if (u == null) return null;
@@ -229,6 +242,7 @@ class LocalCacheRepository {
       addedViaQr: u.addedViaQr,
       preferredAddedAt: u.preferredAddedAt,
       preferredNote: u.preferredNote,
+      preferredName: u.preferredName,
     );
   }
 
@@ -685,6 +699,7 @@ class LocalCacheRepository {
 
   /// Vide les caches secondaires (contacts, listes, appels, meetings, statuts).
   Future<void> clearSession() async {
+    ContactAliases.replaceAll({});
     await _db.delete(_db.localStatuses).go();
     await _db.delete(_db.localMeetings).go();
     await _db.delete(_db.localCalls).go();
@@ -759,6 +774,9 @@ class LocalCacheRepository {
       preferredNote: u.preferredNote != null
           ? Value(u.preferredNote!.isEmpty ? null : u.preferredNote)
           : const Value.absent(),
+      preferredName: u.preferredName != null
+          ? Value(u.preferredName!.isEmpty ? null : u.preferredName)
+          : const Value.absent(),
       cachedAt: Value(cachedAt),
     );
   }
@@ -824,6 +842,9 @@ class LocalCacheRepository {
       preferredNote: u.preferredNote != null
           ? Value(u.preferredNote!.isEmpty ? null : u.preferredNote)
           : const Value.absent(),
+      preferredName: u.preferredName != null
+          ? Value(u.preferredName!.isEmpty ? null : u.preferredName)
+          : const Value.absent(),
       cachedAt: Value(cachedAt),
     );
   }
@@ -837,6 +858,18 @@ class LocalCacheRepository {
         .write(LocalUsersCompanion(
       preferredNote: Value(clean.isEmpty ? null : clean),
     ));
+  }
+
+  /// Pose (ou efface, si vide) le nom personnalisé d'un contact — miroir
+  /// local de PUT /contacts/:id/name.
+  Future<void> setPreferredName(int alanyaID, String? name) async {
+    final clean = (name ?? '').trim();
+    await (_db.update(_db.localUsers)
+          ..where((u) => u.alanyaID.equals(alanyaID)))
+        .write(LocalUsersCompanion(
+      preferredName: Value(clean.isEmpty ? null : clean),
+    ));
+    ContactAliases.set(alanyaID, clean);
   }
 
   Future<void> _upsertCall(Call c, {required int myId}) async {

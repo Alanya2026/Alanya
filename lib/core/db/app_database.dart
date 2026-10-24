@@ -255,6 +255,10 @@ class LocalUsers extends Table {
   /// Douala ») — affichée sur la fiche du contact.
   TextColumn get preferredNote => text().nullable()();
 
+  /// Nom personnalisé sous lequel J'ai enregistré ce contact préféré
+  /// (`customName` du serveur). Null = aucun, on affiche [nom].
+  TextColumn get preferredName => text().nullable()();
+
   IntColumn get typeCompte => integer().withDefault(const Constant(0))();
   IntColumn get accountType => integer().withDefault(const Constant(0))();
   IntColumn get verificationStatus => integer().withDefault(const Constant(0))();
@@ -613,7 +617,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -858,22 +862,34 @@ class AppDatabase extends _$AppDatabase {
                 localConversations.lastMessageTranslated);
           }
           if (from < 27) {
+            // Nom personnalisé des contacts préférés (migration serveur 100).
+            // Une colonne nullable : le cache existant n'est pas vidé.
+            await _addColumnIfMissing(m, localUsers, localUsers.preferredName);
+          }
+          // Stickers : v27 et v28 sur la branche des stickers, décalées en 28
+          // et 29 à la fusion (27 était déjà le nom personnalisé sur main).
+          // Un téléphone de test passé par ces anciennes versions a déjà les
+          // tables : on ne crée que ce qui manque.
+          if (from < 28) {
             // Stickers (migration serveur 097). Quatre créations de tables :
             // rien du cache existant n'est touché, `local_messages` non plus.
-            await m.createTable(localStickerPacks);
-            await m.createTable(localStickers);
-            await m.createTable(localStickerFavorites);
-            await m.createTable(localStickerRecents);
+            await _createTableIfMissing(m, localStickerPacks);
+            await _createTableIfMissing(m, localStickers);
+            await _createTableIfMissing(m, localStickerFavorites);
+            await _createTableIfMissing(m, localStickerRecents);
           }
-          if (from < 28) {
+          if (from < 29) {
             // Stickers V1b : mes packs créés (`owned`, jeton de partage) et
             // l'identifiant d'actif de mes stickers. Trois colonnes à défaut
-            // ou nulles ; sur une base déjà en v27 fraîche, `from < 27` a
-            // créé les tables avec ces colonnes, d'où le test avant ALTER.
+            // ou nulles ; sur une base où `from < 28` vient de créer les
+            // tables, elles y sont déjà, d'où le test avant ALTER.
             await _addColumnIfMissing(m, localStickerPacks, localStickerPacks.owned);
             await _addColumnIfMissing(
                 m, localStickerPacks, localStickerPacks.shareToken);
             await _addColumnIfMissing(m, localStickers, localStickers.assetId);
+            // Téléphone de test passé en v27/v28 par l'ancienne numérotation
+            // des stickers : il a sauté le nom personnalisé.
+            await _addColumnIfMissing(m, localUsers, localUsers.preferredName);
           }
         },
       );
@@ -894,6 +910,22 @@ class AppDatabase extends _$AppDatabase {
   /// n'est jamais incrémenté, la même migration replante à chaque lancement,
   /// jusqu'à l'effacement des données. Tester avant d'ALTER rend chaque barreau
   /// rejouable et répare au passage les bases déjà bloquées.
+  /// Crée [table] seulement si elle n'existe pas encore (`createTable` échoue
+  /// sur une table déjà là).
+  static Future<void> _createTableIfMissing(
+    Migrator m,
+    TableInfo table,
+  ) async {
+    final rows = await m.database
+        .customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+          variables: [Variable.withString(table.actualTableName)],
+        )
+        .get();
+    if (rows.isNotEmpty) return;
+    await m.createTable(table);
+  }
+
   static Future<void> _addColumnIfMissing(
     Migrator m,
     TableInfo table,

@@ -163,7 +163,7 @@ class _ShareContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.nom.isNotEmpty ? user.nom : user.pseudo;
+    final displayName = user.displayName;
     final phone = AlanyaPhoneFormatter.formatDisplay(user.alanyaPhone);
 
     return Material(

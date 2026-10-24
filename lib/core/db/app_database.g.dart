@@ -4323,6 +4323,17 @@ class $LocalUsersTable extends LocalUsers
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _preferredNameMeta = const VerificationMeta(
+    'preferredName',
+  );
+  @override
+  late final GeneratedColumn<String> preferredName = GeneratedColumn<String>(
+    'preferred_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _typeCompteMeta = const VerificationMeta(
     'typeCompte',
   );
@@ -4397,6 +4408,7 @@ class $LocalUsersTable extends LocalUsers
     addedViaQr,
     preferredAddedAt,
     preferredNote,
+    preferredName,
     typeCompte,
     accountType,
     verificationStatus,
@@ -4517,6 +4529,15 @@ class $LocalUsersTable extends LocalUsers
         ),
       );
     }
+    if (data.containsKey('preferred_name')) {
+      context.handle(
+        _preferredNameMeta,
+        preferredName.isAcceptableOrUnknown(
+          data['preferred_name']!,
+          _preferredNameMeta,
+        ),
+      );
+    }
     if (data.containsKey('type_compte')) {
       context.handle(
         _typeCompteMeta,
@@ -4623,6 +4644,10 @@ class $LocalUsersTable extends LocalUsers
         DriftSqlType.string,
         data['${effectivePrefix}preferred_note'],
       ),
+      preferredName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preferred_name'],
+      ),
       typeCompte: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}type_compte'],
@@ -4677,6 +4702,10 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
   /// Note contextuelle saisie après un scan (« rencontré au salon de
   /// Douala ») — affichée sur la fiche du contact.
   final String? preferredNote;
+
+  /// Nom personnalisé sous lequel J'ai enregistré ce contact préféré
+  /// (`customName` du serveur). Null = aucun, on affiche [nom].
+  final String? preferredName;
   final int typeCompte;
   final int accountType;
   final int verificationStatus;
@@ -4697,6 +4726,7 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     required this.addedViaQr,
     this.preferredAddedAt,
     this.preferredNote,
+    this.preferredName,
     required this.typeCompte,
     required this.accountType,
     required this.verificationStatus,
@@ -4727,6 +4757,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     }
     if (!nullToAbsent || preferredNote != null) {
       map['preferred_note'] = Variable<String>(preferredNote);
+    }
+    if (!nullToAbsent || preferredName != null) {
+      map['preferred_name'] = Variable<String>(preferredName);
     }
     map['type_compte'] = Variable<int>(typeCompte);
     map['account_type'] = Variable<int>(accountType);
@@ -4762,6 +4795,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       preferredNote: preferredNote == null && nullToAbsent
           ? const Value.absent()
           : Value(preferredNote),
+      preferredName: preferredName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferredName),
       typeCompte: Value(typeCompte),
       accountType: Value(accountType),
       verificationStatus: Value(verificationStatus),
@@ -4794,6 +4830,7 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
         json['preferredAddedAt'],
       ),
       preferredNote: serializer.fromJson<String?>(json['preferredNote']),
+      preferredName: serializer.fromJson<String?>(json['preferredName']),
       typeCompte: serializer.fromJson<int>(json['typeCompte']),
       accountType: serializer.fromJson<int>(json['accountType']),
       verificationStatus: serializer.fromJson<int>(json['verificationStatus']),
@@ -4819,6 +4856,7 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       'addedViaQr': serializer.toJson<bool>(addedViaQr),
       'preferredAddedAt': serializer.toJson<DateTime?>(preferredAddedAt),
       'preferredNote': serializer.toJson<String?>(preferredNote),
+      'preferredName': serializer.toJson<String?>(preferredName),
       'typeCompte': serializer.toJson<int>(typeCompte),
       'accountType': serializer.toJson<int>(accountType),
       'verificationStatus': serializer.toJson<int>(verificationStatus),
@@ -4842,6 +4880,7 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     bool? addedViaQr,
     Value<DateTime?> preferredAddedAt = const Value.absent(),
     Value<String?> preferredNote = const Value.absent(),
+    Value<String?> preferredName = const Value.absent(),
     int? typeCompte,
     int? accountType,
     int? verificationStatus,
@@ -4866,6 +4905,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     preferredNote: preferredNote.present
         ? preferredNote.value
         : this.preferredNote,
+    preferredName: preferredName.present
+        ? preferredName.value
+        : this.preferredName,
     typeCompte: typeCompte ?? this.typeCompte,
     accountType: accountType ?? this.accountType,
     verificationStatus: verificationStatus ?? this.verificationStatus,
@@ -4902,6 +4944,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       preferredNote: data.preferredNote.present
           ? data.preferredNote.value
           : this.preferredNote,
+      preferredName: data.preferredName.present
+          ? data.preferredName.value
+          : this.preferredName,
       typeCompte: data.typeCompte.present
           ? data.typeCompte.value
           : this.typeCompte,
@@ -4935,6 +4980,7 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           ..write('addedViaQr: $addedViaQr, ')
           ..write('preferredAddedAt: $preferredAddedAt, ')
           ..write('preferredNote: $preferredNote, ')
+          ..write('preferredName: $preferredName, ')
           ..write('typeCompte: $typeCompte, ')
           ..write('accountType: $accountType, ')
           ..write('verificationStatus: $verificationStatus, ')
@@ -4960,6 +5006,7 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     addedViaQr,
     preferredAddedAt,
     preferredNote,
+    preferredName,
     typeCompte,
     accountType,
     verificationStatus,
@@ -4984,6 +5031,7 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           other.addedViaQr == this.addedViaQr &&
           other.preferredAddedAt == this.preferredAddedAt &&
           other.preferredNote == this.preferredNote &&
+          other.preferredName == this.preferredName &&
           other.typeCompte == this.typeCompte &&
           other.accountType == this.accountType &&
           other.verificationStatus == this.verificationStatus &&
@@ -5006,6 +5054,7 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
   final Value<bool> addedViaQr;
   final Value<DateTime?> preferredAddedAt;
   final Value<String?> preferredNote;
+  final Value<String?> preferredName;
   final Value<int> typeCompte;
   final Value<int> accountType;
   final Value<int> verificationStatus;
@@ -5026,6 +5075,7 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.addedViaQr = const Value.absent(),
     this.preferredAddedAt = const Value.absent(),
     this.preferredNote = const Value.absent(),
+    this.preferredName = const Value.absent(),
     this.typeCompte = const Value.absent(),
     this.accountType = const Value.absent(),
     this.verificationStatus = const Value.absent(),
@@ -5047,6 +5097,7 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.addedViaQr = const Value.absent(),
     this.preferredAddedAt = const Value.absent(),
     this.preferredNote = const Value.absent(),
+    this.preferredName = const Value.absent(),
     this.typeCompte = const Value.absent(),
     this.accountType = const Value.absent(),
     this.verificationStatus = const Value.absent(),
@@ -5068,6 +5119,7 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Expression<bool>? addedViaQr,
     Expression<DateTime>? preferredAddedAt,
     Expression<String>? preferredNote,
+    Expression<String>? preferredName,
     Expression<int>? typeCompte,
     Expression<int>? accountType,
     Expression<int>? verificationStatus,
@@ -5090,6 +5142,7 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       if (addedViaQr != null) 'added_via_qr': addedViaQr,
       if (preferredAddedAt != null) 'preferred_added_at': preferredAddedAt,
       if (preferredNote != null) 'preferred_note': preferredNote,
+      if (preferredName != null) 'preferred_name': preferredName,
       if (typeCompte != null) 'type_compte': typeCompte,
       if (accountType != null) 'account_type': accountType,
       if (verificationStatus != null) 'verification_status': verificationStatus,
@@ -5113,6 +5166,7 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Value<bool>? addedViaQr,
     Value<DateTime?>? preferredAddedAt,
     Value<String?>? preferredNote,
+    Value<String?>? preferredName,
     Value<int>? typeCompte,
     Value<int>? accountType,
     Value<int>? verificationStatus,
@@ -5134,6 +5188,7 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       addedViaQr: addedViaQr ?? this.addedViaQr,
       preferredAddedAt: preferredAddedAt ?? this.preferredAddedAt,
       preferredNote: preferredNote ?? this.preferredNote,
+      preferredName: preferredName ?? this.preferredName,
       typeCompte: typeCompte ?? this.typeCompte,
       accountType: accountType ?? this.accountType,
       verificationStatus: verificationStatus ?? this.verificationStatus,
@@ -5187,6 +5242,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     if (preferredNote.present) {
       map['preferred_note'] = Variable<String>(preferredNote.value);
     }
+    if (preferredName.present) {
+      map['preferred_name'] = Variable<String>(preferredName.value);
+    }
     if (typeCompte.present) {
       map['type_compte'] = Variable<int>(typeCompte.value);
     }
@@ -5222,6 +5280,7 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
           ..write('addedViaQr: $addedViaQr, ')
           ..write('preferredAddedAt: $preferredAddedAt, ')
           ..write('preferredNote: $preferredNote, ')
+          ..write('preferredName: $preferredName, ')
           ..write('typeCompte: $typeCompte, ')
           ..write('accountType: $accountType, ')
           ..write('verificationStatus: $verificationStatus, ')
@@ -14253,6 +14312,7 @@ typedef $$LocalUsersTableCreateCompanionBuilder =
       Value<bool> addedViaQr,
       Value<DateTime?> preferredAddedAt,
       Value<String?> preferredNote,
+      Value<String?> preferredName,
       Value<int> typeCompte,
       Value<int> accountType,
       Value<int> verificationStatus,
@@ -14275,6 +14335,7 @@ typedef $$LocalUsersTableUpdateCompanionBuilder =
       Value<bool> addedViaQr,
       Value<DateTime?> preferredAddedAt,
       Value<String?> preferredNote,
+      Value<String?> preferredName,
       Value<int> typeCompte,
       Value<int> accountType,
       Value<int> verificationStatus,
@@ -14358,6 +14419,11 @@ class $$LocalUsersTableFilterComposer
 
   ColumnFilters<String> get preferredNote => $composableBuilder(
     column: $table.preferredNote,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preferredName => $composableBuilder(
+    column: $table.preferredName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14466,6 +14532,11 @@ class $$LocalUsersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get preferredName => $composableBuilder(
+    column: $table.preferredName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get typeCompte => $composableBuilder(
     column: $table.typeCompte,
     builder: (column) => ColumnOrderings(column),
@@ -14555,6 +14626,11 @@ class $$LocalUsersTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get preferredName => $composableBuilder(
+    column: $table.preferredName,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get typeCompte => $composableBuilder(
     column: $table.typeCompte,
     builder: (column) => column,
@@ -14624,6 +14700,7 @@ class $$LocalUsersTableTableManager
                 Value<bool> addedViaQr = const Value.absent(),
                 Value<DateTime?> preferredAddedAt = const Value.absent(),
                 Value<String?> preferredNote = const Value.absent(),
+                Value<String?> preferredName = const Value.absent(),
                 Value<int> typeCompte = const Value.absent(),
                 Value<int> accountType = const Value.absent(),
                 Value<int> verificationStatus = const Value.absent(),
@@ -14644,6 +14721,7 @@ class $$LocalUsersTableTableManager
                 addedViaQr: addedViaQr,
                 preferredAddedAt: preferredAddedAt,
                 preferredNote: preferredNote,
+                preferredName: preferredName,
                 typeCompte: typeCompte,
                 accountType: accountType,
                 verificationStatus: verificationStatus,
@@ -14666,6 +14744,7 @@ class $$LocalUsersTableTableManager
                 Value<bool> addedViaQr = const Value.absent(),
                 Value<DateTime?> preferredAddedAt = const Value.absent(),
                 Value<String?> preferredNote = const Value.absent(),
+                Value<String?> preferredName = const Value.absent(),
                 Value<int> typeCompte = const Value.absent(),
                 Value<int> accountType = const Value.absent(),
                 Value<int> verificationStatus = const Value.absent(),
@@ -14686,6 +14765,7 @@ class $$LocalUsersTableTableManager
                 addedViaQr: addedViaQr,
                 preferredAddedAt: preferredAddedAt,
                 preferredNote: preferredNote,
+                preferredName: preferredName,
                 typeCompte: typeCompte,
                 accountType: accountType,
                 verificationStatus: verificationStatus,

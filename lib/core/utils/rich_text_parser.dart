@@ -155,6 +155,11 @@ class MentionSpec {
   /// `userId` nul = `@Tous`.
   final void Function(int? userId) onTap;
 
+  /// Texte à afficher à la place de la mention telle qu'écrite (« @Nom du
+  /// profil »), ou null pour la laisser telle quelle. Sert à montrer mon nom
+  /// personnalisé : le message stocké, lui, ne change pas.
+  final String? Function(int userId)? label;
+
   /// Les recognizers créés y sont déposés pour que l'appelant les libère.
   /// Sans ça, chaque reconstruction de bulle en fuit un dans une liste qui
   /// défile.
@@ -164,6 +169,7 @@ class MentionSpec {
     required this.resolve,
     required this.style,
     required this.onTap,
+    this.label,
     this.recognizerSink,
   });
 }
@@ -315,7 +321,8 @@ void _appendWithMentions(
       ..onTap = () => spec.onTap(m.userId);
     spec.recognizerSink?.add(recognizer);
     out.add(TextSpan(
-      text: text.substring(m.start, m.end),
+      text: (m.userId == null ? null : spec.label?.call(m.userId!)) ??
+          text.substring(m.start, m.end),
       style: spec.style(style),
       recognizer: recognizer,
     ));

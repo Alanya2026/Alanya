@@ -43,7 +43,7 @@ extension _ChatInput on _ChatDetailScreenState {
               Divider(height: 1, indent: AppSpacing.lg, color: colors.outlineVariant),
           ],
           ..._mentionCandidates.map((p) {
-            final nom = p.nom.isNotEmpty ? p.nom : p.user.pseudo;
+            final nom = p.displayName;
             return ListTile(
               dense: true,
               leading: AppAvatar(
@@ -546,8 +546,11 @@ extension _ChatInput on _ChatDetailScreenState {
           final id = p['alanyaID'];
           // Exclure soi-même (qu'il soit stocké en int ou en string).
           if (_myId != null && id.toString() == _myId.toString()) continue;
-          final nom = (p['nom'] as String?)?.trim();
-          if (nom != null && nom.isNotEmpty) names.add(nom);
+          final nom = ContactAliases.nameFor(
+            int.tryParse(id.toString()),
+            (p['nom'] as String?)?.trim(),
+          );
+          if (nom.isNotEmpty) names.add(nom);
         }
         if (names.isEmpty) return const SizedBox.shrink();
         return Text(

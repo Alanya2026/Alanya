@@ -14433,6 +14433,204 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ouvrir la galerie'**
   String get cameraOpenGallery;
+
+  /// No description provided for @videoTrimStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Début de la vidéo'**
+  String get videoTrimStart;
+
+  /// No description provided for @videoTrimEnd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fin de la vidéo'**
+  String get videoTrimEnd;
+
+  /// No description provided for @videoRendering.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparation de la vidéo…'**
+  String get videoRendering;
+
+  /// No description provided for @videoRenderFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de préparer la vidéo. Réessayez.'**
+  String get videoRenderFailed;
+
+  /// No description provided for @videoFrameFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire cette vidéo pour la retoucher.'**
+  String get videoFrameFailed;
+
+  /// No description provided for @videoTrimSummary.
+  ///
+  /// In fr, this message translates to:
+  /// **'{range} · {length} sur {total}'**
+  String videoTrimSummary(String range, String length, String total);
+
+  /// No description provided for @errCodeDeleteWindowExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'La suppression pour tous n\'est possible que dans les 72 heures suivant l\'envoi.'**
+  String get errCodeDeleteWindowExpired;
+
+  /// No description provided for @clearChatTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion'**
+  String get clearChatTitle;
+
+  /// No description provided for @clearChatAllMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les messages'**
+  String get clearChatAllMessages;
+
+  /// No description provided for @clearChatMediaOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers médias uniquement'**
+  String get clearChatMediaOnly;
+
+  /// No description provided for @clearChatAllHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La discussion reste dans votre liste. Les autres participants ne voient aucun changement.'**
+  String get clearChatAllHint;
+
+  /// No description provided for @clearChatMediaHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les messages restent, sans les fichiers téléchargés sur cet appareil.'**
+  String get clearChatMediaHint;
+
+  /// No description provided for @clearChatButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion ({size})'**
+  String clearChatButton(String size);
+
+  /// No description provided for @clearChatButtonNoSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la discussion'**
+  String get clearChatButtonNoSize;
+
+  /// No description provided for @clearChatDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discussion effacée'**
+  String get clearChatDone;
+
+  /// No description provided for @clearChatMediaDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers médias supprimés'**
+  String get clearChatMediaDone;
+
+  /// No description provided for @sysScreenshot.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a fait une capture d\'écran de cette discussion'**
+  String sysScreenshot(String actor);
+
+  /// No description provided for @sysScreenshotByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez fait une capture d\'écran de cette discussion'**
+  String get sysScreenshotByMe;
+
+  /// No description provided for @sysScreenRecording.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a enregistré l\'écran de cette discussion'**
+  String sysScreenRecording(String actor);
+
+  /// No description provided for @sysScreenRecordingByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez enregistré l\'écran de cette discussion'**
+  String get sysScreenRecordingByMe;
+
+  /// No description provided for @renameContactTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du contact'**
+  String get renameContactTitle;
+
+  /// No description provided for @renameContactHelper.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible par vous seul. Laissez vide pour revenir au nom du profil.'**
+  String get renameContactHelper;
+
+  /// No description provided for @contactProfileSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Profil'**
+  String get contactProfileSection;
+
+  /// No description provided for @contactProfileName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get contactProfileName;
+
+  /// No description provided for @contactProfilePseudo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pseudo'**
+  String get contactProfilePseudo;
+
+  /// No description provided for @contactProfileNumber.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro Alanya'**
+  String get contactProfileNumber;
+
+  /// No description provided for @contactYourNameSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre nom pour ce contact'**
+  String get contactYourNameSection;
+
+  /// No description provided for @contactYourNameNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun'**
+  String get contactYourNameNone;
+
+  /// No description provided for @contactYourNameAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un nom'**
+  String get contactYourNameAdd;
+
+  /// No description provided for @contactYourNameEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get contactYourNameEdit;
+
+  /// No description provided for @contactYourNameClear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer le nom'**
+  String get contactYourNameClear;
+
+  /// No description provided for @contactYourNameHelpSet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.'**
+  String get contactYourNameHelpSet;
+
+  /// No description provided for @contactYourNameHelpEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais.'**
+  String get contactYourNameHelpEmpty;
 }
 
 class _AppLocalizationsDelegate

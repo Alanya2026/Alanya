@@ -19,6 +19,7 @@ User localUserToUser(LocalUser u) => User(
       addedViaQr: u.addedViaQr,
       preferredAddedAt: u.preferredAddedAt,
       preferredNote: u.preferredNote ?? '',
+      preferredName: u.preferredName ?? '',
       paysLibelle: u.paysLibelle,
     );
 
@@ -28,6 +29,7 @@ bool userMatchesSearch(User user, String query) {
   if (q.isEmpty) return false;
 
   if (user.nom.toLowerCase().contains(q)) return true;
+  if ((user.preferredName ?? '').toLowerCase().contains(q)) return true;
   if (user.pseudo.toLowerCase().contains(q)) return true;
 
   final qDigits = AlanyaPhoneFormatter.normalize(q);

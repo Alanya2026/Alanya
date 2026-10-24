@@ -17,6 +17,9 @@ import '../../widgets/common/common.dart';
 import '../../widgets/image_message_preview.dart';
 import '../../widgets/video_message_preview.dart';
 import 'forward_message_screen.dart';
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/utils/message_deletion_policy.dart';
 import 'media_viewer_screen.dart';
 
 const int _maxAlbumListSelectionCount = 50;
@@ -33,6 +36,7 @@ class AlbumMediaListScreen extends StatefulWidget {
     this.initialSelectionMode = false,
     this.onReply,
     this.onShowInfo,
+    this.canDeleteForAll,
   });
 
   final List<LocalMessage> messages;
@@ -43,6 +47,11 @@ class AlbumMediaListScreen extends StatefulWidget {
   final bool initialSelectionMode;
   final void Function(LocalMessage msg)? onReply;
   final void Function(LocalMessage msg)? onShowInfo;
+
+  /// « Supprimer pour tous » est-il proposé pour ce message ? Fourni par la
+  /// discussion, qui connaît mon rôle et ceux des membres (72 h, administrateur
+  /// de groupe). Par défaut : mes propres messages, dans les 72 h.
+  final bool Function(LocalMessage msg)? canDeleteForAll;
 
   static const double itemHeight = 240;
   static const double itemSpacing = AppSpacing.sm;
@@ -358,17 +367,17 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
                   _togglePin(msg);
                 },
               ),
-            if (isMe && !msg.isDeleted)
+            if (_canDeleteForAll(msg))
               ListTile(
                 leading: Icon(Icons.delete_forever, color: error),
                 title: Text(context.l10n.deleteForEveryone),
                 onTap: () {
                   Navigator.pop(context);
-                  chat.repository.deleteMessage(
-                    msg.msgID,
-                    forAll: true,
-                    conversationID: convId,
-                  );
+                  unawaited(_runDelete(() => chat.repository.deleteMessage(
+                        msg.msgID,
+                        forAll: true,
+                        conversationID: convId,
+                      )));
                 },
               ),
             ListTile(
@@ -544,20 +553,41 @@ class _AlbumMediaListScreenState extends State<AlbumMediaListScreen> {
     final ids = _selectedMsgIDs.toList();
     if (ids.isEmpty) return;
     final chat = context.read<ChatProvider>();
-    await chat.repository.deleteMessages(
-      ids,
-      forAll: forAll,
-      conversationID: widget.conversationId,
-    );
+    final ok = await _runDelete(() => chat.repository.deleteMessages(
+          ids,
+          forAll: forAll,
+          conversationID: widget.conversationId,
+        ));
     if (!mounted) return;
-    _exitSelectionMode();
+    if (ok) _exitSelectionMode();
+  }
+
+  /// Règle du serveur reflétée (72 h, expéditeur ou administrateur) : fournie par la
+  /// discussion ; à défaut, mes propres messages dans la fenêtre.
+  bool _canDeleteForAll(LocalMessage m) {
+    final fournie = widget.canDeleteForAll;
+    if (fournie != null) return fournie(m);
+    final myId = context.read<ChatProvider>().repository.myId;
+    return !m.isDeleted &&
+        m.senderID == myId &&
+        (m.msgID == 0 || isInDeleteWindow(m.sendAt));
+  }
+
+  /// Un refus du serveur est dit à l'utilisateur ; le message est déjà revenu.
+  Future<bool> _runDelete(Future<void> Function() action) async {
+    try {
+      await action();
+      return true;
+    } catch (e) {
+      if (mounted) afficherErreur(context, e, domaine: ErrorDomain.chat);
+      return false;
+    }
   }
 
   void _showDeleteSelectedMenu() {
     final selected = _resolveSelected();
     if (selected.isEmpty) return;
-    final myId = context.read<ChatProvider>().repository.myId;
-    final canDeleteForAll = selected.every((m) => m.senderID == myId);
+    final canDeleteForAll = selected.every(_canDeleteForAll);
     final muted = context.colors.onSurfaceVariant;
     final error = context.colors.error;
 

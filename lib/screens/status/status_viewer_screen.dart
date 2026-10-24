@@ -965,7 +965,7 @@ class _StatusViewerScreenState extends State<StatusViewerScreen>
           fallbackKey: s.mediaUrl!,
           totalDuration: _audioPlayer?.duration ??
               Duration(milliseconds: s.mediaDurationMs ?? 5000),
-          displayName: s.nom ?? s.pseudo ?? '',
+          displayName: s.displayNom ?? s.pseudo ?? '',
           avatarUrl: s.avatarUrl,
           paused: _paused,
           onProgress: (v) => _progress.value = v,
@@ -1066,8 +1066,8 @@ class _Header extends StatelessWidget {
             backgroundImage: _profileImage(statut),
             child: _profileImage(statut) == null
                 ? Text(
-                    (statut.nom != null && statut.nom!.isNotEmpty)
-                        ? statut.nom![0].toUpperCase()
+                    (statut.displayNom != null && statut.displayNom!.isNotEmpty)
+                        ? statut.displayNom![0].toUpperCase()
                         : '?',
                     style: const TextStyle(color: Colors.white),
                   )
@@ -1079,7 +1079,7 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  statut.nom ?? context.l10n.meLabel,
+                  statut.displayNom ?? context.l10n.meLabel,
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.w600),
                 ),

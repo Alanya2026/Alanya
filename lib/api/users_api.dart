@@ -90,6 +90,18 @@ extension UsersApi on TalkyApiClient {
     );
   }
 
+  /// Pose ou remplace le nom personnalisé d'un contact préféré. Vide pour
+  /// revenir au nom du profil.
+  Future<void> setContactName(int userId, String name) async {
+    await _handleRequest(
+      () => _client.put(
+        Uri.parse('${TalkyApiClient.baseUrl}/contacts/$userId/name'),
+        headers: _headers,
+        body: jsonEncode({'name': name}),
+      ),
+    );
+  }
+
   Future<void> removeContact(int userId) async {
     await _handleRequest(
       () => _client.delete(Uri.parse('${TalkyApiClient.baseUrl}/contacts/$userId'), headers: _headers),

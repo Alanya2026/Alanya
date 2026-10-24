@@ -8328,4 +8328,118 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cameraOpenGallery => 'Open gallery';
+
+  @override
+  String get videoTrimStart => 'Video start';
+
+  @override
+  String get videoTrimEnd => 'Video end';
+
+  @override
+  String get videoRendering => 'Preparing the video…';
+
+  @override
+  String get videoRenderFailed =>
+      'Couldn\'t prepare the video. Please try again.';
+
+  @override
+  String get videoFrameFailed => 'This video can\'t be read for editing.';
+
+  @override
+  String videoTrimSummary(String range, String length, String total) {
+    return '$range · $length of $total';
+  }
+
+  @override
+  String get errCodeDeleteWindowExpired =>
+      'Delete for everyone is only possible within 72 hours of sending.';
+
+  @override
+  String get clearChatTitle => 'Clear chat';
+
+  @override
+  String get clearChatAllMessages => 'All messages';
+
+  @override
+  String get clearChatMediaOnly => 'Media files only';
+
+  @override
+  String get clearChatAllHint =>
+      'The chat stays in your list. Other participants see no change.';
+
+  @override
+  String get clearChatMediaHint =>
+      'Messages stay, without the files downloaded on this device.';
+
+  @override
+  String clearChatButton(String size) {
+    return 'Clear chat ($size)';
+  }
+
+  @override
+  String get clearChatButtonNoSize => 'Clear chat';
+
+  @override
+  String get clearChatDone => 'Chat cleared';
+
+  @override
+  String get clearChatMediaDone => 'Media files deleted';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor took a screenshot of this chat';
+  }
+
+  @override
+  String get sysScreenshotByMe => 'You took a screenshot of this chat';
+
+  @override
+  String sysScreenRecording(String actor) {
+    return '$actor recorded the screen of this chat';
+  }
+
+  @override
+  String get sysScreenRecordingByMe => 'You recorded the screen of this chat';
+
+  @override
+  String get renameContactTitle => 'Contact name';
+
+  @override
+  String get renameContactHelper =>
+      'Only you can see it. Leave empty to go back to the profile name.';
+
+  @override
+  String get contactProfileSection => 'Profile';
+
+  @override
+  String get contactProfileName => 'Name';
+
+  @override
+  String get contactProfilePseudo => 'Username';
+
+  @override
+  String get contactProfileNumber => 'Alanya number';
+
+  @override
+  String get contactYourNameSection => 'Your name for this contact';
+
+  @override
+  String get contactYourNameNone => 'None';
+
+  @override
+  String get contactYourNameAdd => 'Add a name';
+
+  @override
+  String get contactYourNameEdit => 'Edit';
+
+  @override
+  String get contactYourNameClear => 'Clear the name';
+
+  @override
+  String get contactYourNameHelpSet =>
+      'Only you can see it. It replaces the profile name in your chats, calls and notifications.';
+
+  @override
+  String get contactYourNameHelpEmpty =>
+      'Save this contact under the name you choose. They will never see it.';
 }

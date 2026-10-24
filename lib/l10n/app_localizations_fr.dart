@@ -8427,4 +8427,120 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get cameraOpenGallery => 'Ouvrir la galerie';
+
+  @override
+  String get videoTrimStart => 'Début de la vidéo';
+
+  @override
+  String get videoTrimEnd => 'Fin de la vidéo';
+
+  @override
+  String get videoRendering => 'Préparation de la vidéo…';
+
+  @override
+  String get videoRenderFailed => 'Impossible de préparer la vidéo. Réessayez.';
+
+  @override
+  String get videoFrameFailed =>
+      'Impossible de lire cette vidéo pour la retoucher.';
+
+  @override
+  String videoTrimSummary(String range, String length, String total) {
+    return '$range · $length sur $total';
+  }
+
+  @override
+  String get errCodeDeleteWindowExpired =>
+      'La suppression pour tous n\'est possible que dans les 72 heures suivant l\'envoi.';
+
+  @override
+  String get clearChatTitle => 'Effacer la discussion';
+
+  @override
+  String get clearChatAllMessages => 'Tous les messages';
+
+  @override
+  String get clearChatMediaOnly => 'Fichiers médias uniquement';
+
+  @override
+  String get clearChatAllHint =>
+      'La discussion reste dans votre liste. Les autres participants ne voient aucun changement.';
+
+  @override
+  String get clearChatMediaHint =>
+      'Les messages restent, sans les fichiers téléchargés sur cet appareil.';
+
+  @override
+  String clearChatButton(String size) {
+    return 'Effacer la discussion ($size)';
+  }
+
+  @override
+  String get clearChatButtonNoSize => 'Effacer la discussion';
+
+  @override
+  String get clearChatDone => 'Discussion effacée';
+
+  @override
+  String get clearChatMediaDone => 'Fichiers médias supprimés';
+
+  @override
+  String sysScreenshot(String actor) {
+    return '$actor a fait une capture d\'écran de cette discussion';
+  }
+
+  @override
+  String get sysScreenshotByMe =>
+      'Vous avez fait une capture d\'écran de cette discussion';
+
+  @override
+  String sysScreenRecording(String actor) {
+    return '$actor a enregistré l\'écran de cette discussion';
+  }
+
+  @override
+  String get sysScreenRecordingByMe =>
+      'Vous avez enregistré l\'écran de cette discussion';
+
+  @override
+  String get renameContactTitle => 'Nom du contact';
+
+  @override
+  String get renameContactHelper =>
+      'Visible par vous seul. Laissez vide pour revenir au nom du profil.';
+
+  @override
+  String get contactProfileSection => 'Profil';
+
+  @override
+  String get contactProfileName => 'Nom';
+
+  @override
+  String get contactProfilePseudo => 'Pseudo';
+
+  @override
+  String get contactProfileNumber => 'Numéro Alanya';
+
+  @override
+  String get contactYourNameSection => 'Votre nom pour ce contact';
+
+  @override
+  String get contactYourNameNone => 'Aucun';
+
+  @override
+  String get contactYourNameAdd => 'Ajouter un nom';
+
+  @override
+  String get contactYourNameEdit => 'Modifier';
+
+  @override
+  String get contactYourNameClear => 'Effacer le nom';
+
+  @override
+  String get contactYourNameHelpSet =>
+      'Visible par vous seul. Il remplace le nom du profil dans vos discussions, appels et notifications.';
+
+  @override
+  String get contactYourNameHelpEmpty =>
+      'Enregistrez ce contact sous le nom de votre choix. Lui ne le verra jamais.';
 }

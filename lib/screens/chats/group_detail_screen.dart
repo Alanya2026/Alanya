@@ -171,7 +171,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final roster = targets
         .map((u) => GroupParticipantInfo(
               id: u.alanyaID.toString(),
-              name: u.nom.isNotEmpty ? u.nom : u.pseudo,
+              name: u.displayName,
               photo: u.avatarUrl,
             ))
         .toList();
@@ -371,7 +371,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   Future<void> _removeMember(Participant membre) async {
-    final nom = membre.nom.isNotEmpty ? membre.nom : membre.user.pseudo;
+    final nom = membre.displayName;
     final confirme = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1197,7 +1197,7 @@ class _MembersCard extends StatelessWidget {
           ...participants.map((p) {
             final member = p.user;
             final isYou = member.alanyaID == myId;
-            final nom = member.nom.isNotEmpty ? member.nom : member.pseudo;
+            final nom = member.displayName;
 
             final peutRetirer = canRemove(myRole, p.role, isSelf: isYou);
             final peutChangerRole = canChangeRole(myRole, isSelf: isYou);

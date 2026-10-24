@@ -47,7 +47,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
 
   int get _userId => widget.user.alanyaID;
   String get _displayName =>
-      widget.user.nom.isNotEmpty ? widget.user.nom : widget.user.pseudo;
+      widget.user.displayName;
 
   @override
   void initState() {

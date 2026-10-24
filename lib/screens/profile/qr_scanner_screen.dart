@@ -283,7 +283,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       context,
       MaterialPageRoute(
         builder: (_) => ChatDetailScreen(
-          userName: user.nom.trim().isNotEmpty ? user.nom.trim() : user.pseudo,
+          userName: user.displayName,
           conversationId: convId,
           userId: user.alanyaID,
           avatarUrl: user.avatarUrl,
@@ -299,7 +299,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       MaterialPageRoute(
         builder: (_) => ContactDetailScreen(
           userId: user.alanyaID,
-          initialName: user.nom.trim().isNotEmpty ? user.nom.trim() : user.pseudo,
+          initialName: user.displayName,
           initialAvatar: user.avatarUrl,
         ),
       ),
