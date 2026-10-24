@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     name: Build Android APK
+    run: flutter build apk --release --android-skip-build-dependency-validation
     # Le build ne se lance que si C'EST VOUS qui avez poussé le code
     if: github.actor == 'Sparkfs'
     runs-on: ubuntu-latest
