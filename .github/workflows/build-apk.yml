@@ -3,7 +3,7 @@ name: Build Flutter APK
 on:
   push:
     branches:
-      - '**'
+      - '**' # Écoute toutes les branches
 
 jobs:
   build:
@@ -12,46 +12,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Récupération du code source
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Configuration du JDK Java
       - name: Set up Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Configuration de Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      # 4. Installation des dépendances
       - name: Install dependencies
         run: flutter pub get
 
-      # 5a. Compilation de l'APK Debug
+      # Injection des clés de signature depuis GitHub Secrets (nécessaire pour la Release)
+      - name: Configure Keystore & key.properties
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/alanya-release.jks
+          echo "${{ secrets.KEY_PROPERTIES }}" > android/key.properties
+
+      # 1. Compilation de l'APK Debug
       - name: Build Debug APK
         run: flutter build apk --debug --android-skip-build-dependency-validation
 
-      # 5b. Compilation de l'APK Release
+      # 2. Compilation de l'APK Release
       - name: Build Release APK
         run: flutter build apk --release --android-skip-build-dependency-validation
 
-      # 6a. Sauvegarde de l'APK Debug
-      - name: Upload Debug APK
+      # 3. Sauvegarde de l'APK Debug comme artefact
+      - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: alanya-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
 
-      # 6b. Sauvegarde de l'APK Release
-      - name: Upload Release APK
+      # 4. Sauvegarde de l'APK Release comme artefact
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: alanya-release-apk
