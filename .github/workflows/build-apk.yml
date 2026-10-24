@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     name: Build Android APK
-    run: flutter build apk --release --android-skip-build-dependency-validation
     # Le build ne se lance que si C'EST VOUS qui avez poussé le code
     if: github.actor == 'Sparkfs'
     runs-on: ubuntu-latest
@@ -33,7 +32,7 @@ jobs:
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
