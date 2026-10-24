@@ -3,38 +3,55 @@ name: Build Flutter APK
 on:
   push:
     branches:
-      - '**' # Écoute toutes les branches
+      - '**'
 
 jobs:
   build:
     name: Build Android APK
-    # Le build ne se lance que si C'EST VOUS qui avez poussé le code
     if: github.actor == 'Sparkfs'
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Récupération du code source
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Configuration du JDK Java
       - name: Set up Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
+      # 3. Configuration de Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
+      # 4. Installation des dépendances
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
+      # 5a. Compilation de l'APK Debug
+      - name: Build Debug APK
+        run: flutter build apk --debug --android-skip-build-dependency-validation
+
+      # 5b. Compilation de l'APK Release
+      - name: Build Release APK
         run: flutter build apk --release --android-skip-build-dependency-validation
 
-      - name: Upload APK Artifact
+      # 6a. Sauvegarde de l'APK Debug
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: alanya-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+
+      # 6b. Sauvegarde de l'APK Release
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: alanya-release-apk
