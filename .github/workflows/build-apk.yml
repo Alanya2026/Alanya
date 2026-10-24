@@ -30,18 +30,30 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # Injection des clés de signature depuis GitHub Secrets
+      # Injection des clés de signature depuis GitHub Secrets (nécessaire pour la Release)
       - name: Configure Keystore & key.properties
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/alanya-release.jks
           echo "${{ secrets.KEY_PROPERTIES }}" > android/key.properties
 
-      # Compilation Release signée
+      # 1. Compilation de l'APK Debug
+      - name: Build Debug APK
+        run: flutter build apk --debug --android-skip-build-dependency-validation
+
+      # 2. Compilation de l'APK Release
       - name: Build Release APK
         run: flutter build apk --release --android-skip-build-dependency-validation
 
-      # Sauvegarde de l'artefact Release
-      - name: Upload APK Artifact
+      # 3. Sauvegarde de l'APK Debug comme artefact
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alanya-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+
+      # 4. Sauvegarde de l'APK Release comme artefact
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: alanya-release-apk
