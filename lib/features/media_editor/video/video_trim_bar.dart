@@ -53,6 +53,8 @@ class VideoTrimBar extends StatefulWidget {
 }
 
 class _VideoTrimBarState extends State<VideoTrimBar> {
+  static const _second = Duration(seconds: 1);
+
   /// Poignée saisie : `true` début, `false` fin, `null` aucune.
   bool? _dragging;
   late Duration _start = widget.start;
@@ -209,6 +211,10 @@ class _VideoTrimBarState extends State<VideoTrimBar> {
                   start: true,
                   label: l10n.videoTrimStart,
                   value: formatVideoTime(widget.start),
+                  increased: formatVideoTime(widget.start + _second),
+                  decreased: formatVideoTime(
+                    widget.start > _second ? widget.start - _second : Duration.zero,
+                  ),
                   onIncrease: () => _step(true, 1),
                   onDecrease: () => _step(true, -1),
                 ),
@@ -217,6 +223,12 @@ class _VideoTrimBarState extends State<VideoTrimBar> {
                   start: false,
                   label: l10n.videoTrimEnd,
                   value: formatVideoTime(widget.end),
+                  increased: formatVideoTime(
+                    widget.end + _second > widget.duration
+                        ? widget.duration
+                        : widget.end + _second,
+                  ),
+                  decreased: formatVideoTime(widget.end - _second),
                   onIncrease: () => _step(false, 1),
                   onDecrease: () => _step(false, -1),
                 ),
@@ -252,6 +264,8 @@ class _Handle extends StatelessWidget {
     required this.start,
     required this.label,
     required this.value,
+    required this.increased,
+    required this.decreased,
     required this.onIncrease,
     required this.onDecrease,
   });
@@ -260,6 +274,8 @@ class _Handle extends StatelessWidget {
   final bool start;
   final String label;
   final String value;
+  final String increased;
+  final String decreased;
   final VoidCallback onIncrease;
   final VoidCallback onDecrease;
 
@@ -276,6 +292,8 @@ class _Handle extends StatelessWidget {
         slider: true,
         label: label,
         value: value,
+        increasedValue: increased,
+        decreasedValue: decreased,
         onIncrease: onIncrease,
         onDecrease: onDecrease,
         child: Container(
