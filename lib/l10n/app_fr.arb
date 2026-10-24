@@ -4458,5 +4458,72 @@
   "stickerVideoLoadFailed": "Impossible de lire cette vidéo.",
   "stickerVideoConverting": "Envoi et conversion de la vidéo…",
   "stickerVideoConvertingHint": "En données mobiles, cela peut prendre jusqu'à une minute.",
-  "stickerVideoInvalid": "Cette vidéo n'est pas prise en charge ou est trop détaillée. Essayez une vidéo plus courte ou plus simple."
+  "stickerVideoInvalid": "Cette vidéo n'est pas prise en charge ou est trop détaillée. Essayez une vidéo plus courte ou plus simple.",
+  "mediaEditorToolFilters": "Filtres",
+  "mediaEditorBrushPen": "Stylo",
+  "mediaEditorBrushHighlighter": "Surligneur",
+  "mediaEditorBrushNeon": "Néon",
+  "mediaEditorBrushBlur": "Flou",
+  "mediaEditorBlurHint": "Passez le doigt sur un visage ou une plaque pour le flouter.",
+  "mediaEditorColorYellow": "Jaune",
+  "mediaEditorColorPink": "Rose",
+  "mediaEditorRotate90": "Pivoter",
+  "mediaEditorFlip": "Miroir",
+  "mediaEditorReset": "Réinitialiser",
+  "mediaEditorStraighten": "Redresser",
+  "mediaEditorTabFilters": "Filtres",
+  "mediaEditorTabAdjust": "Réglages",
+  "mediaEditorIntensity": "Intensité",
+  "mediaEditorBrightness": "Luminosité",
+  "mediaEditorContrast": "Contraste",
+  "mediaEditorSaturation": "Saturation",
+  "mediaEditorWarmth": "Chaleur",
+  "mediaEditorFilterNone": "Original",
+  "mediaEditorFilterVivid": "Vif",
+  "mediaEditorFilterWarm": "Chaud",
+  "mediaEditorFilterSoft": "Doux",
+  "mediaEditorFilterMono": "N&B",
+  "mediaEditorFilterNight": "Nuit",
+  "mediaEditorCompare": "Maintenir pour voir l'original",
+  "mediaEditorAlign": "Alignement du texte",
+  "mediaEditorTextBackground": "Fond du texte",
+  "mediaEditorItemHint": "Glissez pour déplacer, pincez pour agrandir ou tourner.",
+  "mediaSendRemoveItem": "Retirer de l'envoi",
+  "mediaSendAddMore": "Ajouter des médias",
+  "mediaSendUndoEdit": "Annuler la dernière retouche",
+  "mediaSendViewOnceOn": "Vue unique activée",
+  "mediaSendViewOnceOff": "Vue unique désactivée",
+  "mediaSendMute": "Couper le son",
+  "mediaSendUnmute": "Remettre le son",
+  "mediaSendEdits": "{count, plural, =1{1 retouche} other{{count} retouches}}",
+  "@mediaSendEdits": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "mediaSendItemLabel": "{kind} {index} sur {total}",
+  "@mediaSendItemLabel": {
+    "placeholders": {
+      "kind": { "type": "String" },
+      "index": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "cameraShutterHint": "Appuyer pour une photo, maintenir pour filmer",
+  "cameraTakePhoto": "Prendre une photo",
+  "cameraStartRecording": "Filmer",
+  "cameraStopRecording": "Arrêter l'enregistrement",
+  "cameraFlash": "Flash",
+  "cameraOpenGallery": "Ouvrir la galerie",
+  "videoTrimStart": "Début de la vidéo",
+  "videoTrimEnd": "Fin de la vidéo",
+  "videoRendering": "Préparation de la vidéo…",
+  "videoRenderFailed": "Impossible de préparer la vidéo. Réessayez.",
+  "videoFrameFailed": "Impossible de lire cette vidéo pour la retoucher.",
+  "videoTrimSummary": "{range} · {length} sur {total}",
+  "@videoTrimSummary": {
+    "placeholders": {
+      "range": { "type": "String" },
+      "length": { "type": "String" },
+      "total": { "type": "String" }
+    }
+  }
 }

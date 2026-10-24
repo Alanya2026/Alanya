@@ -110,48 +110,137 @@ class EditorPlacement {
 }
 
 /// Placement de l'image de base dans le cadre : centre de l'image en
-/// coordonnées du document et échelle (pixels du document par pixel de
-/// l'image de travail). C'est tout le « rognage » : le cadre ne bouge pas,
-/// l'image glisse et zoome dessous.
+/// coordonnées du document, échelle (pixels du document par pixel de l'image
+/// de travail) et orientation. C'est tout le « rognage » : le cadre ne bouge
+/// pas, l'image glisse, zoome et tourne dessous.
+///
+/// Orientation, appliquée dans cet ordre autour du centre de l'image : miroir
+/// horizontal ([flipX]), quarts de tour ([quarterTurns], sens horaire), puis
+/// rotation fine ([rotation], radians, la molette du rognage).
 @immutable
 class EditorImageTransform {
-  const EditorImageTransform({required this.center, required this.scale});
+  const EditorImageTransform({
+    required this.center,
+    required this.scale,
+    this.rotation = 0,
+    this.quarterTurns = 0,
+    this.flipX = false,
+  });
 
   final Offset center;
   final double scale;
+  final double rotation;
+  final int quarterTurns;
+  final bool flipX;
+
+  /// Bornes de la rotation fine (± 45°) : au-delà, on pivote d'un quart de
+  /// tour.
+  static const double maxFineRotation = math.pi / 4;
+
+  /// Taille de l'image une fois ses quarts de tour appliqués.
+  static Size orientedSize(int imageW, int imageH, int quarterTurns) =>
+      quarterTurns.isOdd
+      ? Size(imageH.toDouble(), imageW.toDouble())
+      : Size(imageW.toDouble(), imageH.toDouble());
 
   /// Image entière visible dans le cadre (comme `BoxFit.contain`).
-  factory EditorImageTransform.contain(Size canvas, int imageW, int imageH) {
-    final s = math.min(canvas.width / imageW, canvas.height / imageH);
+  factory EditorImageTransform.contain(
+    Size canvas,
+    int imageW,
+    int imageH, {
+    int quarterTurns = 0,
+    bool flipX = false,
+  }) {
+    final o = orientedSize(imageW, imageH, quarterTurns);
+    final s = math.min(canvas.width / o.width, canvas.height / o.height);
     return EditorImageTransform(
       center: Offset(canvas.width / 2, canvas.height / 2),
       scale: s,
+      quarterTurns: quarterTurns,
+      flipX: flipX,
     );
   }
 
-  /// Cadre entièrement rempli par l'image (comme `BoxFit.cover`).
-  factory EditorImageTransform.cover(Size canvas, int imageW, int imageH) {
-    final s = math.max(canvas.width / imageW, canvas.height / imageH);
+  /// Cadre entièrement rempli par l'image (comme `BoxFit.cover`), y compris
+  /// quand elle est tournée de [rotation] : aucun coin vide.
+  factory EditorImageTransform.cover(
+    Size canvas,
+    int imageW,
+    int imageH, {
+    double rotation = 0,
+    int quarterTurns = 0,
+    bool flipX = false,
+  }) {
     return EditorImageTransform(
       center: Offset(canvas.width / 2, canvas.height / 2),
-      scale: s,
+      scale: coverScale(canvas, imageW, imageH, rotation, quarterTurns),
+      rotation: rotation,
+      quarterTurns: quarterTurns,
+      flipX: flipX,
     );
   }
 
-  /// Rectangle occupé par l'image dans le document.
-  Rect rect(int imageW, int imageH) => Rect.fromCenter(
-    center: center,
-    width: imageW * scale,
-    height: imageH * scale,
-  );
+  /// Échelle minimale pour que l'image tournée de [rotation] couvre le cadre
+  /// (centrée).
+  static double coverScale(
+    Size canvas,
+    int imageW,
+    int imageH,
+    double rotation,
+    int quarterTurns,
+  ) {
+    final o = orientedSize(imageW, imageH, quarterTurns);
+    final c = math.cos(rotation).abs();
+    final s = math.sin(rotation).abs();
+    final needW = canvas.width * c + canvas.height * s;
+    final needH = canvas.width * s + canvas.height * c;
+    return math.max(needW / o.width, needH / o.height);
+  }
+
+  /// Angle total appliqué à l'image (quarts de tour + rotation fine).
+  double get angle => quarterTurns * math.pi / 2 + rotation;
+
+  /// Rectangle occupé par l'image dans le document (sans rotation fine).
+  Rect rect(int imageW, int imageH) {
+    final o = orientedSize(imageW, imageH, quarterTurns);
+    return Rect.fromCenter(
+      center: center,
+      width: o.width * scale,
+      height: o.height * scale,
+    );
+  }
+
+  /// Point du document → pixel de l'image de travail (inverse exact de la
+  /// peinture de l'image).
+  Offset docToImage(Offset docPoint, int imageW, int imageH) {
+    final d = docPoint - center;
+    final c = math.cos(-angle);
+    final s = math.sin(-angle);
+    var x = (d.dx * c - d.dy * s) / scale;
+    final y = (d.dx * s + d.dy * c) / scale;
+    if (flipX) x = -x;
+    return Offset(x + imageW / 2, y + imageH / 2);
+  }
 
   /// Ramène la transformation dans des bornes raisonnables : zoom entre un
   /// quart de « contain » et 8× « cover » ; le centre reste dans le cadre (on
   /// ne peut pas faire sortir l'image).
   EditorImageTransform clamped(Size canvas, int imageW, int imageH) {
-    final lo = EditorImageTransform.contain(canvas, imageW, imageH).scale / 4;
-    final hi = EditorImageTransform.cover(canvas, imageW, imageH).scale * 8;
-    return EditorImageTransform(
+    final lo = EditorImageTransform.contain(
+          canvas,
+          imageW,
+          imageH,
+          quarterTurns: quarterTurns,
+        ).scale /
+        4;
+    final hi = EditorImageTransform.cover(
+          canvas,
+          imageW,
+          imageH,
+          quarterTurns: quarterTurns,
+        ).scale *
+        8;
+    return copyWith(
       center: Offset(
         center.dx.clamp(0, canvas.width),
         center.dy.clamp(0, canvas.height),
@@ -160,21 +249,35 @@ class EditorImageTransform {
     );
   }
 
-  EditorImageTransform copyWith({Offset? center, double? scale}) =>
-      EditorImageTransform(
-        center: center ?? this.center,
-        scale: scale ?? this.scale,
-      );
+  EditorImageTransform copyWith({
+    Offset? center,
+    double? scale,
+    double? rotation,
+    int? quarterTurns,
+    bool? flipX,
+  }) => EditorImageTransform(
+    center: center ?? this.center,
+    scale: scale ?? this.scale,
+    rotation: rotation ?? this.rotation,
+    quarterTurns: quarterTurns ?? this.quarterTurns,
+    flipX: flipX ?? this.flipX,
+  );
 
   @override
   bool operator ==(Object other) =>
       other is EditorImageTransform &&
       other.center == center &&
-      other.scale == scale;
+      other.scale == scale &&
+      other.rotation == rotation &&
+      other.quarterTurns == quarterTurns &&
+      other.flipX == flipX;
 
   @override
-  int get hashCode => Object.hash(center, scale);
+  int get hashCode =>
+      Object.hash(center, scale, rotation, quarterTurns, flipX);
 
   @override
-  String toString() => 'EditorImageTransform($center, x$scale)';
+  String toString() =>
+      'EditorImageTransform($center, x$scale, ${quarterTurns}q '
+      '${rotation.toStringAsFixed(3)} rad${flipX ? ', miroir' : ''})';
 }

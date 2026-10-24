@@ -7805,4 +7805,145 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get stickerVideoInvalid => '不支持此视频，或内容过于复杂。请尝试更短或更简单的视频。';
+
+  @override
+  String get mediaEditorToolFilters => '滤镜';
+
+  @override
+  String get mediaEditorBrushPen => '钢笔';
+
+  @override
+  String get mediaEditorBrushHighlighter => '荧光笔';
+
+  @override
+  String get mediaEditorBrushNeon => '霓虹';
+
+  @override
+  String get mediaEditorBrushBlur => '模糊';
+
+  @override
+  String get mediaEditorBlurHint => '用手指划过人脸或车牌即可模糊处理。';
+
+  @override
+  String get mediaEditorColorYellow => '黄色';
+
+  @override
+  String get mediaEditorColorPink => '粉色';
+
+  @override
+  String get mediaEditorRotate90 => '旋转';
+
+  @override
+  String get mediaEditorFlip => '镜像';
+
+  @override
+  String get mediaEditorReset => '重置';
+
+  @override
+  String get mediaEditorStraighten => '拉直';
+
+  @override
+  String get mediaEditorTabFilters => '滤镜';
+
+  @override
+  String get mediaEditorTabAdjust => '调整';
+
+  @override
+  String get mediaEditorIntensity => '强度';
+
+  @override
+  String get mediaEditorBrightness => '亮度';
+
+  @override
+  String get mediaEditorContrast => '对比度';
+
+  @override
+  String get mediaEditorSaturation => '饱和度';
+
+  @override
+  String get mediaEditorWarmth => '色温';
+
+  @override
+  String get mediaEditorFilterNone => '原图';
+
+  @override
+  String get mediaEditorFilterVivid => '鲜艳';
+
+  @override
+  String get mediaEditorFilterWarm => '暖色';
+
+  @override
+  String get mediaEditorFilterSoft => '柔和';
+
+  @override
+  String get mediaEditorFilterMono => '黑白';
+
+  @override
+  String get mediaEditorFilterNight => '夜晚';
+
+  @override
+  String get mediaEditorCompare => '按住查看原图';
+
+  @override
+  String get mediaEditorAlign => '文字对齐';
+
+  @override
+  String get mediaEditorTextBackground => '文字背景';
+
+  @override
+  String get mediaEditorItemHint => '拖动以移动，双指缩放或旋转。';
+
+  @override
+  String get mediaSendRemoveItem => '从发送中移除';
+
+  @override
+  String get mediaSendAddMore => '添加媒体';
+
+  @override
+  String get mediaSendUndoEdit => '撤销上次编辑';
+
+  @override
+  String get mediaSendViewOnceOn => '一次性查看已开启';
+
+  @override
+  String get mediaSendViewOnceOff => '一次性查看已关闭';
+
+  @override
+  String get mediaSendMute => '静音';
+
+  @override
+  String get mediaSendUnmute => '取消静音';
+
+  @override
+  String mediaSendEdits(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 处编辑',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mediaSendItemLabel(String kind, int index, int total) {
+    return '第 $index 个$kind，共 $total 个';
+  }
+
+  @override
+  String get cameraShutterHint => '轻点拍照，长按录像';
+
+  @override
+  String get cameraTakePhoto => '拍照';
+
+  @override
+  String get cameraStartRecording => '开始录像';
+
+  @override
+  String get cameraStopRecording => '停止录像';
+
+  @override
+  String get cameraFlash => '闪光灯';
+
+  @override
+  String get cameraOpenGallery => '打开相册';
 }

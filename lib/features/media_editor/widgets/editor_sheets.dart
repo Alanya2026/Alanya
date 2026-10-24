@@ -34,10 +34,14 @@ class EditorTextEdit {
     required this.text,
     required this.font,
     required this.color,
+    this.align = EditorTextAlign.center,
+    this.background = EditorTextBackground.none,
   });
   final String text;
   final EditorFont font;
   final Color color;
+  final EditorTextAlign align;
+  final EditorTextBackground background;
 }
 
 /// Saisie d'un texte : contenu, police du projet, couleur. `null` si fermée.

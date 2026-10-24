@@ -12,8 +12,89 @@ enum MediaEditorMode { sticker, photo }
 /// la manuscrite Caveat déjà utilisée par les messages).
 enum EditorFont { standard, bold, handwriting }
 
+/// Pinceaux du crayon : stylo, surligneur (translucide, large), néon (cœur
+/// clair et halo de la couleur) et flou (floute l'image sous le trait, pour
+/// masquer un visage ou une plaque ; la couleur ne compte pas).
+enum EditorBrush { pen, highlighter, neon, blur }
+
+/// Alignement d'un texte de plusieurs lignes.
+enum EditorTextAlign { left, center, right }
+
+/// Fond d'un texte : aucun, plein (la couleur choisie devient le fond, le
+/// texte prend la teinte lisible dessus) ou voile sombre translucide.
+enum EditorTextBackground { none, solid, translucent }
+
+/// Filtres prêts à l'emploi (matrices de couleur, `editor_look.dart`).
+enum EditorFilter { none, vivid, warm, soft, mono, night }
+
+/// Rendu des couleurs de l'image de base : un filtre (et son intensité) puis
+/// des réglages fins, tous neutres à 0. Ne touche que l'image : ni les
+/// traits, ni les textes.
+@immutable
+class EditorLook {
+  const EditorLook({
+    this.filter = EditorFilter.none,
+    this.intensity = 1,
+    this.brightness = 0,
+    this.contrast = 0,
+    this.saturation = 0,
+    this.warmth = 0,
+  });
+
+  static const EditorLook neutral = EditorLook();
+
+  final EditorFilter filter;
+
+  /// Intensité du filtre, de 0 (sans effet) à 1.
+  final double intensity;
+
+  /// Réglages, de −1 à 1 (0 = inchangé).
+  final double brightness;
+  final double contrast;
+  final double saturation;
+  final double warmth;
+
+  bool get isNeutral =>
+      (filter == EditorFilter.none || intensity == 0) &&
+      brightness == 0 &&
+      contrast == 0 &&
+      saturation == 0 &&
+      warmth == 0;
+
+  EditorLook copyWith({
+    EditorFilter? filter,
+    double? intensity,
+    double? brightness,
+    double? contrast,
+    double? saturation,
+    double? warmth,
+  }) => EditorLook(
+    filter: filter ?? this.filter,
+    intensity: (intensity ?? this.intensity).clamp(0, 1),
+    brightness: (brightness ?? this.brightness).clamp(-1, 1),
+    contrast: (contrast ?? this.contrast).clamp(-1, 1),
+    saturation: (saturation ?? this.saturation).clamp(-1, 1),
+    warmth: (warmth ?? this.warmth).clamp(-1, 1),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is EditorLook &&
+      other.filter == filter &&
+      other.intensity == intensity &&
+      other.brightness == brightness &&
+      other.contrast == contrast &&
+      other.saturation == saturation &&
+      other.warmth == warmth;
+
+  @override
+  int get hashCode =>
+      Object.hash(filter, intensity, brightness, contrast, saturation, warmth);
+}
+
 /// Un trait au crayon, en coordonnées du **document**. [erase] : la gomme du
-/// crayon, qui efface les traits dessinés avant elle (jamais l'image).
+/// crayon, qui efface les traits dessinés avant elle (jamais l'image ni le
+/// flou). [brush] : le pinceau (ignoré par la gomme).
 @immutable
 class EditorStroke {
   EditorStroke({
@@ -22,6 +103,7 @@ class EditorStroke {
     required this.color,
     required this.width,
     this.erase = false,
+    this.brush = EditorBrush.pen,
   }) : points = List.unmodifiable(points);
 
   final int id;
@@ -29,6 +111,10 @@ class EditorStroke {
   final ui.Color color;
   final double width;
   final bool erase;
+  final EditorBrush brush;
+
+  /// Trait de flou (peint avec l'image, pas avec les traits).
+  bool get isBlur => !erase && brush == EditorBrush.blur;
 
   EditorStroke withPoints(List<ui.Offset> pts) => EditorStroke(
     id: id,
@@ -36,6 +122,7 @@ class EditorStroke {
     color: color,
     width: width,
     erase: erase,
+    brush: brush,
   );
 }
 
@@ -112,16 +199,22 @@ class EditorTextItem extends EditorItem {
     required this.text,
     this.font = EditorFont.standard,
     required this.color,
+    this.align = EditorTextAlign.center,
+    this.background = EditorTextBackground.none,
   });
 
   final String text;
   final EditorFont font;
   final ui.Color color;
+  final EditorTextAlign align;
+  final EditorTextBackground background;
 
   EditorTextItem copyWith({
     String? text,
     EditorFont? font,
     ui.Color? color,
+    EditorTextAlign? align,
+    EditorTextBackground? background,
     EditorPlacement? placement,
   }) => EditorTextItem(
     id: id,
@@ -129,6 +222,8 @@ class EditorTextItem extends EditorItem {
     text: text ?? this.text,
     font: font ?? this.font,
     color: color ?? this.color,
+    align: align ?? this.align,
+    background: background ?? this.background,
   );
 
   @override
@@ -153,9 +248,9 @@ class EditorEmojiItem extends EditorItem {
 /// Le document édité : **immuable**, modifié uniquement par des commandes
 /// (`editor_commands.dart`), donc annulable sans copie de bitmap.
 ///
-/// Calques, du dessous au dessus : image de base (avec son masque de
-/// détourage éventuel) → traits → éléments (textes, emoji). Le fond hors de
-/// l'image reste **transparent**.
+/// Calques, du dessous au dessus : image de base (avec son rendu [look] et son
+/// masque de détourage éventuel) → zones floutées → traits → éléments
+/// (textes, emoji). Le fond hors de l'image reste **transparent**.
 @immutable
 class EditorDoc {
   EditorDoc({
@@ -164,6 +259,7 @@ class EditorDoc {
     required this.imageHeight,
     required this.imageTransform,
     this.cutout,
+    this.look = EditorLook.neutral,
     List<EditorStroke> strokes = const [],
     List<EditorItem> items = const [],
   }) : strokes = List.unmodifiable(strokes),
@@ -192,8 +288,25 @@ class EditorDoc {
   final int imageHeight;
   final EditorImageTransform imageTransform;
   final EditorCutout? cutout;
+  final EditorLook look;
   final List<EditorStroke> strokes;
   final List<EditorItem> items;
+
+  /// Plus grand identifiant utilisé (traits, éléments, masque) : un éditeur
+  /// rouvert sur ce document numérote à partir du suivant.
+  int get maxId {
+    var m = 0;
+    for (final s in strokes) {
+      if (s.id > m) m = s.id;
+    }
+    for (final i in items) {
+      if (i.id > m) m = i.id;
+    }
+    for (final s in cutout?.strokes ?? const <EditorMaskStroke>[]) {
+      if (s.id > m) m = s.id;
+    }
+    return m;
+  }
 
   EditorItem? itemById(int id) {
     for (final i in items) {
@@ -205,6 +318,7 @@ class EditorDoc {
   EditorDoc copyWith({
     ui.Size? canvas,
     EditorImageTransform? imageTransform,
+    EditorLook? look,
     List<EditorStroke>? strokes,
     List<EditorItem>? items,
   }) => EditorDoc(
@@ -213,6 +327,7 @@ class EditorDoc {
     imageHeight: imageHeight,
     imageTransform: imageTransform ?? this.imageTransform,
     cutout: cutout,
+    look: look ?? this.look,
     strokes: strokes ?? this.strokes,
     items: items ?? this.items,
   );
@@ -224,6 +339,7 @@ class EditorDoc {
     imageHeight: imageHeight,
     imageTransform: imageTransform,
     cutout: c,
+    look: look,
     strokes: strokes,
     items: items,
   );

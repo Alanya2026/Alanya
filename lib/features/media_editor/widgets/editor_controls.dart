@@ -19,9 +19,11 @@ final List<EditorSwatch> kEditorPalette = [
   EditorSwatch(AppColors.white, (l) => l.mediaEditorColorWhite),
   EditorSwatch(AppColors.error, (l) => l.mediaEditorColorRed),
   EditorSwatch(AppColors.warning, (l) => l.mediaEditorColorOrange),
+  EditorSwatch(AppColors.drawYellow, (l) => l.mediaEditorColorYellow),
   EditorSwatch(AppColors.success, (l) => l.mediaEditorColorGreen),
   EditorSwatch(AppColors.info, (l) => l.mediaEditorColorBlue),
   EditorSwatch(AppColors.brandPrimary, (l) => l.mediaEditorColorIndigo),
+  EditorSwatch(AppColors.drawPink, (l) => l.mediaEditorColorPink),
 ];
 
 /// Rangée de pastilles de couleur (cible tactile 48 dp, nom lu par

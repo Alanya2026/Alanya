@@ -213,7 +213,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// saisie.
   final ExpandablePanelController _emojiPanel = ExpandablePanelController();
   bool _showFormatBar = false;
-  bool _pendingViewOnce = false;
   bool _voiceViewOnce = false;
   int _pinnedIndex = 0;
   LocalMessage? _replyTo;

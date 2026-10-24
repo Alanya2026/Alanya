@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../model/editor_document.dart';
+import 'editor_look.dart';
 
 /// Polices du texte. Le projet n'impose aucune police au thème (le système
 /// gère le CJK) ; la seule police embarquée est la manuscrite Caveat des
@@ -75,13 +76,23 @@ abstract final class EditorItemMetrics {
   static TextPainter layout(EditorItem item, ui.Size canvas) {
     final TextSpan span;
     var maxWidth = double.infinity;
+    var align = TextAlign.center;
     switch (item) {
       case EditorTextItem():
         span = TextSpan(
           text: item.text,
-          style: EditorFonts.style(item.font, item.color, textFontSize(canvas)),
+          style: EditorFonts.style(
+            item.font,
+            textColorOf(item),
+            textFontSize(canvas),
+          ),
         );
         maxWidth = textMaxWidth(canvas);
+        align = switch (item.align) {
+          EditorTextAlign.left => TextAlign.left,
+          EditorTextAlign.center => TextAlign.center,
+          EditorTextAlign.right => TextAlign.right,
+        };
       case EditorEmojiItem():
         span = TextSpan(
           text: item.emoji,
@@ -90,17 +101,37 @@ abstract final class EditorItemMetrics {
     }
     final tp = TextPainter(
       text: span,
-      textAlign: TextAlign.center,
+      textAlign: align,
       textDirection: TextDirection.ltr,
       textScaler: TextScaler.noScaling,
     )..layout(maxWidth: maxWidth);
     return tp;
   }
 
-  /// Taille de l'élément à l'échelle 1 (repère de l'élément).
+  /// Couleur des lettres : sur fond plein, la couleur choisie devient le fond
+  /// et le texte prend le noir ou le blanc, selon ce qui se lit le mieux.
+  static ui.Color textColorOf(EditorTextItem item) {
+    if (item.background != EditorTextBackground.solid) return item.color;
+    return item.color.computeLuminance() > 0.5
+        ? AppColors.black
+        : AppColors.white;
+  }
+
+  /// Marge du fond d'un texte autour des lettres ; zéro sans fond.
+  static ui.Size backgroundPadding(EditorItem item, ui.Size canvas) {
+    if (item is! EditorTextItem ||
+        item.background == EditorTextBackground.none) {
+      return ui.Size.zero;
+    }
+    final f = textFontSize(canvas);
+    return ui.Size(f * 0.35, f * 0.15);
+  }
+
+  /// Taille de l'élément à l'échelle 1 (repère de l'élément), fond compris.
   static ui.Size sizeOf(EditorItem item, ui.Size canvas) {
     final tp = layout(item, canvas);
-    final s = ui.Size(tp.width, tp.height);
+    final pad = backgroundPadding(item, canvas);
+    final s = ui.Size(tp.width + 2 * pad.width, tp.height + 2 * pad.height);
     tp.dispose();
     return s;
   }
@@ -109,21 +140,30 @@ abstract final class EditorItemMetrics {
 /// Le dessin du document, **partagé** par l'écran (`EditorPainter`) et
 /// l'export : ce qu'on voit est exactement ce qu'on exporte.
 ///
-/// Ordre, du dessous au dessus : image de base (détourée si besoin) → traits
-/// (la gomme du crayon n'efface que les traits) → éléments. Rien n'est peint
-/// derrière : le fond hors de l'image reste transparent.
+/// Ordre, du dessous au dessus : image de base (rendu des couleurs, détourée
+/// si besoin) → zones floutées → traits (la gomme du crayon n'efface que les
+/// traits) → éléments. Rien n'est peint derrière : le fond hors de l'image
+/// reste transparent.
 abstract final class EditorRenderer {
   /// Flou d'un trait de masque à bords doux, en part de sa largeur.
   static const double softSigmaRatio = 0.22;
 
+  /// Force du flou de zone, en part du petit côté du cadre (même rendu à
+  /// l'écran et à l'export, quelle que soit la résolution).
+  static const double blurSigmaRatio = 1 / 45;
+
   /// Peint [doc] dans le repère du document (0,0)–(canvas) ; l'appelant a
   /// déjà réglé l'échelle du canevas. [contentScale] < 1 réduit tout le
   /// contenu autour du centre (repli d'export quand le PNG dépasse 1 Mo).
+  /// [paintBase] = `false` : seulement les traits et les éléments, sur fond
+  /// transparent (calque incrusté dans une vidéo ; l'image n'est qu'une image
+  /// de la vidéo, et le flou de zone ne la suivrait pas).
   static void paint(
     ui.Canvas canvas,
     EditorDoc doc,
     ui.Image image, {
     double contentScale = 1,
+    bool paintBase = true,
   }) {
     final bounds = ui.Offset.zero & doc.canvas;
     canvas.save();
@@ -133,7 +173,10 @@ abstract final class EditorRenderer {
       canvas.scale(contentScale);
       canvas.translate(-doc.canvas.width / 2, -doc.canvas.height / 2);
     }
-    _paintImage(canvas, doc, image);
+    if (paintBase) {
+      _paintImage(canvas, doc, image);
+      _paintBlur(canvas, doc, image, bounds);
+    }
     _paintStrokes(canvas, doc.strokes, bounds);
     for (final item in doc.items) {
       final tp = EditorItemMetrics.layout(item, doc.canvas);
@@ -142,10 +185,64 @@ abstract final class EditorRenderer {
       canvas.translate(p.center.dx, p.center.dy);
       canvas.rotate(p.rotation);
       canvas.scale(p.scale);
+      if (item is EditorTextItem &&
+          item.background != EditorTextBackground.none) {
+        final pad = EditorItemMetrics.backgroundPadding(item, doc.canvas);
+        final r = ui.Rect.fromCenter(
+          center: ui.Offset.zero,
+          width: tp.width + 2 * pad.width,
+          height: tp.height + 2 * pad.height,
+        );
+        canvas.drawRRect(
+          ui.RRect.fromRectAndRadius(r, ui.Radius.circular(pad.width)),
+          ui.Paint()
+            ..color = item.background == EditorTextBackground.solid
+                ? item.color
+                : AppColors.black.withValues(alpha: 0.55),
+        );
+      }
       tp.paint(canvas, ui.Offset(-tp.width / 2, -tp.height / 2));
       canvas.restore();
       tp.dispose();
     }
+    canvas.restore();
+  }
+
+  /// Zones floutées : l'image (avec son rendu) repeinte floutée, gardée
+  /// seulement sous les traits de flou.
+  static void _paintBlur(
+    ui.Canvas canvas,
+    EditorDoc doc,
+    ui.Image image,
+    ui.Rect bounds,
+  ) {
+    final blurs = doc.strokes.where((s) => s.isBlur).toList();
+    if (blurs.isEmpty) return;
+    final sigma = doc.canvas.shortestSide * blurSigmaRatio;
+    canvas.saveLayer(bounds, ui.Paint());
+    canvas.saveLayer(
+      bounds,
+      ui.Paint()
+        ..imageFilter = ui.ImageFilter.blur(
+          sigmaX: sigma,
+          sigmaY: sigma,
+          tileMode: ui.TileMode.clamp,
+        ),
+    );
+    _paintImage(canvas, doc, image);
+    canvas.restore();
+    canvas.saveLayer(bounds, ui.Paint()..blendMode = ui.BlendMode.dstIn);
+    for (final s in blurs) {
+      final p = ui.Paint()
+        ..color = AppColors.white
+        ..style = ui.PaintingStyle.stroke
+        ..strokeWidth = s.width
+        ..strokeCap = ui.StrokeCap.round
+        ..strokeJoin = ui.StrokeJoin.round
+        ..isAntiAlias = true;
+      _drawPoints(canvas, s.points, s.width, p);
+    }
+    canvas.restore();
     canvas.restore();
   }
 
@@ -156,11 +253,14 @@ abstract final class EditorRenderer {
     final imgRect = ui.Rect.fromLTWH(0, 0, w, h);
     canvas.save();
     canvas.translate(t.center.dx, t.center.dy);
-    canvas.scale(t.scale);
+    canvas.rotate(t.angle);
+    canvas.scale(t.flipX ? -t.scale : t.scale, t.scale);
     canvas.translate(-w / 2, -h / 2);
     final paint = ui.Paint()
       ..filterQuality = ui.FilterQuality.high
       ..isAntiAlias = true;
+    final matrix = EditorLookMatrix.of(doc.look);
+    if (matrix != null) paint.colorFilter = ui.ColorFilter.matrix(matrix);
     final cut = doc.cutout;
     if (cut == null || cut.isEmpty) {
       canvas.drawImageRect(image, imgRect, imgRect, paint);
@@ -211,19 +311,62 @@ abstract final class EditorRenderer {
     List<EditorStroke> strokes,
     ui.Rect bounds,
   ) {
-    if (strokes.isEmpty) return;
+    if (strokes.every((s) => s.isBlur)) return;
     // Calque à part : la gomme (`clear`) ne perce que les traits.
     canvas.saveLayer(bounds, ui.Paint());
     for (final s in strokes) {
-      final p = ui.Paint()
-        ..color = s.color
+      if (s.isBlur) continue;
+      ui.Paint stroke(ui.Color color, double width) => ui.Paint()
+        ..color = color
         ..style = ui.PaintingStyle.stroke
-        ..strokeWidth = s.width
+        ..strokeWidth = width
         ..strokeCap = ui.StrokeCap.round
         ..strokeJoin = ui.StrokeJoin.round
         ..isAntiAlias = true;
-      if (s.erase) p.blendMode = ui.BlendMode.clear;
-      _drawPoints(canvas, s.points, s.width, p);
+      if (s.erase) {
+        _drawPoints(
+          canvas,
+          s.points,
+          s.width,
+          stroke(s.color, s.width)..blendMode = ui.BlendMode.clear,
+        );
+        continue;
+      }
+      switch (s.brush) {
+        case EditorBrush.pen || EditorBrush.blur:
+          _drawPoints(canvas, s.points, s.width, stroke(s.color, s.width));
+        case EditorBrush.highlighter:
+          // Large et translucide : un seul chemin, donc pas de surépaisseur
+          // aux croisements d'un même trait.
+          final w = s.width * 1.8;
+          _drawPoints(
+            canvas,
+            s.points,
+            w,
+            stroke(s.color.withValues(alpha: 0.42), w)
+              ..strokeCap = ui.StrokeCap.square,
+          );
+        case EditorBrush.neon:
+          // Halo de la couleur, puis cœur clair.
+          final glow = s.width * 1.6;
+          _drawPoints(
+            canvas,
+            s.points,
+            glow,
+            stroke(s.color, glow)
+              ..maskFilter = ui.MaskFilter.blur(
+                ui.BlurStyle.normal,
+                glow * 0.45,
+              ),
+          );
+          final core = math.max(s.width * 0.4, 1.0);
+          _drawPoints(
+            canvas,
+            s.points,
+            core,
+            stroke(AppColors.white, core),
+          );
+      }
     }
     canvas.restore();
   }

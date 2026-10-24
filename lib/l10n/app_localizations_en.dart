@@ -8186,4 +8186,146 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get stickerVideoInvalid =>
       'This video isn\'t supported or is too detailed. Try a shorter or simpler video.';
+
+  @override
+  String get mediaEditorToolFilters => 'Filters';
+
+  @override
+  String get mediaEditorBrushPen => 'Pen';
+
+  @override
+  String get mediaEditorBrushHighlighter => 'Highlighter';
+
+  @override
+  String get mediaEditorBrushNeon => 'Neon';
+
+  @override
+  String get mediaEditorBrushBlur => 'Blur';
+
+  @override
+  String get mediaEditorBlurHint => 'Swipe over a face or a plate to blur it.';
+
+  @override
+  String get mediaEditorColorYellow => 'Yellow';
+
+  @override
+  String get mediaEditorColorPink => 'Pink';
+
+  @override
+  String get mediaEditorRotate90 => 'Rotate';
+
+  @override
+  String get mediaEditorFlip => 'Mirror';
+
+  @override
+  String get mediaEditorReset => 'Reset';
+
+  @override
+  String get mediaEditorStraighten => 'Straighten';
+
+  @override
+  String get mediaEditorTabFilters => 'Filters';
+
+  @override
+  String get mediaEditorTabAdjust => 'Adjust';
+
+  @override
+  String get mediaEditorIntensity => 'Intensity';
+
+  @override
+  String get mediaEditorBrightness => 'Brightness';
+
+  @override
+  String get mediaEditorContrast => 'Contrast';
+
+  @override
+  String get mediaEditorSaturation => 'Saturation';
+
+  @override
+  String get mediaEditorWarmth => 'Warmth';
+
+  @override
+  String get mediaEditorFilterNone => 'Original';
+
+  @override
+  String get mediaEditorFilterVivid => 'Vivid';
+
+  @override
+  String get mediaEditorFilterWarm => 'Warm';
+
+  @override
+  String get mediaEditorFilterSoft => 'Soft';
+
+  @override
+  String get mediaEditorFilterMono => 'B&W';
+
+  @override
+  String get mediaEditorFilterNight => 'Night';
+
+  @override
+  String get mediaEditorCompare => 'Hold to see the original';
+
+  @override
+  String get mediaEditorAlign => 'Text alignment';
+
+  @override
+  String get mediaEditorTextBackground => 'Text background';
+
+  @override
+  String get mediaEditorItemHint => 'Drag to move, pinch to resize or rotate.';
+
+  @override
+  String get mediaSendRemoveItem => 'Remove from this send';
+
+  @override
+  String get mediaSendAddMore => 'Add media';
+
+  @override
+  String get mediaSendUndoEdit => 'Undo last edit';
+
+  @override
+  String get mediaSendViewOnceOn => 'View once on';
+
+  @override
+  String get mediaSendViewOnceOff => 'View once off';
+
+  @override
+  String get mediaSendMute => 'Mute';
+
+  @override
+  String get mediaSendUnmute => 'Unmute';
+
+  @override
+  String mediaSendEdits(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count edits',
+      one: '1 edit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mediaSendItemLabel(String kind, int index, int total) {
+    return '$kind $index of $total';
+  }
+
+  @override
+  String get cameraShutterHint => 'Tap for a photo, hold to record';
+
+  @override
+  String get cameraTakePhoto => 'Take a photo';
+
+  @override
+  String get cameraStartRecording => 'Record a video';
+
+  @override
+  String get cameraStopRecording => 'Stop recording';
+
+  @override
+  String get cameraFlash => 'Flash';
+
+  @override
+  String get cameraOpenGallery => 'Open gallery';
 }

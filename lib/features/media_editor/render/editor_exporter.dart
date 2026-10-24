@@ -5,17 +5,22 @@ import '../../../core/services/stickers/sticker_image_check.dart';
 import '../model/editor_document.dart';
 import 'editor_renderer.dart';
 
-/// Ce que rend l'éditeur : un PNG et ses dimensions.
+/// Ce que rend l'éditeur : un PNG et ses dimensions, et pour une photo le
+/// document qui l'a produit (pour reprendre la retouche, calques modifiables).
 class MediaEditorResult {
   const MediaEditorResult({
     required this.png,
     required this.width,
     required this.height,
+    this.doc,
   });
 
   final Uint8List png;
   final int width;
   final int height;
+
+  /// Mode photo seulement ; `null` pour un sticker.
+  final EditorDoc? doc;
 }
 
 /// Export du document en PNG par `dart:ui` seulement (`PictureRecorder` →
@@ -24,7 +29,7 @@ class MediaEditorResult {
 ///
 /// Mode sticker : canevas **512×512** transparent, puis contrôle d'envoi
 /// [StickerImageCheck.validate] (≤ 1 Mo, 512×512, alpha) — c'est lui qui
-/// tranche. Mode photo : le cadre tel quel (≤ 1024 px côté long).
+/// tranche. Mode photo : le cadre tel quel (taille de l'image de travail).
 abstract final class MediaEditorExporter {
   /// Réductions successives du contenu dans le cadre quand le PNG dépasse
   /// 1 Mo (bruit, photo très détaillée) ; le canevas reste 512×512.
@@ -45,7 +50,7 @@ abstract final class MediaEditorExporter {
       final w = doc.canvas.width.round().clamp(1, 4096);
       final h = doc.canvas.height.round().clamp(1, 4096);
       final png = await _render(doc, image, w, h, 1);
-      return MediaEditorResult(png: png, width: w, height: h);
+      return MediaEditorResult(png: png, width: w, height: h, doc: doc);
     }
     const side = StickerImageCheck.side;
     for (final scale in _fitScales) {
@@ -59,13 +64,28 @@ abstract final class MediaEditorExporter {
     throw const StickerImageRejected(StickerImageIssue.tooBig);
   }
 
+  /// Calque d'une vidéo : traits et éléments seuls, PNG transparent
+  /// [width]×[height] (la taille de la vidéo rendue). `null` si le document
+  /// n'a rien à incruster.
+  static Future<Uint8List?> exportOverlay(
+    EditorDoc doc,
+    ui.Image image,
+    int width,
+    int height,
+  ) async {
+    final drawn = doc.strokes.any((s) => !s.isBlur) || doc.items.isNotEmpty;
+    if (!drawn) return null;
+    return _render(doc, image, width, height, 1, paintBase: false);
+  }
+
   static Future<Uint8List> _render(
     EditorDoc doc,
     ui.Image image,
     int width,
     int height,
-    double contentScale,
-  ) async {
+    double contentScale, {
+    bool paintBase = true,
+  }) async {
     await EditorFonts.ensureLoaded(
       doc.items.whereType<EditorTextItem>().map((t) => t.font),
     );
@@ -75,7 +95,13 @@ abstract final class MediaEditorExporter {
       ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
     );
     canvas.scale(width / doc.canvas.width, height / doc.canvas.height);
-    EditorRenderer.paint(canvas, doc, image, contentScale: contentScale);
+    EditorRenderer.paint(
+      canvas,
+      doc,
+      image,
+      contentScale: contentScale,
+      paintBase: paintBase,
+    );
     final picture = recorder.endRecording();
     ui.Image? out;
     try {

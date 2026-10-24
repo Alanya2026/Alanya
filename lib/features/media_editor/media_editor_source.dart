@@ -55,6 +55,10 @@ abstract final class EditorImageLoader {
   static const int maxInputPixels = 50 * 1000 * 1000;
   static const int workBound = 1024;
 
+  /// Photo retouchée avant envoi : la photo part à cette taille, assez pour un
+  /// écran de téléphone (2048 × 1536 × 4 octets ≈ 12 Mo en mémoire).
+  static const int photoWorkBound = 2048;
+
   /// Décode [bytes]. L'appelant possède l'image rendue et la libère.
   static Future<ui.Image> decode(
     Uint8List bytes, {

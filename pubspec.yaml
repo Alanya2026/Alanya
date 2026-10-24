@@ -162,6 +162,7 @@ dependencies:
   # `s.platform = 15.5` : AUCUN changement de IPHONEOS_DEPLOYMENT_TARGET ;
   # Android minSdk 21 < 23 du projet : rien à monter).
   google_mlkit_selfie_segmentation: ^0.12.0
+  pro_video_editor: ^2.43.2
 
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la

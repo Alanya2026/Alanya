@@ -8,7 +8,10 @@ import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/media_editor/editor_controller.dart' show EditorTool;
 import '../../features/media_editor/media_editor_screen.dart';
+import '../../features/media_editor/model/editor_document.dart' show EditorDoc;
+import '../../features/media_editor/photo_tool_screen.dart';
 import '../../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
@@ -33,6 +36,34 @@ typedef PhotoEditor =
       File source, {
       PhotoEditTarget target,
     });
+
+/// Une retouche avant envoi : le JPEG à envoyer et le document qui l'a
+/// produit, rouvert à la retouche suivante (textes et traits restent
+/// modifiables, on repart toujours de l'original).
+class PhotoRetouch {
+  const PhotoRetouch({required this.file, required this.doc});
+  final File file;
+  final EditorDoc doc;
+}
+
+/// Ouvre l'écran d'un outil de retouche (injectable pour les tests).
+typedef PhotoToolOpener =
+    Future<MediaEditorResult?> Function(
+      BuildContext context,
+      MediaEditorSource source,
+      EditorTool tool,
+      EditorDoc? initialDoc,
+    );
+
+/// Retouche d'une photo avant envoi, un outil à la fois : rend la nouvelle
+/// retouche, ou `null` si rien n'a changé (abandon, ou échec signalé).
+typedef PhotoRetoucher =
+    Future<PhotoRetouch?> Function(
+      BuildContext context,
+      File original,
+      EditorTool tool,
+      EditorDoc? previous,
+    );
 
 /// Encodeur JPEG injectable (les tests évitent l'isolat).
 typedef JpegEncoder =
@@ -110,6 +141,52 @@ abstract final class PhotoEditService {
       maxBytes: originalBytes,
       encode: encode,
     );
+    return _write(jpeg, outputDirectory);
+  }
+
+  static Future<MediaEditorResult?> openTool(
+    BuildContext context,
+    MediaEditorSource source,
+    EditorTool tool,
+    EditorDoc? initialDoc,
+  ) => PhotoToolScreen.open(
+    context,
+    source: source,
+    tool: tool,
+    initialDoc: initialDoc,
+  );
+
+  /// Ouvre l'outil [tool] sur [original] avec la retouche [previous] (ses
+  /// calques restent modifiables), recompresse le résultat en JPEG et le
+  /// range dans un fichier neuf. `null` si rien n'a changé ; lève
+  /// [PhotoEditException] si la préparation échoue.
+  static Future<PhotoRetouch?> retouch(
+    BuildContext context,
+    File original,
+    EditorTool tool,
+    EditorDoc? previous, {
+    PhotoToolOpener opener = openTool,
+    Directory? outputDirectory,
+    JpegEncoder encode = encodeJpegInIsolate,
+  }) async {
+    final result = await opener(
+      context,
+      MediaEditorSource.file(original.path),
+      tool,
+      previous,
+    );
+    final doc = result?.doc;
+    if (result == null || doc == null) return null;
+    final jpeg = await recompress(
+      result,
+      quality: photoQuality,
+      maxBytes: await _lengthOrNull(original),
+      encode: encode,
+    );
+    return PhotoRetouch(file: await _write(jpeg, outputDirectory), doc: doc);
+  }
+
+  static Future<File> _write(Uint8List jpeg, Directory? outputDirectory) async {
     final dir = outputDirectory ?? await _outputDirectory();
     await _purgeStale(dir);
     final name = 'edited_${DateTime.now().microsecondsSinceEpoch}_'
@@ -125,7 +202,7 @@ abstract final class PhotoEditService {
 
   /// PNG de l'éditeur → JPEG. Si le résultat dépasse [maxBytes] (poids de
   /// l'original), on réessaie à qualité moindre ; au pire on garde le dernier
-  /// essai (l'image est de toute façon ≤ 1024 px).
+  /// essai (l'image est de toute façon bornée par l'image de travail).
   @visibleForTesting
   static Future<Uint8List> recompress(
     MediaEditorResult result, {
@@ -294,6 +371,25 @@ Future<File?> editPhotoWithFeedback(
   final AppLocalizations l10n = context.l10n;
   try {
     return await PhotoEditService.edit(context, source, target: target);
+  } on PhotoEditException catch (e) {
+    debugPrint('[PhotoEdit] préparation échouée: $e');
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.mediaEditorEditFailed)));
+    return null;
+  }
+}
+
+/// [PhotoRetoucher] de l'écran d'envoi : si la préparation échoue, le dit à
+/// l'utilisateur (la retouche précédente reste en place).
+Future<PhotoRetouch?> retouchPhotoWithFeedback(
+  BuildContext context,
+  File original,
+  EditorTool tool,
+  EditorDoc? previous,
+) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final AppLocalizations l10n = context.l10n;
+  try {
+    return await PhotoEditService.retouch(context, original, tool, previous);
   } on PhotoEditException catch (e) {
     debugPrint('[PhotoEdit] préparation échouée: $e');
     messenger?.showSnackBar(SnackBar(content: Text(l10n.mediaEditorEditFailed)));

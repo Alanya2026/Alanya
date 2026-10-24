@@ -117,6 +117,23 @@ class SetImageTransformCommand extends EditorCommand {
   EditorDoc undo(EditorDoc d) => d.copyWith(imageTransform: before);
 }
 
+/// Filtre et réglages de couleur de l'image de base.
+class SetLookCommand extends EditorCommand {
+  const SetLookCommand(this.before, this.after, {this.name = 'filtre'});
+  final EditorLook before;
+  final EditorLook after;
+  final String name;
+
+  @override
+  String get label => name;
+
+  @override
+  EditorDoc apply(EditorDoc d) => d.copyWith(look: after);
+
+  @override
+  EditorDoc undo(EditorDoc d) => d.copyWith(look: before);
+}
+
 /// Change le format du cadre (mode photo : 4:3, 16:9…) avec la position de
 /// l'image qui va avec. Les calques gardent leurs coordonnées : on rogne
 /// avant de dessiner.

@@ -75,6 +75,11 @@ class AppColors {
   static const Color info = Color(0xFF2E90FA);
   static const Color infoContainer = Color(0xFFE5F1FF);
 
+  // ── Couleurs de contenu de l'éditeur d'image (ce qu'on dessine) ─────
+  // Indépendantes du thème : un trait jaune reste jaune en mode sombre.
+  static const Color drawYellow = Color(0xFFFFD54F);
+  static const Color drawPink = Color(0xFFEC407A);
+
   /// Indicateur de présence « en ligne ».
   static const Color online = Color(0xFF1FA363);
 

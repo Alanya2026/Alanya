@@ -19,8 +19,11 @@ import '../render/editor_renderer.dart';
 /// - texte / emoji : toucher sélectionne, glisser déplace, pincer
 ///   agrandit et tourne l'élément sélectionné.
 class EditorCanvas extends StatefulWidget {
-  const EditorCanvas({super.key, required this.controller});
+  const EditorCanvas({super.key, required this.controller, this.background});
   final EditorController controller;
+
+  /// Fond autour du cadre ; par défaut la surface atténuée du thème.
+  final Color? background;
 
   @override
   State<EditorCanvas> createState() => _EditorCanvasState();
@@ -68,7 +71,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
         } else if (d.pointerCount >= 2 && _c.selectedId != null) {
           _startItem(_c.selectedId!, d.localFocalPoint, 1, 0);
         }
-      case EditorTool.draw || EditorTool.cutout:
+      case EditorTool.draw || EditorTool.cutout || EditorTool.look:
         break;
     }
   }
@@ -104,7 +107,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
         final anchorStart = _toDoc(_cropBaseFocal);
         final anchorNow = _toDoc(d.localFocalPoint);
         _c.updateImageTransform(
-          EditorImageTransform(
+          base.copyWith(
             center: anchorNow + (base.center - anchorStart) * factor,
             scale: newScale,
           ),
@@ -133,7 +136,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
             rotationDelta: d.rotation - _itemBaseRotation,
           ),
         );
-      case EditorTool.draw || EditorTool.cutout:
+      case EditorTool.draw || EditorTool.cutout || EditorTool.look:
         break;
     }
   }
@@ -147,7 +150,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
         if (_itemActive) _c.endItemGesture();
         _itemActive = false;
         _itemBase = null;
-      case EditorTool.draw || EditorTool.cutout:
+      case EditorTool.draw || EditorTool.cutout || EditorTool.look:
         break;
     }
   }
@@ -298,7 +301,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
               image: true,
               label: l10n.mediaEditorCanvas,
               child: ColoredBox(
-                color: context.semantic.surfaceMuted,
+                color: widget.background ?? context.semantic.surfaceMuted,
                 child: interactive,
               ),
             );

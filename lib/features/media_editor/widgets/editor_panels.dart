@@ -45,6 +45,9 @@ class EditorOptionsPanel extends StatelessWidget {
             body = _EmojiOptions(controller: controller, pickEmoji: pickEmoji);
           case EditorTool.cutout:
             body = _CutoutOptions(controller: controller, segmenter: segmenter);
+          case EditorTool.look:
+            // Les filtres n'existent que dans la retouche avant envoi.
+            body = const SizedBox.shrink();
         }
         // Hauteur **constante** : sélectionner un élément (qui fait apparaître
         // ses curseurs) ne doit pas redimensionner la zone de retouche, sinon

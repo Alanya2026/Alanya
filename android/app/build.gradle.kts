@@ -28,8 +28,10 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.alanya237.alanya"
-        // Firebase Messaging et flutter_callkit_incoming requièrent au moins API 23.
-        minSdk = maxOf(23, flutter.minSdkVersion)
+        // Android 7.0 (API 24) au moins : exigé par pro_video_editor (retouche
+        // des vidéos avant envoi, Media3 Transformer). Firebase Messaging et
+        // flutter_callkit_incoming en demandaient 23.
+        minSdk = maxOf(24, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -14169,6 +14169,270 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Cette vidéo n\'est pas prise en charge ou est trop détaillée. Essayez une vidéo plus courte ou plus simple.'**
   String get stickerVideoInvalid;
+
+  /// No description provided for @mediaEditorToolFilters.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtres'**
+  String get mediaEditorToolFilters;
+
+  /// No description provided for @mediaEditorBrushPen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stylo'**
+  String get mediaEditorBrushPen;
+
+  /// No description provided for @mediaEditorBrushHighlighter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Surligneur'**
+  String get mediaEditorBrushHighlighter;
+
+  /// No description provided for @mediaEditorBrushNeon.
+  ///
+  /// In fr, this message translates to:
+  /// **'Néon'**
+  String get mediaEditorBrushNeon;
+
+  /// No description provided for @mediaEditorBrushBlur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Flou'**
+  String get mediaEditorBrushBlur;
+
+  /// No description provided for @mediaEditorBlurHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passez le doigt sur un visage ou une plaque pour le flouter.'**
+  String get mediaEditorBlurHint;
+
+  /// No description provided for @mediaEditorColorYellow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jaune'**
+  String get mediaEditorColorYellow;
+
+  /// No description provided for @mediaEditorColorPink.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rose'**
+  String get mediaEditorColorPink;
+
+  /// No description provided for @mediaEditorRotate90.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pivoter'**
+  String get mediaEditorRotate90;
+
+  /// No description provided for @mediaEditorFlip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Miroir'**
+  String get mediaEditorFlip;
+
+  /// No description provided for @mediaEditorReset.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser'**
+  String get mediaEditorReset;
+
+  /// No description provided for @mediaEditorStraighten.
+  ///
+  /// In fr, this message translates to:
+  /// **'Redresser'**
+  String get mediaEditorStraighten;
+
+  /// No description provided for @mediaEditorTabFilters.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtres'**
+  String get mediaEditorTabFilters;
+
+  /// No description provided for @mediaEditorTabAdjust.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages'**
+  String get mediaEditorTabAdjust;
+
+  /// No description provided for @mediaEditorIntensity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Intensité'**
+  String get mediaEditorIntensity;
+
+  /// No description provided for @mediaEditorBrightness.
+  ///
+  /// In fr, this message translates to:
+  /// **'Luminosité'**
+  String get mediaEditorBrightness;
+
+  /// No description provided for @mediaEditorContrast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contraste'**
+  String get mediaEditorContrast;
+
+  /// No description provided for @mediaEditorSaturation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saturation'**
+  String get mediaEditorSaturation;
+
+  /// No description provided for @mediaEditorWarmth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaleur'**
+  String get mediaEditorWarmth;
+
+  /// No description provided for @mediaEditorFilterNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Original'**
+  String get mediaEditorFilterNone;
+
+  /// No description provided for @mediaEditorFilterVivid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vif'**
+  String get mediaEditorFilterVivid;
+
+  /// No description provided for @mediaEditorFilterWarm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaud'**
+  String get mediaEditorFilterWarm;
+
+  /// No description provided for @mediaEditorFilterSoft.
+  ///
+  /// In fr, this message translates to:
+  /// **'Doux'**
+  String get mediaEditorFilterSoft;
+
+  /// No description provided for @mediaEditorFilterMono.
+  ///
+  /// In fr, this message translates to:
+  /// **'N&B'**
+  String get mediaEditorFilterMono;
+
+  /// No description provided for @mediaEditorFilterNight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nuit'**
+  String get mediaEditorFilterNight;
+
+  /// No description provided for @mediaEditorCompare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintenir pour voir l\'original'**
+  String get mediaEditorCompare;
+
+  /// No description provided for @mediaEditorAlign.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alignement du texte'**
+  String get mediaEditorAlign;
+
+  /// No description provided for @mediaEditorTextBackground.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fond du texte'**
+  String get mediaEditorTextBackground;
+
+  /// No description provided for @mediaEditorItemHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Glissez pour déplacer, pincez pour agrandir ou tourner.'**
+  String get mediaEditorItemHint;
+
+  /// No description provided for @mediaSendRemoveItem.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer de l\'envoi'**
+  String get mediaSendRemoveItem;
+
+  /// No description provided for @mediaSendAddMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des médias'**
+  String get mediaSendAddMore;
+
+  /// No description provided for @mediaSendUndoEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler la dernière retouche'**
+  String get mediaSendUndoEdit;
+
+  /// No description provided for @mediaSendViewOnceOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vue unique activée'**
+  String get mediaSendViewOnceOn;
+
+  /// No description provided for @mediaSendViewOnceOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vue unique désactivée'**
+  String get mediaSendViewOnceOff;
+
+  /// No description provided for @mediaSendMute.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couper le son'**
+  String get mediaSendMute;
+
+  /// No description provided for @mediaSendUnmute.
+  ///
+  /// In fr, this message translates to:
+  /// **'Remettre le son'**
+  String get mediaSendUnmute;
+
+  /// No description provided for @mediaSendEdits.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 retouche} other{{count} retouches}}'**
+  String mediaSendEdits(int count);
+
+  /// No description provided for @mediaSendItemLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'{kind} {index} sur {total}'**
+  String mediaSendItemLabel(String kind, int index, int total);
+
+  /// No description provided for @cameraShutterHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appuyer pour une photo, maintenir pour filmer'**
+  String get cameraShutterHint;
+
+  /// No description provided for @cameraTakePhoto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get cameraTakePhoto;
+
+  /// No description provided for @cameraStartRecording.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filmer'**
+  String get cameraStartRecording;
+
+  /// No description provided for @cameraStopRecording.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrêter l\'enregistrement'**
+  String get cameraStopRecording;
+
+  /// No description provided for @cameraFlash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Flash'**
+  String get cameraFlash;
+
+  /// No description provided for @cameraOpenGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir la galerie'**
+  String get cameraOpenGallery;
 }
 
 class _AppLocalizationsDelegate

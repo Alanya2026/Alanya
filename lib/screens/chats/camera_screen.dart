@@ -20,9 +20,15 @@ class CameraResult {
   });
 }
 
-/// Écran caméra intégré — tap = photo, hold = vidéo.
+/// Écran caméra intégré : un seul déclencheur. En mode photo, toucher prend
+/// une photo et maintenir filme (relâcher arrête) ; en mode vidéo, toucher
+/// démarre puis arrête l'enregistrement.
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key});
+  const CameraScreen({super.key, this.onPickFromGallery});
+
+  /// Bouton galerie : la caméra se ferme, puis ce sélecteur s'ouvre. `null` :
+  /// pas de bouton.
+  final VoidCallback? onPickFromGallery;
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -38,6 +44,10 @@ class _CameraScreenState extends State<CameraScreen> {
   Timer? _recordingTimer;
   int _recordingSeconds = 0;
   bool _isTakingPicture = false;
+  bool _videoMode = false;
+
+  /// Le doigt s'est levé avant que l'enregistrement n'ait démarré.
+  bool _stopRequested = false;
 
   @override
   void initState() {
@@ -133,8 +143,10 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _startRecording() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
     if (_isRecording || _isTakingPicture) return;
+    _stopRequested = false;
     try {
       await _controller!.startVideoRecording();
+      if (!mounted) return;
       setState(() {
         _isRecording = true;
         _recordingSeconds = 0;
@@ -142,13 +154,19 @@ class _CameraScreenState extends State<CameraScreen> {
       _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _recordingSeconds++);
       });
+      if (_stopRequested) await _stopRecording();
     } on CameraException catch (e) {
       debugPrint('[CameraScreen] startVideo error: $e');
     }
   }
 
   Future<void> _stopRecording() async {
-    if (_controller == null || !_isRecording) return;
+    if (_controller == null) return;
+    if (!_isRecording) {
+      // Relâché pendant le démarrage : on arrêtera dès qu'il aura démarré.
+      _stopRequested = true;
+      return;
+    }
     _recordingTimer?.cancel();
     try {
       final file = await _controller!.stopVideoRecording();
@@ -176,39 +194,76 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       backgroundColor: AppColors.black,
       body: _isInitialized && _controller != null
-          ? Stack(
-              fit: StackFit.expand,
+          ? Column(
               children: [
-                // Prévisualisation (sans distortion)
-                Center(
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    clipBehavior: Clip.hardEdge,
-                    child: SizedBox(
-                      width: _controller!.value.previewSize!.height,
-                      height: _controller!.value.previewSize!.width,
-                      child: CameraPreview(_controller!),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(24),
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Prévisualisation (sans distorsion)
+                        FittedBox(
+                          fit: BoxFit.cover,
+                          clipBehavior: Clip.hardEdge,
+                          child: SizedBox(
+                            width: _controller!.value.previewSize!.height,
+                            height: _controller!.value.previewSize!.width,
+                            child: CameraPreview(_controller!),
+                          ),
+                        ),
+                        Positioned(
+                          top: MediaQuery.paddingOf(context).top + 8,
+                          left: 0,
+                          right: 0,
+                          child: _buildTopBar(),
+                        ),
+                        if (!_isRecording)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: AppSpacing.md,
+                            child: Text(
+                              _videoMode
+                                  ? context.l10n.cameraStartRecording
+                                  : context.l10n.cameraShutterHint,
+                              textAlign: TextAlign.center,
+                              style: context.text.bodySmall?.copyWith(
+                                color: AppColors.white,
+                                shadows: [
+                                  Shadow(
+                                    color: AppColors.black.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
-
-                // En haut : fermer + flash + switch caméra
-                Positioned(
-                  top: MediaQuery.paddingOf(context).top + 8,
-                  left: 0,
-                  right: 0,
-                  child: _buildTopBar(),
-                ),
-
-                // En bas : boutons photo/vidéo
-                Positioned(
-                  bottom: MediaQuery.paddingOf(context).bottom + 24,
-                  left: 0,
-                  right: 0,
-                  child: _buildShutter(),
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: AppSpacing.md,
+                    bottom: bottom + AppSpacing.lg,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildModeSwitch(),
+                      AppSpacing.vGapMd,
+                      _buildShutterRow(),
+                    ],
+                  ),
                 ),
               ],
             )
@@ -223,116 +278,175 @@ class _CameraScreenState extends State<CameraScreen> {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
         children: [
-          // Fermer
           _circleButton(
             icon: Icons.close,
-            onTap: () => Navigator.pop(context),
+            label: context.l10n.commonClose,
+            onTap: _isRecording ? null : () => Navigator.pop(context),
           ),
           const Spacer(),
-          // Flash
+          if (_isRecording)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.error,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                _formatDuration(_recordingSeconds),
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          const Spacer(),
           _circleButton(
             icon: _flashIcon,
+            label: context.l10n.cameraFlash,
             onTap: _toggleFlash,
           ),
-          const SizedBox(width: AppSpacing.md),
-          // Switch caméra
-          if (_cameras.length > 1)
-            _circleButton(
-              icon: Icons.cameraswitch_outlined,
-              onTap: _switchCamera,
-            ),
         ],
       ),
     );
   }
 
-  Widget _buildShutter() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Bouton photo
-          GestureDetector(
-            onTap: _isRecording ? null : _takePicture,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.white, width: 4),
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 52,
-                      height: 52,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.white,
-                      ),
-                      child: const Icon(Icons.camera, color: AppColors.black, size: 26),
-                    ),
-                  ),
+  /// VIDÉO · PHOTO : le mode du déclencheur.
+  Widget _buildModeSwitch() {
+    Widget mode(bool video, String label) {
+      final selected = _videoMode == video;
+      return Semantics(
+        button: true,
+        selected: selected,
+        child: GestureDetector(
+          onTap: _isRecording ? null : () => setState(() => _videoMode = video),
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: AppSizes.minTapTarget,
+              minWidth: AppSizes.minTapTarget,
+            ),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: selected ? AppColors.white.withValues(alpha: 0.14) : null,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  color: selected
+                      ? AppColors.drawYellow
+                      : AppColors.white.withValues(alpha: 0.7),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  context.l10n.photo2,
-                  style: TextStyle(color: AppColors.white, fontSize: 12),
-                ),
-              ],
+              ),
             ),
           ),
-          // Bouton vidéo
-          GestureDetector(
-            onTap: _isRecording ? _stopRecording : _startRecording,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.white, width: 4),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        mode(true, context.l10n.video2),
+        mode(false, context.l10n.photo2),
+      ],
+    );
+  }
+
+  Widget _buildShutterRow() {
+    final l10n = context.l10n;
+    final gallery = widget.onPickFromGallery;
+    final String shutterLabel;
+    if (_isRecording) {
+      shutterLabel = l10n.cameraStopRecording;
+    } else if (_videoMode) {
+      shutterLabel = l10n.cameraStartRecording;
+    } else {
+      shutterLabel = l10n.cameraTakePhoto;
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            width: 52,
+            child: gallery == null || _isRecording
+                ? null
+                : _circleButton(
+                    icon: Icons.photo_library_outlined,
+                    label: l10n.cameraOpenGallery,
+                    size: 52,
+                    onTap: () {
+                      Navigator.pop(context);
+                      gallery();
+                    },
                   ),
-                  child: Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 52,
-                      height: 52,
-                      decoration: _isRecording
-                          ? const BoxDecoration(
-                              color: AppColors.error,
-                              borderRadius: BorderRadius.all(Radius.circular(14)),
-                            )
-                          : const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.error,
-                            ),
-                      child: Icon(
-                        _isRecording ? Icons.stop_rounded : Icons.videocam,
-                        color: AppColors.white,
-                        size: 28,
+          ),
+          Semantics(
+            button: true,
+            label: shutterLabel,
+            child: GestureDetector(
+              key: const ValueKey('camera-shutter'),
+              onTap: () {
+                if (_isRecording) {
+                  _stopRecording();
+                } else if (_videoMode) {
+                  _startRecording();
+                } else {
+                  _takePicture();
+                }
+              },
+              // Mode photo : maintenir filme, relâcher arrête.
+              onLongPressStart: _videoMode ? null : (_) => _startRecording(),
+              onLongPressEnd: _videoMode ? null : (_) => _stopRecording(),
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.white, width: 4),
+                ),
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: _isRecording ? 30 : 60,
+                    height: _isRecording ? 30 : 60,
+                    decoration: BoxDecoration(
+                      color: _isRecording || _videoMode
+                          ? AppColors.error
+                          : AppColors.white,
+                      borderRadius: BorderRadius.circular(
+                        _isRecording ? 8 : 30,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  _isRecording ? _formatDuration(_recordingSeconds) : context.l10n.video2,
-                  style: TextStyle(
-                    color: _isRecording ? AppColors.error : AppColors.white,
-                    fontSize: 12,
-                    fontWeight: _isRecording ? FontWeight.w600 : FontWeight.normal,
-                    fontFeatures: _isRecording ? [const FontFeature.tabularFigures()] : null,
-                  ),
-                ),
-              ],
+              ),
             ),
+          ),
+          SizedBox(
+            width: 52,
+            child: _cameras.length > 1 && !_isRecording
+                ? _circleButton(
+                    icon: Icons.cameraswitch_outlined,
+                    label: l10n.switchCamera,
+                    size: 52,
+                    onTap: _switchCamera,
+                  )
+                : null,
           ),
         ],
       ),
@@ -341,18 +455,26 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Widget _circleButton({
     required IconData icon,
-    required VoidCallback onTap,
+    required String label,
+    required VoidCallback? onTap,
+    double size = AppSizes.minTapTarget,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.black.withAlpha(100),
-          shape: BoxShape.circle,
+    return Semantics(
+      button: true,
+      label: label,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: AppColors.black.withAlpha(100),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.white, size: 22),
+          ),
         ),
-        child: Icon(icon, color: AppColors.white, size: 22),
       ),
     );
   }

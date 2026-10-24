@@ -10,7 +10,8 @@ import 'model/editor_document.dart';
 import 'model/editor_geometry.dart';
 import 'render/editor_renderer.dart';
 
-enum EditorTool { crop, draw, text, sticker, cutout }
+/// Outils de l'éditeur ; [look] : filtres et réglages de couleur.
+enum EditorTool { crop, draw, text, sticker, cutout, look }
 
 /// Pinceau du détourage manuel : [keep] fait revenir des pixels (garder),
 /// [erase] les cache (effacer le fond).
@@ -48,18 +49,33 @@ class EditorController extends ChangeNotifier {
   /// format disparaît (photo de profil : `EditorAspect.square`). `original` ou
   /// `null` : cadre libre, comme avant. [roundFrame] : l'écran montre le cadre
   /// vu par un cercle (repère, jamais exporté).
+  ///
+  /// [initialDoc] : reprend une retouche précédente (mêmes dimensions d'image
+  /// de travail, sinon ignoré) ; ses calques restent modifiables. Il ne doit
+  /// pas porter de masque de détourage (dont l'image appartenait à l'ancien
+  /// contrôleur). [initialTool] : l'outil ouvert au départ.
   EditorController({
     required this.mode,
     required this.image,
     EditorAspect? fixedAspect,
     this.roundFrame = false,
+    EditorDoc? initialDoc,
+    EditorTool? initialTool,
     int historyLimit = EditorHistory.defaultLimit,
   }) : fixedAspect = mode == MediaEditorMode.photo && fixedAspect?.ratio != null
            ? fixedAspect
            : null,
        history = EditorHistory(limit: historyLimit),
-       _doc = _initialDoc(mode, image, fixedAspect),
-       tool = EditorTool.crop;
+       _doc =
+           initialDoc != null &&
+               initialDoc.imageWidth == image.width &&
+               initialDoc.imageHeight == image.height &&
+               initialDoc.cutout?.baseMask == null
+           ? initialDoc
+           : _initialDoc(mode, image, fixedAspect),
+       tool = initialTool ?? EditorTool.crop {
+    _nextId = _doc.maxId + 1;
+  }
 
   static EditorDoc _initialDoc(
     MediaEditorMode mode,
@@ -123,6 +139,7 @@ class EditorController extends ChangeNotifier {
   ui.Color penColor = AppColors.black;
   double penWidth = 12;
   bool erasing = false;
+  EditorBrush brush = EditorBrush.pen;
 
   // Réglages du détourage manuel. Taille en unités du **document** (même
   // rendu à l'écran quel que soit le zoom de l'image) ; convertie en pixels de
@@ -169,7 +186,8 @@ class EditorController extends ChangeNotifier {
     // manipulent.
     if (t == EditorTool.crop ||
         t == EditorTool.draw ||
-        t == EditorTool.cutout) {
+        t == EditorTool.cutout ||
+        t == EditorTool.look) {
       selectedId = null;
     }
     _changed();
@@ -188,6 +206,13 @@ class EditorController extends ChangeNotifier {
 
   void setErasing(bool e) {
     erasing = e;
+    _changed();
+  }
+
+  /// Choisit le pinceau (et quitte la gomme).
+  void setBrush(EditorBrush b) {
+    brush = b;
+    erasing = false;
     _changed();
   }
 
@@ -235,6 +260,7 @@ class EditorController extends ChangeNotifier {
     _liveMaskPoints = null;
     _liveMaskStroke = null;
     maskCursor = null;
+    _lookBefore = null;
   }
 
   // ───────────────────────── Crayon ─────────────────────────
@@ -253,6 +279,7 @@ class EditorController extends ChangeNotifier {
       color: penColor,
       width: penWidth,
       erase: erasing,
+      brush: erasing ? EditorBrush.pen : brush,
     );
     _live = _doc.copyWith(strokes: [..._doc.strokes, _liveStroke!]);
     _changed();
@@ -287,13 +314,21 @@ class EditorController extends ChangeNotifier {
     return EditorPlacement(center: c + ui.Offset(14.0 * n, 14.0 * n));
   }
 
-  int addText(String text, EditorFont font, ui.Color color) {
+  int addText(
+    String text,
+    EditorFont font,
+    ui.Color color, {
+    EditorTextAlign align = EditorTextAlign.center,
+    EditorTextBackground background = EditorTextBackground.none,
+  }) {
     final item = EditorTextItem(
       id: newId(),
       placement: _newPlacement(),
       text: text,
       font: font,
       color: color,
+      align: align,
+      background: background,
     );
     execute(AddItemCommand(item));
     selectedId = item.id;
@@ -313,10 +348,23 @@ class EditorController extends ChangeNotifier {
     return item.id;
   }
 
-  void editText(int id, {String? text, EditorFont? font, ui.Color? color}) {
+  void editText(
+    int id, {
+    String? text,
+    EditorFont? font,
+    ui.Color? color,
+    EditorTextAlign? align,
+    EditorTextBackground? background,
+  }) {
     final before = _doc.itemById(id);
     if (before is! EditorTextItem) return;
-    final after = before.copyWith(text: text, font: font, color: color);
+    final after = before.copyWith(
+      text: text,
+      font: font,
+      color: color,
+      align: align,
+      background: background,
+    );
     execute(ReplaceItemCommand(before, after, name: 'texte'));
   }
 
@@ -412,18 +460,170 @@ class EditorController extends ChangeNotifier {
   /// (`cover = true`).
   void fitImage({required bool cover}) {
     final d = _doc;
+    final o = d.imageTransform;
     final t = cover
-        ? EditorImageTransform.cover(d.canvas, d.imageWidth, d.imageHeight)
-        : EditorImageTransform.contain(d.canvas, d.imageWidth, d.imageHeight);
+        ? EditorImageTransform.cover(
+            d.canvas,
+            d.imageWidth,
+            d.imageHeight,
+            rotation: o.rotation,
+            quarterTurns: o.quarterTurns,
+            flipX: o.flipX,
+          )
+        : EditorImageTransform.contain(
+            d.canvas,
+            d.imageWidth,
+            d.imageHeight,
+            quarterTurns: o.quarterTurns,
+            flipX: o.flipX,
+          ).copyWith(rotation: o.rotation);
     if (t == d.imageTransform) return;
     execute(SetImageTransformCommand(d.imageTransform, t));
+  }
+
+  /// Quart de tour dans le sens horaire. Cadre libre (format de l'image) : le
+  /// cadre tourne avec elle ; cadre imposé : l'image remplit le même cadre.
+  void rotateQuarter() {
+    final d = _doc;
+    final o = d.imageTransform;
+    final turns = (o.quarterTurns + 1) % 4;
+    final swap = mode == MediaEditorMode.photo && fixedAspect == null;
+    final canvas = swap ? ui.Size(d.canvas.height, d.canvas.width) : d.canvas;
+    final after = mode == MediaEditorMode.sticker
+        ? EditorImageTransform.contain(
+            canvas,
+            d.imageWidth,
+            d.imageHeight,
+            quarterTurns: turns,
+            flipX: o.flipX,
+          ).copyWith(rotation: o.rotation)
+        : EditorImageTransform.cover(
+            canvas,
+            d.imageWidth,
+            d.imageHeight,
+            rotation: o.rotation,
+            quarterTurns: turns,
+            flipX: o.flipX,
+          );
+    execute(
+      SetCanvasCommand(
+        beforeCanvas: d.canvas,
+        afterCanvas: canvas,
+        beforeTransform: o,
+        afterTransform: after,
+      ),
+    );
+  }
+
+  /// Miroir horizontal de l'image.
+  void flipImage() {
+    final o = _doc.imageTransform;
+    execute(SetImageTransformCommand(o, o.copyWith(flipX: !o.flipX)));
+  }
+
+  /// Rotation fine (molette) : début, valeur courante, fin = une annulation.
+  void beginRotation() => beginImageGesture();
+
+  void updateRotation(double angle) {
+    final base = _imageBefore;
+    if (base == null) return;
+    final d = _doc;
+    final a = angle.clamp(
+      -EditorImageTransform.maxFineRotation,
+      EditorImageTransform.maxFineRotation,
+    );
+    var t = base.copyWith(rotation: a);
+    if (mode == MediaEditorMode.photo) {
+      // Une photo qui remplissait son cadre le remplit encore une fois
+      // tournée : pas de coin vide à l'envoi.
+      final was = EditorImageTransform.coverScale(
+        d.canvas,
+        d.imageWidth,
+        d.imageHeight,
+        base.rotation,
+        base.quarterTurns,
+      );
+      final need = EditorImageTransform.coverScale(
+        d.canvas,
+        d.imageWidth,
+        d.imageHeight,
+        a,
+        base.quarterTurns,
+      );
+      if (base.scale >= was - 1e-6 && t.scale < need) {
+        t = t.copyWith(scale: need, center: base.center);
+      }
+    }
+    _live = d.copyWith(imageTransform: t);
+    _changed();
+  }
+
+  void endRotation() => endImageGesture();
+
+  /// Rognage d'origine : format, position et orientation de départ.
+  void resetCrop() {
+    final d = _doc;
+    final start = _initialDoc(mode, image, fixedAspect);
+    if (start.canvas == d.canvas && start.imageTransform == d.imageTransform) {
+      return;
+    }
+    execute(
+      SetCanvasCommand(
+        beforeCanvas: d.canvas,
+        afterCanvas: start.canvas,
+        beforeTransform: d.imageTransform,
+        afterTransform: start.imageTransform,
+      ),
+    );
+  }
+
+  // ───────────────────── Filtres et réglages ─────────────────────
+
+  EditorLook? _lookBefore;
+
+  /// Choisit un filtre (une annulation) ; l'intensité repart à 100 % quand on
+  /// passe de « aucun » à un filtre.
+  void setFilter(EditorFilter f) {
+    final b = _doc.look;
+    final a = b.copyWith(
+      filter: f,
+      intensity: b.filter == EditorFilter.none ? 1 : b.intensity,
+    );
+    if (a == b) return;
+    execute(SetLookCommand(b, a));
+  }
+
+  /// Curseur d'intensité ou de réglage : début, valeur, fin = une annulation.
+  void beginLook() => _lookBefore = _doc.look;
+
+  void updateLook(EditorLook look) {
+    if (_lookBefore == null) return;
+    _live = _doc.copyWith(look: look);
+    _changed();
+  }
+
+  void endLook() {
+    final before = _lookBefore;
+    _lookBefore = null;
+    final live = _live;
+    _live = null;
+    if (before == null || live == null || live.look == before) {
+      _changed();
+      return;
+    }
+    execute(SetLookCommand(before, live.look, name: 'réglage'));
   }
 
   /// Mode photo : change le format du cadre (l'image le remplit).
   void setAspect(EditorAspect a) {
     if (mode != MediaEditorMode.photo || fixedAspect != null) return;
     final d = _doc;
-    final ratio = a.ratio ?? d.imageWidth / d.imageHeight;
+    final o = EditorImageTransform.orientedSize(
+      d.imageWidth,
+      d.imageHeight,
+      d.imageTransform.quarterTurns,
+    );
+    final ratio = a.ratio ?? o.width / o.height;
     final size = _canvasFor(ratio, d.imageWidth, d.imageHeight);
     if (size == d.canvas) return;
     execute(
@@ -435,6 +635,9 @@ class EditorController extends ChangeNotifier {
           size,
           d.imageWidth,
           d.imageHeight,
+          rotation: d.imageTransform.rotation,
+          quarterTurns: d.imageTransform.quarterTurns,
+          flipX: d.imageTransform.flipX,
         ),
       ),
     );
@@ -503,11 +706,8 @@ class EditorController extends ChangeNotifier {
   EditorMaskStroke? _liveMaskStroke;
   List<ui.Offset>? _liveMaskPoints;
 
-  ui.Offset _docToImage(ui.Offset p) {
-    final t = _doc.imageTransform;
-    return (p - t.center) / t.scale +
-        ui.Offset(_doc.imageWidth / 2, _doc.imageHeight / 2);
-  }
+  ui.Offset _docToImage(ui.Offset p) =>
+      _doc.imageTransform.docToImage(p, _doc.imageWidth, _doc.imageHeight);
 
   void _showLiveMask() {
     final s = _liveMaskStroke;
