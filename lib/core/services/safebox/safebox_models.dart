@@ -4,12 +4,43 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-/// Les quatre dossiers racines, dans l'ordre d'affichage.
-enum SafeboxRoot {
-  albums,
+/// Les quatre types de fichiers (la « famille »), décidés par l'extension.
+enum SafeboxFamily {
+  photos,
   videos,
   audios,
   documents;
+
+  /// Le type rendu par le serveur ; « documents » si inconnu. « albums » est
+  /// l'ancien nom des photos (avant le 24/10/2026, migration 108) : les
+  /// messages déjà reçus le portent encore.
+  static SafeboxFamily fromName(String? name) {
+    if (name == 'albums') return photos;
+    for (final f in values) {
+      if (f.name == name) return f;
+    }
+    return documents;
+  }
+
+  /// Le dossier racine qui n'accepte que ce type.
+  SafeboxRoot get root => switch (this) {
+        photos => SafeboxRoot.photos,
+        videos => SafeboxRoot.videos,
+        audios => SafeboxRoot.audios,
+        documents => SafeboxRoot.documents,
+      };
+}
+
+/// Les six dossiers racines, dans l'ordre d'affichage (décision du
+/// 24/10/2026). Les quatre premiers se remplissent depuis le téléphone, un
+/// type chacun ; Albums et Partager se remplissent à la main et acceptent tout.
+enum SafeboxRoot {
+  photos,
+  videos,
+  audios,
+  documents,
+  albums,
+  partager;
 
   static SafeboxRoot? fromName(String? name) {
     for (final r in values) {
@@ -17,6 +48,37 @@ enum SafeboxRoot {
     }
     return null;
   }
+
+  /// Le seul type accepté ; null pour Albums et Partager, qui acceptent tout.
+  SafeboxFamily? get family => switch (this) {
+        photos => SafeboxFamily.photos,
+        videos => SafeboxFamily.videos,
+        audios => SafeboxFamily.audios,
+        documents => SafeboxFamily.documents,
+        albums || partager => null,
+      };
+
+  bool accepts(SafeboxFamily f) => family == null || family == f;
+}
+
+/// Un autre endroit du coffre où se trouve le même contenu (Photos et un
+/// album) : la feuille de suppression le nomme.
+class SafeboxPlace {
+  const SafeboxPlace({required this.fileId, required this.folderId, required this.root, this.folderName});
+
+  factory SafeboxPlace.fromJson(Map<String, dynamic> j) => SafeboxPlace(
+        fileId: _int(j['fileId']),
+        folderId: _int(j['folderId']),
+        root: SafeboxRoot.fromName(j['root'] as String?) ?? SafeboxRoot.documents,
+        folderName: j['folderName'] as String?,
+      );
+
+  final int fileId;
+  final int folderId;
+  final SafeboxRoot root;
+
+  /// Nul pour un dossier racine : l'application affiche son nom traduit.
+  final String? folderName;
 }
 
 int _int(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
@@ -108,8 +170,8 @@ class SafeboxLimits {
       folderNameMax: _int(j['folderNameMax']),
       fileNameMax: _int(j['fileNameMax']),
       extensions: {
-        for (final r in SafeboxRoot.values)
-          r: (ext[r.name] is List ? (ext[r.name] as List).map((e) => '$e'.toLowerCase()).toList() : <String>[]),
+        for (final f in SafeboxFamily.values)
+          f: (ext[f.name] is List ? (ext[f.name] as List).map((e) => '$e'.toLowerCase()).toList() : <String>[]),
       },
     );
   }
@@ -121,16 +183,16 @@ class SafeboxLimits {
   final int maxFolders;
   final int folderNameMax;
   final int fileNameMax;
-  final Map<SafeboxRoot, List<String>> extensions;
+  final Map<SafeboxFamily, List<String>> extensions;
 
   /// Même règle que le serveur : la première famille qui connaît l'extension,
   /// sinon « documents ».
-  SafeboxRoot familyOf(String fileName) {
+  SafeboxFamily familyOf(String fileName) {
     final ext = safeboxExtensionOf(fileName);
-    for (final r in const [SafeboxRoot.albums, SafeboxRoot.videos, SafeboxRoot.audios]) {
-      if (ext.isNotEmpty && (extensions[r] ?? const []).contains(ext)) return r;
+    for (final f in const [SafeboxFamily.photos, SafeboxFamily.videos, SafeboxFamily.audios]) {
+      if (ext.isNotEmpty && (extensions[f] ?? const []).contains(ext)) return f;
     }
-    return SafeboxRoot.documents;
+    return SafeboxFamily.documents;
   }
 }
 
@@ -372,10 +434,12 @@ class SafeboxFile {
     this.trashedAt,
     this.purgeAt,
     this.folderName,
+    this.folderRoot,
     this.meta,
     this.sent,
     this.lost = false,
     this.note,
+    this.alsoIn = const [],
   });
 
   factory SafeboxFile.fromJson(Map<String, dynamic> j) => SafeboxFile(
@@ -384,7 +448,7 @@ class SafeboxFile {
         name: '${j['name'] ?? ''}',
         ext: '${j['ext'] ?? ''}',
         mime: j['mime'] as String?,
-        family: SafeboxRoot.fromName(j['family'] as String?) ?? SafeboxRoot.documents,
+        family: SafeboxFamily.fromName(j['family'] as String?),
         plainBytes: _int(j['plainBytes']),
         storedBytes: _int(j['storedBytes']),
         originalBytes: _intOrNull(j['originalBytes']),
@@ -397,10 +461,12 @@ class SafeboxFile {
         trashedAt: _date(j['trashedAt']),
         purgeAt: _date(j['purgeAt']),
         folderName: j['folderName'] as String?,
+        folderRoot: SafeboxRoot.fromName(j['folderRoot'] as String?),
         meta: SafeboxMeta.fromJson(j['meta']),
         sent: SafeboxSent.fromJson(j['sent']),
         lost: j['lost'] == true,
         note: SafeboxNote.fromJson(j['note']),
+        alsoIn: _list(j['alsoIn']).map(SafeboxPlace.fromJson).toList(),
       );
 
   final int id;
@@ -408,7 +474,11 @@ class SafeboxFile {
   final String name;
   final String ext;
   final String? mime;
-  final SafeboxRoot family;
+  final SafeboxFamily family;
+
+  /// Les autres endroits du coffre où se trouve le même contenu, sans copie
+  /// (décision du 24/10/2026) ; vide s'il n'est qu'ici.
+  final List<SafeboxPlace> alsoIn;
 
   /// Taille en clair : celle que l'inscrit retrouvera.
   final int plainBytes;
@@ -432,6 +502,9 @@ class SafeboxFile {
   /// Nom de son dossier, rendu par « Libérer de l'espace » ; nul pour un
   /// dossier racine (nom traduit par l'application).
   final String? folderName;
+
+  /// Racine de son dossier, rendue avec [folderName] ; nulle ailleurs.
+  final SafeboxRoot? folderRoot;
 
   final SafeboxMeta? meta;
 
@@ -588,7 +661,7 @@ class SafeboxShareCreated {
         shareId: _int(j['shareId']),
         name: '${j['name'] ?? ''}',
         mime: j['mime'] as String?,
-        family: SafeboxRoot.fromName(j['family'] as String?) ?? SafeboxRoot.documents,
+        family: SafeboxFamily.fromName(j['family'] as String?),
         plainBytes: _int(j['plainBytes']),
         meta: SafeboxMeta.fromJson(j['meta']),
       );
@@ -596,7 +669,7 @@ class SafeboxShareCreated {
   final int shareId;
   final String name;
   final String? mime;
-  final SafeboxRoot family;
+  final SafeboxFamily family;
   final int plainBytes;
   final SafeboxMeta? meta;
 }
@@ -629,7 +702,7 @@ class SafeboxShareInfo {
         senderId: _int(j['senderId']),
         name: '${j['name'] ?? ''}',
         mime: j['mime'] as String?,
-        family: SafeboxRoot.fromName(j['family'] as String?) ?? SafeboxRoot.documents,
+        family: SafeboxFamily.fromName(j['family'] as String?),
         plainBytes: _int(j['plainBytes']),
         available: j['available'] == true,
         isSender: j['isSender'] == true,
@@ -648,7 +721,7 @@ class SafeboxShareInfo {
   final int senderId;
   final String name;
   final String? mime;
-  final SafeboxRoot family;
+  final SafeboxFamily family;
   final int plainBytes;
 
   /// Faux quand l'expéditeur a retiré le fichier de son coffre.

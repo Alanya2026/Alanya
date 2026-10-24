@@ -134,7 +134,7 @@ class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> {
                 child: Column(
                   children: [
                     for (final r in SafeboxRoot.values) ...[
-                      if (r != SafeboxRoot.albums) const Divider(height: 1),
+                      if (r != SafeboxRoot.values.first) const Divider(height: 1),
                       ListTile(
                         leading: Container(
                           padding: const EdgeInsets.all(AppSpacing.sm),

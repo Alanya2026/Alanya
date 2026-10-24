@@ -60,8 +60,22 @@ extension SafeboxApi on TalkyApiClient {
             }),
           )));
 
-  Future<void> trashSafeboxFile(int fileId) =>
-      _safeboxJson(() => _client.delete(_safebox('/files/$fileId'), headers: _headers));
+  /// À la corbeille : cet exemplaire, ou avec [everywhere] tous les
+  /// exemplaires du même contenu dans le coffre (Photos et albums).
+  Future<void> trashSafeboxFile(int fileId, {bool everywhere = false}) => _safeboxJson(
+      () => _client.delete(_safebox('/files/$fileId${everywhere ? '?everywhere=1' : ''}'), headers: _headers));
+
+  /// Ajoute des fichiers du coffre à un album, sans copie. Rend leurs
+  /// exemplaires dans l'album.
+  Future<List<SafeboxFile>> addSafeboxFilesToFolder(int folderId, List<int> fileIds) async {
+    final r = await _safeboxJson(() => _client.post(
+          _safebox('/folders/$folderId/files'),
+          headers: _headers,
+          body: jsonEncode({'fileIds': fileIds}),
+        ));
+    final liste = r['files'] is List ? r['files'] as List : const [];
+    return liste.whereType<Map>().map((e) => SafeboxFile.fromJson(Map<String, dynamic>.from(e))).toList();
+  }
 
   // ── Commentaire d'une photo (privé) ──────────────────────────────────────
 

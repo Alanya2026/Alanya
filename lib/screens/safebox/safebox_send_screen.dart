@@ -1,7 +1,7 @@
 //  Envoyer un fichier du coffre dans une discussion (jusqu'à 1 Go). Deux
-//  chemins : un fichier déjà dans le coffre part tout de suite ; un fichier du
-//  téléphone entre d'abord dans le coffre (sur l'espace de l'expéditeur), puis
-//  part dans la discussion dès la fin de son envoi.
+//  chemins : un fichier déjà dans le coffre part tout de suite, sans copie ;
+//  un fichier du téléphone entre d'abord dans Partager (sur l'espace de
+//  l'expéditeur), puis part dans la discussion dès la fin de son envoi.
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +14,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../core/utils/safebox_share_payload.dart';
 import '../../talky_api_client.dart';
-import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_compression_sheet.dart';
-import 'safebox_move_picker.dart';
 import 'safebox_widgets.dart';
 
 /// Ouvre l'écran d'envoi. Rend le contenu du message à envoyer (fichier pris
@@ -28,12 +26,12 @@ Future<SafeboxSharePayload?> showSafeboxSend(BuildContext context, {required int
       MaterialPageRoute(builder: (_) => SafeboxSendScreen(conversationId: conversationId)),
     );
 
-/// Envoie des fichiers du téléphone dans une discussion par le coffre :
-/// chacun entre dans la racine de sa famille (avec la question de
-/// compression), sur l'espace de l'expéditeur, puis part dans la discussion
-/// à la fin de son envoi. Sert à l'écran d'envoi et à la proposition faite
-/// quand un fichier dépasse la limite des médias de discussion. Rend vrai si
-/// au moins un fichier est en route.
+/// Envoie des fichiers du téléphone dans une discussion par le coffre : ils
+/// entrent dans Partager (décision du 24/10/2026 : pas de question « Ranger
+/// dans »), avec la question de compression, sur l'espace de l'expéditeur,
+/// puis partent dans la discussion à la fin de leur envoi. Sert à l'écran
+/// d'envoi et à la proposition faite quand un fichier dépasse la limite des
+/// médias de discussion. Rend vrai si au moins un fichier est en route.
 Future<bool> sendPhoneFilesViaSafebox(
   BuildContext context, {
   required int conversationId,
@@ -43,131 +41,49 @@ Future<bool> sendPhoneFilesViaSafebox(
   final l10n = context.l10n;
   final vue = c.overview ?? await c.refreshOverview();
   if (vue == null || !context.mounted) return false;
-  var parti = false;
-  for (final famille in SafeboxRoot.values) {
-    final lot = picks.where((p) => vue.limits.familyOf(p.name) == famille).toList();
-    final racine = vue.rootIds[famille];
-    if (lot.isEmpty || racine == null) continue;
-    final dossier = SafeboxFolder(id: racine, parentId: null, root: famille, name: null, depth: 0);
-    final tri = c.triage(lot, dossier);
-    if (tri.rejected.isNotEmpty && context.mounted) {
-      final r = tri.rejected.first;
-      safeboxSnack(
+  final racine = vue.rootIds[SafeboxRoot.partager];
+  if (racine == null) return false;
+  final partager = SafeboxFolder(id: racine, parentId: null, root: SafeboxRoot.partager, name: null, depth: 0);
+  final tri = c.triage(picks, partager);
+  if (tri.rejected.isNotEmpty) {
+    final r = tri.rejected.first;
+    safeboxSnack(
+      context,
+      r.reason == SafeboxRejectReason.tooLarge
+          ? l10n.safeboxFileTooLarge(formatBytes(vue.limits.maxFileBytes, l10n))
+          : l10n.safeboxEmptyFile,
+      error: true,
+    );
+  }
+  if (tri.ok.isEmpty) return false;
+  var compresser = false;
+  final estimation = await c.estimate(tri.ok);
+  if (estimation != null && context.mounted) {
+    final retenu = await c.rememberedChoice();
+    if (retenu == SafeboxCompressionChoice.ask) {
+      if (!context.mounted) return false;
+      final r = await showSafeboxCompressionSheet(
         context,
-        r.reason == SafeboxRejectReason.tooLarge
-            ? l10n.safeboxFileTooLarge(formatBytes(vue.limits.maxFileBytes, l10n))
-            : l10n.safeboxEmptyFile,
-        error: true,
+        originalBytes: estimation.original,
+        compressedBytes: estimation.compressed,
       );
-    }
-    if (tri.ok.isEmpty) continue;
-    if (!context.mounted) return parti;
-    final range = await _rangerDans(context, c, famille, racine, tri.ok.length);
-    if (range == null) continue; // renoncement
-    final cible = range == racine
-        ? dossier
-        : SafeboxFolder(id: range, parentId: null, root: famille, name: null, depth: 1);
-    var compresser = false;
-    final estimation = await c.estimate(tri.ok, famille);
-    if (estimation != null && context.mounted) {
-      final retenu = await c.rememberedChoice();
-      if (retenu == SafeboxCompressionChoice.ask) {
-        if (!context.mounted) return parti;
-        final r = await showSafeboxCompressionSheet(
-          context,
-          originalBytes: estimation.original,
-          compressedBytes: estimation.compressed,
-        );
-        if (r == null) continue;
-        compresser = r.compress;
-        if (r.remember) {
-          await c.rememberChoice(r.compress ? SafeboxCompressionChoice.compressed : SafeboxCompressionChoice.original);
-        }
-      } else {
-        compresser = retenu == SafeboxCompressionChoice.compressed;
+      if (r == null) return false;
+      compresser = r.compress;
+      if (r.remember) {
+        await c.rememberChoice(r.compress ? SafeboxCompressionChoice.compressed : SafeboxCompressionChoice.original);
       }
+    } else {
+      compresser = retenu == SafeboxCompressionChoice.compressed;
     }
-    final total = tri.ok.fold<int>(0, (s, p) => s + p.size);
-    if (!compresser && total > (c.overview ?? vue).quota.freeBytes) {
-      if (context.mounted) safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
-      continue;
-    }
-    await c.addFiles(tri.ok, cible, compress: compresser, shareConversationId: conversationId);
-    parti = true;
   }
-  if (parti && context.mounted) safeboxSnack(context, l10n.safeboxShareQueued);
-  return parti;
-}
-
-/// Où ranger les fichiers dans le coffre (conception, section 07). Sans
-/// sous-dossier dans cette famille, rien n'est demandé : la racine. Sinon une
-/// feuille « Ranger dans : Documents · Modifier · Continuer ». Rend le dossier
-/// choisi, ou null si l'inscrit renonce.
-Future<int?> _rangerDans(BuildContext context, SafeboxController c, SafeboxRoot famille, int racine, int nombre) async {
-  SafeboxFolderPage page;
-  try {
-    page = await c.api.fetchSafeboxFolder(racine);
-  } catch (_) {
-    return racine; // hors ligne : la racine, comme avant
+  final total = tri.ok.fold<int>(0, (s, p) => s + p.size);
+  if (!compresser && total > (c.overview ?? vue).quota.freeBytes) {
+    if (context.mounted) safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
+    return false;
   }
-  if (page.folders.isEmpty || !context.mounted) return racine;
-  var choisi = racine;
-  var libelle = SafeboxController.rootLabel(famille, context.l10n);
-  return showAppBottomSheet<int>(
-    context: context,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) {
-        final l10n = ctx.l10n;
-        return SafeArea(
-          child: Padding(
-            padding: AppSpacing.card,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(l10n.safeboxStoreInTitle, style: ctx.text.titleMedium),
-                AppSpacing.vGapXs,
-                Text(l10n.safeboxStoreInHint(nombre),
-                    style: ctx.text.bodySmall?.copyWith(color: ctx.colors.onSurfaceVariant)),
-                AppSpacing.vGapSm,
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(choisi == racine ? safeboxRootIcon(famille) : Icons.folder_outlined,
-                      color: ctx.colors.primary),
-                  title: Text(libelle, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: TextButton(
-                    onPressed: () async {
-                      final id = await pickSafeboxDestination(
-                        ctx,
-                        startFolderId: racine,
-                        currentParentId: -1,
-                        actionLabel: l10n.safeboxStoreHere,
-                      );
-                      if (id == null || !ctx.mounted) return;
-                      var nom = libelle;
-                      try {
-                        nom = SafeboxController.folderLabel((await c.api.fetchSafeboxFolder(id)).folder, l10n);
-                      } catch (_) {}
-                      setState(() {
-                        choisi = id;
-                        libelle = nom;
-                      });
-                    },
-                    child: Text(l10n.safeboxStoreChange),
-                  ),
-                ),
-                AppSpacing.vGapSm,
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, choisi),
-                  child: Text(l10n.safeboxStoreContinue),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    ),
-  );
+  await c.addFiles(tri.ok, partager, compress: compresser, shareConversationId: conversationId);
+  if (context.mounted) safeboxSnack(context, l10n.safeboxShareQueued);
+  return true;
 }
 
 class SafeboxSendScreen extends StatefulWidget {
@@ -202,8 +118,8 @@ class _SafeboxSendScreenState extends State<SafeboxSendScreen> {
     }
   }
 
-  /// Fichier du téléphone : déposé dans la racine de sa famille, il partira
-  /// dans la discussion à la fin de l'envoi.
+  /// Fichier du téléphone : déposé dans Partager, il partira dans la
+  /// discussion à la fin de l'envoi.
   Future<void> _depuisLeTelephone() async {
     final res = await FilePicker.platform.pickFiles(withData: false);
     final f = res?.files.single;

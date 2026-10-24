@@ -15,10 +15,12 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 
 IconData safeboxRootIcon(SafeboxRoot r) => switch (r) {
-      SafeboxRoot.albums => Icons.photo_library_outlined,
+      SafeboxRoot.photos => Icons.photo_library_outlined,
       SafeboxRoot.videos => Icons.video_library_outlined,
       SafeboxRoot.audios => Icons.library_music_outlined,
       SafeboxRoot.documents => Icons.description_outlined,
+      SafeboxRoot.albums => Icons.collections_bookmark_outlined,
+      SafeboxRoot.partager => Icons.send_outlined,
     };
 
 /// Icône d'un fichier sans aperçu, selon son extension.
@@ -49,10 +51,10 @@ IconData safeboxFileIcon(SafeboxFile f) {
       return Icons.android;
   }
   return switch (f.family) {
-    SafeboxRoot.albums => Icons.image_outlined,
-    SafeboxRoot.videos => Icons.movie_outlined,
-    SafeboxRoot.audios => Icons.music_note_outlined,
-    SafeboxRoot.documents => Icons.insert_drive_file_outlined,
+    SafeboxFamily.photos => Icons.image_outlined,
+    SafeboxFamily.videos => Icons.movie_outlined,
+    SafeboxFamily.audios => Icons.music_note_outlined,
+    SafeboxFamily.documents => Icons.insert_drive_file_outlined,
   };
 }
 
@@ -110,7 +112,7 @@ class _SafeboxFileThumbState extends State<SafeboxFileThumb> {
               child: Image.memory(_octets!, fit: BoxFit.cover, gaplessPlayback: true),
             ),
     );
-    if (widget.file.family != SafeboxRoot.videos || _octets == null) return fond;
+    if (widget.file.family != SafeboxFamily.videos || _octets == null) return fond;
     return Stack(
       fit: widget.fill ? StackFit.expand : StackFit.loose,
       alignment: Alignment.center,

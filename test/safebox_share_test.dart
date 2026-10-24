@@ -24,13 +24,13 @@ void main() {
     test('aller-retour du contenu, tel que le réécrit le serveur', () {
       const p = SafeboxSharePayload(
         share: 7, name: 'Mariage.mp4', size: 880803840, mime: 'video/mp4',
-        family: SafeboxRoot.videos, blur: 'AAAA',
+        family: SafeboxFamily.videos, blur: 'AAAA',
       );
       final relu = SafeboxSharePayload.tryParse(p.encode())!;
       expect(relu.share, 7);
       expect(relu.name, 'Mariage.mp4');
       expect(relu.size, 880803840);
-      expect(relu.family, SafeboxRoot.videos);
+      expect(relu.family, SafeboxFamily.videos);
       expect(relu.blur, 'AAAA');
       expect(jsonDecode(p.encode())['v'], 1);
     });
@@ -93,7 +93,7 @@ void main() {
 
     test('voyagent dans le message, et dans un envoi qui reprend après redémarrage', () {
       const meta = SafeboxMeta(durationMs: 1000, title: 'Titre', artist: 'Artiste');
-      const p = SafeboxSharePayload(share: 2, name: 'a.mp3', size: 9, family: SafeboxRoot.audios, meta: meta);
+      const p = SafeboxSharePayload(share: 2, name: 'a.mp3', size: 9, family: SafeboxFamily.audios, meta: meta);
       final relu = SafeboxSharePayload.tryParse(p.encode())!;
       expect(relu.meta!.title, 'Titre');
       expect(relu.meta!.artist, 'Artiste');
@@ -140,7 +140,7 @@ void main() {
         open: (loc, mime) async => true,
       );
       expect(await r.location(5), isNull);
-      final loc = await r.publish(File('/tmp/x'), shareId: 5, name: 'Mariage.mp4', family: SafeboxRoot.videos);
+      final loc = await r.publish(File('/tmp/x'), shareId: 5, name: 'Mariage.mp4', family: SafeboxFamily.videos);
       expect(loc, 'content://dl/1');
       expect(copies, ['Alanya/Alanya Videos/Mariage.mp4 (video/mp4)']);
       expect(await r.location(5), 'content://dl/1');
@@ -155,13 +155,13 @@ void main() {
         publish: (path, name, mime, subdir) async => throw Exception('plein'),
         exists: (loc) async => true,
       );
-      expect(await r.publish(File('/tmp/x'), shareId: 6, name: 'a.pdf', family: SafeboxRoot.documents), isNull);
+      expect(await r.publish(File('/tmp/x'), shareId: 6, name: 'a.pdf', family: SafeboxFamily.documents), isNull);
       expect(await r.location(6), isNull);
     });
 
     test('rangement et type', () {
-      expect(SafeboxReceivedFiles.subdirFor(SafeboxRoot.documents), 'Alanya/Alanya Documents');
-      expect(SafeboxReceivedFiles.subdirFor(SafeboxRoot.audios), 'Alanya/Alanya Audio');
+      expect(SafeboxReceivedFiles.subdirFor(SafeboxFamily.documents), 'Alanya/Alanya Documents');
+      expect(SafeboxReceivedFiles.subdirFor(SafeboxFamily.audios), 'Alanya/Alanya Audio');
       expect(SafeboxReceivedFiles.mimeFor('acte.pdf', null), 'application/pdf');
       expect(SafeboxReceivedFiles.mimeFor('donnees.inconnu', null), 'application/octet-stream');
     });

@@ -7591,6 +7591,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxRootAlbums => 'Albums';
 
   @override
+  String get safeboxRootPhotos => 'Photos';
+
+  @override
+  String get safeboxRootShare => 'Share';
+
+  @override
+  String get safeboxAddToAlbum => 'Add to an album';
+
+  @override
+  String get safeboxAddToAlbumHere => 'Add here';
+
+  @override
+  String get safeboxAddedToAlbum => 'Added to the album';
+
+  @override
+  String safeboxAlsoIn(String place) {
+    return 'Also in \"$place\"';
+  }
+
+  @override
+  String get safeboxDeleteWhich => 'This file is also elsewhere in your safe';
+
+  @override
+  String safeboxDeleteHereOnly(String place) {
+    return 'Remove from \"$place\" only';
+  }
+
+  @override
+  String safeboxDeleteHereOnlyHint(String other) {
+    return 'It stays in \"$other\". No space is freed.';
+  }
+
+  @override
+  String get safeboxDeleteEverywhere => 'Delete everywhere';
+
+  @override
+  String get safeboxDeleteEverywhereHint =>
+      'It goes to the trash; the space is freed when the trash is emptied.';
+
+  @override
+  String get safeboxMoveToRoot => 'Move to…';
+
+  @override
   String get safeboxRootVideos => 'Videos';
 
   @override

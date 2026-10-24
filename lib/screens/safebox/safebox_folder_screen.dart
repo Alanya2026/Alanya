@@ -46,7 +46,8 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
   final ScrollController _defilement = ScrollController();
 
   SafeboxController get _c => context.read<SafeboxController>();
-  bool get _grille => widget.root == SafeboxRoot.albums || widget.root == SafeboxRoot.videos;
+  bool get _grille =>
+      widget.root == SafeboxRoot.photos || widget.root == SafeboxRoot.videos || widget.root == SafeboxRoot.albums;
 
   @override
   void initState() {
@@ -152,11 +153,12 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     final l10n = context.l10n;
     final page = _page;
     if (page == null) return;
+    // Albums et Partager acceptent tous les types.
     final type = switch (widget.root) {
-      SafeboxRoot.albums => FileType.image,
+      SafeboxRoot.photos => FileType.image,
       SafeboxRoot.videos => FileType.video,
       SafeboxRoot.audios => FileType.audio,
-      SafeboxRoot.documents => FileType.any,
+      SafeboxRoot.documents || SafeboxRoot.albums || SafeboxRoot.partager => FileType.any,
     };
     final res = await FilePicker.platform.pickFiles(allowMultiple: true, type: type, withData: false);
     if (res == null || !mounted) return;
@@ -169,7 +171,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
       final r = tri.rejected.first;
       final message = switch (r.reason) {
         SafeboxRejectReason.wrongFamily =>
-          l10n.safeboxWrongFamily(SafeboxController.rootLabel(r.expectedRoot ?? SafeboxRoot.documents, l10n)),
+          l10n.safeboxWrongFamily(SafeboxController.rootLabel((r.expectedFamily ?? SafeboxFamily.documents).root, l10n)),
         SafeboxRejectReason.tooLarge =>
           l10n.safeboxFileTooLarge(formatBytes(_c.overview?.limits.maxFileBytes ?? 0, l10n)),
         SafeboxRejectReason.empty || SafeboxRejectReason.unreadable => l10n.safeboxEmptyFile,
@@ -179,7 +181,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     if (tri.ok.isEmpty) return;
 
     var compresser = false;
-    final estimation = await _c.estimate(tri.ok, widget.root);
+    final estimation = await _c.estimate(tri.ok);
     if (estimation != null && mounted) {
       final retenu = await _c.rememberedChoice();
       if (retenu == SafeboxCompressionChoice.ask) {
@@ -248,7 +250,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
   /// Une photo s'ouvre dans l'application, avec son commentaire ; les autres
   /// fichiers, dans l'application du téléphone qui sait les lire.
   Future<void> _ouvrirFichier(SafeboxFile f) async {
-    if (f.family != SafeboxRoot.albums) return _ouvrir(f);
+    if (f.family != SafeboxFamily.photos) return _ouvrir(f);
     await Navigator.push(context, MaterialPageRoute(builder: (_) => SafeboxPhotoScreen(file: f)));
     if (mounted) await _charger(); // le commentaire a pu changer
   }
@@ -297,10 +299,9 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     }
   }
 
+  /// Vers un dossier de sa racine, d'Albums ou de Partager.
   Future<void> _deplacerFichier(SafeboxFile f) async {
-    final racine = _c.overview?.rootIds[widget.root];
-    if (racine == null) return;
-    final cible = await pickSafeboxDestination(context, startFolderId: racine, currentParentId: widget.folderId);
+    final cible = await pickSafeboxFileDestination(context, family: f.family, currentParentId: widget.folderId);
     if (cible == null || !mounted) return;
     try {
       await _c.api.updateSafeboxFile(f.id, folderId: cible);
@@ -310,13 +311,75 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     }
   }
 
-  Future<void> _supprimerFichier(SafeboxFile f) async {
+  /// Dans un album, sans copie (décision du 24/10/2026) : l'espace ne change pas.
+  Future<void> _ajouterAUnAlbum(SafeboxFile f) async {
+    final l10n = context.l10n;
+    final albums = _c.overview?.rootIds[SafeboxRoot.albums];
+    if (albums == null) return;
+    final cible = await pickSafeboxDestination(
+      context,
+      startFolderId: albums,
+      currentParentId: -1,
+      actionLabel: l10n.safeboxAddToAlbumHere,
+    );
+    if (cible == null || !mounted) return;
     try {
-      await _c.api.trashSafeboxFile(f.id);
-      await _c.downloads.evict(f.id);
+      await _c.addToAlbum([f], cible);
+      if (!mounted) return;
+      safeboxSnack(context, l10n.safeboxAddedToAlbum);
+      await _charger(); // « Aussi dans … » apparaît
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+    }
+  }
+
+  /// Le même contenu est ailleurs dans le coffre : retirer d'ici seulement
+  /// (rien n'est libéré) ou supprimer partout. Null si l'inscrit renonce.
+  Future<bool?> _icOuPartout(SafeboxFile f) {
+    final l10n = context.l10n;
+    final page = _page;
+    final ici = page == null ? SafeboxController.rootLabel(widget.root, l10n) : SafeboxController.folderLabel(page.folder, l10n);
+    final ailleurs = f.alsoIn.map((p) => SafeboxController.placeLabel(p, l10n)).toSet().join(', ');
+    return showAppBottomSheet<bool>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: ctx.text.titleSmall),
+              subtitle: Text(l10n.safeboxDeleteWhich),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.remove_circle_outline),
+              title: Text(l10n.safeboxDeleteHereOnly(ici)),
+              subtitle: Text(l10n.safeboxDeleteHereOnlyHint(ailleurs)),
+              onTap: () => Navigator.pop(ctx, false),
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: ctx.colors.error),
+              title: Text(l10n.safeboxDeleteEverywhere, style: TextStyle(color: ctx.colors.error)),
+              subtitle: Text(l10n.safeboxDeleteEverywhereHint),
+              onTap: () => Navigator.pop(ctx, true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _supprimerFichier(SafeboxFile f) async {
+    var partout = false;
+    if (f.alsoIn.isNotEmpty) {
+      final choix = await _icOuPartout(f);
+      if (choix == null || !mounted) return;
+      partout = choix;
+    }
+    try {
+      await _c.trashFile(f, everywhere: partout);
       if (mounted) safeboxSnack(context, context.l10n.safeboxMovedToTrash);
       await _charger();
-      unawaited(_c.refreshOverview());
     } catch (e) {
       if (mounted) safeboxShowError(context, e);
     }
@@ -333,12 +396,17 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
             ListTile(title: Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: ctx.text.titleSmall)),
             const Divider(height: 1),
             ListTile(leading: const Icon(Icons.open_in_new), title: Text(l10n.safeboxOpen), onTap: () => Navigator.pop(ctx, 'ouvrir')),
-            if (f.family == SafeboxRoot.albums)
+            if (f.family == SafeboxFamily.photos)
               ListTile(
                 leading: const Icon(Icons.add_comment_outlined),
                 title: Text(f.note == null ? l10n.safeboxNoteAdd : l10n.safeboxNoteEdit),
                 onTap: () => Navigator.pop(ctx, 'commentaire'),
               ),
+            ListTile(
+              leading: const Icon(Icons.collections_bookmark_outlined),
+              title: Text(l10n.safeboxAddToAlbum),
+              onTap: () => Navigator.pop(ctx, 'album'),
+            ),
             ListTile(leading: const Icon(Icons.send_outlined), title: Text(l10n.safeboxSendToChat), onTap: () => Navigator.pop(ctx, 'envoyer')),
             ListTile(leading: const Icon(Icons.ios_share), title: Text(l10n.safeboxExport), onTap: () => Navigator.pop(ctx, 'exporter')),
             ListTile(leading: const Icon(Icons.edit_outlined), title: Text(l10n.safeboxRename), onTap: () => Navigator.pop(ctx, 'renommer')),
@@ -358,6 +426,8 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
         await _ouvrirFichier(f);
       case 'commentaire':
         await _commenter(f);
+      case 'album':
+        await _ajouterAUnAlbum(f);
       case 'envoyer':
         await _envoyerDansDiscussion(f);
       case 'exporter':
@@ -538,6 +608,11 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
                                   Text('${formatBytes(f.plainBytes, l10n)} · ${safeboxDate(context, f.createdAt)}'),
                                   if (f.lost) const SafeboxLostBadge(),
                                   if (f.note != null) SafeboxNoteLine(note: f.note!),
+                                  if (f.alsoIn.isNotEmpty)
+                                    Text(
+                                      l10n.safeboxAlsoIn(SafeboxController.placeLabel(f.alsoIn.first, l10n)),
+                                      style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
+                                    ),
                                   if (f.sent != null) SafeboxSentBadge(sent: f.sent!),
                                 ],
                               ),

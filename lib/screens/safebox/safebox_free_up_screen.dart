@@ -78,8 +78,10 @@ class _SafeboxFreeUpScreenState extends State<SafeboxFreeUpScreen> {
     final ids = _choisis.toList();
     setState(() => _occupe = true);
     try {
+      // Partout : un contenu aussi rangé dans un album ne libère sa place
+      // que si tous ses exemplaires partent (décision du 24/10/2026).
       for (final id in ids) {
-        await _c.api.trashSafeboxFile(id);
+        await _c.api.trashSafeboxFile(id, everywhere: true);
         await _c.downloads.evict(id);
       }
       _choisis.clear();
@@ -192,7 +194,7 @@ class _SafeboxFreeUpScreenState extends State<SafeboxFreeUpScreen> {
                         children: [
                           Text([
                             formatBytes(f.storedBytes, l10n),
-                            l10n.safeboxInFolder(f.folderName ?? SafeboxController.rootLabel(f.family, l10n)),
+                            l10n.safeboxInFolder(f.folderName ?? SafeboxController.rootLabel(f.folderRoot ?? f.family.root, l10n)),
                           ].join(' · ')),
                           if (f.lost) const SafeboxLostBadge(),
                           if (f.sent != null) SafeboxSentBadge(sent: f.sent!),

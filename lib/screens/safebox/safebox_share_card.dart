@@ -150,7 +150,7 @@ class _SafeboxShareCardState extends State<SafeboxShareCard> {
     if (!avecImage) {
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: Icon(safeboxRootIcon(p.family), size: 36, color: widget.mutedColor),
+        child: Icon(safeboxRootIcon(p.family.root), size: 36, color: widget.mutedColor),
       );
     }
     return ClipRRect(
@@ -169,7 +169,7 @@ class _SafeboxShareCardState extends State<SafeboxShareCard> {
               ColoredBox(color: context.semantic.brandContainer),
             if (info != null && info.available && info.previewUrl != null)
               SafeboxFileThumb(file: info.asFile(), fill: true),
-            if (p.family == SafeboxRoot.videos)
+            if (p.family == SafeboxFamily.videos)
               const Center(
                 child: DecoratedBox(
                   decoration: BoxDecoration(color: Colors.black45, shape: BoxShape.circle),

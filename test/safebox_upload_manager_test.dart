@@ -116,7 +116,7 @@ class _FauxServeur implements SafeboxTransport {
     expect(recus[fileId]!.length, n, reason: 'tous les blocs doivent être chez MEGA');
     if (e.preview > 0) expect(apercus, contains(fileId));
     return SafeboxFile(
-      id: fileId, folderId: 1, name: 'f', ext: 'pdf', mime: null, family: SafeboxRoot.documents,
+      id: fileId, folderId: 1, name: 'f', ext: 'pdf', mime: null, family: SafeboxFamily.documents,
       plainBytes: e.plain, storedBytes: e.size, originalBytes: null, compressed: false,
       cipherFormat: kSafeboxCipherFormat, key: key, previewUrl: null,
     );

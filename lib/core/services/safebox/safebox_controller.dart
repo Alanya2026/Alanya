@@ -37,10 +37,12 @@ class SafeboxPick {
 enum SafeboxRejectReason { wrongFamily, tooLarge, empty, unreadable }
 
 class SafeboxRejection {
-  const SafeboxRejection(this.pick, this.reason, {this.expectedRoot});
+  const SafeboxRejection(this.pick, this.reason, {this.expectedFamily});
   final SafeboxPick pick;
   final SafeboxRejectReason reason;
-  final SafeboxRoot? expectedRoot;
+
+  /// Le type du fichier refusé, pour nommer le dossier où il va.
+  final SafeboxFamily? expectedFamily;
 }
 
 /// Choix de compression retenu par l'inscrit (« Retenir mon choix »).
@@ -160,14 +162,23 @@ class SafeboxController extends ChangeNotifier {
   }
 
   static String rootLabel(SafeboxRoot r, AppLocalizations l10n) => switch (r) {
-        SafeboxRoot.albums => l10n.safeboxRootAlbums,
+        SafeboxRoot.photos => l10n.safeboxRootPhotos,
         SafeboxRoot.videos => l10n.safeboxRootVideos,
         SafeboxRoot.audios => l10n.safeboxRootAudios,
         SafeboxRoot.documents => l10n.safeboxRootDocuments,
+        SafeboxRoot.albums => l10n.safeboxRootAlbums,
+        SafeboxRoot.partager => l10n.safeboxRootShare,
       };
 
   static String folderLabel(SafeboxFolder f, AppLocalizations l10n) =>
       f.isRoot ? rootLabel(f.root, l10n) : (f.name ?? '');
+
+  /// Nom d'un autre endroit du même contenu : son dossier, ou sa racine traduite.
+  static String placeLabel(SafeboxPlace p, AppLocalizations l10n) => p.folderName ?? rootLabel(p.root, l10n);
+
+  /// Le type d'un fichier d'après son nom, comme le serveur (« documents »
+  /// tant que les réglages du coffre ne sont pas chargés).
+  SafeboxFamily familyOf(String name) => _overview?.limits.familyOf(name) ?? SafeboxFamily.documents;
 
   // ── Choix de compression ─────────────────────────────────────────────────
 
@@ -190,7 +201,8 @@ class SafeboxController extends ChangeNotifier {
       SafeboxMediaPrep(workDir: Directory('${(await safeboxLocalDir()).path}/outbox'));
 
   /// Trie les fichiers choisis : ceux qui peuvent partir dans [folder], et les
-  /// autres avec la raison (mauvais dossier, trop gros, vide).
+  /// autres avec la raison (mauvais dossier, trop gros, vide). Albums et
+  /// Partager acceptent tous les types.
   ({List<SafeboxPick> ok, List<SafeboxRejection> rejected}) triage(List<SafeboxPick> picks, SafeboxFolder folder) {
     final limites = _overview?.limits;
     final ok = <SafeboxPick>[];
@@ -200,9 +212,9 @@ class SafeboxController extends ChangeNotifier {
         refuses.add(SafeboxRejection(pick, SafeboxRejectReason.empty));
         continue;
       }
-      final famille = limites?.familyOf(pick.name) ?? folder.root;
-      if (famille != folder.root) {
-        refuses.add(SafeboxRejection(pick, SafeboxRejectReason.wrongFamily, expectedRoot: famille));
+      final famille = limites?.familyOf(pick.name) ?? folder.root.family ?? SafeboxFamily.documents;
+      if (!folder.root.accepts(famille)) {
+        refuses.add(SafeboxRejection(pick, SafeboxRejectReason.wrongFamily, expectedFamily: famille));
         continue;
       }
       if (limites != null && pick.size > limites.maxFileBytes) {
@@ -215,15 +227,17 @@ class SafeboxController extends ChangeNotifier {
   }
 
   /// Poids total et poids compressé estimé, pour la feuille de choix. Null
-  /// quand rien de ce lot ne se compresse (documents, audios, GIF…).
-  Future<({int original, int compressed})?> estimate(List<SafeboxPick> picks, SafeboxRoot root) async {
-    if (!picks.any((p) => SafeboxMediaPrep.canCompress(root, p.name))) return null;
+  /// quand rien de ce lot ne se compresse (documents, audios, GIF…). Chaque
+  /// fichier selon son type : un lot pour Albums ou Partager mélange les types.
+  Future<({int original, int compressed})?> estimate(List<SafeboxPick> picks) async {
+    bool compressible(SafeboxPick p) => SafeboxMediaPrep.canCompress(familyOf(p.name), p.name);
+    if (!picks.any(compressible)) return null;
     final prep = await _prep();
     var original = 0;
     var compresse = 0;
     for (final p in picks) {
       original += p.size;
-      compresse += SafeboxMediaPrep.canCompress(root, p.name) ? await prep.estimate(p.path, root, p.size) : p.size;
+      compresse += compressible(p) ? await prep.estimate(p.path, familyOf(p.name), p.size) : p.size;
     }
     return (original: original, compressed: compresse);
   }
@@ -244,8 +258,9 @@ class SafeboxController extends ChangeNotifier {
         var source = pick.path;
         var nom = pick.name;
         var possede = false;
+        final famille = familyOf(pick.name);
         if (compress) {
-          final c = await prep.compress(pick.path, pick.name, folder.root);
+          final c = await prep.compress(pick.path, pick.name, famille);
           if (c != null) {
             source = c.path;
             nom = c.name;
@@ -257,14 +272,14 @@ class SafeboxController extends ChangeNotifier {
         final cle = safeboxNewFileKey();
         String? cheminApercu;
         var tailleApercu = 0;
-        final apercu = await prep.preview(source, folder.root, nom);
+        final apercu = await prep.preview(source, famille, nom);
         if (apercu != null && apercu.isNotEmpty && apercu.length <= maxApercu) {
           final chiffre = safeboxEncryptPreviewSync(cle, Uint8List.fromList(apercu));
           cheminApercu = '${prep.workDir.path}/apercu_${DateTime.now().microsecondsSinceEpoch}.sbx';
           await File(cheminApercu).writeAsBytes(chiffre, flush: true);
           tailleApercu = chiffre.length;
         }
-        final details = await prep.meta(source, folder.root, nom);
+        final details = await prep.meta(source, famille, nom);
         await uploads.enqueue(
           SafeboxUploadJob(
             id: '${DateTime.now().microsecondsSinceEpoch}_${pick.name.hashCode}',
@@ -289,6 +304,26 @@ class SafeboxController extends ChangeNotifier {
         debugPrint('[Coffre] préparation de ${pick.name} impossible : $e');
       }
     }
+  }
+
+  // ── Un même contenu à plusieurs endroits (décision du 24/10/2026) ───────
+
+  /// Ajoute des fichiers du coffre à un album, sans copie : l'espace ne
+  /// change pas.
+  Future<List<SafeboxFile>> addToAlbum(List<SafeboxFile> files, int albumId) =>
+      _api.addSafeboxFilesToFolder(albumId, [for (final f in files) f.id]);
+
+  /// À la corbeille : cet exemplaire, ou tous ceux du même contenu
+  /// ([everywhere]), seul moyen de libérer sa place.
+  Future<void> trashFile(SafeboxFile f, {bool everywhere = false}) async {
+    await _api.trashSafeboxFile(f.id, everywhere: everywhere);
+    await downloads.evict(f.id);
+    if (everywhere) {
+      for (final p in f.alsoIn) {
+        await downloads.evict(p.fileId);
+      }
+    }
+    unawaited(refreshOverview());
   }
 
   // ── Partage dans une discussion (lot 3) ──────────────────────────────────

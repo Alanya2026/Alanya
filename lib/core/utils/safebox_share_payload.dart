@@ -34,7 +34,7 @@ class SafeboxSharePayload {
   /// Taille en clair.
   final int size;
   final String? mime;
-  final SafeboxRoot family;
+  final SafeboxFamily family;
 
   /// Mini-image floue (base64, quelques Ko), affichée tout de suite, même
   /// hors connexion, avant l'aperçu net.
@@ -56,7 +56,7 @@ class SafeboxSharePayload {
         name: d['name'] is String ? d['name'] as String : '',
         size: d['size'] is num ? (d['size'] as num).toInt() : 0,
         mime: d['mime'] as String?,
-        family: SafeboxRoot.fromName(d['family'] as String?) ?? SafeboxRoot.documents,
+        family: SafeboxFamily.fromName(d['family'] as String?),
         blur: d['b'] is String ? d['b'] as String : null,
         meta: SafeboxMeta.fromJson(d['meta']),
       );

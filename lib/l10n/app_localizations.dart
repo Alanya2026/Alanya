@@ -13084,6 +13084,78 @@ abstract class AppLocalizations {
   /// **'Albums'**
   String get safeboxRootAlbums;
 
+  /// No description provided for @safeboxRootPhotos.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photos'**
+  String get safeboxRootPhotos;
+
+  /// No description provided for @safeboxRootShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager'**
+  String get safeboxRootShare;
+
+  /// No description provided for @safeboxAddToAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à un album'**
+  String get safeboxAddToAlbum;
+
+  /// No description provided for @safeboxAddToAlbumHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter ici'**
+  String get safeboxAddToAlbumHere;
+
+  /// No description provided for @safeboxAddedToAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouté à l\'album'**
+  String get safeboxAddedToAlbum;
+
+  /// No description provided for @safeboxAlsoIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aussi dans « {place} »'**
+  String safeboxAlsoIn(String place);
+
+  /// No description provided for @safeboxDeleteWhich.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier est aussi ailleurs dans le coffre'**
+  String get safeboxDeleteWhich;
+
+  /// No description provided for @safeboxDeleteHereOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer de « {place} » seulement'**
+  String safeboxDeleteHereOnly(String place);
+
+  /// No description provided for @safeboxDeleteHereOnlyHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il reste dans « {other} ». Aucun espace libéré.'**
+  String safeboxDeleteHereOnlyHint(String other);
+
+  /// No description provided for @safeboxDeleteEverywhere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer partout'**
+  String get safeboxDeleteEverywhere;
+
+  /// No description provided for @safeboxDeleteEverywhereHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il va à la corbeille ; l\'espace est libéré quand elle est vidée.'**
+  String get safeboxDeleteEverywhereHint;
+
+  /// No description provided for @safeboxMoveToRoot.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déplacer vers…'**
+  String get safeboxMoveToRoot;
+
   /// No description provided for @safeboxRootVideos.
   ///
   /// In fr, this message translates to:

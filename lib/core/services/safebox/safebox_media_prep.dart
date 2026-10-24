@@ -83,17 +83,17 @@ class SafeboxMediaPrep {
   static int _seq = 0;
 
   /// La compression a-t-elle un sens pour ce fichier, sur ce téléphone ?
-  static bool canCompress(SafeboxRoot family, String name) {
+  static bool canCompress(SafeboxFamily family, String name) {
     if (kIsWeb) return false;
     final ext = safeboxExtensionOf(name);
     switch (family) {
-      case SafeboxRoot.albums:
+      case SafeboxFamily.photos:
         return ext != 'gif'; // l'animation se perdrait
-      case SafeboxRoot.videos:
+      case SafeboxFamily.videos:
         return Platform.isAndroid || Platform.isIOS;
-      case SafeboxRoot.audios:
+      case SafeboxFamily.audios:
         return Platform.isAndroid && (ext == 'wav' || ext == 'flac');
-      case SafeboxRoot.documents:
+      case SafeboxFamily.documents:
         return false;
     }
   }
@@ -116,9 +116,9 @@ class SafeboxMediaPrep {
   /// Poids estimé après compression, pour la feuille de choix. Égal à
   /// l'original quand il n'y a rien à gagner (fichier déjà léger) : la feuille
   /// le dit au lieu de proposer une compression vaine.
-  Future<int> estimate(String path, SafeboxRoot family, int size) async {
+  Future<int> estimate(String path, SafeboxFamily family, int size) async {
     switch (family) {
-      case SafeboxRoot.albums:
+      case SafeboxFamily.photos:
         try {
           final d = await _dimensions(path);
           if (d == null || d.width <= 0 || d.height <= 0) return (size * 0.3).round();
@@ -129,16 +129,16 @@ class SafeboxMediaPrep {
         } catch (_) {
           return (size * 0.3).round();
         }
-      case SafeboxRoot.videos:
+      case SafeboxFamily.videos:
         final faits = await _faitsVideo(path);
         if (faits == null) return (size * 0.5).round();
         // La règle et le débit des discussions, en H.264.
         return estimateUploadBytesFor(path, faits, maxOutputBitsPerSecond: targetBitsPerSecond(VideoCodec.avc));
-      case SafeboxRoot.audios:
+      case SafeboxFamily.audios:
         final ms = await _duree(path);
         if (ms != null && ms > 0) return math.min(size, (ms / 1000 * kSafeboxAudioBitrate / 8).round());
         return (size * 0.3).round();
-      case SafeboxRoot.documents:
+      case SafeboxFamily.documents:
         return size;
     }
   }
@@ -176,11 +176,11 @@ class SafeboxMediaPrep {
   }
 
   /// Compresse, ou rend null pour garder l'original.
-  Future<SafeboxCompressed?> compress(String path, String name, SafeboxRoot family) async {
+  Future<SafeboxCompressed?> compress(String path, String name, SafeboxFamily family) async {
     if (!canCompress(family, name)) return null;
     await workDir.create(recursive: true);
     try {
-      if (family == SafeboxRoot.videos) {
+      if (family == SafeboxFamily.videos) {
         // Comme les discussions : une vidéo déjà en 720p et sous la cible ne
         // gagnerait rien, on ne la convertit pas (temps et batterie épargnés).
         final faits = await _faitsVideo(path);
@@ -190,10 +190,10 @@ class SafeboxMediaPrep {
         }
       }
       final c = switch (family) {
-        SafeboxRoot.albums => await _photo(path, name),
-        SafeboxRoot.videos => Platform.isAndroid ? await _videoTranscode(path, name) : await _videoIos(path, name),
-        SafeboxRoot.audios => await _audio(path, name),
-        SafeboxRoot.documents => null,
+        SafeboxFamily.photos => await _photo(path, name),
+        SafeboxFamily.videos => Platform.isAndroid ? await _videoTranscode(path, name) : await _videoIos(path, name),
+        SafeboxFamily.audios => await _audio(path, name),
+        SafeboxFamily.documents => null,
       };
       if (c == null) return null;
       final avant = await File(path).length();
@@ -300,10 +300,10 @@ class SafeboxMediaPrep {
 
   /// Aperçu en clair (JPEG ou PNG d'environ 480 px), ou null. Chiffré ensuite
   /// avec la clé du fichier.
-  Future<Uint8List?> preview(String path, SafeboxRoot family, String name) async {
+  Future<Uint8List?> preview(String path, SafeboxFamily family, String name) async {
     try {
       switch (family) {
-        case SafeboxRoot.albums:
+        case SafeboxFamily.photos:
           return await FlutterImageCompress.compressWithFile(
             path,
             minWidth: kSafeboxPreviewSide,
@@ -311,12 +311,12 @@ class SafeboxMediaPrep {
             quality: 70,
             format: CompressFormat.jpeg,
           );
-        case SafeboxRoot.videos:
+        case SafeboxFamily.videos:
           return await VideoThumbnailService.forFile(path);
-        case SafeboxRoot.audios:
+        case SafeboxFamily.audios:
           final b64 = await MusicMetadataService.coverBase64(path);
           return b64 == null ? null : base64Decode(b64);
-        case SafeboxRoot.documents:
+        case SafeboxFamily.documents:
           if (safeboxExtensionOf(name) != 'pdf') return null;
           final b64 = await PdfThumbnailService.base64ForFile(path, maxWidth: kSafeboxPreviewSide.toDouble());
           return b64 == null ? null : base64Decode(b64);
@@ -331,10 +331,10 @@ class SafeboxMediaPrep {
   /// d'une vidéo, pages d'un PDF, titre, artiste et durée d'un audio), lus sur
   /// le fichier qui part — la copie compressée s'il y en a une. Null si rien
   /// n'est lisible : ils décorent, ils ne bloquent jamais un envoi.
-  Future<SafeboxMeta?> meta(String path, SafeboxRoot family, String name) async {
+  Future<SafeboxMeta?> meta(String path, SafeboxFamily family, String name) async {
     try {
       switch (family) {
-        case SafeboxRoot.videos:
+        case SafeboxFamily.videos:
           if (Platform.isAndroid) {
             final raw = await _video.invokeMethod<Map<dynamic, dynamic>>('probe', {'path': path});
             if (raw == null) return null;
@@ -354,7 +354,7 @@ class SafeboxMediaPrep {
             'width': info.width,
             'height': info.height,
           });
-        case SafeboxRoot.audios:
+        case SafeboxFamily.audios:
           final tags = readMetadata(File(path), getImage: false);
           var ms = tags.duration?.inMilliseconds;
           if (ms == null || ms <= 0) {
@@ -362,7 +362,7 @@ class SafeboxMediaPrep {
             ms = s == null ? null : s * 1000;
           }
           return SafeboxMeta.fromJson({'durationMs': ms, 'title': tags.title, 'artist': tags.artist});
-        case SafeboxRoot.documents:
+        case SafeboxFamily.documents:
           if (safeboxExtensionOf(name) != 'pdf') return null;
           final doc = await PdfDocument.openFile(path);
           try {
@@ -370,7 +370,7 @@ class SafeboxMediaPrep {
           } finally {
             await doc.close();
           }
-        case SafeboxRoot.albums:
+        case SafeboxFamily.photos:
           return null;
       }
     } catch (e) {

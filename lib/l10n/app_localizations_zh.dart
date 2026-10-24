@@ -7242,6 +7242,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxRootAlbums => '相册';
 
   @override
+  String get safeboxRootPhotos => '照片';
+
+  @override
+  String get safeboxRootShare => '分享';
+
+  @override
+  String get safeboxAddToAlbum => '添加到相册';
+
+  @override
+  String get safeboxAddToAlbumHere => '添加到这里';
+
+  @override
+  String get safeboxAddedToAlbum => '已添加到相册';
+
+  @override
+  String safeboxAlsoIn(String place) {
+    return '也在“$place”中';
+  }
+
+  @override
+  String get safeboxDeleteWhich => '此文件也在保险箱的其他位置';
+
+  @override
+  String safeboxDeleteHereOnly(String place) {
+    return '仅从“$place”移除';
+  }
+
+  @override
+  String safeboxDeleteHereOnlyHint(String other) {
+    return '它仍保留在“$other”中，不会释放空间。';
+  }
+
+  @override
+  String get safeboxDeleteEverywhere => '从所有位置删除';
+
+  @override
+  String get safeboxDeleteEverywhereHint => '移至回收站；清空回收站后释放空间。';
+
+  @override
+  String get safeboxMoveToRoot => '移动到…';
+
+  @override
   String get safeboxRootVideos => '视频';
 
   @override

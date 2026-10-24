@@ -1,5 +1,6 @@
-//  Choix du dossier de destination d'un déplacement. On ne navigue que dans la
-//  famille de l'élément : un fichier ou un dossier reste dans sa famille.
+//  Choix du dossier de destination d'un déplacement. Un dossier reste dans sa
+//  racine ; un fichier va dans la racine de son type, dans Albums ou dans
+//  Partager (décision du 24/10/2026).
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,7 +10,44 @@ import '../../core/services/safebox/safebox_models.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../talky_api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_widgets.dart';
+
+/// Destination d'un fichier : d'abord la racine (celle de son type, Albums ou
+/// Partager), puis le dossier dans cette racine. Rend l'identifiant du
+/// dossier choisi, ou null.
+Future<int?> pickSafeboxFileDestination(
+  BuildContext context, {
+  required SafeboxFamily family,
+  required int currentParentId,
+}) async {
+  final c = context.read<SafeboxController>();
+  final vue = c.overview ?? await c.refreshOverview();
+  if (vue == null || !context.mounted) return null;
+  final l10n = context.l10n;
+  final racine = await showAppBottomSheet<SafeboxRoot>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(title: Text(l10n.safeboxMoveToRoot, style: ctx.text.titleSmall)),
+          const Divider(height: 1),
+          for (final r in [family.root, SafeboxRoot.albums, SafeboxRoot.partager])
+            if (vue.rootIds[r] != null)
+              ListTile(
+                leading: Icon(safeboxRootIcon(r), color: ctx.colors.primary),
+                title: Text(SafeboxController.rootLabel(r, l10n)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.pop(ctx, r),
+              ),
+        ],
+      ),
+    ),
+  );
+  if (racine == null || !context.mounted) return null;
+  return pickSafeboxDestination(context, startFolderId: vue.rootIds[racine]!, currentParentId: currentParentId);
+}
 
 /// Rend l'identifiant du dossier choisi, ou null. `currentParentId` est le
 /// dossier actuel (non proposé) ; -1 quand tout dossier convient (choix du

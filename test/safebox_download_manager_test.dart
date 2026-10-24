@@ -67,7 +67,7 @@ class _FauxMega implements SafeboxDownloadTransport {
 
 SafeboxFile _fichier({String? previewUrl}) => SafeboxFile(
       id: 9, folderId: 1, name: 'Acte de naissance.pdf', ext: 'pdf', mime: 'application/pdf',
-      family: SafeboxRoot.documents, plainBytes: _taille, storedBytes: safeboxEncryptedLength(_taille),
+      family: SafeboxFamily.documents, plainBytes: _taille, storedBytes: safeboxEncryptedLength(_taille),
       originalBytes: null, compressed: false, cipherFormat: kSafeboxCipherFormat, key: _cle, previewUrl: previewUrl,
     );
 

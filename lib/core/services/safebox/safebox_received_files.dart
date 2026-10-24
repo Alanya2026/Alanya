@@ -42,11 +42,11 @@ class SafeboxReceivedFiles {
   final Future<bool> Function(String, String) _ouvrir;
 
   /// Même rangement que les médias reçus dans les discussions.
-  static String subdirFor(SafeboxRoot family) => switch (family) {
-        SafeboxRoot.albums => 'Alanya/Alanya Images',
-        SafeboxRoot.videos => 'Alanya/Alanya Videos',
-        SafeboxRoot.audios => 'Alanya/Alanya Audio',
-        SafeboxRoot.documents => 'Alanya/Alanya Documents',
+  static String subdirFor(SafeboxFamily family) => switch (family) {
+        SafeboxFamily.photos => 'Alanya/Alanya Images',
+        SafeboxFamily.videos => 'Alanya/Alanya Videos',
+        SafeboxFamily.audios => 'Alanya/Alanya Audio',
+        SafeboxFamily.documents => 'Alanya/Alanya Documents',
       };
 
   static String mimeFor(String name, String? mime) =>
@@ -84,7 +84,7 @@ class SafeboxReceivedFiles {
 
   /// Copie le fichier déchiffré dans Téléchargements/Alanya et retient où.
   /// Null si la copie échoue : le fichier reste alors dans l'application.
-  Future<String?> publish(File file, {required int shareId, required String name, String? mime, required SafeboxRoot family}) async {
+  Future<String?> publish(File file, {required int shareId, required String name, String? mime, required SafeboxFamily family}) async {
     String? loc;
     try {
       loc = await _publier(file.path, name, mimeFor(name, mime), subdirFor(family));
