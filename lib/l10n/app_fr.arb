@@ -4170,6 +4170,15 @@
     }
   },
   "sysScreenshotByMe": "Vous avez fait une capture d'écran de cette discussion",
+  "sysScreenRecording": "{actor} a enregistré l'écran de cette discussion",
+  "@sysScreenRecording": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "sysScreenRecordingByMe": "Vous avez enregistré l'écran de cette discussion",
   "renameContactTitle": "Nom du contact",
   "renameContactHelper": "Visible par vous seul. Laissez vide pour revenir au nom du profil.",
   "contactProfileSection": "Profil",

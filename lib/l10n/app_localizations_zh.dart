@@ -7186,6 +7186,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sysScreenshotByMe => '您对此聊天进行了截屏';
 
   @override
+  String sysScreenRecording(String actor) {
+    return '$actor 对此聊天进行了录屏';
+  }
+
+  @override
+  String get sysScreenRecordingByMe => '您对此聊天进行了录屏';
+
+  @override
   String get renameContactTitle => '联系人名称';
 
   @override

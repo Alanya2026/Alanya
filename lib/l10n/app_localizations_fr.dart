@@ -7622,6 +7622,15 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vous avez fait une capture d\'écran de cette discussion';
 
   @override
+  String sysScreenRecording(String actor) {
+    return '$actor a enregistré l\'écran de cette discussion';
+  }
+
+  @override
+  String get sysScreenRecordingByMe =>
+      'Vous avez enregistré l\'écran de cette discussion';
+
+  @override
   String get renameContactTitle => 'Nom du contact';
 
   @override

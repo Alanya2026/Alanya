@@ -560,7 +560,7 @@ class ChatRepository {
     }
   }
 
-  // ── Capture d'écran ─────────────────────────────────────────────────
+  // ── Capture et enregistrement d'écran ───────────────────────────────
 
   /// Dit au serveur que j'ai fait une capture d'écran de cette discussion à deux
   /// (il écrit la ligne système que les deux participants voient). Best-effort :
@@ -571,6 +571,17 @@ class ChatRepository {
       await _api.signalScreenshot(conversID);
     } catch (e) {
       debugPrint('[ChatRepo] signalScreenshot: $e');
+    }
+  }
+
+  /// Même chose pour un enregistrement vidéo de l'écran : la discussion est
+  /// (ou a été) filmée. Best-effort, comme la capture.
+  Future<void> signalScreenRecording(int conversID) async {
+    if (conversID <= 0) return;
+    try {
+      await _api.signalScreenRecording(conversID);
+    } catch (e) {
+      debugPrint('[ChatRepo] signalScreenRecording: $e');
     }
   }
 

@@ -70,6 +70,9 @@ abstract class ChatApi {
   /// Signale une capture d'écran de la discussion (ligne système côté serveur).
   Future<void> signalScreenshot(int conversID);
 
+  /// Signale un enregistrement d'écran de la discussion (ligne système côté serveur).
+  Future<void> signalScreenRecording(int conversID);
+
   /// Suppressions pour tous manquées hors ligne : `{deletions, cursor, hasMore}`.
   Future<Map<String, dynamic>> getDeletionsSince({int? after, int limit = 200});
 

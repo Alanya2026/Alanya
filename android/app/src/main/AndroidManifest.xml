@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Android 14+ : détecter une capture d'écran de la discussion ouverte (sans demande à l'utilisateur). -->
     <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE"/>
+    <!-- Android 15+ : savoir si la discussion ouverte est filmée (enregistrement d'écran), sans demande non plus. -->
+    <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING"/>
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.INTERNET" />

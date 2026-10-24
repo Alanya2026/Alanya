@@ -261,6 +261,17 @@ extension ChatHttpApi on TalkyApiClient {
     );
   }
 
+  /// Signale un enregistrement vidéo de l'écran de la discussion à deux. Même
+  /// contrat que [signalScreenshot].
+  Future<void> signalScreenRecording(int conversID) async {
+    await _handleRequest(
+      () => _client.post(
+        Uri.parse('${TalkyApiClient.baseUrl}/conversations/$conversID/screen-recording'),
+        headers: _headers,
+      ),
+    );
+  }
+
   /// Suppressions pour tous manquées hors ligne. Sans [after], le serveur ne
   /// rejoue rien et renvoie seulement le curseur à mémoriser.
   Future<Map<String, dynamic>> getDeletionsSince({int? after, int limit = 200}) async {
