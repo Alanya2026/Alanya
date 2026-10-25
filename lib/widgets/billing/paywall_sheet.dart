@@ -429,5 +429,9 @@ class PlusLockedBanner extends StatelessWidget {
           l10n.paywallRingtonesTitle,
           l10n.paywallRingtonesBody,
         ),
+      PlusFeature.stickersPremium => (
+          l10n.paywallStickersTitle,
+          l10n.paywallStickersBody,
+        ),
       _ => (l10n.paywallGenericTitle, l10n.paywallGenericBody),
     };

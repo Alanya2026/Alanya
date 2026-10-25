@@ -20,6 +20,7 @@ enum ErrorDomain {
   profil,
   admin,
   abonnement,
+  stickers,
   generique,
 }
 

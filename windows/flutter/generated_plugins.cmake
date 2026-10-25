@@ -17,6 +17,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   local_auth_windows
   pdfx
   permission_handler_windows
+  pro_video_editor
   record_windows
   share_plus
   sqlite3_flutter_libs

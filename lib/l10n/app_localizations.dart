@@ -12874,6 +12874,1602 @@ abstract class AppLocalizations {
   /// **'{read} lu, {delivered} reçu sans être lu, {pending} en attente'**
   String receiptsBarLabel(int read, int delivered, int pending);
 
+  /// No description provided for @stickerWord.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker'**
+  String get stickerWord;
+
+  /// No description provided for @stickerPreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'{emoji} Sticker'**
+  String stickerPreview(String emoji);
+
+  /// No description provided for @stickerRemoved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker retiré'**
+  String get stickerRemoved;
+
+  /// No description provided for @stickerUnsupported.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker non pris en charge — mettez à jour l\'application'**
+  String get stickerUnsupported;
+
+  /// No description provided for @stickerTabEmojis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Émojis'**
+  String get stickerTabEmojis;
+
+  /// No description provided for @stickerTabStickers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stickers'**
+  String get stickerTabStickers;
+
+  /// No description provided for @stickerRecents.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récents'**
+  String get stickerRecents;
+
+  /// No description provided for @stickerFavorites.
+  ///
+  /// In fr, this message translates to:
+  /// **'Favoris'**
+  String get stickerFavorites;
+
+  /// No description provided for @stickerEmptyRecents.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos stickers récents apparaîtront ici.'**
+  String get stickerEmptyRecents;
+
+  /// No description provided for @stickerEmptyFavorites.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touchez ★ dans la fiche d\'un sticker pour l\'ajouter à vos favoris.'**
+  String get stickerEmptyFavorites;
+
+  /// No description provided for @stickerLoadError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les stickers.'**
+  String get stickerLoadError;
+
+  /// No description provided for @stickerRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get stickerRetry;
+
+  /// No description provided for @stickerLockedBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce pack est réservé à Alanya Plus.'**
+  String get stickerLockedBanner;
+
+  /// No description provided for @stickerUnlockCta.
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrir Alanya Plus'**
+  String get stickerUnlockCta;
+
+  /// No description provided for @stickerLockedLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack {name}, verrouillé'**
+  String stickerLockedLabel(String name);
+
+  /// No description provided for @stickerBadgeOfficial.
+  ///
+  /// In fr, this message translates to:
+  /// **'Officiel'**
+  String get stickerBadgeOfficial;
+
+  /// No description provided for @stickerBadgePlus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus'**
+  String get stickerBadgePlus;
+
+  /// No description provided for @stickerFavoriteAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter aux favoris'**
+  String get stickerFavoriteAdd;
+
+  /// No description provided for @stickerFavoriteRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer des favoris'**
+  String get stickerFavoriteRemove;
+
+  /// No description provided for @stickerViewPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le pack'**
+  String get stickerViewPack;
+
+  /// No description provided for @stickerForward.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transférer'**
+  String get stickerForward;
+
+  /// No description provided for @stickerSheetPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack : {name}'**
+  String stickerSheetPack(String name);
+
+  /// No description provided for @stickerSheetSender.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyé par {name}'**
+  String stickerSheetSender(String name);
+
+  /// No description provided for @stickerSheetSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'{w} × {h} px'**
+  String stickerSheetSize(int w, int h);
+
+  /// No description provided for @stickerSheetWeight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Poids : {size}'**
+  String stickerSheetWeight(String size);
+
+  /// No description provided for @stickerAddPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get stickerAddPack;
+
+  /// No description provided for @stickerRemovePack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get stickerRemovePack;
+
+  /// No description provided for @stickerAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack ajouté.'**
+  String get stickerAdded;
+
+  /// No description provided for @stickerPackRemoved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack retiré.'**
+  String get stickerPackRemoved;
+
+  /// No description provided for @stickerMyPacks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes packs'**
+  String get stickerMyPacks;
+
+  /// No description provided for @stickerCatalog.
+  ///
+  /// In fr, this message translates to:
+  /// **'Catalogue'**
+  String get stickerCatalog;
+
+  /// No description provided for @stickerManage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gérer les stickers'**
+  String get stickerManage;
+
+  /// No description provided for @stickerPackCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} stickers'**
+  String stickerPackCount(int count);
+
+  /// No description provided for @stickerPackInstalled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Installé'**
+  String get stickerPackInstalled;
+
+  /// No description provided for @stickerSendLockedPlus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sticker nécessite Alanya Plus.'**
+  String get stickerSendLockedPlus;
+
+  /// No description provided for @stickerDomainError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les stickers ne sont pas disponibles pour le moment.'**
+  String get stickerDomainError;
+
+  /// No description provided for @errCodeStickerNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sticker n\'existe plus.'**
+  String get errCodeStickerNotFound;
+
+  /// No description provided for @errCodeStickerPackUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce pack n\'est plus disponible.'**
+  String get errCodeStickerPackUnavailable;
+
+  /// No description provided for @errCodeStickerInvalidPayload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sticker n\'a pas pu être envoyé.'**
+  String get errCodeStickerInvalidPayload;
+
+  /// No description provided for @errCodeStickerAssetInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette image ne peut pas devenir un sticker.'**
+  String get errCodeStickerAssetInvalid;
+
+  /// No description provided for @errCodeStickerAssetBlocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette image est bloquée et ne peut pas être utilisée.'**
+  String get errCodeStickerAssetBlocked;
+
+  /// No description provided for @errCodeStickerQuotaExceeded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez atteint votre limite de 200 stickers.'**
+  String get errCodeStickerQuotaExceeded;
+
+  /// No description provided for @errCodeStickerPackLimit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez atteint la limite de packs ou de stickers par pack.'**
+  String get errCodeStickerPackLimit;
+
+  /// No description provided for @plusFeatureStickers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stickers Royal'**
+  String get plusFeatureStickers;
+
+  /// No description provided for @paywallStickersTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les stickers Royal'**
+  String get paywallStickersTitle;
+
+  /// No description provided for @paywallStickersBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le pack Royal fait partie d\'Alanya Plus : couronnes, trophées et paillettes pour vos conversations.'**
+  String get paywallStickersBody;
+
+  /// No description provided for @stickerTrayLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stickers'**
+  String get stickerTrayLabel;
+
+  /// No description provided for @stickerNoPacks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun pack installé. Ouvrez le catalogue pour en ajouter.'**
+  String get stickerNoPacks;
+
+  /// No description provided for @stickerPreviewTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu du sticker'**
+  String get stickerPreviewTitle;
+
+  /// No description provided for @stickerReplyQuote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker'**
+  String get stickerReplyQuote;
+
+  /// No description provided for @stickerSemantics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker {emoji}'**
+  String stickerSemantics(String emoji);
+
+  /// No description provided for @stickerPackLockedSemantics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Verrouillé, Alanya Plus requis'**
+  String get stickerPackLockedSemantics;
+
+  /// No description provided for @stickerSendFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le sticker n\'a pas pu être envoyé.'**
+  String get stickerSendFailed;
+
+  /// No description provided for @stickerPackReorderHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintenez et glissez pour réordonner'**
+  String get stickerPackReorderHint;
+
+  /// No description provided for @stickerNoFavorites.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun favori'**
+  String get stickerNoFavorites;
+
+  /// No description provided for @stickerOfficialPackName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack officiel'**
+  String get stickerOfficialPackName;
+
+  /// No description provided for @stickerTabInstalled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Installés'**
+  String get stickerTabInstalled;
+
+  /// No description provided for @stickerMyCreations.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes créations'**
+  String get stickerMyCreations;
+
+  /// No description provided for @stickerCreatedEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez encore créé aucun pack. Touchez ＋ pour commencer.'**
+  String get stickerCreatedEmpty;
+
+  /// No description provided for @stickerNewPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau pack'**
+  String get stickerNewPack;
+
+  /// No description provided for @stickerPackNameLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du pack'**
+  String get stickerPackNameLabel;
+
+  /// No description provided for @stickerDefaultPackName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes stickers'**
+  String get stickerDefaultPackName;
+
+  /// No description provided for @stickerPrivacyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avant de créer'**
+  String get stickerPrivacyTitle;
+
+  /// No description provided for @stickerPrivacyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un sticker envoyé peut être vu par ses destinataires.'**
+  String get stickerPrivacyBody;
+
+  /// No description provided for @stickerPrivacyDetail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre pack reste privé, mais chaque image est accessible à toute personne qui la reçoit dans une conversation.'**
+  String get stickerPrivacyDetail;
+
+  /// No description provided for @stickerPrivacyConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai compris'**
+  String get stickerPrivacyConfirm;
+
+  /// No description provided for @stickerRename.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renommer'**
+  String get stickerRename;
+
+  /// No description provided for @stickerDeletePack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer le pack'**
+  String get stickerDeletePack;
+
+  /// No description provided for @stickerDeletePackBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le pack sera supprimé et son lien de partage révoqué. Les stickers déjà envoyés peuvent s\'afficher « Sticker retiré ».'**
+  String get stickerDeletePackBody;
+
+  /// No description provided for @stickerPackDeleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack supprimé.'**
+  String get stickerPackDeleted;
+
+  /// No description provided for @stickerAddFromGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter depuis la galerie'**
+  String get stickerAddFromGallery;
+
+  /// No description provided for @stickerAddedSticker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker ajouté au pack.'**
+  String get stickerAddedSticker;
+
+  /// No description provided for @stickerAlreadyOwned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette image est déjà dans vos stickers.'**
+  String get stickerAlreadyOwned;
+
+  /// No description provided for @stickerRemoveFromPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du pack'**
+  String get stickerRemoveFromPack;
+
+  /// No description provided for @stickerPackEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce pack est vide. Ajoutez une image depuis la galerie.'**
+  String get stickerPackEmpty;
+
+  /// No description provided for @stickerImageFormat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Image illisible. Choisissez une photo JPEG, PNG ou WebP.'**
+  String get stickerImageFormat;
+
+  /// No description provided for @stickerImageTooBig.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'image dépasse 1 Mo.'**
+  String get stickerImageTooBig;
+
+  /// No description provided for @stickerImageSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'image doit mesurer exactement 512 × 512 px.'**
+  String get stickerImageSize;
+
+  /// No description provided for @stickerImageNoAlpha.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'image doit avoir un fond transparent (PNG ou WebP avec transparence).'**
+  String get stickerImageNoAlpha;
+
+  /// No description provided for @stickerImageAnimated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les images animées (GIF, WebP animé) ne sont pas encore prises en charge.'**
+  String get stickerImageAnimated;
+
+  /// No description provided for @stickerImageInputTooBig.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette image est trop grande (20 Mo ou 50 mégapixels au plus).'**
+  String get stickerImageInputTooBig;
+
+  /// No description provided for @stickerPreviewHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'image est ajustée dans un carré de 512 × 512 px. Le damier montre les zones transparentes.'**
+  String get stickerPreviewHint;
+
+  /// No description provided for @stickerPreviewAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get stickerPreviewAdd;
+
+  /// No description provided for @stickerAddToPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à un pack'**
+  String get stickerAddToPack;
+
+  /// No description provided for @stickerChoosePack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un pack'**
+  String get stickerChoosePack;
+
+  /// No description provided for @stickerCopiedToPack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker ajouté à votre pack.'**
+  String get stickerCopiedToPack;
+
+  /// No description provided for @stickerReport.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler'**
+  String get stickerReport;
+
+  /// No description provided for @stickerReportTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pourquoi signaler ce sticker ?'**
+  String get stickerReportTitle;
+
+  /// No description provided for @stickerReportInappropriate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contenu inapproprié'**
+  String get stickerReportInappropriate;
+
+  /// No description provided for @stickerReportSpam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Spam'**
+  String get stickerReportSpam;
+
+  /// No description provided for @stickerReportRights.
+  ///
+  /// In fr, this message translates to:
+  /// **'Atteinte à des droits'**
+  String get stickerReportRights;
+
+  /// No description provided for @stickerReportOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autre'**
+  String get stickerReportOther;
+
+  /// No description provided for @stickerReported.
+  ///
+  /// In fr, this message translates to:
+  /// **'Merci, votre signalement a été envoyé.'**
+  String get stickerReported;
+
+  /// No description provided for @stickerReportedAlready.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez déjà signalé ce sticker.'**
+  String get stickerReportedAlready;
+
+  /// No description provided for @stickerShareByLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager par lien'**
+  String get stickerShareByLink;
+
+  /// No description provided for @stickerShareRevoke.
+  ///
+  /// In fr, this message translates to:
+  /// **'Révoquer le lien'**
+  String get stickerShareRevoke;
+
+  /// No description provided for @stickerShareRevoked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lien révoqué.'**
+  String get stickerShareRevoked;
+
+  /// No description provided for @stickerShareRevokeBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le lien ne fonctionnera plus. Les personnes qui ont déjà ajouté le pack en gardent leur copie.'**
+  String get stickerShareRevokeBody;
+
+  /// No description provided for @stickerShareEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez au moins un sticker avant de partager.'**
+  String get stickerShareEmpty;
+
+  /// No description provided for @stickerShared.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partagé'**
+  String get stickerShared;
+
+  /// No description provided for @stickerShareMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon pack de stickers « {name} » sur Alanya : {link}\nCode : {code}'**
+  String stickerShareMessage(String name, String link, String code);
+
+  /// No description provided for @stickerOpenLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir un lien de pack'**
+  String get stickerOpenLink;
+
+  /// No description provided for @stickerOpenLinkHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Collez un lien ou un code'**
+  String get stickerOpenLinkHint;
+
+  /// No description provided for @stickerOpenLinkInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce lien ou ce code n\'est pas celui d\'un pack de stickers.'**
+  String get stickerOpenLinkInvalid;
+
+  /// No description provided for @stickerSharedPackTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack partagé'**
+  String get stickerSharedPackTitle;
+
+  /// No description provided for @stickerShareInstall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à mes packs'**
+  String get stickerShareInstall;
+
+  /// No description provided for @stickerShareCopyInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous recevez votre propre copie : elle reste à vous même si le lien est révoqué.'**
+  String get stickerShareCopyInfo;
+
+  /// No description provided for @stickerShareAlreadyAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà ajouté'**
+  String get stickerShareAlreadyAdded;
+
+  /// No description provided for @stickerShareMine.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est votre propre pack.'**
+  String get stickerShareMine;
+
+  /// No description provided for @stickerShareDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pack ajouté à vos créations.'**
+  String get stickerShareDone;
+
+  /// No description provided for @stickerShareIgnored.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} image(s) ignorée(s) (bloquées ou retirées).'**
+  String stickerShareIgnored(int count);
+
+  /// No description provided for @stickerCreatedCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count}/{max}'**
+  String stickerCreatedCount(int count, int max);
+
+  /// No description provided for @errCodeRateLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de demandes. Réessayez dans une minute.'**
+  String get errCodeRateLimited;
+
+  /// No description provided for @stickerSetCover.
+  ///
+  /// In fr, this message translates to:
+  /// **'Définir comme couverture'**
+  String get stickerSetCover;
+
+  /// No description provided for @stickerPaste.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coller'**
+  String get stickerPaste;
+
+  /// No description provided for @stickerPreviewEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get stickerPreviewEdit;
+
+  /// No description provided for @mediaEditorTitleSticker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le sticker'**
+  String get mediaEditorTitleSticker;
+
+  /// No description provided for @mediaEditorTitlePhoto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retoucher l\'image'**
+  String get mediaEditorTitlePhoto;
+
+  /// No description provided for @mediaEditorDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer'**
+  String get mediaEditorDone;
+
+  /// No description provided for @mediaEditorUndo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get mediaEditorUndo;
+
+  /// No description provided for @mediaEditorRedo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rétablir'**
+  String get mediaEditorRedo;
+
+  /// No description provided for @mediaEditorTools.
+  ///
+  /// In fr, this message translates to:
+  /// **'Outils de retouche'**
+  String get mediaEditorTools;
+
+  /// No description provided for @mediaEditorToolCrop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rogner'**
+  String get mediaEditorToolCrop;
+
+  /// No description provided for @mediaEditorToolDraw.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crayon'**
+  String get mediaEditorToolDraw;
+
+  /// No description provided for @mediaEditorToolText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Texte'**
+  String get mediaEditorToolText;
+
+  /// No description provided for @mediaEditorToolEmoji.
+  ///
+  /// In fr, this message translates to:
+  /// **'Emoji'**
+  String get mediaEditorToolEmoji;
+
+  /// No description provided for @mediaEditorPen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crayon'**
+  String get mediaEditorPen;
+
+  /// No description provided for @mediaEditorEraser.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gomme'**
+  String get mediaEditorEraser;
+
+  /// No description provided for @mediaEditorColor.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couleur'**
+  String get mediaEditorColor;
+
+  /// No description provided for @mediaEditorColorBlack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Noir'**
+  String get mediaEditorColorBlack;
+
+  /// No description provided for @mediaEditorColorWhite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Blanc'**
+  String get mediaEditorColorWhite;
+
+  /// No description provided for @mediaEditorColorRed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rouge'**
+  String get mediaEditorColorRed;
+
+  /// No description provided for @mediaEditorColorOrange.
+  ///
+  /// In fr, this message translates to:
+  /// **'Orange'**
+  String get mediaEditorColorOrange;
+
+  /// No description provided for @mediaEditorColorGreen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vert'**
+  String get mediaEditorColorGreen;
+
+  /// No description provided for @mediaEditorColorBlue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bleu'**
+  String get mediaEditorColorBlue;
+
+  /// No description provided for @mediaEditorColorIndigo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indigo'**
+  String get mediaEditorColorIndigo;
+
+  /// No description provided for @mediaEditorThickness.
+  ///
+  /// In fr, this message translates to:
+  /// **'Épaisseur du trait'**
+  String get mediaEditorThickness;
+
+  /// No description provided for @mediaEditorCropHintSticker.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pincez pour zoomer, glissez pour déplacer l\'image dans le carré.'**
+  String get mediaEditorCropHintSticker;
+
+  /// No description provided for @mediaEditorCropHintPhoto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pincez pour zoomer, glissez pour déplacer l\'image dans le cadre.'**
+  String get mediaEditorCropHintPhoto;
+
+  /// No description provided for @mediaEditorFitContain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajuster'**
+  String get mediaEditorFitContain;
+
+  /// No description provided for @mediaEditorFitCover.
+  ///
+  /// In fr, this message translates to:
+  /// **'Remplir'**
+  String get mediaEditorFitCover;
+
+  /// No description provided for @mediaEditorAspectOriginal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Original'**
+  String get mediaEditorAspectOriginal;
+
+  /// No description provided for @mediaEditorAddText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un texte'**
+  String get mediaEditorAddText;
+
+  /// No description provided for @mediaEditorEditText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le texte'**
+  String get mediaEditorEditText;
+
+  /// No description provided for @mediaEditorTextHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre texte'**
+  String get mediaEditorTextHint;
+
+  /// No description provided for @mediaEditorFontStandard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Standard'**
+  String get mediaEditorFontStandard;
+
+  /// No description provided for @mediaEditorFontBold.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gras'**
+  String get mediaEditorFontBold;
+
+  /// No description provided for @mediaEditorFontHandwriting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Manuscrite'**
+  String get mediaEditorFontHandwriting;
+
+  /// No description provided for @mediaEditorAddEmoji.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un emoji'**
+  String get mediaEditorAddEmoji;
+
+  /// No description provided for @mediaEditorSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taille'**
+  String get mediaEditorSize;
+
+  /// No description provided for @mediaEditorRotation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rotation'**
+  String get mediaEditorRotation;
+
+  /// No description provided for @mediaEditorDeleteItem.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer l\'élément'**
+  String get mediaEditorDeleteItem;
+
+  /// No description provided for @mediaEditorCanvas.
+  ///
+  /// In fr, this message translates to:
+  /// **'Zone de retouche de l\'image'**
+  String get mediaEditorCanvas;
+
+  /// No description provided for @mediaEditorDiscardTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Abandonner les modifications ?'**
+  String get mediaEditorDiscardTitle;
+
+  /// No description provided for @mediaEditorDiscardBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos retouches seront perdues.'**
+  String get mediaEditorDiscardBody;
+
+  /// No description provided for @mediaEditorKeepEditing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get mediaEditorKeepEditing;
+
+  /// No description provided for @mediaEditorDiscard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Abandonner'**
+  String get mediaEditorDiscard;
+
+  /// No description provided for @mediaEditorExporting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparation de l\'image…'**
+  String get mediaEditorExporting;
+
+  /// No description provided for @mediaEditorToolCutout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détourer'**
+  String get mediaEditorToolCutout;
+
+  /// No description provided for @mediaEditorCutoutHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détourage automatique : personnes. Pour le reste, utilisez le pinceau.'**
+  String get mediaEditorCutoutHint;
+
+  /// No description provided for @mediaEditorCutoutAuto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détourer les personnes'**
+  String get mediaEditorCutoutAuto;
+
+  /// No description provided for @mediaEditorCutoutBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détourage en cours…'**
+  String get mediaEditorCutoutBusy;
+
+  /// No description provided for @mediaEditorCutoutKeep.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder'**
+  String get mediaEditorCutoutKeep;
+
+  /// No description provided for @mediaEditorCutoutErase.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer'**
+  String get mediaEditorCutoutErase;
+
+  /// No description provided for @mediaEditorCutoutSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taille du pinceau'**
+  String get mediaEditorCutoutSize;
+
+  /// No description provided for @mediaEditorCutoutSoft.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bords doux'**
+  String get mediaEditorCutoutSoft;
+
+  /// No description provided for @mediaEditorCutoutReset.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser le masque'**
+  String get mediaEditorCutoutReset;
+
+  /// No description provided for @mediaEditorCutoutNoPerson.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune personne détectée sur cette image. Utilisez le pinceau pour détourer.'**
+  String get mediaEditorCutoutNoPerson;
+
+  /// No description provided for @mediaEditorCutoutFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le détourage automatique a échoué. Utilisez le pinceau pour détourer.'**
+  String get mediaEditorCutoutFailed;
+
+  /// No description provided for @stickerAnimatedSemantics.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker animé {emoji}'**
+  String stickerAnimatedSemantics(String emoji);
+
+  /// No description provided for @stickerReplay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejouer l\'animation'**
+  String get stickerReplay;
+
+  /// No description provided for @stickerOpenDetails.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir la fiche du sticker'**
+  String get stickerOpenDetails;
+
+  /// No description provided for @stickerBadgeAnimated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Animé'**
+  String get stickerBadgeAnimated;
+
+  /// No description provided for @stickerAddAnimated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un sticker animé'**
+  String get stickerAddAnimated;
+
+  /// No description provided for @stickerAnimatedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker animé'**
+  String get stickerAnimatedTitle;
+
+  /// No description provided for @stickerAnimatedShape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Forme'**
+  String get stickerAnimatedShape;
+
+  /// No description provided for @stickerShapeCircle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cercle'**
+  String get stickerShapeCircle;
+
+  /// No description provided for @stickerShapeRounded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carré arrondi'**
+  String get stickerShapeRounded;
+
+  /// No description provided for @stickerShapeSquare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carré'**
+  String get stickerShapeSquare;
+
+  /// No description provided for @stickerAnimatedHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre image sera recadrée en carré et limitée à 3 secondes environ. Dans la conversation, l\'animation se joue une fois ; touchez le sticker pour la rejouer.'**
+  String get stickerAnimatedHint;
+
+  /// No description provided for @stickerAnimatedPreviewLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu animé du sticker'**
+  String get stickerAnimatedPreviewLabel;
+
+  /// No description provided for @stickerAnimatedConverting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conversion en cours…'**
+  String get stickerAnimatedConverting;
+
+  /// No description provided for @stickerAnimatedConvertingHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cela peut prendre une quinzaine de secondes.'**
+  String get stickerAnimatedConvertingHint;
+
+  /// No description provided for @stickerAnimatedAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker animé ajouté.'**
+  String get stickerAnimatedAdded;
+
+  /// No description provided for @stickerAnimatedNotAnimated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier n\'est pas animé. Choisissez un GIF ou un WebP animé.'**
+  String get stickerAnimatedNotAnimated;
+
+  /// No description provided for @stickerAnimatedFormat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les GIF et les WebP animés sont acceptés.'**
+  String get stickerAnimatedFormat;
+
+  /// No description provided for @stickerAnimatedTooBig.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier dépasse 3 Mo.'**
+  String get stickerAnimatedTooBig;
+
+  /// No description provided for @stickerAnimatedInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier est trop lourd ou n\'est pas pris en charge. Essayez un GIF plus court ou plus petit.'**
+  String get stickerAnimatedInvalid;
+
+  /// No description provided for @stickerAnimatedRateLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez créé beaucoup de stickers animés. Réessayez plus tard (10 par heure au plus).'**
+  String get stickerAnimatedRateLimited;
+
+  /// No description provided for @stickerAnimatedBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le service est occupé. Réessayez dans un instant.'**
+  String get stickerAnimatedBusy;
+
+  /// No description provided for @stickerAnimatedClosed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les stickers animés ne sont pas disponibles pour le moment.'**
+  String get stickerAnimatedClosed;
+
+  /// No description provided for @mediaEditorCropHintRound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Glissez et pincez pour cadrer la photo : elle s\'affichera dans un cercle.'**
+  String get mediaEditorCropHintRound;
+
+  /// No description provided for @mediaEditorEditFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de préparer la photo modifiée. Réessayez.'**
+  String get mediaEditorEditFailed;
+
+  /// No description provided for @stickerCreateTile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer'**
+  String get stickerCreateTile;
+
+  /// No description provided for @stickerCreateHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créez un sticker à partir d\'une photo de votre galerie.'**
+  String get stickerCreateHint;
+
+  /// No description provided for @stickerCreatedInMyStickers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouté à {name}'**
+  String stickerCreatedInMyStickers(String name);
+
+  /// No description provided for @stickerView.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir'**
+  String get stickerView;
+
+  /// No description provided for @chatPanelExpand.
+  ///
+  /// In fr, this message translates to:
+  /// **'Agrandir le panneau'**
+  String get chatPanelExpand;
+
+  /// No description provided for @chatPanelCollapse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réduire le panneau'**
+  String get chatPanelCollapse;
+
+  /// No description provided for @stickerVideoTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sticker depuis une vidéo'**
+  String get stickerVideoTitle;
+
+  /// No description provided for @stickerVideoPreviewLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aperçu de la vidéo découpée'**
+  String get stickerVideoPreviewLabel;
+
+  /// No description provided for @stickerVideoStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Début'**
+  String get stickerVideoStart;
+
+  /// No description provided for @stickerVideoDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée'**
+  String get stickerVideoDuration;
+
+  /// No description provided for @stickerVideoStartValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Début : {time}'**
+  String stickerVideoStartValue(String time);
+
+  /// No description provided for @stickerVideoDurationValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée : {seconds} s'**
+  String stickerVideoDurationValue(String seconds);
+
+  /// No description provided for @stickerVideoPlay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lecture'**
+  String get stickerVideoPlay;
+
+  /// No description provided for @stickerVideoPause.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pause'**
+  String get stickerVideoPause;
+
+  /// No description provided for @stickerVideoHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez les 3 secondes à garder (500 ms au minimum). La vidéo est découpée sur nos serveurs, sans le son.'**
+  String get stickerVideoHint;
+
+  /// No description provided for @stickerVideoTooBig.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette vidéo dépasse 20 Mo. Choisissez-en une plus courte.'**
+  String get stickerVideoTooBig;
+
+  /// No description provided for @stickerVideoFormat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Format non pris en charge. Choisissez une vidéo MP4, MOV ou WebM.'**
+  String get stickerVideoFormat;
+
+  /// No description provided for @stickerVideoUnsupported.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les vidéos ne sont pas encore prises en charge.'**
+  String get stickerVideoUnsupported;
+
+  /// No description provided for @stickerVideoTooShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette vidéo est trop courte (500 ms au minimum).'**
+  String get stickerVideoTooShort;
+
+  /// No description provided for @stickerVideoLoadFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire cette vidéo.'**
+  String get stickerVideoLoadFailed;
+
+  /// No description provided for @stickerVideoConverting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi et conversion de la vidéo…'**
+  String get stickerVideoConverting;
+
+  /// No description provided for @stickerVideoConvertingHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'En données mobiles, cela peut prendre jusqu\'à une minute.'**
+  String get stickerVideoConvertingHint;
+
+  /// No description provided for @stickerVideoInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette vidéo n\'est pas prise en charge ou est trop détaillée. Essayez une vidéo plus courte ou plus simple.'**
+  String get stickerVideoInvalid;
+
+  /// No description provided for @mediaEditorToolFilters.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtres'**
+  String get mediaEditorToolFilters;
+
+  /// No description provided for @mediaEditorBrushPen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stylo'**
+  String get mediaEditorBrushPen;
+
+  /// No description provided for @mediaEditorBrushHighlighter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Surligneur'**
+  String get mediaEditorBrushHighlighter;
+
+  /// No description provided for @mediaEditorBrushNeon.
+  ///
+  /// In fr, this message translates to:
+  /// **'Néon'**
+  String get mediaEditorBrushNeon;
+
+  /// No description provided for @mediaEditorBrushBlur.
+  ///
+  /// In fr, this message translates to:
+  /// **'Flou'**
+  String get mediaEditorBrushBlur;
+
+  /// No description provided for @mediaEditorBlurHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passez le doigt sur un visage ou une plaque pour le flouter.'**
+  String get mediaEditorBlurHint;
+
+  /// No description provided for @mediaEditorColorYellow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jaune'**
+  String get mediaEditorColorYellow;
+
+  /// No description provided for @mediaEditorColorPink.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rose'**
+  String get mediaEditorColorPink;
+
+  /// No description provided for @mediaEditorRotate90.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pivoter'**
+  String get mediaEditorRotate90;
+
+  /// No description provided for @mediaEditorFlip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Miroir'**
+  String get mediaEditorFlip;
+
+  /// No description provided for @mediaEditorReset.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser'**
+  String get mediaEditorReset;
+
+  /// No description provided for @mediaEditorStraighten.
+  ///
+  /// In fr, this message translates to:
+  /// **'Redresser'**
+  String get mediaEditorStraighten;
+
+  /// No description provided for @mediaEditorTabFilters.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtres'**
+  String get mediaEditorTabFilters;
+
+  /// No description provided for @mediaEditorTabAdjust.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages'**
+  String get mediaEditorTabAdjust;
+
+  /// No description provided for @mediaEditorIntensity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Intensité'**
+  String get mediaEditorIntensity;
+
+  /// No description provided for @mediaEditorBrightness.
+  ///
+  /// In fr, this message translates to:
+  /// **'Luminosité'**
+  String get mediaEditorBrightness;
+
+  /// No description provided for @mediaEditorContrast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contraste'**
+  String get mediaEditorContrast;
+
+  /// No description provided for @mediaEditorSaturation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saturation'**
+  String get mediaEditorSaturation;
+
+  /// No description provided for @mediaEditorWarmth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaleur'**
+  String get mediaEditorWarmth;
+
+  /// No description provided for @mediaEditorFilterNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Original'**
+  String get mediaEditorFilterNone;
+
+  /// No description provided for @mediaEditorFilterVivid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vif'**
+  String get mediaEditorFilterVivid;
+
+  /// No description provided for @mediaEditorFilterWarm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaud'**
+  String get mediaEditorFilterWarm;
+
+  /// No description provided for @mediaEditorFilterSoft.
+  ///
+  /// In fr, this message translates to:
+  /// **'Doux'**
+  String get mediaEditorFilterSoft;
+
+  /// No description provided for @mediaEditorFilterMono.
+  ///
+  /// In fr, this message translates to:
+  /// **'N&B'**
+  String get mediaEditorFilterMono;
+
+  /// No description provided for @mediaEditorFilterNight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nuit'**
+  String get mediaEditorFilterNight;
+
+  /// No description provided for @mediaEditorCompare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintenir pour voir l\'original'**
+  String get mediaEditorCompare;
+
+  /// No description provided for @mediaEditorAlign.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alignement du texte'**
+  String get mediaEditorAlign;
+
+  /// No description provided for @mediaEditorTextBackground.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fond du texte'**
+  String get mediaEditorTextBackground;
+
+  /// No description provided for @mediaEditorItemHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Glissez pour déplacer, pincez pour agrandir ou tourner.'**
+  String get mediaEditorItemHint;
+
+  /// No description provided for @mediaSendRemoveItem.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer de l\'envoi'**
+  String get mediaSendRemoveItem;
+
+  /// No description provided for @mediaSendAddMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des médias'**
+  String get mediaSendAddMore;
+
+  /// No description provided for @mediaSendUndoEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler la dernière retouche'**
+  String get mediaSendUndoEdit;
+
+  /// No description provided for @mediaSendViewOnceOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vue unique activée'**
+  String get mediaSendViewOnceOn;
+
+  /// No description provided for @mediaSendViewOnceOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vue unique désactivée'**
+  String get mediaSendViewOnceOff;
+
+  /// No description provided for @mediaSendMute.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couper le son'**
+  String get mediaSendMute;
+
+  /// No description provided for @mediaSendUnmute.
+  ///
+  /// In fr, this message translates to:
+  /// **'Remettre le son'**
+  String get mediaSendUnmute;
+
+  /// No description provided for @mediaSendEdits.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 retouche} other{{count} retouches}}'**
+  String mediaSendEdits(int count);
+
+  /// No description provided for @mediaSendItemLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'{kind} {index} sur {total}'**
+  String mediaSendItemLabel(String kind, int index, int total);
+
+  /// No description provided for @cameraShutterHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appuyer pour une photo, maintenir pour filmer'**
+  String get cameraShutterHint;
+
+  /// No description provided for @cameraTakePhoto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get cameraTakePhoto;
+
+  /// No description provided for @cameraStartRecording.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filmer'**
+  String get cameraStartRecording;
+
+  /// No description provided for @cameraStopRecording.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrêter l\'enregistrement'**
+  String get cameraStopRecording;
+
+  /// No description provided for @cameraFlash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Flash'**
+  String get cameraFlash;
+
+  /// No description provided for @cameraOpenGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir la galerie'**
+  String get cameraOpenGallery;
+
+  /// No description provided for @videoTrimStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Début de la vidéo'**
+  String get videoTrimStart;
+
+  /// No description provided for @videoTrimEnd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fin de la vidéo'**
+  String get videoTrimEnd;
+
+  /// No description provided for @videoRendering.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparation de la vidéo…'**
+  String get videoRendering;
+
+  /// No description provided for @videoRenderFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de préparer la vidéo. Réessayez.'**
+  String get videoRenderFailed;
+
+  /// No description provided for @videoFrameFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire cette vidéo pour la retoucher.'**
+  String get videoFrameFailed;
+
+  /// No description provided for @videoTrimSummary.
+  ///
+  /// In fr, this message translates to:
+  /// **'{range} · {length} sur {total}'**
+  String videoTrimSummary(String range, String length, String total);
+
   /// No description provided for @errCodeDeleteWindowExpired.
   ///
   /// In fr, this message translates to:

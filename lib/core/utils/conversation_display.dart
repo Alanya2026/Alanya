@@ -8,6 +8,7 @@ import 'call_log_preview.dart';
 import 'contact_aliases.dart';
 import 'media_album.dart';
 import 'self_chat.dart';
+import 'sticker_payload.dart';
 import 'system_event_payload.dart';
 
 export 'self_chat.dart' show kSelfChatMarker;
@@ -236,8 +237,13 @@ String conversationListPreview(
 
   // Aperçu traduit quand il existe : sans cela, la liste contredirait le fil,
   // qui affiche déjà la traduction.
+  // Sticker : si l'aperçu stocké est du JSON, on lit « 😂 Sticker ». Le texte
+  // déjà lisible du serveur passe tel quel.
+  final stored = conv.lastMessageTranslated ?? conv.lastMessage;
   final body = displayConversationPreview(
-    conv.lastMessageTranslated ?? conv.lastMessage,
+    conv.lastMessageType == kStickerMessageType && stored != null
+        ? sanitizeQuotedContent(stored, l10n: l10n)
+        : stored,
     l10n,
   );
   if (!conv.isGroup || conv.lastMessage == null) return body;

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/countries_repository.dart';
+import '../../core/services/photo_edit_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/alanya_phone_formatter.dart';
@@ -22,7 +23,17 @@ import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+  const EditProfileScreen({
+    super.key,
+    this.pickImage,
+    this.editPhoto = editPhotoWithFeedback,
+  });
+
+  /// Sélecteur de photo (injectable pour les tests) ; par défaut, image_picker.
+  final Future<XFile?> Function(ImageSource source)? pickImage;
+
+  /// Rognage d'office de la photo choisie (injectable pour les tests).
+  final PhotoEditor editPhoto;
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -217,18 +228,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickAndUpload(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
+      final picker = widget.pickImage;
+      final picked = picker != null
+          ? await picker(source)
+          : await _picker.pickImage(
+              source: source,
+              maxWidth: 1024,
+              maxHeight: 1024,
+              imageQuality: 85,
+            );
       if (picked == null || !mounted) return;
+
+      // Rognage proposé d'office : carré, aperçu rond. Abandonner = on ne
+      // change pas de photo.
+      final cropped = await widget.editPhoto(
+        context,
+        File(picked.path),
+        target: PhotoEditTarget.avatar,
+      );
+      if (cropped == null || !mounted) return;
 
       setState(() => _uploadingAvatar = true);
 
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      await auth.updateAvatar(File(picked.path));
+      try {
+        await auth.updateAvatar(cropped);
+      } finally {
+        unawaited(PhotoEditService.discard(cropped));
+      }
       if (!mounted) return;
 
       setState(() {

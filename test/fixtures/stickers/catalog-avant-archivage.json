@@ -1,0 +1,4 @@
+{"version":3,"packs":[
+ {"id":1,"code":"alanya","name":"Alanya","description":"Le pack de la maison : appels, messages, réseau.","cover":"https://<bucket>/official/stickers/alanya/1_ab12cd34_t.webp","count":1,"isPremium":false,"locked":false,"version":1,"installedByDefault":true},
+ {"id":3,"code":"mboa","name":"Mboa","description":"Le pack du quartier.","cover":"https://<bucket>/official/stickers/mboa/45_cd34ef56_t.webp","count":2,"isPremium":false,"locked":false,"version":1,"installedByDefault":false},
+ {"id":6,"code":"royal","name":"Royal","description":"The Plus pack: crowns, trophies, sparkle.","cover":"https://<bucket>/official/stickers/royal/71_9f8e7d6c_t.webp","count":12,"isPremium":true,"locked":true,"version":1,"installedByDefault":false}]}

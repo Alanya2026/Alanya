@@ -62,6 +62,14 @@ extension on _MediaKind {
         _MediaKind.files => const [4],
       };
 
+  /// Types emportés par une **archive**. Identiques à [types], sauf « Tout » :
+  /// une archive part du principe inverse de la grille — elle référence aussi
+  /// les stickers (type 10), qui n'ont pourtant pas de copie locale à gérer. Une
+  /// famille précise (photos, vidéos…) reste sans stickers : le choix explicite
+  /// de l'inscrit prime.
+  List<int> get exportTypes =>
+      this == _MediaKind.all ? kExportMediaTypes : types;
+
   String label(AppLocalizations l10n) => switch (this) {
         _MediaKind.all => l10n.myMediaKindAll,
         _MediaKind.photos => l10n.myMediaKindPhotos,
@@ -1006,7 +1014,9 @@ class _MyMediaScreenState extends State<MyMediaScreen> {
           until: period == null
               ? null
               : _startOfDay(period.end).add(const Duration(days: 1)),
-          types: _kind.types,
+          // L'archive « Tout » emporte aussi les stickers ; une famille précise
+          // (photos, vidéos…) reste sans, conformément à [exportTypes].
+          types: _kind.exportTypes,
         ),
       ),
     );

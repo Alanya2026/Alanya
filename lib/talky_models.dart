@@ -6,6 +6,7 @@ import 'core/utils/backend_url.dart';
 import 'core/utils/contact_aliases.dart';
 import 'core/utils/contact_payload.dart';
 import 'core/utils/location_payload.dart';
+import 'core/utils/sticker_payload.dart';
 import 'core/theme/locale_controller.dart';
 import 'core/utils/self_chat.dart';
 import 'core/utils/welcome_cta_payload.dart';
@@ -942,6 +943,7 @@ class Message {
       final contact = ContactPayload.tryParse(content);
       return contact?.previewLabel ?? LocaleController.instance.l10n.contact;
     }
+    if (type == kStickerMessageType) return stickerPreviewLabel(content);
     if (type == kWelcomeCtaMessageType) {
       final cta = WelcomeCtaPayload.tryParse(content);
       if (cta != null && cta.buttons.isNotEmpty) {

@@ -265,7 +265,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
       if (source != null) linkUrl = firstUrlIn(source);
     }
 
-    final bleed = _isBleedMedia(msg) && !hasPrelude;
+    // Sticker seul dans son message : ni fond ni queue, il flotte sur le
+    // papier peint (~150 dp). Avec une citation ou un « transféré », la bulle
+    // reprend son fond : ces chips sont écrites pour lui.
+    final plainSticker =
+        msg.type == kStickerMessageType && !msg.isDeleted && !hasPrelude;
+    final bleed = (_isBleedMedia(msg) && !hasPrelude) || plainSticker;
     // Trois places pour l'heure, dans cet ordre de préférence : en fin de
     // dernière ligne quand le texte clôt la bulle, sur le média quand celui-ci
     // va au bord, sur sa propre ligne sinon (vocal, fichier, carte, supprimé).
@@ -306,18 +311,23 @@ extension _ChatBubbles on _ChatDetailScreenState {
                 isMe: isMe,
                 selected: selected,
                 highlighted: _highlightMsgId == msg.msgID,
-                hairline: _needsHairline(isMe: isMe, bleed: bleed),
+                hairline:
+                    !plainSticker && _needsHairline(isMe: isMe, bleed: bleed),
                 // Fond teinté quand JE suis mentionné : c'est ce qui rend le
                 // bouton de saut lisible — on voit où l'on atterrit. Pas de
                 // liseré (décision produit) : un troisième traitement visuel
                 // alourdirait un fil déjà partagé entre bulles et messages
                 // système. Entrantes seulement : une sortante est déjà indigo.
-                baseColor: isMe
-                    ? context.colors.primary
-                    : (_mentionsMe(msg)
-                        ? context.colors.primaryContainer
-                        : context.colors.surface),
-                borderRadius: _bubbleRadius(isMe: isMe, isLast: burst.isLast),
+                baseColor: plainSticker
+                    ? Colors.transparent
+                    : isMe
+                        ? context.colors.primary
+                        : (_mentionsMe(msg)
+                            ? context.colors.primaryContainer
+                            : context.colors.surface),
+                borderRadius: plainSticker
+                    ? AppRadius.brMd
+                    : _bubbleRadius(isMe: isMe, isLast: burst.isLast),
               ),
               // Largeur = max(citation, corps), plafonnée par maxWidth du Container.
               child: IntrinsicWidth(
@@ -1163,7 +1173,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
       accent: accent,
       title: title,
       titleColor: accent,
-      body: content,
+      // Une citation de sticker ne montre jamais le JSON recopié.
+      body: sanitizeQuotedContent(content),
       bodyColor: _bubbleMuted(isMe),
       thumb: thumb,
       onTap: (replyToID != null && replyToID > 0)
@@ -1181,13 +1192,29 @@ extension _ChatBubbles on _ChatDetailScreenState {
   }
 
   bool _canShowReplyThumb(LocalMessage msg) =>
-      !msg.isViewOnce && (msg.type == 1 || msg.type == 2 || msg.type == 4);
+      !msg.isViewOnce &&
+      (msg.type == 1 ||
+          msg.type == 2 ||
+          msg.type == 4 ||
+          (msg.type == kStickerMessageType &&
+              (msg.mediaUrl?.isNotEmpty ?? false)));
 
   Widget? _buildReplyMediaThumb(LocalMessage msg, {double size = 40}) {
     if (!_canShowReplyThumb(msg)) return null;
 
     final fallback = context.colors.surfaceContainerHighest;
     final Widget child;
+    if (msg.type == kStickerMessageType) {
+      // Vignette de citation : le sticker lui-même, « Sticker » en texte.
+      return StickerImage(
+        url: msg.mediaUrl!,
+        emoji: StickerPayload.emojiOf(msg.content),
+        size: size,
+        showRemovedLabel: false,
+        // Une citation d'un sticker animé reste fixe (vignette).
+        staticFrame: StickerPayload.tryParse(msg.content)?.animated ?? false,
+      );
+    }
     if (msg.type == 4) {
       final style = DocumentFileStyle.fromMessage(
         mediaName: msg.mediaName,
@@ -1476,6 +1503,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
     if (msg.type == 5 ||
         msg.type == 7 ||
         msg.type == kTripMessageType ||
+        msg.type == kStickerMessageType ||
         msg.type == kWelcomeCtaMessageType) {
       return null;
     }
@@ -1550,10 +1578,95 @@ extension _ChatBubbles on _ChatDetailScreenState {
         return _buildTripMedia(msg, isMe);
       case kWelcomeCtaMessageType:
         return _buildWelcomeCtaMedia(msg, isMe);
+      case kStickerMessageType:
+        return _buildStickerMedia(msg, isMe);
       default:
         return Text(_mediaLabel(msg.type, mediaName: msg.mediaName),
             style: context.text.bodyLarge?.copyWith(color: _bubbleText(isMe)));
     }
+  }
+
+  /// Sticker (type 10), ~150 dp, `Semantics(label: emoji)`.
+  ///
+  /// Trois états, aucun n'affiche le JSON : l'image ; le repli « Sticker » +
+  /// emoji (version future du payload, fichier absent) ; le repli « Sticker
+  /// retiré » (le fichier répond 404/410 — état prévu, pas une erreur).
+  /// Au tap : la fiche du sticker.
+  Widget _buildStickerMedia(LocalMessage msg, bool isMe) {
+    const size = 150.0;
+    final payload = StickerPayload.tryParse(msg.content);
+    final url = msg.mediaUrl;
+    final emoji = payload?.emoji ?? '';
+    final Widget child;
+    if (payload == null || !payload.isRenderable) {
+      child = StickerFallback(
+        emoji: emoji,
+        size: size,
+        label: payload == null ? null : context.l10n.stickerUnsupported,
+      );
+    } else if (url == null || url.isEmpty) {
+      child = StickerFallback(emoji: emoji, size: size, removed: true);
+    } else if (payload.animated) {
+      // Sticker animé (`a` = 1, posé par le serveur) : lu une seule fois à
+      // l'arrivée, rejoué au tap. L'ouverture de la fiche passe par le bouton
+      // « i » ; l'appui long reste celui du menu du message.
+      return NonLoopingAnimatedSticker(
+        url: url,
+        emoji: emoji,
+        size: size,
+        playKey: msg.clientId,
+        interactive: !_selectionMode,
+        onOpenSheet: () => _openStickerSheet(msg, payload, url),
+      );
+    } else {
+      child = StickerImage(url: url, emoji: emoji, size: size);
+    }
+    // Le sticker est un bouton : il ouvre la fiche au tap. StickerImage /
+    // StickerFallback portent déjà le libellé (« Sticker 😂 », « Sticker
+    // retiré ») ; on ajoute ici le rôle et l'état, ce qu'un lecteur d'écran
+    // annonce avant le libellé. En mode sélection, le tap est neutralisé : le
+    // bouton est alors annoncé désactivé.
+    final tappable = !_selectionMode && payload != null;
+    return Semantics(
+      button: true,
+      enabled: tappable,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: !tappable
+            ? null
+            : () => _openStickerSheet(msg, payload, url),
+        child: child,
+      ),
+    );
+  }
+
+  /// Fiche d'un sticker (tap sur un sticker fixe, bouton « i » d'un animé).
+  Future<void> _openStickerSheet(
+    LocalMessage msg,
+    StickerPayload payload,
+    String? url,
+  ) {
+    return showStickerSheet(
+      context,
+      payload: payload,
+      mediaUrl: url,
+      senderName: msg.senderID == _myId
+          ? null
+          : (msg.senderNom?.trim().isNotEmpty == true
+              ? msg.senderNom!.trim()
+              : (msg.senderPseudo ?? _chatTitle(context))),
+      onForward: canForwardMessage(msg)
+          ? () => unawaited(Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ForwardMessageScreen(
+                    message: msg,
+                    excludeConversationId: _convId,
+                  ),
+                ),
+              ))
+          : null,
+    );
   }
 
   /// Carte de trajet de confiance (type 9).

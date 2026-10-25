@@ -107,6 +107,20 @@
                       android:host="www.alanya237.com"
                       android:pathPrefix="/q/c/"/>
             </intent-filter>
+
+            <!-- App Link d'un pack de stickers partagé : https://www.alanya237.com/s/<jeton>.
+                 Même hôte, donc même /.well-known/assetlinks.json que les liens
+                 /q/ ci-dessus (aucune nouvelle empreinte). Sans vérification
+                 réussie, le lien s'ouvre dans le navigateur ; le code collé et
+                 alanya://sticker/<jeton> restent des chemins garantis. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="www.alanya237.com"
+                      android:pathPrefix="/s/"/>
+            </intent-filter>
             <!-- Recevoir des partages depuis d'autres apps (Galerie, Fichiers…) -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

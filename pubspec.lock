@@ -909,6 +909,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.14.0"
+  google_mlkit_selfie_segmentation:
+    dependency: "direct main"
+    description:
+      name: google_mlkit_selfie_segmentation
+      sha256: "13dd067dea4cf1433cc5e47d44c507d594ad0b8953d76999e87cb80019fdd1fa"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.12.0"
   google_mlkit_translation:
     dependency: "direct main"
     description:
@@ -1030,7 +1038,7 @@ packages:
     source: hosted
     version: "4.1.2"
   image:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: image
       sha256: f9881ff4998044947ec38d098bc7c8316ae1186fa786eddffdb867b9bc94dfce
@@ -1565,6 +1573,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.0"
+  pro_video_editor:
+    dependency: "direct main"
+    description:
+      name: pro_video_editor
+      sha256: b56beb2af802de57a8c3b7c8da50c8dcd6245fc6ae9bfcf970d9ee72f354b4a1
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.43.2"
   proj4dart:
     dependency: transitive
     description:

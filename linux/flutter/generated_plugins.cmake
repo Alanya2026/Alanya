@@ -9,6 +9,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_timezone
   flutter_webrtc
   gtk
+  pro_video_editor
   record_linux
   sqlite3_flutter_libs
   url_launcher_linux

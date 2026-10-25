@@ -221,6 +221,27 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
     case 'REQUEST_NOT_PENDING':
       return l10n.errCodeRequestNotPending;
 
+    // Stickers (contrat §9 : un code ne se renomme jamais). La liste de
+    // référence est `kStickerErrorCodes` dans `afficher_erreur.dart`.
+    case 'STICKER_NOT_FOUND':
+      return l10n.errCodeStickerNotFound;
+    case 'STICKER_PACK_UNAVAILABLE':
+      return l10n.errCodeStickerPackUnavailable;
+    case 'STICKER_INVALID_PAYLOAD':
+      return l10n.errCodeStickerInvalidPayload;
+    case 'STICKER_ASSET_INVALID':
+      return l10n.errCodeStickerAssetInvalid;
+    case 'STICKER_ASSET_BLOCKED':
+      return l10n.errCodeStickerAssetBlocked;
+    case 'STICKER_QUOTA_EXCEEDED':
+      return l10n.errCodeStickerQuotaExceeded;
+    case 'STICKER_PACK_LIMIT':
+      return l10n.errCodeStickerPackLimit;
+    // Limite de débit par compte (partage de stickers, contrat §4b) : la
+    // même phrase vaut pour toute route qui répondrait `RATE_LIMITED`.
+    case 'RATE_LIMITED':
+      return l10n.errCodeRateLimited;
+
     // Droits
     case 'INSUFFICIENT_ROLE':
       return l10n.errCodeInsufficientRole;
@@ -322,6 +343,8 @@ String _messagePourDomaine(AppLocalizations l10n, ErrorDomain domaine) {
       return l10n.errDomaineAdmin;
     case ErrorDomain.abonnement:
       return l10n.errDomaineAbonnement;
+    case ErrorDomain.stickers:
+      return l10n.stickerDomainError;
     case ErrorDomain.generique:
       return l10n.errGenerique;
   }

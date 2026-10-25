@@ -10,6 +10,7 @@ import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/call_service.dart';
+import '../../core/services/photo_edit_service.dart';
 import '../../core/call_limits.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -35,11 +36,19 @@ class GroupDetailScreen extends StatefulWidget {
   final String groupName;
   final String? groupAvatar;
 
+  /// Sélecteur de photo (injectable pour les tests) ; par défaut, image_picker.
+  final Future<XFile?> Function(ImageSource source)? pickImage;
+
+  /// Rognage d'office de la photo choisie (injectable pour les tests).
+  final PhotoEditor editPhoto;
+
   const GroupDetailScreen({
     super.key,
     required this.conversationId,
     required this.groupName,
     this.groupAvatar,
+    this.pickImage,
+    this.editPhoto = editPhotoWithFeedback,
   });
 
   @override
@@ -256,25 +265,40 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   Future<void> _changeGroupPhoto() async {
-    final picker = ImagePicker();
-    final x = await picker.pickImage(source: ImageSource.gallery);
+    final pick = widget.pickImage;
+    final x = pick != null
+        ? await pick(ImageSource.gallery)
+        : await ImagePicker().pickImage(source: ImageSource.gallery);
     if (x == null || !mounted) return;
 
-    final api = Provider.of<TalkyApiClient>(context, listen: false);
-    await _runGroupAction(
-      () async {
-        // Deux temps, comme à la création : l'upload rend une URL, que la
-        // route de groupe enregistre. Le serveur ne reçoit jamais le binaire.
-        final res = await api.uploadImage(File(x.path));
-        final url = (res['url'] as String?)?.trim();
-        if (url == null || url.isEmpty) {
-          throw Exception('upload sans URL');
-        }
-        await _chat.repository
-            .updateGroupInfo(widget.conversationId, groupPhoto: url);
-      },
-      successMessage: context.l10n.groupInfoUpdated,
+    // Rognage proposé d'office : carré, aperçu rond. Abandonner = la photo du
+    // groupe ne change pas.
+    final cropped = await widget.editPhoto(
+      context,
+      File(x.path),
+      target: PhotoEditTarget.avatar,
     );
+    if (cropped == null || !mounted) return;
+
+    final api = Provider.of<TalkyApiClient>(context, listen: false);
+    try {
+      await _runGroupAction(
+        () async {
+          // Deux temps, comme à la création : l'upload rend une URL, que la
+          // route de groupe enregistre. Le serveur ne reçoit jamais le binaire.
+          final res = await api.uploadImage(cropped);
+          final url = (res['url'] as String?)?.trim();
+          if (url == null || url.isEmpty) {
+            throw Exception('upload sans URL');
+          }
+          await _chat.repository
+              .updateGroupInfo(widget.conversationId, groupPhoto: url);
+        },
+        successMessage: context.l10n.groupInfoUpdated,
+      );
+    } finally {
+      unawaited(PhotoEditService.discard(cropped));
+    }
   }
 
   Future<void> _renameGroup() async {
